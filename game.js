@@ -1292,5 +1292,27 @@ function init() {
   renderAll();
 }
 
+/* Expose UI handlers to inline onclick attributes (this file is an IIFE,
+   so without this every button in the game is dead). */
+window.closeModal = closeModal;
+window.newGame = newGame;
+window.switchTab = switchTab;
+window.buyLot = buyLot;
+window.buyScript = buyScript;
+window.greenlightModal = greenlightModal;
+window.glToggleCast = glToggleCast;
+window.glConfirm = glConfirm;
+window.releaseModal = releaseModal;
+window.relConfirm = relConfirm;
+window.dilemmaPick = dilemmaPick;
+window.poachPick = poachPick;
+window.scoutModal = scoutModal;
+window.scoutHire = scoutHire;
+window.fireTalent = fireTalent;
+window.researchTech = researchTech;
+window.buyPrestige = buyPrestige;
+window.upgradeScriptOffice = upgradeScriptOffice;
+window.makeSequel = makeSequel;
+
 document.addEventListener("DOMContentLoaded", init);
 })();
