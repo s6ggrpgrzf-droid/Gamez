@@ -140,3 +140,84 @@ var DILEMMAS = [
 ];
 
 var SCOUT_FLAVOR = ["a theater kid with fire","a soap actor ready for film","a stunt performer with presence","a stand-up with timing","an indie darling","a former child star, all grown up","a model who can actually act","a voice actor with range"];
+
+/* ---- script themes & audiences (script development) ---- */
+var SCRIPT_THEMES = ["Revenge","Underdog","Love Triangle","Heist","Coming of Age","Fish Out of Water","Redemption","Rivalry","Survival","Double Life"];
+var THEME_SYNERGY = { // theme -> genres where it sings (+quality, discoverable)
+  "Revenge":        ["western","action","thriller"],
+  "Underdog":       ["comedy","drama","animation"],
+  "Love Triangle":  ["romance","drama","musical"],
+  "Heist":          ["action","thriller","comedy"],
+  "Coming of Age":  ["drama","comedy","animation"],
+  "Fish Out of Water": ["comedy","scifi","fantasy"],
+  "Redemption":     ["western","drama","romance"],
+  "Rivalry":        ["musical","drama","superhero"],
+  "Survival":       ["horror","thriller","scifi"],
+  "Double Life":    ["superhero","thriller","romance"],
+};
+var AUDIENCES = ["Family","Teens","Adults","Prestige"];
+var AUD_FIT = { // audience -> {good:[genres] (+8% opening), bad:[genres] (-10% opening)}
+  "Family":   {good:["animation","comedy","musical","fantasy"], bad:["horror","thriller"]},
+  "Teens":    {good:["comedy","horror","action","superhero"],  bad:["drama","musical"]},
+  "Adults":   {good:["drama","thriller","western","romance"],  bad:["animation"]},
+  "Prestige": {good:["drama"], bad:["action","comedy","horror"]}, // +6 critic, -8% opening
+};
+
+/* ---- talent personality traits ---- */
+var TRAITS = {
+  perfectionist: {name:"Perfectionist", icon:"🔍", desc:"+4 film quality. Gains stress 50% faster."},
+  diva:          {name:"Diva",          icon:"👑", desc:"Draws 25% bigger crowds (fame counts more). Demands 40% higher salary."},
+  workhorse:     {name:"Workhorse",     icon:"🐂", desc:"Stress melts twice as fast. -2 film quality (workmanlike)."},
+  charmer:       {name:"Charmer",       icon:"😎", desc:"Marketing is 25% more effective on their films."},
+  reliable:      {name:"Reliable",       icon:"🛡", desc:"Production crises hurt half as much."},
+  volatile:     {name:"Volatile",       icon:"🎆", desc:"3× scandal risk. +3 quality when stressed past 60."},
+  method:        {name:"Method Actor",   icon:"🎭", desc:"+6 quality in drama, -4 in comedy."},
+  veteran:       {name:"Veteran",        icon:"🎖", desc:"Mentor: every co-star gets +2 quality."},
+};
+
+/* ---- production departments (budget allocation) ---- */
+var DEPTS = [
+  {id:"cast",   name:"Cast"},
+  {id:"sets",   name:"Sets & Costumes"},
+  {id:"stunts", name:"Stunts & FX"},
+  {id:"sound",  name:"Sound & Music"},
+  {id:"camera", name:"Cinematography"},
+];
+var DEPT_IDEAL = { // genre -> ideal % split (sums to 100)
+  western:  {cast:25, sets:30, stunts:20, sound:10, camera:15},
+  drama:    {cast:40, sets:15, stunts:5,  sound:20, camera:20},
+  comedy:   {cast:40, sets:15, stunts:10, sound:15, camera:20},
+  musical:  {cast:30, sets:20, stunts:5,  sound:35, camera:10},
+  romance:  {cast:35, sets:15, stunts:5,  sound:20, camera:25},
+  horror:   {cast:25, sets:20, stunts:15, sound:30, camera:10},
+  thriller: {cast:30, sets:15, stunts:15, sound:20, camera:20},
+  action:   {cast:20, sets:15, stunts:40, sound:15, camera:10},
+  scifi:    {cast:15, sets:20, stunts:35, sound:15, camera:15},
+  fantasy:  {cast:20, sets:25, stunts:30, sound:15, camera:10},
+  animation:{cast:15, sets:25, stunts:20, sound:25, camera:15},
+  superhero:{cast:20, sets:15, stunts:40, sound:15, camera:10},
+};
+
+/* ---- star scandals ---- */
+var SCANDALS = [
+  {id:"romance",  name:"Tabloid Romance",  text:"was spotted canoodling with a rival studio's biggest star. The gossip columns are feasting."},
+  {id:"meltdown", name:"On-Set Meltdown",  text:"threw a legendary tantrum and stormed off set. Three camera phones caught it all."},
+  {id:"feud",     name:"Co-Star Feud",     text:"is in an open feud with a co-star. Interviews have become must-see combat."},
+  {id:"party",    name:"Wild Party",       text:"threw a party that made the papers for all the wrong reasons. The neighbors called everyone."},
+];
+
+/* ---- poster taglines ---- */
+var TAGLINES = {
+  western:  ["SIX GUNS. ONE LEGEND.","JUSTICE RIDES AT DAWN.","THE WEST WAS NEVER THIS WILD."],
+  drama:    ["EVERY FAMILY HAS ITS SECRETS.","SOME WOUNDS NEVER HEAL.","A STORY THAT STAYS WITH YOU."],
+  comedy:   ["LAUGHTER GUARANTEED* (*NOT GUARANTEED)","THIS SUMMER, PANTS OPTIONAL.","THEY CAME. THEY SAW. THEY SPILLED."],
+  musical:  ["EVERY HEART HAS A SONG.","TAP YOUR FEET. STEAL YOUR HEART.","THE MUSIC NEVER STOPS."],
+  romance:  ["LOVE FINDS A WAY.","ONE SUMMER. FOREVER CHANGED.","SOME MEETINGS ARE DESTINY."],
+  horror:   ["DON'T WATCH ALONE.","IT KNOWS YOU'RE AWAKE.","SLEEP IS OVERRATED."],
+  thriller: ["TRUST NO ONE.","EVERY SECOND COUNTS.","THE TRUTH HAS TEETH."],
+  action:   ["NO MERCY. NO RETREAT.","THIS TIME IT'S PERSONAL.","MAXIMUM IMPACT."],
+  scifi:    ["BEYOND THE STARS, NOTHING IS SAFE.","THE FUTURE IS ARRIVING.","FIRST CONTACT. LAST WARNING."],
+  fantasy:  ["MAGIC HAS A PRICE.","EVERY LEGEND HAS A BEGINNING.","THE REALM CALLS."],
+  animation:["BRING THE WHOLE FAMILY!","IMAGINATION UNLEASHED.","EVERYONE'S INVITED!"],
+  superhero:["A NEW HERO RISES.","JUSTICE WEARS A CAPE.","THE CITY NEEDS SAVING."],
+};
