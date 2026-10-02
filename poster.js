@@ -160,8 +160,27 @@ function motif(ctx, R, genre, W, H, th) {
 }
 
 var posterCache = {};
+function eraStyle(year) {
+  if (!year || year < 1968) return "golden";   // painted, warm, technicolor
+  if (year < 1990) return "gritty";            // high contrast, heavy grain
+  if (year < 2010) return "neon";              // glossy, glowing title
+  return "minimal";                            // streaming age: stark, quiet
+}
+function grain(ctx, R, W, H, n, alpha) {
+  for (var i = 0; i < n; i++) {
+    ctx.fillStyle = R() < 0.5 ? "rgba(255,255,255," + alpha + ")" : "rgba(0,0,0," + alpha + ")";
+    ctx.fillRect(R() * W, R() * H, 1.4, 1.4);
+  }
+}
+function titleFont(genre, fs) {
+  if (genre === "action" || genre === "superhero") return "900 " + fs + "px 'Arial Black', Arial, sans-serif";
+  if (genre === "horror") return "700 " + fs + "px Georgia, 'Times New Roman', serif";
+  if (genre === "romance") return "italic 700 " + fs + "px Georgia, serif";
+  if (genre === "comedy" || genre === "animation") return "800 " + fs + "px 'Trebuchet MS', Verdana, sans-serif";
+  return "700 " + fs + "px Georgia, serif";
+}
 function getPoster(film) {
-  var key = film.title + "|" + film.genre + "|" + (film.scriptStars || 0);
+  var key = film.title + "|" + film.genre + "|" + (film.scriptStars || 0) + "|" + (film.year || 0);
   if (posterCache[key]) return posterCache[key];
   var W = 240, H = 360;
   var cv = document.createElement("canvas");
@@ -169,6 +188,12 @@ function getPoster(film) {
   var ctx = cv.getContext("2d");
   var R = mulberry(hashStr(key));
   var th = THEMES[film.genre] || THEMES.drama;
+  var era = eraStyle(film.year);
+  var tagline = "";
+  try {
+    var tl = (typeof TAGLINES !== "undefined" && TAGLINES[film.genre]) || [];
+    if (tl.length) tagline = tl[Math.floor(R() * tl.length)];
+  } catch (e) {}
 
   // sky
   var g = ctx.createLinearGradient(0, 0, 0, H * 0.75);
@@ -203,16 +228,27 @@ function getPoster(film) {
     ctx.globalAlpha = 1;
   }
 
-  // vignette
+  // vignette (heavier in gritty era)
   var vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.75);
-  vg.addColorStop(0, "transparent"); vg.addColorStop(1, "rgba(0,0,0,.5)");
+  vg.addColorStop(0, "transparent"); vg.addColorStop(1, era === "gritty" ? "rgba(0,0,0,.68)" : "rgba(0,0,0,.5)");
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
-  // gold frame
-  ctx.strokeStyle = th.accent; ctx.globalAlpha = 0.85; ctx.lineWidth = 5;
-  ctx.strokeRect(7, 7, W - 14, H - 14);
-  ctx.globalAlpha = 1; ctx.lineWidth = 1.5;
-  ctx.strokeRect(14, 14, W - 28, H - 28);
+  // film grain
+  grain(ctx, R, W, H, era === "gritty" ? 900 : era === "golden" ? 250 : 450, era === "gritty" ? 0.10 : 0.05);
+
+  // golden-age painted warmth
+  if (era === "golden") { ctx.fillStyle = "rgba(232,163,61,.10)"; ctx.fillRect(0, 0, W, H); }
+
+  // frame (minimal era skips the gold frame)
+  if (era !== "minimal") {
+    ctx.strokeStyle = th.accent; ctx.globalAlpha = 0.85; ctx.lineWidth = 5;
+    ctx.strokeRect(7, 7, W - 14, H - 14);
+    ctx.globalAlpha = 1; ctx.lineWidth = 1.5;
+    ctx.strokeRect(14, 14, W - 28, H - 28);
+  } else {
+    ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = 1;
+    ctx.strokeRect(10, 10, W - 20, H - 20);
+  }
 
   // billing
   ctx.fillStyle = "rgba(243,234,216,.85)";
@@ -220,10 +256,18 @@ function getPoster(film) {
   ctx.textAlign = "center";
   ctx.fillText("R E E L   E M P I R E   P R E S E N T S", W / 2, 30);
 
-  // title (wrapped)
+  // technicolor ribbon for the golden age
+  if (era === "golden" && R() < 0.6) {
+    ctx.fillStyle = "#a31c1c";
+    ctx.fillRect(0, 44, W, 18);
+    ctx.fillStyle = "#f7ecd4"; ctx.font = "700 10px Inter, sans-serif";
+    ctx.fillText("IN GLORIOUS TECHNICOLOR", W / 2, 57);
+  }
+
+  // title (wrapped) — typography varies by genre
   var words = film.title.toUpperCase().split(" ");
   var lines = [], line = "";
-  ctx.font = "700 26px Georgia, serif";
+  ctx.font = titleFont(film.genre, 26);
   words.forEach(function (wd) {
     var t = line ? line + " " + wd : wd;
     if (ctx.measureText(t).width > W - 56 && line) { lines.push(line); line = wd; }
@@ -231,19 +275,28 @@ function getPoster(film) {
   });
   if (line) lines.push(line);
   if (lines.length > 3) lines = lines.slice(0, 3);
-  var fs = lines.length > 2 ? 21 : 26;
-  ctx.font = "700 " + fs + "px Georgia, serif";
-  ctx.fillStyle = "#f7ecd4";
+  var fs = era === "minimal" ? 19 : lines.length > 2 ? 21 : 26;
+  ctx.font = titleFont(film.genre, fs);
+  ctx.fillStyle = film.genre === "horror" ? "#e8b4b4" : "#f7ecd4";
   ctx.shadowColor = "rgba(0,0,0,.8)"; ctx.shadowBlur = 6;
-  var ty = H - 34 - (lines.length - 1) * (fs + 4);
+  if (era === "neon") { ctx.shadowColor = th.accent; ctx.shadowBlur = 16; }
+  var tagH = tagline ? 16 : 0;
+  var ty = H - 34 - tagH - (lines.length - 1) * (fs + 4);
   lines.forEach(function (ln, i) { ctx.fillText(ln, W / 2, ty + i * (fs + 4)); });
   ctx.shadowBlur = 0;
+
+  // tagline
+  if (tagline) {
+    ctx.font = "italic 600 10px Georgia, serif";
+    ctx.fillStyle = "rgba(243,234,216,.75)";
+    ctx.fillText(tagline, W / 2, ty + lines.length * (fs + 4) + 2);
+  }
 
   // genre tag
   ctx.font = "700 10px Inter, sans-serif";
   ctx.fillStyle = th.accent;
   var glabel = (typeof GENRES !== "undefined" && GENRES[film.genre]) ? GENRES[film.genre].name.toUpperCase() : "";
-  ctx.fillText("· " + glabel + " ·", W / 2, H - 22);
+  ctx.fillText("· " + glabel + " ·", W / 2, H - 16);
 
   var url = cv.toDataURL("image/jpeg", 0.85);
   posterCache[key] = url;
