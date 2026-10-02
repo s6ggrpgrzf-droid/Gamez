@@ -156,3 +156,40 @@ select,input[type=text]{width:100%; background:var(--card); border:1px solid var
 .poster-wall{display:flex; gap:10px; overflow-x:auto; padding:4px 2px 10px; -webkit-overflow-scrolling:touch;}
 .poster-wall img{width:110px; height:165px; object-fit:cover; border-radius:8px; flex-shrink:0;
   border:1px solid rgba(212,169,78,.4); box-shadow:0 8px 20px rgba(0,0,0,.5);}
+
+/* ---- feature update: traits, departments, premiere ---- */
+.trait{display:inline-block; font-size:11px; padding:3px 9px; border-radius:12px; margin:2px 4px 2px 0;
+  background:rgba(122,168,212,.14); border:1px solid rgba(122,168,212,.4); color:#bcd4ee; font-weight:600;
+  cursor:help; white-space:nowrap;}
+
+.deptrow{display:flex; align-items:center; gap:10px; margin:6px 0;}
+.deptrow .dname{width:110px; font-size:12px; color:var(--muted); flex-shrink:0;}
+.deptrow input[type=range]{flex:1;}
+.deptrow .dval{width:44px; text-align:right; font-size:12px; color:var(--gold2);}
+
+.premiere{text-align:center;}
+.prem-carpet{height:10px; margin:-4px -20px 12px; border-radius:6px;
+  background:linear-gradient(90deg,#7a1c1c,#c94d4d,#7a1c1c);}
+.prem-poster img{width:150px; height:225px; object-fit:cover; border-radius:10px;
+  border:2px solid var(--gold); box-shadow:0 12px 32px rgba(0,0,0,.6);}
+.premiere .pt{font-family:Marcellus,serif; font-size:22px; color:var(--gold2); margin-top:10px;}
+.premiere .pg{font-size:13px; color:var(--muted); margin:4px 0 10px;}
+.prem-stats{display:flex; gap:10px; justify-content:center; margin:10px 0;}
+.prem-stats div{background:rgba(212,169,78,.08); border:1px solid var(--line); border-radius:10px;
+  padding:8px 14px; min-width:120px;}
+.prem-stats span{display:block; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
+.prem-stats b{font-size:17px; color:var(--gold2);}
+.premiere .verdict{font-size:15px; font-weight:600;}
+
+.marquee{animation:blink 1.1s infinite alternate;}
+@keyframes blink{from{opacity:1;} to{opacity:.25;}}
+
+.filmrow{transition:transform .15s, box-shadow .15s;}
+.filmrow:hover{transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,0,0,.45);}
+.card{transition:border-color .15s;}
+.btn.amber{transition:filter .15s, transform .1s;}
+.btn.amber:hover{filter:brightness(1.08);}
+.btn.amber:active{transform:scale(.97);}
+h2.sec{position:relative; padding-bottom:6px;}
+h2.sec::after{content:""; position:absolute; left:0; bottom:0; width:44px; height:2px;
+  background:linear-gradient(90deg,var(--gold),transparent); border-radius:2px;}
