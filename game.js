@@ -504,6 +504,7 @@ function runAwards(yr) {
   if (mine.length) {
     log("🏆 <b>Awards " + yr + ":</b> you win " + mine.map(function (m) { return m.cat; }).join(", ") + "! +2★ prestige each.");
     toast("🏆 You won " + mine.length + " award" + (mine.length > 1 ? "s" : "") + "!");
+    confettiBurst();
     pendingAwards = { year: yr, results: results };
     pauseForModal();
   } else {
@@ -689,9 +690,7 @@ function renderAll() {
   if (!S) return;
   var d = dateOf(S.week);
   $("tbDate").textContent = d.m + " " + d.y;
-  var c = $("tbCash");
-  c.textContent = fmtM(S.cash);
-  c.classList.toggle("neg", S.cash < 0);
+  tweenCash(S.cash);
   $("tbPrestige").textContent = "★ " + S.prestige;
   setSpeedUI();
   ({ studio: renderStudio, films: renderFilms, talent: renderTalent, market: renderMarket, awards: renderAwards })[activeTab]();
@@ -702,6 +701,85 @@ function setSpeedUI() {
   $("spd3").classList.toggle("on", S.speed === 3);
 }
 
+function posterImg(f, cls) {
+  try { return "<img class='" + (cls || "pthumb") + "' src='" + getPoster(f) + "' alt=''>"; }
+  catch (e) { return ""; }
+}
+function grossBars(f) {
+  if (!f.weeklyGross || !f.weeklyGross.length) return "";
+  var max = f.opening || 1, i;
+  for (i = 0; i < f.weeklyGross.length; i++) if (f.weeklyGross[i] > max) max = f.weeklyGross[i];
+  var bars = "";
+  for (i = 0; i < f.weeklyGross.length; i++)
+    bars += "<i style='height:" + Math.max(6, Math.round(f.weeklyGross[i] / max * 100)) + "%'></i>";
+  return "<div class='gbars'>" + bars + "</div><div class='sub' style='margin:2px 0 0'>weekly box office</div>";
+}
+function eraOf(y) {
+  if (y < 1968) return "Golden Age";
+  if (y < 1975) return "New Hollywood";
+  if (y < 1990) return "Blockbuster Era";
+  if (y < 2010) return "Modern Era";
+  return "Streaming Age";
+}
+function lotSVG() {
+  var lvl = lotLevel(), b = "";
+  b += "<rect x='40' y='150' width='120' height='80' rx='4' fill='#3a2f1c' stroke='#d4a94e'/>" +
+       "<text x='100' y='196' text-anchor='middle' fill='#f2d488' font-size='12'>STAGE A</text>";
+  if (lvl >= 1) b += "<rect x='180' y='160' width='90' height='70' rx='4' fill='#2c2517' stroke='#d4a94e'/>" +
+       "<text x='225' y='198' text-anchor='middle' fill='#f2d488' font-size='11'>OFFICES</text>";
+  if (lvl >= 2) b += "<rect x='300' y='140' width='130' height='90' rx='4' fill='#33281a' stroke='#d4a94e'/>" +
+       "<text x='365' y='188' text-anchor='middle' fill='#f2d488' font-size='11'>BACKLOT</text>";
+  if (lvl >= 3) b += "<rect x='450' y='155' width='110' height='75' rx='4' fill='#1e2c3a' stroke='#7ad4f7'/>" +
+       "<text x='505' y='195' text-anchor='middle' fill='#8fd4f7' font-size='11'>CGI LAB</text>";
+  return "<svg viewBox='0 0 600 260' class='lotsvg'>" +
+    "<defs><linearGradient id='lsky' x1='0' y1='0' x2='0' y2='1'>" +
+    "<stop offset='0' stop-color='#1c1008'/><stop offset='1' stop-color='#8f5c1c'/></linearGradient></defs>" +
+    "<rect width='600' height='228' fill='url(#lsky)'/>" +
+    "<circle cx='520' cy='52' r='30' fill='#f7dc9a' opacity='.85'/>" +
+    "<rect y='228' width='600' height='32' fill='#100c07'/>" + b +
+    "<g><rect x='262' y='62' width='8' height='66' fill='#5c4a2c'/><rect x='292' y='62' width='8' height='66' fill='#5c4a2c'/>" +
+    "<ellipse cx='281' cy='56' rx='36' ry='27' fill='#d4a94e'/>" +
+    "<text x='281' y='61' text-anchor='middle' font-size='11' font-weight='bold' fill='#1a1408'>REEL</text></g>" +
+    "<rect x='0' y='200' width='600' height='6' fill='#d4a94e' opacity='.35'/></svg>";
+}
+var displayedCash = null, cashRaf = null;
+function tweenCash(target) {
+  var el = $("tbCash");
+  if (typeof requestAnimationFrame === "undefined") {
+    displayedCash = target; el.textContent = fmtM(target);
+    el.classList.toggle("neg", target < 0); return;
+  }
+  if (displayedCash === null) displayedCash = target;
+  if (Math.abs(displayedCash - target) < 0.05) {
+    displayedCash = target; el.textContent = fmtM(target);
+    el.classList.toggle("neg", target < 0); return;
+  }
+  if (cashRaf) cancelAnimationFrame(cashRaf);
+  var from = displayedCash, start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    var p = Math.min(1, (ts - start) / 700);
+    displayedCash = from + (target - from) * (1 - Math.pow(1 - p, 3));
+    el.textContent = fmtM(displayedCash);
+    el.classList.toggle("neg", target < 0);
+    if (p < 1) cashRaf = requestAnimationFrame(step);
+  }
+  cashRaf = requestAnimationFrame(step);
+}
+function confettiBurst() {
+  if (!document.body) return;
+  var cols = ["#d4a94e", "#f2d488", "#e87b9c", "#7ad4a3", "#8fd4f7"];
+  for (var i = 0; i < 60; i++) {
+    var d = document.createElement("div");
+    d.className = "confetti";
+    d.style.left = (Math.random() * 100) + "vw";
+    d.style.background = cols[i % cols.length];
+    d.style.animationDelay = (Math.random() * 0.6) + "s";
+    d.style.animationDuration = (1.8 + Math.random() * 1.4) + "s";
+    document.body.appendChild(d);
+    (function (el) { setTimeout(function () { el.remove(); }, 3600); })(d);
+  }
+}
 function heatChips() {
   var gs = unlockedGenres(S.week), out = "";
   for (var i = 0; i < gs.length; i++) {
@@ -725,7 +803,8 @@ function renderStudio() {
   var inProd = S.films.filter(function (f) { return f.stage === "production"; }).length;
   var inTheaters = S.films.filter(function (f) { return f.stage === "theatrical"; }).length;
   var lotC = lotUpgradeCost();
-  var html = "<h2 class='sec'>🎬 Studio Lot</h2>" +
+  var html = "<h2 class='sec'>🎬 Studio Lot</h2><div class='sub'>" + eraOf(dateOf(S.week).y) + " · " + dateStr(S.week) + "</div>" +
+    "<div class='card' style='padding:8px'>" + lotSVG() + "</div>" +
     "<div class='grid2'>" +
     "<div class='stat'><div class='v'>" + fmtM(S.cash) + "</div><div class='k'>Cash</div></div>" +
     "<div class='stat'><div class='v'>" + fmtM(studioValue()) + "</div><div class='k'>Studio value</div></div>" +
@@ -746,8 +825,13 @@ function renderStudio() {
     "<div class='kv'><span>In theaters</span><b>" + inTheaters + "</b></div>" +
     "<div class='kv'><span>Monthly burn</span><b class='neg'>" + fmtM(monthlyBurn()) + "</b></div>" +
     "<div class='kv'><span>Hits / Flops</span><b>" + S.stats.hits + " / " + S.stats.flops + "</b></div>" +
-    "</div>" +
-    "<h2 class='sec'>📰 Studio wire</h2><div class='card log'>" +
+    "</div>";
+  var relWall = S.films.filter(function (f) { return f.stage === "released"; }).slice(-10).reverse();
+  if (relWall.length) {
+    html += "<h2 class='sec'>🎞 Poster wall</h2><div class='poster-wall'>" +
+      relWall.map(function (f) { return posterImg(f).replace("class='pthumb'", ""); }).join("") + "</div>";
+  }
+  html += "<h2 class='sec'>📰 Studio wire</h2><div class='card log'>" +
     S.log.slice(0, 25).map(function (e) { return "<div><span class='t'>" + dateStr(e.w) + "</span>" + e.msg + "</div>"; }).join("") +
     "</div>";
   el.innerHTML = html;
@@ -759,6 +843,11 @@ function monthlyBurn() {
 }
 
 /* ============ Films tab ============ */
+function filmRow(f, body) {
+  return "<div class='filmrow'>" + posterImg(f) +
+    "<div class='finfo'><div class='pt'>" + f.title + "</div>" +
+    "<div class='pg'>" + GENRES[f.genre].icon + " " + GENRES[f.genre].name + "</div>" + body + "</div></div>";
+}
 function renderFilms() {
   var el = $("view-films");
   var prod = S.films.filter(function (f) { return f.stage === "production"; });
@@ -772,44 +861,41 @@ function renderFilms() {
     html += "<h2 class='sec'>🎬 In production</h2>";
     prod.forEach(function (f) {
       var pct = Math.round(f.progress / f.weeksTotal * 100);
-      html += "<div class='poster'><div class='pt'>" + f.title + "</div><div class='pg'>" +
-        GENRES[f.genre].icon + " " + GENRES[f.genre].name + " · " + fmtM(f.budget) + " budget</div>" +
+      html += filmRow(f,
         "<div class='bar'><i style='width:" + pct + "%'></i></div>" +
-        "<div class='meta'><span>" + pct + "% · " + f.weeksLeft + " wks left</span></div></div>";
+        "<div class='meta'><span>" + pct + "% · " + f.weeksLeft + " wks left · " + fmtM(f.budget) + "</span></div>");
     });
   }
   if (ready.length) {
     html += "<h2 class='sec'>✅ Ready to release</h2>";
     ready.forEach(function (f) {
-      html += "<div class='poster'><div class='pt'>" + f.title + "</div><div class='pg'>" +
-        GENRES[f.genre].icon + " " + GENRES[f.genre].name + " · quality " + f.quality + "/100</div>" +
-        "<div class='meta'><button class='btn amber small' onclick='releaseModal(\"" + f.id + "\")'>📅 Date the release</button></div></div>";
+      html += filmRow(f,
+        "<div class='meta'><span>quality " + f.quality + "/100</span></div>" +
+        "<div class='meta'><button class='btn amber small' onclick='releaseModal(\"" + f.id + "\")'>📅 Date the release</button></div>");
     });
   }
   if (sched.length) {
     html += "<h2 class='sec'>📅 Dated</h2>";
     sched.forEach(function (f) {
-      html += "<div class='poster'><div class='pt'>" + f.title + "</div><div class='pg'>" + dateStr(f.releaseWeek) +
-        " · " + fmtM(f.marketing) + " marketing</div></div>";
+      html += filmRow(f,
+        "<div class='meta'><span>" + dateStr(f.releaseWeek) + " · " + fmtM(f.marketing) + " marketing</span></div>");
     });
   }
   if (theat.length) {
     html += "<h2 class='sec'>🎟 In theaters</h2>";
     theat.forEach(function (f) {
       var last = f.weeklyGross.length ? f.weeklyGross[f.weeklyGross.length - 1] : 0;
-      html += "<div class='poster'><div class='pt'>" + f.title + "</div><div class='pg'>Week " + (f.weekNum + 1) +
-        " · this week " + fmtM(last) + " · total " + fmtM(f.totalGross) + "</div>" +
-        "<div class='bar'><i class='good' style='width:" + Math.min(100, f.totalGross / (f.budget * 2) * 100) + "%'></i></div></div>";
+      html += filmRow(f,
+        "<div class='meta'><span>Week " + (f.weekNum + 1) + " · " + fmtM(last) + " this week · " + fmtM(f.totalGross) + " total</span></div>" +
+        grossBars(f));
     });
   }
-  // scripts market
   html += "<h2 class='sec'>📝 Script market</h2><div class='sub'>Script office tier " + S.scriptTier + " (win awards to upgrade)</div>";
   S.scripts.forEach(function (s) {
     html += "<div class='card'><div class='row'><div><b>" + s.title + "</b><div class='sub' style='margin:2px 0 0'>" +
       GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · <span class='stars'>" + stars(s.quality) + "</span></div></div>" +
       "<button class='btn amber small' onclick='buyScript(\"" + s.id + "\")'>" + fmtM(s.price) + "</button></div></div>";
   });
-  // unproduced (owned scripts)
   if (S.scriptsOwned && S.scriptsOwned.length) {
     html += "<h2 class='sec'>📚 Owned scripts</h2>";
     S.scriptsOwned.forEach(function (s) {
@@ -822,12 +908,11 @@ function renderFilms() {
     html += "<h2 class='sec'>🏁 Released</h2>";
     rel.forEach(function (f) {
       var profit = f.totalGross * 0.5 - f.budget - f.marketing;
-      html += "<div class='poster'><div class='pt'>" + f.title + "</div><div class='pg'>" +
-        GENRES[f.genre].icon + " " + GENRES[f.genre].name + " · critic " + f.critic + "/100</div>" +
-        "<div class='meta'><span>Gross " + fmtM(f.totalGross) + "</span><span class='" + (profit >= 0 ? "pos" : "neg") + "'>" +
-        (profit >= 0 ? "+" : "") + fmtM(profit) + "</span>" +
-        (!f.sequelOf ? "<button class='btn ghost small' onclick='makeSequel(\"" + f.id + "\")'>Sequel</button>" : "") +
-        "</div></div>";
+      html += filmRow(f,
+        "<div class='meta'><span>critic " + f.critic + "/100 · gross " + fmtM(f.totalGross) + "</span>" +
+        "<span class='" + (profit >= 0 ? "pos" : "neg") + "'>" + (profit >= 0 ? "+" : "") + fmtM(profit) + "</span></div>" +
+        grossBars(f) +
+        (!f.sequelOf ? "<div class='meta'><button class='btn ghost small' onclick='makeSequel(\"" + f.id + "\")'>🎬 Sequel</button></div>" : ""));
     });
   }
   el.innerHTML = html;
@@ -988,7 +1073,8 @@ function greenlightModal(scriptId) {
   GL = { scriptId: scriptId, directorId: dirs[0].id, castIds: [], budget: Math.round(idealBudget(s.quality)) };
   var ideal = idealBudget(s.quality);
   var html = "<h2>🎬 Greenlight: " + s.title + "</h2>" +
-    "<p class='sub'>" + GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · script " + stars(s.quality) + "</p>" +
+    "<div class='row'><div style='flex:1'><p class='sub'>" + GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · script " + stars(s.quality) + "</p></div>" +
+    posterImg({ title: s.title, genre: s.genre, scriptStars: s.quality }, "pthumb small") + "</div>" +
     "<div class='fld'><label>Director</label><select id='glDir'>" +
     dirs.map(function (d) { return "<option value='" + d.id + "'>" + d.name + " (talent " + d.talent + ")</option>"; }).join("") +
     "</select></div>" +
