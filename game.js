@@ -56,6 +56,8 @@ function newGame() {
     tutorial: false,
     lastSave: Date.now(),
     gameOver: false, won: false,
+    developing: [],   // {scriptId, weeksLeft, kind:'polish'}
+    discovered: {},   // theme -> [genres] of discovered synergies
   };
   for (var i = 0; i < 3; i++) {
     S.rivals.push({ name: RIVAL_NAMES[i], slate: [], prestige: ri(10, 40), flavorCooldown: 0 });
@@ -68,12 +70,32 @@ function newGame() {
 }
 
 function save() { S.lastSave = Date.now(); try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch (e) {} }
+function migrateState() {
+  // fill in fields added after v1 so old saves keep working
+  if (!S.developing) S.developing = [];
+  if (!S.discovered) S.discovered = {};
+  function fixScript(s) {
+    if (!s.theme) s.theme = pick(SCRIPT_THEMES);
+    if (!s.audience) s.audience = pick(AUDIENCES);
+    if (s.polish === undefined) s.polish = 0;
+  }
+  (S.scripts || []).forEach(fixScript);
+  (S.scriptsOwned || []).forEach(fixScript);
+  (S.talent || []).forEach(function (t) { if (!t.traits) t.traits = rollTraits(); });
+  S.films.forEach(function (f) {
+    if (!f.depts) f.depts = { cast: 20, sets: 20, stunts: 20, sound: 20, camera: 20 };
+    if (!f.theme && f.genre) { f.theme = pick(SCRIPT_THEMES); f.audience = pick(AUDIENCES); }
+  });
+  S.v = 2;
+}
 function load() {
   try {
     var raw = localStorage.getItem(LS_KEY);
     if (!raw) return false;
     S = JSON.parse(raw);
-    return !!(S && S.v === 1);
+    if (!(S && (S.v === 1 || S.v === 2))) return false;
+    migrateState();
+    return true;
   } catch (e) { return false; }
 }
 
@@ -105,6 +127,24 @@ function genName(female) {
   var f = female === undefined ? Math.random() < 0.5 : female;
   return (f ? pick(FIRST_NAMES_F) : pick(FIRST_NAMES_M)) + " " + pick(LAST_NAMES);
 }
+function rollTraits() {
+  var keys = Object.keys(TRAITS);
+  var n = Math.random() < 0.3 ? 2 : 1;
+  var out = [];
+  while (out.length < n) {
+    var k = pick(keys);
+    if (out.indexOf(k) < 0) out.push(k);
+  }
+  return out;
+}
+function hasTrait(t, id) { return t && t.traits && t.traits.indexOf(id) >= 0; }
+function traitChips(t) {
+  if (!t.traits || !t.traits.length) return "";
+  return t.traits.map(function (id) {
+    var tr = TRAITS[id];
+    return "<span class='trait' title='" + tr.desc + "'>" + tr.icon + " " + tr.name + "</span>";
+  }).join(" ");
+}
 function genTalent(type, starter) {
   var y = dateOf(S ? S.week : 0).y;
   var talent = starter ? ri(45, 75) : ri(25, 95);
@@ -114,7 +154,7 @@ function genTalent(type, starter) {
     id: uid(), type: type, name: type === "director" ? genName(false) + " " + pick(["","Jr."]) : genName(),
     age: age, talent: talent, fame: fame,
     genreFit: {}, salary: 0, stress: ri(0, 20),
-    films: 0, hired: !!starter, retired: false, scandal: 0,
+    films: 0, hired: !!starter, retired: false, scandal: 0, traits: rollTraits(),
   };
   if (type === "director") t.name = pick(DIRECTOR_SURNAMES) + " " + pick(["","Jr.","III"]);
   var gs = unlockedGenres(S ? S.week : 0);
@@ -125,7 +165,9 @@ function genTalent(type, starter) {
   return t;
 }
 function calcSalary(t) {
-  return Math.max(0.05, (t.fame * 0.012 + t.talent * 0.007) * eraMult(S ? S.week : 0));
+  var s = Math.max(0.05, (t.fame * 0.012 + t.talent * 0.007) * eraMult(S ? S.week : 0));
+  if (hasTrait(t, "diva")) s *= 1.4;
+  return s;
 }
 function rosterCap() { return { actor: 4 + (S.lot || 0) * 2, director: 2 + (S.lot || 0) }; }
 
@@ -140,7 +182,8 @@ function genScript() {
   var maxQ = S.scriptTier === 1 ? 3 : S.scriptTier === 2 ? 4 : 5;
   var q = clamp(ri(1, maxQ) + (Math.random() < 0.25 ? 1 : 0), 1, 5);
   return { id: uid(), title: genTitle(g), genre: g, quality: q,
-           price: q * 0.35 * eraMult(S.week) };
+           price: q * 0.35 * eraMult(S.week),
+           theme: pick(SCRIPT_THEMES), audience: pick(AUDIENCES), polish: 0 };
 }
 function refreshScripts(initial) {
   S.scripts = [];
@@ -151,7 +194,7 @@ function refreshScripts(initial) {
 /* ============ film pipeline ============ */
 function idealBudget(scriptStars) { return scriptStars * 4 * eraMult(S.week); }
 
-function greenlight(scriptId, directorId, castIds, budget) {
+function greenlight(scriptId, directorId, castIds, budget, depts) {
   S.scriptsOwned = S.scriptsOwned || [];
   var si = -1;
   for (var i = 0; i < S.scriptsOwned.length; i++) if (S.scriptsOwned[i].id === scriptId) si = i;
@@ -169,9 +212,14 @@ function greenlight(scriptId, directorId, castIds, budget) {
     releaseWeek: -1, weeklyGross: [], totalGross: 0, critic: 0, breakdown: null,
     dilemmasDone: 0, buzz: 0, franchise: null, sequelOf: null,
     year: dateOf(S.week).y,
+    theme: sc.theme || pick(SCRIPT_THEMES), audience: sc.audience || pick(AUDIENCES),
+    depts: depts || { cast: 20, sets: 20, stunts: 20, sound: 20, camera: 20 },
   };
-  // cast stress
-  eachTalent(castIds.concat([directorId]), function (t) { t.stress = clamp(t.stress + 15, 0, 100); t.films++; });
+  // cast stress (perfectionists burn hotter)
+  eachTalent(castIds.concat([directorId]), function (t) {
+    var gain = 15 * (hasTrait(t, "perfectionist") ? 1.5 : 1);
+    t.stress = clamp(t.stress + gain, 0, 100); t.films++;
+  });
   S.films.push(film);
   log("🎬 <b>" + film.title + "</b> enters production (" + GENRES[film.genre].name + ", " + fmtM(budget) + " budget).");
   return film;
@@ -186,13 +234,38 @@ function talentById(id) {
   return null;
 }
 
+function deptFit(f) {
+  var ideal = DEPT_IDEAL[f.genre];
+  if (!ideal || !f.depts) return 0;
+  var dist = 0;
+  for (var k in ideal) dist += Math.abs((f.depts[k] || 0) - ideal[k]);
+  dist = dist / 2; // 0 (perfect) .. 100 (worst)
+  return Math.round(12 * (0.5 - dist / 100)); // +6 .. -6
+}
+function themeSynergy(f) {
+  var fav = THEME_SYNERGY[f.theme] || [];
+  return fav.indexOf(f.genre) >= 0 ? 3 : 0;
+}
 function computeQuality(f) {
   var dir = talentById(f.directorId);
-  var castT = 0, castF = 0;
+  var castT = 0, castF = 0, traitQ = 0, mentors = 0;
+  var crew = f.castIds.slice();
+  if (dir) crew.push(f.directorId);
   for (var i = 0; i < f.castIds.length; i++) {
     var t = talentById(f.castIds[i]);
     if (t) { castT += t.talent * (t.genreFit[f.genre] || 1); castF += t.fame; }
   }
+  // personality trait quality effects
+  for (var j = 0; j < crew.length; j++) {
+    var ct = talentById(crew[j]);
+    if (!ct) continue;
+    if (hasTrait(ct, "perfectionist")) traitQ += 4;
+    if (hasTrait(ct, "workhorse")) traitQ -= 2;
+    if (hasTrait(ct, "method")) traitQ += (f.genre === "drama" ? 6 : f.genre === "comedy" ? -4 : 0);
+    if (hasTrait(ct, "volatile") && ct.stress > 60) traitQ += 3;
+    if (hasTrait(ct, "veteran")) mentors++;
+  }
+  if (mentors > 0 && f.castIds.length > 1) traitQ += mentors * 2 * (f.castIds.length - 1);
   var castAvg = f.castIds.length ? castT / f.castIds.length : 50;
   var ideal = idealBudget(f.scriptStars);
   var budgetFit = clamp(10 - Math.abs(f.budget - ideal) / ideal * 14, -12, 10);
@@ -205,7 +278,7 @@ function computeQuality(f) {
   techB = Math.min(techB, 16);
   var innov = innovatorBonus(f.genre);
   var q = 18 + f.scriptStars * 8 + (dir ? dir.talent * 0.22 * (dir.genreFit[f.genre] || 1) : 8)
-        + castAvg * 0.18 + budgetFit + techB + innov + f.qmod + rnd(-4, 4);
+        + castAvg * 0.18 + budgetFit + techB + innov + f.qmod + deptFit(f) + themeSynergy(f) + traitQ + rnd(-4, 4);
   // franchise expectations
   if (f.sequelOf && S.franchises[f.sequelOf]) {
     var orig = S.franchises[f.sequelOf].quality;
@@ -252,16 +325,35 @@ function openFilm(f) {
   f.stage = "theatrical";
   f.weekNum = 0;
   var dir = talentById(f.directorId);
-  var starPower = 0;
-  for (var i = 0; i < f.castIds.length; i++) { var t = talentById(f.castIds[i]); if (t) starPower += t.fame; }
+  var starPower = 0, hasCharmer = false;
+  var crewIds = f.castIds.concat([f.directorId]);
+  for (var ci = 0; ci < crewIds.length; ci++) {
+    var ct0 = talentById(crewIds[ci]);
+    if (ct0 && hasTrait(ct0, "charmer")) hasCharmer = true;
+  }
+  for (var i = 0; i < f.castIds.length; i++) {
+    var t = talentById(f.castIds[i]);
+    if (t) starPower += t.fame * (hasTrait(t, "diva") ? 1.25 : 1);
+  }
   starPower = starPower / 120;
   var mkt = 0.5 + Math.min(f.marketing / (f.budget + 0.5), 1.2);
+  if (hasCharmer) mkt *= 1.25;
   if (S.techs.blockbuster && S.techs.blockbuster.status === "owned") mkt *= 1.2;
   var heat = genreHeat(f.genre, f.releaseWeek);
+  // audience fit
+  var audMod = 1, audNote = "";
+  var fit = AUD_FIT[f.audience];
+  if (fit) {
+    if (fit.good.indexOf(f.genre) >= 0) { audMod = 1.08; audNote = "👪 " + f.audience + " audiences showed up!"; }
+    else if (fit.bad.indexOf(f.genre) >= 0) {
+      audMod = f.audience === "Prestige" ? 0.92 : 0.9;
+      audNote = "👪 " + f.audience + " audiences stayed home…";
+    }
+  }
   var legsBoost = 0;
   for (var i = 0; i < S.eventMods.length; i++) if (S.eventMods[i].legs && S.eventMods[i].untilWeek >= f.releaseWeek) legsBoost += S.eventMods[i].legs;
   var open = 7.0 * Math.pow(f.budget, 0.72) * (0.45 + 0.28 * starPower) * mkt
-           * (0.55 + f.quality / 130) * heat * eraMult(f.releaseWeek);
+           * (0.55 + f.quality / 130) * heat * eraMult(f.releaseWeek) * audMod;
   if (f.overexposed) open *= 0.85;
   if (f.quality < 50) open *= 0.6; // toxic word of mouth
   var buff = S.buffs.untilWeek >= S.week ? (1 + S.buffs.boxoffice) : 1;
@@ -272,18 +364,32 @@ function openFilm(f) {
   f.leg = f.quality >= 75 ? 0.62 : f.quality >= 55 ? 0.55 : 0.45;
   f.leg += legsBoost;
   f.totalMult = f.quality >= 75 ? 3.4 : f.quality >= 55 ? 2.6 : 1.8;
-  f.critic = clamp(Math.round(f.quality + rnd(-10, 10) - (f.overexposed ? 5 : 0)), 1, 100);
+  f.critic = clamp(Math.round(f.quality + rnd(-10, 10) - (f.overexposed ? 5 : 0) + (f.audience === "Prestige" ? 6 : 0)), 1, 100);
   f.breakdown = {
     Script: clamp(Math.round(f.scriptStars * 20 + rnd(-6, 6)), 1, 100),
     Direction: clamp(Math.round((dir ? dir.talent : 50) + rnd(-6, 6)), 1, 100),
     Cast: clamp(Math.round((f.castIds.length ? starPower * 60 : 40) + rnd(-6, 6)), 1, 100),
     Craft: clamp(Math.round(f.quality + rnd(-8, 8)), 1, 100),
   };
-  log("🎟 <b>" + f.title + "</b> opens to " + fmtM(open) + " — critics: <b>" + f.critic + "</b>/100.");
+  // theme synergy discovery
+  if (themeSynergy(f) > 0) {
+    S.discovered[f.theme] = S.discovered[f.theme] || [];
+    if (S.discovered[f.theme].indexOf(f.genre) < 0) {
+      S.discovered[f.theme].push(f.genre);
+      log("💡 <b>Discovery!</b> Critics loved the <b>" + f.theme + "</b> theme in this " + GENRES[f.genre].name.toLowerCase() + ". They'll remember that.");
+      toast("💡 Theme synergy discovered!");
+    } else {
+      log("⭐ The <b>" + f.theme + "</b> theme sings in this " + GENRES[f.genre].name.toLowerCase() + " — critics noticed.");
+    }
+  }
+  log("🎟 <b>" + f.title + "</b> opens to " + fmtM(open) + " — critics: <b>" + f.critic + "</b>/100." + (audNote ? " " + audNote : ""));
+  premiereQueue.push(f.id);
 }
 
 /* ============ weekly simulation ============ */
 var pendingDilemma = null;
+var premiereQueue = [];  // film ids awaiting their premiere modal
+var scandalQueue = [];   // {talentId, scandal} awaiting player response
 
 function advanceWeeks(n) {
   for (var k = 0; k < n; k++) {
@@ -297,6 +403,23 @@ function advanceWeeks(n) {
 
 function tickWeek() {
   var w = S.week, d = dateOf(w);
+  // script development projects
+  for (var di = S.developing.length - 1; di >= 0; di--) {
+    var dev = S.developing[di];
+    dev.weeksLeft--;
+    if (dev.weeksLeft <= 0) {
+      S.developing.splice(di, 1);
+      var ds = findOwnedScript(dev.scriptId);
+      if (ds && dev.kind === "polish") {
+        ds.quality = Math.min(5, ds.quality + 1);
+        ds.polish = (ds.polish || 0) + 1;
+        log("✍️ Polish complete: <b>" + ds.title + "</b> is now " + stars(ds.quality) + ".");
+        toast("✍️ " + ds.title + " polished to " + stars(ds.quality));
+      }
+    }
+  }
+  // weekly star-scandal checks
+  checkScandals();
   // productions
   for (var i = S.films.length - 1; i >= 0; i--) {
     var f = S.films[i];
@@ -359,19 +482,13 @@ function tickWeek() {
       ta.age++;
       if (ta.age >= 70) { ta.retired = true; log("👋 " + ta.name + " retires at 70. A legend exits the stage."); }
       else { ta.salary = calcSalary(ta); }
-      // stress decay for idle talent
-      if (!isFilming(ta.id)) ta.stress = clamp(ta.stress - 8, 0, 100);
+      // stress decay for idle talent (workhorses recover faster)
+      if (!isFilming(ta.id)) ta.stress = clamp(ta.stress - (hasTrait(ta, "workhorse") ? 16 : 8), 0, 100);
       // boredom: benched too long
       ta.benched = isFilming(ta.id) ? 0 : (ta.benched || 0) + 1;
       if (ta.benched > 52 && Math.random() < 0.3) {
         ta.hired = false;
         log("🚪 " + ta.name + " left — tired of waiting by the phone.");
-      }
-      // scandal risk
-      if (ta.stress > 80 && Math.random() < 0.25) {
-        ta.stress = 50; ta.fame = Math.max(10, ta.fame - 15); ta.scandal++;
-        log("📰 Scandal! " + ta.name + " in the tabloids. Fame takes a hit.");
-        toast("📰 Scandal: " + ta.name);
       }
     }
     yearlyEvent(yr);
@@ -417,6 +534,75 @@ function scriptCostOf(f) { return 0; } // paid at greenlight
 function queueDilemma(f) {
   pendingDilemma = { filmId: f.id, d: pick(DILEMMAS) };
   pauseForModal();
+}
+
+function findOwnedScript(id) {
+  S.scriptsOwned = S.scriptsOwned || [];
+  for (var i = 0; i < S.scriptsOwned.length; i++) if (S.scriptsOwned[i].id === id) return S.scriptsOwned[i];
+  return null;
+}
+function isDeveloping(id) {
+  for (var i = 0; i < S.developing.length; i++) if (S.developing[i].scriptId === id) return true;
+  return false;
+}
+function polishCost(s) { return 1.5 * eraMult(S.week) * Math.pow(1.6, s.polish || 0); }
+
+/* ============ star scandals ============ */
+function checkScandals() {
+  if (scandalQueue.length >= 3) return; // don't pile up
+  for (var i = 0; i < S.talent.length; i++) {
+    var t = S.talent[i];
+    if (!t.hired || t.retired || t.laylowUntil > S.week) continue;
+    if (t.fame < 50) continue;
+    var p = 0.004 * (t.fame / 100) * (1 + t.stress / 100) * (hasTrait(t, "volatile") ? 3 : 1);
+    if (Math.random() < p) {
+      t.scandal = (t.scandal || 0) + 1;
+      scandalQueue.push({ talentId: t.id, scandal: pick(SCANDALS) });
+      pauseForModal();
+      return; // one at a time
+    }
+  }
+}
+function scandalModal(q) {
+  var t = talentById(q.talentId);
+  if (!t || !t.hired) { resumeFromModal(); return; }
+  window._scandal = q;
+  showModal("<h2>📰 Scandal!</h2><p><b>" + t.name + "</b> " + q.scandal.text + "</p>" +
+    "<p class='sub'>The press is circling. How do you play it?</p>" +
+    "<button class='choice' onclick='scandalPick(0)'><b>🙏 Issue a public apology</b><small>" + fmtM(0.5) + " in PR costs. Fame -5, stress reset.</small></button>" +
+    "<button class='choice' onclick='scandalPick(1)'><b>😏 Lean into the publicity</b><small>Gamble — fame could soar or the film could suffer.</small></button>" +
+    "<button class='choice' onclick='scandalPick(2)'><b>🌙 Lay low</b><small>Star unavailable 6 weeks. Stress fully reset, fame -3.</small></button>");
+}
+function scandalPick(i) {
+  var q = window._scandal, t = talentById(q.talentId);
+  window._scandal = null;
+  if (t && t.hired) {
+    var filming = null;
+    for (var k = 0; k < S.films.length; k++)
+      if (S.films[k].stage === "production" && (S.films[k].castIds.indexOf(t.id) >= 0 || S.films[k].directorId === t.id)) filming = S.films[k];
+    if (i === 0) {
+      S.cash -= 0.5;
+      t.fame = Math.max(5, t.fame - 5); t.stress = 20;
+      log("🙏 " + t.name + " issues a tearful apology. The storm passes.");
+    } else if (i === 1) {
+      var goodOdds = (filming && filming.genre === "comedy") || dateOf(S.week).y >= 2000 ? 0.65 : 0.5;
+      if (Math.random() < goodOdds) {
+        t.fame = Math.min(100, t.fame + 15);
+        if (filming) filming.buzz += 10;
+        log("😏 " + t.name + " leans into it — the public eats it up! Fame +15" + (filming ? ", buzz +10 on <b>" + filming.title + "</b>" : "") + ".");
+        toast("😏 Scandal backfires… on the press!");
+      } else {
+        t.fame = Math.max(5, t.fame - 10); t.stress = clamp(t.stress + 20, 0, 100);
+        if (filming) filming.qmod -= 3;
+        log("💥 " + t.name + "'s gamble flops. Fame -10" + (filming ? ", <b>" + filming.title + "</b> takes a -3 quality hit" : "") + ".");
+      }
+    } else {
+      t.laylowUntil = S.week + 6;
+      t.stress = 0; t.fame = Math.max(5, t.fame - 3);
+      log("🌙 " + t.name + " disappears for 6 weeks. Comes back refreshed.");
+    }
+  }
+  closeModal(); renderAll();
 }
 
 /* ============ rivals ============ */
@@ -641,6 +827,8 @@ function makeSequel(filmId) {
     quality: 0, qmod: 0, costOver: 0, releaseWeek: -1, weeklyGross: [], totalGross: 0,
     critic: 0, breakdown: null, dilemmasDone: 0, buzz: 0,
     franchise: key, sequelOf: key, year: dateOf(S.week).y,
+    theme: f.theme || pick(SCRIPT_THEMES), audience: f.audience || pick(AUDIENCES),
+    depts: f.depts ? { cast: f.depts.cast, sets: f.depts.sets, stunts: f.depts.stunts, sound: f.depts.sound, camera: f.depts.camera } : undefined,
   };
   S.films.push(nf);
   log("🎬 Sequel greenlit: <b>" + nf.title + "</b>. The fans are waiting…");
@@ -669,11 +857,34 @@ function drainModals() {
   if ($("mback")) return;
   if (pendingGameOver) { pendingGameOver = null; return gameOverModal(); }
   if (pendingWin) { pendingWin = null; return winModal(); }
+  if (scandalQueue.length) { var sq = scandalQueue.shift(); return scandalModal(sq); }
   if (pendingDilemma) { var p = pendingDilemma; pendingDilemma = null; return dilemmaModal(p); }
+  if (premiereQueue.length) { var pf = premiereQueue.shift(); return premiereModal(pf); }
   if (pendingPoach) { var q = pendingPoach; pendingPoach = null; return poachModal(q); }
   if (pendingScout) { var s = pendingScout; pendingScout = null; return scoutModal(s); }
   if (pendingAwards) { var a = pendingAwards; pendingAwards = null; return awardsModal(a); }
   if (pendingEvent) { var e = pendingEvent; pendingEvent = null; return eventModal(e); }
+}
+function premiereModal(filmId) {
+  var f = null;
+  for (var i = 0; i < S.films.length; i++) if (S.films[i].id === filmId) f = S.films[i];
+  if (!f) { resumeFromModal(); return; }
+  pauseForModal();
+  var stars5 = f.critic >= 85 ? "★★★★★" : f.critic >= 70 ? "★★★★" : f.critic >= 55 ? "★★★" : f.critic >= 40 ? "★★" : "★";
+  var verdict = f.critic >= 75 ? "The crowd goes wild! 🎉" : f.critic >= 55 ? "A solid opening night. 🥂" : f.critic >= 40 ? "Polite applause… 😬" : "Critics are sharpening their knives. 🔪";
+  var html = "<div class='premiere'>" +
+    "<div class='prem-carpet'></div>" +
+    "<h2>🌟 Premiere Night</h2>" +
+    "<div class='prem-poster'>" + posterImg(f) + "</div>" +
+    "<div class='pt'>" + f.title + "</div>" +
+    "<div class='pg'>" + GENRES[f.genre].icon + " " + GENRES[f.genre].name + " · 🎭 " + (f.theme || "") + "</div>" +
+    "<div class='prem-stats'><div><span>Opening weekend</span><b>" + fmtM(f.opening) + "</b></div>" +
+    "<div><span>Critics</span><b>" + f.critic + "/100 " + stars5 + "</b></div></div>" +
+    "<p class='verdict'>" + verdict + "</p>" +
+    (f.breakdown ? "<div class='sub'>Script " + f.breakdown.Script + " · Direction " + f.breakdown.Direction + " · Cast " + f.breakdown.Cast + " · Craft " + f.breakdown.Craft + "</div>" : "") +
+    "<button class='btn amber mt' onclick='closeModal()'>🎬 Back to the studio</button></div>";
+  confettiBurst();
+  showModal(html);
 }
 
 var activeTab = "studio";
@@ -721,21 +932,71 @@ function eraOf(y) {
   if (y < 2010) return "Modern Era";
   return "Streaming Age";
 }
+function lotBacklotSet() {
+  // a set piece on the backlot reflecting your most recent released film's genre
+  var rel = S.films.filter(function (f) { return f.stage === "released"; });
+  var g = rel.length ? rel[rel.length - 1].genre : "western";
+  var s = "<g>";
+  if (g === "western") {
+    s += "<rect x='315' y='168' width='100' height='62' fill='#4a3319' stroke='#d4a94e'/>" +
+         "<rect x='305' y='156' width='120' height='16' fill='#5c4224' stroke='#d4a94e'/>" +
+         "<text x='365' y='169' text-anchor='middle' fill='#f2d488' font-size='10'>SALOON</text>" +
+         "<rect x='355' y='196' width='20' height='34' fill='#2c1f0e'/>";
+  } else if (g === "scifi" || g === "superhero") {
+    s += "<rect x='352' y='150' width='26' height='80' rx='12' fill='#8fa3b8' stroke='#d4a94e'/>" +
+         "<circle cx='365' cy='168' r='7' fill='#1c2c3a' stroke='#7ad4f7'/>" +
+         "<polygon points='352,190 338,230 352,230' fill='#c94d4d'/><polygon points='378,190 392,230 378,230' fill='#c94d4d'/>";
+  } else if (g === "horror") {
+    s += "<polygon points='315,230 315,180 365,150 415,180 415,230' fill='#1c1c26' stroke='#8f5c8f'/>" +
+         "<rect x='355' y='196' width='20' height='34' fill='#0c0c12'/>" +
+         "<circle cx='340' cy='196' r='6' fill='#e8d44d' opacity='.8'/><circle cx='390' cy='196' r='6' fill='#e8d44d' opacity='.8'/>";
+  } else if (g === "action") {
+    s += "<rect x='320' y='190' width='30' height='40' fill='#3a3a44'/><rect x='355' y='175' width='36' height='55' fill='#2c2c34'/>" +
+         "<rect x='396' y='195' width='24' height='35' fill='#3a3a44'/>" +
+         "<circle cx='340' cy='182' r='4' fill='#e8d44d' opacity='.85'/><circle cx='373' cy='167' r='4' fill='#e8d44d' opacity='.85'/>";
+  } else {
+    // camera crane for everything else
+    s += "<rect x='360' y='200' width='10' height='30' fill='#5c4a2c'/>" +
+         "<rect x='300' y='170' width='140' height='8' fill='#5c4a2c' transform='rotate(-12 370 174)'/>" +
+         "<rect x='292' y='186' width='22' height='16' fill='#2c2517' stroke='#d4a94e'/>";
+  }
+  return s + "<text x='365' y='248' text-anchor='middle' fill='#a89a7d' font-size='9'>BACKLOT</text></g>";
+}
 function lotSVG() {
   var lvl = lotLevel(), b = "";
-  b += "<rect x='40' y='150' width='120' height='80' rx='4' fill='#3a2f1c' stroke='#d4a94e'/>" +
-       "<text x='100' y='196' text-anchor='middle' fill='#f2d488' font-size='12'>STAGE A</text>";
-  if (lvl >= 1) b += "<rect x='180' y='160' width='90' height='70' rx='4' fill='#2c2517' stroke='#d4a94e'/>" +
-       "<text x='225' y='198' text-anchor='middle' fill='#f2d488' font-size='11'>OFFICES</text>";
-  if (lvl >= 2) b += "<rect x='300' y='140' width='130' height='90' rx='4' fill='#33281a' stroke='#d4a94e'/>" +
-       "<text x='365' y='188' text-anchor='middle' fill='#f2d488' font-size='11'>BACKLOT</text>";
-  if (lvl >= 3) b += "<rect x='450' y='155' width='110' height='75' rx='4' fill='#1e2c3a' stroke='#7ad4f7'/>" +
-       "<text x='505' y='195' text-anchor='middle' fill='#8fd4f7' font-size='11'>CGI LAB</text>";
+  // studio gate arch
+  b += "<g><rect x='8' y='176' width='10' height='54' fill='#5c4a2c'/><rect x='82' y='176' width='10' height='54' fill='#5c4a2c'/>" +
+       "<rect x='8' y='166' width='84' height='14' rx='3' fill='#3a2f1c' stroke='#d4a94e'/>" +
+       "<text x='50' y='177' text-anchor='middle' fill='#f2d488' font-size='9'>REEL EMPIRE</text></g>";
+  // Stage A with lit windows
+  b += "<g><rect x='110' y='150' width='120' height='80' rx='4' fill='#3a2f1c' stroke='#d4a94e'/>" +
+       "<text x='170' y='176' text-anchor='middle' fill='#f2d488' font-size='12'>STAGE A</text>";
+  for (var wxi = 0; wxi < 4; wxi++)
+    b += "<rect x='" + (122 + wxi * 28) + "' y='192' width='18' height='22' fill='#e8d44d' opacity='" + (0.5 + (wxi % 2) * 0.35) + "'/>";
+  b += "</g>";
+  if (lvl >= 1) b += "<g><rect x='245' y='160' width='90' height='70' rx='4' fill='#2c2517' stroke='#d4a94e'/>" +
+       "<text x='290' y='184' text-anchor='middle' fill='#f2d488' font-size='11'>OFFICES</text>" +
+       "<rect x='257' y='196' width='14' height='18' fill='#e8d44d' opacity='.7'/><rect x='279' y='196' width='14' height='18' fill='#e8d44d' opacity='.45'/>" +
+       "<rect x='301' y='196' width='14' height='18' fill='#e8d44d' opacity='.7'/></g>" +
+       "<g><rect x='110' y='196' width='0' height='0'/><ellipse cx='480' cy='216' rx='26' ry='10' fill='#1c2c1c'/>" +
+       "<rect x='474' y='186' width='12' height='30' fill='#4a5c3a'/><circle cx='480' cy='180' r='18' fill='#3d5c33'/>" +
+       "<text x='480' y='248' text-anchor='middle' fill='#a89a7d' font-size='9'>COMMISSARY</text></g>";
+  if (lvl >= 2) b += lotBacklotSet();
+  if (lvl >= 3) b += "<g><rect x='445' y='150' width='110' height='80' rx='4' fill='#1e2c3a' stroke='#7ad4f7'/>" +
+       "<text x='500' y='176' text-anchor='middle' fill='#8fd4f7' font-size='11'>CGI LAB</text>" +
+       "<rect x='457' y='192' width='16' height='20' fill='#7ad4f7' opacity='.6'/><rect x='481' y='192' width='16' height='20' fill='#7ad4f7' opacity='.35'/>" +
+       "<rect x='505' y='192' width='16' height='20' fill='#7ad4f7' opacity='.6'/>" +
+       "<circle class='marquee' cx='452' cy='157' r='4' fill='#f57b2d'/><circle class='marquee' cx='500' cy='157' r='4' fill='#f57b2d'/>" +
+       "<circle class='marquee' cx='548' cy='157' r='4' fill='#f57b2d'/></g>";
   return "<svg viewBox='0 0 600 260' class='lotsvg'>" +
     "<defs><linearGradient id='lsky' x1='0' y1='0' x2='0' y2='1'>" +
-    "<stop offset='0' stop-color='#1c1008'/><stop offset='1' stop-color='#8f5c1c'/></linearGradient></defs>" +
+    "<stop offset='0' stop-color='#141021'/><stop offset='.6' stop-color='#4d2c14'/><stop offset='1' stop-color='#8f5c1c'/></linearGradient>" +
+    "<radialGradient id='lmoon' cx='.5' cy='.5' r='.5'><stop offset='0' stop-color='#f7dc9a'/><stop offset='1' stop-color='#f7dc9a' stop-opacity='0'/></radialGradient></defs>" +
     "<rect width='600' height='228' fill='url(#lsky)'/>" +
-    "<circle cx='520' cy='52' r='30' fill='#f7dc9a' opacity='.85'/>" +
+    "<circle cx='520' cy='52' r='46' fill='url(#lmoon)' opacity='.5'/>" +
+    "<circle cx='520' cy='52' r='26' fill='#f7dc9a' opacity='.9'/>" +
+    "<g fill='rgba(255,255,255,.7)'><circle cx='80' cy='40' r='1.4'/><circle cx='150' cy='70' r='1.1'/><circle cx='230' cy='36' r='1.5'/>" +
+    "<circle cx='330' cy='60' r='1.2'/><circle cx='420' cy='34' r='1.4'/><circle cx='60' cy='110' r='1.1'/><circle cx='200' cy='100' r='1.2'/></g>" +
     "<rect y='228' width='600' height='32' fill='#100c07'/>" + b +
     "<g><rect x='262' y='62' width='8' height='66' fill='#5c4a2c'/><rect x='292' y='62' width='8' height='66' fill='#5c4a2c'/>" +
     "<ellipse cx='281' cy='56' rx='36' ry='27' fill='#d4a94e'/>" +
@@ -893,15 +1154,22 @@ function renderFilms() {
   html += "<h2 class='sec'>📝 Script market</h2><div class='sub'>Script office tier " + S.scriptTier + " (win awards to upgrade)</div>";
   S.scripts.forEach(function (s) {
     html += "<div class='card'><div class='row'><div><b>" + s.title + "</b><div class='sub' style='margin:2px 0 0'>" +
-      GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · <span class='stars'>" + stars(s.quality) + "</span></div></div>" +
+      GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · <span class='stars'>" + stars(s.quality) + "</span>" +
+      "<br>🎭 " + s.theme + " · 👪 " + s.audience + "</div></div>" +
       "<button class='btn amber small' onclick='buyScript(\"" + s.id + "\")'>" + fmtM(s.price) + "</button></div></div>";
   });
   if (S.scriptsOwned && S.scriptsOwned.length) {
-    html += "<h2 class='sec'>📚 Owned scripts</h2>";
+    html += "<h2 class='sec'>📚 Owned scripts</h2><div class='sub'>🛠 Develop a script to polish it (+1★) or rewrite its theme.</div>";
     S.scriptsOwned.forEach(function (s) {
+      var dev = isDeveloping(s.id);
       html += "<div class='card'><div class='row'><div><b>" + s.title + "</b><div class='sub' style='margin:2px 0 0'>" +
-        GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · <span class='stars'>" + stars(s.quality) + "</span></div></div>" +
-        "<button class='btn amber small' onclick='greenlightModal(\"" + s.id + "\")'>Greenlight</button></div></div>";
+        GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · <span class='stars'>" + stars(s.quality) + "</span>" +
+        "<br>🎭 " + s.theme + " · 👪 " + s.audience +
+        (dev ? " · <span class='pill'>🛠 in development</span>" : "") + "</div></div>" +
+        "<div style='display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end'>" +
+        (dev ? "" : "<button class='btn ghost small' onclick='developModal(\"" + s.id + "\")'>🛠 Develop</button>") +
+        (dev ? "" : "<button class='btn amber small' onclick='greenlightModal(\"" + s.id + "\")'>Greenlight</button>") +
+        "</div></div></div>";
     });
   }
   if (rel.length) {
@@ -933,6 +1201,56 @@ function buyScript(id) {
   save(); renderAll();
 }
 
+/* ============ script development ============ */
+function developModal(scriptId) {
+  var s = findOwnedScript(scriptId);
+  if (!s || isDeveloping(scriptId)) return;
+  window._devScript = scriptId;
+  var cost = polishCost(s);
+  var canPolish = s.quality < 5 && (s.polish || 0) < 2;
+  var html = "<h2>🛠 Develop: " + s.title + "</h2>" +
+    "<p class='sub'>" + GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · " + s.theme + " · " + s.audience + " · script " + stars(s.quality) + "</p>";
+  // discovered synergies hint
+  var known = S.discovered[s.theme] || [];
+  if (known.length) html += "<p class='sub'>💡 You know <b>" + s.theme + "</b> sings in: " + known.map(function (g) { return GENRES[g].name; }).join(", ") + ".</p>";
+  else html += "<p class='sub'>💡 Theme synergies are discovered when films release — experiment!</p>";
+  if (canPolish) {
+    html += "<button class='choice' onclick='polishScript()'><b>✍️ Polish the script</b><small>" + fmtM(cost) + ", 3 weeks. +" + "1★ (up to 5★).</small></button>";
+  } else {
+    html += "<p class='sub'>This script is polished as far as it will go.</p>";
+  }
+  if (!s.rewriteUsed) {
+    html += "<div class='fld'><label>Or rewrite the theme (" + fmtM(0.8) + ", instant — one per script)</label><select id='devTheme'>" +
+      SCRIPT_THEMES.map(function (th) { return "<option value='" + th + "'" + (th === s.theme ? " selected" : "") + ">" + th + "</option>"; }).join("") +
+      "</select></div><button class='btn amber small' onclick='rewriteTheme()'>📝 Rewrite theme</button>";
+  }
+  html += "<div class='mt'><button class='btn ghost' onclick='closeModal()'>Not now</button></div>";
+  pauseForModal();
+  showModal(html);
+}
+function polishScript() {
+  var s = findOwnedScript(window._devScript);
+  window._devScript = null;
+  if (!s) { closeModal(); return; }
+  var cost = polishCost(s);
+  if (S.cash < cost) { toast("Not enough cash."); closeModal(); return; }
+  S.cash -= cost;
+  S.developing.push({ scriptId: s.id, weeksLeft: 3, kind: "polish" });
+  log("🛠 <b>" + s.title + "</b> goes into development (3 weeks).");
+  closeModal(); save(); renderAll();
+}
+function rewriteTheme() {
+  var s = findOwnedScript(window._devScript);
+  var th = $("devTheme") ? $("devTheme").value : null;
+  window._devScript = null;
+  if (!s || !th || s.rewriteUsed) { closeModal(); return; }
+  if (S.cash < 0.8) { toast("Not enough cash."); closeModal(); return; }
+  S.cash -= 0.8;
+  s.theme = th; s.rewriteUsed = true;
+  log("📝 <b>" + s.title + "</b> rewritten as a <b>" + th + "</b> story.");
+  closeModal(); save(); renderAll();
+}
+
 /* ============ Talent tab ============ */
 function renderTalent() {
   var el = $("view-talent");
@@ -944,6 +1262,8 @@ function renderTalent() {
     var filming = isFilming(t.id);
     return "<div class='card'><div class='talent-card'><div class='avatar'>" + t.name[0] + "</div><div style='flex:1'>" +
       "<b>" + t.name + "</b> <span class='pill'>" + t.age + "</span>" + (filming ? " <span class='pill'>🎬 filming</span>" : "") +
+      (t.laylowUntil > S.week ? " <span class='pill'>🌙 laying low</span>" : "") +
+      "<div style='margin:4px 0'>" + traitChips(t) + "</div>" +
       "<div class='sub' style='margin:2px 0'>Talent " + t.talent + " · Fame " + t.fame + " · " + t.films + " films</div>" +
       "<div class='sub' style='margin:2px 0'>Salary " + fmtM(t.salary) + "/yr · Stress <b class='" + sc + "'>" + Math.round(t.stress) + "</b></div>" +
       "<div class='bar'><i class='" + (t.stress > 75 ? "bad" : "") + "' style='width:" + t.stress + "%'></i></div>" +
@@ -1066,21 +1386,37 @@ function greenlightModal(scriptId) {
   var s = null;
   S.scriptsOwned = S.scriptsOwned || [];
   for (var i = 0; i < S.scriptsOwned.length; i++) if (S.scriptsOwned[i].id === scriptId) s = S.scriptsOwned[i];
-  if (!s) return;
-  var dirs = S.talent.filter(function (t) { return t.hired && t.type === "director" && !t.retired && !isFilming(t.id); });
-  var actors = S.talent.filter(function (t) { return t.hired && t.type === "actor" && !t.retired && !isFilming(t.id); });
+  if (!s || isDeveloping(scriptId)) return;
+  var avail = function (t) { return t.hired && !t.retired && !isFilming(t.id) && !(t.laylowUntil > S.week); };
+  var dirs = S.talent.filter(function (t) { return t.type === "director" && avail(t); });
+  var actors = S.talent.filter(function (t) { return t.type === "actor" && avail(t); });
   if (!dirs.length) { toast("No available director — hire or wait."); return; }
-  GL = { scriptId: scriptId, directorId: dirs[0].id, castIds: [], budget: Math.round(idealBudget(s.quality)) };
+  GL = { scriptId: scriptId, directorId: dirs[0].id, castIds: [], budget: Math.round(idealBudget(s.quality)),
+         depts: { cast: 20, sets: 20, stunts: 20, sound: 20, camera: 20 }, genre: s.genre };
   var ideal = idealBudget(s.quality);
+  var idealD = DEPT_IDEAL[s.genre] || {};
+  var want = Object.keys(idealD).sort(function (a, b) { return idealD[b] - idealD[a]; }).slice(0, 3)
+    .map(function (k) { return DEPTS.filter(function (d) { return d.id === k; })[0].name; }).join(", ");
+  var fit = AUD_FIT[s.audience] || { good: [], bad: [] };
   var html = "<h2>🎬 Greenlight: " + s.title + "</h2>" +
-    "<div class='row'><div style='flex:1'><p class='sub'>" + GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · script " + stars(s.quality) + "</p></div>" +
-    posterImg({ title: s.title, genre: s.genre, scriptStars: s.quality }, "pthumb small") + "</div>" +
+    "<div class='row'><div style='flex:1'><p class='sub'>" + GENRES[s.genre].icon + " " + GENRES[s.genre].name + " · script " + stars(s.quality) +
+    "<br>🎭 " + s.theme + " · 👪 " + s.audience + "</p></div>" +
+    posterImg({ title: s.title, genre: s.genre, scriptStars: s.quality, year: dateOf(S.week).y }, "pthumb small") + "</div>" +
+    "<p class='sub'>🎯 This " + GENRES[s.genre].name.toLowerCase() + " wants: <b>" + want + "</b>" +
+    (fit.good.length ? "<br>👪 " + s.audience + " audiences love: " + fit.good.map(function (g) { return GENRES[g].name; }).join(", ") +
+     " · avoid: " + fit.bad.map(function (g) { return GENRES[g].name; }).join(", ") : "") + "</p>" +
     "<div class='fld'><label>Director</label><select id='glDir'>" +
     dirs.map(function (d) { return "<option value='" + d.id + "'>" + d.name + " (talent " + d.talent + ")</option>"; }).join("") +
     "</select></div>" +
     "<div class='fld'><label>Cast (up to 3)</label><div class='opt-row' id='glCast'>" +
     actors.map(function (a) {
-      return "<span class='opt' data-id='" + a.id + "' onclick='glToggleCast(\"" + a.id + "\")'>" + a.name + " ★" + a.fame + "</span>";
+      return "<span class='opt' data-id='" + a.id + "' title='" + (a.traits || []).map(function (tr) { return TRAITS[tr].name + ": " + TRAITS[tr].desc; }).join(" | ") + "' onclick='glToggleCast(\"" + a.id + "\")'>" + a.name + " ★" + a.fame + "</span>";
+    }).join("") + "</div></div>" +
+    "<div class='fld'><label>🏭 Department budgets <span class='sub'>(must total 100%)</span> <b id='deptFit' style='float:right'></b></label><div id='deptRows'>" +
+    DEPTS.map(function (d) {
+      return "<div class='deptrow'><span class='dname'>" + d.name + "</span>" +
+        "<input type='range' id='dept_" + d.id + "' min='0' max='100' step='5' value='20' oninput='deptSet(\"" + d.id + "\", this.value)'>" +
+        "<b class='dval' id='deptv_" + d.id + "'>20%</b></div>";
     }).join("") + "</div></div>" +
     "<div class='fld'><label>Budget: <b id='glBudgetLabel'>" + fmtM(GL.budget) + "</b> <span class='sub'>(sweet spot ~" + fmtM(ideal) + ")</span></label>" +
     "<input type='range' id='glBudget' min='0.5' max='" + Math.max(10, Math.round(ideal * 3)) + "' step='0.5' value='" + GL.budget + "' oninput='GL.budget=parseFloat(this.value);$(\"glBudgetLabel\").textContent=fmtM(GL.budget)'>" +
@@ -1090,6 +1426,35 @@ function greenlightModal(scriptId) {
     "<button class='btn ghost' onclick='closeModal()'>Cancel</button></div>";
   pauseForModal();
   showModal(html);
+  deptRefresh();
+}
+function deptSet(id, val) {
+  if (!GL) return;
+  val = clamp(Math.round(val / 5) * 5, 0, 100);
+  var d = GL.depts;
+  d[id] = val;
+  var keys = Object.keys(d).filter(function (k) { return k !== id; });
+  var rest = keys.reduce(function (a, k) { return a + d[k]; }, 0);
+  var target = 100 - val;
+  if (rest === 0) keys.forEach(function (k) { d[k] = Math.round(target / keys.length); });
+  else keys.forEach(function (k) { d[k] = Math.max(0, Math.round(d[k] / rest * target)); });
+  var tot = keys.reduce(function (a, k) { return a + d[k]; }, val);
+  d[keys[0]] += 100 - tot; // absorb rounding
+  deptRefresh();
+}
+function deptRefresh() {
+  if (!GL) return;
+  DEPTS.forEach(function (dep) {
+    var sl = document.getElementById("dept_" + dep.id), lb = document.getElementById("deptv_" + dep.id);
+    if (sl) sl.value = GL.depts[dep.id];
+    if (lb) lb.textContent = GL.depts[dep.id] + "%";
+  });
+  var el = document.getElementById("deptFit");
+  if (el) {
+    var fit = deptFit({ genre: GL.genre, depts: GL.depts });
+    el.textContent = (fit >= 0 ? "+" : "") + fit + " quality";
+    el.className = fit >= 0 ? "pos" : "neg";
+  }
 }
 function glToggleCast(id) {
   var i = GL.castIds.indexOf(id);
@@ -1099,7 +1464,7 @@ function glToggleCast(id) {
 }
 function glConfirm() {
   GL.directorId = $("glDir").value;
-  var f = greenlight(GL.scriptId, GL.directorId, GL.castIds, GL.budget);
+  var f = greenlight(GL.scriptId, GL.directorId, GL.castIds, GL.budget, GL.depts);
   GL = null;
   closeModal();
   if (f) { toast("🎬 Production started!"); renderAll(); }
@@ -1163,7 +1528,16 @@ function dilemmaPick(i) {
   var f = null;
   for (var k = 0; k < S.films.length; k++) if (S.films[k].id === p.filmId) f = S.films[k];
   if (f) {
-    f.qmod += c.q || 0;
+    // Reliable crew halves the sting of bad options
+    var qd = c.q || 0;
+    if (qd < 0) {
+      var crew = f.castIds.concat([f.directorId]);
+      for (var r = 0; r < crew.length; r++) {
+        var rt = talentById(crew[r]);
+        if (rt && hasTrait(rt, "reliable")) { qd = Math.ceil(qd / 2); break; }
+      }
+    }
+    f.qmod += qd;
     if (c.cost) { f.budget += c.cost; S.cash -= c.cost; }
     if (c.weeks) { f.weeksTotal += c.weeks; f.weeksLeft += c.weeks; }
     if (c.buzz) f.buzz += c.buzz;
@@ -1204,7 +1578,7 @@ function scoutModal(o) {
     var cur = S.talent.filter(function (t) { return t.hired && t.type === c.type && !t.retired; }).length;
     html += "<div class='card'><div class='row'><div><b>" + c.name + "</b> <span class='pill'>" + c.type + "</span>" +
       "<div class='sub' style='margin:2px 0 0'>Age " + c.age + " · Talent " + c.talent + " · Fame " + c.fame +
-      " · " + fmtM(c.salary) + "/yr</div></div>" +
+      " · " + fmtM(c.salary) + "/yr</div><div style='margin:4px 0'>" + traitChips(c) + "</div></div>" +
       (cur >= cap ? "<span class='pill'>Roster full</span>"
         : "<button class='btn amber small' onclick='scoutHire(" + i + ")'>Sign " + fmtM(bonus) + "</button>") +
       "</div></div>";
@@ -1294,6 +1668,10 @@ function init() {
 
 /* Expose UI handlers to inline onclick attributes (this file is an IIFE,
    so without this every button in the game is dead). */
+window.$ = $;
+window.fmtM = fmtM;
+window.overWarn = overWarn;
+Object.defineProperty(window, "GL", { get: function () { return GL; }, set: function (v) { GL = v; } });
 window.closeModal = closeModal;
 window.newGame = newGame;
 window.switchTab = switchTab;
@@ -1302,6 +1680,7 @@ window.buyScript = buyScript;
 window.greenlightModal = greenlightModal;
 window.glToggleCast = glToggleCast;
 window.glConfirm = glConfirm;
+window.deptSet = deptSet;
 window.releaseModal = releaseModal;
 window.relConfirm = relConfirm;
 window.dilemmaPick = dilemmaPick;
@@ -1313,6 +1692,12 @@ window.researchTech = researchTech;
 window.buyPrestige = buyPrestige;
 window.upgradeScriptOffice = upgradeScriptOffice;
 window.makeSequel = makeSequel;
+window.developModal = developModal;
+window.polishScript = polishScript;
+window.rewriteTheme = rewriteTheme;
+window.scandalPick = scandalPick;
+window.renderAll = renderAll;
+window.startLoop = startLoop;
 
 document.addEventListener("DOMContentLoaded", init);
 })();
