@@ -67,6 +67,13 @@ h1{
 .body p{margin:0;color:rgba(255,255,255,.62);font-size:14px;line-height:1.45}
 .play{display:inline-block;margin-top:14px;padding:11px 26px;border-radius:999px;font-weight:800;font-size:16px;
   background:linear-gradient(100deg,#ff5fa2,#c13b8f);box-shadow:0 6px 20px rgba(255,95,162,.4)}
+.art.neon{background:
+  radial-gradient(circle at 50% 50%, rgba(136,68,255,.4), transparent 60%),
+  linear-gradient(150deg,#0a0a20,#050510);}
+.gridfx{position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(80,140,255,.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(80,140,255,.25) 1px, transparent 1px);
+  background-size:28px 28px;}
 .card.soon{opacity:.55;pointer-events:none}
 .card.soon .art{background:linear-gradient(150deg,#1d1430,#0e0a18)}
 footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
@@ -101,6 +108,17 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
       <span class="play">Play →</span>
     </div>
   </a>
+  <a class="card" href="./neon-void/">
+    <div class="art neon">
+      <div class="gridfx"></div>
+      <div class="emoji">🚀</div>
+    </div>
+    <div class="body">
+      <h2>🚀 Neon Void</h2>
+      <p>Twin-stick neon arena shooter. Blast geometric swarms, grab geoms, dodge gravity wells. Don't blink.</p>
+      <span class="play">Play →</span>
+    </div>
+  </a>
   <a class="card" href="./bubble-hex/">
     <div class="art reel">
       <div class="emoji">🔮</div>
@@ -108,7 +126,7 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
     </div>
     <div class="body">
       <h2>🔮 Bubble Hex</h2>
-      <p>Aim, fire &amp; pop hex bubbles across 15 levels. Charge the spell orb for the Hex Blast!</p>
+      <p>Aim, fire &amp; pop hex bubbles across 30 levels. Charge the spell orb for the Hex Blast!</p>
       <span class="play">Play →</span>
     </div>
   </a>
