@@ -128,6 +128,10 @@
     updateHUD();
     showScreen('game');
     HexAudio.music(true);
+    if (state.wilbur) {
+      // Wilbur gloats on arrival; the taunt arrives async and never blocks play
+      setTimeout(function () { if (state && state.wilbur && !state.over) wilburTaunt(idx, 100); }, 1200);
+    }
   }
 
   function countFamiliars(board) {
@@ -495,6 +499,10 @@
     wb.hp -= n;
     wb.hitT = 0.35;
     HexAudio.caw();
+    // taunt at damage milestones (once each)
+    var frac = wb.maxHp ? wb.hp / wb.maxHp : 0;
+    if (frac <= 0.66 && !wb.taunt66) { wb.taunt66 = 1; wilburTaunt(state.idx, 66); }
+    else if (frac <= 0.33 && !wb.taunt33) { wb.taunt33 = 1; wilburTaunt(state.idx, 33); }
     var fx = wb.x, fy = 54;
     for (var i = 0; i < 5; i++) {
       floaters.push({
@@ -1226,6 +1234,34 @@
 
   /* ================= Gamez Arcade (Cloudflare) ================= */
   var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+  var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
+  function aiFetch(kind, ctx2, cb) {
+    var done = false, timer = null;
+    function fin(t) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(t); } }
+    timer = setTimeout(function () { fin(null); }, 7000);
+    try {
+      fetch(AI_BASE + '/g', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind, game: 'bubble-hex', ctx: ctx2 })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) { fin(d && d.text ? d.text : null); })
+        .catch(function () { fin(null); });
+    } catch (e) { fin(null); }
+  }
+  var WILBUR_TAUNTS = [
+    'You pop bubbles. I end bloodlines, little witch.',
+    'Is that your best shot? My hairballs hit harder.',
+    'I have lived nine lives. You will barely survive this level.',
+    'Stella, Stella. All that wand-waving, and still so… mortal.',
+    'Every bubble you pop only makes my entrance more dramatic.',
+    'I once sneezed on a wizard. He is a frog now.'
+  ];
+  function wilburTaunt(levelIdx, hpBucket) {
+    var slot = (levelIdx * 3 + hpBucket) % WILBUR_TAUNTS.length;
+    function show(t) { banner('🐈‍⬛ <i>' + (t || WILBUR_TAUNTS[slot]) + '</i>'); }
+    aiFetch('taunt', { level: levelIdx, hp: hpBucket }, show);
+    setTimeout(function () { if (!$('banner').classList.contains('hidden')) return; show(null); }, 2500);
+  }
   function arcadeFetch(path, body, cb) {
     var done = false, timer = null;
     function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
