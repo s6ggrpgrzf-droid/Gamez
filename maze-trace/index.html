@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Maze Trace</title>
+<title>Arrow Slide</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,12 +29,13 @@
 
 <div id="menu" class="overlay">
   <div class="card">
-    <h1>🌀 Maze Trace</h1>
-    <p class="tag">Follow the arrows.<br>Don't leave the path.</p>
+    <h1>🏹 Arrow Slide</h1>
+    <p class="tag">Tap arrows to slide them off the grid.<br>Only arrows with a clear path can fly.</p>
     <button id="play-btn" class="big-btn">▶ Play</button>
-    <p class="help">Drag from the blue ▶ dot and trace through the maze to the 🚩.<br>
-    Stray off the path and you lose a 💧 — lose all three and it's over.<br>
-    Pinch to zoom, drag empty space to pan.</p>
+    <p class="help">Tap an arrow — if nothing blocks its way to the edge, it slides off.<br>
+    A blocked arrow costs you a 💧 — lose all three and it's over.<br>
+    Plan the order. Clear the board.<br>
+    Pinch to zoom, drag to pan.</p>
   </div>
 </div>
 
@@ -43,6 +44,7 @@
     <div class="stars" id="win-stars">⭐⭐⭐</div>
     <h2>Well Done!</h2>
     <div class="stats">
+    <div><span>Cleared</span><b id="clear-label">0/0</b></div>
       <div><span>Time</span><b id="win-time">0:00</b></div>
       <div><span>Slips</span><b id="win-moves">0</b></div>
     </div>
