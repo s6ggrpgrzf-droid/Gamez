@@ -39,6 +39,17 @@
     return S.gender === 'M' ? '👴' : '👵';
   }
 
+  function stage(age) {
+    if (age < 3) return 'Baby';
+    if (age < 13) return 'Kid';
+    if (age < 18) return 'Teen';
+    if (age < 30) return 'Young adult';
+    if (age < 60) return 'Adult';
+    if (age < 80) return 'Senior';
+    return 'Elder';
+  }
+
+  var prevStats = {};
   function render() {
     if (!S) return;
     $('avatar').textContent = avatar();
@@ -48,12 +59,19 @@
     if (S.studying) extra += ' · 🎓 studying';
     if (S.fame >= 20) extra += ' · ⭐' + S.fame;
     if (S.followers >= 1000) extra += ' · 📱' + LifeSim.fmtN(S.followers);
-    $('page').textContent = 'Age ' + S.age + ' · ' + S.city + extra;
+    $('page').textContent = stage(S.age) + ' · Age ' + S.age + ' · ' + S.city + extra;
     $('pmoney').textContent = LifeSim.fmt(LifeSim.netWorth(S));
-    $('b-happy').style.width = S.happy + '%';
-    $('b-health').style.width = S.health + '%';
-    $('b-smarts').style.width = S.smarts + '%';
-    $('b-looks').style.width = S.looks + '%';
+    [['happy', 'b-happy'], ['health', 'b-health'], ['smarts', 'b-smarts'], ['looks', 'b-looks']].forEach(function (pair) {
+      var bar = $(pair[1]), num = $(pair[1] + '-n'), v = S[pair[0]];
+      bar.style.width = v + '%';
+      if (num) num.textContent = v;
+      if (prevStats[pair[0]] !== undefined && prevStats[pair[0]] !== v) {
+        bar.classList.remove('up', 'down');
+        void bar.offsetWidth;
+        bar.classList.add(v > prevStats[pair[0]] ? 'up' : 'down');
+      }
+      prevStats[pair[0]] = v;
+    });
     var j = $('journal');
     j.innerHTML = S.log.map(function (e) {
       return '<div class="entry"><span class="ag">Age ' + e.age + '</span>' + e.text + '</div>';
@@ -82,6 +100,9 @@
 
   function openSheet(tab) {
     currentTab = tab;
+    document.querySelectorAll('#tabs button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.tab === tab);
+    });
     $('sheet-title').textContent = TITLES[tab];
     var body = $('sheet-body');
     body.innerHTML = '';
@@ -210,6 +231,35 @@
     $('journal').scrollTop = 0;
   }
 
+  function confetti() {
+    var c = $('confetti');
+    if (!c.getContext) return;
+    var ctx = c.getContext('2d');
+    c.width = window.innerWidth; c.height = window.innerHeight;
+    c.classList.remove('hidden');
+    var colors = ['#ffd166', '#7c5cff', '#4dd0a6', '#ff6b9d', '#2ea8ff'];
+    var parts = [];
+    for (var i = 0; i < 140; i++) parts.push({
+      x: Math.random() * c.width, y: -20 - Math.random() * c.height * 0.4,
+      w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+      vy: 2 + Math.random() * 3.5, vx: -1.5 + Math.random() * 3,
+      r: Math.random() * Math.PI, vr: -0.12 + Math.random() * 0.24,
+      col: colors[i % colors.length]
+    });
+    var t = 0;
+    (function tick() {
+      ctx.clearRect(0, 0, c.width, c.height);
+      parts.forEach(function (p) {
+        p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      if (++t < 200) requestAnimationFrame(tick);
+      else c.classList.add('hidden');
+    })();
+  }
+
   function showDeath() {
     recordDeath();
     $('d-emoji').textContent = S.ribbon.e;
@@ -229,6 +279,7 @@
     var canKid = S.kids.length > 0 && LifeSim.netWorth(S) > 0;
     $('child-btn').classList.toggle('hidden', !canKid);
     $('death').classList.remove('hidden');
+    if (S.won) setTimeout(confetti, 350);
   }
 
   function buildScenarios() {
@@ -260,8 +311,12 @@
   document.querySelectorAll('#tabs button').forEach(function (b) {
     b.onclick = function () { if (S && S.alive) openSheet(b.dataset.tab); };
   });
-  $('sheet-x').onclick = function () { $('sheet').classList.add('hidden'); };
-  $('sheet').addEventListener('click', function (e) { if (e.target === $('sheet')) $('sheet').classList.add('hidden'); });
+  function closeSheet() {
+    $('sheet').classList.add('hidden');
+    document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.remove('on'); });
+  }
+  $('sheet-x').onclick = closeSheet;
+  $('sheet').addEventListener('click', function (e) { if (e.target === $('sheet')) closeSheet(); });
   $('again-btn').onclick = function () { $('death').classList.add('hidden'); $('start').classList.remove('hidden'); showLegacy(); };
   $('child-btn').onclick = function () {
     var kid = S.kids[0];
