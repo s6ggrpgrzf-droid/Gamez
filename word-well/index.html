@@ -6,7 +6,10 @@
 <meta name="theme-color" content="#f3e8cf">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Word Well — Daily Word Ladder</title>
-<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=IM+Fell+English:ital@0;1&display=swap">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div class="app">
@@ -17,9 +20,9 @@
       <div class="logo" id="menu-logo" title="tap the well">🪢</div>
       <h1 class="game-title">Word Well</h1>
       <p class="tagline">Climb down the well, one letter at a time.</p>
-      <p class="streak-line" id="menu-streak"></p>
+      <p class="streak-line bookplate" id="menu-streak"></p>
       <div class="menu-btns">
-        <button class="btn primary" id="btn-daily" type="button">Today&rsquo;s Well<br><span class="btn-sub" id="daily-date"></span></button>
+        <button class="btn primary seal" id="btn-daily" type="button">Today&rsquo;s Well<br><span class="btn-sub" id="daily-date"></span></button>
         <button class="btn" id="btn-practice" type="button">Practice</button>
         <button class="btn ghost" id="btn-how" type="button">How to play</button>
       </div>
@@ -64,7 +67,10 @@
         <div class="rope-count" id="rope-count">&times;0</div>
         <div class="rope-track"><div class="rope-fill" id="rope-fill"></div></div>
       </div>
-      <div class="shaft" id="shaft" aria-live="polite"></div>
+      <div class="shaft-wrap">
+        <div class="shaft" id="shaft" aria-live="polite"></div>
+        <div class="motes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
     </div>
     <div class="msg" id="msg"></div>
     <div class="toolbar">
@@ -87,7 +93,7 @@
       <p class="fortune" id="win-fortune"></p>
       <div class="stars" id="win-stars"></div>
       <div class="win-stats" id="win-stats"></div>
-      <p class="streak-line" id="win-streak"></p>
+      <p class="streak-line bookplate" id="win-streak"></p>
       <button class="btn primary" id="btn-share" type="button">📋 Share</button>
       <div class="arc-box" id="arc-lb" hidden></div>
       <div class="row-btns">
