@@ -76,12 +76,46 @@ function clampN(v, a, b) {
   v = Math.round(+v || 0);
   return v < a ? a : v > b ? b : v;
 }
+function extractBlocks(text) {
+  // top-level {...} substrings with balanced braces (string-aware)
+  var blocks = [], i = 0, n = text.length;
+  while (i < n) {
+    if (text[i] !== '{') { i++; continue; }
+    var depth = 0, inStr = false, esc = false, start = i, j;
+    for (j = i; j < n; j++) {
+      var c = text[j];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === '\\') esc = true;
+        else if (c === '"') inStr = false;
+      } else {
+        if (c === '"') inStr = true;
+        else if (c === '{') depth++;
+        else if (c === '}') {
+          depth--;
+          if (depth === 0) { blocks.push(text.slice(start, j + 1)); i = j + 1; break; }
+        }
+      }
+    }
+    if (j >= n) break; // unbalanced tail; stop
+  }
+  return blocks;
+}
 function extractJson(text) {
-  // strip markdown fences, then find the first {...} block
-  var t = String(text || "").replace(/```json|```/g, "").trim();
-  var i = t.indexOf("{"), j = t.lastIndexOf("}");
-  if (i < 0 || j <= i) return null;
-  try { return JSON.parse(t.slice(i, j + 1)); } catch (e) { return null; }
+  // strip markdown fences, parse every top-level {...} block, shallow-merge.
+  // Tolerates models that emit {"text":"..."} and {"choices":[...]} as two objects.
+  var t = String(text || "").replace(/```json|```/g, "");
+  var blocks = extractBlocks(t), merged = null, k, o, key;
+  for (k = 0; k < blocks.length; k++) {
+    try {
+      o = JSON.parse(blocks[k]);
+      if (o && typeof o === 'object' && !Array.isArray(o)) {
+        if (!merged) merged = {};
+        for (key in o) merged[key] = o[key];
+      }
+    } catch (e) {}
+  }
+  return merged;
 }
 async function checkRate(env, ip, key, max) {
   var k = "rl/" + key + "/" + ip + "/" + Math.floor(Date.now() / 60000);
@@ -193,7 +227,7 @@ export default {
         aiTxt = await runAi(env, [
           { role: "system", content: EVENT_SYSTEM },
           { role: "user", content: prompt }
-        ], 400, 0.7);
+        ], 600, 0.7);
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
       var ev = sanitizeEvent(extractJson(aiTxt || ""));
       if (!ev) return json({ error: "bad generation", raw: String(aiTxt || "").slice(0, 400) }, 502);
@@ -214,6 +248,11 @@ export default {
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
       var d2 = extractJson(aiTxt2 || "");
       var text = d2 && typeof d2.text === "string" ? clean(d2.text, 300) : "";
+      if (text.length < 10) {
+        // prose fallback: model ignored the JSON instruction; use raw text as-is
+        var prose = clean(aiTxt2, 300);
+        if (prose.length >= 10 && prose.charAt(0) !== '{') text = prose;
+      }
       if (text.length < 10) return json({ error: "bad generation", raw: String(aiTxt2 || "").slice(0, 400) }, 502);
       return json({ text: text, ai: true });
     }
