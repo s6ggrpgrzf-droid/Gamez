@@ -31,6 +31,9 @@ function dateStr(week) { var d = dateOf(week); return d.m + " " + d.y; }
 var LS_KEY = "reel-empire-v1";
 var S = null; // game state
 
+/* AI posters via Cloudflare Worker. Empty = disabled; the game is fully playable offline. */
+var AI_POSTER_BASE = "https://reel-empire-posters.chaoticutopia84.workers.dev";
+
 function eraMult(week) { var y = dateOf(week).y; return 1 + (y - 1955) * 0.022; }
 function unlockedGenres(week) {
   var y = dateOf(week).y, out = [];
@@ -449,6 +452,7 @@ function tickWeek() {
       if (f.weekNum >= maxW) {
         f.stage = "released";
         S.stats.released++;
+        requestAIPoster(f); // paint real AI key art in the background
         var profit = f.totalGross * 0.5 - f.budget - f.marketing - scriptCostOf(f);
         if (f.critic >= 70 && f.totalGross * 0.5 > (f.budget + f.marketing) * 1.5) S.stats.hits++;
         if (profit < 0) S.stats.flops++;
@@ -905,6 +909,7 @@ function renderAll() {
   $("tbPrestige").textContent = "★ " + S.prestige;
   setSpeedUI();
   ({ studio: renderStudio, films: renderFilms, talent: renderTalent, market: renderMarket, awards: renderAwards })[activeTab]();
+  upgradeAIPosters();
 }
 function setSpeedUI() {
   $("spdPause").classList.toggle("on", S.speed === 0);
@@ -913,8 +918,111 @@ function setSpeedUI() {
 }
 
 function posterImg(f, cls) {
-  try { return "<img class='" + (cls || "pthumb") + "' src='" + getPoster(f) + "' alt=''>"; }
-  catch (e) { return ""; }
+  try {
+    var ai = aiPosterUrlFor(f);
+    if (!ai && (f.stage === "released" || f.stage === "theatrical")) requestAIPoster(f);
+    return "<img class='" + (cls || "pthumb") + (ai ? " aiposter" : "") + "' src='" + (ai || getPoster(f)) + "'" +
+      (ai || !f.id ? "" : " data-fid='" + f.id + "'") + " alt=''>";
+  } catch (e) { return ""; }
+}
+
+/* ============ AI posters (Cloudflare Worker) ============
+   Films get a canvas poster instantly; the worker paints real AI key art in
+   the background, cached forever in R2. Posters upgrade in place with a fade. */
+var AI_POSTER_LS = "reel-ai-posters-v1";
+function aiPosterCache() {
+  try { return JSON.parse(localStorage.getItem(AI_POSTER_LS) || "{}"); } catch (e) { return {}; }
+}
+function aiPosterCacheSet(key, url) {
+  try {
+    var c = aiPosterCache();
+    c[key] = url;
+    var ks = Object.keys(c);
+    while (ks.length > 300) { delete c[ks.shift()]; }
+    localStorage.setItem(AI_POSTER_LS, JSON.stringify(c));
+  } catch (e) {}
+}
+function aiPosterUrlFor(f) {
+  if (!f) return null;
+  if (f.aiPosterUrl) return f.aiPosterUrl;
+  if (f.aiPosterKey) {
+    var u = aiPosterCache()[f.aiPosterKey];
+    if (u) { f.aiPosterUrl = u; return u; }
+  }
+  return null;
+}
+function aiFetch(url, body, cb) {
+  var done = false, timer = null;
+  function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
+  timer = setTimeout(function () { fin(new Error("timeout")); }, 20000);
+  try {
+    fetch(url, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
+      .then(function (r) { return r.json(); })
+      .then(function (d) { fin(null, d); })
+      .catch(function (e) { fin(e); });
+  } catch (e) { fin(e); }
+}
+function requestAIPoster(f) {
+  if (!AI_POSTER_BASE || !f || !f.id || f.aiPosterUrl || f._aiReq) return;
+  if (f.stage !== "released" && f.stage !== "theatrical") return;
+  f._aiReq = true;
+  aiFetch(AI_POSTER_BASE + "/poster", { title: f.title, genre: f.genre, year: f.year }, function (err, data) {
+    if (err || !data || !data.key) return;
+    f.aiPosterKey = data.key;
+    save();
+    if (data.status === "ready" && data.url) setAIPoster(f, AI_POSTER_BASE + data.url);
+    else aiPollPoster(f, 0);
+  });
+}
+function aiPollPoster(f, n) {
+  if (!f || f.aiPosterUrl || n > 16 || !f.aiPosterKey) return;
+  setTimeout(function () {
+    if (f.aiPosterUrl) return;
+    aiFetch(AI_POSTER_BASE + "/status?key=" + encodeURIComponent(f.aiPosterKey), null, function (err, data) {
+      if (!err && data && data.status === "ready" && data.url) setAIPoster(f, AI_POSTER_BASE + data.url);
+      else aiPollPoster(f, n + 1);
+    });
+  }, 6000);
+}
+function setAIPoster(f, url) {
+  f.aiPosterUrl = url;
+  if (f.aiPosterKey) aiPosterCacheSet(f.aiPosterKey, url);
+  save();
+  upgradeAIPosters();
+}
+/* Swap canvas posters for AI art once it arrives — no re-render needed. */
+function upgradeAIPosters() {
+  if (!S || !S.films || !document.querySelectorAll) return;
+  var imgs = document.querySelectorAll("img[data-fid]");
+  for (var i = 0; i < imgs.length; i++) {
+    (function (img) {
+      var fid = img.getAttribute("data-fid"), f = null, j;
+      for (j = 0; j < S.films.length; j++) if (S.films[j].id === fid) { f = S.films[j]; break; }
+      if (!f) return;
+      var url = aiPosterUrlFor(f);
+      if (!url) return;
+      img.removeAttribute("data-fid");
+      if (img.className.indexOf("aiposter") < 0) img.className += " aiposter";
+      var fig = img.parentNode;
+      if (fig && fig.tagName === "FIGURE" && !fig.querySelector(".ai-chip")) {
+        var chip = document.createElement("span");
+        chip.className = "ai-chip";
+        chip.textContent = "✨";
+        chip.title = "AI-painted poster";
+        fig.appendChild(chip);
+      }
+      img.style.opacity = "0";
+      var pre = new Image();
+      pre.onload = function () { img.src = url; img.style.opacity = "1"; };
+      pre.onerror = function () { img.style.opacity = "1"; };
+      pre.src = url;
+    })(imgs[i]);
+  }
+}
+function escHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
 }
 function grossBars(f) {
   if (!f.weeklyGross || !f.weeklyGross.length) return "";
@@ -1090,7 +1198,10 @@ function renderStudio() {
   var relWall = S.films.filter(function (f) { return f.stage === "released"; }).slice(-10).reverse();
   if (relWall.length) {
     html += "<h2 class='sec'>🎞 Poster wall</h2><div class='poster-wall'>" +
-      relWall.map(function (f) { return posterImg(f).replace("class='pthumb'", ""); }).join("") + "</div>";
+      relWall.map(function (f) {
+        return "<figure class='pw-item'>" + posterImg(f, "pwimg") +
+          "<figcaption>" + escHtml(f.title) + "</figcaption></figure>";
+      }).join("") + "</div>";
   }
   html += "<h2 class='sec'>📰 Studio wire</h2><div class='card log'>" +
     S.log.slice(0, 25).map(function (e) { return "<div><span class='t'>" + dateStr(e.w) + "</span>" + e.msg + "</div>"; }).join("") +
