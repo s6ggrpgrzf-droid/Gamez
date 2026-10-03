@@ -67,6 +67,15 @@ h1{
 .body p{margin:0;color:rgba(255,255,255,.62);font-size:14px;line-height:1.45}
 .play{display:inline-block;margin-top:14px;padding:11px 26px;border-radius:999px;font-weight:800;font-size:16px;
   background:linear-gradient(100deg,#ff5fa2,#c13b8f);box-shadow:0 6px 20px rgba(255,95,162,.4)}
+.art.maze{background:
+  radial-gradient(circle at 50% 40%, rgba(180,138,94,.35), transparent 60%),
+  linear-gradient(150deg,#f5efe2,#e8dcc6);}
+.mazefx{position:absolute;inset:22px;opacity:.55;
+  background-image:linear-gradient(#8a6f5c 2px, transparent 2px),
+    linear-gradient(90deg, #8a6f5c 2px, transparent 2px);
+  background-size:30px 30px;
+  mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 75%);}
 .art.neon{background:
   radial-gradient(circle at 50% 50%, rgba(136,68,255,.4), transparent 60%),
   linear-gradient(150deg,#0a0a20,#050510);}
@@ -105,6 +114,17 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
     <div class="body">
       <h2>🎥 Reel Empire</h2>
       <p>Run a movie studio from 1955 to glory: greenlight scripts, manage stars, dodge scandals, win awards.</p>
+      <span class="play">Play →</span>
+    </div>
+  </a>
+  <a class="card" href="./maze-trace/">
+    <div class="art maze">
+      <div class="mazefx"></div>
+      <div class="emoji">🌀</div>
+    </div>
+    <div class="body">
+      <h2>🌀 Maze Trace</h2>
+      <p>Trace the arrows through twisting mazes with your finger. 24 levels, 3 lives — don't leave the path.</p>
       <span class="play">Play →</span>
     </div>
   </a>
