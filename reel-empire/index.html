@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Reel Empire — Movie Studio Tycoon</title>
+<link rel="stylesheet" href="style.css?v=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="tb-left">
+      <div class="tb-studio" id="tbStudio">★ Reel Empire</div>
+      <div class="tb-date" id="tbDate">Jan 1955</div>
+    </div>
+    <div class="tb-mid">
+      <div class="tb-cash" id="tbCash">$20.0M</div>
+      <div class="tb-prestige" id="tbPrestige">★ 0</div>
+    </div>
+    <div class="tb-right">
+      <button class="spd" id="spdPause" title="Pause">⏸</button>
+      <button class="spd on" id="spd1" title="Normal speed">1×</button>
+      <button class="spd" id="spd3" title="Fast">3×</button>
+    </div>
+  </header>
+
+  <main id="views">
+    <section class="view" id="view-studio"></section>
+    <section class="view" id="view-films" hidden></section>
+    <section class="view" id="view-talent" hidden></section>
+    <section class="view" id="view-market" hidden></section>
+    <section class="view" id="view-awards" hidden></section>
+  </main>
+
+  <nav id="bottomnav">
+    <button data-tab="studio" class="on">🎬<span>Studio</span></button>
+    <button data-tab="films">🎞<span>Films</span></button>
+    <button data-tab="talent">⭐<span>Talent</span></button>
+    <button data-tab="market">📅<span>Market</span></button>
+    <button data-tab="awards">🏆<span>Awards</span></button>
+  </nav>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script src="data.js?v=2"></script>
+<script src="poster.js?v=2"></script>
+<script src="game.js?v=4"></script>
+</body>
+</html>
