@@ -207,6 +207,80 @@
     document.getElementById('final-score').textContent = S.score.toLocaleString();
     document.getElementById('best2').textContent = best.toLocaleString();
     setTimeout(function () { document.getElementById('over').classList.add('show'); }, 900);
+    submitScore();
+  }
+
+  /* ============ Gamez Arcade: global leaderboards ============
+     Scores post to a shared Cloudflare worker; everything degrades
+     silently offline so the game never depends on the network. */
+  var ARCADE_BASE = "https://gamez-arcade.chaoticutopia84.workers.dev"; // Gamez Arcade backend
+  var NV_GAME = 'neon-void';
+  function arcadeFetch(path, body, cb) {
+    var done = false, timer = null;
+    function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
+    timer = setTimeout(function () { fin(new Error('timeout')); }, 12000);
+    try {
+      fetch(ARCADE_BASE + path, body ?
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {})
+        .then(function (r) { return r.json(); })
+        .then(function (d) { fin(null, d); })
+        .catch(function (e) { fin(e); });
+    } catch (e) { fin(e); }
+  }
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function renderBoard(id, top, hlName) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (!top || !top.length) {
+      el.innerHTML = '<div class="lb-empty">no scores yet — be the first</div>';
+      return;
+    }
+    el.innerHTML = top.map(function (e, i) {
+      var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+      var me = hlName && e.name === hlName ? ' me' : '';
+      return '<div class="lb-row' + me + '"><span>' + medal + ' ' + escHtml(e.name) +
+        '</span><b>' + (+e.score).toLocaleString() + '</b></div>';
+    }).join('');
+  }
+  function loadBoards() {
+    if (!ARCADE_BASE) return;
+    arcadeFetch('/scores?game=' + NV_GAME, null, function (err, data) {
+      var top = (!err && data) ? data.top : null;
+      renderBoard('menu-lb', top);
+      renderBoard('over-lb', top, localStorage.getItem('nv_name'));
+    });
+  }
+  function submitScore() {
+    if (!ARCADE_BASE || S._submitted || !(S.score > 0)) return;
+    var name = (localStorage.getItem('nv_name') || '').trim();
+    if (!name) {
+      var form = document.getElementById('lb-form');
+      form.style.display = 'flex';
+      document.getElementById('lb-save').onclick = function () {
+        var v = document.getElementById('lb-name').value.trim().slice(0, 12);
+        if (!v) return;
+        try { localStorage.setItem('nv_name', v); } catch (e) {}
+        form.style.display = 'none';
+        postScore(v);
+      };
+      return;
+    }
+    postScore(name);
+  }
+  function postScore(name) {
+    S._submitted = true;
+    var rankEl = document.getElementById('lb-rank');
+    rankEl.textContent = 'sending…';
+    arcadeFetch('/score', { game: NV_GAME, name: name, score: S.score }, function (err, data) {
+      if (err || !data) { rankEl.textContent = ''; return; }
+      rankEl.textContent = data.rank > 0 ? '🌍 GLOBAL RANK #' + data.rank : '';
+      renderBoard('over-lb', data.top, name);
+      renderBoard('menu-lb', data.top, name);
+    });
   }
 
   /* ---------- update ---------- */
@@ -622,6 +696,7 @@
   resize();
   document.getElementById('best').textContent = (+(localStorage.getItem('nv_best') || 0)).toLocaleString();
   document.getElementById('menu').classList.add('show');
+  loadBoards();
   document.getElementById('start').addEventListener('click', function () {
     document.getElementById('menu').classList.remove('show');
     document.getElementById('over').classList.remove('show');
