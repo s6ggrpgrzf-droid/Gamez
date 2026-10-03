@@ -125,6 +125,18 @@ h1 { margin: 8px 0; font-size: 30px; }
 .dstats span { color: var(--dim); font-size: 11px; display: block; }
 .dstats b { font-size: 16px; }
 #legacy { margin-top: 14px; color: var(--dim); font-size: 13px; line-height: 1.7; }
+#scenario-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.scen {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; color: var(--txt);
+  padding: 13px 10px; cursor: pointer; font-size: 14px;
+}
+.scen b { display: block; font-size: 15px; margin-bottom: 4px; }
+.scen small { color: var(--dim); font-size: 12px; line-height: 1.4; display: block; }
+.scen:active { transform: scale(.97); border-color: var(--acc); }
+.winbanner {
+  background: linear-gradient(135deg, var(--gold), #ff9d4d); color: #231a05;
+  font-weight: 800; border-radius: 10px; padding: 8px; margin-bottom: 8px; font-size: 15px;
+}
 
 #toast {
   position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(20px);
