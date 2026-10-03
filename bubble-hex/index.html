@@ -3,31 +3,41 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#1a0b2e">
-<title>Bubble Hex</title>
-<link rel="stylesheet" href="style.css?v=1">
+<meta name="theme-color" content="#120826">
+<title>Bubble Hex — Witchwood</title>
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
-<div id="bg-stars" aria-hidden="true"></div>
 <div id="app">
   <section id="screen-map" class="screen">
     <header class="brand">
-      <div class="logo">🔮</div>
+      <div class="logo">🪄</div>
       <h1>Bubble<br>Hex</h1>
+      <div class="tagline">a witchwood bubble tale</div>
       <div class="stars-total">★ <span id="total-stars">0</span></div>
     </header>
     <div id="map-scroll"><div id="map-path"></div></div>
-    <footer class="map-foot">a Gamez joint 🔮</footer>
+    <footer class="map-foot">a Gamez joint 🪄</footer>
   </section>
   <section id="screen-game" class="screen hidden">
     <header id="hud">
-      <button id="btn-quit" class="icon-btn">‹</button>
+      <button id="btn-quit" class="icon-btn" aria-label="Back to map">‹</button>
       <div id="hud-goal" class="hud-pill"></div>
       <div id="hud-shots" class="hud-pill"><span id="shots">0</span><label>shots</label></div>
-      <button id="btn-pause" class="icon-btn">❚❚</button>
+      <button id="btn-music" class="icon-btn" aria-label="Toggle music">🎵</button>
+      <button id="btn-pause" class="icon-btn" aria-label="Pause">❚❚</button>
     </header>
+    <div id="scorebar">
+      <div id="score-num">0</div>
+      <div id="star-track">
+        <div id="star-fill"></div>
+        <div class="star-mk" id="star-mk1">★</div>
+        <div class="star-mk" id="star-mk2">★</div>
+        <div class="star-mk" id="star-mk3">★</div>
+      </div>
+    </div>
     <div id="orb-wrap" title="Spell orb — fill it to unleash the Hex Blast">
-      <div id="orb-fill"></div><span>✦</span>
+      <div id="orb-fill"></div><span>✦ SPELL ORB</span>
     </div>
     <canvas id="game"></canvas>
     <div id="banner" class="hidden"></div>
@@ -36,7 +46,9 @@
 <div id="modal" class="hidden"><div id="modal-card"></div></div>
 <script src="engine.js"></script>
 <script src="levels.js"></script>
+<script src="daily.js"></script>
+<script src="art.js"></script>
 <script src="audio.js"></script>
-<script src="ui.js"></script>
+<script src="ui.js?v=2"></script>
 </body>
 </html>
