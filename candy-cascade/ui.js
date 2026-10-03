@@ -604,13 +604,15 @@ async function playEnd(step) {
     if ((progress.stars[n] || 0) < earned) progress.stars[n] = earned;
     if (n < LEVELS.length) progress.unlocked = Math.max(progress.unlocked, n + 1);
     saveProgress();
+    arcadeLevelComplete('candy-cascade', n, step.score);
     const last = n === LEVELS.length;
     showModal({
       title: last ? 'You beat them all! 🏆' : 'Level Complete!',
       stars: earned,
       sub: `Score <b>${step.score.toLocaleString()}</b>` +
         (step.bonus ? ` <span class="dim">(+${step.bonus.toLocaleString()} move bonus)</span>` : '') +
-        (step.best >= 2 ? `<br>Best cascade: <b>×${step.best}</b> 🔥` : ''),
+        (step.best >= 2 ? `<br>Best cascade: <b>×${step.best}</b> 🔥` : '') +
+        `<div id="arc-lb" class="arc-lb"></div>`,
       buttons: [
         ...(last ? [] : [{ label: '▶ Next Level', onClick: () => { hideModal(); startLevel(n + 1); } }]),
         { label: '↻ Replay', ghost: true, onClick: () => { hideModal(); startLevel(n); } },
@@ -664,4 +666,53 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+/* ---------------- Gamez Arcade: global leaderboards ----------------
+   Shared Cloudflare backend; silent offline so the game never depends on it. */
+const ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev'; // Gamez Arcade backend, e.g. https://gamez-arcade.xxx.workers.dev
+function arcadeFetch(path, body) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 12000);
+  return fetch(ARCADE_BASE + path, body ?
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal } :
+    { signal: ctl.signal })
+    .then(r => r.json())
+    .finally(() => clearTimeout(t))
+    .catch(() => null);
+}
+function arcadeEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function arcadeBoardHtml(top, hl) {
+  if (!top || !top.length) return '<div class="arc-lb-empty">No scores yet — be the first!</div>';
+  const medals = ['🥇', '🥈', '🥉'];
+  return top.slice(0, 3).map((e, i) =>
+    `<div class="arc-lb-row${e.name === hl ? ' me' : ''}"><span>${medals[i] || (i + 1) + '.'} ${arcadeEsc(e.name)}</span><b>${(+e.score).toLocaleString()}</b></div>`
+  ).join('');
+}
+function arcadeEnsureName(box, cb) {
+  let name = '';
+  try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+  if (name) { cb(name); return; }
+  box.innerHTML = '<div class="arc-lb-form"><input id="arc-lb-name" maxlength="12" placeholder="YOUR NAME" autocomplete="off"><button id="arc-lb-go" class="btn">SAVE</button></div>';
+  document.getElementById('arc-lb-go').addEventListener('click', () => {
+    const v = document.getElementById('arc-lb-name').value.trim().slice(0, 12);
+    if (!v) return;
+    try { localStorage.setItem('arcade_name', v); } catch (e) {}
+    cb(v);
+  });
+}
+async function arcadeLevelComplete(game, levelN, score) {
+  const box = document.getElementById('arc-lb');
+  if (!box || !ARCADE_BASE || !(score > 0)) return;
+  const board = 'level-' + levelN;
+  box.innerHTML = '<div class="arc-lb-empty">🏆 loading scores…</div>';
+  arcadeEnsureName(box, async (name) => {
+    box.innerHTML = '<div class="arc-lb-empty">🏆 sending…</div>';
+    const res = await arcadeFetch('/score', { game, board, name, score });
+    const top = (res && res.top) ? res.top : (await arcadeFetch(`/scores?game=${game}&board=${board}`) || {}).top;
+    const rank = res && res.rank > 0 ? `<div class="arc-lb-rank">GLOBAL #${res.rank}!</div>` : '';
+    box.innerHTML = rank + `<div class="arc-lb-title">🏆 LEVEL ${levelN} BEST</div>` + arcadeBoardHtml(top, name);
+  });
+}
 })();

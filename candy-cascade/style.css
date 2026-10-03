@@ -237,3 +237,19 @@ body{
   .brand h1{font-size:26px;} .logo{width:44px;height:44px;flex-basis:44px;}
   .lvl-node{width:62px;height:62px; font-size:19px;}
 }
+
+/* ---- Gamez Arcade: leaderboards ---- */
+.arc-lb { margin-top: 12px; text-align: left; }
+.arc-lb-title { font-size: 12px; letter-spacing: 2px; opacity: .75; margin-bottom: 6px; text-align: center; }
+.arc-lb-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 12px;
+  background: rgba(255,255,255,.05); border-radius: 10px; margin-bottom: 4px; font-size: 14px; }
+.arc-lb-row b { color: #facc15; }
+.arc-lb-row.me { background: rgba(250,204,21,.12); border: 1px solid rgba(250,204,21,.45); }
+.arc-lb-empty { opacity: .6; font-size: 13px; padding: 6px; text-align: center; }
+.arc-lb-rank { color: #facc15; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; text-align: center; }
+.arc-lb-form { display: flex; gap: 8px; margin-top: 4px; }
+#arc-lb-name { flex: 1; min-width: 0; border-radius: 16px; border: 1px solid var(--glass-brd);
+  background: rgba(0,0,0,.35); color: #fff; padding: 12px 14px; font-size: 16px; font-family: inherit;
+  letter-spacing: 1px; text-transform: uppercase; }
+#arc-lb-name:focus { outline: none; border-color: #ff5fa2; }
+#arc-lb-go { padding: 12px 18px; }
