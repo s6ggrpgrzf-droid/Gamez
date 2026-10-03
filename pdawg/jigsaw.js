@@ -758,6 +758,8 @@ var Game = {
     this.canvas.height = Math.round(this.ch * this.dpr);
     this.canvas.style.width = this.cw + 'px';
     this.canvas.style.height = this.ch + 'px';
+    var r = this.canvas.getBoundingClientRect();
+    this._rectL = r.left; this._rectT = r.top;
     this.dirty = true;
   },
 
@@ -830,9 +832,11 @@ var Game = {
   },
 
   toBoard: function (sx, sy) {
+    // sx/sy are viewport (client) coords: subtract the canvas's own
+    // viewport offset first (topbar sits above the canvas).
     return {
-      x: this.cam.x + (sx - this.cw / 2) / this.cam.s,
-      y: this.cam.y + (sy - this.ch / 2) / this.cam.s
+      x: this.cam.x + (sx - (this._rectL || 0) - this.cw / 2) / this.cam.s,
+      y: this.cam.y + (sy - (this._rectT || 0) - this.ch / 2) / this.cam.s
     };
   },
 
@@ -1075,8 +1079,23 @@ Game.onDown = function (e) {
     return;
   }
   if (this.pointers.size > 2) return;
+  // refresh the canvas viewport offset: iOS Safari's toolbar can shift
+  // layout without a resize event between touches.
+  var rc = this.canvas.getBoundingClientRect();
+  this._rectL = rc.left; this._rectT = rc.top;
   var b = this.toBoard(e.clientX, e.clientY);
   var hit = this.hitTest(b.x, b.y);
+  if (!hit && e.pointerType === 'touch') {
+    // fat-finger retry: probe a small ring around the touch point so
+    // near-misses on small pieces still pick something up.
+    var slop = 10 / this.cam.s, k, o;
+    var ring = [[slop, 0], [-slop, 0], [0, slop], [0, -slop],
+                [slop, slop], [-slop, -slop], [slop, -slop], [-slop, slop]];
+    for (k = 0; k < ring.length && !hit; k++) {
+      o = ring[k];
+      hit = this.hitTest(b.x + o[0], b.y + o[1]);
+    }
+  }
   if (hit) {
     var gid = hit.gid;
     // bring to front
@@ -2073,7 +2092,8 @@ if (typeof module !== 'undefined' && module.exports) {
     chooseWhimsy: chooseWhimsy, applyWhimsy: applyWhimsy,
     serializeState: serializeState, deserializeState: deserializeState,
     renderPieceCanvases: renderPieceCanvases,
-    dailySpec: dailySpec, COUNTS: COUNTS, LEVELS: LEVELS, levelForCount: levelForCount
+    dailySpec: dailySpec, COUNTS: COUNTS, LEVELS: LEVELS, levelForCount: levelForCount,
+    Game: Game
   };
 }
 })();
