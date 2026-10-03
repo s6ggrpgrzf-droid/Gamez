@@ -24,23 +24,28 @@ function normResponse(r) {
   var x = r && r.response;
   if (typeof x === 'string') return x;
   if (x && typeof x === 'object') {
+    // nested wrapper? stringify the inner object whole so no fields are lost
+    if (x.response != null && typeof x.response !== 'string') {
+      try { return JSON.stringify(x.response).slice(0, 4000); } catch (e) {}
+    }
     if (typeof x.response === 'string') return x.response;
-    if (typeof x.text === 'string') return x.text;
-    if (typeof x.content === 'string') return x.content;
-    try { return JSON.stringify(x).slice(0, 2000); } catch (e) { return ''; }
+    try { return JSON.stringify(x).slice(0, 4000); } catch (e) { return ''; }
   }
   return '';
 }
 
-async function runAi(env, messages, maxTokens, temperature) {
+async function runAi(env, messages, maxTokens, temperature, fmt) {
   var lastErr = "";
   for (var i = 0; i < MODELS.length; i++) {
     try {
-      var r = await env.AI.run(MODELS[i], {
+      var params = {
         messages: messages,
         max_tokens: maxTokens,
         temperature: temperature
-      });
+      };
+      // native JSON enforcement; mistral-7b does not support it, so skip there
+      if (fmt && MODELS[i].indexOf("mistral") < 0) params.response_format = fmt;
+      var r = await env.AI.run(MODELS[i], params);
       var txt = normResponse(r);
       if (txt) return txt;
       lastErr = "empty response from " + MODELS[i];
@@ -50,6 +55,49 @@ async function runAi(env, messages, maxTokens, temperature) {
   }
   throw new Error(lastErr || "all models failed");
 }
+
+// Native JSON-mode schemas (Workers AI json_schema). Keep field names short,
+// nesting shallow: text + a flat choices array.
+var EVENT_SCHEMA = {
+  type: "json_schema",
+  json_schema: {
+    name: "LifeEvent",
+    schema: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        choices: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string" },
+              happy: { type: "number" },
+              health: { type: "number" },
+              smarts: { type: "number" },
+              looks: { type: "number" },
+              money: { type: "number" },
+              fame: { type: "number" }
+            },
+            required: ["label", "happy", "health", "smarts", "looks", "money", "fame"]
+          }
+        }
+      },
+      required: ["text", "choices"]
+    }
+  }
+};
+var OBIT_SCHEMA = {
+  type: "json_schema",
+  json_schema: {
+    name: "Obituary",
+    schema: {
+      type: "object",
+      properties: { text: { type: "string" } },
+      required: ["text"]
+    }
+  }
+};
 
 function cors(extra) {
   var h = {
@@ -142,8 +190,6 @@ var EVENT_SYSTEM = "You are a JSON event generator for a satirical life-simulato
   "You output ONLY raw JSON. No explanations, no preamble, no markdown fences, no surrounding text. " +
   "Your entire response must be exactly one JSON object and nothing else.";
 
-var EVENT_PREFILL = '{"text":"';
-
 function eventPrompt(st) {
   var bits = [
     "Player: " + (+st.age || 20) + "-year-old,",
@@ -157,14 +203,10 @@ function eventPrompt(st) {
   return EVENT_SYSTEM + "\n" + bits.join(" ") + "\n" +
     "Write one funny life event about this player (max 35 words, second person, present tense; never cruel, never graphic, no politics, no real people), " +
     "then exactly 3 short choices (max 8 words each). Small effects only: stats -12..+12, money -4000..+4000, fame -8..+8. " +
-    "One choice should be a little mischievous.\n" +
-    "Respond with EXACTLY this JSON object and nothing else:\n" +
-    '{"text":"<event text>","choices":[' +
-    '{"label":"<choice 1>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
-    '{"label":"<choice 2>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
-    '{"label":"<choice 3>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0}' +
-    "]}\n" +
-    EVENT_PREFILL;
+    "One choice should be a little mischievous. " +
+    "You MUST output valid JSON matching the required schema: an object with " +
+    '"text" (string) and "choices" (array of exactly 3 objects, each with ' +
+    '"label" string and numeric happy/health/smarts/looks/money/fame).';
 }
 
 function sanitizeEvent(d) {
@@ -202,8 +244,7 @@ function obitPrompt(b) {
     "Epitaph theme: " + clean(b.ribbon, 60) + ". " +
     (hl.length ? "Life highlights: " + hl.join(" ") : "") + "\n" +
     "Respond with EXACTLY this JSON object and nothing else:\n" +
-    '{"text":"<obituary text>"}\n' +
-    'Begin your response with {"text":"';
+    '{"text":"<obituary text>}';
 }
 
 export default {
@@ -229,22 +270,17 @@ export default {
         aiTxt = await runAi(env, [
           { role: "system", content: EVENT_SYSTEM },
           { role: "user", content: prompt }
-        ], 600, 0.7);
-        ev = sanitizeEvent(extractJson(EVENT_PREFILL + (aiTxt || "")));
+        ], 600, 0.7, EVENT_SCHEMA);
+        ev = sanitizeEvent(extractJson(aiTxt || ""));
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
       if (!ev) {
-        // one blunt retry: show the exact shape again
+        // one retry at lower temperature, still in JSON mode
         try {
           var retryTxt = await runAi(env, [
             { role: "system", content: EVENT_SYSTEM },
-            { role: "user", content: "Output ONLY this exact JSON shape, nothing else, no prose:\n" +
-              '{"text":"<event text, max 35 words, second person, funny>","choices":[' +
-              '{"label":"<choice 1, max 8 words>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
-              '{"label":"<choice 2>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
-              '{"label":"<choice 3, mischievous>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0}]}\n' +
-              EVENT_PREFILL }
-          ], 600, 0.5);
-          ev = sanitizeEvent(extractJson(EVENT_PREFILL + (retryTxt || "")));
+            { role: "user", content: prompt + " Output valid JSON only." }
+          ], 600, 0.4, EVENT_SCHEMA);
+          ev = sanitizeEvent(extractJson(retryTxt || ""));
           if (ev) aiTxt = retryTxt;
         } catch (e) {}
       }
@@ -262,7 +298,7 @@ export default {
         aiTxt2 = await runAi(env, [
           { role: "system", content: OBIT_SYSTEM },
           { role: "user", content: obitPrompt(b2) }
-        ], 200, 0.7);
+        ], 200, 0.7, OBIT_SCHEMA);
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
       var d2 = extractJson(aiTxt2 || "");
       var text = d2 && typeof d2.text === "string" ? clean(d2.text, 300) : "";
