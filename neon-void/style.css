@@ -1,0 +1,20 @@
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: #050510; font-family: 'Segoe UI', system-ui, sans-serif; }
+#game { position: fixed; inset: 0; touch-action: none; }
+#hud { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; pointer-events: none; z-index: 5; }
+#score { color: #fff; font-size: 24px; font-weight: 800; text-shadow: 0 0 12px #66ccff; letter-spacing: 1px; }
+#mult { color: #ffe14d; font-size: 24px; font-weight: 800; text-shadow: 0 0 12px #ffe14d; }
+#lives { font-size: 18px; letter-spacing: 2px; }
+#bomb-btn { position: fixed; right: 18px; bottom: 90px; font-size: 38px; z-index: 6; opacity: 0.85; filter: drop-shadow(0 0 10px #ff8844); }
+#bomb-btn:active { transform: scale(1.25); }
+#menu, #over { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,5,20,0.88); z-index: 10; opacity: 0; pointer-events: none; transition: opacity 0.3s; text-align: center; padding: 20px; }
+#menu.show, #over.show { opacity: 1; pointer-events: auto; }
+#menu h1, #over h1 { color: #fff; font-size: 52px; font-weight: 900; letter-spacing: 6px; text-shadow: 0 0 24px #ff60c0, 0 0 60px #8844ff; margin-bottom: 4px; }
+#over h1 { text-shadow: 0 0 24px #ff4444, 0 0 60px #ff8844; }
+.tag { color: #8844ff; font-style: italic; margin-bottom: 24px; text-shadow: 0 0 10px #8844ff; }
+.best { color: #ffe14d; font-weight: 700; letter-spacing: 2px; margin-bottom: 20px; text-shadow: 0 0 10px #ffe14d; }
+.final { color: #fff; font-size: 44px; font-weight: 900; margin-bottom: 8px; text-shadow: 0 0 20px #66ccff; }
+#start, #again { background: linear-gradient(135deg, #ff60c0, #8844ff); border: none; color: #fff; font-size: 22px; font-weight: 800; letter-spacing: 2px; padding: 16px 54px; border-radius: 40px; cursor: pointer; box-shadow: 0 0 24px rgba(255,96,192,0.6); margin-bottom: 24px; }
+#start:active, #again:active { transform: scale(0.95); }
+.help { color: #8899bb; font-size: 14px; line-height: 1.9; max-width: 320px; }
+.geom-demo { color: #ffe14d; text-shadow: 0 0 8px #ffe14d; }
