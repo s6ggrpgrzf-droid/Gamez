@@ -148,11 +148,12 @@ var slots = [];          /* current guess, uppercase letters */
 var kbMode = null;       /* 'play' | 'name' | null — routes physical keyboard */
 var nameHandler = null;  /* active name-entry key handler */
 var msgTimer = null;
+var flipId = 0;          /* invalidates in-flight submit animations on screen change */
 
 /* ============================== screens ============================== */
 var SCREENS = ['menu', 'intro', 'play', 'win', 'lose'];
 function show(name) {
-  kbMode = null; nameHandler = null;
+  kbMode = null; nameHandler = null; flipId++; /* cancel any mid-flip submit */
   SCREENS.forEach(function (s) { $('scr-' + s).classList.toggle('on', s === name); });
 }
 function showMsg(t, sticky) {
@@ -275,18 +276,47 @@ function replayAsPractice() {
   startGame({ start: G.puz.start, end: G.puz.end, par: par, rope: par + 3, date: null }, 'practice', null);
 }
 
+/* Wordle-style 3D tile flip on submit: slots flip staggered, the changed
+ * letter is revealed with the illuminated gold treatment at the flip's
+ * midpoint. Presentation-only; calls done() when the animation finishes. */
+function flipSlots(word, prev, done) {
+  var els = $('slots').children;
+  var w = word.toUpperCase(), p = String(prev).toUpperCase(), diff = -1, i;
+  for (i = 0; i < 4; i++) { if (w[i] !== p[i]) { diff = i; break; } }
+  var myFlip = ++flipId;
+  for (i = 0; i < 4; i++) {
+    (function (el, idx) {
+      el.style.animationDelay = (idx * 90) + 'ms';
+      el.classList.add('flipping');
+      setTimeout(function () {
+        if (myFlip !== flipId) return;
+        el.classList.add('revealed');
+        if (idx === diff) el.classList.add('gold');
+      }, idx * 90 + 250);
+    })(els[i], i);
+  }
+  setTimeout(function () {
+    if (myFlip !== flipId) return;
+    for (var j = 0; j < 4; j++) {
+      els[j].classList.remove('flipping', 'revealed', 'gold');
+      els[j].style.animationDelay = '';
+    }
+    done();
+  }, 4 * 90 + 340);
+}
+
 /* ---------- guessing ---------- */
 function pressLetter(ch) {
-  if (!G || G.status !== 'playing') return;
+  if (!G || G.status !== 'playing' || G.flipping) return;
   if (slots.length >= 4) return;
   slots.push(ch); sfx.key(); renderSlots();
 }
 function pressBksp() {
-  if (!G || G.status !== 'playing') return;
+  if (!G || G.status !== 'playing' || G.flipping) return;
   if (slots.length) { slots.pop(); sfx.key(); renderSlots(); }
 }
 function submitGuess() {
-  if (!G || G.status !== 'playing') return;
+  if (!G || G.status !== 'playing' || G.flipping) return;
   if (slots.length < 4) { sfx.error(); shakeSlots(); showMsg('Four letters, friend.'); return; }
   var word = slots.join('').toLowerCase();
   var prev = G.rungs[G.rungs.length - 1];
@@ -299,17 +329,23 @@ function submitGuess() {
             res.code === 'repeat' ? 'Already climbed that word' : 'Change just one letter');
     return;
   }
-  G.rungs.push(word); G.ropeLeft -= 1;
-  slots = []; renderSlots();
-  $('shaft').appendChild(renderRung(word, prev, true));
-  sfx.thunk(); updateRope(); scrollShaft();
-  if (G.mode === 'daily') saveDaily();
-  if (word === G.puz.end) { onWin(true); return; }
-  if (G.ropeLeft <= 0) { onLose(true); return; }
-  if (G.ropeLeft <= 2) showMsg('The rope is fraying\u2026');
+  G.flipping = true;
+  var myGame = G;
+  flipSlots(word, prev, function () {
+    if (G !== myGame || G.status !== 'playing') return; /* user left mid-flip */
+    G.flipping = false;
+    G.rungs.push(word); G.ropeLeft -= 1;
+    slots = []; renderSlots();
+    $('shaft').appendChild(renderRung(word, prev, true));
+    sfx.thunk(); updateRope(); scrollShaft();
+    if (G.mode === 'daily') saveDaily();
+    if (word === G.puz.end) { onWin(true); return; }
+    if (G.ropeLeft <= 0) { onLose(true); return; }
+    if (G.ropeLeft <= 2) showMsg('The rope is fraying\u2026');
+  });
 }
 function useHint() {
-  if (!G || G.status !== 'playing' || G.ropeLeft < 2) return;
+  if (!G || G.status !== 'playing' || G.flipping || G.ropeLeft < 2) return;
   var from = G.rungs[G.rungs.length - 1], h = null;
   try { h = WW.hintNext(from, G.puz.end, GRAPH); } catch (e) {}
   if (!h) { showMsg('The well is silent\u2026'); return; }
@@ -336,7 +372,9 @@ function onWin(fresh) {
   /* restart the drop-into-water animation */
   wr.classList.remove('end-rung'); void wr.offsetWidth; wr.classList.add('end-rung');
 
-  $('win-fortune').textContent = fortuneFor(puz);
+  var fort = $('win-fortune');
+  fort.textContent = fortuneFor(puz);
+  fort.classList.remove('unroll'); void fort.offsetWidth; fort.classList.add('unroll');
   $('win-stars').textContent = starGlyphs(stars);
   $('win-stats').textContent = steps + ' rungs (par ' + puz.par + ')';
   var sl = $('win-streak');
