@@ -7,16 +7,16 @@
 
   var LEVELS = [];
   (function () {
-    // [cols, rows, fill, difficulty]
+    // [cols, rows, fill, minLen, maxLen, difficulty]
     var defs = [
-      [5, 5, .45, 'Easy'], [5, 6, .48, 'Easy'], [6, 6, .50, 'Easy'], [6, 7, .52, 'Easy'],
-      [7, 7, .55, 'Medium'], [7, 8, .55, 'Medium'], [8, 8, .58, 'Medium'], [8, 9, .58, 'Medium'],
-      [9, 9, .60, 'Hard'], [9, 10, .60, 'Hard'], [10, 10, .62, 'Hard'], [10, 11, .62, 'Hard'],
-      [10, 12, .64, 'Hard'], [11, 12, .64, 'Expert'], [11, 13, .66, 'Expert'], [12, 13, .66, 'Expert'],
-      [12, 14, .68, 'Expert'], [13, 14, .68, 'Expert'], [13, 15, .70, 'Master'], [14, 15, .70, 'Master'],
-      [14, 16, .72, 'Master'], [15, 16, .72, 'Master'], [15, 17, .74, 'Master'], [16, 17, .74, 'Master'],
+      [5, 5, .40, 2, 2, 'Easy'], [5, 6, .42, 2, 2, 'Easy'], [6, 6, .44, 2, 3, 'Easy'], [6, 7, .46, 2, 3, 'Easy'],
+      [7, 7, .48, 2, 3, 'Medium'], [7, 8, .50, 2, 3, 'Medium'], [8, 8, .52, 2, 3, 'Medium'], [8, 9, .54, 2, 3, 'Medium'],
+      [9, 9, .56, 2, 4, 'Hard'], [9, 10, .58, 2, 4, 'Hard'], [10, 10, .60, 2, 4, 'Hard'], [10, 11, .60, 2, 4, 'Hard'],
+      [10, 12, .62, 3, 4, 'Hard'], [11, 12, .62, 3, 4, 'Expert'], [11, 13, .64, 3, 4, 'Expert'], [12, 13, .64, 3, 4, 'Expert'],
+      [12, 14, .66, 3, 4, 'Expert'], [13, 14, .66, 3, 5, 'Expert'], [13, 15, .68, 3, 5, 'Master'], [14, 15, .68, 3, 5, 'Master'],
+      [14, 16, .70, 3, 5, 'Master'], [15, 16, .70, 4, 5, 'Master'], [15, 17, .72, 4, 5, 'Master'], [16, 17, .72, 4, 6, 'Master'],
     ];
-    defs.forEach(function (d, i) { LEVELS.push({ w: d[0], h: d[1], fill: d[2], diff: d[3], n: i + 1 }); });
+    defs.forEach(function (d, i) { LEVELS.push({ w: d[0], h: d[1], fill: d[2], minLen: d[3], maxLen: d[4], diff: d[5], n: i + 1 }); });
   })();
 
   var S = null;
@@ -54,7 +54,7 @@
 
   function newLevel(n) {
     var L = LEVELS[n - 1];
-    var board = ArrowGen.generate(L.w, L.h, L.fill);
+    var board = ArrowGen.generate(L.w, L.h, L.fill, L.minLen, L.maxLen);
     S = {
       n: n, L: L, board: board,
       lives: 3, mistakes: 0, cleared: 0, total: board.count,
@@ -74,26 +74,31 @@
   /* ---------- rules ---------- */
   function tapCell(cx, cy) {
     if (!S || S.won) return;
-    var k = cx + ',' + cy;
-    if (!S.board.arrows.hasOwnProperty(k)) return; // tapped empty space
-    var b = S.board, d = b.arrows[k];
-    var blocked = ArrowGen.pathCells(b.w, b.h, cx, cy, d).some(function (cc) {
-      return b.arrows.hasOwnProperty(cc[0] + ',' + cc[1]);
+    var b = S.board;
+    var id = b.occ[cx + ',' + cy];
+    if (!id) return; // tapped empty space
+    var a = b.arrows[id];
+    var blocked = ArrowGen.pathCells(b.w, b.h, a.x, a.y, a.dir, a.len).some(function (cc) {
+      return b.occ.hasOwnProperty(cc[0] + ',' + cc[1]);
     });
-    if (blocked) { wrongTap(k); return; }
-    // slide it off!
-    var dir = d, dx = ArrowGen.DX[dir], dy = ArrowGen.DY[dir];
-    var c = cellCenter(cx, cy);
-    var dist = 0;
-    if (dir === 0) dist = c[1] + 80; else if (dir === 2) dist = boardH() - c[1] + 80;
-    else if (dir === 3) dist = c[0] + 80; else dist = boardW() - c[0] + 80;
-    S.flying.push({ x: c[0], y: c[1], dx: dx, dy: dy, dist: dist, t: 0, dur: 0.38, dir: dir });
-    // trail along its path
-    ArrowGen.pathCells(b.w, b.h, cx, cy, d).forEach(function (cc, i) {
+    if (blocked) { wrongTap(id); return; }
+    // slide the whole arrow off!
+    var dx = ArrowGen.DX[a.dir], dy = ArrowGen.DY[a.dir];
+    var hd = ArrowGen.headOf(a.x, a.y, a.dir, a.len);
+    var hc = cellCenter(hd[0], hd[1]);
+    var dist;
+    if (a.dir === 0) dist = hc[1] + 80;
+    else if (a.dir === 2) dist = boardH() - hc[1] + 80;
+    else if (a.dir === 3) dist = hc[0] + 80;
+    else dist = boardW() - hc[0] + 80;
+    var tc = cellCenter(a.x, a.y);
+    S.flying.push({ x: tc[0], y: tc[1], dx: dx, dy: dy, dist: dist, len: a.len, t: 0, dur: 0.42, dir: a.dir });
+    // trail along its exit path
+    ArrowGen.pathCells(b.w, b.h, a.x, a.y, a.dir, a.len).forEach(function (cc, i) {
       var pc = cellCenter(cc[0], cc[1]);
       S.trails.push({ x: pc[0], y: pc[1], t: -i * 0.02, life: 0.5 });
     });
-    delete b.arrows[k];
+    ArrowGen.removeArrow(b, id);
     S.cleared++;
     S.hintKey = null;
     try { MT_Audio.slide(); } catch (e) {}
@@ -102,11 +107,11 @@
     else draw();
   }
 
-  function wrongTap(k) {
+  function wrongTap(id) {
     S.mistakes++;
     S.lives--;
     S.shake = 9;
-    S.badFlash = { k: k, t: 0 };
+    S.badFlash = { id: id, t: 0 };
     try { MT_Audio.bad(); } catch (e) {}
     updateHUD();
     draw();
@@ -140,25 +145,30 @@
   var INK = '#6b5a4e', INK_LT = '#9a8878', CREAM = '#faf6ef';
   var ACOLORS = ['#e0644b', '#4da3ff', '#7bc96f', '#b48a5e'];
 
-  function arrowColor(k) {
+  function arrowColor(id) {
     var h = 0;
-    for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+    for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
     return ACOLORS[Math.abs(h) % ACOLORS.length];
   }
 
-  function drawArrowShape(x, y, dir, s, color) {
-    // chevron arrow pointing dir
-    var ang = [Math.PI * 1.5, 0, Math.PI * 0.5, Math.PI][dir];
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  // long skinny arrow: shaft from tail to head + arrowhead at the head
+  function drawLongArrow(tx, ty, hx, hy, dir, color, widthScale) {
+    var ang = Math.atan2(hy - ty, hx - tx);
+    var wdt = cell * zoom * 0.16 * (widthScale || 1); // skinny shaft
+    var hl = cell * zoom * 0.42; // head length
+    ctx.strokeStyle = color;
     ctx.fillStyle = color;
+    ctx.lineWidth = wdt;
+    ctx.lineCap = 'round';
+    // shaft (stop short so the head sits clean)
+    var ex = hx - Math.cos(ang) * hl * 0.7, ey = hy - Math.sin(ang) * hl * 0.7;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(ex, ey); ctx.stroke();
+    // head
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(ang);
     ctx.beginPath();
-    ctx.moveTo(s, 0);
-    ctx.lineTo(-s * 0.2, -s * 0.85);
-    ctx.lineTo(-s * 0.2, -s * 0.35);
-    ctx.lineTo(-s * 1.1, -s * 0.35);
-    ctx.lineTo(-s * 1.1, s * 0.35);
-    ctx.lineTo(-s * 0.2, s * 0.35);
-    ctx.lineTo(-s * 0.2, s * 0.85);
+    ctx.moveTo(hl, 0);
+    ctx.lineTo(-hl * 0.35, -hl * 0.62);
+    ctx.lineTo(-hl * 0.35, hl * 0.62);
     ctx.closePath(); ctx.fill();
     ctx.restore();
   }
@@ -188,24 +198,24 @@
       ctx.beginPath(); ctx.arc(p[0], p[1], cell * zoom * 0.30 * a + 2, 0, 7); ctx.fill();
     });
 
-    // arrows
-    var s = cell * zoom * 0.30;
-    Object.keys(b.arrows).forEach(function (k) {
-      var p = k.split(','), cx = +p[0], cy = +p[1];
-      var c = cellCenter(cx, cy), q = toScreen(c[0], c[1]);
-      var col = arrowColor(k);
-      if (S.badFlash && S.badFlash.k === k) col = '#e02020';
-      // hint pulse
-      var sc = s;
-      if (S.hintKey === k) sc = s * (1 + 0.18 * Math.sin(Date.now() / 130));
-      // touch target circle
-      ctx.fillStyle = 'rgba(255,255,255,0.65)';
-      ctx.beginPath(); ctx.arc(q[0], q[1], cell * zoom * 0.44, 0, 7); ctx.fill();
-      if (S.hintKey === k) {
-        ctx.strokeStyle = '#4da3ff'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(q[0], q[1], cell * zoom * 0.44, 0, 7); ctx.stroke();
-      }
-      drawArrowShape(q[0], q[1], b.arrows[k], sc, col);
+    // arrows (long & skinny)
+    Object.keys(b.arrows).forEach(function (id) {
+      var a = b.arrows[id];
+      var tc = cellCenter(a.x, a.y);
+      var hd = ArrowGen.headOf(a.x, a.y, a.dir, a.len);
+      var hc = cellCenter(hd[0], hd[1]);
+      var tq = toScreen(tc[0], tc[1]), hq = toScreen(hc[0], hc[1]);
+      var col = arrowColor(id);
+      if (S.badFlash && S.badFlash.id === id) col = '#e02020';
+      var pulse = (S.hintKey === id) ? 1 + 0.18 * Math.sin(Date.now() / 130) : 1;
+      // touch halo over the whole arrow
+      ctx.strokeStyle = S.hintKey === id ? '#4da3ff' : 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = cell * zoom * 0.52;
+      ctx.lineCap = 'round';
+      if (S.hintKey === id) { ctx.save(); ctx.setLineDash([]); }
+      ctx.beginPath(); ctx.moveTo(tq[0], tq[1]); ctx.lineTo(hq[0], hq[1]); ctx.stroke();
+      if (S.hintKey === id) ctx.restore();
+      drawLongArrow(tq[0], tq[1], hq[0], hq[1], a.dir, col, pulse);
     });
 
     // flying arrows
@@ -213,8 +223,11 @@
       var p = 1 - Math.pow(1 - f.t / f.dur, 2); // easeOut
       var mx = f.x + f.dx * f.dist * p, my = f.y + f.dy * f.dist * p;
       var q = toScreen(mx, my);
+      // head leads: offset tail back along direction
+      var back = (f.len - 1) * cell;
+      var tqx = q[0] - f.dx * back * zoom, tqy = q[1] - f.dy * back * zoom;
       ctx.globalAlpha = 1 - p * 0.6;
-      drawArrowShape(q[0], q[1], f.dir, s, '#e0644b');
+      drawLongArrow(tqx, tqy, q[0], q[1], f.dir, '#e0644b', 1);
       ctx.globalAlpha = 1;
     });
 
