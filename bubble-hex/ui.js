@@ -53,7 +53,7 @@
       ghost: L.ghostStart ? { r: L.ghostStart[0], c: L.ghostStart[1] } : null,
       rescued: 0, shieldLeft: L.shield || 0,
       aiming: false, aimAngle: -Math.PI / 2,
-      anims: [], over: false
+      anims: [], over: false, missStreak: 0
     };
     state.current = newShooterBubble();
     state.next = newShooterBubble();
@@ -105,6 +105,35 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawAimPreview(sx, sy) {
+    var boardTop = 10;
+    var x = sx, y = sy;
+    var vx = Math.cos(state.aimAngle), vy = Math.sin(state.aimAngle);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.moveTo(x, y);
+    var bounces = 0;
+    for (var i = 0; i < 60; i++) {
+      x += vx * 14; y += vy * 14;
+      if (x < R) { x = R; vx = -vx; bounces++; }
+      if (x > W - R) { x = W - R; vx = -vx; bounces++; }
+      if (y <= R + boardTop + 4) break;
+      // stop at first bubble hit
+      var hitBub = false;
+      Object.keys(state.board).forEach(function (k) {
+        if (hitBub) return;
+        var p = k.split(','), xy = E.cellXY(+p[0], +p[1], R);
+        var dx = x - xy[0], dy = y - (xy[1] + boardTop);
+        if (dx * dx + dy * dy < (R * 1.8) * (R * 1.8)) hitBub = true;
+      });
+      if (hitBub || bounces > 2) break;
+    }
+    ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
+    // landing dot
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
+  }
+
   function shade(hex, amt) {
     var n = parseInt(hex.slice(1), 16);
     var r = Math.max(0, Math.min(255, (n >> 16) + amt));
@@ -115,7 +144,14 @@
 
   function render() {
     if (!state) return;
-    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    // screen shake
+    if (state.shake && Date.now() - state.shake.t0 < state.shake.dur) {
+      var st = (Date.now() - state.shake.t0) / state.shake.dur;
+      var mag = state.shake.mag * (1 - st);
+      ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+    }
+    ctx.clearRect(-20, -20, W + 40, H + 40);
     var boardTop = 10;
 
     // Draw board bubbles
@@ -138,13 +174,9 @@
 
     // Shooter
     var sx = W / 2, sy = H - 40;
-    // aim line
+    // aim line with bounce preview
     if (state.aiming && !state.flying && !state.over) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
-      ctx.beginPath(); ctx.moveTo(sx, sy);
-      var ax = sx + Math.cos(state.aimAngle) * 120, ay = sy + Math.sin(state.aimAngle) * 120;
-      ctx.lineTo(ax, ay); ctx.stroke(); ctx.setLineDash([]);
+      drawAimPreview(sx, sy);
     }
     // next bubble preview
     if (state.next) drawBubble(sx - R * 2.6, sy + 6, state.next, 0.6, 0.8);
@@ -160,6 +192,28 @@
       if (t >= 1) return false;
       if (a.type === 'pop') {
         drawBubble(a.x, a.y + boardTop, a.bub, 1 + t * 0.6, 1 - t);
+        // pop particles
+        if (!a.spawned) {
+          a.spawned = true;
+          for (var i = 0; i < 8; i++) {
+            var ang = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 120;
+            state.anims.push({ type: 'particle', x: a.x, y: a.y,
+              vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+              color: a.color || '#ffe14d', t0: Date.now(), dur: 400 + Math.random() * 300 });
+          }
+        }
+      } else if (a.type === 'particle') {
+        var px = a.x + a.vx * t, py = a.y + a.vy * t - 40 * t * t;
+        ctx.globalAlpha = 1 - t;
+        ctx.fillStyle = a.color;
+        ctx.beginPath(); ctx.arc(px, py + boardTop, 3 * (1 - t) + 1, 0, 7); ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (a.type === 'floater') {
+        ctx.globalAlpha = 1 - t;
+        ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(a.text, a.x, a.y + boardTop - t * 40);
+        ctx.globalAlpha = 1;
       } else if (a.type === 'drop') {
         drawBubble(a.x, a.y + boardTop + t * 120, a.bub, 1, 1 - t);
       } else if (a.type === 'blast') {
@@ -170,6 +224,7 @@
       return true;
     });
 
+    ctx.restore();
     if (!state.over) requestAnimationFrame(render);
   }
 
@@ -183,6 +238,7 @@
   canvas.addEventListener('pointerdown', function (e) {
     if (!state || state.over || state.flying) return;
     var p = canvasPos(e);
+    downPos = p;
     shooterX = W / 2; shooterY = H - 40;
     state.aiming = true;
     updateAim(p);
@@ -195,8 +251,17 @@
   canvas.addEventListener('pointerup', function (e) {
     if (!state || !state.aiming) return;
     state.aiming = false;
+    // tap (minimal movement) on shooter = swap bubbles
+    var p = canvasPos(e);
+    var dx = p[0] - downPos[0], dy = p[1] - downPos[1];
+    if (dx * dx + dy * dy < 400 && !state.flying) {
+      var tmp = state.current; state.current = state.next; state.next = tmp;
+      HexAudio.click();
+      return;
+    }
     fire();
   });
+  var downPos = [0, 0];
   function updateAim(p) {
     var dx = p[0] - shooterX, dy = p[1] - shooterY;
     if (dy > -10) dy = -10; // only upward
@@ -298,13 +363,19 @@
 
   function applyResolve(res, x, y) {
     var boardTop = 10;
+    var popColor = '#ffe14d';
     res.popped.forEach(function (rc) {
       var xy = E.cellXY(rc[0], rc[1], R);
-      // find the bubble for animation (already deleted, use placeholder)
-      state.anims.push({ type: 'pop', x: xy[0], y: xy[1], bub: { color: 'Y' }, t0: Date.now(), dur: 300 });
-      // check familiar rescue
-      // (we track via board before delete; simplified: count pops near familiars)
+      state.anims.push({ type: 'pop', x: xy[0], y: xy[1], bub: { color: 'Y' }, color: popColor, t0: Date.now(), dur: 300 });
     });
+    // score floater
+    if (res.score > 0) {
+      state.anims.push({ type: 'floater', x: x, y: y, text: '+' + res.score, t0: Date.now(), dur: 900 });
+    }
+    // screen shake on big pops
+    if (res.popped.length >= 6) {
+      state.shake = { t0: Date.now(), dur: 300, mag: 8 };
+    }
     res.dropped.forEach(function (rc) {
       var xy = E.cellXY(rc[0], rc[1], R);
       state.anims.push({ type: 'drop', x: xy[0], y: xy[1], bub: { color: 'B' }, t0: Date.now(), dur: 500 });
@@ -314,12 +385,34 @@
       state.score += res.score;
       state.orb = Math.min(state.orbMax, state.orb + res.popped.length);
       if (state.orb >= state.orbMax) { document.getElementById('orb-wrap').classList.add('full'); }
+      state.missStreak = 0;
+    } else {
+      state.missStreak++;
+      // Ceiling pressure: every 5 misses, bubbles descend one row
+      if (state.missStreak >= 5) {
+        state.missStreak = 0;
+        descendBoard();
+        banner('⚠️ The ceiling descends!');
+      }
     }
     if (res.dropped.length) HexAudio.drop();
     // Ghost movement: ghost rises when bubbles above it are cleared
     updateGhost();
     updateHUD();
     endTurn(true);
+  }
+
+  function descendBoard() {
+    var nb = E.newBoard();
+    var gameOver = false;
+    Object.keys(state.board).forEach(function (k) {
+      var p = k.split(','), r = +p[0] + 1, c = +p[1];
+      if (r >= E.ROWS - 2) gameOver = true; // reached shooter zone
+      if (r < E.ROWS) E.set(nb, r, c, state.board[k]);
+    });
+    state.board = nb;
+    if (state.ghost) state.ghost.r = Math.min(state.ghost.r + 1, E.ROWS - 1);
+    if (gameOver) { lose(); banner('💀 The bubbles reached you!'); }
   }
 
   function updateGhost() {
