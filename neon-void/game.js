@@ -27,12 +27,29 @@
   }
   function warpGrid(x, y, force) {
     var gx = Math.round(x / GS), gy = Math.round(y / GS);
-    for (var dy = -3; dy <= 3; dy++) for (var dx = -3; dx <= 3; dx++) {
+    for (var dy = -5; dy <= 5; dy++) for (var dx = -5; dx <= 5; dx++) {
       var ix = gx + dx, iy = gy + dy;
       if (ix < 0 || iy < 0 || ix >= GW || iy >= GH) continue;
       var d = Math.sqrt(dx * dx + dy * dy) || 0.5;
       var p = grid[iy][ix];
       p.vx += (dx / d) * force / d; p.vy += (dy / d) * force / d;
+    }
+  }
+  // ambient background churn — the grid never sits still
+  var churnT = 0;
+  function churnGrid(dt) {
+    churnT += dt;
+    // slow rolling waves across the whole field
+    for (var y = 0; y < GH; y += 2) for (var x = 0; x < GW; x += 2) {
+      var p = grid[y][x];
+      var wave = Math.sin(churnT * 1.3 + x * 0.55 + y * 0.4) * 2.2
+               + Math.sin(churnT * 0.7 - x * 0.3 + y * 0.6) * 1.6;
+      p.vx += Math.cos(churnT * 0.9 + y * 0.5) * wave * dt * 3;
+      p.vy += Math.sin(churnT * 1.1 + x * 0.5) * wave * dt * 3;
+    }
+    // random micro-impacts to keep it alive
+    if (Math.random() < dt * 6) {
+      warpGrid(Math.random() * W, Math.random() * H, 10 + Math.random() * 14);
     }
   }
   function updateGrid() {
@@ -123,8 +140,8 @@
       var a = Math.random() * Math.PI * 2, s = (0.3 + Math.random() * 0.7) * (spd || 260);
       S.parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + Math.random() * 0.5, t: 0, color: color, r: 1.5 + Math.random() * 2.5 });
     }
-    warpGrid(x, y, 14);
-    S.shake = Math.min(S.shake + 6, 18);
+    warpGrid(x, y, 30);
+    S.shake = Math.min(S.shake + 8, 22);
   }
 
   /* ---------- combat ---------- */
@@ -176,8 +193,8 @@
     S.wells.forEach(function (w) { explode(w.x, w.y, '#000000', 40, 300); });
     S.wells = [];
     S.bullets = [];
-    warpGrid(W / 2, H / 2, 60);
-    S.shake = 20;
+    warpGrid(W / 2, H / 2, 120);
+    S.shake = 26;
     S.floaters.push({ x: W / 2, y: H / 2, text: '💥 BOMB', t: 0, color: '#fff' });
     beep(60, 0.8, 'sawtooth', 0.25);
     updateHUD();
@@ -287,6 +304,8 @@
       var w = S.wells[wi];
       w.grow += dt;
       w.r = 8 + Math.sin(w.grow * 3) * 3 + Math.min(w.suck / 2000, 14);
+      // wells constantly churn the grid around them
+      if (Math.random() < dt * 20) warpGrid(w.x + (Math.random() - 0.5) * 120, w.y + (Math.random() - 0.5) * 120, -18);
       // pull player
       var pdx = S.px - w.x, pdy = S.py - w.y, pd = Math.hypot(pdx, pdy) || 1;
       if (pd < 300) {
@@ -364,6 +383,7 @@
       if (f.t > 1) S.floaters.splice(fi, 1);
     }
     if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 40);
+    churnGrid(dt);
     updateGrid();
   }
 
