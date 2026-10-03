@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1d3a1a">
+<title>Bloom Defense</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ MENU ============ -->
+<div id="screen-menu" class="screen">
+  <div class="menu-bg"></div>
+  <div class="menu-inner">
+    <div class="logo">🌸</div>
+    <h1>BLOOM<br>DEFENSE</h1>
+    <p class="tag">The weeds are coming. Plant accordingly.</p>
+    <div id="menu-best" class="menu-best"></div>
+    <button id="play-btn" class="big-btn">🌱 PLAY</button>
+    <button id="daily-btn" class="big-btn alt">📅 DAILY BLOOM</button>
+    <div class="menu-row">
+      <button id="almanac-btn" class="ghost-btn">📖 Almanac</button>
+      <button id="how-btn" class="ghost-btn">❓ How to play</button>
+    </div>
+    <div id="howto" class="howto hidden">
+      <p>🧟 Weeds shamble in from the right. <b>Don't let them reach your house</b> (left).</p>
+      <p>☀️ Collect falling sun. Plant <b>Sunflowers</b> for more.</p>
+      <p>🌱 Tap a seed packet, then tap the lawn to plant.</p>
+      <p>🚜 Each row has one <b>lawnmower</b> — a single free save. Don't waste it.</p>
+      <p>🪏 The shovel digs up plants you regret.</p>
+      <p>🪱 Tap <b>Wally the worm</b> when he peeks out for bonus sun.</p>
+      <p>🏆 Survive all <b>10 waves</b>. Mowers you don't use become bonus points.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOADOUT ============ -->
+<div id="screen-loadout" class="screen hidden">
+  <div class="panel">
+    <h2>Choose your seeds</h2>
+    <p class="sub">Pick <b>6</b> — that's all you can carry. <span id="loadout-count">6 / 6</span></p>
+    <div id="loadout-grid" class="lo-grid"></div>
+    <div class="row">
+      <button id="lo-back" class="ghost-btn">← Back</button>
+      <button id="start-btn" class="big-btn">PLANT! 🌸</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ALMANAC ============ -->
+<div id="screen-almanac" class="screen hidden">
+  <div class="panel wide">
+    <h2>📖 Almanac</h2>
+    <div class="al-tabs">
+      <button class="al-tab on" data-tab="plants">🌱 Plants</button>
+      <button class="al-tab" data-tab="zombies">🧟 Weeds</button>
+    </div>
+    <div id="al-plants" class="al-list"></div>
+    <div id="al-zombies" class="al-list hidden"></div>
+    <button id="al-back" class="ghost-btn">← Back</button>
+  </div>
+</div>
+
+<!-- ============ GAME ============ -->
+<div id="screen-game" class="screen hidden">
+  <div id="hud">
+    <div id="sun-bank"><span class="sun-ico">☀️</span><span id="sun-count">150</span></div>
+    <div id="wave-wrap">
+      <div id="wave-bar"><div id="wave-fill"></div><i class="flag" style="left:50%"></i><i class="flag" style="left:100%"></i></div>
+      <div id="wave-label">get ready…</div>
+    </div>
+    <div id="score-wrap">⭐ <span id="score-count">0</span></div>
+    <div class="hud-btns">
+      <button id="mute-btn" class="icon-btn">🔊</button>
+      <button id="pause-btn" class="icon-btn">⏸️</button>
+      <button id="quit-btn" class="icon-btn">🏠</button>
+    </div>
+  </div>
+  <div id="stage">
+    <div id="packets"></div>
+    <div id="board-wrap"><canvas id="board"></canvas></div>
+  </div>
+  <div id="banner" class="hidden"></div>
+  <div id="toast" class="hidden"></div>
+  <div id="modal" class="hidden">
+    <div id="modal-win" class="modal-card hidden">
+      <h2>🌸 LAWN DEFENDED!</h2>
+      <p id="win-sub" class="sub"></p>
+      <div class="final-score"><span id="win-score">0</span></div>
+      <div class="best-line">best <span id="win-best">0</span></div>
+      <div id="arcade-box"></div>
+      <div class="row">
+        <button id="again-btn" class="big-btn">↻ PLAY AGAIN</button>
+        <button id="win-menu-btn" class="ghost-btn">Menu</button>
+      </div>
+    </div>
+    <div id="modal-lose" class="modal-card hidden">
+      <h2>🥀 OVERRUN</h2>
+      <p id="lose-wave" class="sub"></p>
+      <p class="tip">Tip: sunflowers first, walls second, panic never.</p>
+      <div class="row">
+        <button id="retry-btn" class="big-btn">↻ TRY AGAIN</button>
+        <button id="lose-menu-btn" class="ghost-btn">Menu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="art.js"></script>
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

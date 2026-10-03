@@ -91,6 +91,15 @@ h1{
   background-image:radial-gradient(rgba(255,255,255,.35) 2px, transparent 3px);
   background-size:34px 34px;}
 .card.soon .art{background:linear-gradient(150deg,#1d1430,#0e0a18)}
+.art.bloom{background:
+  radial-gradient(circle at 30% 30%, rgba(184,245,122,.4), transparent 55%),
+  radial-gradient(circle at 75% 70%, rgba(255,210,90,.25), transparent 50%),
+  linear-gradient(150deg,#1d3a1a,#0a180c);}
+.bloomfx{position:absolute;inset:0;}
+.bloomfx i{position:absolute;font-style:normal;animation:bob 3.4s ease-in-out infinite;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4));}
+.bloomfx i:nth-child(1){left:14%;top:20%;font-size:52px;}
+.bloomfx i:nth-child(2){left:56%;top:48%;font-size:44px;animation-delay:-1.1s;}
+.bloomfx i:nth-child(3){left:74%;top:16%;font-size:38px;animation-delay:-2.2s;}
 footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
   padding:0 20px calc(20px + env(safe-area-inset-bottom));text-align:center}
 </style>
@@ -164,6 +173,16 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
     <div class="body">
       <h2>📖 Life Story</h2>
       <p>Live a whole life one tap at a time — school, careers, love, crime, fortune. What will your obituary say?</p>
+      <span class="play">Play →</span>
+    </div>
+  </a>
+  <a class="card" href="./bloom-defense/">
+    <div class="art bloom">
+      <div class="bloomfx"><i>🌻</i><i>🧟</i><i>🌱</i></div>
+    </div>
+    <div class="body">
+      <h2>🌸 Bloom Defense</h2>
+      <p>Hold the lawn through 10 waves of weeds: sunflowers, wall-nuts, cherry bombs, lawnmowers &amp; a daily challenge.</p>
       <span class="play">Play →</span>
     </div>
   </a>
