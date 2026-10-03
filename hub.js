@@ -121,14 +121,14 @@
     try { return JSON.parse(v); } catch (e) { return null; }
   }
   var GAMES = [
-    { id: 'candy-cascade', name: 'Candy Cascade', art: 'assets/small-candy-cascade.jpg' },
-    { id: 'bubble-hex', name: 'Bubble Hex', art: 'assets/small-bubble-hex.jpg' },
-    { id: 'bloom-defense', name: 'Bloom Defense', art: 'assets/small-bloom-defense.jpg' },
-    { id: 'neon-void', name: 'Neon Void', art: 'assets/small-neon-void.jpg' },
-    { id: 'maze-trace', name: 'Arrow Slide', art: 'assets/small-arrow-slide.jpg' },
-    { id: 'life-story', name: 'Life Story', art: 'assets/small-life-story.jpg' },
-    { id: 'reel-empire', name: 'Reel Empire', art: 'assets/small-reel-empire.jpg' },
-    { id: 'pdawg', name: 'Pdawg Puzzles', art: 'assets/small-pdawg.jpg' }
+    { id: 'candy-cascade', name: 'Candy Cascade', cls: 'art-candy-cascade' },
+    { id: 'bubble-hex', name: 'Bubble Hex', cls: 'art-bubble-hex' },
+    { id: 'bloom-defense', name: 'Bloom Defense', cls: 'art-bloom-defense' },
+    { id: 'neon-void', name: 'Neon Void', cls: 'art-neon-void' },
+    { id: 'maze-trace', name: 'Arrow Slide', cls: 'art-arrow-slide' },
+    { id: 'life-story', name: 'Life Story', cls: 'art-life-story' },
+    { id: 'reel-empire', name: 'Reel Empire', cls: 'art-reel-empire' },
+    { id: 'pdawg', name: 'Pdawg Puzzles', cls: 'art-pdawg' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -194,8 +194,7 @@
     if (!pr) return;
     any = true;
     var a = document.createElement('a');
-    a.className = 'chip'; a.href = './' + g.id + '/';
-    a.style.backgroundImage = 'url(' + g.art + ')';
+    a.className = 'chip ' + g.cls; a.href = './' + g.id + '/';
     a.innerHTML = '<div class="scrim"></div><div class="info"><b>' +
       escapeHtml(g.name) + '</b><span>' + escapeHtml(pr.label) + '</span></div>';
     rail.appendChild(a);
