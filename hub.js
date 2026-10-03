@@ -129,7 +129,8 @@
     { id: 'life-story', name: 'Life Story', cls: 'art-life-story' },
     { id: 'reel-empire', name: 'Reel Empire', cls: 'art-reel-empire' },
     { id: 'pdawg', name: 'Pdawg Puzzles', cls: 'art-pdawg' },
-    { id: 'word-well', name: 'Word Well', cls: 'art-word-well' }
+    { id: 'word-well', name: 'Word Well', cls: 'art-word-well' },
+    { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -190,6 +191,13 @@
         var w = readJSON('ww_streak_v1');
         if (!w || !w.count) return null;
         return { label: '🔥 ' + w.count + '-day streak', frac: Math.min(1, w.count / 30) };
+      }
+      if (id === 'blood-moon') {
+        var bm = readJSON('bm_meta');
+        if (!bm) return null;
+        var bn = bm.nightsSurvived || 0, bk = bm.bestKills || 0;
+        if (!bn && !bk) return null;
+        return { label: '🌙 ' + bn + ' night' + (bn === 1 ? '' : 's') + ' · 🩸' + bk + ' best', frac: Math.min(1, bn / 5) };
       }
     } catch (e) { return null; }
     return null;
