@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Life Story — a life simulator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div id="who">
+      <div id="avatar">🍼</div>
+      <div>
+        <div id="pname">—</div>
+        <div id="page">Age 0 · <span id="ploc"></span></div>
+      </div>
+    </div>
+    <div id="pmoney">$0</div>
+  </header>
+
+  <div id="stats">
+    <div class="stat"><span>😊</span><div class="bar"><i id="b-happy"></i></div></div>
+    <div class="stat"><span>❤️</span><div class="bar"><i id="b-health"></i></div></div>
+    <div class="stat"><span>🧠</span><div class="bar"><i id="b-smarts"></i></div></div>
+    <div class="stat"><span>✨</span><div class="bar"><i id="b-looks"></i></div></div>
+  </div>
+
+  <div id="journal"></div>
+
+  <button id="age-btn">Age +</button>
+
+  <nav id="tabs">
+    <button data-tab="act">🎯<small>Life</small></button>
+    <button data-tab="love">💕<small>Love</small></button>
+    <button data-tab="job">💼<small>Career</small></button>
+    <button data-tab="assets">🏠<small>Assets</small></button>
+    <button data-tab="crime">🕶️<small>Crime</small></button>
+  </nav>
+</div>
+
+<div id="sheet" class="overlay hidden">
+  <div class="panel">
+    <div class="panel-head"><h2 id="sheet-title"></h2><button id="sheet-x" class="x">✕</button></div>
+    <div id="sheet-body"></div>
+  </div>
+</div>
+
+<div id="start" class="overlay">
+  <div class="panel">
+    <div class="logo">📖</div>
+    <h1>Life Story</h1>
+    <p class="tag">One tap per year. School, work, love, crime, fortune — then the obituary. How will your story read?</p>
+    <button id="new-life-btn" class="big-btn">🍼 Start a New Life</button>
+    <div id="legacy"></div>
+  </div>
+</div>
+
+<div id="death" class="overlay hidden">
+  <div class="panel">
+    <div class="logo" id="d-emoji">⚰️</div>
+    <h1 id="d-name"></h1>
+    <p class="tag" id="d-cause"></p>
+    <div class="ribbon"><span id="d-ribbon-e"></span><b id="d-ribbon-t"></b><p id="d-ribbon-d"></p></div>
+    <div class="dstats" id="d-stats"></div>
+    <button id="again-btn" class="big-btn">🍼 New Life</button>
+    <button id="child-btn" class="ghost-btn hidden">👶 Continue as my child</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="life.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
