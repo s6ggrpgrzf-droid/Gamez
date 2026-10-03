@@ -890,7 +890,17 @@ function drainEvents() {
         G.fx.push({ kind: 'novaring', x: e.x, y: e.y, r: e.r, t: 0.55, max: 0.55 });
         SFX.nova(); shake(11, 0.45);
         break;
-      case 'taunt': bubble(e.x, e.y, e.text); break;
+      case 'taunt':
+        var txt = e.text;
+        // silent AI flavor: sometimes swap a villager scream for a fresh AI one
+        if (aiTauntPool.length && Math.random() < 0.4 &&
+            BloodMoonContent.HELSING_LINES.indexOf(txt) < 0 &&
+            BloodMoonContent.DAWN_LINES.indexOf(txt) < 0 &&
+            txt !== 'For the Count!' && txt !== 'Impossible…') {
+          txt = aiTauntPool.pop();
+        }
+        bubble(e.x, e.y, txt);
+        break;
       case 'bell':
         SFX.bell();
         if (e.n <= 4) banner('🕯 THE ' + HOUR_NAMES[e.n - 1] + ' HOUR TOLLS');
@@ -1301,7 +1311,7 @@ document.getElementById('menu-btn').onclick = function () {
   document.getElementById('over').classList.add('hidden');
   document.getElementById('menu').classList.remove('hidden');
   G.mode = 'menu'; G.api = null; G._submitted = false;
-  renderMeta(); renderBloodlines(); loadBoards();
+  renderMeta(); renderBloodlines(); loadBoards(); primeAi();
 };
 document.getElementById('pause-btn').onclick = function () { togglePause(); };
 document.getElementById('resume-btn').onclick = function () { togglePause(); };
@@ -1315,7 +1325,7 @@ document.getElementById('quit-btn').onclick = function () {
   document.getElementById('menu').classList.remove('hidden');
   document.getElementById('hud').classList.add('hidden');
   G.mode = 'menu'; G.api = null; G.carry = null;
-  renderMeta(); renderBloodlines(); loadBoards();
+  renderMeta(); renderBloodlines(); loadBoards(); primeAi();
 };
 canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
@@ -1332,8 +1342,51 @@ loadMeta();
 renderMeta();
 renderBloodlines();
 loadBoards();
+primeAi();
 G.mode = 'menu';
 requestAnimationFrame(frame);
 requestAnimationFrame(menuFrame);
 
 })();
+
+/* ============ silent AI flavor (gamez-ai; local fallback, never blocks) ============
+   The player never knows AI is involved: every call has an instant local
+   fallback and nothing in the game waits on the network. */
+var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
+function aiFetch(kind, ctxObj, cb) {
+  var done = false, timer = null;
+  function fin(t) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(t); } }
+  timer = setTimeout(function () { fin(null); }, 7000);
+  try {
+    fetch(AI_BASE + '/g', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: kind, game: 'blood-moon', ctx: ctxObj })
+    }).then(function (r) { return r.json(); })
+      .then(function (d) { fin(d && d.text ? d.text : null); })
+      .catch(function () { fin(null); });
+  } catch (e) { fin(e); }
+}
+var BRIEF_FALLBACKS = [
+  'The village of Turnip Hollow sleeps. It should not have.',
+  'Gristle\'s Hollow: pitchforks sharpened, torches lit, lambs silent.',
+  'Mildred rang the church bell at dusk. Nobody answered.',
+  'The harvest festival ends at midnight. So does the truce.',
+  'Fog on the fen, a bell that won\'t stop, and you — hungry.'
+];
+var aiTauntPool = [];
+var aiSlot = 0;
+function primeAi() {
+  // one-line gothic scene-setter on the menu
+  var slot = aiSlot % BRIEF_FALLBACKS.length; aiSlot++;
+  var bel = document.getElementById('night-brief');
+  function show(t) { if (bel) bel.textContent = '📜 ' + (t || BRIEF_FALLBACKS[slot]); }
+  aiFetch('nightbrief', { v: slot }, show);
+  setTimeout(function () { if (bel && !bel.textContent) show(null); }, 1500);
+  // a fresh batch of villager screams for this session
+  aiFetch('vamptaunt', { v: aiSlot }, function (t) {
+    if (!t) return;
+    var lines = String(t).split('\n').map(function (s) { return s.trim().replace(/^["'\-\d.)\s]+|["'\s]+$/g, ''); })
+      .filter(function (s) { return s.length > 4 && s.length < 90; });
+    if (lines.length) aiTauntPool = lines.slice(0, 8);
+  });
+}
