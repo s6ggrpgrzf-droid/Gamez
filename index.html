@@ -1,54 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Reel Empire — Movie Studio Tycoon</title>
-<link rel="stylesheet" href="style.css?v=1">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12071f">
+<title>Gamez — arcade</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;color:#fff;
+  font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:radial-gradient(120% 90% at 50% 0%, #3a1458 0%, #1c0b33 50%, #0e0619 100%);
+  min-height:100dvh; display:flex; flex-direction:column; align-items:center;
+  overflow-x:hidden; user-select:none; -webkit-user-select:none;
+}
+.blobs{position:fixed;inset:0;overflow:hidden;pointer-events:none}
+.blobs span{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:drift 16s ease-in-out infinite alternate}
+.blobs span:nth-child(1){width:40vmax;height:40vmax;left:-10vmax;top:-8vmax;background:#7b2ff7}
+.blobs span:nth-child(2){width:34vmax;height:34vmax;right:-8vmax;top:30vh;background:#ff5fa2;animation-delay:-5s}
+.blobs span:nth-child(3){width:28vmax;height:28vmax;left:10vw;bottom:-10vmax;background:#2fc7f7;animation-delay:-9s}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(4vmax,3vmax) scale(1.1)}}
+header{position:relative;z-index:1;text-align:center;padding:calc(34px + env(safe-area-inset-top)) 20px 8px}
+h1{
+  margin:0;font-size:52px;font-weight:900;letter-spacing:4px;
+  background:linear-gradient(100deg,#ffd34d,#ff5fa2 50%,#4de3ff);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 16px rgba(255,95,162,.35));
+}
+.tag{color:rgba(255,255,255,.6);font-size:15px;margin-top:6px}
+.games{position:relative;z-index:1;display:flex;gap:22px;flex-wrap:wrap;justify-content:center;
+  padding:26px 20px 40px;max-width:860px;width:100%}
+.card{
+  position:relative;width:300px;border-radius:24px;overflow:hidden;text-decoration:none;color:#fff;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 16px 44px rgba(0,0,0,.45);
+  transition:transform .18s, box-shadow .18s;
+}
+.card:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.card:active{transform:scale(.97)}
+.art{height:170px;position:relative;overflow:hidden}
+.art.reel{background:
+  radial-gradient(circle at 70% 20%, rgba(255,211,77,.25), transparent 55%),
+  linear-gradient(150deg,#2b1a4e,#12081f);}
+.art.candy{background:
+  radial-gradient(circle at 30% 25%, rgba(255,95,162,.35), transparent 55%),
+  linear-gradient(150deg,#3d1030,#160a24);}
+.art .emoji{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:84px;
+  filter:drop-shadow(0 10px 20px rgba(0,0,0,.5));}
+.marquee{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:6px}
+.marquee i{width:26px;height:12px;border-radius:3px;background:rgba(255,255,255,.85);
+  box-shadow:0 0 10px rgba(255,255,255,.6);animation:chase 1.2s infinite}
+.marquee i:nth-child(2){animation-delay:.15s}.marquee i:nth-child(3){animation-delay:.3s}
+.marquee i:nth-child(4){animation-delay:.45s}.marquee i:nth-child(5){animation-delay:.6s}
+@keyframes chase{0%,100%{opacity:.35}50%{opacity:1}}
+.candies{position:absolute;inset:0}
+.candies i{position:absolute;border-radius:40%;animation:bob 3.4s ease-in-out infinite}
+.candies i:nth-child(1){width:44px;height:44px;left:16%;top:24%;background:radial-gradient(circle at 35% 30%,#ff9d9d,#e11d48 65%);animation-delay:0s}
+.candies i:nth-child(2){width:36px;height:36px;left:58%;top:56%;background:radial-gradient(circle at 35% 30%,#bfe6ff,#0284c7 65%);border-radius:50%;animation-delay:-1.2s}
+.candies i:nth-child(3){width:40px;height:40px;left:74%;top:20%;background:radial-gradient(circle at 35% 30%,#fff3b0,#ca8a04 65%);animation-delay:-2.1s}
+.candies i:nth-child(4){width:32px;height:32px;left:38%;top:62%;background:radial-gradient(circle at 35% 30%,#b8f5c8,#16a34a 65%);animation-delay:-.6s}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-12px) rotate(6deg)}}
+.body{padding:18px 20px 22px}
+.body h2{margin:0 0 6px;font-size:24px;font-weight:900}
+.body p{margin:0;color:rgba(255,255,255,.62);font-size:14px;line-height:1.45}
+.play{display:inline-block;margin-top:14px;padding:11px 26px;border-radius:999px;font-weight:800;font-size:16px;
+  background:linear-gradient(100deg,#ff5fa2,#c13b8f);box-shadow:0 6px 20px rgba(255,95,162,.4)}
+.card.soon{opacity:.55;pointer-events:none}
+.card.soon .art{background:linear-gradient(150deg,#1d1430,#0e0a18)}
+footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
+  padding:0 20px calc(20px + env(safe-area-inset-bottom));text-align:center}
+</style>
 </head>
 <body>
-<div id="app">
-  <header id="topbar">
-    <div class="tb-left">
-      <div class="tb-studio" id="tbStudio">★ Reel Empire</div>
-      <div class="tb-date" id="tbDate">Jan 1955</div>
+<div class="blobs"><span></span><span></span><span></span></div>
+<header>
+  <h1>GAMEZ</h1>
+  <div class="tag">little games, made with care 🕹️</div>
+</header>
+<main class="games">
+  <a class="card" href="./candy-cascade/">
+    <div class="art candy">
+      <div class="candies"><i></i><i></i><i></i><i></i></div>
     </div>
-    <div class="tb-mid">
-      <div class="tb-cash" id="tbCash">$20.0M</div>
-      <div class="tb-prestige" id="tbPrestige">★ 0</div>
+    <div class="body">
+      <h2>🍬 Candy Cascade</h2>
+      <p>Swap, match &amp; chain candy combos across 20 levels. Striped, wrapped &amp; color-bomb specials included.</p>
+      <span class="play">Play →</span>
     </div>
-    <div class="tb-right">
-      <button class="spd" id="spdPause" title="Pause">⏸</button>
-      <button class="spd on" id="spd1" title="Normal speed">1×</button>
-      <button class="spd" id="spd3" title="Fast">3×</button>
+  </a>
+  <a class="card" href="./reel-empire/">
+    <div class="art reel">
+      <div class="emoji">🎬</div>
+      <div class="marquee"><i></i><i></i><i></i><i></i><i></i></div>
     </div>
-  </header>
-
-  <main id="views">
-    <section class="view" id="view-studio"></section>
-    <section class="view" id="view-films" hidden></section>
-    <section class="view" id="view-talent" hidden></section>
-    <section class="view" id="view-market" hidden></section>
-    <section class="view" id="view-awards" hidden></section>
-  </main>
-
-  <nav id="bottomnav">
-    <button data-tab="studio" class="on">🎬<span>Studio</span></button>
-    <button data-tab="films">🎞<span>Films</span></button>
-    <button data-tab="talent">⭐<span>Talent</span></button>
-    <button data-tab="market">📅<span>Market</span></button>
-    <button data-tab="awards">🏆<span>Awards</span></button>
-  </nav>
-</div>
-
-<div id="modalRoot"></div>
-<div id="toastRoot"></div>
-
-<script src="data.js?v=2"></script>
-<script src="poster.js?v=2"></script>
-<script src="game.js?v=4"></script>
+    <div class="body">
+      <h2>🎥 Reel Empire</h2>
+      <p>Run a movie studio from 1955 to glory: greenlight scripts, manage stars, dodge scandals, win awards.</p>
+      <span class="play">Play →</span>
+    </div>
+  </a>
+  <div class="card soon">
+    <div class="art"><div class="emoji">🔮</div></div>
+    <div class="body">
+      <h2>???</h2>
+      <p>Something new is rolling down the assembly line…</p>
+      <span class="play">Soon</span>
+    </div>
+  </div>
+</main>
+<footer>built by Jimmy &amp; Pip · more games coming</footer>
 </body>
 </html>
