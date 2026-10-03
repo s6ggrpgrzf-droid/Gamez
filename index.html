@@ -84,6 +84,12 @@ h1{
     linear-gradient(90deg, rgba(80,140,255,.25) 1px, transparent 1px);
   background-size:28px 28px;}
 .card.soon{opacity:.55;pointer-events:none}
+.art.life{background:
+  radial-gradient(circle at 50% 30%, rgba(124,92,255,.5), transparent 60%),
+  linear-gradient(150deg,#232742,#12141f);}
+.lifefx{position:absolute;inset:0;opacity:.5;
+  background-image:radial-gradient(rgba(255,255,255,.35) 2px, transparent 3px);
+  background-size:34px 34px;}
 .card.soon .art{background:linear-gradient(150deg,#1d1430,#0e0a18)}
 footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
   padding:0 20px calc(20px + env(safe-area-inset-bottom));text-align:center}
@@ -147,6 +153,17 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
     <div class="body">
       <h2>🔮 Bubble Hex</h2>
       <p>Aim, fire &amp; pop hex bubbles across 30 levels. Charge the spell orb for the Hex Blast!</p>
+      <span class="play">Play →</span>
+    </div>
+  </a>
+  <a class="card" href="./life-story/">
+    <div class="art life">
+      <div class="lifefx"></div>
+      <div class="emoji">📖</div>
+    </div>
+    <div class="body">
+      <h2>📖 Life Story</h2>
+      <p>Live a whole life one tap at a time — school, careers, love, crime, fortune. What will your obituary say?</p>
       <span class="play">Play →</span>
     </div>
   </a>
