@@ -13,8 +13,8 @@
   var ROWS = 5, COLS = 9;
   var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
   var BEST_KEY = 'bloom2_best', NAME_KEY = 'arcade_name';
-  var SKY_SUN_EVERY = 9, SUN_VALUE = 25, SUNFLOWER_EVERY = 14, SUN_DESPAWN = 12;
-  var PEA_DMG = 20, PEA_EVERY = 1.4, PEA_SPEED = 5.5;
+  var SKY_SUN_EVERY = 8, SUN_VALUE = 25, SUNFLOWER_EVERY = 14, SUN_DESPAWN = 12;
+  var PEA_DMG = 20, PEA_EVERY = 1.3, PEA_SPEED = 5.5;
   var MELON_DMG = 65, MELON_EVERY = 2.4;
   var BITE_DPS = 110;
   var WORM_EVERY = 26, WORM_VALUE = 50;
@@ -40,7 +40,7 @@
   var PLANT_IDS = Object.keys(PLANTS);
 
   var ZTYPES = {
-    basic:    { hp: 190,  speed: 0.30, score: 100,  name: 'Garden Zombie',
+    basic:    { hp: 190,  speed: 0.27, score: 100,  name: 'Garden Zombie',
       desc: 'Shambles toward brains. Union-mandated lunch breaks.' },
     speedy:   { hp: 130,  speed: 0.55, score: 150,  name: 'Sprinter Zombie',
       desc: 'Skipped leg day never. Outruns your peas if you blink.' },
@@ -54,13 +54,14 @@
       desc: 'The final exam. Bring a wall. Bring two walls.' },
   };
 
-  // waves: counts per type + spawn gap; huge/final get telegraphed
+  // waves: counts per type + spawn gap; huge/fin get telegraphed.
+  // waves 1-2 use only the middle rows so the opening teaches before the full 5-row chaos.
   var WAVES = [
-    { basic: 4,  speedy: 0, conehead: 0, vaulter: 0, newspaper: 0, brute: 0, gap: 7 },
-    { basic: 7,  speedy: 0, conehead: 0, vaulter: 0, newspaper: 0, brute: 0, gap: 6 },
-    { basic: 8,  speedy: 3, conehead: 0, vaulter: 0, newspaper: 0, brute: 0, gap: 5.5 },
-    { basic: 8,  speedy: 4, conehead: 3, vaulter: 0, newspaper: 0, brute: 0, gap: 5 },
-    { basic: 12, speedy: 6, conehead: 5, vaulter: 0, newspaper: 0, brute: 0, gap: 4, huge: true },
+    { basic: 3,  speedy: 0, conehead: 0, vaulter: 0, newspaper: 0, brute: 0, gap: 8, rows: [1, 2, 3] },
+    { basic: 5,  speedy: 0, conehead: 0, vaulter: 0, newspaper: 0, brute: 0, gap: 7, rows: [1, 2, 3] },
+    { basic: 6,  speedy: 2, conehead: 0, vaulter: 0, newspaper: 0, brute: 0, gap: 6 },
+    { basic: 8,  speedy: 3, conehead: 2, vaulter: 0, newspaper: 0, brute: 0, gap: 5.5 },
+    { basic: 10, speedy: 5, conehead: 4, vaulter: 0, newspaper: 0, brute: 0, gap: 4.5, huge: true },
     { basic: 8,  speedy: 5, conehead: 5, vaulter: 3, newspaper: 0, brute: 0, gap: 4.5 },
     { basic: 10, speedy: 6, conehead: 6, vaulter: 3, newspaper: 3, brute: 0, gap: 4 },
     { basic: 12, speedy: 8, conehead: 8, vaulter: 4, newspaper: 4, brute: 0, gap: 3.8 },
@@ -70,10 +71,12 @@
 
   /* ================= STATE ================= */
   var S = null;
+  var __gid = 0;
   function newState() {
     return {
+      gid: 0,
       screen: 'menu', running: false, paused: false, over: false, won: false,
-      time: 0, sun: 150, score: 0,
+      time: 0, sun: 175, score: 0,
       wave: 0, waveState: 'idle', // idle | spawning | fighting | done
       spawnQueue: [], spawnT: 0, spawnGap: 5, waveKilled: 0, waveTotal: 0,
       plants: [], zombies: [], peas: [], melons: [], suns: [],
@@ -240,6 +243,7 @@
   /* ================= GAME FLOW ================= */
   function startGame(daily) {
     S = newState();
+    S.gid = ++__gid;
     S.daily = !!daily;
     if (daily) {
       S.dailyDate = new Date().toISOString().slice(0, 10);
@@ -278,14 +282,16 @@
   // Daily mode: don't start wave 1 until the seed arrives (else wave 1 differs per player)
   function waitForSeedThen(n) {
     if (!S.daily || S.seedReady) { beginWave1(n); return; }
-    var tries = 0;
+    var g = S.gid, tries = 0;
     var iv = setInterval(function () {
+      if (!S || S.gid !== g) { clearInterval(iv); return; }
       if (!S.running || S.over) { clearInterval(iv); return; }
       if (S.seedReady || ++tries > 25) { clearInterval(iv); beginWave1(n); }
     }, 200);
   }
   function beginWave1(n) {
-    setTimeout(function () { if (S.running && !S.over && !S.paused) startWave(n); }, 1200);
+    var g = S.gid;
+    setTimeout(function () { if (S.running && !S.over && !S.paused && S.gid === g) startWave(n); }, 1200);
   }
 
   function buildWaveQueue(wi) {
@@ -299,9 +305,10 @@
       var j = Math.floor(rng() * (i + 1));
       var tmp = q[i]; q[i] = q[j]; q[j] = tmp;
     }
-    // rows: avoid stacking >2 in a row on the same lane early
+    // rows: early waves stick to the middle lanes
+    var rowPool = w.rows || [0, 1, 2, 3, 4];
     var rows = [];
-    for (var k = 0; k < q.length; k++) rows.push(Math.floor(rng() * ROWS));
+    for (var k = 0; k < q.length; k++) rows.push(rowPool[Math.floor(rng() * rowPool.length)]);
     return { types: q, rows: rows, gap: w.gap, huge: !!w.huge, fin: !!w.fin };
   }
 
@@ -325,6 +332,7 @@
 
   function banner(a, b, c, done) {
     var el = $('banner');
+    var g = S ? S.gid : 0;
     el.innerHTML = '<div class="b1">' + a + '</div>' +
       (b ? '<div class="b2">' + b + '</div>' : '') +
       (c ? '<div class="b3">' + c + '</div>' : '');
@@ -333,8 +341,8 @@
     clearTimeout(banner._t);
     banner._t = setTimeout(function () {
       el.classList.add('hidden');
-      if (done) done();
-    }, 1700);
+      if (done && S && S.gid === g) done();
+    }, 2100);
   }
   function toast(msg) {
     var el = $('toast');
@@ -421,7 +429,8 @@
         AU.sun();
         if (S.wave >= WAVES.length) return winGame();
         S.waveState = 'idle';
-        setTimeout(function () { if (S.running && !S.over && !S.paused) startWave(S.wave + 1); }, 2600);
+        var g = S.gid, wn = S.wave;
+        setTimeout(function () { if (S.running && !S.over && !S.paused && S.gid === g) startWave(wn + 1); }, 2600);
       }
     }
 
@@ -482,7 +491,7 @@
         if (p.cool <= 0 && zombieAhead(p.r, px + 0.3, COLS + 1)) {
           firePea(p, p.id === 'snowpea');
           if (p.id === 'repeater') {
-            (function (pp) { setTimeout(function () { if (S.running && !S.over && !S.paused && S.plants.indexOf(pp) >= 0) firePea(pp, false); }, 180); })(p);
+            (function (pp, g) { setTimeout(function () { if (S.running && !S.over && !S.paused && S.gid === g && S.plants.indexOf(pp) >= 0) firePea(pp, false); }, 180); })(p, S.gid);
           }
           p.cool = PEA_EVERY;
           p.recoil = 1;
@@ -888,7 +897,9 @@
     if (S.score > best) { best = S.score; localStorage.setItem(BEST_KEY, best); }
     AU.win();
     A.puff(A.W / 2, A.H / 2, 80, ['#ffe97a', '#ff9d9d', '#7ee06a', '#aee3ff'], 300, 1.6, 6, 200);
+    var g = S.gid;
     setTimeout(function () {
+      if (!S || S.gid !== g) return;
       $('win-score').textContent = S.score.toLocaleString();
       $('win-best').textContent = best.toLocaleString();
       $('win-sub').textContent = (S.daily ? '📅 Daily Bloom · ' + S.dailyDate : 'All 10 waves survived!') +
@@ -901,7 +912,9 @@
     if (S.over) return;
     S.over = true; S.running = false;
     AU.lose();
+    var g = S.gid;
     setTimeout(function () {
+      if (!S || S.gid !== g) return;
       $('lose-wave').textContent = 'The weeds overran wave ' + Math.max(1, S.wave) + '.';
       showModal('lose');
     }, 900);
