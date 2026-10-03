@@ -253,3 +253,58 @@ body{
   letter-spacing: 1px; text-transform: uppercase; }
 #arc-lb-name:focus { outline: none; border-color: #ff5fa2; }
 #arc-lb-go { padding: 12px 18px; }
+
+/* ============ Revamp: boosters, intro card, hints, map colors ============ */
+#booster-bar{display:flex; align-items:center; justify-content:center; gap:10px; padding:4px 0 0;}
+.boost{position:relative; width:54px; height:54px; border-radius:50%; border:2px solid var(--glass-brd);
+  background:var(--glass); font-size:26px; cursor:pointer; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  transition:transform .12s;}
+.boost:active{transform:scale(.9);}
+.boost span{position:absolute; right:-6px; bottom:-6px; background:var(--gold); color:#3a2200;
+  font-size:13px; font-weight:900; border-radius:99px; padding:1px 7px; box-shadow:0 2px 6px rgba(0,0,0,.4);}
+.boost.empty{filter:grayscale(1); opacity:.45;}
+.boost.armed{border-color:var(--gold); box-shadow:0 0 18px var(--gold); animation:pulse 1s infinite;}
+#boost-tip{font-size:11px; color:var(--ink-dim); font-weight:700; line-height:1.4; text-align:left;}
+
+/* idle hint pulse */
+.tile.hint .candy{animation:hintPulse .8s ease-in-out infinite;}
+@keyframes hintPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.24); filter:brightness(1.5) drop-shadow(0 0 8px #fff);}}
+
+/* cherry ingredient */
+.candy.ing{display:flex; align-items:center; justify-content:center; background:none !important;
+  box-shadow:none !important; filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));}
+.candy.ing::after{display:none;}
+
+/* map: type color-coding + icons */
+.lvl-node .tico{position:absolute; top:-9px; right:-9px; font-size:19px; filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));}
+.lvl-node.t-score{border-color:#ffd34d;}
+.lvl-node.t-jelly{border-color:#38bdf8;}
+.lvl-node.t-order{border-color:#ff8ac2;}
+.lvl-node.t-ing{border-color:#4ade80;}
+.lvl-node.t-mixed{border-color:#c084fc;}
+
+/* daily treat + streak */
+#daily-toast{margin:2px 16px 0; padding:8px 14px; border-radius:12px; text-align:center;
+  font-size:13px; font-weight:700;
+  background:linear-gradient(100deg,rgba(255,211,77,.22),rgba(255,95,162,.22));
+  border:1px solid var(--glass-brd); transition:opacity .4s;}
+#daily-toast.hidden{display:none;}
+#daily-toast .dim{color:var(--ink-dim); font-weight:600;}
+#streak-flame{font-size:16px; font-weight:800; background:var(--glass); border:1px solid var(--glass-brd);
+  padding:8px 12px; border-radius:999px; animation:pulse 1.6s ease-in-out infinite;}
+#streak-flame.hidden{display:none;}
+
+/* level intro card */
+.intro-goal{font-size:17px; font-weight:800; margin-bottom:4px;}
+.intro-goal .gicons{display:inline-flex; gap:6px; align-items:center;}
+.intro-goal .mini{width:24px; height:24px; display:inline-block; vertical-align:-6px;}
+.intro-moves{color:var(--ink-dim); font-size:14px; margin-bottom:10px;}
+.intro-stars{display:flex; justify-content:center; gap:14px; font-size:13px; color:var(--gold);
+  font-weight:800; margin-bottom:10px;}
+.intro-tip{background:rgba(255,211,77,.1); border:1px solid rgba(255,211,77,.35); border-radius:12px;
+  padding:8px 12px; font-size:13px; line-height:1.45; margin-bottom:10px; color:#ffe9a8; text-align:left;}
+.intro-hammers{font-size:14px; font-weight:700; margin-bottom:16px;}
+.intro-hammers .dim{color:var(--ink-dim); font-weight:600; font-size:12px;}
+
+/* confetti easter egg */
+.confetti{position:absolute; top:0; width:10px; height:14px; border-radius:2px; z-index:50; pointer-events:none;}

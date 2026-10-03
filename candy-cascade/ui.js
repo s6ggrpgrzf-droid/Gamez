@@ -4,14 +4,23 @@
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const CANDY_CSS = ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#38bdf8', '#a855f7'];
-const BANNERS = { 2: 'Juicy!', 3: 'Sugary!', 4: 'Delicious!', 5: 'Candy-tastic!' };
+const BANNERS = { 2: 'Sweet!', 3: 'Tasty!', 4: 'Delicious!', 5: 'Divine!' };
+const TYPE_META = {
+  score:       { cls: 't-score', icon: '🎯' },
+  jelly:       { cls: 't-jelly', icon: '🫧' },
+  order:       { cls: 't-order', icon: '🍬' },
+  ingredients: { cls: 't-ing',   icon: '🍒' },
+  mixed:       { cls: 't-mixed', icon: '✨' },
+};
 
 /* ---------------- persistence ---------------- */
 const SAVE_KEY = 'cc_progress_v1';
 function loadProgress() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch (e) { return null; }
 }
-let progress = loadProgress() || { stars: {}, unlocked: 1, muted: false };
+let progress = loadProgress() || { stars: {}, unlocked: 1, muted: false, hammers: 3, streak: 0 };
+if (progress.hammers == null) progress.hammers = 3;
+if (progress.streak == null) progress.streak = 0;
 function saveProgress() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch (e) {} }
 
 /* ---------------- state ---------------- */
@@ -19,6 +28,7 @@ let st = null, levelDef = null;
 let tiles = [], jellyEls = [], frostEls = [];
 let ts = 40, inputLocked = false, selected = null, swipeStart = null;
 let shownScore = 0, boardEl = null, fxEl = null;
+let hammerArmed = false, hintEls = [], idleTimer = null;
 
 /* ---------------- helpers ---------------- */
 const inBounds = p => p.r >= 0 && p.r < st.rows && p.c >= 0 && p.c < st.cols;
@@ -33,18 +43,37 @@ function showScreen(which) {
 function renderMap() {
   const path = $('map-path');
   path.innerHTML = '';
+  // daily treat: +1 lollipop hammer (cap 5)
+  const today = new Date().toISOString().slice(0, 10);
+  const dt = $('daily-toast');
+  if (progress.lastDaily !== today) {
+    progress.lastDaily = today;
+    progress.hammers = Math.min(5, (progress.hammers || 0) + 1);
+    saveProgress();
+    dt.innerHTML = '🍭 Daily treat! +1 Lollipop Hammer <span class="dim">— tap 🍭 under the board to smash any candy</span>';
+    dt.classList.remove('hidden');
+    clearTimeout(renderMap._dt);
+    renderMap._dt = setTimeout(() => dt.classList.add('hidden'), 7000);
+  } else dt.classList.add('hidden');
+  // win streak flame
+  const sf = $('streak-flame');
+  if ((progress.streak || 0) >= 2) {
+    sf.textContent = `🔥×${progress.streak}`;
+    sf.classList.remove('hidden');
+  } else sf.classList.add('hidden');
   let total = 0;
   LEVELS.forEach(L => {
     const n = L.n, stars = progress.stars[n] || 0;
     total += stars;
+    const meta = TYPE_META[L.type] || TYPE_META.score;
     const btn = document.createElement('button');
-    btn.className = 'lvl-node';
+    btn.className = 'lvl-node ' + meta.cls;
     btn.dataset.n = n;
     if (n > progress.unlocked) {
       btn.classList.add('locked');
       btn.innerHTML = '🔒';
     } else {
-      btn.textContent = n;
+      btn.innerHTML = `<span class="tico">${meta.icon}</span>` + n;
       if (stars > 0) btn.classList.add('done');
       else if (n === progress.unlocked) btn.classList.add('current');
       const s = document.createElement('div');
@@ -52,7 +81,7 @@ function renderMap() {
       s.innerHTML = [1, 2, 3].map(i =>
         `<span class="${i <= stars ? '' : 'off'}">★</span>`).join('');
       btn.appendChild(s);
-      btn.addEventListener('click', () => { CCAudio.unlock(); CCAudio.click(); startLevel(n); });
+      btn.addEventListener('click', () => { CCAudio.unlock(); CCAudio.click(); showIntro(n); });
     }
     path.appendChild(btn);
   });
@@ -66,7 +95,63 @@ function renderMap() {
   });
 }
 
+/* ---------------- level intro card ---------------- */
+function introGoalHtml(d) {
+  if (d.type === 'score') return `🎯 Score <b>${d.goal.score.toLocaleString()}</b> points`;
+  if (d.type === 'jelly') {
+    let n = 0;
+    for (const row of CC.gridFromStrings(d.jelly, 9, 9)) for (const v of row) n += v;
+    return `🫧 Clear all <b>${n}</b> jelly layers`;
+  }
+  if (d.type === 'order') {
+    const parts = Object.keys(d.goal.orders)
+      .map(k => `<span class="mini candy c${k}"></span>×${d.goal.orders[k]}`);
+    return `<div class="gicons">Collect ${parts.join(' ')}</div>`;
+  }
+  if (d.type === 'ingredients') return `🍒 Deliver <b>${d.goal.ingredients}</b> cherries to the bottom row`;
+  if (d.type === 'mixed') {
+    let n = 0;
+    for (const row of CC.gridFromStrings(d.jelly, 9, 9)) for (const v of row) n += v;
+    const parts = Object.keys(d.goal.orders)
+      .map(k => `<span class="mini candy c${k}"></span>×${d.goal.orders[k]}`);
+    return `🫧 Clear <b>${n}</b> jelly <span class="dim">+</span> <div class="gicons">collect ${parts.join(' ')}</div>`;
+  }
+  return '';
+}
+
+function showIntro(n) {
+  const d = LEVELS[n - 1];
+  const s = d.stars;
+  showModal({
+    title: `Level ${n}`,
+    sub: `<div class="intro-goal">${introGoalHtml(d)}</div>` +
+      `<div class="intro-moves">in <b>${d.moves}</b> moves</div>` +
+      `<div class="intro-stars"><span>★ ${s[0].toLocaleString()}</span><span>★★ ${s[1].toLocaleString()}</span><span>★★★ ${s[2].toLocaleString()}</span></div>` +
+      (d.tip ? `<div class="intro-tip">💡 ${d.tip}</div>` : '') +
+      `<div class="intro-hammers">🍭 Lollipop Hammers: <b>${progress.hammers || 0}</b> <span class="dim">— smash any one candy, free</span></div>`,
+    buttons: [
+      { label: '▶ Play!', onClick: () => { hideModal(); startLevel(n); } },
+      { label: '🗺 Map', ghost: true, onClick: () => { hideModal(); } },
+    ],
+  });
+}
+
 /* ---------------- board construction ---------------- */
+function paintCandy(candy, cell) {
+  if (cell.t === 'i') {
+    candy.className = 'candy ing';
+    candy.textContent = '🍒';
+    candy.style.fontSize = Math.round(ts * 0.66) + 'px';
+    delete candy.dataset.color;
+  } else {
+    candy.className = 'candy' + (cell.color == null ? '' : ' c' + cell.color);
+    candy.textContent = '';
+    candy.style.fontSize = '';
+    if (cell.color != null) candy.dataset.color = cell.color;
+    else delete candy.dataset.color;
+  }
+}
+
 function makeTile(cell) {
   const el = document.createElement('div');
   el.className = 'tile';
@@ -75,8 +160,7 @@ function makeTile(cell) {
   const pad = document.createElement('div');
   pad.className = 'pad';
   const candy = document.createElement('div');
-  candy.className = 'candy' + (cell.color == null ? '' : ' c' + cell.color);
-  if (cell.color != null) candy.dataset.color = cell.color;
+  paintCandy(candy, cell);
   pad.appendChild(candy);
   el.appendChild(pad);
   setSpecial(el, cell.sp);
@@ -84,8 +168,7 @@ function makeTile(cell) {
 }
 
 function refreshTileVisual(el, cell) {
-  const candy = el.firstChild.firstChild;
-  candy.className = 'candy' + (cell.color == null ? '' : ' c' + cell.color);
+  paintCandy(el.firstChild.firstChild, cell);
   setSpecial(el, cell.sp);
 }
 
@@ -146,7 +229,12 @@ function layout() {
   ts = boardEl.clientWidth / st.cols;
   for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
     const t = tiles[r][c];
-    if (t) { t.style.width = t.style.height = ts + 'px'; setTilePos(t, r, c); }
+    if (t) {
+      t.style.width = t.style.height = ts + 'px';
+      setTilePos(t, r, c);
+      const ing = t.querySelector('.candy.ing');
+      if (ing) ing.style.fontSize = Math.round(ts * 0.66) + 'px';
+    }
     const j = jellyEls[r][c];
     if (j) { j.style.width = j.style.height = ts + 'px'; j.style.transform = pos(r, c); }
     const f = frostEls[r][c];
@@ -169,12 +257,25 @@ function goalText() {
       .map(k => `<span class="mini candy c${k}"></span>×${st.ordersLeft[k]}`);
     return `<div class="gicons">Collect ${parts.join(' ') || 'done!'}</div>`;
   }
+  if (d.type === 'ingredients') {
+    const left = Math.max(0, d.goal.ingredients - st.ingredientsCollected);
+    return `🍒 <b>${left}</b> to deliver`;
+  }
+  if (d.type === 'mixed') {
+    let n = 0;
+    for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) n += st.jelly[r][c];
+    const parts = Object.keys(st.ordersLeft || {})
+      .filter(k => st.ordersLeft[k] > 0)
+      .map(k => `<span class="mini candy c${k}"></span>×${st.ordersLeft[k]}`);
+    return `🫧<b>${n}</b> <span class="dim">+</span> <div class="gicons">${parts.join(' ') || 'done!'}</div>`;
+  }
   return '';
 }
 
 function updateHUD(instant) {
   $('moves').textContent = st.movesLeft;
   $('hud-moves').classList.toggle('low', st.movesLeft <= 5);
+  CCAudio.setIntensity(st.movesLeft <= 5 && st.movesLeft > 0 && !st.over);
   $('hud-goal').innerHTML = goalText();
   // score tween
   const from = shownScore, to = st.score;
@@ -346,6 +447,41 @@ function popTile(el, colorIdx) {
   ], { duration: 300, easing: 'ease-in' }).finished.catch(() => {});
 }
 
+async function applyFallVisual(fall) {
+  for (const m of fall.moves) {
+    const el = tiles[m.fr][m.fc];
+    tiles[m.fr][m.fc] = null;
+    tiles[m.tr][m.tc] = el;
+    if (el) setTilePos(el, m.tr, m.tc);
+  }
+  for (const s of fall.spawns) {
+    const el = makeTile(s.ing ? { t: 'i' } : { color: s.color, sp: null });
+    el.style.transform = `translate(${s.c * ts}px, ${(s.r - s.drop) * ts}px)`;
+    boardEl.appendChild(el);
+    void el.offsetWidth;
+    setTilePos(el, s.r, s.c);
+    tiles[s.r][s.c] = el;
+  }
+  await wait(360);
+}
+
+async function playCollect(step) {
+  const jobs = [];
+  for (const it of step.items) {
+    const el = tiles[it.r] && tiles[it.r][it.c];
+    burst(it.r, it.c, null);
+    floater(it.r, it.c, '+1,000 🍒');
+    if (el) {
+      jobs.push(popTile(el).then(() => el.remove()));
+      tiles[it.r][it.c] = null;
+    }
+  }
+  CCAudio.special();
+  await Promise.all(jobs);
+  await wait(120);
+  await applyFallVisual(step.fall);
+}
+
 async function playClearStep(step) {
   const isCombo = step.k === 'combo';
   // 1. special creations sparkle
@@ -384,6 +520,10 @@ async function playClearStep(step) {
   if (step.clear.length) {
     const n = step.clear.length;
     floater(fr / n, fc / n, '+' + step.gain.toLocaleString());
+  }
+  for (const cl of step.collected || []) {
+    burst(cl.r, cl.c, null);
+    floater(cl.r, cl.c, '+1,000 🍒');
   }
   // 3. effect beams / blasts
   for (const e of step.effects || []) beamFx(e);
@@ -433,22 +573,7 @@ async function playClearStep(step) {
   }
   await wait(120);
   // 7. gravity
-  const fall = step.fall;
-  for (const m of fall.moves) {
-    const el = tiles[m.fr][m.fc];
-    tiles[m.fr][m.fc] = null;
-    tiles[m.tr][m.tc] = el;
-    if (el) setTilePos(el, m.tr, m.tc);
-  }
-  for (const s of fall.spawns) {
-    const el = makeTile({ color: s.color, sp: null });
-    el.style.transform = `translate(${s.c * ts}px, ${(s.r - s.drop) * ts}px)`;
-    boardEl.appendChild(el);
-    void el.offsetWidth;
-    setTilePos(el, s.r, s.c);
-    tiles[s.r][s.c] = el;
-  }
-  await wait(360);
+  await applyFallVisual(step.fall);
 }
 
 async function playShuffle(step) {
@@ -473,33 +598,94 @@ async function playSteps(steps) {
   for (const step of steps) {
     if (step.k === 'invalid') await playInvalid(step);
     else if (step.k === 'swap') await playSwap(step);
-    else if (step.k === 'round' || step.k === 'combo') await playClearStep(step);
+    else if (step.k === 'round' || step.k === 'combo' || step.k === 'hammer') await playClearStep(step);
+    else if (step.k === 'collect') await playCollect(step);
     else if (step.k === 'shuffle') await playShuffle(step);
     else if (step.k === 'end') await playEnd(step);
   }
   updateHUD(false);
 }
 
+/* ---------------- idle hints ---------------- */
+function clearHintEls() {
+  for (const el of hintEls) if (el) el.classList.remove('hint');
+  hintEls = [];
+}
+function clearIdle() {
+  clearTimeout(idleTimer); idleTimer = null;
+  clearHintEls();
+}
+function pokeIdle() {
+  clearIdle();
+  idleTimer = setTimeout(() => {
+    if (!st || st.over || inputLocked || hammerArmed) return;
+    const h = CC.hint(st);
+    if (!h) return;
+    const a = tiles[h.a.r] && tiles[h.a.r][h.a.c];
+    const b = tiles[h.b.r] && tiles[h.b.r][h.b.c];
+    if (a && b) {
+      hintEls = [a, b];
+      hintEls.forEach(el => el.classList.add('hint'));
+      CCAudio.hint();
+    }
+  }, 5000);
+}
+
 /* ---------------- game flow ---------------- */
-async function doSwap(a, b) {
+async function doSwap(a, b, swipeDir) {
   if (inputLocked || !st || st.over) return;
   if (!inBounds(a) || !inBounds(b)) return;
   inputLocked = true;
+  clearIdle();
   try {
-    const res = CC.trySwap(st, a, b);
+    const res = CC.trySwap(st, a, b, swipeDir);
     await playSteps(res.steps);
   } finally {
     inputLocked = false;
   }
+  pokeIdle();
+}
+
+/* ---------------- lollipop hammer booster ---------------- */
+function updateBoosterBar() {
+  $('hammer-n').textContent = progress.hammers || 0;
+  $('btn-hammer').classList.toggle('empty', !(progress.hammers > 0));
+  $('btn-hammer').classList.toggle('armed', hammerArmed);
+}
+function disarmHammer() { hammerArmed = false; updateBoosterBar(); }
+
+async function useHammer(r, c) {
+  const wasArmed = hammerArmed;
+  disarmHammer();
+  if (!wasArmed) return;
+  if (inputLocked || !st || st.over) return;
+  if (!(progress.hammers > 0)) { showBanner('No hammers! Come back tomorrow 🍭'); return; }
+  const el = tiles[r] && tiles[r][c];
+  const frost = frostEls[r] && frostEls[r][c];
+  if (!el && !frost) return;
+  inputLocked = true;
+  clearIdle();
+  try {
+    const res = CC.hammer(st, r, c);
+    if (res.ok) {
+      progress.hammers--; saveProgress(); updateBoosterBar();
+      CCAudio.hammer();
+      await playSteps(res.steps);
+    } else CCAudio.invalid();
+  } finally {
+    inputLocked = false;
+  }
+  pokeIdle();
 }
 
 function onCellPress(r, c) {
+  if (hammerArmed) { useHammer(r, c); return; }
   if (!tiles[r] || !tiles[r][c]) return;
   CCAudio.unlock();
   if (selected && selected.r === r && selected.c === c) { clearSelection(); return; }
   if (selected && Math.abs(selected.r - r) + Math.abs(selected.c - c) === 1) {
     const a = selected;
-    doSwap(a, { r, c });
+    doSwap(a, { r, c }, a.r === r ? 'h' : 'v');
     return;
   }
   clearSelection();
@@ -513,6 +699,15 @@ function bindInput() {
   boardEl.addEventListener('pointerdown', e => {
     CCAudio.unlock();
     if (inputLocked || !st || st.over) return;
+    clearIdle();
+    if (hammerArmed) {
+      const rect = boardEl.getBoundingClientRect();
+      const c = Math.floor((e.clientX - rect.left) / ts);
+      const r = Math.floor((e.clientY - rect.top) / ts);
+      if (r >= 0 && r < st.rows && c >= 0 && c < st.cols) useHammer(r, c);
+      else disarmHammer();
+      return;
+    }
     const t = e.target.closest('.tile');
     if (!t) return;
     const r = +t.dataset.r, c = +t.dataset.c;
@@ -520,7 +715,7 @@ function bindInput() {
     onCellPress(r, c);
   });
   boardEl.addEventListener('pointermove', e => {
-    if (!swipeStart || e.pointerId !== swipeStart.id || inputLocked) return;
+    if (!swipeStart || e.pointerId !== swipeStart.id || inputLocked || hammerArmed) return;
     const dx = e.clientX - swipeStart.x, dy = e.clientY - swipeStart.y;
     if (Math.hypot(dx, dy) > 22) {
       const dir = Math.abs(dx) > Math.abs(dy)
@@ -529,7 +724,7 @@ function bindInput() {
       const a = { r: swipeStart.r, c: swipeStart.c };
       swipeStart = null;
       clearSelection();
-      doSwap(a, { r: a.r + dir.r, c: a.c + dir.c });
+      doSwap(a, { r: a.r + dir.r, c: a.c + dir.c }, dir.r === 0 ? 'h' : 'v');
     }
   });
   const cancelSwipe = () => { swipeStart = null; };
@@ -543,6 +738,8 @@ function goalToast() {
   let txt;
   if (d.type === 'score') txt = `🎯 Score <b>${d.goal.score.toLocaleString()}</b> in ${d.moves} moves`;
   else if (d.type === 'jelly') txt = `🫧 Clear all the jelly in ${d.moves} moves`;
+  else if (d.type === 'ingredients') txt = `🍒 Deliver <b>${d.goal.ingredients}</b> cherries to the bottom in ${d.moves} moves`;
+  else if (d.type === 'mixed') txt = `✨ Clear the jelly <b>and</b> fill the candy order in ${d.moves} moves`;
   else {
     const names = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
     const parts = Object.keys(d.goal.orders).map(k => `${d.goal.orders[k]} ${names[k]}`);
@@ -561,12 +758,14 @@ function startLevel(n) {
   levelDef = LEVELS[n - 1];
   st = CC.newGame(levelDef);
   selected = null; inputLocked = false; shownScore = 0;
+  disarmHammer(); updateBoosterBar();
   $('score').textContent = '0';
   buildBoard();
   layout();
   showScreen('game');
   updateHUD(true);
   goalToast();
+  pokeIdle();
 }
 
 /* ---------------- modal ---------------- */
@@ -600,6 +799,45 @@ async function playEnd(step) {
   const n = levelDef.n;
   if (step.won) {
     CCAudio.win();
+    // win streak: every 3rd consecutive win earns a hammer
+    progress.streak = (progress.streak || 0) + 1;
+    let streakNote = '';
+    if (progress.streak % 3 === 0 && (progress.hammers || 0) < 5) {
+      progress.hammers = (progress.hammers || 0) + 1;
+      streakNote = `<br>🔥 ${progress.streak}-win streak! +1 🍭 hammer`;
+    }
+    saveProgress();
+    updateBoosterBar();
+    // Sugar Crush: burn leftover moves into bonus points, tap to skip
+    if (step.bonus > 0) {
+      showBanner('Sugar Crush!');
+      CCAudio.sugar();
+      const from = step.score - step.bonus, to = step.score;
+      const mv = Math.round(step.bonus / 250);
+      const s = levelDef.stars, max = s[2];
+      const t0 = performance.now(), dur = Math.min(2000, 500 + mv * 130);
+      let skipped = false;
+      const skip = () => { skipped = true; };
+      $('board-wrap').addEventListener('pointerdown', skip, { once: true });
+      $('moves').textContent = mv;
+      await new Promise(res => {
+        const done = () => {
+          $('board-wrap').removeEventListener('pointerdown', skip);
+          updateHUD(true);
+          res();
+        };
+        (function tick(now) {
+          const p = Math.min(1, (now - t0) / dur);
+          if (skipped || p >= 1) { done(); return; }
+          const v = from + (to - from) * p;
+          $('score').textContent = Math.round(v).toLocaleString();
+          $('moves').textContent = Math.ceil(mv * (1 - p));
+          $('starfill').style.width = Math.min(100, (v / max) * 100) + '%';
+          requestAnimationFrame(tick);
+        })(t0);
+      });
+      await wait(250);
+    }
     const earned = step.stars;
     if ((progress.stars[n] || 0) < earned) progress.stars[n] = earned;
     if (n < LEVELS.length) progress.unlocked = Math.max(progress.unlocked, n + 1);
@@ -610,8 +848,8 @@ async function playEnd(step) {
       title: last ? 'You beat them all! 🏆' : 'Level Complete!',
       stars: earned,
       sub: `Score <b>${step.score.toLocaleString()}</b>` +
-        (step.bonus ? ` <span class="dim">(+${step.bonus.toLocaleString()} move bonus)</span>` : '') +
-        (step.best >= 2 ? `<br>Best cascade: <b>×${step.best}</b> 🔥` : '') +
+        (step.bonus ? ` <span class="dim">(+${step.bonus.toLocaleString()} Sugar Crush)</span>` : '') +
+        (step.best >= 2 ? `<br>Best cascade: <b>×${step.best}</b> 🔥` : '') + streakNote +
         `<div id="arc-lb" class="arc-lb"></div>`,
       buttons: [
         ...(last ? [] : [{ label: '▶ Next Level', onClick: () => { hideModal(); startLevel(n + 1); } }]),
@@ -621,6 +859,8 @@ async function playEnd(step) {
     });
   } else {
     CCAudio.lose();
+    progress.streak = 0;
+    saveProgress();
     showModal({
       title: 'Out of moves 😢',
       sub: goalTextPlain(),
@@ -636,7 +876,28 @@ function goalTextPlain() {
   const d = levelDef;
   if (d.type === 'score') return `You needed ${d.goal.score.toLocaleString()} points.`;
   if (d.type === 'jelly') return 'Some jelly survived. Give it another go!';
+  if (d.type === 'ingredients') return 'The cherries didn\'t all make it down. Try again!';
+  if (d.type === 'mixed') return 'Both goals need finishing — so close, one more try!';
   return 'Not quite enough candy collected.';
+}
+
+/* ---------------- confetti easter egg (tap the logo 5×) ---------------- */
+function confetti() {
+  CCAudio.special();
+  const app = $('app');
+  const colors = ['#ff5fa2', '#4de3ff', '#ffd34d', '#4ade80', '#a855f7'];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti';
+    p.style.left = (Math.random() * 100) + '%';
+    p.style.background = colors[i % colors.length];
+    app.appendChild(p);
+    p.animate([
+      { transform: 'translateY(-12px) rotate(0deg)', opacity: 1 },
+      { transform: `translateY(${app.clientHeight * 0.75}px) rotate(${(Math.random() * 720 - 360) | 0}deg)`, opacity: 0 }
+    ], { duration: 1200 + Math.random() * 1200, easing: 'cubic-bezier(.2,.6,.4,1)', delay: Math.random() * 300 })
+      .onfinish = () => p.remove();
+  }
 }
 
 /* ---------------- wire up ---------------- */
@@ -644,8 +905,17 @@ function init() {
   CCAudio.setMuted(!!progress.muted);
   bindInput();
   renderMap();
+  updateBoosterBar();
   $('btn-quit').addEventListener('click', () => {
-    CCAudio.click(); hideModal(); renderMap(); showScreen('map');
+    CCAudio.click(); hideModal(); clearIdle(); disarmHammer(); renderMap(); showScreen('map');
+  });
+  $('btn-hammer').addEventListener('click', () => {
+    CCAudio.unlock(); CCAudio.click();
+    if (!st || st.over || $('screen-game').classList.contains('hidden')) return;
+    if (hammerArmed) { disarmHammer(); return; }
+    if (!(progress.hammers > 0)) { showBanner('No hammers left! Come back tomorrow 🍭'); return; }
+    hammerArmed = true; updateBoosterBar(); clearSelection(); clearIdle();
+    showBanner('Tap a candy to smash it! 🍭');
   });
   $('btn-pause').addEventListener('click', () => {
     CCAudio.click();
@@ -663,6 +933,15 @@ function init() {
     });
   });
   document.addEventListener('pointerdown', () => CCAudio.unlock(), { once: true });
+  document.addEventListener('pointerdown', () => CCAudio.music(true), { once: true });
+  // logo easter egg: 5 quick taps = confetti
+  let logoTaps = 0, logoTimer = null;
+  document.querySelector('.logo').addEventListener('click', () => {
+    logoTaps++;
+    clearTimeout(logoTimer);
+    logoTimer = setTimeout(() => { logoTaps = 0; }, 1500);
+    if (logoTaps >= 5) { logoTaps = 0; confetti(); }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
