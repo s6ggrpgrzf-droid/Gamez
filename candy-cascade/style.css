@@ -240,6 +240,7 @@ body{
 
 /* ---- Gamez Arcade: leaderboards ---- */
 .arc-lb { margin-top: 12px; text-align: left; }
+.cc-quip { margin: 10px 4px 2px; font-style: italic; font-size: 14px; color: #ffb3d9; text-shadow: 0 0 8px rgba(255,120,200,.35); min-height: 1.2em; }
 .arc-lb-title { font-size: 12px; letter-spacing: 2px; opacity: .75; margin-bottom: 6px; text-align: center; }
 .arc-lb-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 12px;
   background: rgba(255,255,255,.05); border-radius: 10px; margin-bottom: 4px; font-size: 14px; }

@@ -850,6 +850,7 @@ async function playEnd(step) {
       sub: `Score <b>${step.score.toLocaleString()}</b>` +
         (step.bonus ? ` <span class="dim">(+${step.bonus.toLocaleString()} Sugar Crush)</span>` : '') +
         (step.best >= 2 ? `<br>Best cascade: <b>×${step.best}</b> 🔥` : '') + streakNote +
+        `<div id="cc-quip" class="cc-quip"></div>` +
         `<div id="arc-lb" class="arc-lb"></div>`,
       buttons: [
         ...(last ? [] : [{ label: '▶ Next Level', onClick: () => { hideModal(); startLevel(n + 1); } }]),
@@ -857,6 +858,7 @@ async function playEnd(step) {
         { label: '🗺 Map', ghost: true, onClick: () => { hideModal(); renderMap(); showScreen('map'); } },
       ],
     });
+    fillQuip(n, earned);
   } else {
     CCAudio.lose();
     progress.streak = 0;
@@ -949,6 +951,31 @@ document.addEventListener('DOMContentLoaded', init);
 /* ---------------- Gamez Arcade: global leaderboards ----------------
    Shared Cloudflare backend; silent offline so the game never depends on it. */
 const ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev'; // Gamez Arcade backend, e.g. https://gamez-arcade.xxx.workers.dev
+/* ---------------- flavor text (shared backend; silent local fallback) ---------------- */
+const AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
+function aiFetch(kind, ctx) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 7000);
+  return fetch(AI_BASE + '/g', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, game: 'candy-cascade', ctx }), signal: ctl.signal
+  }).then(r => r.json()).then(d => (d && d.text) ? d.text : null)
+    .catch(() => null).finally(() => clearTimeout(t));
+}
+const QUIP_FALLBACKS = [
+  'The gummy bears are throwing a parade in your honor.',
+  'Somewhere, a chocolate bar just applauded.',
+  'Sugar levels: critical. Satisfaction: maximum.',
+  'The candy kingdom salutes you — jelly beans weep with joy.',
+  'That cascade was smoother than fondant.',
+  'Certified sugar wizard. The licorice council approves.',
+];
+function fillQuip(level, stars) {
+  const el = document.getElementById('cc-quip');
+  const show = t => { if (el) el.textContent = t || QUIP_FALLBACKS[(level + stars) % QUIP_FALLBACKS.length]; };
+  aiFetch('quip', { level, stars }).then(show);
+  setTimeout(() => { if (el && !el.textContent) show(null); }, 1500);
+}
 function arcadeFetch(path, body) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 12000);
