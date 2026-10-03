@@ -1107,7 +1107,7 @@
         .then(function (d) {
           clearTimeout(to);
           if (tok !== lifeToken) return;
-          if (d && typeof d.text === 'string' && d.text.trim()) ob.textContent = '✨ ' + d.text.trim();
+          if (d && typeof d.text === 'string' && d.text.trim()) ob.textContent = d.text.trim();
         })
         .catch(function () { clearTimeout(to); });
     } catch (e) { clearTimeout(to); }
