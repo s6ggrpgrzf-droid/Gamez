@@ -1681,7 +1681,6 @@ var UI = {
     var self = this;
     list.forEach(function (a) {
       var card = el('div', 'gal-card ai-card');
-      card.appendChild(el('div', 'ai-badge', '✨ AI'));
       var im = el('div', 'gal-thumb-loading');
       card.appendChild(im);
       card.appendChild(el('div', 'gal-title', a.title));
