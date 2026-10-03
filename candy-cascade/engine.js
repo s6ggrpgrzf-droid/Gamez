@@ -6,20 +6,28 @@
    Board: st.board[r][c] with r=0 at the TOP.
    Cell: { t:'c', color:0..5|null, sp:null|'sh'|'sv'|'w'|'b' }
          { t:'f', hp:1..2 }                       (frosting blocker)
+         { t:'i' }                               (ingredient: falls, immune to
+                                                  clears, collected at bottom)
          null                                    (empty, mid-resolution)
    Specials: sh = striped-horizontal (clears row), sv = striped-vertical
              (clears column), w = wrapped (3x3 double blast),
              b = color bomb (colorless, never matches by color).
+   Stripe orientation follows the PLAYER'S SWIPE direction (horizontal
+   swipe -> horizontal stripes -> clears row), not the match line.
 
-   trySwap() returns { ok, steps } where steps is a replayable list:
+   trySwap(st, a, b, swipeDir) returns { ok, steps } where steps is a replayable list:
      {k:'invalid', a, b}
      {k:'swap', a, b}
      {k:'round', round, matches, creations, clear, effects, jellyCleared,
                orders, frostHits, frostBroken, gain, fall}
      {k:'combo', clear, effects, jellyCleared, orders, frostHits,
                frostBroken, gain, fall}
+     {k:'hammer', ...round-shaped, hammerAt, collected}
+     {k:'collect', items, gain, fall}
      {k:'shuffle', tiles:[{r,c,color,special}]}
      {k:'end', won, stars, score, bonus, best}
+   hammer(st, r, c) smashes one cell for free (no move spent).
+   hint(st) suggests a swap {a, b}, preferring special forges.
    ===================================================================== */
 
 const CC = (() => {
@@ -62,18 +70,42 @@ function newGame(def, seed) {
     movesLeft: def.moves, score: 0,
     ordersLeft: def.goal && def.goal.orders ? Object.assign({}, def.goal.orders) : null,
     over: false, won: false, stars: 0, endBonus: 0, cascadeBest: 0,
+    ingredientsCollected: 0, ingredientsSpawned: 0, pendingIngredient: false, movesUsed: 0,
   };
   const frostGrid = gridFromStrings(def.frost, 9, 9);
+  // constructive fill: never create a match while placing (works for any
+  // color count), then retry only if the board has no possible move at all
   let guard = 0;
   do {
     st.board = Array.from({ length: 9 }, () => Array(9).fill(null));
     for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
-      st.board[r][c] = frostGrid[r][c] > 0
-        ? { t: 'f', hp: frostGrid[r][c] }
-        : { t: 'c', color: (rng() * st.colors) | 0, sp: null };
+      if (frostGrid[r][c] > 0) { st.board[r][c] = { t: 'f', hp: frostGrid[r][c] }; continue; }
+      const banned = new Set();
+      const l1 = st.board[r][c - 1], l2 = st.board[r][c - 2];
+      if (l1 && l2 && l1.t === 'c' && l2.t === 'c' && l1.color != null && l1.color === l2.color) banned.add(l1.color);
+      const u1 = r > 0 ? st.board[r - 1][c] : null, u2 = r > 1 ? st.board[r - 2][c] : null;
+      if (u1 && u2 && u1.t === 'c' && u2.t === 'c' && u1.color != null && u1.color === u2.color) banned.add(u1.color);
+      let color, tries = 0;
+      do { color = (rng() * st.colors) | 0; tries++; } while (banned.has(color) && tries < 50);
+      st.board[r][c] = { t: 'c', color, sp: null };
     }
     guard++;
-  } while (guard < 500 && (findMatches(st.board).length > 0 || !hasPossibleMove(st.board)));
+  } while (guard < 200 && !hasPossibleMove(st.board));
+  if (def.type === 'ingredients') {
+    // seed a couple of cherries near the top so the goal is visible immediately
+    const goal = (def.goal && def.goal.ingredients) || 0;
+    const n = Math.min(2, goal);
+    const cols = [];
+    for (let c = 0; c < 9; c++) cols.push(c);
+    for (let i = cols.length - 1; i > 0; i--) {
+      const j = (rng() * (i + 1)) | 0;
+      const t = cols[i]; cols[i] = cols[j]; cols[j] = t;
+    }
+    for (let i = 0; i < n; i++) {
+      st.board[1 + i][cols[i]] = { t: 'i' };
+      st.ingredientsSpawned++;
+    }
+  }
   return st;
 }
 
@@ -156,8 +188,11 @@ function pickCell(cluster, prefer, run) {
   return { r: mid.r, c: mid.c };
 }
 
-/* Decide which special (if any) a cluster of matches forges. */
-function planCreation(board, cluster, prefer) {
+/* Decide which special (if any) a cluster of matches forges.
+   Stripe orientation follows the player's swipe ('h' -> sh clears the row,
+   'v' -> sv clears the column); cascade-forged stripes fall back to the
+   match line so headless play stays deterministic. */
+function planCreation(board, cluster, prefer, swipeDir) {
   for (const cell of cluster.cells.values()) {
     if (board[cell.r][cell.c].sp) return null; // existing special: it just fires
   }
@@ -170,7 +205,11 @@ function planCreation(board, cluster, prefer) {
     return { kind: 'w', color: longest.color, at: pickCell(cluster, prefer, longest) };
   }
   const four = ms.find(m => m.len === 4);
-  if (four) return { kind: four.dir === 'h' ? 'sh' : 'sv', color: four.color, at: pickCell(cluster, prefer, four) };
+  if (four) {
+    const kind = swipeDir ? (swipeDir === 'h' ? 'sh' : 'sv')
+                          : (four.dir === 'h' ? 'sh' : 'sv');
+    return { kind, color: four.color, at: pickCell(cluster, prefer, four) };
+  }
   return null;
 }
 
@@ -279,12 +318,23 @@ function applyRoundTail(st, steps, stepKind, clear, effects, frostHits, round, e
 
 function applyGravity(st) {
   const moves = [], spawns = [];
+  // ingredient dispenser: convert the first fresh spawn (in random column
+  // order) into an ingredient; if nothing spawns this pass, stay pending
+  const colOrder = Array.from({ length: st.cols }, (_, i) => i);
+  const dispensing = st.pendingIngredient && st.def.type === 'ingredients';
+  if (dispensing) {
+    for (let i = colOrder.length - 1; i > 0; i--) {
+      const j = (st.rng() * (i + 1)) | 0;
+      const t = colOrder[i]; colOrder[i] = colOrder[j]; colOrder[j] = t;
+    }
+  }
+  let ingPlaced = false;
   const posOf = new Map();
   for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
     const cell = st.board[r][c];
     if (cell) posOf.set(cell, { r, c });
   }
-  for (let c = 0; c < st.cols; c++) {
+  for (const c of colOrder) {
     let r = st.rows - 1;
     while (r >= 0) {
       const cell = st.board[r][c];
@@ -298,7 +348,7 @@ function applyGravity(st) {
       const candies = [];
       for (let rr = segBot; rr >= segTop; rr--) {
         const cc = st.board[rr][c];
-        if (cc && cc.t === 'c') candies.push(cc);
+        if (cc && (cc.t === 'c' || cc.t === 'i')) candies.push(cc);
       }
       let rr = segBot, idx = 0;
       for (; idx < candies.length; idx++, rr--) {
@@ -308,9 +358,12 @@ function applyGravity(st) {
         if (old.r !== rr || old.c !== c) moves.push({ fr: old.r, fc: old.c, tr: rr, tc: c });
       }
       for (; rr >= segTop; rr--) {
-        const obj = { t: 'c', color: (st.rng() * st.colors) | 0, sp: null };
+        const makeIng = dispensing && !ingPlaced && rr === segTop;
+        const obj = makeIng ? { t: 'i' }
+                            : { t: 'c', color: (st.rng() * st.colors) | 0, sp: null };
+        if (makeIng) { ingPlaced = true; st.pendingIngredient = false; st.ingredientsSpawned++; }
         st.board[rr][c] = obj;
-        spawns.push({ r: rr, c, color: obj.color, drop: (segTop - rr) + 2 });
+        spawns.push({ r: rr, c, color: obj.color, drop: (segTop - rr) + 2, ing: makeIng });
       }
       r = segTop - 1;
     }
@@ -320,13 +373,13 @@ function applyGravity(st) {
 
 /* ---------------- cascade resolution ---------------- */
 
-function resolveRound(st, steps, round, prefer) {
+function resolveRound(st, steps, round, prefer, swipeDir) {
   const matches = findMatches(st.board);
   if (matches.length === 0) return false;
   const clusters = clusterize(matches);
   const creations = [], creationKeys = new Set();
   for (const cl of clusters) {
-    const plan = planCreation(st.board, cl, prefer);
+    const plan = planCreation(st.board, cl, prefer, round === 1 ? swipeDir : null);
     if (plan) { creations.push(plan); creationKeys.add(key(plan.at.r, plan.at.c)); }
   }
   const clear = new Map(), effects = [], queue = [], qset = new Set(), frostHits = [];
@@ -354,11 +407,11 @@ function resolveRound(st, steps, round, prefer) {
   return true;
 }
 
-function doCascades(st, steps, prefer) {
+function doCascades(st, steps, prefer, swipeDir) {
   let round = 0;
   while (round < 60) {
     round++;
-    if (!resolveRound(st, steps, round, prefer)) break;
+    if (!resolveRound(st, steps, round, prefer, swipeDir)) break;
     prefer = null;
   }
 }
@@ -428,20 +481,23 @@ function doCombo(st, a, b, sa, sb, steps) {
 
 /* ---------------- moves ---------------- */
 
-function trySwap(st, a, b) {
+const swappable = x => x && (x.t === 'c' || x.t === 'i');
+
+function trySwap(st, a, b, swipeDir) {
   const steps = [];
   if (st.over) return { ok: false, steps };
   if (!inB(st, a) || !inB(st, b) || !adjacent(a, b))
     return { ok: false, steps: [{ k: 'invalid', a, b }] };
   const A = st.board[a.r][a.c], B = st.board[b.r][b.c];
-  if (!A || !B || A.t !== 'c' || B.t !== 'c')
+  if (!swappable(A) || !swappable(B))
     return { ok: false, steps: [{ k: 'invalid', a, b }] };
   st.board[a.r][a.c] = B;
   st.board[b.r][b.c] = A;
   const sa = A.sp, sb = B.sp;
+  const bothCandy = A.t === 'c' && B.t === 'c';
   let combo = false;
-  if (sa && sb) combo = true;
-  else if (sa === 'b' || sb === 'b') combo = true;
+  if (bothCandy && sa && sb) combo = true;
+  else if (bothCandy && (sa === 'b' || sb === 'b')) combo = true;
   else if (findMatches(st.board).length === 0) {
     st.board[a.r][a.c] = A;
     st.board[b.r][b.c] = B;
@@ -449,18 +505,107 @@ function trySwap(st, a, b) {
   }
   st.movesLeft--;
   steps.push({ k: 'swap', a: { r: a.r, c: a.c }, b: { r: b.r, c: b.c } });
-  if (combo) { doCombo(st, a, b, sa, sb, steps); doCascades(st, steps, null); }
-  else doCascades(st, steps, b);
+  if (combo) { doCombo(st, a, b, sa, sb, steps); doCascades(st, steps, null, null); }
+  else doCascades(st, steps, b, swipeDir);
+  collectIngredients(st, steps);
+  doCascades(st, steps, null, null);
   finishMove(st, steps);
   return { ok: true, steps };
+}
+
+/* Lollipop hammer: smash one cell for free — no move spent, no specials
+   detonated. Frosting loses one layer; an ingredient is collected. */
+function hammer(st, r, c) {
+  const steps = [];
+  if (st.over) return { ok: false, steps };
+  const p = { r, c };
+  if (!inB(st, p)) return { ok: false, steps: [{ k: 'invalid', a: p, b: p }] };
+  const cell = st.board[r][c];
+  if (!cell) return { ok: false, steps: [{ k: 'invalid', a: p, b: p }] };
+  const clear = new Map(), effects = [], queue = [], qset = new Set(), frostHits = [];
+  let wasIngredient = false;
+  if (cell.t === 'f') { cell.hp--; frostHits.push({ r, c, hp: cell.hp }); }
+  else { cell.sp = null; wasIngredient = cell.t === 'i'; addClear(clear, r, c); }
+  applyRoundTail(st, steps, 'hammer', clear, effects, frostHits, 1, {
+    public: { hammerAt: { r, c } },
+  });
+  const step = steps[steps.length - 1];
+  step.collected = [];
+  if (wasIngredient) {
+    st.ingredientsCollected++;
+    st.score += 940; // +60 from the clear = 1000 total
+    step.collected = [{ r, c }];
+    step.gain += 940;
+  }
+  doCascades(st, steps, null, null);
+  collectIngredients(st, steps);
+  doCascades(st, steps, null, null);
+  finishMove(st, steps);
+  return { ok: true, steps };
+}
+
+function countIngredients(st) {
+  let n = 0;
+  for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
+    const cell = st.board[r][c];
+    if (cell && cell.t === 'i') n++;
+  }
+  return n;
+}
+
+/* Sweep ingredients sitting on the bottom row into the goal. Loops because
+   gravity can drop more ingredients down after each collection. */
+function collectIngredients(st, steps) {
+  if (st.def.type !== 'ingredients') return;
+  let guard = 0;
+  for (;;) {
+    const items = [];
+    for (let c = 0; c < st.cols; c++) {
+      const cell = st.board[st.rows - 1][c];
+      if (cell && cell.t === 'i') {
+        items.push({ r: st.rows - 1, c });
+        st.board[st.rows - 1][c] = null;
+        st.ingredientsCollected++;
+      }
+    }
+    if (!items.length || guard++ > 12) break;
+    const gain = items.length * 1000;
+    st.score += gain;
+    const fall = applyGravity(st);
+    steps.push({ k: 'collect', items, gain, fall });
+  }
+}
+
+/* Suggest a swap for idle hints: prefers forging specials, then big clears. */
+function hint(st) {
+  const swaps = validSwaps(st);
+  if (!swaps.length) return null;
+  let best = null, bestScore = -1;
+  for (const [a, b] of swaps) {
+    const A = st.board[a.r][a.c], B = st.board[b.r][b.c];
+    st.board[a.r][a.c] = B; st.board[b.r][b.c] = A;
+    const ms = findMatches(st.board);
+    let score = 0;
+    if (ms.length) {
+      const clusters = clusterize(ms);
+      for (const cl of clusters) {
+        const plan = planCreation(st.board, cl, null, null);
+        if (plan) score += plan.kind === 'b' ? 100 : plan.kind === 'w' ? 50 : 20;
+        score += cl.cells.size;
+      }
+      if (A.sp || B.sp) score += 30;
+    }
+    st.board[a.r][a.c] = A; st.board[b.r][b.c] = B;
+    if (score > bestScore) { bestScore = score; best = { a, b }; }
+  }
+  return best;
 }
 
 /* Non-mutating validity check (used by bot + UI hints). */
 function swapValid(board, a, b) {
   const A = board[a.r][a.c], B = board[b.r][b.c];
-  if (!A || !B || A.t !== 'c' || B.t !== 'c') return false;
-  if (A.sp && B.sp) return true;
-  if (A.sp === 'b' || B.sp === 'b') return true;
+  if (!swappable(A) || !swappable(B)) return false;
+  if (A.t === 'c' && B.t === 'c' && ((A.sp && B.sp) || A.sp === 'b' || B.sp === 'b')) return true;
   board[a.r][a.c] = B; board[b.r][b.c] = A;
   const ok = findMatches(board).length > 0;
   board[a.r][a.c] = A; board[b.r][b.c] = B;
@@ -484,14 +629,13 @@ function hasPossibleMove(board) {
   const R = board.length, C = board[0].length;
   for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
     const A = board[r][c];
-    if (!A || A.t !== 'c') continue;
+    if (!swappable(A)) continue;
     for (const [dr, dc] of [[0, 1], [1, 0]]) {
       const nr = r + dr, nc = c + dc;
       if (nr >= R || nc >= C) continue;
       const B = board[nr][nc];
-      if (!B || B.t !== 'c') continue;
-      if (A.sp && B.sp) return true;
-      if (A.sp === 'b' || B.sp === 'b') return true;
+      if (!swappable(B)) continue;
+      if (A.t === 'c' && B.t === 'c' && ((A.sp && B.sp) || A.sp === 'b' || B.sp === 'b')) return true;
       board[r][c] = B; board[nr][nc] = A;
       const m = findMatches(board).length > 0;
       board[r][c] = A; board[nr][nc] = B;
@@ -543,6 +687,15 @@ function checkWin(st) {
     for (const k in st.ordersLeft) if (st.ordersLeft[k] > 0) return false;
     return true;
   }
+  if (st.def.type === 'mixed') {
+    for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++)
+      if (st.jelly[r][c] > 0) return false;
+    for (const k in st.ordersLeft) if (st.ordersLeft[k] > 0) return false;
+    return true;
+  }
+  if (st.def.type === 'ingredients') {
+    return st.ingredientsCollected >= (g.ingredients || 0);
+  }
   return false;
 }
 
@@ -555,6 +708,15 @@ function finishMove(st, steps) {
     st.stars = st.score >= s[2] ? 3 : st.score >= s[1] ? 2 : 1;
     steps.push({ k: 'end', won: true, stars: st.stars, score: st.score, bonus: st.endBonus, best: st.cascadeBest });
     return;
+  }
+  // ingredient dispenser cadence
+  if (st.def.type === 'ingredients') {
+    st.movesUsed++;
+    const goal = (st.def.goal && st.def.goal.ingredients) || 0;
+    const every = st.def.ingredientEvery || 5;
+    if (st.ingredientsSpawned < goal && countIngredients(st) < 3 && st.movesUsed % every === 0) {
+      st.pendingIngredient = true;
+    }
   }
   if (st.movesLeft <= 0) {
     st.over = true;
@@ -582,7 +744,7 @@ function botPlay(def, seed) {
 }
 
 return {
-  newGame, trySwap, findMatches, hasPossibleMove, validSwaps,
+  newGame, trySwap, hammer, hint, findMatches, hasPossibleMove, validSwaps,
   swapValid, checkWin, botPlay, shuffleBoard, mulberry32,
   gridFromStrings,
 };

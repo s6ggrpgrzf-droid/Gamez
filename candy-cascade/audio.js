@@ -47,6 +47,31 @@ const CCAudio = (() => {
     win()      { [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.22, 'triangle', 0.24, i * 0.11)); },
     lose()     { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.25, 'sine', 0.2, i * 0.16)); },
     click()    { tone(700, 0.05, 'sine', 0.15); },
+    hammer()   { tone(140, 0.18, 'square', 0.3, 0, 60); tone(1200, 0.3, 'triangle', 0.2, 0.05, 2400); },
+    sugar()    { [660, 830, 990, 1174, 1318, 1568].forEach((f, i) => tone(f, 0.16, 'sine', 0.2, i * 0.08)); },
+    hint()     { tone(880, 0.12, 'sine', 0.12, 0, 1320); },
   };
+
+  /* ---- generative music box: soft pentatonic plucks, intensifies when moves run low ---- */
+  let musicOn = false, intense = false, mStep = 0, mTimer = null;
+  const MEL = [523.25, 587.33, 659.25, 783.99, 880.0, 783.99, 659.25, 587.33,
+               523.25, 659.25, 783.99, 880.0, 1046.5, 880.0, 783.99, 659.25];
+  const BASSN = [130.81, 98.0, 110.0, 146.83];
+  function musicTick() {
+    if (!musicOn) return;
+    if (!muted && ensure()) {
+      const s = mStep % 16;
+      if (s % 2 === 0) tone(MEL[s], 0.5, 'triangle', 0.055, 0);
+      if (s % 8 === 0) tone(BASSN[(mStep / 8 | 0) % 4], 1.2, 'sine', 0.07, 0);
+      if (intense && s % 2 === 1) tone(MEL[(s + 4) % 16] * 2, 0.2, 'sine', 0.03, 0);
+    }
+    mStep++;
+    mTimer = setTimeout(musicTick, intense ? 165 : 250);
+  }
+  api.music = function (on) {
+    if (on && !musicOn) { musicOn = true; mStep = 0; musicTick(); }
+    else if (!on && musicOn) { musicOn = false; clearTimeout(mTimer); mTimer = null; }
+  };
+  api.setIntensity = function (low) { intense = !!low; };
   return api;
 })();
