@@ -375,7 +375,7 @@ var LifeSim = (function () {
         { label: 'Run', run: function (S) { if (chance(0.5)) { stat(S, 'happy', 6); return '🥷 Ran. Cardio paid off. You are the main character in a chase scene now.'; } var m = ri(900) + 100; S.money -= m; stat(S, 'health', -8); return '🥷 Ran. Tripped. Lost ' + fmt(m) + ' and some dignity. The mugger waited patiently. Embarrassing for everyone.'; } },
         { label: 'Try to mug THEM back', run: function (S) { stat(S, 'health', -12); karma(S, -6); stat(S, 'happy', 2); return '🥷 Attempted a reverse-mugging. You are now the cautionary tale they tell at mugger school.'; } }
       ] },
-    { w: 2, ok: function (S) { return S.age >= 25; }, title: '📜 Inheritance',
+    { w: 2, once: true, ok: function (S) { return S.age >= 25; }, title: '📜 Inheritance',
       text: function (S) { var m = 5000 + ((S.age * 37) % 20000); return 'Your twice-removed Uncle Gerald has died and left you ' + fmt(m) + '. You met him twice. He remembered you anyway.'; },
       choices: [
         { label: 'Accept graciously', run: function (S) { var m = 5000 + ((S.age * 37) % 20000); S.money += m; stat(S, 'happy', 8); return '📜 Inherited ' + fmt(m) + ' from Gerald. Grief, but make it profitable.'; } },
@@ -600,7 +600,7 @@ var LifeSim = (function () {
         { label: 'Cover your answers', run: function (S) { karma(S, 1); stat(S, 'happy', -2); return '📝 Covered your answers. They failed. You feel weird about it. That\'s called a conscience.'; } },
         { label: 'Copy THEIR answers instead', run: function (S) { karma(S, -4); if (chance(0.5)) { stat(S, 'smarts', 2); stat(S, 'happy', 4); return '📝 Copied THEIR answers. Bold reversal. Their answers were better. You\'re welcome, everyone.'; } stat(S, 'smarts', -2); return '📝 Copied THEIR answers. Their answers were wrong. You failed together. Beautiful.'; } }
       ] },
-    { w: 2, ok: function (S) { return S.age >= 6 && S.age < 18; }, title: '🍎 Teacher\'s pet',
+    { w: 2, cooldown: 4, ok: function (S) { return S.age >= 6 && S.age < 18; }, title: '🍎 Teacher\'s pet',
       text: 'Ms. Alvarez asked who wants to be class helper. It comes with a shiny badge and the quiet resentment of your peers.',
       choices: [
         { label: 'Volunteer', run: function (S) { stat(S, 'smarts', 4); stat(S, 'happy', -4); return '🍎 Became class helper. The badge is shiny. Your social life is not.'; } },
@@ -687,12 +687,22 @@ var LifeSim = (function () {
   ];
 
   function pickEvent(S) {
-    var pool = [], tw = 0, i, e;
-    for (i = 0; i < EVENTS.length; i++) { e = EVENTS[i]; if (e.ok(S)) { pool.push(e); tw += e.w; } }
+    if (!S.seenEvents) S.seenEvents = {};
+    var pool = [], tw = 0, i, e, key, last;
+    for (i = 0; i < EVENTS.length; i++) {
+      e = EVENTS[i];
+      if (!e.ok(S)) continue;
+      key = e.title;
+      last = S.seenEvents[key];
+      if (e.once && last != null) continue;                       // one-shot narrative events
+      if (e.cooldown && last != null && (S.age - last) < e.cooldown) continue; // recurring but not yearly
+      pool.push(e); tw += e.w;
+    }
     if (!pool.length) return null;
-    var r = R() * tw;
-    for (i = 0; i < pool.length; i++) { r -= pool[i].w; if (r <= 0) return pool[i]; }
-    return pool[pool.length - 1];
+    var r = R() * tw, chosen = pool[pool.length - 1];
+    for (i = 0; i < pool.length; i++) { r -= pool[i].w; if (r <= 0) { chosen = pool[i]; break; } }
+    S.seenEvents[chosen.title] = S.age;
+    return chosen;
   }
 
   function deathCheck(S) {
