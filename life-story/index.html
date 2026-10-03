@@ -11,25 +11,41 @@
 <div id="app">
   <header id="hud">
     <div id="who">
-      <div id="avatar">🍼</div>
+      <canvas id="avatar" width="96" height="96" aria-label="Your face, aging in real time"></canvas>
       <div>
         <div id="pname">—</div>
         <div id="page">Age 0 · <span id="ploc"></span></div>
       </div>
     </div>
-    <div id="pmoney">$0</div>
+    <div class="hud-right">
+      <button id="mute-btn" title="Toggle sound">🔊</button>
+      <div id="pmoney">$0</div>
+    </div>
   </header>
+
+  <div id="daily-banner" class="hidden">
+    <details>
+      <summary><span id="daily-progress">📅 Daily: 0/4</span><span class="daily-toggle">objectives ▾</span></summary>
+      <ul id="daily-objs"></ul>
+    </details>
+  </div>
 
   <div id="stats">
     <div class="stat"><span>😊</span><div class="bar"><i id="b-happy"></i></div><b id="b-happy-n">–</b></div>
     <div class="stat"><span>❤️</span><div class="bar"><i id="b-health"></i></div><b id="b-health-n">–</b></div>
     <div class="stat"><span>🧠</span><div class="bar"><i id="b-smarts"></i></div><b id="b-smarts-n">–</b></div>
     <div class="stat"><span>✨</span><div class="bar"><i id="b-looks"></i></div><b id="b-looks-n">–</b></div>
+    <div class="stat karma-bar" id="karma-stat"><span>😇</span><div class="bar"><i id="b-karma"></i></div><b id="b-karma-n">?</b></div>
   </div>
+
+  <div id="fate-note"><span class="shimmer">✨ consulting fate…</span></div>
 
   <div id="journal"></div>
 
-  <button id="age-btn">Age +</button>
+  <div class="age-row">
+    <button id="age-btn">Age +</button>
+    <button id="second-chance-btn" title="Rewind one year — once per life">⏪ Second Chance</button>
+  </div>
 
   <nav id="tabs">
     <button data-tab="act">🎯<small>Life</small></button>
@@ -53,19 +69,81 @@
     <div class="logo">📖</div>
     <h1>Life Story</h1>
     <p class="tag">One tap per year. School, work, love, crime, fortune — then the obituary. How will your story read?</p>
+    <div id="start-fate" class="fate-line">✨ 0 Fate Points</div>
     <div id="scenario-pick"></div>
+    <button id="daily-life-btn" class="ghost-btn">📅 Daily Life</button>
     <div id="legacy"></div>
   </div>
 </div>
 
-<div id="death" class="overlay hidden">
+<div id="dossier" class="overlay hidden">
   <div class="panel">
-    <div class="logo" id="d-emoji">⚰️</div>
+    <div class="grab"></div>
+    <h1 class="dossier-title">Birth Dossier</h1>
+    <p class="tag">Every legend starts with paperwork.</p>
+    <div class="dossier-card">
+      <div class="dossier-seal">📜</div>
+      <div class="d-row"><span>Father</span><b id="d-father">—</b></div>
+      <div class="d-row"><span>Mother</span><b id="d-mother">—</b></div>
+      <div class="d-row"><span>Born</span><b id="d-dob">—</b></div>
+      <div class="d-row"><span>Conceived</span><b id="d-conception">—</b></div>
+      <div class="d-row"><span>Siblings</span><b id="d-siblings">—</b></div>
+      <div class="d-row"><span>Family wealth</span><b id="d-wealth">—</b></div>
+      <div class="d-row"><span>Country</span><b id="d-country">—</b></div>
+      <div class="d-sign"><span id="d-sign" class="sign-badge">✦</span></div>
+    </div>
+    <div id="dossier-fate" class="fate-line">✨ 0 Fate Points</div>
+    <div class="fate-row" id="fate-spenders">
+      <button class="fate-btn" data-fate="happy" data-cost="2">😊 Happy +10<span class="fate-cost">2✨</span></button>
+      <button class="fate-btn" data-fate="health" data-cost="2">❤️ Health +10<span class="fate-cost">2✨</span></button>
+      <button class="fate-btn" data-fate="smarts" data-cost="2">🧠 Smarts +10<span class="fate-cost">2✨</span></button>
+      <button class="fate-btn" data-fate="looks" data-cost="2">✨ Looks +10<span class="fate-cost">2✨</span></button>
+      <button class="fate-btn" data-fate="country" data-cost="1">🌍 New country<span class="fate-cost">1✨</span></button>
+      <button class="fate-btn" data-fate="name" data-cost="0">🎲 Reroll name<span class="fate-cost">free</span></button>
+    </div>
+    <button id="begin-life-btn" class="big-btn">Begin Life ▶</button>
+    <button id="dossier-back" class="ghost-btn">← Back</button>
+  </div>
+</div>
+
+<div id="event-modal" class="overlay hidden">
+  <div class="panel">
+    <div class="grab"></div>
+    <div class="event-head"><span id="em-emoji">🎲</span><h2 id="em-title"></h2></div>
+    <p id="em-text"></p>
+    <div id="em-choices"></div>
+  </div>
+</div>
+
+<div id="crate-modal" class="overlay hidden">
+  <div class="panel">
+    <div class="grab"></div>
+    <h2>🎁 Mystery Crate</h2>
+    <p class="tag">All four daily objectives complete. The universe offers a prize — pick one.</p>
+    <div class="crate-grid" id="crate-grid">
+      <button class="crate" data-crate="0">❓<small>crate</small></button>
+      <button class="crate" data-crate="1">❓<small>crate</small></button>
+      <button class="crate" data-crate="2">❓<small>crate</small></button>
+      <button class="crate" data-crate="3">❓<small>crate</small></button>
+    </div>
+  </div>
+</div>
+
+<div id="death" class="overlay hidden">
+  <div class="panel tombstone">
+    <div class="moss"></div>
+    <div class="logo" id="d-emoji">🪦</div>
     <h1 id="d-name"></h1>
+    <p class="tag engraved" id="d-dates"></p>
     <p class="tag" id="d-cause"></p>
+    <p id="d-obit"></p>
+    <p id="d-karma"></p>
     <div class="ribbon"><span id="d-ribbon-e"></span><b id="d-ribbon-t"></b><p id="d-ribbon-d"></p></div>
     <div class="dstats" id="d-stats"></div>
     <div class="arc-lb" id="arc-lb"></div>
+    <div class="arc-lb" id="arc-lb-daily"></div>
+    <button id="d-journal-btn" class="ghost-btn">📖 Read journal</button>
+    <div id="d-journal"></div>
     <button id="again-btn" class="big-btn">🍼 New Life</button>
     <button id="child-btn" class="ghost-btn hidden">👶 Continue as my child</button>
   </div>
@@ -74,7 +152,7 @@
 <div id="toast"></div>
 <canvas id="confetti" class="hidden"></canvas>
 
-<script src="life.js"></script>
-<script src="app.js"></script>
+<script src="life.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

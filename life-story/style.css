@@ -233,3 +233,180 @@ h1 { margin: 10px 0 6px; font-size: 32px; font-weight: 800; letter-spacing: .5px
   background: rgba(0,0,0,.35); color: #fff; padding: 10px 12px; font-size: 15px; font-family: inherit;
   letter-spacing: 1px; text-transform: uppercase; }
 #arc-lb-name:focus { outline: none; border-color: #a3e635; }
+
+/* ================= v3 "Rebirth" additions ================= */
+.hidden { display: none !important; }
+
+/* ---------- birth dossier ---------- */
+#dossier .panel { text-align: center; }
+.dossier-title { margin: 6px 0 2px; }
+.dossier-card {
+  position: relative; text-align: left; overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255,209,102,.09), transparent 55%),
+    linear-gradient(165deg, #2c2414, #1c1610 55%, #15100a);
+  border: 1px solid #9a7a33; border-radius: 18px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.55), inset 0 0 0 4px rgba(0,0,0,.22), inset 0 0 44px rgba(255,209,102,.06);
+  padding: 18px 18px 14px; margin: 14px 0 10px;
+}
+.dossier-card::before {
+  content: ""; position: absolute; inset: 6px; border: 1px solid rgba(255,209,102,.22);
+  border-radius: 13px; pointer-events: none;
+}
+.dossier-seal { position: absolute; top: 10px; right: 14px; font-size: 30px; opacity: .9;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.5)); }
+.d-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 7px 26px 7px 2px; border-bottom: 1px dashed rgba(255,209,102,.18); font-size: 14px; }
+.d-row:last-of-type { border-bottom: none; }
+.d-row span { color: #c9a94f; font-weight: 700; font-size: 11.5px; text-transform: uppercase;
+  letter-spacing: 1px; flex: 0 0 auto; }
+.d-row b { color: #f3e6c8; font-weight: 600; text-align: right; line-height: 1.4; }
+.d-sign { margin-top: 10px; text-align: center; }
+.sign-badge {
+  display: inline-block; color: var(--gold); font-weight: 800; font-size: 13.5px; letter-spacing: .4px;
+  background: linear-gradient(135deg, rgba(255,209,102,.22), rgba(255,157,77,.12));
+  border: 1px solid rgba(255,209,102,.55); padding: 7px 16px; border-radius: 22px;
+  box-shadow: 0 0 16px rgba(255,209,102,.18);
+}
+
+/* ---------- fate spenders ---------- */
+.fate-line { font-size: 14.5px; font-weight: 800; color: var(--gold); margin: 12px 0 4px;
+  text-shadow: 0 0 14px rgba(255,209,102,.35); }
+.fate-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin: 12px 0 6px; }
+.fate-btn {
+  position: relative; color: var(--txt); padding: 13px 8px 11px;
+  font-size: 13.5px; font-weight: 700; cursor: pointer;
+  background: linear-gradient(180deg, #2d2745, #221d36);
+  border: 1px solid rgba(124,92,255,.45); border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(0,0,0,.3); transition: transform .08s, box-shadow .15s, border-color .15s;
+}
+.fate-btn:not(:disabled):hover { box-shadow: 0 0 16px rgba(124,92,255,.35); border-color: var(--acc2); }
+.fate-btn:not(:disabled):active { transform: scale(.95); }
+.fate-btn:disabled { opacity: .35; cursor: default; }
+.fate-cost {
+  position: absolute; top: -10px; right: 10px; font-size: 11px; font-weight: 800;
+  color: #231a05; background: linear-gradient(135deg, var(--gold), #ff9d4d);
+  padding: 3px 10px; border-radius: 12px; box-shadow: 0 3px 10px rgba(0,0,0,.45);
+}
+
+/* ---------- event modal ---------- */
+#event-modal .panel { border-radius: 22px; margin: 20px; align-self: center;
+  padding: 20px 20px calc(22px + env(safe-area-inset-bottom)); }
+.event-head { display: flex; align-items: center; gap: 13px; margin: 2px 0 10px; }
+#em-emoji { font-size: 46px; flex: 0 0 auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,.5)); }
+#em-title { margin: 0; font-size: 23px; font-weight: 800; letter-spacing: .3px; text-align: left; color: var(--txt); }
+#em-text { text-align: left; color: #dbe0ee; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
+#em-choices { display: flex; flex-direction: column; gap: 9px; }
+.choice { margin-bottom: 0; }
+.choice:hover { border-color: var(--acc); box-shadow: 0 0 14px rgba(124,92,255,.3); }
+.choice-chaos { border-color: rgba(255,107,107,.55); background: linear-gradient(180deg, #3b2327, #2a191d); }
+.choice-chaos:hover { border-color: var(--bad); box-shadow: 0 0 16px rgba(255,107,107,.35); }
+.pray-btns .act { margin-bottom: 9px; }
+
+/* ---------- tombstone death screen ---------- */
+#death .tombstone {
+  background:
+    radial-gradient(130% 55% at 50% -8%, rgba(255,255,255,.07), transparent 60%),
+    linear-gradient(168deg, #414654, #2b2f3c 48%, #1b1e27 100%);
+  border: 1px solid #565d74; border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.65), inset 0 2px 0 rgba(255,255,255,.14), inset 0 -26px 50px rgba(0,0,0,.4);
+  overflow: hidden;
+}
+.moss {
+  height: 20px; margin: -26px -18px 12px;
+  background:
+    radial-gradient(circle at 14px 6px, rgba(112,166,102,.6) 0 7px, transparent 8px),
+    radial-gradient(circle at 52px 3px, rgba(92,142,86,.55) 0 6px, transparent 7px),
+    radial-gradient(circle at 92px 7px, rgba(124,178,110,.5) 0 8px, transparent 9px),
+    radial-gradient(circle at 132px 4px, rgba(100,150,94,.55) 0 6px, transparent 7px);
+  background-size: 150px 20px; background-repeat: repeat-x;
+}
+.tombstone #d-emoji { font-size: 56px; animation: none; }
+.engraved { font-family: Georgia, 'Times New Roman', serif; color: #c6cbdb; letter-spacing: 1.5px;
+  text-shadow: 0 1px 0 rgba(255,255,255,.14), 0 -1px 2px rgba(0,0,0,.85); }
+#d-obit {
+  font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 16.5px; line-height: 1.65;
+  color: #dde2f0; margin: 14px 6px;
+  text-shadow: 0 -1px 2px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.08);
+}
+#d-obit::before { content: "\201C"; }
+#d-obit::after { content: "\201D"; }
+#d-karma {
+  font-family: Georgia, 'Times New Roman', serif; font-size: 14px; letter-spacing: 1px;
+  color: var(--gold); margin: 6px 0 4px; text-shadow: 0 -1px 2px rgba(0,0,0,.8);
+}
+#d-journal { display: none; text-align: left; max-height: 38dvh; overflow-y: auto; margin: 10px 0 4px; padding-right: 2px; }
+#d-journal.open { display: block; }
+#d-journal .entry { font-size: 13px; padding: 8px 11px; }
+
+/* ---------- mystery crates ---------- */
+.crate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 4px; }
+.crate {
+  font-size: 46px; padding: 24px 10px 18px; border-radius: 18px; cursor: pointer; color: var(--txt);
+  background: linear-gradient(160deg, #322a52, #201b36);
+  border: 1px solid rgba(160,77,255,.45); box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  transition: transform .12s, box-shadow .15s, border-color .15s;
+}
+.crate small { display: block; font-size: 12px; color: var(--dim); margin-top: 10px;
+  font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.crate:hover { box-shadow: 0 0 26px rgba(160,77,255,.5); border-color: var(--acc2); transform: translateY(-3px); }
+.crate:active { transform: scale(.94); }
+
+/* ---------- daily banner ---------- */
+#daily-banner { padding: 0 16px 4px; }
+#daily-banner details {
+  background: linear-gradient(135deg, rgba(255,209,102,.13), rgba(124,92,255,.13));
+  border: 1px solid rgba(255,209,102,.42); border-radius: 14px; padding: 10px 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.25);
+}
+#daily-banner summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between;
+  align-items: center; font-weight: 800; font-size: 14px; color: var(--gold); }
+#daily-banner summary::-webkit-details-marker { display: none; }
+.daily-toggle { color: var(--dim); font-size: 11.5px; font-weight: 700; letter-spacing: .5px; }
+#daily-objs { margin: 10px 0 2px; padding: 0; list-style: none; }
+#daily-objs li { font-size: 13.5px; padding: 7px 2px; border-top: 1px dashed rgba(255,209,102,.22); color: #e4e8f4; }
+#daily-objs li.done { color: var(--good); text-decoration: line-through; opacity: .85; }
+
+/* ---------- canvas avatar ---------- */
+#avatar {
+  width: 96px; height: 96px; flex: 0 0 96px; display: block; border-radius: 50%;
+  background: linear-gradient(135deg, #2a2f40, #1a1d28);
+  box-shadow: 0 0 0 2px rgba(124,92,255,.6), 0 0 0 5px rgba(124,92,255,.16), 0 6px 20px rgba(0,0,0,.5);
+}
+
+/* ---------- fate shimmer ---------- */
+#fate-note { display: none; text-align: center; padding: 8px 0 0; font-size: 12.5px; }
+#fate-note.show { display: block; }
+.shimmer {
+  font-weight: 800; letter-spacing: .4px;
+  background: linear-gradient(100deg, #8f7bff 15%, #ffffff 40%, #8f7bff 65%);
+  background-size: 220% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: shimmerMove 1.7s linear infinite;
+}
+@keyframes shimmerMove { to { background-position: 220% center; } }
+
+/* ---------- karma stat bar ---------- */
+.stat.karma-bar { display: none; }
+.stat.karma-bar.revealed { display: flex; }
+#b-karma { background: linear-gradient(90deg, var(--gold), var(--acc2)); }
+
+/* ---------- age row / second chance / mute ---------- */
+.age-row { display: flex; gap: 10px; margin: 10px 16px; align-items: stretch; }
+.age-row #age-btn { flex: 1 1 auto; margin: 0; }
+#second-chance-btn {
+  flex: 0 0 auto; padding: 0 16px; border-radius: 18px; cursor: pointer; white-space: nowrap;
+  background: rgba(124,92,255,.1); border: 1px solid rgba(124,92,255,.5); color: #d9d2f5;
+  font-size: 13.5px; font-weight: 800; transition: transform .08s;
+}
+#second-chance-btn:not(:disabled):active { transform: scale(.95); }
+#second-chance-btn:disabled { opacity: .35; cursor: default; }
+.hud-right { display: flex; align-items: center; gap: 9px; }
+#mute-btn {
+  background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--txt);
+  border-radius: 12px; font-size: 16px; padding: 8px 11px; cursor: pointer; transition: transform .08s;
+}
+#mute-btn:active { transform: scale(.92); }
+#mute-btn.muted { opacity: .45; }
+
+/* ---------- start screen v3 bits ---------- */
+#daily-life-btn { margin-top: 10px; }
