@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b1035">
+<title>Candy Cascade</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="bg-blobs" aria-hidden="true">
+  <span class="blob b1"></span><span class="blob b2"></span>
+  <span class="blob b3"></span><span class="blob b4"></span>
+</div>
+
+<div id="app">
+  <!-- ============ LEVEL MAP ============ -->
+  <section id="screen-map" class="screen">
+    <header class="brand">
+      <div class="logo"><span class="logo-candy"></span></div>
+      <h1>Candy<br>Cascade</h1>
+      <div class="stars-total" title="Total stars">★ <span id="total-stars">0</span><span class="dim">/60</span></div>
+    </header>
+    <div id="map-scroll"><div id="map-path"></div></div>
+    <footer class="map-foot">a Gamez joint 🍬</footer>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="screen-game" class="screen hidden">
+    <header id="hud">
+      <button id="btn-quit" class="icon-btn" aria-label="Back to map">‹</button>
+      <div id="hud-goal" class="hud-pill"></div>
+      <div id="hud-moves" class="hud-pill moves"><span id="moves">0</span><label>moves</label></div>
+      <div id="hud-score" class="hud-pill score">
+        <div id="score">0</div>
+        <div id="starbar"><div id="starfill"></div><i class="s1">★</i><i class="s2">★</i><i class="s3">★</i></div>
+      </div>
+      <button id="btn-pause" class="icon-btn" aria-label="Pause">❚❚</button>
+    </header>
+    <div id="goal-toast" class="hidden"></div>
+    <div id="board-wrap">
+      <div id="board"><div id="fx"></div></div>
+      <div id="banner" class="hidden"></div>
+    </div>
+    <div id="hint-bar"></div>
+  </section>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div id="modal" class="hidden">
+  <div id="modal-card">
+    <div id="modal-stars" class="hidden"><span>★</span><span>★</span><span>★</span></div>
+    <h2 id="modal-title"></h2>
+    <p id="modal-sub"></p>
+    <div id="modal-btns"></div>
+  </div>
+</div>
+
+<script src="engine.js?v=1"></script>
+<script src="levels.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="ui.js?v=1"></script>
+</body>
+</html>
