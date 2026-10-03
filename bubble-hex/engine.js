@@ -91,6 +91,11 @@ function resolveBoard(board, r, c) {
         }
       }
     }
+  } else if (placed && placed.special === 'lightning') {
+    // Lightning: clears entire row
+    for (var cc = 0; cc < COLS; cc++) {
+      if (get(board, r, cc)) popped.push([r, cc]);
+    }
   } else {
     var cluster = findCluster(board, r, c);
     if (cluster.length >= 3) popped = cluster;
