@@ -1737,7 +1737,9 @@ function winModal() {
     "<div class='kv'><span>Films released</span><b>" + S.stats.released + "</b></div>" +
     "<div class='kv'><span>Awards won</span><b>" + S.stats.awardsWon + "</b></div>" +
     "<div class='kv'><span>Total box office</span><b>" + fmtM(S.stats.totalGross) + "</b></div>" +
+    "<div id='arc-lb' class='arc-lb'></div>" +
     "<button class='btn amber mt' onclick='closeModal()'>Keep building the empire</button>");
+  arcadeStudioWin(Math.floor(studioValue()));
 }
 function gameOverModal() {
   showModal("<h2>💸 Bankrupt</h2><p>The studio gates close. The final reel:</p>" +
@@ -1811,4 +1813,62 @@ window.renderAll = renderAll;
 window.startLoop = startLoop;
 
 document.addEventListener("DOMContentLoaded", init);
+
+/* ---------- Gamez Arcade: global leaderboards ----------
+   "Richest studio" board — studio value ($M) at the $1B win. Silent offline. */
+var ARCADE_BASE = "https://gamez-arcade.chaoticutopia84.workers.dev"; // Gamez Arcade backend
+function arcadeFetch(path, body, cb) {
+  var done = false, timer = null;
+  function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
+  timer = setTimeout(function () { fin(null, null); }, 12000);
+  try {
+    fetch(ARCADE_BASE + path, body ?
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
+      .then(function (r) { return r.json(); })
+      .then(function (d) { fin(null, d); })
+      .catch(function () { fin(null, null); });
+  } catch (e) { fin(null, null); }
+}
+function arcadeEsc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function arcadeStudioWin(valueM) {
+  var box = document.getElementById("arc-lb");
+  if (!box || !ARCADE_BASE || !(valueM > 0)) { if (box) box.innerHTML = ""; return; }
+  var fmt = function (v) { return "$" + v.toLocaleString() + "M"; };
+  box.innerHTML = "<div class='arc-lb-empty'>🏆 loading moguls…</div>";
+  var name = "";
+  try { name = (localStorage.getItem("arcade_name") || "").trim(); } catch (e) {}
+  function go(n) {
+    box.innerHTML = "<div class='arc-lb-empty'>🏆 sending…</div>";
+    arcadeFetch("/score", { game: "reel-empire", name: n, score: valueM }, function (err, res) {
+      function done(top, rank) {
+        var r = rank > 0 ? "<div class='arc-lb-rank'>GLOBAL #" + rank + " MOGUL!</div>" : "";
+        var rows = (!top || !top.length)
+          ? "<div class='arc-lb-empty'>No moguls yet — be the first!</div>"
+          : top.slice(0, 3).map(function (e, i) {
+              var medals = ["🥇", "🥈", "🥉"];
+              return "<div class='arc-lb-row" + (e.name === n ? " me" : "") + "'><span>" +
+                (medals[i] || (i + 1) + ".") + " " + arcadeEsc(e.name) + "</span><b>" + fmt(e.score) + "</b></div>";
+            }).join("");
+        box.innerHTML = r + "<div class='arc-lb-title'>🎬 RICHEST STUDIOS</div>" + rows;
+      }
+      if (res && res.top) done(res.top, res.rank);
+      else arcadeFetch("/scores?game=reel-empire", null, function (e2, d2) {
+        done(d2 && d2.top ? d2.top : null, 0);
+      });
+    });
+  }
+  if (name) { go(name); return; }
+  box.innerHTML = "<div class='arc-lb-form'><input id='arc-lb-name' maxlength='12' placeholder='STUDIO NAME' autocomplete='off'>" +
+    "<button id='arc-lb-go' class='btn amber'>SAVE</button></div>";
+  document.getElementById("arc-lb-go").onclick = function () {
+    var v = document.getElementById("arc-lb-name").value.trim().slice(0, 12);
+    if (!v) return;
+    try { localStorage.setItem("arcade_name", v); } catch (e) {}
+    go(v);
+  };
+}
 })();
