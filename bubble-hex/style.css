@@ -38,3 +38,19 @@ body{margin:0;color:#fff;font-family:ui-rounded,"SF Pro Rounded",system-ui,-appl
 .modal-btns{display:flex;flex-direction:column;gap:10px}
 .mbtn{background:linear-gradient(135deg,#c44dff,#7b2ff7);border:none;color:#fff;font-size:17px;font-weight:700;padding:14px;border-radius:14px;cursor:pointer}
 .mbtn:active{transform:scale(.97)}
+
+/* ---- Gamez Arcade: leaderboards ---- */
+.arc-lb { margin-top: 12px; text-align: left; }
+.arc-lb-title { font-size: 12px; letter-spacing: 2px; opacity: .75; margin-bottom: 6px; text-align: center; }
+.arc-lb-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 12px;
+  background: rgba(255,255,255,.05); border-radius: 10px; margin-bottom: 4px; font-size: 14px; }
+.arc-lb-row b { color: #7df9ff; }
+.arc-lb-row.me { background: rgba(125,249,255,.1); border: 1px solid rgba(125,249,255,.4); }
+.arc-lb-empty { opacity: .6; font-size: 13px; padding: 6px; text-align: center; }
+.arc-lb-rank { color: #7df9ff; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; text-align: center; }
+.arc-lb-form { display: flex; gap: 8px; margin-top: 4px; }
+#arc-lb-name { flex: 1; min-width: 0; border-radius: 10px; border: 1px solid rgba(125,249,255,.35);
+  background: rgba(0,0,0,.35); color: #fff; padding: 10px 12px; font-size: 15px; font-family: inherit;
+  letter-spacing: 1px; text-transform: uppercase; }
+#arc-lb-name:focus { outline: none; border-color: #7df9ff; }
+#arc-lb-go { padding: 10px 16px; }

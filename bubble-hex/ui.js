@@ -522,10 +522,12 @@
     HexAudio.win();
     var s = stars();
     saveStars(state.idx, s);
-    showModal('Level Complete!', '★'.repeat(s) + '☆'.repeat(3 - s) + '<br>Score: ' + state.score,
+    showModal('Level Complete!', '★'.repeat(s) + '☆'.repeat(3 - s) + '<br>Score: ' + state.score +
+      '<div id="arc-lb" class="arc-lb"></div>',
       [{ t: state.idx + 1 < LEVELS.length ? 'Next Level →' : 'Map', fn: function () { hideModal(); if (state.idx + 1 < LEVELS.length) loadLevel(state.idx + 1); else showScreen('map'); renderMap(); } },
        { t: 'Replay', fn: function () { hideModal(); loadLevel(state.idx); } },
        { t: 'Map', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
+    arcadeLevelComplete('bubble-hex', state.idx + 1, state.score);
   }
   function lose() {
     state.over = true;
@@ -598,4 +600,66 @@
   // boot
   renderMap();
   showScreen('map');
+
+  /* ---------- Gamez Arcade: global leaderboards ----------
+     Shared Cloudflare backend; silent offline so the game never depends on it. */
+  var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev'; // Gamez Arcade backend, e.g. https://gamez-arcade.xxx.workers.dev
+  function arcadeFetch(path, body, cb) {
+    var done = false, timer = null;
+    function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
+    timer = setTimeout(function () { fin(new Error('timeout')); }, 12000);
+    try {
+      fetch(ARCADE_BASE + path, body ?
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {})
+        .then(function (r) { return r.json(); })
+        .then(function (d) { fin(null, d); })
+        .catch(function (e) { fin(e); });
+    } catch (e) { fin(e); }
+  }
+  function arcadeEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function arcadeBoardHtml(top, hl) {
+    if (!top || !top.length) return '<div class="arc-lb-empty">No scores yet — be the first!</div>';
+    var medals = ['🥇', '🥈', '🥉'];
+    return top.slice(0, 3).map(function (e, i) {
+      return '<div class="arc-lb-row' + (e.name === hl ? ' me' : '') + '"><span>' +
+        (medals[i] || (i + 1) + '.') + ' ' + arcadeEsc(e.name) + '</span><b>' +
+        (+e.score).toLocaleString() + '</b></div>';
+    }).join('');
+  }
+  function arcadeEnsureName(box, cb) {
+    var name = '';
+    try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+    if (name) { cb(name); return; }
+    box.innerHTML = '<div class="arc-lb-form"><input id="arc-lb-name" maxlength="12" placeholder="YOUR NAME" autocomplete="off">' +
+      '<button id="arc-lb-go" class="mbtn">SAVE</button></div>';
+    document.getElementById('arc-lb-go').onclick = function () {
+      var v = document.getElementById('arc-lb-name').value.trim().slice(0, 12);
+      if (!v) return;
+      try { localStorage.setItem('arcade_name', v); } catch (e) {}
+      cb(v);
+    };
+  }
+  function arcadeLevelComplete(game, levelN, score) {
+    var box = document.getElementById('arc-lb');
+    if (!box || !ARCADE_BASE || !(score > 0)) return;
+    var board = 'level-' + levelN;
+    box.innerHTML = '<div class="arc-lb-empty">🏆 loading scores…</div>';
+    arcadeEnsureName(box, function (name) {
+      box.innerHTML = '<div class="arc-lb-empty">🏆 sending…</div>';
+      arcadeFetch('/score', { game: game, board: board, name: name, score: score }, function (err, res) {
+        function done(top, rank) {
+          var r = rank > 0 ? '<div class="arc-lb-rank">GLOBAL #' + rank + '!</div>' : '';
+          box.innerHTML = r + '<div class="arc-lb-title">🏆 LEVEL ' + levelN + ' BEST</div>' + arcadeBoardHtml(top, name);
+        }
+        if (res && res.top) done(res.top, res.rank);
+        else arcadeFetch('/scores?game=' + game + '&board=' + board, null, function (e2, d2) {
+          done(d2 && d2.top ? d2.top : null, 0);
+        });
+      });
+    });
+  }
 })();
