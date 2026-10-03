@@ -279,6 +279,7 @@
     var canKid = S.kids.length > 0 && LifeSim.netWorth(S) > 0;
     $('child-btn').classList.toggle('hidden', !canKid);
     $('death').classList.remove('hidden');
+    arcadeLifeComplete(LifeSim.netWorth(S));
     if (S.won) setTimeout(confetti, 350);
   }
 
@@ -329,4 +330,64 @@
 
   buildScenarios();
   showLegacy();
+
+  /* ---------- Gamez Arcade: global leaderboards ----------
+     "Richest life" board — net worth at death. Silent offline. */
+  var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev'; // Gamez Arcade backend, e.g. https://gamez-arcade.xxx.workers.dev
+  function arcadeFetch(path, body, cb) {
+    var done = false, timer = null;
+    function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
+    timer = setTimeout(function () { fin(new Error('timeout')); }, 12000);
+    try {
+      fetch(ARCADE_BASE + path, body ?
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {})
+        .then(function (r) { return r.json(); })
+        .then(function (d) { fin(null, d); })
+        .catch(function (e) { fin(e); });
+    } catch (e) { fin(e); }
+  }
+  function arcadeEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function arcadeBoardHtml(top, hl, fmt) {
+    if (!top || !top.length) return '<div class="arc-lb-empty">No fortunes yet — be the first!</div>';
+    var medals = ['🥇', '🥈', '🥉'];
+    return top.slice(0, 3).map(function (e, i) {
+      return '<div class="arc-lb-row' + (e.name === hl ? ' me' : '') + '"><span>' +
+        (medals[i] || (i + 1) + '.') + ' ' + arcadeEsc(e.name) + '</span><b>' + fmt(e.score) + '</b></div>';
+    }).join('');
+  }
+  function arcadeLifeComplete(worth) {
+    var box = $('arc-lb');
+    if (!box || !ARCADE_BASE || !(worth > 0)) { if (box) box.innerHTML = ''; return; }
+    worth = Math.floor(worth);
+    var fmt = function (v) { return LifeSim.fmt(v); };
+    box.innerHTML = '<div class="arc-lb-empty">🏆 loading fortunes…</div>';
+    var name = '';
+    try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+    function go(n) {
+      box.innerHTML = '<div class="arc-lb-empty">🏆 sending…</div>';
+      arcadeFetch('/score', { game: 'life-story', name: n, score: worth }, function (err, res) {
+        function done(top, rank) {
+          var r = rank > 0 ? '<div class="arc-lb-rank">GLOBAL #' + rank + ' RICHEST!</div>' : '';
+          box.innerHTML = r + '<div class="arc-lb-title">💰 RICHEST LIVES</div>' + arcadeBoardHtml(top, n, fmt);
+        }
+        if (res && res.top) done(res.top, res.rank);
+        else arcadeFetch('/scores?game=life-story', null, function (e2, d2) {
+          done(d2 && d2.top ? d2.top : null, 0);
+        });
+      });
+    }
+    if (name) { go(name); return; }
+    box.innerHTML = '<div class="arc-lb-form"><input id="arc-lb-name" maxlength="12" placeholder="YOUR NAME" autocomplete="off">' +
+      '<button id="arc-lb-go" class="ghost-btn">SAVE</button></div>';
+    $('arc-lb-go').onclick = function () {
+      var v = $('arc-lb-name').value.trim().slice(0, 12);
+      if (!v) return;
+      try { localStorage.setItem('arcade_name', v); } catch (e) {}
+      go(v);
+    };
+  }
 })();
