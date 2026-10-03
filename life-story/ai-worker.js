@@ -142,6 +142,8 @@ var EVENT_SYSTEM = "You are a JSON event generator for a satirical life-simulato
   "You output ONLY raw JSON. No explanations, no preamble, no markdown fences, no surrounding text. " +
   "Your entire response must be exactly one JSON object and nothing else.";
 
+var EVENT_PREFILL = '{"text":"';
+
 function eventPrompt(st) {
   var bits = [
     "Player: " + (+st.age || 20) + "-year-old,",
@@ -162,7 +164,7 @@ function eventPrompt(st) {
     '{"label":"<choice 2>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
     '{"label":"<choice 3>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0}' +
     "]}\n" +
-    'Begin your response with {"text":"';
+    EVENT_PREFILL;
 }
 
 function sanitizeEvent(d) {
@@ -222,14 +224,30 @@ export default {
       if (cached && cached.text) return json(cached);
 
       var prompt = eventPrompt(st);
-      var aiTxt;
+      var aiTxt, ev = null;
       try {
         aiTxt = await runAi(env, [
           { role: "system", content: EVENT_SYSTEM },
           { role: "user", content: prompt }
         ], 600, 0.7);
+        ev = sanitizeEvent(extractJson(EVENT_PREFILL + (aiTxt || "")));
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
-      var ev = sanitizeEvent(extractJson(aiTxt || ""));
+      if (!ev) {
+        // one blunt retry: show the exact shape again
+        try {
+          var retryTxt = await runAi(env, [
+            { role: "system", content: EVENT_SYSTEM },
+            { role: "user", content: "Output ONLY this exact JSON shape, nothing else, no prose:\n" +
+              '{"text":"<event text, max 35 words, second person, funny>","choices":[' +
+              '{"label":"<choice 1, max 8 words>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
+              '{"label":"<choice 2>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
+              '{"label":"<choice 3, mischievous>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0}]}\n' +
+              EVENT_PREFILL }
+          ], 600, 0.5);
+          ev = sanitizeEvent(extractJson(EVENT_PREFILL + (retryTxt || "")));
+          if (ev) aiTxt = retryTxt;
+        } catch (e) {}
+      }
       if (!ev) return json({ error: "bad generation", raw: String(aiTxt || "").slice(0, 400) }, 502);
       ctx.waitUntil(env.STORE.put(key, JSON.stringify(ev), { expirationTtl: 86400 * 7 }));
       return json(ev);
