@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Maze Trace</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<header id="topbar">
+  <button id="map-btn" class="icon-btn" aria-label="Levels">🗺️</button>
+  <div id="title-block">
+    <div id="lvl-label">Level 1</div>
+    <div id="diff-label">Easy</div>
+  </div>
+  <div id="lives">💧💧💧</div>
+  <button id="hint-btn" class="icon-btn" aria-label="Hint">💡</button>
+</header>
+
+<div id="hint-toast">Stuck? Tap 💡 for a hint!</div>
+
+<div id="zoom-ctl">
+  <button id="zoom-in">＋</button>
+  <button id="zoom-out">－</button>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1>🌀 Maze Trace</h1>
+    <p class="tag">Follow the arrows.<br>Don't leave the path.</p>
+    <button id="play-btn" class="big-btn">▶ Play</button>
+    <p class="help">Drag from the blue ▶ dot and trace through the maze to the 🚩.<br>
+    Stray off the path and you lose a 💧 — lose all three and it's over.<br>
+    Pinch to zoom, drag empty space to pan.</p>
+  </div>
+</div>
+
+<div id="win-modal" class="overlay">
+  <div class="card">
+    <div class="stars" id="win-stars">⭐⭐⭐</div>
+    <h2>Well Done!</h2>
+    <div class="stats">
+      <div><span>Time</span><b id="win-time">0:00</b></div>
+      <div><span>Slips</span><b id="win-moves">0</b></div>
+    </div>
+    <button id="next-btn" class="big-btn">Next →</button>
+    <div class="row">
+      <button id="retry-btn" class="ghost-btn">↻ Replay</button>
+      <button id="win-map-btn" class="ghost-btn">🗺️ Map</button>
+    </div>
+  </div>
+</div>
+
+<div id="lives-modal" class="overlay">
+  <div class="card">
+    <h2>Out of Lives!</h2>
+    <div class="drops">💧💧💧</div>
+    <p class="tag">The maze wins this round.</p>
+    <button id="retry-btn2" class="big-btn">↻ Restart</button>
+    <button id="lives-map-btn" class="ghost-btn">🗺️ Map</button>
+  </div>
+</div>
+
+<div id="map-modal" class="overlay">
+  <div class="card wide">
+    <h2>Levels</h2>
+    <div id="map-grid"></div>
+    <button id="map-close" class="ghost-btn">Close</button>
+  </div>
+</div>
+
+<script src="maze.js"></script>
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
