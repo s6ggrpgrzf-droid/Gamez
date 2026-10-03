@@ -53,3 +53,18 @@ html, body { height: 100%; overflow: hidden; background: #faf6ef; font-family: '
 .map-cell.cur { box-shadow: 0 0 0 3px rgba(180,138,94,.35); }
 .mc-n { font-weight: 800; font-size: 18px; color: #5a4636; }
 .mc-s { font-size: 11px; color: #b48a5e; min-height: 14px; }
+
+/* ---- Gamez Arcade: leaderboards ---- */
+.arc-lb { margin: 10px 0 4px; }
+.arc-lb-title { font-size: 11px; letter-spacing: 2px; opacity: .7; margin-bottom: 6px; }
+.arc-lb-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 12px;
+  background: rgba(255,255,255,.05); border-radius: 10px; margin-bottom: 4px; font-size: 14px; }
+.arc-lb-row b { color: #ffd166; font-variant-numeric: tabular-nums; }
+.arc-lb-row.me { background: rgba(255,209,102,.1); border: 1px solid rgba(255,209,102,.4); }
+.arc-lb-empty { opacity: .6; font-size: 13px; padding: 6px; }
+.arc-lb-rank { color: #ffd166; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; }
+.arc-lb-form { display: flex; gap: 8px; margin-top: 4px; }
+#arc-lb-name { flex: 1; min-width: 0; border-radius: 10px; border: 1px solid rgba(255,255,255,.2);
+  background: rgba(0,0,0,.35); color: #fff; padding: 10px 12px; font-size: 15px; font-family: inherit;
+  letter-spacing: 1px; text-transform: uppercase; }
+#arc-lb-name:focus { outline: none; border-color: #ffd166; }

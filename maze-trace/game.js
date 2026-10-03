@@ -127,6 +127,7 @@
     p[S.n] = Math.max(p[S.n] || 0, stars);
     saveProgress(p);
     try { MT_Audio.win(); } catch (e) {}
+    arcadeBoardSubmit(S.n, secs);
     setTimeout(function () { showWin(stars, secs); }, 600);
   }
 
@@ -408,4 +409,65 @@
   // expose for tests
   window.MT_DEBUG = { tapCell: tapCell, getS: function () { return S; }, newLevel: newLevel };
   requestAnimationFrame(loop);
+
+  /* ---------- Gamez Arcade: global leaderboards ----------
+     Fastest solve per board. Scores are stored as (3600 - seconds) so that
+     faster times rank higher; the board converts them back to m:ss. */
+  var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev'; // Gamez Arcade backend, e.g. https://gamez-arcade.xxx.workers.dev
+  function arcadeFetch(path, body, cb) {
+    var done = false, timer = null;
+    function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
+    timer = setTimeout(function () { fin(new Error('timeout')); }, 12000);
+    try {
+      fetch(ARCADE_BASE + path, body ?
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {})
+        .then(function (r) { return r.json(); })
+        .then(function (d) { fin(null, d); })
+        .catch(function (e) { fin(e); });
+    } catch (e) { fin(e); }
+  }
+  function arcadeEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function arcadeTimeHtml(top, hl) {
+    if (!top || !top.length) return '<div class="arc-lb-empty">No times yet — be the first!</div>';
+    var medals = ['🥇', '🥈', '🥉'];
+    return top.slice(0, 3).map(function (e, i) {
+      return '<div class="arc-lb-row' + (e.name === hl ? ' me' : '') + '"><span>' +
+        (medals[i] || (i + 1) + '.') + ' ' + arcadeEsc(e.name) + '</span><b>' +
+        fmtTime(Math.max(0, 3600 - e.score)) + '</b></div>';
+    }).join('');
+  }
+  function arcadeBoardSubmit(boardN, secs) {
+    var box = document.getElementById('arc-lb');
+    if (!box || !ARCADE_BASE || !(secs >= 0)) return;
+    var score = Math.max(1, 3600 - Math.min(secs, 3599));
+    box.innerHTML = '<div class="arc-lb-empty">🏆 loading times…</div>';
+    var name = '';
+    try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+    function go(n) {
+      box.innerHTML = '<div class="arc-lb-empty">🏆 sending…</div>';
+      arcadeFetch('/score', { game: 'maze-trace', board: 'board-' + boardN, name: n, score: score }, function (err, res) {
+        function done(top, rank) {
+          var r = rank > 0 ? '<div class="arc-lb-rank">GLOBAL #' + rank + '!</div>' : '';
+          box.innerHTML = r + '<div class="arc-lb-title">🏆 BOARD ' + boardN + ' FASTEST</div>' + arcadeTimeHtml(top, n);
+        }
+        if (res && res.top) done(res.top, res.rank);
+        else arcadeFetch('/scores?game=maze-trace&board=board-' + boardN, null, function (e2, d2) {
+          done(d2 && d2.top ? d2.top : null, 0);
+        });
+      });
+    }
+    if (name) { go(name); return; }
+    box.innerHTML = '<div class="arc-lb-form"><input id="arc-lb-name" maxlength="12" placeholder="YOUR NAME" autocomplete="off">' +
+      '<button id="arc-lb-go" class="ghost-btn">SAVE</button></div>';
+    document.getElementById('arc-lb-go').onclick = function () {
+      var v = document.getElementById('arc-lb-name').value.trim().slice(0, 12);
+      if (!v) return;
+      try { localStorage.setItem('arcade_name', v); } catch (e) {}
+      go(v);
+    };
+  }
 })();
