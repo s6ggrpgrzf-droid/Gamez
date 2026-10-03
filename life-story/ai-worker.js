@@ -104,9 +104,9 @@ function eventCacheKey(st) {
   return "ev/" + ageB + "/" + (st.scenario || "classic") + "/" + job + "/" + fam + "/" + econTier(+st.worth || 0);
 }
 
-var EVENT_SYSTEM = "You write random life events for a satirical life-simulator game in the style of BitLife. " +
-  "Second person, present tense, funny, surprising, grounded in ordinary life. Never cruel, never graphic, " +
-  "no politics, no real people. Max 35 words for the event text.";
+var EVENT_SYSTEM = "You are a JSON event generator for a satirical life-simulator game in the style of BitLife. " +
+  "You output ONLY raw JSON. No explanations, no preamble, no markdown fences, no surrounding text. " +
+  "Your entire response must be exactly one JSON object and nothing else.";
 
 function eventPrompt(st) {
   var bits = [
@@ -119,9 +119,16 @@ function eventPrompt(st) {
     st.kids ? "Has " + (+st.kids) + " kid(s)." : "No kids."
   ];
   return EVENT_SYSTEM + "\n" + bits.join(" ") + "\n" +
-    "Write one event, then exactly 3 choices. Small effects only: stats -12..+12, money -4000..+4000, fame -8..+8. " +
-    "At least one choice should be a little mischievous. " +
-    'Return ONLY valid JSON, no markdown: {"text":"...","choices":[{"label":"max 8 words","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},{"label":"...","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},{"label":"...","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0}]}';
+    "Write one funny life event about this player (max 35 words, second person, present tense; never cruel, never graphic, no politics, no real people), " +
+    "then exactly 3 short choices (max 8 words each). Small effects only: stats -12..+12, money -4000..+4000, fame -8..+8. " +
+    "One choice should be a little mischievous.\n" +
+    "Respond with EXACTLY this JSON object and nothing else:\n" +
+    '{"text":"<event text>","choices":[' +
+    '{"label":"<choice 1>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
+    '{"label":"<choice 2>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0},' +
+    '{"label":"<choice 3>","happy":0,"health":0,"smarts":0,"looks":0,"money":0,"fame":0}' +
+    "]}\n" +
+    'Begin your response with {"text":"';
 }
 
 function sanitizeEvent(d) {
@@ -147,16 +154,20 @@ function sanitizeEvent(d) {
   return { text: text, choices: choices, ai: true };
 }
 
-var OBIT_SYSTEM = "You write witty obituaries for a satirical life-simulator game. Warm, funny, a little cheeky. " +
-  "Never cruel, never graphic. Under 45 words.";
+var OBIT_SYSTEM = "You are a JSON obituary generator for a satirical life-simulator game. Warm, funny, a little cheeky, never cruel, never graphic. " +
+  "You output ONLY raw JSON. No explanations, no preamble, no markdown, no surrounding text. " +
+  "Your entire response must be exactly one JSON object and nothing else.";
 
 function obitPrompt(b) {
   var hl = (b.highlights || []).slice(0, 5).map(function (h) { return clean(h, 120); }).filter(Boolean);
   return OBIT_SYSTEM + "\n" +
+    "Write a witty 2-sentence obituary (under 45 words) for this game character:\n" +
     clean(b.name, 40) + ", died at " + (+b.age || 70) + " (" + clean(b.cause, 80) + "). " +
     "Epitaph theme: " + clean(b.ribbon, 60) + ". " +
     (hl.length ? "Life highlights: " + hl.join(" ") : "") + "\n" +
-    'Return ONLY valid JSON, no markdown: {"text":"..."}';
+    "Respond with EXACTLY this JSON object and nothing else:\n" +
+    '{"text":"<obituary text>"}\n' +
+    'Begin your response with {"text":"';
 }
 
 export default {
@@ -182,7 +193,7 @@ export default {
         aiTxt = await runAi(env, [
           { role: "system", content: EVENT_SYSTEM },
           { role: "user", content: prompt }
-        ], 400, 0.9);
+        ], 400, 0.7);
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
       var ev = sanitizeEvent(extractJson(aiTxt || ""));
       if (!ev) return json({ error: "bad generation", raw: String(aiTxt || "").slice(0, 400) }, 502);
@@ -199,7 +210,7 @@ export default {
         aiTxt2 = await runAi(env, [
           { role: "system", content: OBIT_SYSTEM },
           { role: "user", content: obitPrompt(b2) }
-        ], 200, 0.85);
+        ], 200, 0.7);
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
       var d2 = extractJson(aiTxt2 || "");
       var text = d2 && typeof d2.text === "string" ? clean(d2.text, 300) : "";
