@@ -73,10 +73,11 @@
     if (!avail.length) avail = colors;
     var pick = avail[(Math.random() * avail.length) | 0];
     if (state) { state.lastColors = (state.lastColors || []).concat([pick]).slice(-3); }
-    // 6% rainbow, 4% bomb
+    // 6% rainbow, 4% bomb, 3% lightning
     var roll = Math.random();
     if (roll < 0.06) return { color: 'W' };
     if (roll < 0.10) return { color: pick, special: 'bomb' };
+    if (roll < 0.13) return { color: pick, special: 'lightning' };
     return { color: pick };
   }
 
@@ -101,10 +102,15 @@
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(x, y, r - 2, 0, 7); ctx.stroke();
       }
-      if (bub.special === 'bomb') {
+    if (bub.special === 'bomb') {
         ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (r * 0.9) + 'px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('✸', x, y + 1);
+      }
+      if (bub.special === 'lightning') {
+        ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (r * 0.9) + 'px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('⚡', x, y + 1);
       }
       if (bub.familiar) {
         ctx.fillStyle = '#fff'; ctx.font = (r * 0.85) + 'px sans-serif';
@@ -396,12 +402,25 @@
       var xy = E.cellXY(rc[0], rc[1], R);
       state.anims.push({ type: 'pop', x: xy[0], y: xy[1], bub: { color: 'Y' }, color: popColor, t0: Date.now(), dur: 300 });
     });
-    // score floater
-    if (res.score > 0) {
-      state.anims.push({ type: 'floater', x: x, y: y, text: '+' + res.score, t0: Date.now(), dur: 900 });
+    // Puzzle Bobble-style exponential drop scoring: 1=20, 2=40, 3=80...
+    var dropScore = 0;
+    for (var di = 0; di < res.dropped.length; di++) dropScore += 20 * Math.pow(2, di);
+    if (dropScore > 0) {
+      state.anims.push({ type: 'floater', x: x, y: y - 20, text: '+' + dropScore + ' DROP!', t0: Date.now(), dur: 1200 });
+    }
+    var totalScore = res.score + dropScore;
+    // Combo multiplier
+    state.combo = (state.combo || 0) + 1;
+    var mult = Math.min(state.combo, 5);
+    if (mult > 1) {
+      totalScore *= mult;
+      banner('🔥 Combo x' + mult + '!');
+    }
+    if (totalScore > 0) {
+      state.anims.push({ type: 'floater', x: x, y: y, text: '+' + totalScore, t0: Date.now(), dur: 900 });
     }
     // screen shake on big pops
-    if (res.popped.length >= 6) {
+    if (res.popped.length >= 6 || res.dropped.length >= 4) {
       state.shake = { t0: Date.now(), dur: 300, mag: 8 };
     }
     res.dropped.forEach(function (rc) {
@@ -410,18 +429,20 @@
     });
     if (res.popped.length) {
       HexAudio.pop(res.popped.length);
-      state.score += res.score;
+      state.score += totalScore;
       state.orb = Math.min(state.orbMax, state.orb + res.popped.length);
       if (state.orb >= state.orbMax) { document.getElementById('orb-wrap').classList.add('full'); }
       state.missStreak = 0;
     } else {
       state.missStreak++;
-      // BW3-style: ceiling descends every 5 shots without a pop
-      if (state.missStreak >= 5) {
-        state.missStreak = 0;
-        descendBoard();
-        if (!state.over) banner('⚠️ The ceiling descends!');
-      }
+      state.combo = 0; // combo resets on miss
+    }
+    // Continuous ceiling pressure (Puzzle Bobble-style): every 4 shots, descend
+    state.shotsSinceDrop = (state.shotsSinceDrop || 0) + 1;
+    if (state.shotsSinceDrop >= 4) {
+      state.shotsSinceDrop = 0;
+      descendBoard();
+      if (!state.over) banner('⚠️ The ceiling descends!');
     }
     if (res.dropped.length) HexAudio.drop();
     // Ghost movement: ghost rises when bubbles above it are cleared
