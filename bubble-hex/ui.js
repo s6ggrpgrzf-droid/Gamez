@@ -459,23 +459,11 @@
   function endTurn(wasShot) {
     if (state.over) return;
     var L = state.level;
-    var won = false;
-    if (L.type === 'clear') {
-      won = Object.keys(state.board).filter(function (k) {
-        var b = state.board[k]; return !b.blocker;
-      }).length === 0;
-    } else if (L.type === 'rescue') {
-      // count remaining familiars
-      var left = 0;
-      Object.keys(state.board).forEach(function (k) { if (state.board[k].familiar) left++; });
-      won = left === 0;
-    } else if (L.type === 'ghost') {
-      won = !state.ghost;
-    } else if (L.type === 'boss') {
-      // boss: clear all non-blocker = win (shield bubbles are just tough)
-      won = Object.keys(state.board).filter(function (k) { return !state.board[k].blocker; }).length === 0;
-    }
-    if (won) return win();
+    // BW3: you win when ALL bubbles are popped, regardless of level type
+    var remaining = Object.keys(state.board).filter(function (k) {
+      return !state.board[k].blocker;
+    }).length;
+    if (remaining === 0) return win();
     if (state.shots <= 0) return lose();
     if (!state.flying) render();
   }
