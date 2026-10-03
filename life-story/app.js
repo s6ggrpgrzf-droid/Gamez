@@ -578,11 +578,11 @@
         return;
       }
       add(sect('Mind & body'));
-      add(btn('📖 Study hard', 'Smarts up, fun down', function () { return acts.study(S); }));
-      add(btn('🏋️ Hit the gym', 'Health & looks up', function () { return acts.gym(S); }));
-      add(btn('📚 Library', 'Quiet smarts boost', function () { return acts.library(S); }));
+      add(btn('📖 Study hard', 'Smarts up, fun down', function () { return acts.study(S); }, S.age < 6 ? '🔒 Age 6+' : null));
+      add(btn('🏋️ Hit the gym', 'Health & looks up', function () { return acts.gym(S); }, S.age < 10 ? '🔒 Age 10+' : null));
+      add(btn('📚 Library', 'Quiet smarts boost', function () { return acts.library(S); }, S.age < 8 ? '🔒 Age 8+' : null));
       add(btn('🩺 See a doctor', '$200 · Health boost', function () { return acts.doctor(S); }));
-      add(btn('🧘 Meditate', 'Happiness up', function () { return acts.meditate(S); }));
+      add(btn('🧘 Meditate', 'Happiness up', function () { return acts.meditate(S); }, S.age < 8 ? '🔒 Age 8+' : null));
       add(btn('🙏 Pray to Pip', S.prayedYear === S.age ? 'Pip heard you already' : 'Once a year · big guy upstairs',
         function () { openPraySheet(); return { ok: true }; },
         S.prayedYear === S.age ? 'Come back next year' : null));
@@ -1056,11 +1056,11 @@
         '<div><span>Net worth</span><b>' + LifeSim.fmt(tb.worth) + '</b></div>' +
         '<div><span>Career</span><b>' + esc(tb.career) + '</b></div>' +
         '<div><span>Education</span><b>' + esc(tb.edu) + '</b></div>' +
-        '<div><span>Kids</span><b>' + tb.kids + '</b></div>' +
-        '<div><span>Lovers</span><b>' + tb.lovers + '</b></div>' +
-        '<div><span>Crimes</span><b>' + tb.crimes + '</b></div>' +
-        '<div><span>Prison</span><b>' + tb.prison + 'y</b></div>' +
-        '<div><span>Happiness</span><b>' + tb.happy + '</b></div>';
+        '<div><span>Kids</span><b>' + (tb.kids || 0) + '</b></div>' +
+        '<div><span>Lovers</span><b>' + (tb.lovers || 0) + '</b></div>' +
+        '<div><span>Crimes</span><b>' + (tb.crimes || 0) + '</b></div>' +
+        '<div><span>Prison</span><b>' + (tb.prison || 0) + 'y</b></div>' +
+        '<div><span>Happiness</span><b>' + (tb.happy || 0) + '</b></div>';
     } else {
       $('d-stats').innerHTML =
         '<div><span>Final age</span><b>' + S.age + '</b></div>' +
