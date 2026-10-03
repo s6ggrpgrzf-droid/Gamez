@@ -21,10 +21,10 @@
   </header>
 
   <div id="stats">
-    <div class="stat"><span>😊</span><div class="bar"><i id="b-happy"></i></div></div>
-    <div class="stat"><span>❤️</span><div class="bar"><i id="b-health"></i></div></div>
-    <div class="stat"><span>🧠</span><div class="bar"><i id="b-smarts"></i></div></div>
-    <div class="stat"><span>✨</span><div class="bar"><i id="b-looks"></i></div></div>
+    <div class="stat"><span>😊</span><div class="bar"><i id="b-happy"></i></div><b id="b-happy-n">–</b></div>
+    <div class="stat"><span>❤️</span><div class="bar"><i id="b-health"></i></div><b id="b-health-n">–</b></div>
+    <div class="stat"><span>🧠</span><div class="bar"><i id="b-smarts"></i></div><b id="b-smarts-n">–</b></div>
+    <div class="stat"><span>✨</span><div class="bar"><i id="b-looks"></i></div><b id="b-looks-n">–</b></div>
   </div>
 
   <div id="journal"></div>
@@ -42,6 +42,7 @@
 
 <div id="sheet" class="overlay hidden">
   <div class="panel">
+    <div class="grab"></div>
     <div class="panel-head"><h2 id="sheet-title"></h2><button id="sheet-x" class="x">✕</button></div>
     <div id="sheet-body"></div>
   </div>
@@ -70,6 +71,7 @@
 </div>
 
 <div id="toast"></div>
+<canvas id="confetti" class="hidden"></canvas>
 
 <script src="life.js"></script>
 <script src="app.js"></script>
