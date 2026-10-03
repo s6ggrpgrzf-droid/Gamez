@@ -120,6 +120,15 @@ function clean(s, max) {
   if (s.length > max) s = s.slice(0, max).trim();
   return s;
 }
+function cleanWord(s, max) {
+  // like clean(), but never chops mid-word: backs off to the last space + …
+  s = String(s == null ? "" : s).replace(/[<>&"']/g, "").trim();
+  if (s.length > max) {
+    var cut = s.slice(0, max), sp = cut.lastIndexOf(" ");
+    s = (sp > max * 0.6 ? cut.slice(0, sp) : cut).trim() + "…";
+  }
+  return s;
+}
 function clampN(v, a, b) {
   v = Math.round(+v || 0);
   return v < a ? a : v > b ? b : v;
@@ -211,7 +220,7 @@ function eventPrompt(st) {
 
 function sanitizeEvent(d) {
   if (!d || typeof d.text !== "string" || !Array.isArray(d.choices)) return null;
-  var text = clean(d.text, 220);
+  var text = cleanWord(d.text, 220);
   if (text.length < 10) return null;
   var choices = [];
   for (var i = 0; i < d.choices.length && choices.length < 3; i++) {
@@ -298,13 +307,13 @@ export default {
         aiTxt2 = await runAi(env, [
           { role: "system", content: OBIT_SYSTEM },
           { role: "user", content: obitPrompt(b2) }
-        ], 200, 0.7, OBIT_SCHEMA);
+        ], 300, 0.7, OBIT_SCHEMA);
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
       var d2 = extractJson(aiTxt2 || "");
-      var text = d2 && typeof d2.text === "string" ? clean(d2.text, 300) : "";
+      var text = d2 && typeof d2.text === "string" ? cleanWord(d2.text, 300) : "";
       if (text.length < 10) {
         // prose fallback: model ignored the JSON instruction; use raw text as-is
-        var prose = clean(aiTxt2, 300);
+        var prose = cleanWord(aiTxt2, 300);
         if (prose.length >= 10 && prose.charAt(0) !== '{') text = prose;
       }
       if (text.length < 10) return json({ error: "bad generation", raw: String(aiTxt2 || "").slice(0, 400) }, 502);
