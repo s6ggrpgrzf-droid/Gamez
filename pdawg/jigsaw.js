@@ -433,9 +433,18 @@ function levelForCount(n) {
 }
 
 function gridForCount(n, aspect) {
-  var cols = Math.max(2, Math.round(Math.sqrt(n * aspect)));
-  var rows = Math.max(2, Math.round(n / cols));
-  return { rows: rows, cols: cols };
+  // Pick rows x cols whose product hits n exactly when possible (so a
+  // "24 pieces" puzzle really has 24); break ties by aspect match so cells
+  // stay squarish.
+  var best = null;
+  var c0 = Math.sqrt(n * aspect);
+  for (var c = Math.max(2, Math.floor(c0) - 3); c <= Math.ceil(c0) + 3; c++) {
+    for (var r = Math.max(2, Math.floor(n / c) - 1); r <= Math.ceil(n / c) + 1; r++) {
+      var score = Math.abs(r * c - n) * 4 + Math.abs((c / r) - aspect) / aspect;
+      if (!best || score < best.score) best = { rows: r, cols: c, score: score };
+    }
+  }
+  return { rows: best.rows, cols: best.cols };
 }
 
 /* Build a fresh puzzle state object (no DOM needed except piece canvases). */
