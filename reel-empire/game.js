@@ -1003,14 +1003,6 @@ function upgradeAIPosters() {
       if (!url) return;
       img.removeAttribute("data-fid");
       if (img.className.indexOf("aiposter") < 0) img.className += " aiposter";
-      var fig = img.parentNode;
-      if (fig && fig.tagName === "FIGURE" && !fig.querySelector(".ai-chip")) {
-        var chip = document.createElement("span");
-        chip.className = "ai-chip";
-        chip.textContent = "✨";
-        chip.title = "AI-painted poster";
-        fig.appendChild(chip);
-      }
       img.style.opacity = "0";
       var pre = new Image();
       pre.onload = function () { img.src = url; img.style.opacity = "1"; };
