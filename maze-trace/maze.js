@@ -1,98 +1,100 @@
-/* Maze Trace — maze generation (recursive backtracker) + BFS distance field */
+/* Arrow Slide — arrow-grid puzzle (Amaze GO-style).
+   Tap an arrow to slide it off the grid. It only slides if its straight-line
+   path to the edge is clear. Clear all arrows to win. Wrong taps cost drops. */
 'use strict';
-window.MazeGen = (function () {
-  // directions: N E S W
-  var DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+window.ArrowGen = (function () {
+  var DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0]; // N E S W
 
-  function generate(w, h) {
-    // walls[c] = [N,E,S,W] true = wall present
-    var walls = [];
-    for (var i = 0; i < w * h; i++) walls.push([true, true, true, true]);
-    var visited = new Uint8Array(w * h);
-    function idx(x, y) { return y * w + x; }
-
-    // iterative backtracker
-    var sx = (Math.random() * w) | 0, sy = (Math.random() * h) | 0;
-    var stack = [[sx, sy]];
-    visited[idx(sx, sy)] = 1;
-    while (stack.length) {
-      var top = stack[stack.length - 1], x = top[0], y = top[1];
-      var opts = [];
-      for (var d = 0; d < 4; d++) {
-        var nx = x + DX[d], ny = y + DY[d];
-        if (nx >= 0 && ny >= 0 && nx < w && ny < h && !visited[idx(nx, ny)]) opts.push(d);
-      }
-      if (!opts.length) { stack.pop(); continue; }
-      var dir = opts[(Math.random() * opts.length) | 0];
-      var mx = x + DX[dir], my = y + DY[dir];
-      walls[idx(x, y)][dir] = false;
-      walls[idx(mx, my)][(dir + 2) % 4] = false;
-      visited[idx(mx, my)] = 1;
-      stack.push([mx, my]);
+  // downstream cells from (x,y) in direction d, exclusive of (x,y)
+  function pathCells(w, h, x, y, d) {
+    var cells = [];
+    var cx = x + DX[d], cy = y + DY[d];
+    while (cx >= 0 && cy >= 0 && cx < w && cy < h) {
+      cells.push([cx, cy]);
+      cx += DX[d]; cy += DY[d];
     }
-
-    // start on left edge, exit on right edge — pick rows far apart
-    var startY = (Math.random() * h) | 0;
-    var exitY = (Math.random() * h) | 0;
-    if (Math.abs(exitY - startY) < ((h / 2) | 0)) exitY = (startY + ((h / 2) | 0) + 1) % h;
-    walls[idx(0, startY)][3] = false;       // open west of start
-    walls[idx(w - 1, exitY)][1] = false;    // open east of exit
-
-    return { w: w, h: h, walls: walls, start: [0, startY], exit: [w - 1, exitY] };
+    return cells;
   }
 
-  // BFS distances from exit; also arrow direction per cell (toward exit)
-  function solve(mz) {
-    var w = mz.w, h = mz.h;
-    function idx(x, y) { return y * w + x; }
-    var dist = new Int32Array(w * h).fill(-1);
-    var q = [mz.exit];
-    dist[idx(mz.exit[0], mz.exit[1])] = 0;
-    while (q.length) {
-      var c = q.shift(), x = c[0], y = c[1];
-      for (var d = 0; d < 4; d++) {
-        if (mz.walls[idx(x, y)][d]) continue;
-        var nx = x + DX[d], ny = y + DY[d];
-        // allow stepping outside at start/exit openings
-        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        if (dist[idx(nx, ny)] === -1) { dist[idx(nx, ny)] = dist[idx(x, y)] + 1; q.push([nx, ny]); }
-      }
+  function hasCycle(w, h, arrows) {
+    // arrows: map "x,y" -> dir. dependency: A depends on arrows in A's path.
+    var keys = Object.keys(arrows);
+    var adj = {};
+    keys.forEach(function (k) { adj[k] = []; });
+    keys.forEach(function (k) {
+      var p = k.split(','), x = +p[0], y = +p[1], d = arrows[k];
+      pathCells(w, h, x, y, d).forEach(function (c) {
+        var ck = c[0] + ',' + c[1];
+        if (arrows.hasOwnProperty(ck)) adj[k].push(ck);
+      });
+    });
+    // DFS cycle detect
+    var state = {};
+    function visit(k) {
+      if (state[k] === 1) return true;
+      if (state[k] === 2) return false;
+      state[k] = 1;
+      for (var i = 0; i < adj[k].length; i++) if (visit(adj[k][i])) return true;
+      state[k] = 2;
+      return false;
     }
-    // arrow dir: neighbor with smallest dist (toward exit)
-    var arrows = new Int8Array(w * h).fill(-1);
-    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
-      if (x === mz.exit[0] && y === mz.exit[1]) continue;
-      var best = -1, bd = Infinity;
-      for (var d2 = 0; d2 < 4; d2++) {
-        if (mz.walls[idx(x, y)][d2]) continue;
-        var ax = x + DX[d2], ay = y + DY[d2];
-        if (ax < 0 || ay < 0 || ax >= w || ay >= h) continue;
-        if (dist[idx(ax, ay)] >= 0 && dist[idx(ax, ay)] < bd) { bd = dist[idx(ax, ay)]; best = d2; }
-      }
-      arrows[idx(x, y)] = best;
-    }
-    return { dist: dist, arrows: arrows, length: dist[idx(mz.start[0], mz.start[1])] };
+    for (var i = 0; i < keys.length; i++) if (visit(keys[i])) return true;
+    return false;
   }
 
-  // corridor segments for hit-testing: [x1,y1,x2,y2] in cell coords (cell centers)
-  function segments(mz) {
-    var segs = [];
-    function idx(x, y) { return y * mz.w + x; }
-    for (var y = 0; y < mz.h; y++) for (var x = 0; x < mz.w; x++) {
+  // generate a solvable board: random arrows, reject placements that create cycles
+  function generate(w, h, fillRatio) {
+    var arrows = {};
+    var cells = [];
+    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) cells.push([x, y]);
+    // shuffle
+    for (var i = cells.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var t = cells[i]; cells[i] = cells[j]; cells[j] = t;
+    }
+    var target = Math.round(w * h * fillRatio);
+    var placed = 0;
+    for (var c = 0; c < cells.length && placed < target; c++) {
+      var x = cells[c][0], y = cells[c][1];
+      var dirs = [0, 1, 2, 3].sort(function () { return Math.random() - 0.5; });
       for (var d = 0; d < 4; d++) {
-        if (mz.walls[idx(x, y)][d]) continue;
-        var nx = x + DX[d], ny = y + DY[d];
-        if (nx < 0 || ny < 0 || nx >= mz.w || ny >= mz.h) {
-          // stub leading outside (start/exit)
-          segs.push([x, y, x + DX[d] * 0.6, y + DY[d] * 0.6]);
-        } else if (d === 1 || d === 2) {
-          // draw each interior corridor once (E and S)
-          segs.push([x, y, nx, ny]);
-        }
+        var k = x + ',' + y;
+        arrows[k] = dirs[d];
+        if (!hasCycle(w, h, arrows)) { placed++; break; }
+        delete arrows[k];
       }
     }
-    return segs;
+    // ensure at least one arrow has a clear path (almost always true, but check)
+    var keys = Object.keys(arrows);
+    var open = keys.some(function (k) {
+      var p = k.split(','), x = +p[0], y = +p[1];
+      return pathCells(w, h, x, y, arrows[k]).every(function (cc) {
+        return !arrows.hasOwnProperty(cc[0] + ',' + cc[1]);
+      });
+    });
+    if (!open && keys.length) {
+      // force: clear the path of a random arrow
+      var rk = keys[(Math.random() * keys.length) | 0];
+      var rp = rk.split(','), rx = +rp[0], ry = +rp[1];
+      pathCells(w, h, rx, ry, arrows[rk]).forEach(function (cc) {
+        delete arrows[cc[0] + ',' + cc[1]];
+      });
+    }
+    return { w: w, h: h, arrows: arrows, count: Object.keys(arrows).length };
   }
 
-  return { generate: generate, solve: solve, segments: segments, DX: DX, DY: DY };
+  // arrows currently free to slide (clear path to edge)
+  function freeArrows(board) {
+    var out = [];
+    Object.keys(board.arrows).forEach(function (k) {
+      var p = k.split(','), x = +p[0], y = +p[1];
+      var blocked = pathCells(board.w, board.h, x, y, board.arrows[k]).some(function (cc) {
+        return board.arrows.hasOwnProperty(cc[0] + ',' + cc[1]);
+      });
+      if (!blocked) out.push(k);
+    });
+    return out;
+  }
+
+  return { generate: generate, freeArrows: freeArrows, pathCells: pathCells, DX: DX, DY: DY };
 })();
