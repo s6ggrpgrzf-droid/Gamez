@@ -12,6 +12,48 @@
   /* ================= CONFIG ================= */
   var ROWS = 5, COLS = 9;
   var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+  var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
+  /* flavor text (shared backend; silent local fallback). Wave flavor is
+     prefetched one wave ahead so it is ready when the banner fires. */
+  var aiWaveCache = {};
+  function aiFetch(kind, ctx2, cb) {
+    var done = false, timer = null;
+    function fin(t) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(t); } }
+    timer = setTimeout(function () { fin(null); }, 7000);
+    try {
+      fetch(AI_BASE + '/g', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind, game: 'bloom-defense', ctx: ctx2 })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) { fin(d && d.text ? d.text : null); })
+        .catch(function () { fin(null); });
+    } catch (e) { fin(null); }
+  }
+  var WAVE_FALLBACKS = [
+    'They look hungry. Rude, honestly.',
+    'The weeds brought friends. Unwelcome ones.',
+    'Keep calm and plant sunflowers.',
+    'They want your brains. Joke is on them: you are a gardener.',
+    'Mulch them.',
+    'The lawn has seen worse. Probably.',
+    'Petal to the metal, people.',
+    'No mercy. Only mulch.',
+    'They came from the neighbor\'s yard. Typical.',
+    'Hold the lawn! The daisies are counting on you.'
+  ];
+  function prefetchWave(n) {
+    if (n > WAVES.length || aiWaveCache[n] !== undefined) return;
+    aiWaveCache[n] = null;
+    aiFetch('banner', { wave: n, final: n === WAVES.length }, function (t) {
+      aiWaveCache[n] = t || false;
+    });
+  }
+  function waveFlavor(n, fin) {
+    var c = aiWaveCache[n];
+    if (typeof c === 'string' && c) return c;
+    if (fin) return 'Hold the lawn! 🌸';
+    return WAVE_FALLBACKS[n % WAVE_FALLBACKS.length];
+  }
   var BEST_KEY = 'bloom2_best', NAME_KEY = 'arcade_name';
   var SKY_SUN_EVERY = 8, SUN_VALUE = 25, SUNFLOWER_EVERY = 14, SUN_DESPAWN = 12;
   var PEA_DMG = 20, PEA_EVERY = 1.3, PEA_SPEED = 5.5;
@@ -262,6 +304,8 @@
       banner('🌱', 'The weeds are coming…', 'Plant sunflowers first! ☀️');
       waitForSeedThen(1);
     });
+    aiWaveCache = {};
+    prefetchWave(1);
     AU.ready();
     if (!daily) return;
     // daily: fetch seed, then it's the same for everyone today
@@ -322,12 +366,13 @@
     S.waveState = 'spawning';
     updateWavebar();
     if (wq.huge) {
-      banner('⚠️', wq.fin ? 'FINAL WAVE!' : 'A HUGE WAVE IS APPROACHING!', wq.fin ? 'Hold the lawn! 🌸' : 'Brace your petals…');
+      banner('⚠️', wq.fin ? 'FINAL WAVE!' : 'A HUGE WAVE IS APPROACHING!', waveFlavor(n, wq.fin));
       AU.horn();
     } else if (n > 1) {
-      banner('Wave ' + n, '', '');
+      banner('Wave ' + n, waveFlavor(n, false), '');
       AU.click();
     }
+    prefetchWave(n + 1);
   }
 
   function banner(a, b, c, done) {
