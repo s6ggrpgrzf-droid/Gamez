@@ -511,7 +511,13 @@
       document.getElementById('lvl-label').textContent = 'Daily Slide';
       document.getElementById('diff-label').textContent = S.daily.date;
     } else {
-      document.getElementById('lvl-label').textContent = 'Level ' + S.n;
+      (function () {
+        var n = S.n, el = document.getElementById('lvl-label');
+        levelEpithet(n, function (ep) {
+          // only apply if the player hasn't moved on to another level meanwhile
+          if (!S.daily && S.n === n && el) el.textContent = 'Level ' + n + ' · ' + ep;
+        });
+      })();
       document.getElementById('diff-label').textContent = S.L.diff;
     }
     document.getElementById('clear-label').textContent = S.cleared + '/' + S.total;
@@ -694,6 +700,50 @@
      Fastest solve per board. Scores are stored as (3600 - seconds) so that
      faster times rank higher; the board converts them back to m:ss. */
   var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+  /* flavor text (shared backend; silent local fallback). Level epithets are
+     cached in localStorage so each level generates once, ever. */
+  var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
+  var TITLE_KEY = 'mazetrace_titles';
+  function titleCache() {
+    try { return JSON.parse(localStorage.getItem(TITLE_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function aiFetch(kind, ctx2, cb) {
+    var done = false, timer = null;
+    function fin(t) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(t); } }
+    timer = setTimeout(function () { fin(null); }, 7000);
+    try {
+      fetch(AI_BASE + '/g', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind, game: 'maze-trace', ctx: ctx2 })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) { fin(d && d.text ? d.text : null); })
+        .catch(function () { fin(null); });
+    } catch (e) { fin(null); }
+  }
+  var TITLE_FALLBACKS = [
+    'Still Water', 'The Long Turn', 'Quiet Geometry', 'Paper Path', 'Gentle Bend',
+    'Morning Line', 'Soft Corner', 'The Patient Curve', 'Ink Trail', 'Calm Crossing',
+    'Slow River', 'The Winding Way', 'Dusk Line', 'Pebble Path', 'Silent Arrow',
+    'The Deep Breath', 'Meadow Walk', 'Still Point', 'The Far Turn', 'Low Tide',
+    'Paper Crane', 'The Quiet Mile', 'Drift', 'Arrive'
+  ];
+  var titleFetching = {};
+  function levelEpithet(n, cb) {
+    var cache = titleCache();
+    if (cache[n]) { cb(cache[n]); return; }
+    cb(TITLE_FALLBACKS[n % TITLE_FALLBACKS.length]);
+    if (titleFetching[n]) return;
+    titleFetching[n] = true;
+    aiFetch('title', { level: n }, function (t) {
+      titleFetching[n] = false;
+      if (!t) return;
+      try {
+        var c = titleCache(); c[n] = t;
+        localStorage.setItem(TITLE_KEY, JSON.stringify(c));
+      } catch (e) {}
+      cb(t);
+    });
+  }
   function arcadeFetch(path, body, cb) {
     var done = false, timer = null;
     function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
