@@ -53,7 +53,8 @@
       ghost: L.ghostStart ? { r: L.ghostStart[0], c: L.ghostStart[1] } : null,
       rescued: 0, shieldLeft: L.shield || 0,
       aiming: false, aimAngle: -Math.PI / 2,
-      anims: [], over: false, missStreak: 0
+      anims: [], over: false, missStreak: 0,
+      nero: 0 // bubbles tossed to Nero; every 4 = rainbow power-up
     };
     state.current = newShooterBubble();
     state.next = newShooterBubble();
@@ -63,11 +64,20 @@
 
   function newShooterBubble() {
     var colors = E.boardColors(state ? state.board : {});
-    // 8% rainbow, 5% bomb
+    // Balanced queue: avoid 3+ same color in a row (BW3-style)
+    var last = state ? state.lastColors || [] : [];
+    var avail = colors.filter(function (c) {
+      if (last.length >= 2 && last[last.length - 1] === c && last[last.length - 2] === c) return false;
+      return true;
+    });
+    if (!avail.length) avail = colors;
+    var pick = avail[(Math.random() * avail.length) | 0];
+    if (state) { state.lastColors = (state.lastColors || []).concat([pick]).slice(-3); }
+    // 6% rainbow, 4% bomb
     var roll = Math.random();
-    if (roll < 0.08) return { color: 'W' };
-    if (roll < 0.13) return { color: colors[(Math.random() * colors.length) | 0], special: 'bomb' };
-    return { color: colors[(Math.random() * colors.length) | 0] };
+    if (roll < 0.06) return { color: 'W' };
+    if (roll < 0.10) return { color: pick, special: 'bomb' };
+    return { color: pick };
   }
 
   /* ---------- Rendering ---------- */
@@ -109,16 +119,16 @@
     var boardTop = 10;
     var x = sx, y = sy;
     var vx = Math.cos(state.aimAngle), vy = Math.sin(state.aimAngle);
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+    // BW3-style: aiming line extends all the way to the top
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(x, y);
     var bounces = 0;
-    for (var i = 0; i < 60; i++) {
-      x += vx * 14; y += vy * 14;
+    for (var i = 0; i < 200; i++) {
+      x += vx * 12; y += vy * 12;
       if (x < R) { x = R; vx = -vx; bounces++; }
       if (x > W - R) { x = W - R; vx = -vx; bounces++; }
       if (y <= R + boardTop + 4) break;
-      // stop at first bubble hit
       var hitBub = false;
       Object.keys(state.board).forEach(function (k) {
         if (hitBub) return;
@@ -126,12 +136,11 @@
         var dx = x - xy[0], dy = y - (xy[1] + boardTop);
         if (dx * dx + dy * dy < (R * 1.8) * (R * 1.8)) hitBub = true;
       });
-      if (hitBub || bounces > 2) break;
+      if (hitBub || bounces > 3) break;
     }
-    ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
-    // landing dot
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
+    ctx.lineTo(x, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill();
   }
 
   function shade(hex, amt) {
@@ -182,6 +191,17 @@
     if (state.next) drawBubble(sx - R * 2.6, sy + 6, state.next, 0.6, 0.8);
     // current bubble
     if (state.current && !state.flying) drawBubble(sx, sy, state.current);
+    // Nero the cat (discard) — tap to toss current bubble
+    var nx = sx + R * 2.8, ny = sy + 4;
+    ctx.font = (R * 1.6) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🎩', nx, ny - 6);
+    ctx.font = (R * 1.1) + 'px sans-serif';
+    ctx.fillText('🐱', nx, ny + 8);
+    if (state.nero > 0) {
+      ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(state.nero + '/4', nx, ny + R + 8);
+    }
+    state.neroPos = [nx, ny];
     // shooter base
     ctx.fillStyle = '#2a1a4a';
     ctx.beginPath(); ctx.arc(sx, sy + R + 6, R * 1.3, Math.PI, 0); ctx.fill();
@@ -238,7 +258,24 @@
   canvas.addEventListener('pointerdown', function (e) {
     if (!state || state.over || state.flying) return;
     var p = canvasPos(e);
-    downPos = p;
+    // Nero tap: discard current bubble
+    if (state.neroPos) {
+      var dx = p[0] - state.neroPos[0], dy = p[1] - state.neroPos[1];
+      if (dx * dx + dy * dy < (R * 1.8) * (R * 1.8)) {
+        state.nero++;
+        HexAudio.click();
+        if (state.nero >= 4) {
+          state.nero = 0;
+          state.current = { color: 'W' }; // rainbow power-up!
+          banner('🎩 Nero grants a rainbow bubble!');
+          HexAudio.orb();
+        } else {
+          state.current = state.next;
+          state.next = newShooterBubble();
+        }
+        return;
+      }
+    }
     shooterX = W / 2; shooterY = H - 40;
     state.aiming = true;
     updateAim(p);
@@ -251,17 +288,8 @@
   canvas.addEventListener('pointerup', function (e) {
     if (!state || !state.aiming) return;
     state.aiming = false;
-    // tap (minimal movement) on shooter = swap bubbles
-    var p = canvasPos(e);
-    var dx = p[0] - downPos[0], dy = p[1] - downPos[1];
-    if (dx * dx + dy * dy < 400 && !state.flying) {
-      var tmp = state.current; state.current = state.next; state.next = tmp;
-      HexAudio.click();
-      return;
-    }
     fire();
   });
-  var downPos = [0, 0];
   function updateAim(p) {
     var dx = p[0] - shooterX, dy = p[1] - shooterY;
     if (dy > -10) dy = -10; // only upward
@@ -388,31 +416,12 @@
       state.missStreak = 0;
     } else {
       state.missStreak++;
-      // Ceiling pressure: every 5 misses, bubbles descend one row
-      if (state.missStreak >= 5) {
-        state.missStreak = 0;
-        descendBoard();
-        banner('⚠️ The ceiling descends!');
-      }
     }
     if (res.dropped.length) HexAudio.drop();
     // Ghost movement: ghost rises when bubbles above it are cleared
     updateGhost();
     updateHUD();
     endTurn(true);
-  }
-
-  function descendBoard() {
-    var nb = E.newBoard();
-    var gameOver = false;
-    Object.keys(state.board).forEach(function (k) {
-      var p = k.split(','), r = +p[0] + 1, c = +p[1];
-      if (r >= E.ROWS - 2) gameOver = true; // reached shooter zone
-      if (r < E.ROWS) E.set(nb, r, c, state.board[k]);
-    });
-    state.board = nb;
-    if (state.ghost) state.ghost.r = Math.min(state.ghost.r + 1, E.ROWS - 1);
-    if (gameOver) { lose(); banner('💀 The bubbles reached you!'); }
   }
 
   function updateGhost() {
