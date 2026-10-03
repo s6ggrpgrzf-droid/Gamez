@@ -416,12 +416,31 @@
       state.missStreak = 0;
     } else {
       state.missStreak++;
+      // BW3-style: ceiling descends every 5 shots without a pop
+      if (state.missStreak >= 5) {
+        state.missStreak = 0;
+        descendBoard();
+        if (!state.over) banner('⚠️ The ceiling descends!');
+      }
     }
     if (res.dropped.length) HexAudio.drop();
     // Ghost movement: ghost rises when bubbles above it are cleared
     updateGhost();
     updateHUD();
     endTurn(true);
+  }
+
+  function descendBoard() {
+    var nb = E.newBoard();
+    var gameOver = false;
+    Object.keys(state.board).forEach(function (k) {
+      var p = k.split(','), r = +p[0] + 1, c = +p[1];
+      if (r >= E.ROWS - 2) gameOver = true;
+      if (r < E.ROWS) E.set(nb, r, c, state.board[k]);
+    });
+    state.board = nb;
+    if (state.ghost) state.ghost.r = Math.min(state.ghost.r + 1, E.ROWS - 1);
+    if (gameOver) { lose(); }
   }
 
   function updateGhost() {
