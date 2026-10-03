@@ -5,6 +5,8 @@ html, body { height: 100%; overflow: hidden; background: #050510; font-family: '
 #score { color: #fff; font-size: 24px; font-weight: 800; text-shadow: 0 0 12px #66ccff; letter-spacing: 1px; }
 #mult { color: #ffe14d; font-size: 24px; font-weight: 800; text-shadow: 0 0 12px #ffe14d; }
 #lives { font-size: 18px; letter-spacing: 2px; }
+#brief { position: fixed; top: 64px; left: 50%; transform: translateX(-50%) translateY(-8px); max-width: 88vw; text-align: center; color: #9fe8ff; font-size: 14px; font-weight: 600; letter-spacing: .5px; text-shadow: 0 0 10px #2288cc; opacity: 0; transition: opacity .4s, transform .4s; pointer-events: none; z-index: 5; }
+#brief.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #bomb-btn { position: fixed; right: 18px; bottom: 90px; font-size: 38px; z-index: 6; opacity: 0.85; filter: drop-shadow(0 0 10px #ff8844); }
 #bomb-btn:active { transform: scale(1.25); }
 #menu, #over { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(5,5,20,0.88); z-index: 10; opacity: 0; pointer-events: none; transition: opacity 0.3s; text-align: center; padding: 20px; }

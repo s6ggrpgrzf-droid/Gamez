@@ -678,6 +678,46 @@
     clearTimeout(bannerT);
     bannerT = setTimeout(updateHUD, 1600);
   }
+
+  /* ---------- flavor text (shared backend; silent local fallback) ---------- */
+  var AI_BASE = "https://gamez-ai.chaoticutopia84.workers.dev";
+  function aiFetch(kind, ctx, cb) {
+    var done = false, timer = null;
+    function fin(t) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(t); } }
+    timer = setTimeout(function () { fin(null); }, 7000);
+    try {
+      fetch(AI_BASE + '/g', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind, game: 'neon-void', ctx: ctx })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) { fin(d && d.text ? d.text : null); })
+        .catch(function () { fin(null); });
+    } catch (e) { fin(null); }
+  }
+  var BRIEF_FALLBACKS = [
+    'Sector 7: pirate swarm near the shattered moon. Weapons hot.',
+    'Deep field patrol: hostiles converging on the trade lane.',
+    'Nebula breach: something big is waking up in the dust.',
+    'Border skirmish: hold the line until the convoy clears.',
+    'Derelict station ahead: salvage rights go to the survivor.',
+    'Void storm incoming: fly fast, shoot faster.'
+  ];
+  var aiRuns = 0, briefT = null;
+  function showBriefing() {
+    var slot = aiRuns % BRIEF_FALLBACKS.length;
+    aiRuns++;
+    var el = document.getElementById('brief');
+    function show(t) {
+      if (!el) return;
+      el.textContent = '📡 ' + (t || BRIEF_FALLBACKS[slot]);
+      el.classList.add('show');
+      clearTimeout(briefT);
+      briefT = setTimeout(function () { el.classList.remove('show'); }, 4500);
+    }
+    aiFetch('briefing', { v: slot }, show);
+    // if the fetch is slow, show the fallback right away so the run always has a briefing
+    setTimeout(function () { if (el && !el.classList.contains('show')) show(null); }, 1200);
+  }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
   /* ---------- loop ---------- */
@@ -701,11 +741,13 @@
     document.getElementById('menu').classList.remove('show');
     document.getElementById('over').classList.remove('show');
     newGame();
+    showBriefing();
     try { NV_Audio.init(); } catch (e) {}
   });
   document.getElementById('again').addEventListener('click', function () {
     document.getElementById('over').classList.remove('show');
     newGame();
+    showBriefing();
   });
   requestAnimationFrame(loop);
 })();
