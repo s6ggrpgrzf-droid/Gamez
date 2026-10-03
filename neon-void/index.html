@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Neon Void</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div id="score">0</div>
+  <div id="mult">×1</div>
+  <div id="lives">🚀🚀🚀</div>
+</div>
+<div id="bomb-btn">💣</div>
+<div id="menu">
+  <h1>NEON VOID</h1>
+  <p class="tag">a geometry wars love letter</p>
+  <div class="best">BEST <span id="best">0</span></div>
+  <button id="start">▶ START</button>
+  <p class="help">Left thumb: move &nbsp;•&nbsp; Right thumb: aim + fire<br>Grab the <span class="geom-demo">◆</span> geoms to raise your multiplier.<br>Don't die — death resets it.</p>
+</div>
+<div id="over">
+  <h1>GAME OVER</h1>
+  <div class="final"><span id="final-score">0</span></div>
+  <div class="best">BEST <span id="best2">0</span></div>
+  <button id="again">↻ RETRY</button>
+</div>
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
