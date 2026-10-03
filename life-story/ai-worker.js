@@ -20,6 +20,18 @@ var MODELS = [
   "@cf/mistral/mistral-7b-instruct-v0.2"
 ];
 
+function normResponse(r) {
+  var x = r && r.response;
+  if (typeof x === 'string') return x;
+  if (x && typeof x === 'object') {
+    if (typeof x.response === 'string') return x.response;
+    if (typeof x.text === 'string') return x.text;
+    if (typeof x.content === 'string') return x.content;
+    try { return JSON.stringify(x).slice(0, 2000); } catch (e) { return ''; }
+  }
+  return '';
+}
+
 async function runAi(env, messages, maxTokens, temperature) {
   var lastErr = "";
   for (var i = 0; i < MODELS.length; i++) {
@@ -29,7 +41,8 @@ async function runAi(env, messages, maxTokens, temperature) {
         max_tokens: maxTokens,
         temperature: temperature
       });
-      if (r && r.response) return r;
+      var txt = normResponse(r);
+      if (txt) return txt;
       lastErr = "empty response from " + MODELS[i];
     } catch (e) {
       lastErr = MODELS[i] + ": " + String((e && e.message) || e).slice(0, 140);
@@ -164,15 +177,15 @@ export default {
       if (cached && cached.text) return json(cached);
 
       var prompt = eventPrompt(st);
-      var ai;
+      var aiTxt;
       try {
-        ai = await runAi(env, [
+        aiTxt = await runAi(env, [
           { role: "system", content: EVENT_SYSTEM },
           { role: "user", content: prompt }
         ], 400, 0.9);
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
-      var ev = sanitizeEvent(extractJson(ai.response || ""));
-      if (!ev) return json({ error: "bad generation" }, 502);
+      var ev = sanitizeEvent(extractJson(aiTxt || ""));
+      if (!ev) return json({ error: "bad generation", raw: String(aiTxt || "").slice(0, 400) }, 502);
       ctx.waitUntil(env.STORE.put(key, JSON.stringify(ev), { expirationTtl: 86400 * 7 }));
       return json(ev);
     }
@@ -181,16 +194,16 @@ export default {
       if (!(await checkRate(env, ip, "obit", 4))) return json({ error: "slow down" }, 429);
       var b2;
       try { b2 = await request.json(); } catch (e) { return json({ error: "bad json" }, 400); }
-      var ai2;
+      var aiTxt2;
       try {
-        ai2 = await runAi(env, [
+        aiTxt2 = await runAi(env, [
           { role: "system", content: OBIT_SYSTEM },
           { role: "user", content: obitPrompt(b2) }
         ], 200, 0.85);
       } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 200) }, 502); }
-      var d2 = extractJson(ai2.response || "");
+      var d2 = extractJson(aiTxt2 || "");
       var text = d2 && typeof d2.text === "string" ? clean(d2.text, 300) : "";
-      if (text.length < 10) return json({ error: "bad generation" }, 502);
+      if (text.length < 10) return json({ error: "bad generation", raw: String(aiTxt2 || "").slice(0, 400) }, 502);
       return json({ text: text, ai: true });
     }
 
