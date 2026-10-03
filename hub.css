@@ -82,7 +82,7 @@ h2 .dot{width:9px;height:9px;border-radius:50%;background:#ff5fa2;box-shadow:0 0
 }
 .card:hover{transform:translateY(-6px)}
 .card:active{transform:scale(.98)}
-.card .art{height:168px;position:relative;overflow:hidden;background:#160c28}
+.card .art{height:168px;position:relative;overflow:hidden;background-color:#160c28}
 .card .art img{width:100%;height:100%;object-fit:cover;display:block;
   transition:transform .5s ease}
 .card:hover .art img{transform:scale(1.06)}
