@@ -735,7 +735,7 @@ var Game = {
 
   resize: function () {
     var wrap = $('#game');
-    this.dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    this.dpr = Math.min(2, window.devicePixelRatio || 1);
     // Size the canvas to its flex-allocated box: container minus the
     // topbar and toolbar. (Measuring #game alone and forcing the canvas
     // to that height overflows the flex column and pushes the toolbar
@@ -1466,7 +1466,9 @@ function makeThumb(imgCanvas) {
 /* ---------------- daily (AI-painted, same image worldwide) ---------------- */
 function dailyStr(d) {
   d = d || new Date();
-  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
 }
 function dailySpec(dateStr) {
   var n = hashStr('pdawg-daily-' + (dateStr || dailyStr()));

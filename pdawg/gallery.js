@@ -511,16 +511,18 @@ var GALLERY = [
   { id: 'g9', title: 'Nebula', make: nebula },
   // National-parks photo series (bundled JPEGs in parks/). Appended after the
   // procedural scenes so existing galleryIdx values (0-9) keep working in saves.
-  { id: 'p0', title: 'Yosemite', photo: 'parks/IMG_3781.jpeg' },
-  { id: 'p1', title: 'Yellowstone', photo: 'parks/IMG_3782.jpeg' },
-  { id: 'p2', title: 'Grand Canyon', photo: 'parks/IMG_3783.jpeg' },
-  { id: 'p3', title: 'Zion', photo: 'parks/IMG_3784.jpeg' },
-  { id: 'p4', title: 'Arches', photo: 'parks/IMG_3787.jpeg' },
-  { id: 'p5', title: 'Glacier', photo: 'parks/IMG_3786.jpeg' },
-  { id: 'p6', title: 'Grand Teton', photo: 'parks/IMG_3785.jpeg' },
-  { id: 'p7', title: 'Acadia', photo: 'parks/IMG_3788.jpeg' },
-  { id: 'p8', title: 'Bryce Canyon', photo: 'parks/IMG_3789.jpeg' },
-  { id: 'p9', title: 'Olympic', photo: 'parks/IMG_3790.jpeg' }
+  // On GitHub Pages the photos ship as base64 text bundles (park-01.jpg.b64)
+  // because the push tooling can't carry binary; loadPhoto falls back to them.
+  { id: 'p0', title: 'Yosemite', photo: 'parks/park-01.jpg' },
+  { id: 'p1', title: 'Yellowstone', photo: 'parks/park-02.jpg' },
+  { id: 'p2', title: 'Grand Canyon', photo: 'parks/park-03.jpg' },
+  { id: 'p3', title: 'Zion', photo: 'parks/park-04.jpg' },
+  { id: 'p4', title: 'Arches', photo: 'parks/park-05.jpg' },
+  { id: 'p5', title: 'Glacier', photo: 'parks/park-06.jpg' },
+  { id: 'p6', title: 'Grand Teton', photo: 'parks/park-07.jpg' },
+  { id: 'p7', title: 'Acadia', photo: 'parks/park-08.jpg' },
+  { id: 'p8', title: 'Bryce Canyon', photo: 'parks/park-09.jpg' },
+  { id: 'p9', title: 'Olympic', photo: 'parks/park-10.jpg' }
 ];
 
 function paintGalleryImage(idx, W, H, seed) {
@@ -537,12 +539,31 @@ var _photoCache = {}; // idx -> { img } once loaded
 
 function loadPhoto(idx) {
   // Returns Promise<HTMLImageElement>; cached after first load.
+  // Tries the bundled JPEG first, then falls back to the base64 text bundle
+  // (<photo>.b64) that ships on GitHub Pages.
   if (_photoCache[idx]) return Promise.resolve(_photoCache[idx]);
   return new Promise(function (resolve, reject) {
+    var path = GALLERY[idx].photo;
+    function cache(img) { _photoCache[idx] = img; resolve(img); }
+    function fromB64() {
+      fetch(path + '.b64').then(function (r) {
+        if (!r.ok) throw new Error('photo load failed: ' + path);
+        return r.text();
+      }).then(function (b64) {
+        var bin = atob(b64.trim());
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        var url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+        var img = new Image();
+        img.onload = function () { URL.revokeObjectURL(url); cache(img); };
+        img.onerror = function () { reject(new Error('photo decode failed: ' + path)); };
+        img.src = url;
+      }).catch(reject);
+    }
     var img = new Image();
-    img.onload = function () { _photoCache[idx] = img; resolve(img); };
-    img.onerror = function () { reject(new Error('photo load failed: ' + GALLERY[idx].photo)); };
-    img.src = GALLERY[idx].photo;
+    img.onload = function () { cache(img); };
+    img.onerror = fromB64;
+    img.src = path;
   });
 }
 
