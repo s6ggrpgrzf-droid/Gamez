@@ -19,6 +19,7 @@ window.MT_Audio = (function () {
   return {
     init: init,
     click: function () { tone(600, 0.07, 'sine', 0.06); },
+    slide: function () { tone(500, 0.18, 'sine', 0.08, 1200); },
     bad: function () { tone(220, 0.25, 'sawtooth', 0.08, 110); },
     win: function () {
       tone(523, 0.14, 'sine', 0.09); setTimeout(function () { tone(659, 0.14, 'sine', 0.09); }, 130);
