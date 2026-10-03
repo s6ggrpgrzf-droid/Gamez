@@ -113,3 +113,7 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
 @media (prefers-reduced-motion:reduce){
   .bulbs i,.card .art img,h2 .dot{animation:none;transition:none}
 }
+
+/* Word Well key art: pure CSS, ink & parchment (no image file) */
+.art-word-well{background:radial-gradient(circle at 50% 28%,#f8f0dc 0%,#ead9b6 52%,#c8ab7d 100%)}
+.art-word-well::before{content:"\1FAA2";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 8px 12px rgba(58,43,28,.35))}

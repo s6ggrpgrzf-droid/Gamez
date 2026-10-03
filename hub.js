@@ -128,7 +128,8 @@
     { id: 'maze-trace', name: 'Arrow Slide', cls: 'art-arrow-slide' },
     { id: 'life-story', name: 'Life Story', cls: 'art-life-story' },
     { id: 'reel-empire', name: 'Reel Empire', cls: 'art-reel-empire' },
-    { id: 'pdawg', name: 'Pdawg Puzzles', cls: 'art-pdawg' }
+    { id: 'pdawg', name: 'Pdawg Puzzles', cls: 'art-pdawg' },
+    { id: 'word-well', name: 'Word Well', cls: 'art-word-well' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -184,6 +185,11 @@
         var t = readJSON('pdawg-table');
         if (t) return { label: 'Puzzle in progress', frac: .5 };
         return null;
+      }
+      if (id === 'word-well') {
+        var w = readJSON('ww_streak_v1');
+        if (!w || !w.count) return null;
+        return { label: '🔥 ' + w.count + '-day streak', frac: Math.min(1, w.count / 30) };
       }
     } catch (e) { return null; }
     return null;
