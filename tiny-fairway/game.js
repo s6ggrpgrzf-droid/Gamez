@@ -158,7 +158,8 @@
     if (mode !== 'endless') return;
     try {
       var b = JSON.parse(lsGet('tf_best', 'null'));
-      if (!b || totalStrokes < b.strokes) lsSet('tf_best', JSON.stringify({ holes: holeIndex, strokes: totalStrokes, stars: totalStars }));
+      if (!b || holeIndex > b.holes || (holeIndex === b.holes && totalStrokes < b.strokes))
+        lsSet('tf_best', JSON.stringify({ holes: holeIndex, strokes: totalStrokes, stars: totalStars }));
     } catch (e) {}
   }
 
