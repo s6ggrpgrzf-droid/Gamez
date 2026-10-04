@@ -342,48 +342,69 @@ function flattenEdgeOps(ops, x1, y1, n) {
 }
 
 /* ---------------- storage: IndexedDB + shelf index ---------------- */
+/* All ops gate on open(): a fast tap right after boot must never hit a
+ * half-initialized DB (db null AND mem null -> "transaction of null").
+ * If IDB never settles (wedged/blocked), fall back to in-memory after 4s. */
 var idb = {
-  db: null, mem: null,
+  db: null, mem: null, _ready: null,
   open: function () {
     var self = this;
-    return new Promise(function (resolve) {
-      if (!window.indexedDB) { self.mem = { puzzles: {}, images: {} }; resolve(); return; }
-      var req = window.indexedDB.open('pdawg', 1);
-      req.onupgradeneeded = function () {
-        var d = req.result;
-        if (!d.objectStoreNames.contains('puzzles')) d.createObjectStore('puzzles', { keyPath: 'id' });
-        if (!d.objectStoreNames.contains('images')) d.createObjectStore('images', { keyPath: 'id' });
-      };
-      req.onsuccess = function () { self.db = req.result; resolve(); };
-      req.onerror = function () { self.mem = { puzzles: {}, images: {} }; resolve(); };
-    });
+    if (!self._ready) {
+      self._ready = new Promise(function (resolve) {
+        function useMem() {
+          if (!self.mem) self.mem = { puzzles: {}, images: {} };
+          resolve();
+        }
+        if (!window.indexedDB) { useMem(); return; }
+        var req;
+        try { req = window.indexedDB.open('pdawg', 1); }
+        catch (e) { useMem(); return; }
+        req.onupgradeneeded = function () {
+          var d = req.result;
+          if (!d.objectStoreNames.contains('puzzles')) d.createObjectStore('puzzles', { keyPath: 'id' });
+          if (!d.objectStoreNames.contains('images')) d.createObjectStore('images', { keyPath: 'id' });
+        };
+        req.onsuccess = function () { self.db = req.result; resolve(); };
+        req.onerror = function () { useMem(); };
+        req.onblocked = function () { useMem(); };
+        setTimeout(function () { if (!self.db && !self.mem) useMem(); }, 4000);
+      });
+    }
+    return self._ready;
   },
   _store: function (name, mode) { return this.db.transaction(name, mode).objectStore(name); },
-  put: function (name, val) {
+  _op: function (name, mode, fn) {
     var self = this;
-    return new Promise(function (resolve, reject) {
-      if (self.mem) { self.mem[name][val.id] = val; resolve(); return; }
-      var q = self._store(name, 'readwrite').put(val);
-      q.onsuccess = function () { resolve(); };
-      q.onerror = function () { reject(q.error); };
+    return self.open().then(function () {
+      return new Promise(function (resolve, reject) {
+        if (self.mem) { try { resolve(fn(self.mem[name])); } catch (e) { reject(e); } return; }
+        var q;
+        try { q = fn(self._store(name, mode)); }
+        catch (e) { reject(e); return; }
+        q.onsuccess = function () { resolve(q.result === undefined ? undefined : q.result); };
+        q.onerror = function () { reject(q.error); };
+      });
     });
   },
+  put: function (name, val) {
+    return this._op(name, 'readwrite', function (s) {
+      if (s.put) return s.put(val);          // IDB object store
+      s[val.id] = val; return null;          // mem fallback (sync)
+    }).then(function (r) { return r === null ? undefined : r; });
+  },
   get: function (name, key) {
-    var self = this;
-    return new Promise(function (resolve, reject) {
-      if (self.mem) { resolve(self.mem[name][key] || null); return; }
-      var q = self._store(name, 'readonly').get(key);
-      q.onsuccess = function () { resolve(q.result || null); };
-      q.onerror = function () { reject(q.error); };
+    return this._op(name, 'readonly', function (s) {
+      if (s.get) return s.get(key);
+      return { _mem: true, value: s[key] || null };
+    }).then(function (r) {
+      if (r && r._mem) return r.value;
+      return r || null;
     });
   },
   del: function (name, key) {
-    var self = this;
-    return new Promise(function (resolve, reject) {
-      if (self.mem) { delete self.mem[name][key]; resolve(); return; }
-      var q = self._store(name, 'readwrite').delete(key);
-      q.onsuccess = function () { resolve(); };
-      q.onerror = function () { reject(q.error); };
+    return this._op(name, 'readwrite', function (s) {
+      if (s.delete) return s.delete(key);
+      delete s[key]; return null;
     });
   }
 };
@@ -717,6 +738,11 @@ var Game = {
   pointers: new Map(), gesture: null, downInfo: null,
   saveTimer: 0,
   tableTheme: 'cardboard', _pats: {},
+  /* feel state (transient — never saved) */
+  snapFx: [],        // active connect pops: {ids, set, t0}
+  dust: null,        // pooled gold-dust particles
+  dustOn: false,
+  glide: null,       // active scatter glide: {list:[{p,fx,fy,tx,ty}], t0}
 
   TABLE_THEMES: [
     { id: 'cardboard', name: 'Cardboard', css: '#9c8a6c' },
@@ -850,6 +876,18 @@ var Game = {
     this.paused = false;
     this.confetti = null;
     this.edgeHi = false;
+    this.snapFx = [];
+    this.glide = null;
+    // warm the gold-dust pool once (zero per-frame allocation afterwards)
+    if (!this.dust) {
+      this.dust = [];
+      for (var i = 0; i < FEEL.dustPool; i++) {
+        this.dust.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 2, col: 0 });
+      }
+    } else {
+      for (var j = 0; j < this.dust.length; j++) this.dust[j].on = false;
+    }
+    this.dustOn = false;
     $('#edgeBtn').classList.remove('on');
     this.resize();
     this.fitBoard();
@@ -884,12 +922,34 @@ var Game = {
       S.elapsed += dt;
       if (!this._tick || t - this._tick > 500) {
         this._tick = t;
-        $('#timer').textContent = fmtTime(S.elapsed);
+        // perf: only touch the DOM when the displayed value actually changes
+        var tt = fmtTime(S.elapsed);
+        if (tt !== this._lastTimerTxt) { this._lastTimerTxt = tt; $('#timer').textContent = tt; }
       }
     }
     if (this.confetti) this.updateConfetti(dt);
+    if (this.dustOn) this.updateDust(dt);
+    if (this.glide) this.updateGlide(t);
+    this.pruneSnapFx();
+    // feel animations need continuous frames while alive
+    if (this.confetti || this.dustOn || this.glide || this.snapFx.length) this.markDirty();
     if (this.dirty) { this.draw(); this.dirty = false; }
-    else if (this.confetti) { this.draw(); }
+    else if (this.confetti || this.dustOn) { this.draw(); }
+  },
+
+  /* Eased scatter glide: pieces float to their new spots instead of jumping. */
+  updateGlide: function (t) {
+    var g = this.glide;
+    if (!g) return;
+    var k = easeOutCubic(Math.min(1, (t - g.t0) / FEEL.scatterMs));
+    var L = g.list;
+    for (var i = 0; i < L.length; i++) {
+      var m = L[i];
+      m.p.x = m.fx + (m.tx - m.fx) * k;
+      m.p.y = m.fy + (m.ty - m.fy) * k;
+    }
+    if (k >= 1) { this.glide = null; this.saveNow(); }
+    this.markDirty();
   },
 
   draw: function () {
@@ -934,6 +994,8 @@ var Game = {
         this.drawPiece(members[j], dim);
       }
     }
+    // gold-dust sparkles (board space)
+    this.drawDust();
     // selection highlight
     if (this.selection && S.groups[this.selection]) {
       var ms = groupMembers(S, this.selection);
@@ -977,6 +1039,9 @@ var Game = {
     if (dim) ctx.globalAlpha = 0.32;
     ctx.translate(cx, cy);
     if (p.rot) ctx.rotate(p.rot * Math.PI / 180);
+    // magnetic chunk: the connect pop scales the piece about its center
+    var sc = this.snapScaleFor(p.id);
+    if (sc !== 1) ctx.scale(sc, sc);
     ctx.drawImage(cv, -(S.cellW / 2 + M), -(S.cellH / 2 + M), S.cellW + 2 * M, S.cellH + 2 * M);
     ctx.restore();
   },
@@ -1010,7 +1075,107 @@ var Game = {
     var S = this.S;
     if (!S) return;
     var n = placedCount(S), total = S.pieces.length;
-    $('#prog').textContent = n + ' / ' + total + '  (' + Math.round(n / total * 100) + '%)';
+    var txt = n + ' / ' + total + '  (' + Math.round(n / total * 100) + '%)';
+    var elp = $('#prog');
+    if (elp && txt !== this._lastProgTxt) {
+      this._lastProgTxt = txt;
+      elp.textContent = txt;
+      if (!reduceMotion()) {
+        // warm little pop on every connect — re-trigger the CSS animation
+        elp.classList.remove('pop');
+        void elp.offsetWidth;
+        elp.classList.add('pop');
+      }
+    }
+  },
+
+  /* ---- feel: magnetic snap pop + gold dust ---- */
+  snapPop: function (ids, cx, cy) {
+    if (!ids || !ids.length || reduceMotion()) return;
+    var set = {};
+    for (var i = 0; i < ids.length; i++) set[ids[i]] = 1;
+    this.snapFx.push({ set: set, t0: performance.now() });
+    this.spawnDust(cx, cy, FEEL.dustCount);
+    this.markDirty();
+  },
+
+  snapScaleFor: function (id) {
+    var fx = this.snapFx;
+    if (!fx.length) return 1;
+    var now = performance.now(), best = 1;
+    for (var i = 0; i < fx.length; i++) {
+      var e = fx[i];
+      if (!e.set[id]) continue;
+      var t = (now - e.t0) / FEEL.snapPopMs;
+      if (t >= 1) continue;
+      var s = snapCurve(t < 0 ? 0 : t);
+      if (s > best) best = s;
+    }
+    return best;
+  },
+
+  pruneSnapFx: function () {
+    var fx = this.snapFx;
+    if (!fx.length) return;
+    var now = performance.now(), kept = [];
+    for (var i = 0; i < fx.length; i++) {
+      if (now - fx[i].t0 < FEEL.snapPopMs + 50) kept.push(fx[i]);
+    }
+    this.snapFx = kept;
+  },
+
+  /* Gold dust: warm, soft, paper-craft — never neon. Pooled, zero alloc. */
+  spawnDust: function (bx, by, count) {
+    if (!this.dust || reduceMotion()) return;
+    var cols = 4, placed = 0;
+    for (var i = 0; i < this.dust.length && placed < count; i++) {
+      var d = this.dust[i];
+      if (d.on) continue;
+      var a = Math.random() * 6.283, sp = 40 + Math.random() * 130;
+      d.on = true;
+      d.x = bx; d.y = by;
+      d.vx = Math.cos(a) * sp; d.vy = Math.sin(a) * sp - 70;
+      d.max = d.life = FEEL.dustMs * (0.7 + Math.random() * 0.6);
+      d.size = 2 + Math.random() * 3.5;
+      d.col = (Math.random() * cols) | 0;
+      placed++;
+    }
+    if (placed) this.dustOn = true;
+  },
+
+  updateDust: function (dt) {
+    if (!this.dustOn) return;
+    var alive = false, s = dt / 1000;
+    for (var i = 0; i < this.dust.length; i++) {
+      var d = this.dust[i];
+      if (!d.on) continue;
+      d.life -= dt;
+      if (d.life <= 0) { d.on = false; continue; }
+      alive = true;
+      d.x += d.vx * s; d.y += d.vy * s;
+      d.vx *= (1 - 2.4 * s); d.vy *= (1 - 2.4 * s);
+      d.vy -= 34 * s;   // gentle float upward, like dust in lamplight
+    }
+    this.dustOn = alive;
+    if (alive) this.markDirty();
+  },
+
+  drawDust: function () {
+    if (!this.dustOn) return;
+    var ctx = this.ctx;
+    var cols = ['#ffd166', '#f6c453', '#ffe8a3', '#f4a259'];
+    ctx.save();
+    for (var i = 0; i < this.dust.length; i++) {
+      var d = this.dust[i];
+      if (!d.on) continue;
+      var k = d.life / d.max;
+      ctx.globalAlpha = k < 0.6 ? k / 0.6 : 1;
+      ctx.fillStyle = cols[d.col];
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.size * (0.5 + 0.5 * k), 0, 6.283);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 };
 
@@ -1059,7 +1224,7 @@ Game.hitTest = function (bx, by) {
 };
 
 Game.onDown = function (e) {
-  if (!this.S || this.paused || this.S.won) return;
+  if (!this.S || this.paused || this.S.won || this.glide) return;
   e.preventDefault();
   try { this.canvas.setPointerCapture(e.pointerId); } catch (err) {}
   this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1314,6 +1479,8 @@ Game.checkWin = function () {
   this.selection = null;
   this.confetti = [];
   this._confInit = false;
+  // celebratory ease: a warm gold-dust bloom over the finished picture
+  this.spawnDust(S.boardW / 2, S.boardH / 2, FEEL.dustWinCount);
   sfx('win');
   var key = this.bestKey();
   var prev = bests.get(key);
@@ -1488,7 +1655,14 @@ function makeThumb(imgCanvas) {
   var cv = document.createElement('canvas');
   cv.width = tw; cv.height = th;
   cv.getContext('2d').drawImage(imgCanvas, 0, 0, tw, th);
-  return cv.toDataURL('image/jpeg', 0.7);
+  try {
+    return cv.toDataURL('image/jpeg', 0.7);
+  } catch (e) {
+    // A tainted canvas (e.g. a gallery photo loaded straight from file:// in
+    // local dev, where the image origin is opaque) throws SecurityError here.
+    // The thumb is cosmetic — never let it abort puzzle startup.
+    return '';
+  }
 }
 
 /* ---------------- daily (AI-painted, same image worldwide) ---------------- */
@@ -1543,11 +1717,45 @@ function sfx(name) {
   try { if (window.PDAWG_SFX && window.PDAWG_SFX[name]) window.PDAWG_SFX[name](); } catch (e) {}
 }
 
+/* ---------------- feel: TACTILE · WARM · SATISFYING ----------------
+ * Every juice choice serves the identity: piece snaps feel magnetic and
+ * chunky (ease-out-back scale settle), connects burst warm gold dust (never
+ * neon), haptics are a soft thock. Deliberately skipped: screen shake,
+ * hit-stop, slow-mo — they fight the calm puzzle-table mood.
+ * All tunables live in FEEL (one place, per the tuning playbook). */
+var FEEL = {
+  snapPopMs: 280,     // scale-settle duration on connect
+  snapPopAmt: 0.12,   // peak scale of the pop
+  dustCount: 14,      // gold-dust motes per connect
+  dustWinCount: 46,   // motes for the completion burst
+  dustMs: 600,
+  dustPool: 96,
+  scatterMs: 480,     // scatter glide duration
+  progPopMs: 380      // progress text pop duration
+};
+function easeOutBack(t) {
+  var c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function reduceMotion() {
+  try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  catch (e) { return false; }
+}
+/* Magnetic chunk: grows past 1 with an overshoot, then settles exactly to 1.
+ * s(0)=1, s(1)=1 — no discontinuity, the "thock" comes from sound+haptic. */
+function snapCurve(t) {
+  if (t <= 0) return 1;
+  if (t >= 1) return 1;
+  return 1 + FEEL.snapPopAmt * (easeOutBack(t) - t);
+}
+
 var WHIMSY_NAMES = { 0: 'paw print', 1: 'star', 2: 'heart', 3: 'dog bone' };
 function whimsyName(s) { return WHIMSY_NAMES[s] || 'whimsy'; }
 
 /* Shared drop resolution: snap, sounds, whimsy celebration, win check. */
 function resolveDrop(S, gid) {
+  var before = groupMembers(S, gid);   // dragged group's pieces (pre-merge)
   var res = snapAfterDrop(S, gid);
   if (res.placedWhimsy && res.placedWhimsy.length) {
     sfx('whimsy');
@@ -1557,6 +1765,16 @@ function resolveDrop(S, gid) {
     sfx('snap');
   } else if (res.merged) {
     sfx('click');
+  }
+  if ((res.merged || res.placed) && typeof Game !== 'undefined' && Game.snapPop) {
+    // pop the pieces that just joined: the merged group, or the placed ones
+    var members = res.placed ? before : groupMembers(S, gid);
+    var ids = [], cx = 0, cy = 0, n = 0;
+    for (var i = 0; i < members.length; i++) {
+      ids.push(members[i].id);
+      cx += members[i].x + S.cellW / 2; cy += members[i].y + S.cellH / 2; n++;
+    }
+    if (n) Game.snapPop(ids, cx / n, cy / n);
   }
   return res;
 }
@@ -1972,6 +2190,7 @@ var UI = {
       Game.paused = true;
       Game.saveNow();
       UI.renderThemeRow();
+      try { $('#haptToggle').checked = window.PDAWG_SFX && PDAWG_SFX.hapticsOn(); } catch (e) {}
       openModal('#pauseModal');
     };
     $('#resumeBtn').onclick = function () { closeModal('#pauseModal'); Game.paused = false; Game.markDirty(); };
@@ -2003,7 +2222,8 @@ var UI = {
     $('#fitBtn').onclick = function () { Game.fitBoard(); };
     $('#scatterBtn').onclick = function () {
       var S = Game.S;
-      if (!S || S.won) return;
+      if (!S || S.won || Game.glide) return;
+      var moves = [];
       for (var i = 0; i < S.zorder.length; i++) {
         var members = groupMembers(S, S.zorder[i]);
         if (!members.length || members[0].placed) continue;
@@ -2021,15 +2241,42 @@ var UI = {
             ny + h > S.imgOY - S.cellH && ny < S.imgOY + S.imgH + S.cellH) {
           ny = (ny < S.boardH / 2) ? Math.max(0, S.imgOY - h - S.cellH) : Math.min(S.boardH - h, S.imgOY + S.imgH + S.cellH);
         }
-        var dx = nx - x0, dy = ny - y0;
-        for (k = 0; k < members.length; k++) { members[k].x += dx; members[k].y += dy; }
+        moves.push({ members: members, dx: nx - x0, dy: ny - y0 });
       }
+      if (!moves.length) return;
       sfx('scatter');
-      Game.markDirty();
-      Game.saveNow();
       toast('Pieces scattered — fresh eyes!');
+      if (reduceMotion()) {
+        // no animation: apply instantly, same end state as the glide
+        for (var m = 0; m < moves.length; m++) {
+          var mv = moves[m];
+          for (var q = 0; q < mv.members.length; q++) {
+            mv.members[q].x += mv.dx; mv.members[q].y += mv.dy;
+          }
+        }
+        Game.markDirty();
+        Game.saveNow();
+        return;
+      }
+      // eased glide: every loose piece floats to its new spot
+      var list = [];
+      for (var a = 0; a < moves.length; a++) {
+        var mm = moves[a];
+        for (var b = 0; b < mm.members.length; b++) {
+          var p = mm.members[b];
+          list.push({ p: p, fx: p.x, fy: p.y, tx: p.x + mm.dx, ty: p.y + mm.dy });
+        }
+      }
+      Game.glide = { list: list, t0: performance.now() };
+      Game.markDirty();
     };
     $('#countClose').onclick = function () { closeModal('#countModal'); };
+    // haptics setting (pause modal)
+    var ht = $('#haptToggle');
+    if (ht) ht.addEventListener('change', function () {
+      try { if (window.PDAWG_SFX) PDAWG_SFX.setHaptics(ht.checked); } catch (e) {}
+      sfx('click');
+    });
     // AI studio
     $('#aiGenBtn').onclick = function () {
       var v = $('#aiPrompt').value.trim();
@@ -2092,7 +2339,10 @@ if (typeof module !== 'undefined' && module.exports) {
     serializeState: serializeState, deserializeState: deserializeState,
     renderPieceCanvases: renderPieceCanvases,
     dailySpec: dailySpec, COUNTS: COUNTS, LEVELS: LEVELS, levelForCount: levelForCount,
-    Game: Game
+    Game: Game,
+    /* feel (test seam) */
+    FEEL: FEEL, snapCurve: snapCurve, easeOutBack: easeOutBack, easeOutCubic: easeOutCubic,
+    reduceMotion: reduceMotion, resolveDrop: resolveDrop
   };
 }
 })();

@@ -38,18 +38,36 @@ function noise(dur, peak, filterFreq) {
   src.connect(f); f.connect(g); g.connect(c.destination);
   src.start(t); src.stop(t + dur + 0.05);
 }
+function reduceMotion() {
+  try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  catch (e) { return false; }
+}
+/* Haptics preference: on by default, off when the OS asks for reduced motion.
+ * Persisted; togglable from the pause menu. Never throws (iOS has no vibrate). */
+var HAPT_KEY = 'pdawg-haptics';
+var haptics = true;
+try {
+  var hv = localStorage.getItem(HAPT_KEY);
+  haptics = hv === null ? !reduceMotion() : hv === '1';
+} catch (e) { haptics = !reduceMotion(); }
 function buzz(ms) {
+  if (!haptics) return;
   try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
 }
 var SFX = {
   unlock: function () { ac(); },
+  hapticsOn: function () { return haptics; },
+  setHaptics: function (on) {
+    haptics = !!on;
+    try { localStorage.setItem(HAPT_KEY, haptics ? '1' : '0'); } catch (e) {}
+  },
   click: function () { tone(660, 0.06, 'triangle', 0.12); },
-  pickup: function () { tone(420, 0.07, 'sine', 0.10, 560); },
+  pickup: function () { tone(420, 0.07, 'sine', 0.10, 560); buzz(20); },
   /* satisfying wooden snap */
   snap: function () {
     noise(0.09, 0.32, 1800);
     tone(220, 0.10, 'triangle', 0.22, 140);
-    buzz(12);
+    buzz(30);
   },
   /* whimsy found: little sparkle arpeggio */
   whimsy: function () {
@@ -65,7 +83,7 @@ var SFX = {
     for (var i = 0; i < seq.length; i++) {
       (function (f, dl) { setTimeout(function () { tone(f, 0.22, 'triangle', 0.2); noise(0.05, 0.06, 4000); }, dl); })(seq[i], i * 130);
     }
-    buzz([20, 60, 20, 60, 40]);
+    buzz([10, 40, 10]);
   },
   scatter: function () { noise(0.25, 0.12, 900); }
 };

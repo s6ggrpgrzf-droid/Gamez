@@ -73,6 +73,8 @@ body.playing{overflow:hidden;position:fixed;width:100%;height:100dvh}
 .shelf-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--good));border-radius:3px}
 .shelf-del{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:none;
   background:rgba(0,0,0,.55);color:#fff;font-size:16px;line-height:1;cursor:pointer}
+/* expand the hit area to 44px without changing the visual size */
+.shelf-del::after{content:'';position:absolute;inset:-9px}
 
 /* upload */
 .upload-sec{text-align:center;margin-top:6px}
@@ -104,6 +106,10 @@ body.playing{overflow:hidden;position:fixed;width:100%;height:100dvh}
 .top-mid{flex:1;min-width:0;text-align:center}
 .ptitle{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow{display:flex;gap:10px;justify-content:center;font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+/* warm little pop each time pieces connect */
+#prog{display:inline-block}
+#prog.pop{animation:progpop .38s ease-out}
+@keyframes progpop{0%{transform:scale(1)}35%{transform:scale(1.35);color:#ffd166}100%{transform:scale(1)}}
 .tbtn{min-width:46px;min-height:46px;border-radius:13px;border:1px solid rgba(255,255,255,.1);
   background:rgba(255,255,255,.06);color:var(--ink);font-size:19px;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px 8px}
