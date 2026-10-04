@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a0d08">
+<title>Dead Man's Hand — Gamez Arcade</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ MENU ============ -->
+  <section id="screen-menu" class="screen">
+    <div class="menu-felt">
+      <div class="title-cards" aria-hidden="true">
+        <span class="tcard red">A<span>♥</span></span><span class="tcard">8<span>♠</span></span>
+      </div>
+      <h1>DEAD MAN'S<br>HAND</h1>
+      <p class="tag">Five rooms. One deck. No mercy.</p>
+      <div class="menu-btns">
+        <button id="btn-quick" class="btn big" type="button">QUICK DESCENT</button>
+        <button id="btn-daily" class="btn big gold" type="button">DAILY CRYPT</button>
+        <div id="daily-sub" class="sub"></div>
+      </div>
+      <div id="menu-best" class="best"></div>
+      <div class="menu-row">
+        <button id="btn-help" class="btn ghost" type="button">HOW TO PLAY</button>
+        <button id="btn-mute" class="btn ghost" type="button" aria-label="toggle sound">🔊</button>
+      </div>
+      <a class="hub-link" href="../">← arcade</a>
+    </div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="screen-game" class="screen hidden">
+    <header id="topbar">
+      <div class="tb-left">
+        <div id="room-label">ROOM 1/5</div>
+        <div id="mon-name">—</div>
+      </div>
+      <div class="tb-mid">
+        <div id="hpbar" role="progressbar" aria-label="monster health"><i></i></div>
+        <div id="hp-num"></div>
+      </div>
+      <div class="tb-right">
+        <span class="pill" id="pill-hands" title="hands left">🂡 4</span>
+        <span class="pill" id="pill-disc" title="discards left">⟳ 3</span>
+        <span class="pill score" id="pill-score">0</span>
+      </div>
+    </header>
+
+    <div id="arena">
+      <canvas id="monster" width="240" height="240" aria-label="monster portrait"></canvas>
+      <div id="taunt"></div>
+      <div id="dmg-layer"></div>
+    </div>
+
+    <div id="preview" aria-live="polite">Tap 5 cards</div>
+
+    <div id="hand" role="group" aria-label="your cards"></div>
+
+    <div id="controls">
+      <button id="btn-discard" class="btn" type="button">DISCARD</button>
+      <button id="btn-play" class="btn big red" type="button" disabled>PLAY HAND</button>
+      <button id="btn-rank" class="btn sq" type="button" aria-label="hand rankings">?</button>
+    </div>
+  </section>
+
+  <!-- ============ BOON PICKER ============ -->
+  <div id="boon-overlay" class="overlay hidden" role="dialog" aria-label="choose a boon">
+    <div class="sheet">
+      <h2>ROOM CLEARED</h2>
+      <p class="sheet-sub">The crypt offers a boon. Take one.</p>
+      <div id="boon-choices"></div>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER ============ -->
+  <div id="over-overlay" class="overlay hidden" role="dialog" aria-label="run over">
+    <div class="sheet">
+      <h2 id="over-title">THE HOUSE COLLECTS</h2>
+      <p id="over-sub" class="sheet-sub"></p>
+      <div id="over-score" class="over-score">0</div>
+      <div id="over-best" class="best"></div>
+      <div id="arc-lb"></div>
+      <div class="menu-btns">
+        <button id="btn-again" class="btn big" type="button">DESCEND AGAIN</button>
+        <button id="btn-menu" class="btn ghost" type="button">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HAND RANKINGS ============ -->
+  <div id="help-sheet" class="overlay hidden" role="dialog" aria-label="hand rankings">
+    <div class="sheet">
+      <h2>HAND RANKINGS</h2>
+      <p class="sheet-sub">Damage = hand base + the 5 cards' values (J=11 Q=12 K=13 A=14)</p>
+      <ol id="rank-list"></ol>
+      <p class="sheet-sub dim">Aces &amp; eights, two pair… the dead man's hand pays +50. Don't ask why.</p>
+      <button id="btn-close-help" class="btn" type="button">CLOSE</button>
+    </div>
+  </div>
+
+  <div id="coach" class="hidden"></div>
+  <div id="banner" class="hidden"></div>
+
+</div>
+<script src="engine.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
