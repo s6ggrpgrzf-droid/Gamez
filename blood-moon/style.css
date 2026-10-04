@@ -18,6 +18,10 @@ html, body {
 #kills { color: #e63946; }
 @keyframes pulse { 50% { opacity: 0.55; } }
 #hp-wrap { position: relative; height: 12px; margin-top: 6px; background: #1c1420; border: 1px solid #4a2c33; border-radius: 6px; overflow: hidden; }
+#blood-wrap { position: relative; height: 8px; margin-top: 4px; background: #160a0e; border: 1px solid #5a1a1a; border-radius: 4px; overflow: hidden; }
+#blood-bar { position: absolute; inset: 0; width: 0%; background: linear-gradient(90deg, #8d0801, #ff2a2a); transition: width 0.2s; }
+#blood-wrap.full #blood-bar { animation: bloodpulse 0.5s infinite alternate; }
+@keyframes bloodpulse { from { filter: brightness(1); } to { filter: brightness(1.9); } }
 #hp-bar { position: absolute; inset: 0; width: 100%; background: linear-gradient(90deg, #7a0c14, #e63946); transition: width 0.15s; z-index: 2; }
 #hp-ghost { position: absolute; inset: 0; width: 100%; background: rgba(230,57,70,0.35); transition: width 0.6s; }
 #xp-wrap { height: 5px; margin-top: 4px; background: #14101c; border-radius: 3px; overflow: hidden; }
@@ -56,6 +60,9 @@ html, body {
 .mid-btn { font-family: inherit; font-size: 15px; letter-spacing: 1px; padding: 10px 22px; margin: 6px;
   background: #171221; color: #c9a227; border: 1px solid #4a3f5c; border-radius: 8px; cursor: pointer; font-variant: small-caps; }
 .mid-btn:active { transform: scale(0.96); }
+.mid-btn.used { opacity: 0.55; }
+.mid-btn.on { border-color: #e63946; color: #ff6b6b; box-shadow: 0 0 18px rgba(230,57,70,0.3); }
+.mid-btn small { font-size: 11px; opacity: 0.7; letter-spacing: 0; }
 .menu-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
 
 /* bloodline cards */

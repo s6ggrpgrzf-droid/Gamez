@@ -25,7 +25,11 @@
   var DAWN_LEN = 30;
   var MAX_ENEMIES = 130;
 
-  function xpForLevel(lv) { return Math.floor(6 * Math.pow(1.27, lv - 1)) + lv * 2; }
+  function xpForLevel(lv) {
+    if (lv === 1) return 5;   // revamp: front-load the first two upgrades
+    if (lv === 2) return 9;
+    return Math.floor(6 * Math.pow(1.27, lv - 1)) + lv * 2;
+  }
 
   function makeSim(seed, opts) {
     opts = opts || {};
@@ -38,11 +42,14 @@
       rng: rng, night: night, time: 0, state: 'night',
       nightT: NIGHT_LEN, dawnT: 0, bell: 0,
       player: null, enemies: [], allies: [], bolts: [], orbs: [],
+      drops: [], fires: [], holy: [], shadeIslands: [],
       shadows: [], coffin: null, sunBands: [],
       events: [], pendingLevels: 0,
       kills: 0, blood: 0, level: 1,
       spawnT: 1.5, bossSpawned: false, bossRef: null,
-      enemyId: 1,
+      enemyId: 1, omenIdx: 0, nextElite: 100, eliteFlip: false,
+      bloodMoonT: 0, killTimes: [], flavorCount: {},
+      nightmare: !!opts.nightmare,
       over: false
     };
 
@@ -64,17 +71,30 @@
       x: WORLD / 2, y: WORLD / 2, vx: 0, vy: 0, r: 16,
       maxHp: 100 * hpMul, hp: 100 * hpMul,
       speed: 235 * spdMul,
+      verb: (opts.mods && opts.mods.verb) || 'dominator',
       level: 1, xp: 0, xpNext: xpForLevel(1),
       biteDmg: 16 * dmgMul, biteRange: 88, biteCd: 0, biteRate: 0.5,
       armor: 0, regen: 0.6, pickupR: 95, xpMul: xpMul,
       dashCd: 0, dashMax: 4 * (mods.dashCdMul || 1), invuln: 0,
       upg: {},
+      // revamp: blood-thirst loop
+      bloodM: 0, bloodMax: 100,
+      surgeT: 0, surgeDmg: 0, surgeExt: 0, surgeFlavor: null,
+      holyResistT: 0, spdBoostT: 0, burnTrailT: 0, burnTickT: 0,
+      // revamp: bat form panic button
+      batCd: 0, batMax: 20 * (mods.dashCdMul || 1), batFormT: 0,
+      // revamp: bloodline verbs
+      fearR: 0,
+      // dawn
+      exposedT: 0, sunWarned: false,
       bats: 0, batAng: 0,
       auraDps: 0, auraR: 0,
       whipDmg: 0, whipR: 130, whipCd: 0, whipRate: 2.4,
       novaDmg: 0, novaR: 0, novaCd: 8,
       charm: 0, facing: 0
     };
+    if (P.verb === 'swarm') { P.bats = 2; P.pickupR *= 1.3; }
+    if (P.verb === 'dominator') { P.fearR = 260; }
     if (opts.carry) {
       var c = opts.carry, cu = c.upg || {}, k, s;
       P.upg = {};
@@ -84,8 +104,12 @@
       sim.level = P.level;
     }
 
-    sim.hpMul = 1 + (night - 1) * 0.45;
-    sim.dmgMul = 1 + (night - 1) * 0.16;
+    sim.hpMul = (1 + (night - 1) * 0.45) * (sim.nightmare ? 1.25 : 1);
+    sim.dmgMul = (1 + (night - 1) * 0.16) * (sim.nightmare ? 1.25 : 1);
+    sim.bloodMul = (sim.nightmare ? 1.3 : 1);
+
+    // revamp: every run starts with a real weapon (no peashooter opening)
+    applyUpgrade(sim, 'whip', true);
 
     function ev(t, o) { o = o || {}; o.t = t; sim.events.push(o); }
 
@@ -95,7 +119,35 @@
         var s = sim.shadows[i];
         if (x > s.x && x < s.x + s.w && y > s.y && y < s.y + s.h) return true;
       }
+      for (var j = 0; j < sim.shadeIslands.length; j++) {
+        var isl = sim.shadeIslands[j];
+        if (x > isl.x && x < isl.x + isl.w && y > isl.y && y < isl.y + isl.h) return true;
+      }
       return false;
+    }
+
+    function fireOmen(idx) {
+      var P = sim.player, o = C.OMENS[idx], i, a;
+      ev('omen', { name: o.name, sub: o.sub });
+      if (idx === 0) {
+        // hunter ambush ring
+        for (i = 0; i < 6; i++) {
+          a = (i / 6) * TAU;
+          spawnEnemy('hunter',
+            clamp(P.x + Math.cos(a) * 480, 40, WORLD - 40),
+            clamp(P.y + Math.sin(a) * 480, 40, WORLD - 40));
+        }
+      } else if (idx === 1) {
+        // priest procession
+        for (i = 0; i < 4; i++) {
+          a = rng() * TAU;
+          spawnEnemy('priest',
+            clamp(P.x + Math.cos(a) * (420 + i * 60), 40, WORLD - 40),
+            clamp(P.y + Math.sin(a) * (420 + i * 60), 40, WORLD - 40));
+        }
+      } else if (idx === 2) {
+        sim.bloodMoonT = 30;
+      }
     }
 
     function spawnEnemy(type, x, y, foe) {
@@ -108,6 +160,8 @@
         speed: d.speed * (0.9 + rng() * 0.2),
         dmg: d.dmg * sim.dmgMul,
         state: 'chase', t: 0, cd: rng() * 0.8, atkCd: 0, batCd: 0,
+        pend: [], phase: 1, aimT: 0, aimAng: 0, fireT: 0,
+        panicT: 0, panicCd: 0,
         tx: x, ty: y, name: null, dead: false
       };
       if (type === 'villager' || type === 'torch') {
@@ -138,9 +192,39 @@
       return 'villager';
     }
 
+    var DROP_VAL = { villager: 9, torch: 11, priest: 14, hunter: 14, bellringer: 30, witchfinder: 30, vanhelsing: 50 };
+
+    function bloodMult() {
+      var m = sim.bloodMul || 1;
+      if (sim.bloodMoonT > 0) m *= 2;
+      if (sim.state === 'dawn' && sim.player.exposedT > 0) m *= 2; // Bloodmoon gamble
+      return m;
+    }
+
+    function startSurge() {
+      var P = sim.player, fc = sim.flavorCount, best = 'villager', bn = -1, k;
+      for (k in fc) if (fc[k] > bn) { bn = fc[k]; best = k; }
+      sim.flavorCount = {};
+      P.bloodM = 0;
+      P.surgeT = 6 * (P.verb === 'dominator' ? 1.5 : 1);
+      P.surgeDmg = 0; P.surgeExt = 0; P.surgeFlavor = best;
+      if (best === 'villager') P.hp = Math.min(P.maxHp, P.hp + 30);
+      else if (best === 'priest') P.holyResistT = 20;
+      else if (best === 'hunter') P.spdBoostT = 20;
+      else if (best === 'torch') P.burnTrailT = 20;
+      ev('surge', { flavor: best, name: (C.SURGE_FLAVORS[best] || {}).name || 'Blood Surge' });
+    }
+
     function damageEnemy(e, dmg, kx, ky) {
       if (e.dead) return;
+      var P = sim.player;
+      if (P.surgeT > 0) dmg *= 1.5 + P.surgeDmg;                    // Blood Surge
+      if (P.verb === 'blur' && (P.vx * P.vx + P.vy * P.vy) > 3600) dmg *= 1.15; // Celerity
+      if (e.type === 'vanhelsing' && e.t > 60) dmg *= 3;            // mercy: the duel ends
       e.hp -= dmg;
+      if (P.surgeT > 0 && !e.dead) {
+        P.hp = Math.min(P.maxHp, P.hp + dmg * 0.2);                // surge lifesteal
+      }
       ev('hit', { x: e.x, y: e.y, dmg: Math.round(dmg) });
       if (kx) { e.vx += kx; e.vy += ky; }
       if (e.hp <= 0) killEnemy(e);
@@ -149,22 +233,39 @@
     function killEnemy(e) {
       if (e.dead) return;
       e.dead = true;
+      var P = sim.player;
       var d = C.ENEMIES[e.type];
       sim.kills++;
-      ev('kill', { x: e.x, y: e.y, big: e.type === 'vanhelsing' });
+      sim.killTimes.push(sim.time);
+      // mythic: Blood Frenzy — kills during the surge feed it
+      if (P.surgeT > 0 && P.surgeExt < 6) {
+        P.surgeT += 0.35; P.surgeExt += 0.35; P.surgeDmg += 0.05;
+      }
+      ev('kill', { x: e.x, y: e.y, big: e.type === 'vanhelsing', elite: !!d.elite });
+      if (d.elite) ev('chest', { x: e.x, y: e.y });
+      var mult = bloodMult();
       // blood orbs
       var n = e.type === 'vanhelsing' ? 12 : (d.xp >= 4 ? 2 : 1);
       for (var i = 0; i < n; i++) {
         var a = rng() * TAU;
         sim.orbs.push({
           x: e.x, y: e.y, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120,
-          val: d.xp / n, t: 0
+          val: d.xp / n * mult, t: 0
+        });
+      }
+      // blood droplets: the thirst loop
+      var nd = e.type === 'vanhelsing' ? 6 : (d.elite ? 4 : 2 + (rng() < 0.5 ? 1 : 0));
+      for (var di = 0; di < nd; di++) {
+        var a2 = rng() * TAU, sp = 80 + rng() * 160;
+        sim.drops.push({
+          x: e.x, y: e.y, vx: Math.cos(a2) * sp, vy: Math.sin(a2) * sp,
+          val: (DROP_VAL[e.type] || 8) * mult / nd * 2, kind: e.type, t: 0
         });
       }
       // charm: convert a villager to fight for you
       if (P.charm > 0 && e.foe && (e.type === 'villager' || e.type === 'torch') && rng() < 0.09 * P.charm) {
-        var a2 = spawnEnemy(e.type, e.x, e.y, false);
-        a2.maxHp = a2.hp = 60 * sim.hpMul; a2.dmg *= 1.5;
+        var a3 = spawnEnemy(e.type, e.x, e.y, false);
+        a3.maxHp = a3.hp = 60 * sim.hpMul; a3.dmg *= 1.5;
         ev('charm', { x: e.x, y: e.y });
         ev('taunt', { x: e.x, y: e.y - 20, text: 'For the Count!' });
       }
@@ -286,9 +387,26 @@
         }
         if (sim.nightT <= 0) {
           sim.state = 'dawn'; sim.dawnT = DAWN_LEN;
+          // drifting shade islands for the dawn heist
+          sim.shadeIslands.length = 0;
+          for (var shi2 = 0; shi2 < 3; shi2++) {
+            var iw = 150 + rng() * 90, ih = 120 + rng() * 70;
+            sim.shadeIslands.push({
+              x: 150 + rng() * (WORLD - 300 - iw), y: 150 + rng() * (WORLD - 300 - ih),
+              w: iw, h: ih,
+              vx: (rng() < 0.5 ? -1 : 1) * (14 + rng() * 14),
+              vy: (rng() < 0.5 ? -1 : 1) * (10 + rng() * 12)
+            });
+          }
           ev('dawn');
           ev('taunt', { x: P.x, y: P.y - 30, text: C.DAWN_LINES[(rng() * C.DAWN_LINES.length) | 0] });
         }
+        // scripted omens punctuate the mid-game
+        while (sim.omenIdx < C.OMENS.length && sim.time >= C.OMENS[sim.omenIdx].t) {
+          fireOmen(sim.omenIdx);
+          sim.omenIdx++;
+        }
+        if (sim.bloodMoonT > 0) sim.bloodMoonT -= dt;
       } else if (sim.state === 'dawn') {
         sim.time += dt;
         sim.dawnT -= dt;
@@ -298,7 +416,21 @@
           var cx = ((1 - sim.dawnT / DAWN_LEN) * (WORLD + 900) + b * 800) % (WORLD + 900) - 450;
           sim.sunBands.push(cx);
         }
-        if (!inShadow(P.x, P.y)) hurtPlayer(16 * sim.dmgMul * dt * 10 * 0.1 + 14 * dt);
+        // drifting shade islands (safe, moving)
+        for (var shi = 0; shi < sim.shadeIslands.length; shi++) {
+          var isl = sim.shadeIslands[shi];
+          isl.x += isl.vx * dt; isl.y += isl.vy * dt;
+          if (isl.x < 60 || isl.x + isl.w > WORLD - 60) isl.vx *= -1;
+          if (isl.y < 60 || isl.y + isl.h > WORLD - 60) isl.vy *= -1;
+        }
+        // exposure: 3s grace with warning, then heavy burn (V Rising rule)
+        if (inShadow(P.x, P.y)) {
+          P.exposedT = 0; P.sunWarned = false;
+        } else {
+          P.exposedT += dt;
+          if (!P.sunWarned && P.exposedT > 0.2) { P.sunWarned = true; ev('sunwarn'); }
+          if (P.exposedT > 3) hurtPlayer((20 + night * 4) * dt);
+        }
         if (sim.dawnT <= 0) {
           sim.state = 'won'; sim.over = true;
           ev('won');
@@ -309,8 +441,18 @@
       var mx = input.mx || 0, my = input.my || 0;
       var ml = Math.hypot(mx, my);
       if (ml > 1) { mx /= ml; my /= ml; }
-      var dashing = false;
-      if (input.dash && P.dashCd <= 0 && P.upg.dash) {
+      // revamp: bat form panic button — double-tap, or auto at low HP
+      if (P.batCd > 0) P.batCd -= dt;
+      if (P.batFormT > 0) P.batFormT -= dt;
+      if ((input.bat || (P.hp < P.maxHp * 0.15 && P.hp > 0)) && P.batCd <= 0 && P.batFormT <= 0 && !sim.over) {
+        P.batCd = P.batMax; P.batFormT = 0.8;
+        P.invuln = Math.max(P.invuln, 0.9);
+        var ba = ml > 0.1 ? Math.atan2(my, mx) : P.facing;
+        P.vx = Math.cos(ba) * 950; P.vy = Math.sin(ba) * 950;
+        ev('batform', { x: P.x, y: P.y });
+      }
+      var dashing = P.batFormT > 0;
+      if (input.dash && P.dashCd <= 0 && P.upg.dash && !dashing) {
         P.dashCd = P.dashMax; P.invuln = Math.max(P.invuln, 0.35);
         var da = ml > 0.1 ? Math.atan2(my, mx) : P.facing;
         P.vx = Math.cos(da) * 900; P.vy = Math.sin(da) * 900;
@@ -319,8 +461,9 @@
       }
       if (!dashing) {
         var acc = 12;
-        P.vx += (mx * P.speed - P.vx) * Math.min(1, dt * acc);
-        P.vy += (my * P.speed - P.vy) * Math.min(1, dt * acc);
+        var effSpeed = P.speed * (P.surgeT > 0 ? 1.25 : 1) * (P.spdBoostT > 0 ? 1.15 : 1);
+        P.vx += (mx * effSpeed - P.vx) * Math.min(1, dt * acc);
+        P.vy += (my * effSpeed - P.vy) * Math.min(1, dt * acc);
       }
       P.x = clamp(P.x + P.vx * dt, 24, WORLD - 24);
       P.y = clamp(P.y + P.vy * dt, 24, WORLD - 24);
@@ -328,7 +471,28 @@
       if (P.dashCd > 0) P.dashCd -= dt;
       if (P.invuln > 0) P.invuln -= dt;
       if (P.biteCd > 0) P.biteCd -= dt;
-      if (P.regen > 0 && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
+      // mythic: Crimson Saint — the wounded saint burns brightest
+      var saint = (P.upg.aura > 0 && P.upg.nap > 0 && P.upg.gut > 0) && P.hp < P.maxHp * 0.5;
+      if (P.regen > 0 && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * (saint ? 3 : 1) * dt);
+      // surge + flavor timers
+      if (P.surgeT > 0) {
+        P.surgeT -= dt;
+        if (P.surgeT <= 0) { P.surgeT = 0; P.surgeDmg = 0; P.surgeExt = 0; ev('surgeend'); }
+      } else if (sim.state === 'night') {
+        P.bloodM = Math.max(0, P.bloodM - 0.8 * dt); // the thirst grows
+      }
+      if (P.holyResistT > 0) P.holyResistT -= dt;
+      if (P.spdBoostT > 0) P.spdBoostT -= dt;
+      if (P.burnTrailT > 0) {
+        P.burnTrailT -= dt;
+        P.burnTickT -= dt;
+        if (P.burnTickT <= 0) {
+          P.burnTickT = 0.3;
+          sim.fires.push({ x: P.x, y: P.y, t: 3, foe: false });
+        }
+      }
+      // prune kill timestamps (flee logic)
+      while (sim.killTimes.length && sim.killTimes[0] < sim.time - 10) sim.killTimes.shift();
 
       /* ----- bite (auto-attack) ----- */
       if (P.biteCd <= 0) {
@@ -341,6 +505,8 @@
           damageEnemy(tgt, P.biteDmg * (crit ? 2 : 1),
             Math.cos(P.facing) * kb, Math.sin(P.facing) * kb);
           ev('bite', { x: P.x, y: P.y, ang: P.facing, crit: crit });
+          // mythic: Executioner — bite crits quicken the moon
+          if (crit && P.novaDmg > 0) P.novaCd = Math.max(0, P.novaCd - 1.5);
           // the bite chains: blood sprays to one nearby foe
           var chained = null, cbd = 80 * 80;
           for (var ci = 0; ci < sim.enemies.length; ci++) {
@@ -397,9 +563,11 @@
 
       /* ----- crimson aura ----- */
       if (P.auraDps > 0) {
+        var saintAura = (P.upg.aura > 0 && P.upg.nap > 0 && P.upg.gut > 0) && P.hp < P.maxHp * 0.5;
+        var auraDps = P.auraDps * (saintAura ? 1.5 : 1); // mythic: Crimson Saint
         forNear(P.x, P.y, P.auraR, function (e) {
           if (dist2(P.x, P.y, e.x, e.y) < P.auraR * P.auraR)
-            damageEnemy(e, P.auraDps * dt, 0, 0);
+            damageEnemy(e, auraDps * dt, 0, 0);
         });
       }
 
@@ -424,12 +592,21 @@
         for (i = 0; i < sim.enemies.length; i++) if (!sim.enemies[i].dead) alive++;
         if (sim.spawnT <= 0 && alive < MAX_ENEMIES) {
           var interval = clamp(2.3 - sim.time * 0.006 - night * 0.12, 0.45, 2.3);
+          if (sim.nightmare) interval *= 0.7;
           sim.spawnT = interval;
           var batch = 1 + ((sim.time / 55) | 0) + ((night / 2) | 0);
           for (var s = 0; s < batch; s++) {
             var sp = spawnPos();
             spawnEnemy(pickType(), sp.x, sp.y);
           }
+        }
+        // elites stalk the night from ~100s, alternating
+        if (sim.time >= sim.nextElite && alive < MAX_ENEMIES - 6) {
+          sim.nextElite += 75;
+          sim.eliteFlip = !sim.eliteFlip;
+          var ep = spawnPos();
+          spawnEnemy(sim.eliteFlip ? 'bellringer' : 'witchfinder', ep.x, ep.y);
+          ev('elite', { x: ep.x, y: ep.y, type: sim.eliteFlip ? 'bellringer' : 'witchfinder' });
         }
         // Van Helsing arrives one minute before dawn
         if (!sim.bossSpawned && sim.time >= C.UNLOCK_AT.vanhelsing) {
@@ -514,6 +691,62 @@
         }
       }
 
+      /* ----- blood droplets (the thirst loop) ----- */
+      var foeNear = false;
+      forNear(P.x, P.y, 220, function () { foeNear = true; });
+      // feeding favors the bold: magnet grows near the mob, shrinks while kiting
+      var magR = P.pickupR * (foeNear ? 1.7 : 0.7);
+      for (var dri = sim.drops.length - 1; dri >= 0; dri--) {
+        var dr = sim.drops[dri];
+        dr.t += dt;
+        var dxr = P.x - dr.x, dyr = P.y - dr.y;
+        var d2r = dxr * dxr + dyr * dyr;
+        if (d2r < magR * magR || dr.t > 0.5) {
+          var ddr = Math.sqrt(d2r) || 1;
+          var pull = d2r < magR * magR ? 1100 : 150;
+          dr.vx += (dxr / ddr) * pull * dt * 4;
+          dr.vy += (dyr / ddr) * pull * dt * 4;
+        } else {
+          dr.vx *= (1 - dt * 3); dr.vy *= (1 - dt * 3);
+        }
+        dr.x += dr.vx * dt; dr.y += dr.vy * dt;
+        if (d2r < 26 * 26) {
+          sim.drops.splice(dri, 1);
+          sim.flavorCount[dr.kind] = (sim.flavorCount[dr.kind] || 0) + 1;
+          ev('thwip', { x: dr.x, y: dr.y });
+          if (P.surgeT > 0) {
+            P.hp = Math.min(P.maxHp, P.hp + 2); // feeding mid-surge tops you up
+          } else {
+            P.bloodM = Math.min(P.bloodMax, P.bloodM + dr.val);
+            if (P.bloodM >= P.bloodMax) startSurge();
+          }
+        }
+      }
+      if (sim.drops.length > 220) sim.drops.splice(0, sim.drops.length - 220);
+
+      /* ----- fire patches & holy ground ----- */
+      for (var fpi = sim.fires.length - 1; fpi >= 0; fpi--) {
+        var fr = sim.fires[fpi];
+        fr.t -= dt;
+        if (fr.t <= 0) { sim.fires.splice(fpi, 1); continue; }
+        if (fr.foe) {
+          if (dist2(fr.x, fr.y, P.x, P.y) < 34 * 34) hurtPlayer(10 * dt);
+        } else {
+          (function (fx0, fy0) {
+            forNear(fx0, fy0, 40, function (en) {
+              if (dist2(fx0, fy0, en.x, en.y) < 34 * 34) damageEnemy(en, 25 * dt, 0, 0);
+            });
+          })(fr.x, fr.y);
+        }
+      }
+      for (var hzi = sim.holy.length - 1; hzi >= 0; hzi--) {
+        var hz = sim.holy[hzi];
+        hz.t -= dt;
+        if (hz.t <= 0) { sim.holy.splice(hzi, 1); continue; }
+        if (dist2(hz.x, hz.y, P.x, P.y) < hz.r * hz.r)
+          hurtPlayer(18 * dt * (P.holyResistT > 0 ? 0.5 : 1));
+      }
+
       if (P.batCdFix !== true) {
         for (var fi = 0; fi < sim.enemies.length; fi++) {
           var fe = sim.enemies[fi];
@@ -538,7 +771,7 @@
       var dist = Math.hypot(dx, dy) || 1;
       dx /= dist; dy /= dist;
 
-      if (e.type === 'priest' && isFoe) {
+      if ((e.type === 'priest' || e.type === 'bellringer') && isFoe) {
         if (e.state === 'chase') {
           if (dist < d.keepDist) { e.state = 'cast'; e.t = 0; ev('priestcast', { x: tx, y: ty, r: d.novaR }); }
           else moveToward(e, dx, dy, dt);
@@ -546,41 +779,79 @@
           if (e.t >= d.castTime) {
             e.state = 'chase'; e.t = 0;
             ev('novahit', { x: tx, y: ty, r: d.novaR });
-            if (dist2(tx, ty, P.x, P.y) < d.novaR * d.novaR) hurtPlayer(d.novaDmg * sim.dmgMul);
+            // sanctified ground lingers (area denial)
+            sim.holy.push({ x: tx, y: ty, r: d.novaR, t: 4 });
+            if (dist2(tx, ty, P.x, P.y) < d.novaR * d.novaR)
+              hurtPlayer(d.novaDmg * sim.dmgMul * (P.holyResistT > 0 ? 0.5 : 1));
           }
         }
-      } else if (e.type === 'hunter' && isFoe) {
-        e.cd -= dt;
-        if (dist > d.keepDist + 60) moveToward(e, dx, dy, dt);
-        else if (dist < d.keepDist - 60) moveToward(e, -dx, -dy, dt);
-        else { // strafe
-          var sa = Math.atan2(dy, dx) + Math.PI / 2;
-          e.vx += (Math.cos(sa) * e.speed * 0.6 - e.vx) * Math.min(1, dt * 6);
-          e.vy += (Math.sin(sa) * e.speed * 0.6 - e.vy) * Math.min(1, dt * 6);
+      } else if ((e.type === 'hunter' || e.type === 'witchfinder') && isFoe) {
+        if (e.state === 'aim') {
+          // telegraphed aim: the red line was already shown, now the shot lands
+          e.aimT -= dt;
+          if (e.aimT <= 0) {
+            e.state = 'chase'; e.cd = d.shotCd;
+            sim.bolts.push({ x: e.x, y: e.y, vx: Math.cos(e.aimAng) * d.boltSpeed, vy: Math.sin(e.aimAng) * d.boltSpeed, r: 6, dmg: d.boltDmg * sim.dmgMul, foe: true, t: 3 });
+            ev('shoot', { x: e.x, y: e.y });
+          }
+        } else {
+          e.cd -= dt;
+          if (dist > d.keepDist + 60) moveToward(e, dx, dy, dt);
+          else if (dist < d.keepDist - 60) moveToward(e, -dx, -dy, dt);
+          else { // strafe
+            var sa = Math.atan2(dy, dx) + Math.PI / 2;
+            e.vx += (Math.cos(sa) * e.speed * 0.6 - e.vx) * Math.min(1, dt * 6);
+            e.vy += (Math.sin(sa) * e.speed * 0.6 - e.vy) * Math.min(1, dt * 6);
+          }
+          if (e.cd <= 0 && dist < 560) {
+            e.state = 'aim'; e.aimT = d.aimTime || 0.8;
+            e.aimAng = Math.atan2(P.y - e.y, P.x - e.x);
+            ev('aimline', { x: e.x, y: e.y, ang: e.aimAng, t: e.aimT });
+          }
         }
-        if (e.cd <= 0 && dist < 560) {
-          e.cd = d.shotCd;
-          var a2 = Math.atan2(P.y - e.y, P.x - e.x);
-          sim.bolts.push({ x: e.x, y: e.y, vx: Math.cos(a2) * d.boltSpeed, vy: Math.sin(a2) * d.boltSpeed, r: 6, dmg: d.boltDmg * sim.dmgMul, foe: true, t: 3 });
-          ev('shoot', { x: e.x, y: e.y });
-        }
-        e.x += e.vx * dt; e.y += e.vy * dt;
+        e.x = clamp(e.x + e.vx * dt, 24, WORLD - 24);
+        e.y = clamp(e.y + e.vy * dt, 24, WORLD - 24);
       } else if (e.type === 'vanhelsing' && isFoe) {
         var enraged = e.hp < e.maxHp * 0.4;
+        if (e.phase !== 2 && e.hp < e.maxHp * 0.5) {
+          e.phase = 2;
+          ev('bossphase');
+          ev('taunt', { x: e.x, y: e.y - 40, text: 'FINAL PRAYER. No mercy.' });
+        }
         e.cd -= dt; e.atkCd -= dt;
         moveToward(e, dx, dy, dt * (enraged ? 1.35 : 1));
-        if (e.cd <= 0 && dist < 640) {
-          e.cd = d.shotCd * (enraged ? 0.6 : 1);
-          for (var k = -1; k <= 1; k++) {
-            var a3 = Math.atan2(P.y - e.y, P.x - e.x) + k * 0.14;
-            sim.bolts.push({ x: e.x, y: e.y, vx: Math.cos(a3) * d.stakeSpeed, vy: Math.sin(a3) * d.stakeSpeed, r: 7, dmg: d.stakeDmg * sim.dmgMul, foe: true, t: 3 });
+        // resolve telegraphed attacks
+        for (var pi = e.pend.length - 1; pi >= 0; pi--) {
+          var pa = e.pend[pi];
+          pa.t -= dt;
+          if (pa.t <= 0) {
+            e.pend.splice(pi, 1);
+            if (pa.kind === 'fan') {
+              for (var k = -1; k <= 1; k++) {
+                var a3 = pa.ang + k * 0.14;
+                sim.bolts.push({ x: e.x, y: e.y, vx: Math.cos(a3) * d.stakeSpeed, vy: Math.sin(a3) * d.stakeSpeed, r: 7, dmg: d.stakeDmg * sim.dmgMul, foe: true, t: 3 });
+              }
+              ev('shoot', { x: e.x, y: e.y });
+            } else if (pa.kind === 'holylob') {
+              sim.holy.push({ x: pa.x, y: pa.y, r: 130, t: 4.5 });
+              ev('novahit', { x: pa.x, y: pa.y, r: 130 });
+            }
           }
-          ev('shoot', { x: e.x, y: e.y });
+        }
+        if (e.cd <= 0 && dist < 640) {
+          e.cd = d.shotCd * (e.phase === 2 ? 0.6 : 1) * (enraged ? 0.8 : 1);
+          var fa = Math.atan2(P.y - e.y, P.x - e.x);
+          e.pend.push({ kind: 'fan', t: 0.7, ang: fa });
+          ev('aimfan', { x: e.x, y: e.y, ang: fa });
           if (rng() < 0.4) ev('taunt', { x: e.x, y: e.y - 40, text: C.HELSING_LINES[(rng() * C.HELSING_LINES.length) | 0] });
         }
-        if (e.atkCd <= 0) {
+        if (e.phase === 2 && e.atkCd <= 0) {
+          e.atkCd = 6;
+          e.pend.push({ kind: 'holylob', t: 1.0, x: P.x, y: P.y });
+          ev('holylob', { x: P.x, y: P.y, r: 130 });
+        } else if (e.phase !== 2 && e.atkCd <= 0) {
           e.atkCd = d.summonCd;
-          for (var s2 = 0; s2 < 4; s2++) {
+          for (var s2 = 0; s2 < 3; s2++) {
             var a4 = rng() * TAU;
             spawnEnemy(rng() < 0.7 ? 'villager' : 'torch', e.x + Math.cos(a4) * 90, e.y + Math.sin(a4) * 90);
           }
@@ -590,9 +861,26 @@
         e.y = clamp(e.y + e.vy * dt, 24, WORLD - 24);
       } else {
         // melee chaser (villager, torch, allies)
-        moveToward(e, dx, dy, dt);
+        var fleeing = false;
+        if (isFoe && (e.type === 'villager' || e.type === 'torch')) {
+          if (e.panicCd > 0) e.panicCd -= dt;
+          var killRate = sim.killTimes.length / 10;
+          if (e.panicCd <= 0 && ((killRate > 1.1 && dist < 420) || (P.fearR > 0 && dist < P.fearR))) {
+            e.panicT = 2.5; e.panicCd = 6; // panic burst, then they come back
+            if (rng() < 0.3)
+              ev('taunt', { x: e.x, y: e.y - 16, text: C.FLEE_QUOTES[(rng() * C.FLEE_QUOTES.length) | 0] });
+          }
+          if (e.panicT > 0) { e.panicT -= dt; fleeing = true; }
+        }
+        if (fleeing) moveToward(e, -dx, -dy, dt);
+        else moveToward(e, dx, dy, dt);
         e.x = clamp(e.x + e.vx * dt, 24, WORLD - 24);
         e.y = clamp(e.y + e.vy * dt, 24, WORLD - 24);
+        // torch mobs leave fire trails (area denial)
+        if (isFoe && e.type === 'torch') {
+          e.fireT -= dt;
+          if (e.fireT <= 0) { e.fireT = 0.5; sim.fires.push({ x: e.x, y: e.y, t: 2.5, foe: true }); }
+        }
         if (isFoe) {
           if (dist < e.r + P.r + 6 && e.atkCd <= 0) {
             e.atkCd = 0.85;
@@ -617,7 +905,7 @@
     }
 
     function score() {
-      return sim.kills * 10 + (night - 1) * 1000 + sim.level * 25;
+      return sim.kills * 10 + (night - 1) * 1000 + sim.level * 25 + (sim.state === 'won' ? 500 : 0);
     }
 
     return {
