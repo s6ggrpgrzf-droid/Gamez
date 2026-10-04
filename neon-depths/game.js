@@ -243,13 +243,14 @@
     if (now - tauntCooldown < 25000) return;
     tauntCooldown = now;
     try {
-      fetch('https://gamez-ai.chaoticutopia84.workers.dev/', {
+      fetch('https://gamez-ai.chaoticutopia84.workers.dev/g', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.assign({ kind: 'krakentaunt' }, t)),
+        body: JSON.stringify({ kind: 'krakentaunt', game: 'neon-depths', ctx: t }),
       }).then(r => r.json()).then(j => {
-        if (j && j.line) {
-          el.taunt.textContent = '🦑 ' + j.line;
+        const line = j && (j.text || j.line);
+        if (line) {
+          el.taunt.textContent = '🦑 ' + String(line).slice(0, 90);
           el.taunt.style.opacity = '1';
           setTimeout(() => { el.taunt.style.opacity = '0'; }, 5000);
         }
