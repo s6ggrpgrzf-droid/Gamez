@@ -75,7 +75,7 @@ button{font-family:inherit;touch-action:manipulation}
 }
 .btn.primary:active{box-shadow:0 0 0 var(--gold-deep)}
 .btn.ghost{background:transparent;box-shadow:none;border-style:dashed}
-.btn.small{min-height:40px;font-size:16px;margin:14px auto;max-width:320px}
+.btn.small{min-height:44px;font-size:16px;margin:14px auto;max-width:320px}
 .btn.hint{min-height:44px;font-size:17px;margin:0 auto;max-width:340px}
 .btn:disabled{opacity:.45;cursor:default}
 .btn .btn-sub{font-size:14px;font-weight:500;opacity:.8}
@@ -100,6 +100,7 @@ button{font-family:inherit;touch-action:manipulation}
   background:none;border:none;color:var(--ink);cursor:pointer;border-radius:10px;
 }
 .icon-btn:active{background:rgba(58,43,28,.12)}
+.icon-btn.haptic-off{opacity:.35}
 .row-btns{display:flex;gap:10px;margin-top:6px}
 .row-btns .btn{margin:8px 0}
 
@@ -192,7 +193,12 @@ button{font-family:inherit;touch-action:manipulation}
   background:repeating-linear-gradient(90deg, #d8b878 0 2px, transparent 2px 5px);
   clip-path:polygon(0 100%, 6% 15%, 14% 70%, 22% 5%, 31% 60%, 40% 20%, 50% 75%, 58% 10%, 67% 55%, 76% 25%, 84% 65%, 92% 15%, 100% 100%);
   opacity:.9;
+  animation:frayTwitch 1.4s ease-in-out infinite; /* strands tremble under load */
 }
+@keyframes frayTwitch{0%,100%{transform:translateY(0) skewX(0)}30%{transform:translateY(1.5px) skewX(3deg)}65%{transform:translateY(0) skewX(-3deg)}}
+/* rope-fray tension: the whole rope sways faster and wider when nearly spent */
+.rope-col.danger{animation:ropeSwayFast 2.4s ease-in-out infinite}
+@keyframes ropeSwayFast{0%,100%{transform:rotate(-2.4deg)}50%{transform:rotate(2.4deg)}}
 @keyframes ropePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
 /* --- the well shaft --- */
 .shaft-wrap{
@@ -264,6 +270,7 @@ button{font-family:inherit;touch-action:manipulation}
   background:rgba(58,43,28,.14);border-radius:7px;
   box-shadow:inset 0 3px 6px rgba(40,28,12,.5), inset 0 -1px 2px rgba(255,250,235,.35);
   text-shadow:0 -1px 1px rgba(40,28,12,.75), 0 1px 0 rgba(255,250,235,.5); /* chiseled */
+  position:relative;overflow:hidden;
 }
 /* illuminated-manuscript gold: leaf gradient + warm glow, never neon */
 .tile.gold{
@@ -276,6 +283,15 @@ button{font-family:inherit;touch-action:manipulation}
   text-shadow:0 1px 0 rgba(255,244,200,.8), 0 -1px 1px rgba(90,60,8,.6);
   border:1px solid rgba(122,90,18,.65);
 }
+/* letter-change gold shimmer: a fresh sheen sweeps the illuminated letter
+ * once, like a just-gilded manuscript initial. One-shot; fired by JS. */
+.tile.glimmer::after{
+  content:'';position:absolute;top:-20%;bottom:-20%;left:0;width:60%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,250,220,.85),transparent);
+  transform:translateX(-160%) skewX(-12deg);
+  animation:glimmer .9s cubic-bezier(.4,.1,.6,1) .12s 1 forwards;
+}
+@keyframes glimmer{to{transform:translateX(260%) skewX(-12deg)}}
 .rung-tag{
   position:absolute;left:-8px;top:-10px;font-size:10px;letter-spacing:2.5px;font-variant:small-caps;font-weight:700;
   background:#2e2314;color:#ecdfc2;border-radius:6px;padding:3px 8px;
@@ -283,7 +299,10 @@ button{font-family:inherit;touch-action:manipulation}
 }
 .msg{min-height:1.7em;text-align:center;font-style:italic;color:#7a2e1d;font-size:17px;padding:2px 12px}
 .toolbar{padding:2px 16px 6px}
-/* guess slots: Wordle-style 3D flip on submit */
+/* guess slots: paper-card flip on submit — crisp snap, not a float.
+ * Word Well's feel identity is "crisp, papery, clever": the flip is a quick
+ * card snap with a tiny paper settle (overshoot at 82%), on a bespoke
+ * paper-snap curve, distinct from any other game's easing. */
 .slots{display:flex;gap:8px;justify-content:center;padding:8px 0 12px;perspective:400px}
 .slot{
   width:clamp(46px,13vw,58px);height:clamp(52px,14.5vw,64px);
@@ -298,12 +317,13 @@ button{font-family:inherit;touch-action:manipulation}
   box-shadow:inset 0 2px 5px rgba(58,43,28,.4), 0 2px 5px rgba(58,43,28,.25);
   text-shadow:0 1px 0 rgba(255,250,235,.6);
 }
-.slot.flipping{animation:slotFlip .55s ease-in-out}
+.slot.flipping{animation:slotFlip .42s cubic-bezier(.5,.05,.6,1)}
 @keyframes slotFlip{
-  0%{transform:rotateX(0)}
-  42%{transform:rotateX(-92deg)}
-  58%{transform:rotateX(-92deg)}
-  100%{transform:rotateX(0)}
+  0%{transform:rotateX(0deg)}
+  42%{transform:rotateX(-94deg)}
+  56%{transform:rotateX(-94deg)}
+  82%{transform:rotateX(3.5deg)}  /* paper snap: overshoot, then settle */
+  100%{transform:rotateX(0deg)}
 }
 .slot.revealed{
   border-style:solid;
@@ -318,6 +338,30 @@ button{font-family:inherit;touch-action:manipulation}
 }
 .slots.shake{animation:shake .4s}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+/* papery shudder on rope break: small, quick, linear — a sheet of paper
+ * flinching, NOT a screen shake. Applied to .app by JS for ~300ms. */
+.app.shudder{animation:papShudder .28s linear}
+@keyframes papShudder{
+  0%{transform:translate(0,0) rotate(0)}
+  20%{transform:translate(-2px,1px) rotate(-.15deg)}
+  40%{transform:translate(2px,-1px) rotate(.15deg)}
+  60%{transform:translate(-1.5px,.5px) rotate(-.1deg)}
+  80%{transform:translate(1.5px,-.5px) rotate(.1deg)}
+  100%{transform:none}
+}
+/* confetti-lite on solve: torn manuscript scraps drifting down. Spawned once
+ * by JS on a fresh win, removed after landing. Transform-only. */
+.paperfall{position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden}
+.paperfall i{
+  position:absolute;top:-16px;opacity:0;
+  animation-name:paperDrift;animation-timing-function:linear;
+  animation-iteration-count:1;animation-fill-mode:forwards;
+}
+@keyframes paperDrift{
+  0%{transform:translate3d(0,0,0) rotate(0deg);opacity:0}
+  8%{opacity:1}
+  100%{transform:translate3d(var(--dx,10px),108vh,0) rotate(var(--rot,540deg));opacity:.95}
+}
 
 /* ---------- on-screen keyboard: real 3D keys ---------- */
 .kb{
