@@ -37,7 +37,7 @@ html, body {
 #hud-delta.up { color: var(--good); } #hud-delta.down { color: #ff5f6d; }
 #btn-pause {
   pointer-events: auto; background: rgba(20,26,46,.7); color: var(--ink);
-  border: 1px solid #2c3a5e; border-radius: 10px; width: 44px; height: 40px;
+  border: 1px solid #2c3a5e; border-radius: 10px; width: 44px; height: 44px;
   font-size: 16px; font-weight: 700;
 }
 #hud-speed {
@@ -116,6 +116,7 @@ h3 { font-size: 20px; margin: 18px 0 8px; color: var(--dim); letter-spacing: 1px
 .mini {
   font: inherit; font-size: 15px; padding: 8px 14px; border-radius: 10px;
   background: #1b2340; color: var(--ink); border: 1px solid #2c3a5e; cursor: pointer;
+  min-height: 44px;
 }
 .mini.on { border-color: var(--neon); color: var(--neon); }
 .card {
@@ -150,7 +151,7 @@ h3 { font-size: 20px; margin: 18px 0 8px; color: var(--dim); letter-spacing: 1px
 .sw.locked { opacity: .3; }
 .upg { display: flex; align-items: center; justify-content: space-between; background: #1b2340; border-radius: 12px; padding: 10px 14px; margin: 8px 0; }
 .upg .pips { letter-spacing: 3px; font-size: 18px; }
-.upg button { font: inherit; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--neon); background: transparent; color: var(--neon); font-weight: 700; cursor: pointer; }
+.upg button { font: inherit; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--neon); background: transparent; color: var(--neon); font-weight: 700; cursor: pointer; min-height: 44px; }
 .upg button:disabled { opacity: .35; border-color: #2c3a5e; color: var(--dim); }
 
 /* pre-race grid */
