@@ -708,6 +708,21 @@ function mergeGroups(S, gidA, gidB) {
   if (S.zorder.indexOf(gidA) < 0) S.zorder.push(gidA);
   return gidA;
 }
+/* Seat every member of a group at its exact relative grid position.
+ * A group's solved layout is always the true grid layout (rotation is drawn
+ * about each piece's own center, never baked into x/y), so any deviation is
+ * accumulated snap-tolerance slop -- removing it makes seams invisible. */
+function seatGroupExact(S, gid) {
+  var members = groupMembers(S, gid);
+  if (members.length < 2) return;
+  var a = members[0];
+  var ax = a.x, ay = a.y, atx = trueX(a, S), aty = trueY(a, S);
+  for (var i = 1; i < members.length; i++) {
+    var m = members[i];
+    m.x = ax + (trueX(m, S) - atx);
+    m.y = ay + (trueY(m, S) - aty);
+  }
+}
 
 function neighborsOf(p, S) {
   var out = [];
@@ -737,6 +752,7 @@ function snapAfterDrop(S, gid) {
         var dy = (q.y - p.y) - (trueY(q, S) - trueY(p, S));
         if (Math.hypot(dx, dy) < sd) {
           gid = mergeGroups(S, gid, q.gid);
+          seatGroupExact(S, gid); // snap seats flush: no tolerance slop in the seam
           merged = true; changed = true;
         }
       }
@@ -761,6 +777,10 @@ function snapAfterDrop(S, gid) {
       break;
     }
   }
+  // heal any slop left by merges that predate the seating fix: every
+  // surviving group gets its internal seams pulled exactly flush
+  var gids = Object.keys(S.groups);
+  for (var h = 0; h < gids.length; h++) seatGroupExact(S, gids[h]);
   return { merged: merged, placed: placed, placedWhimsy: placedWhimsy };
 }
 
@@ -2396,7 +2416,8 @@ if (typeof module !== 'undefined' && module.exports) {
     strokeGeom: strokeGeom, tracePiecePath: tracePiecePath, bezPoint: bezPoint, flattenEdgeOps: flattenEdgeOps,
     gridForCount: gridForCount, newPuzzleState: newPuzzleState,
     trueX: trueX, trueY: trueY, snapDist: snapDist, isEdgePiece: isEdgePiece,
-    groupMembers: groupMembers, mergeGroups: mergeGroups, neighborsOf: neighborsOf,
+    groupMembers: groupMembers, mergeGroups: mergeGroups, seatGroupExact: seatGroupExact,
+    neighborsOf: neighborsOf,
     snapAfterDrop: snapAfterDrop, rotateGroup: rotateGroup,
     placedCount: placedCount, isComplete: isComplete,
     WHIMSY: WHIMSY, traceWhimsyPath: traceWhimsyPath,
