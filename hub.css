@@ -127,3 +127,8 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
   radial-gradient(circle at 50% 24%,#fff6dd 0%,#ffdf9e 13%,rgba(255,223,158,0) 27%),
   linear-gradient(180deg,#f9d9a8 0%,#f2a988 40%,#e89a7c 47%,#7fb3c9 48%,#4f86a8 100%)}
 .art-castaway-cove::before{content:"\1F3A3";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:80px;z-index:1;filter:drop-shadow(0 8px 12px rgba(40,60,80,.35))}
+
+/* Neon Drift key art: pure CSS, night asphalt with neon light trails (no image file) */
+.art-neon-drift{background:linear-gradient(160deg,#070a16 0%,#10162e 55%,#1c1240 100%)}
+.art-neon-drift::before{content:"\1F3CE";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 18px rgba(77,216,255,.8))}
+.art-neon-drift::after{content:"";position:absolute;left:-25%;right:-25%;top:64%;height:16px;transform:rotate(-16deg);background:linear-gradient(90deg,transparent,#4dd8ff 30%,#ff4dd8 70%,transparent);filter:blur(3px);opacity:.85;z-index:0}

@@ -132,7 +132,8 @@
     { id: 'word-well', name: 'Word Well', cls: 'art-word-well' },
     { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
     { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' },
-    { id: 'castaway-cove', name: 'Castaway Cove', cls: 'art-castaway-cove' }
+    { id: 'castaway-cove', name: 'Castaway Cove', cls: 'art-castaway-cove' },
+    { id: 'neon-drift', name: 'Neon Drift', cls: 'art-neon-drift' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -214,6 +215,11 @@
         var cs = (ccv.streak && ccv.streak.count) || 0;
         if (!jc && !cs) return null;
         return { label: '📖 ' + jc + '/40 · 🔥' + cs, frac: Math.min(1, jc / 40) };
+      }
+      if (id === 'neon-drift') {
+        var nd = readJSON('nd_save_v1');
+        if (!nd || !nd.tokens) return null;
+        return { label: '🏎️ ' + nd.tokens + ' ◈ · ' + (nd.cupsUnlocked || 1) + '/4 cups', frac: Math.min(1, (nd.cupsUnlocked || 1) / 4) };
       }
     } catch (e) { return null; }
     return null;
