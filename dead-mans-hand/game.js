@@ -75,6 +75,8 @@ function refreshMenu() {
     $('daily-sub').textContent = (G.dailyInfo ? G.dailyInfo.date : todayStr()) + ' · one crypt, worldwide';
   }
   $('btn-mute').textContent = AU.isMuted() ? '🔇' : '🔊';
+  $('btn-haptic').textContent = HAPT.on ? '📳 ON' : '📳 OFF';
+  $('btn-haptic').setAttribute('aria-pressed', HAPT.on ? 'true' : 'false');
 }
 
 function fetchDaily(cb) {
@@ -105,15 +107,21 @@ function startRun(mode) {
   show('screen-game');
   $('boon-overlay').classList.add('hidden');
   $('over-overlay').classList.add('hidden');
-  startRoomUI();
+  startRoomUI(true);
   if (tutorial) coach(0);
 }
 
-function startRoomUI() {
+function startRoomUI(withTransition) {
   var st = G.st;
   renderTop(); renderHand(true); renderPreview();
   drawMonster(st.monster.id, false);
   tauntFor(st.monster, st.room);
+  // eased room transition: fade-slide through darkness
+  if (withTransition && !REDUCED) {
+    var arena = $('arena');
+    arena.classList.remove('room-in'); void arena.offsetWidth; arena.classList.add('room-in');
+    setTimeout(function () { arena.classList.remove('room-in'); }, 500);
+  }
 }
 
 function tauntFor(monster, room) {
@@ -195,7 +203,7 @@ function onCardTap(i) {
   AU.init();
   var r = DMH.select(G.st, i);
   if (!r.ok) return;
-  if (r.selected) { AU.tick(); } else { AU.untick(); }
+  if (r.selected) { AU.snap(); vibrate(HAPT.select); } else { AU.untick(); }
   renderHand(false); renderPreview();
   // tutorial tip 3: weak preview + discards available
   if (G.tutorial && !G.coachShown.tip3 && G.st.discardsLeft > 0 && G.st.handsLeft > 1) {
@@ -218,7 +226,58 @@ function coach(n) {
 }
 
 function vibrate(pat) {
-  try { if (navigator.vibrate && !REDUCED) navigator.vibrate(pat); } catch (e) {}
+  try {
+    if (!HAPT.on || REDUCED || !navigator.vibrate) return;
+    navigator.vibrate(pat);
+  } catch (e) {}
+}
+
+/* haptics vocabulary: light on select, medium on play, success on clear,
+ * error on run end. Settings toggle (menu), persisted; never throws on iOS. */
+var HAPT = (function () {
+  var on = true;
+  try { var v = localStorage.getItem('dmh_haptics'); on = (v === null) ? true : (v === '1'); } catch (e) {}
+  return {
+    get on() { return on; },
+    select: 20, play: 30, success: [10, 40, 10], error: [40, 80, 40, 40, 80, 40],
+    set: function (v) {
+      on = !!v;
+      try { localStorage.setItem('dmh_haptics', on ? '1' : '0'); } catch (e) {}
+      var b = document.getElementById('btn-haptic');
+      if (b) { b.textContent = on ? '📳 ON' : '📳 OFF'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+    }
+  };
+})();
+
+/* smoky ember/ash burst from the monster on damage. pooled-ish: few short-lived divs. */
+function spawnEmbers(n) {
+  if (REDUCED) return;
+  var layer = $('dmg-layer');
+  var mon = $('monster').getBoundingClientRect();
+  var box = $('arena').getBoundingClientRect();
+  for (var i = 0; i < n; i++) {
+    (function () {
+      var d = document.createElement('div');
+      var ashy = Math.random() < 0.35; // some cinders fall grey as ash
+      d.className = 'ember' + (ashy ? ' ash' : '');
+      var mx = mon.left - box.left + mon.width * (0.2 + Math.random() * 0.6);
+      var my = mon.top - box.top + mon.height * (0.2 + Math.random() * 0.6);
+      var dx = (Math.random() - 0.5) * 90;
+      var dy = ashy ? (20 + Math.random() * 50) : (-50 - Math.random() * 70); // embers rise, ash sinks
+      d.style.left = mx + 'px'; d.style.top = my + 'px';
+      d.style.setProperty('--ex', dx.toFixed(0) + 'px');
+      d.style.setProperty('--ey', dy.toFixed(0) + 'px');
+      d.style.animationDelay = (Math.random() * 120).toFixed(0) + 'ms';
+      layer.appendChild(d);
+      setTimeout(function () { d.remove(); }, 1450);
+    })();
+  }
+}
+
+function monsterFlinch() {
+  var m = $('monster');
+  if (REDUCED) return;
+  m.classList.remove('hit-flinch'); void m.offsetWidth; m.classList.add('hit-flinch');
 }
 
 function dmgFloat(dmg, big) {
@@ -247,22 +306,38 @@ function onPlay() {
   if (G.busy || !DMH.canPlay(st)) return;
   AU.init();
   G.busy = true;
+  vibrate(HAPT.play);
+  AU.snap(); // weighty snap on play
   var pv = DMH.preview(st);
   var selIdx = st.selected.slice();
   var cardEls = Array.prototype.slice.call($('hand').children);
   var flying = selIdx.map(function (i) { return cardEls[i]; }).filter(Boolean);
+  var settled = false;
+
+  // dramatic pause: hand title swells like a held breath before the damage lands
+  function pauseThenResolve() {
+    if (settled) return; settled = true;
+    renderHand(false);
+    var pvel = $('preview');
+    pvel.classList.add('reveal');
+    pvel.innerHTML = esc(pv.title) + ' <span class="dmg">&hellip;</span>';
+    AU.riser();
+    setTimeout(resolve, REDUCED ? 60 : 580);
+  }
 
   function resolve() {
+    $('preview').classList.remove('reveal');
     var res = DMH.play(st);
     AU.thud(res.dmg);
     var big = res.ev.rank >= 7 || res.dmg >= 120;
-    vibrate(big ? [30, 50, 30] : 25);
     if (res.deadMans) {
       banner("DEAD MAN'S HAND · +50");
       AU.deadBell();
       vibrate([60, 60, 60]);
     }
     dmgFloat(res.dmg, big);
+    spawnEmbers(big ? 16 : 8);
+    monsterFlinch();
     drawMonster(st.monster.id, true);
     if (big && !REDUCED) {
       var app = $('app');
@@ -287,12 +362,11 @@ function onPlay() {
         { transform: elc.style.transform, opacity: 1 },
         { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.4) rotate(20deg)', opacity: 0.2 }
       ], { duration: 320 + k * 40, easing: 'ease-in', fill: 'forwards' });
-      an.onfinish = function () { if (++done === flying.length) { renderHand(false); resolve(); } };
+      an.onfinish = function () { if (++done === flying.length) { pauseThenResolve(); } };
     });
-    setTimeout(function () { if (G.busy) { renderHand(false); resolve(); } }, 1200); // safety
+    setTimeout(function () { if (G.busy && !settled) { pauseThenResolve(); } }, 1600); // safety
   } else {
-    renderHand(false);
-    resolve();
+    pauseThenResolve();
   }
 }
 
@@ -315,6 +389,7 @@ function coachHint(t) {
 
 function onKill(res) {
   var st = G.st;
+  vibrate(HAPT.success); // room clear
   var kl = DMH.KILL_LINES[Math.floor(Math.random() * DMH.KILL_LINES.length)];
   $('taunt').textContent = '\u201C' + kl + '\u201D';
   renderTop();
@@ -332,7 +407,17 @@ function onKill(res) {
         var r = DMH.chooseBoon(st, idx);
         if (r.ok) {
           $('boon-overlay').classList.add('hidden');
-          startRoomUI();
+          if (!REDUCED) {
+            // slide the old room into darkness, then ease the new one in
+            var arena = $('arena');
+            arena.classList.add('room-out');
+            setTimeout(function () {
+              arena.classList.remove('room-out');
+              startRoomUI(true);
+            }, 230);
+          } else {
+            startRoomUI(false);
+          }
         }
         G.busy = false;
       });
@@ -346,7 +431,8 @@ function onKill(res) {
 function onRunOver(won) {
   var st = G.st;
   G.busy = false;
-  if (won) { AU.fanfare(); winCascade(); } else { AU.sting(); }
+  if (won) { AU.fanfare(); winCascade(); vibrate(HAPT.success); }
+  else { AU.sting(); vibrate(HAPT.error); }
   var best = readJSON('dmh_best_v1');
   if (!best || st.score > best.score) {
     best = { score: st.score, rooms: st.roomsCleared };
@@ -575,6 +661,11 @@ function wire() {
   $('btn-mute').addEventListener('click', function () {
     AU.init(); AU.setMuted(!AU.isMuted());
     $('btn-mute').textContent = AU.isMuted() ? '🔇' : '🔊';
+  });
+  $('btn-haptic').addEventListener('click', function () {
+    AU.click();
+    HAPT.set(!HAPT.on);
+    if (HAPT.on) vibrate(HAPT.select); // confirm the new setting with a tap
   });
   $('btn-play').addEventListener('click', onPlay);
   $('btn-discard').addEventListener('click', onDiscard);

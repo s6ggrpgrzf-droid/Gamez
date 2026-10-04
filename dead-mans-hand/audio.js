@@ -95,9 +95,25 @@ var AU = (function () {
     tone(196, 'sawtooth', 0.12, 0.8, 98);
     setTimeout(function () { tone(147, 'sawtooth', 0.12, 1.0, 73); }, 220);
   }
+  // tension riser: held breath before the hand reveal. swells, never resolves.
+  function riser() {
+    if (!ensure() || muted) return;
+    try {
+      var t0 = ctx.currentTime, dur = 0.55;
+      var o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(48, t0);
+      o.frequency.exponentialRampToValueAtTime(96, t0 + dur);
+      f.type = 'lowpass'; f.frequency.setValueAtTime(180, t0);
+      f.frequency.exponentialRampToValueAtTime(1400, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.14, t0 + dur);
+      g.gain.exponentialRampToValueAtTime(0.0002, t0 + dur + 0.06);
+      o.connect(f); f.connect(g); g.connect(master);
+      o.start(t0); o.stop(t0 + dur + 0.1);
+    } catch (e) {}
+  }
   // dead man's hand easter egg: undertaker bell + low boom
-  function deadBell() {
-    tone(110, 'sine', 0.4, 1.6, 55);
+  function deadBell() {    tone(110, 'sine', 0.4, 1.6, 55);
     setTimeout(function () { tone(110, 'sine', 0.3, 1.4, 58); }, 420);
     noise(0.5, 0.1, 300);
   }
@@ -131,6 +147,7 @@ var AU = (function () {
   return {
     init: init, isMuted: isMuted, setMuted: setMuted,
     snap: snap, tick: tick, untick: untick, whoosh: whoosh, thud: thud,
-    chime: chime, fanfare: fanfare, sting: sting, deadBell: deadBell, click: click
+    chime: chime, fanfare: fanfare, sting: sting, deadBell: deadBell, click: click,
+    riser: riser
   };
 })();
