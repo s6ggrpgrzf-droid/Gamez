@@ -182,8 +182,9 @@ body{
 .frost.hp1{opacity:.55;}
 .frost.crack{animation:crackShake .25s;}
 @keyframes crackShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-3px) rotate(-2deg);}75%{transform:translateX(3px) rotate(2deg);}}
-/* fx bits */
-.particle{position:absolute; width:10px; height:10px; border-radius:50%; pointer-events:none; z-index:5;}
+/* fx bits: sugar-crystal sparkles (diamond, additive screen blend — this game's particle identity) */
+.spark{position:absolute; width:8px; height:8px; pointer-events:none; z-index:5;
+  transform:translate(-50%,-50%) rotate(45deg); border-radius:1.5px; mix-blend-mode:screen;}
 .floater{position:absolute; transform:translate(-50%,-50%); font-weight:900; font-size:20px; color:#fff;
   text-shadow:0 2px 8px rgba(255,95,162,.8), 0 0 2px #000; pointer-events:none; z-index:6;}
 .beam-h,.beam-v{position:absolute; pointer-events:none; z-index:4;
@@ -197,13 +198,31 @@ body{
   font-size:44px; font-weight:900; letter-spacing:1px; white-space:nowrap; pointer-events:none;
   background:linear-gradient(100deg,#ffd34d,#ff5fa2,#4de3ff); -webkit-background-clip:text; background-clip:text; color:transparent;
   filter:drop-shadow(0 4px 14px rgba(0,0,0,.6)); opacity:0;}
-#banner.show{animation:bannerPop 1s ease-out forwards;}
-@keyframes bannerPop{0%{opacity:0; transform:translate(-50%,-50%) scale(.5) rotate(-6deg);}
-  25%{opacity:1; transform:translate(-50%,-50%) scale(1.15) rotate(2deg);}
-  60%{opacity:1; transform:translate(-50%,-50%) scale(1);}
-  100%{opacity:0; transform:translate(-50%,-60%) scale(1.05);}}
+#banner.mega{font-size:56px;}
+#banner.show{animation:bannerPop 1.05s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes bannerPop{0%{opacity:0; transform:translate(-50%,-50%) scale(.45) rotate(-8deg);}
+  30%{opacity:1; transform:translate(-50%,-50%) scale(1.22) rotate(3deg);}
+  55%{opacity:1; transform:translate(-50%,-50%) scale(.97) rotate(-1deg);}
+  78%{opacity:1; transform:translate(-50%,-50%) scale(1.03);}
+  100%{opacity:0; transform:translate(-50%,-62%) scale(1.04);}}
 #hint-bar{min-height:26px; text-align:center; color:var(--ink-dim); font-size:13px; font-weight:600;
   padding:2px 16px calc(10px + env(safe-area-inset-bottom));}
+
+/* ---------- feel: happy bounce (never harsh shake), score pop, sugar-crush slow-mo ---------- */
+#board-wrap.happy-bounce{animation:happyBounce .42s cubic-bezier(.34,1.56,.64,1);}
+@keyframes happyBounce{0%{transform:translateY(0);}40%{transform:translateY(-8px);}100%{transform:translateY(0);}}
+#score.pop{animation:scorePop .35s cubic-bezier(.34,1.56,.64,1); transform-origin:center;}
+@keyframes scorePop{0%{transform:scale(1);}45%{transform:scale(1.35);}100%{transform:scale(1);}}
+#board-wrap.sugar-slow #board{filter:saturate(1.25) brightness(1.07);
+  transition:filter .25s;}
+@media (prefers-reduced-motion: reduce){
+  #modal:not(.hidden) #modal-card{animation:none;}
+  #banner.show{animation-duration:.3s;}
+  #board-wrap.happy-bounce{animation:none;}
+  #score.pop{animation:none;}
+  .lvl-node.current,.hud-pill.moves.low span,.tile.hint .candy,.boost.armed,
+  #streak-flame,.logo-candy{animation:none;}
+}
 
 /* ---------- modal ---------- */
 #modal{position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
@@ -212,8 +231,11 @@ body{
 #modal.hidden{opacity:0; pointer-events:none;}
 #modal-card{background:linear-gradient(160deg,#2c1547,#1b0d33); border:1px solid var(--glass-brd);
   border-radius:26px; padding:28px 30px; text-align:center; max-width:340px; width:100%;
-  box-shadow:0 24px 70px rgba(0,0,0,.6); transform:scale(1); transition:transform .3s;}
+  box-shadow:0 24px 70px rgba(0,0,0,.6); transform:scale(1);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1), opacity .25s;}
 #modal.hidden #modal-card{transform:scale(.9);}
+#modal:not(.hidden) #modal-card{animation:cardSpring .55s cubic-bezier(.34,1.56,.64,1);}
+@keyframes cardSpring{0%{transform:scale(.72) translateY(26px);}60%{transform:scale(1.045) translateY(-4px);}100%{transform:scale(1) translateY(0);}}
 #modal-stars{font-size:46px; letter-spacing:6px; margin-bottom:6px; height:60px;}
 #modal-stars span{color:rgba(255,255,255,.18); display:inline-block;}
 #modal-stars span.earned{color:var(--gold); text-shadow:0 0 18px rgba(255,211,77,.8); animation:starPop .5s backwards;}
