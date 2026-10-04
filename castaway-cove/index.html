@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f7c98b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Castaway Cove — Cozy Fishing</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="app">
+
+  <!-- MENU -->
+  <section id="scr-menu" class="screen on" aria-label="Menu">
+    <div class="menu-sky" aria-hidden="true">
+      <div class="menu-sun"></div>
+      <div class="menu-cloud c1"></div>
+      <div class="menu-cloud c2"></div>
+      <div class="menu-sea"></div>
+      <div class="menu-heron" aria-hidden="true">🐦</div>
+    </div>
+    <div class="menu-wrap">
+      <h1 class="game-title">Castaway Cove</h1>
+      <p class="tagline">Cast a line. Watch the water. No rush.</p>
+      <p class="streak-line" id="menu-streak"></p>
+      <div class="menu-btns">
+        <button class="btn primary" id="btn-play" type="button">🎣 Cast Off</button>
+        <button class="btn" id="btn-daily-menu" type="button">📅 Daily Big Catch</button>
+        <div class="btn-row">
+          <button class="btn" id="btn-journal-menu" type="button">📖 Journal</button>
+          <button class="btn" id="btn-shop-menu" type="button">🛠️ Tackle</button>
+        </div>
+        <button class="btn ghost" id="btn-how" type="button">How to play</button>
+      </div>
+      <div class="rules-card" id="rules-card" hidden>
+        <h2>How to play</h2>
+        <ul>
+          <li><b>Press &amp; hold</b> CAST — longer hold, deeper water.</li>
+          <li>Wait for the <b>!</b> ripple, then <b>tap</b> to hook.</li>
+          <li>Rarer fish bite for less time. Deeper water, rarer fish.</li>
+          <li>Earn coins, upgrade your <b>rod</b>, <b>line</b> &amp; <b>lure</b>.</li>
+          <li>Fill the <b>journal</b> — 40 fish, one sleepy heron judging you.</li>
+        </ul>
+      </div>
+      <p class="whisper" id="menu-whisper"></p>
+    </div>
+  </section>
+
+  <!-- PLAY -->
+  <section id="scr-play" class="screen" aria-label="Fishing">
+    <canvas id="scene"></canvas>
+    <header class="hud">
+      <button class="icon-btn" id="btn-quit" type="button" aria-label="Back to menu">‹</button>
+      <div class="hud-coins" id="hud-coins">🪙 0</div>
+      <div class="hud-sky" id="hud-sky" title="time and weather">🌅</div>
+      <button class="icon-btn" id="btn-journal" type="button" aria-label="Journal">📖</button>
+      <button class="icon-btn" id="btn-shop" type="button" aria-label="Tackle shop">🛠️</button>
+      <button class="icon-btn" id="btn-daily" type="button" aria-label="Daily big catch">📅</button>
+      <button class="icon-btn" id="btn-mute" type="button" aria-label="Mute">🔊</button>
+    </header>
+    <div class="depth-gauge" id="depth-gauge" aria-hidden="true">
+      <div class="gauge-track"><div class="gauge-fill" id="gauge-fill"></div>
+        <div class="gauge-mark" data-z="shallows" style="bottom:66.6%">shallows</div>
+        <div class="gauge-mark" data-z="mid" style="bottom:33.3%">mid</div>
+        <div class="gauge-mark" data-z="deep" style="bottom:0%">deep</div>
+      </div>
+    </div>
+    <div class="hook-prompt" id="hook-prompt" hidden>TAP TO HOOK!</div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+    <button class="cast-btn" id="cast-btn" type="button"><span>HOLD TO CAST</span></button>
+  </section>
+
+  <!-- JOURNAL -->
+  <div class="overlay" id="ov-journal" hidden>
+    <div class="sheet">
+      <div class="sheet-head"><h2>📖 Field Journal</h2><button class="icon-btn" data-close="ov-journal" type="button" aria-label="Close">✕</button></div>
+      <p class="sheet-sub" id="journal-sub"></p>
+      <div class="journal-grid" id="journal-grid"></div>
+      <div class="journal-detail" id="journal-detail" hidden></div>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div class="overlay" id="ov-shop" hidden>
+    <div class="sheet">
+      <div class="sheet-head"><h2>🛠️ Tackle Shop</h2><button class="icon-btn" data-close="ov-shop" type="button" aria-label="Close">✕</button></div>
+      <p class="sheet-sub">Coins: <b id="shop-coins">0</b> 🪙</p>
+      <div id="shop-rows"></div>
+      <p class="sheet-note">Deeper water hides rarer fish. The heron approves of spending.</p>
+    </div>
+  </div>
+
+  <!-- DAILY -->
+  <div class="overlay" id="ov-daily" hidden>
+    <div class="sheet">
+      <div class="sheet-head"><h2>📅 Daily Big Catch</h2><button class="icon-btn" data-close="ov-daily" type="button" aria-label="Close">✕</button></div>
+      <div id="daily-body"></div>
+      <div class="arc-box" id="arc-lb"></div>
+    </div>
+  </div>
+
+  <!-- CATCH CARD -->
+  <div class="overlay" id="ov-catch" hidden>
+    <div class="catch-card">
+      <div class="catch-kicker" id="catch-kicker">You caught…</div>
+      <canvas class="catch-fish" id="catch-fish" width="220" height="110"></canvas>
+      <h2 id="catch-name"></h2>
+      <div class="catch-badges" id="catch-badges"></div>
+      <p class="catch-lore" id="catch-lore"></p>
+      <div class="catch-coins" id="catch-coins"></div>
+      <div class="catch-stamp" id="catch-stamp" hidden>★ NEW TO JOURNAL ★</div>
+      <div class="row-btns">
+        <button class="btn primary" id="btn-again" type="button">Keep fishing</button>
+        <button class="btn ghost" id="btn-catch-journal" type="button">Journal</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="sim.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
