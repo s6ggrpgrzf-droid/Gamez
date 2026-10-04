@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Neon Drift — one-touch drift racing</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HUD -->
+<header id="hud" hidden>
+  <div id="hud-pos">P6/6 · LAP 1/3</div>
+  <div id="hud-delta"></div>
+  <button id="btn-pause" type="button" aria-label="Pause">II</button>
+</header>
+<div id="hud-speed" hidden>0</div>
+<canvas id="minimap" width="132" height="132" hidden></canvas>
+
+<!-- drift button -->
+<button id="btn-drift" type="button" hidden>DRIFT</button>
+
+<!-- countdown -->
+<div id="countdown" hidden></div>
+
+<!-- toast (rival banter, milestones) -->
+<div id="toast" hidden></div>
+
+<!-- MENU -->
+<section id="menu" class="screen on" aria-label="Menu">
+  <div class="menu-inner">
+    <div class="logo" id="menu-logo">🏎️</div>
+    <h1>Neon Drift</h1>
+    <p class="tagline">One finger. Full sideways.</p>
+    <p class="hype" id="menu-hype"></p>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-quick" type="button">Quick Race</button>
+      <button class="btn" id="btn-cups" type="button">Cups<span class="btn-sub" id="cups-sub"></span></button>
+      <button class="btn" id="btn-tt" type="button">Time Trial</button>
+      <button class="btn" id="btn-daily" type="button">Daily Drift<span class="btn-sub" id="daily-sub">same track, worldwide</span></button>
+      <button class="btn ghost" id="btn-garage" type="button">Garage<span class="btn-sub" id="garage-sub"></span></button>
+      <button class="btn ghost" id="btn-how" type="button">How to play</button>
+    </div>
+    <div class="howto" id="howto" hidden>
+      <p><b>Drag left / right anywhere</b> to steer — your car accelerates on its own.
+      <b>Hold DRIFT</b> through corners: sparks build <span class="c1">blue</span> →
+      <span class="c2">orange</span> → <span class="c3">pink</span>. <b>Release</b> at the
+      corner exit for a boost. Pinker = bigger.</p>
+      <p>Hard steering scrubs speed — that's your brake. No rubber-banding here:
+      rivals drive the same physics you do. Beat them clean.</p>
+    </div>
+    <p class="best" id="menu-best"></p>
+    <p class="rowline">
+      <button class="mini" id="btn-mute" type="button">🔊</button>
+      <button class="mini" id="btn-assist" type="button">steer assist: off</button>
+    </p>
+  </div>
+</section>
+
+<!-- TRACK / CUP PICKER -->
+<section id="picker" class="screen" aria-label="Pick a track">
+  <div class="menu-inner">
+    <h2 id="picker-title">Pick a track</h2>
+    <p class="tagline" id="picker-sub"></p>
+    <div id="picker-grid" class="grid"></div>
+    <button class="btn ghost" id="btn-picker-back" type="button">← back</button>
+  </div>
+</section>
+
+<!-- GARAGE -->
+<section id="garage" class="screen" aria-label="Garage">
+  <div class="menu-inner">
+    <h2>Garage</h2>
+    <p class="tagline">tokens: <b id="garage-tokens">0</b></p>
+    <div id="car-cards" class="grid"></div>
+    <h3>Paint</h3>
+    <div id="paint-row" class="swatches"></div>
+    <h3>Underglow</h3>
+    <div id="glow-row" class="swatches"></div>
+    <h3>Workshop</h3>
+    <div id="upg-rows"></div>
+    <button class="btn ghost" id="btn-garage-back" type="button">← back</button>
+  </div>
+</section>
+
+<!-- PRE-RACE -->
+<section id="prerace" class="screen" aria-label="Pre-race">
+  <div class="menu-inner">
+    <h2 id="pre-name">Neon City</h2>
+    <p class="tagline" id="pre-sub">Track 1 · 3 laps</p>
+    <p class="hype" id="pre-hype"></p>
+    <div id="grid-list"></div>
+    <p class="rowline" id="diff-row">
+      <button class="mini diff" data-d="0" type="button">Cruiser</button>
+      <button class="mini diff on" data-d="1" type="button">Racer</button>
+      <button class="mini diff" data-d="2" type="button">Menace</button>
+    </p>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-go" type="button">RACE</button>
+      <button class="btn ghost" id="btn-pre-back" type="button">← back</button>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="result" class="screen" aria-label="Result">
+  <div class="card">
+    <div class="res-stars" id="result-pos">P1</div>
+    <h2 id="result-title">Race complete</h2>
+    <p id="result-sub"></p>
+    <div id="result-rows"></div>
+    <div id="arc-lb"></div>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-rematch" type="button">Rematch</button>
+      <button class="btn ghost" id="btn-tomenu" type="button">Menu</button>
+    </div>
+  </div>
+</section>
+
+<!-- PAUSE -->
+<section id="paused" class="screen" aria-label="Paused">
+  <div class="card">
+    <h2>Paused</h2>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-resume" type="button">Resume</button>
+      <button class="btn ghost" id="btn-quit" type="button">Quit race</button>
+    </div>
+  </div>
+</section>
+
+<div id="err" hidden></div>
+
+<script src="sim.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
