@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f6f1e6">
+<title>Still Life — a quiet coloring book</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="paint"></canvas>
+  <img id="lineart" alt="" draggable="false">
+</div>
+
+<div id="chrome">
+  <div id="topbar">
+    <button id="pages-btn" class="tbtn" aria-label="Pages">📚</button>
+    <div id="page-title">Blank Canvas</div>
+    <button id="ai-btn" class="tbtn" aria-label="Create">✨</button>
+    <button id="gallery-btn" class="tbtn" aria-label="Gallery">🖼</button>
+    <button id="sound-btn" class="tbtn" aria-label="Sound">🔊</button>
+    <button id="finish-btn" class="tbtn done" aria-label="Finish piece">✓</button>
+  </div>
+  <div id="toolbar">
+    <div class="seg">
+      <button id="medium-pencil" class="tool sel" aria-label="Colored pencil">✏️</button>
+      <button id="medium-oil" class="tool" aria-label="Oil paint">🖌️</button>
+    </div>
+    <button id="well" class="well" aria-label="Color"></button>
+    <div class="sizewrap">
+      <input id="size" type="range" min="6" max="80" value="26" aria-label="Brush size">
+      <span id="size-val">26</span>
+    </div>
+    <button id="fill-btn" class="tool" aria-label="Tap to fill">🪣</button>
+    <button id="assist-btn" class="tool sel" aria-label="Stay inside the lines">🧲</button>
+    <button id="undo-btn" class="tool" aria-label="Undo">↩️</button>
+  </div>
+</div>
+<button id="zen-btn" aria-label="Show controls">•</button>
+
+<!-- color sheet -->
+<div class="sheet" id="color-sheet">
+  <div class="card">
+    <button class="sheet-x" aria-label="Close">✕</button>
+    <div class="pal-head">
+      <button id="pal-prev" aria-label="Previous palette">‹</button>
+      <h2 id="pal-name">Botanical</h2>
+      <button id="pal-next" aria-label="Next palette">›</button>
+    </div>
+    <div id="pal-grid"></div>
+    <div id="pal-dots"></div>
+    <div class="shade-row">
+      <span>shade</span>
+      <input id="shade" type="range" min="-40" max="40" value="0" aria-label="Shade">
+      <span id="shade-val">0</span>
+    </div>
+    <h3>Recent</h3>
+    <div id="history-row" class="swrow"></div>
+    <h3>Quick pencils <small>tap to use · hold to store</small></h3>
+    <div id="slots" class="swrow"></div>
+  </div>
+</div>
+
+<!-- pages sheet -->
+<div class="sheet" id="pages-sheet">
+  <div class="card wide">
+    <button class="sheet-x" aria-label="Close">✕</button>
+    <h2>Choose a page</h2>
+    <div id="pages-grid"></div>
+    <button id="clear-btn" class="quiet">Clear this page and start over</button>
+  </div>
+</div>
+
+<!-- gallery sheet -->
+<div class="sheet" id="gallery-sheet">
+  <div class="card wide">
+    <button class="sheet-x" aria-label="Close">✕</button>
+    <h2>Your gallery</h2>
+    <div id="gallery-grid"></div>
+  </div>
+</div>
+
+<!-- ai sheet -->
+<div class="sheet" id="ai-sheet">
+  <div class="card">
+    <button class="sheet-x" aria-label="Close">✕</button>
+    <h2>Create with AI</h2>
+    <div id="ai-status"></div>
+    <button id="photo-btn" class="bigbtn">📷 Color your own photo</button>
+    <input type="file" id="photo-input" accept="image/*" hidden>
+    <div class="mood-row">
+      <input id="mood-input" type="text" placeholder="a mood… try “desert sunset”" maxlength="40">
+      <button id="mood-go" class="bigbtn">Palette</button>
+    </div>
+    <button id="daily-btn" class="bigbtn">📅 Today’s AI page</button>
+    <button id="timelapse-btn" class="bigbtn">🎬 Replay as time-lapse</button>
+    <p class="note">AI features need a connection; everything else works offline.</p>
+  </div>
+</div>
+
+<!-- timelapse sheet -->
+<div class="sheet" id="timelapse-sheet">
+  <div class="card wide">
+    <button class="sheet-x" aria-label="Close">✕</button>
+    <h2>Watch it paint itself</h2>
+    <video controls playsinline></video>
+    <div class="tl-row">
+      <a id="tl-download" class="bigbtn" href="#">Download video</a>
+      <button id="tl-share" class="bigbtn" style="display:none">Share</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="engine.js?v=20261004a"></script>
+<script src="app.js?v=20261004a"></script>
+</body>
+</html>

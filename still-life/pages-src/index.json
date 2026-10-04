@@ -1,0 +1,42 @@
+[
+  {
+    "file": "mandala-lotus.svg",
+    "title": "Lotus Mandala",
+    "category": "Mandalas"
+  },
+  {
+    "file": "mandala-geo.svg",
+    "title": "Starlight Mandala",
+    "category": "Mandalas"
+  },
+  {
+    "file": "botanical-wildflowers.svg",
+    "title": "Wildflower Bouquet",
+    "category": "Botanical"
+  },
+  {
+    "file": "botanical-monstera.svg",
+    "title": "Tropical Leaves",
+    "category": "Botanical"
+  },
+  {
+    "file": "animal-owl.svg",
+    "title": "Night Owl",
+    "category": "Animals"
+  },
+  {
+    "file": "animal-fox.svg",
+    "title": "Sleeping Fox",
+    "category": "Animals"
+  },
+  {
+    "file": "landscape-lake.svg",
+    "title": "Mountain Lake",
+    "category": "Landscapes"
+  },
+  {
+    "file": "pattern-waves.svg",
+    "title": "Ocean Waves",
+    "category": "Patterns"
+  }
+]
