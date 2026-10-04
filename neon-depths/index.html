@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Neon Depths — Pinball</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud-top">
+    <div id="score">0</div>
+    <div id="balls">●○○</div>
+  </div>
+
+  <div id="banner"><div id="banner-main"></div><div id="banner-sub"></div></div>
+
+  <div id="depth-gauge"><div id="depth-fill"></div><div id="depth-label">0m</div></div>
+
+  <div id="save-wrap"><div id="save-fill"></div><span>BALL SAVE</span></div>
+
+  <div id="combo"></div>
+  <div id="taunt"></div>
+
+  <div id="tilt-wrap"><div id="tilt-fill"></div></div>
+
+  <button id="nudge-left" class="nudge" aria-label="nudge left">◀</button>
+  <button id="nudge-right" class="nudge" aria-label="nudge right">▶</button>
+  <button id="mute-btn" aria-label="mute">🔊</button>
+
+  <!-- Attract -->
+  <div id="attract" class="overlay">
+    <div class="title">NEON<br>DEPTHS</div>
+    <div class="subtitle">a deep-sea pinball descent</div>
+    <div class="tap">— tap to dive —</div>
+    <div id="attract-best" class="best"></div>
+    <div class="howto">tap left / right to flip &nbsp;·&nbsp; drag the plunger lane &nbsp;·&nbsp; Q / E to nudge</div>
+  </div>
+
+  <!-- Game over -->
+  <div id="gameover" class="overlay" style="display:none">
+    <div class="title small">DIVE COMPLETE</div>
+    <div id="final-score" class="final">0 pts</div>
+    <div id="best-score" class="best"></div>
+    <div class="tap">— tap to dive again —</div>
+  </div>
+
+  <!-- Pause -->
+  <div id="pause-overlay" class="overlay" style="display:none">
+    <div class="title small">PAUSED</div>
+    <div class="tap">— tap to resume —</div>
+  </div>
+</div>
+
+<script src="sim.js?v=1"></script>
+<script src="table.js?v=1"></script>
+<script src="rules.js?v=1"></script>
+<script src="render.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>

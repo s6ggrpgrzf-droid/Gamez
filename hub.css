@@ -137,3 +137,8 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
 .art-dead-mans-hand{background:radial-gradient(circle at 50% 30%,#1c2b18 0%,#0c110a 55%,#050604 100%)}
 .art-dead-mans-hand::before{content:"\1F0CF";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 16px rgba(201,162,39,.55))}
 .art-dead-mans-hand::after{content:"";position:absolute;left:-25%;right:-25%;top:58%;height:12px;transform:rotate(18deg);background:linear-gradient(90deg,transparent,#a4161a 35%,#e63946 65%,transparent);filter:blur(4px);opacity:.9;z-index:0}
+
+/* Neon Depths key art: pure CSS, abyss gradient with kraken + ball streak (no image file) */
+.art-neon-depths{background:radial-gradient(circle at 50% 22%,#0a3a52 0%,#041a2c 48%,#01040a 100%)}
+.art-neon-depths::before{content:"\1F991";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 18px rgba(180,76,224,.8))}
+.art-neon-depths::after{content:"";position:absolute;left:-25%;right:-25%;top:66%;height:10px;transform:rotate(-14deg);background:linear-gradient(90deg,transparent,#4ce0e0 35%,#eafcff 65%,transparent);filter:blur(3px);opacity:.9;z-index:0}
