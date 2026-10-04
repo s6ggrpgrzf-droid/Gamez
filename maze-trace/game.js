@@ -39,10 +39,27 @@
   function loadPref(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
   function savePref(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
+  /* reduced motion: calm the oscillation, never the gameplay */
+  var REDUCED = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || false;
+
+  /* Haptics: feather-light taps, fully guarded so they can never throw.
+   * iOS Safari has no navigator.vibrate — the typeof guard covers that.
+   * Respects the settings toggle (S.haptic) and prefers-reduced-motion. */
+  function haptic(pattern) {
+    if (REDUCED) return;
+    if (!S || !S.haptic) return;
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate(pattern);
+      }
+    } catch (e) {}
+  }
+
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', S.theme);
     buildGrain();
     document.getElementById('sound-btn').textContent = S.sound ? '🔊' : '🔇';
+    document.getElementById('haptic-btn').textContent = S.haptic ? '📳' : '📴';
     draw();
   }
 
@@ -120,11 +137,13 @@
       n: o.n, L: o.L, board: o.board, daily: o.daily,
       lives: 3, mistakes: 0, cleared: 0, total: o.board.count,
       t0: Date.now(), won: false,
-      flying: [], trails: [], ripples: [],
-      shake: 0, badFlash: null, hintKey: null, hintT: 0,
+      flying: [], trails: [], ripples: [], motes: [],
+      glowT: 0,
+      badFlash: null, hintKey: null, hintT: 0,
       guide: null, guideT: 0,
       theme: loadPref('as_theme', 'day'),
       sound: loadPref('as_sound', '1') === '1',
+      haptic: loadPref('as_haptic', '1') === '1',
     };
     try { MT_Audio.setEnabled(S.sound); } catch (e) {}
     applyTheme();
@@ -176,16 +195,21 @@
     S.flying.push({
       pts: a.pts.map(function (p) { return [p[0], p[1]]; }),
       dir: a.dir, dx: dx, dy: dy, dist: dist,
-      t: 0, dur: isFinal ? 1.05 : 0.42, final: isFinal,
+      t: 0, dur: isFinal ? 1.2 : 0.42, final: isFinal,
     });
     ArrowGen.pathCells(b.w, b.h, a).forEach(function (cc, i) {
       var pc = cellCenter(cc[0], cc[1]);
       S.trails.push({ x: pc[0], y: pc[1], t: -i * 0.02, life: 0.5 });
     });
+    // soft placement pulse: a slow, low-alpha gold ring breathing out from
+    // the tail cell where the arrow was lifted from
+    var tl = a.pts[0], tc = cellCenter(tl[0], tl[1]);
+    S.ripples.push({ x: tc[0], y: tc[1], t: 0, life: 1.6, maxA: 0.22, grow: 2.4 });
     ArrowGen.removeArrow(b, id);
     S.cleared++;
     S.hintKey = null; S.guide = null;
     try { if (S.sound) MT_Audio.slide(); } catch (e) {}
+    haptic([10]);
     updateHUD();
     if (Object.keys(b.arrows).length === 0) win();
     else draw();
@@ -194,7 +218,7 @@
   function wrongTap(id) {
     S.mistakes++;
     S.lives--;
-    S.shake = 9;
+    // no camera shake in this game — a wrong tap just tints the arrow red, briefly
     S.badFlash = { id: id, t: 0 };
     S.guide = null;
     try { if (S.sound) MT_Audio.bad(); } catch (e) {}
@@ -224,6 +248,18 @@
       saveProgress(p);
     }
     try { if (S.sound) MT_Audio.win(); } catch (e) {}
+    haptic([10, 40, 10]);
+    // warm win glow + drifting motes: the glow breathes for a while, the motes
+    // drift up and fade; both live behind the win card
+    S.glowT = REDUCED ? 0.08 : 0.0001; // reduced motion: one faint static wash, no breathing
+    for (var m = 0; m < 16; m++) {
+      S.motes.push({
+        x: Math.random() * W, y: H * 0.25 + Math.random() * H * 0.75,
+        vx: (Math.random() - 0.5) * 10, vy: -(8 + Math.random() * 14),
+        r: 1.5 + Math.random() * 2.5, ph: Math.random() * 7,
+        t: -Math.random() * 2.5, life: 7 + Math.random() * 5
+      });
+    }
     var delay = S.flying.length ? 1150 : 500; // let the final arrow finish its slow glide
     setTimeout(function () {
       arcadeBoardSubmit(boardId, label, secs);
@@ -297,8 +333,16 @@
       ctx.fillRect(0, 0, W, H);
     }
     if (!S) return;
+    // win glow: warm gold light that breathes — faint, slow, sleepy
+    if (S.won && S.glowT > 0) {
+      var breathe = REDUCED ? 0.075 : 0.06 + 0.035 * (0.5 + 0.5 * Math.sin(S.glowT * 2 * Math.PI / 4.5));
+      var grad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
+      grad.addColorStop(0, hexA(T.gold, breathe));
+      grad.addColorStop(1, hexA(T.gold, 0));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
     ctx.save();
-    if (S.shake > 0) ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake);
 
     var b = S.board;
 
@@ -356,7 +400,8 @@
       var a = b.arrows[id];
       var col = T.ink;
       if (S.badFlash && S.badFlash.id === id) col = '#d94040';
-      var pulse = (S.hintKey === id) ? 1 + 0.25 * Math.sin(Date.now() / 130) : 1;
+      var pulse = 1;
+      if (S.hintKey === id) pulse = REDUCED ? 1.08 : 1 + 0.12 * Math.sin(Date.now() / 900); // slow breathing halo
       if (S.hintKey === id) {
         // soft gold halo under the hinted arrow
         ctx.save();
@@ -371,9 +416,11 @@
       drawArrowShape(a.pts, a.dir, col, pulse);
     });
 
-    // flying arrows
+    // flying arrows — the final one glides on a smoothstep ease (slow start,
+    // slow landing) instead of the snappier easeOut used for the rest
     S.flying.forEach(function (f) {
-      var p = 1 - Math.pow(1 - f.t / f.dur, 2); // easeOut
+      var fx = Math.min(1, f.t / f.dur);
+      var p = f.final ? fx * fx * (3 - 2 * fx) : 1 - Math.pow(1 - fx, 2);
       var ox = f.dx * f.dist * p, oy = f.dy * f.dist * p;
       var moved = f.pts.map(function (c) { return [c[0] + ox / cell, c[1] + oy / cell]; });
       ctx.globalAlpha = f.final ? Math.max(0, 1 - p * 0.9) : 1 - p * 0.55;
@@ -381,13 +428,21 @@
       ctx.globalAlpha = 1;
     });
 
-    // final-arrow ripple rings
+    // soft ripples — placement pulses (low alpha, wide) and the final ripple
     S.ripples.forEach(function (r) {
       var p = r.t / r.life;
       var q = toScreen(r.x, r.y);
-      ctx.strokeStyle = hexA(T.gold, (1 - p) * 0.6);
+      ctx.strokeStyle = hexA(T.gold, (1 - p) * (r.maxA == null ? 0.6 : r.maxA));
       ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(q[0], q[1], 8 + p * cell * zoom * 1.6, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(q[0], q[1], 8 + p * cell * zoom * (r.grow == null ? 1.6 : r.grow), 0, 7); ctx.stroke();
+    });
+
+    // drifting motes on win: tiny warm specks floating up, fading in and out
+    S.motes.forEach(function (mo) {
+      if (mo.t < 0) return;
+      var ma = Math.sin(Math.PI * Math.min(1, mo.t / mo.life)) * 0.35;
+      ctx.fillStyle = hexA(T.gold, ma);
+      ctx.beginPath(); ctx.arc(mo.x, mo.y, mo.r, 0, 7); ctx.fill();
     });
 
     ctx.restore();
@@ -569,6 +624,13 @@
     try { MT_Audio.setEnabled(S.sound); MT_Audio.init(); if (S.sound) MT_Audio.click(); } catch (e) {}
     document.getElementById('sound-btn').textContent = S.sound ? '🔊' : '🔇';
   });
+  document.getElementById('haptic-btn').addEventListener('click', function () {
+    S.haptic = !S.haptic;
+    savePref('as_haptic', S.haptic ? '1' : '0');
+    try { if (S.sound) MT_Audio.click(); } catch (e) {}
+    document.getElementById('haptic-btn').textContent = S.haptic ? '📳' : '📴';
+    haptic([10]); // feather-light confirmation
+  });
   document.getElementById('map-btn').addEventListener('click', showMap);
   document.getElementById('map-close').addEventListener('click', function () {
     document.getElementById('map-modal').classList.remove('show');
@@ -647,7 +709,6 @@
     last = ts;
     if (!S) return;
     var dirty = false;
-    if (S.shake > 0) { S.shake = Math.max(0, S.shake - dt * 40); dirty = true; }
     if (S.badFlash) { S.badFlash.t += dt; if (S.badFlash.t > 0.6) S.badFlash = null; dirty = true; }
     if (S.hintT > 0) { S.hintT -= dt; if (S.hintT <= 0) S.hintKey = null; dirty = true; }
     else if (S.hintKey) dirty = true;
@@ -663,7 +724,7 @@
           try { if (S.sound) MT_Audio.final(); } catch (e) {}
           var hd = f.pts[f.pts.length - 1];
           var hc = cellCenter(hd[0], hd[1]);
-          S.ripples.push({ x: hc[0] + f.dx * f.dist / cell, y: hc[1] + f.dy * f.dist / cell, t: 0, life: 1.1 });
+          S.ripples.push({ x: hc[0] + f.dx * f.dist / cell, y: hc[1] + f.dy * f.dist / cell, t: 0, life: 1.1, maxA: 0.6, grow: 1.6 });
         }
       }
     }
@@ -677,31 +738,27 @@
       r.t += dt; dirty = true;
       if (r.t >= r.life) S.ripples.splice(k, 1);
     }
+    // win ambience: the glow breathes for ~25s, the motes drift up and fade.
+    // (reduced motion: glow was set static at win; motes hang still)
+    if (S.won && !REDUCED && S.glowT < 25) {
+      S.glowT += dt; dirty = true;
+      for (var m2 = S.motes.length - 1; m2 >= 0; m2--) {
+        var mo = S.motes[m2];
+        mo.t += dt;
+        if (mo.t >= 0) {
+          mo.x += (mo.vx + Math.sin(mo.t * 0.8 + mo.ph) * 6) * dt;
+          mo.y += mo.vy * dt;
+        }
+        if (mo.t > mo.life) S.motes.splice(m2, 1); else dirty = true;
+      }
+    }
     if (dirty || !S._drawn) { draw(); S._drawn = true; }
   }
 
-  /* ---------- boot ---------- */
-  resize();
-  var p0 = best(), startN = 1;
-  for (var i = 1; i <= LEVELS.length; i++) if (p0[i]) startN = i + 1;
-  startN = Math.min(startN, LEVELS.length);
-  newLevel(startN);
-  document.getElementById('menu').classList.add('show');
-  document.getElementById('play-btn').addEventListener('click', function () {
-    document.getElementById('menu').classList.remove('show');
-    try { MT_Audio.init(); } catch (e) {}
-  });
-  fetchDaily(); // prefetch today's board in the background
-  window.MT_LEVELS = LEVELS.length;
-  window.MT_DEBUG = { tapCell: tapCell, getS: function () { return S; }, newLevel: newLevel, newDaily: newDaily, showGuide: showGuide };
-  requestAnimationFrame(loop);
-
-  /* ---------- Gamez Arcade: global leaderboards ----------
-     Fastest solve per board. Scores are stored as (3600 - seconds) so that
-     faster times rank higher; the board converts them back to m:ss. */
-  var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
-  /* flavor text (shared backend; silent local fallback). Level epithets are
-     cached in localStorage so each level generates once, ever. */
+  /* ---------- Gamez Arcade flavor text (shared backend; silent local fallback).
+     Placed BEFORE the boot block: updateHUD() -> levelEpithet() runs during boot,
+     and `var` assignments below the boot line would still be undefined at that
+     point (the game.js:734 crash). ---------- */
   var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
   var TITLE_KEY = 'mazetrace_titles';
   function titleCache() {
@@ -744,6 +801,29 @@
       cb(t);
     });
   }
+
+  /* ---------- boot ---------- */
+  resize();
+  var p0 = best(), startN = 1;
+  for (var i = 1; i <= LEVELS.length; i++) if (p0[i]) startN = i + 1;
+  startN = Math.min(startN, LEVELS.length);
+  newLevel(startN);
+  document.getElementById('menu').classList.add('show');
+  document.getElementById('play-btn').addEventListener('click', function () {
+    document.getElementById('menu').classList.remove('show');
+    try { MT_Audio.init(); } catch (e) {}
+  });
+  fetchDaily(); // prefetch today's board in the background
+  window.MT_LEVELS = LEVELS.length;
+  window.MT_DEBUG = { tapCell: tapCell, getS: function () { return S; }, newLevel: newLevel, newDaily: newDaily, showGuide: showGuide };
+  requestAnimationFrame(loop);
+
+  /* ---------- Gamez Arcade: global leaderboards ----------
+     Fastest solve per board. Scores are stored as (3600 - seconds) so that
+     faster times rank higher; the board converts them back to m:ss. */
+  var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+  /* flavor-text helpers (AI_BASE, TITLE_KEY, aiFetch, TITLE_FALLBACKS, levelEpithet)
+     were moved above the boot block — boot calls them via updateHUD(). */
   function arcadeFetch(path, body, cb) {
     var done = false, timer = null;
     function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }

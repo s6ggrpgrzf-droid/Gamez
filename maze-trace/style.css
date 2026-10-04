@@ -16,7 +16,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); font-family:
   padding: calc(12px + env(safe-area-inset-top)) 16px 8px; z-index: 5; pointer-events: none; }
 #topbar > * { pointer-events: auto; }
 .top-btn { background: var(--paper); border: 1px solid var(--line); border-radius: 50%;
-  width: 42px; height: 42px; font-size: 21px; color: var(--ink); cursor: pointer;
+  width: 44px; height: 44px; font-size: 21px; color: var(--ink); cursor: pointer;
   box-shadow: 0 2px 8px var(--shadow); display: flex; align-items: center; justify-content: center; line-height: 1; }
 .top-btn:active { transform: scale(.9); }
 #back-btn { font-size: 30px; padding-bottom: 4px; }
@@ -45,7 +45,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); font-family:
 
 #zoom-ctl { position: fixed; right: 14px; bottom: calc(110px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 8px; z-index: 5; opacity: .75; }
-#zoom-ctl button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line);
+#zoom-ctl button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
   background: var(--paper); font-size: 19px; color: var(--sub); cursor: pointer; box-shadow: 0 2px 8px var(--shadow); }
 #zoom-ctl button:active { transform: scale(.92); }
 
@@ -85,7 +85,7 @@ html[data-theme="night"] #logo-arrow { stroke: #d9c9a4; }
 .help b { color: var(--ink); }
 #map-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0 20px; }
 .map-cell { background: var(--soft); border: 2px solid var(--line); border-radius: 16px; padding: 12px 4px; cursor: pointer;
-  display: flex; flex-direction: column; gap: 2px; }
+  display: flex; flex-direction: column; gap: 2px; min-height: 64px; justify-content: center; }
 .map-cell:active { transform: scale(.93); }
 .map-cell.done { border-color: var(--gold); }
 .map-cell.cur { box-shadow: 0 0 0 3px rgba(192,138,45,.35); }
