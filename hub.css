@@ -132,3 +132,8 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
 .art-neon-drift{background:linear-gradient(160deg,#070a16 0%,#10162e 55%,#1c1240 100%)}
 .art-neon-drift::before{content:"\1F3CE";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 18px rgba(77,216,255,.8))}
 .art-neon-drift::after{content:"";position:absolute;left:-25%;right:-25%;top:64%;height:16px;transform:rotate(-16deg);background:linear-gradient(90deg,transparent,#4dd8ff 30%,#ff4dd8 70%,transparent);filter:blur(3px);opacity:.85;z-index:0}
+
+/* Dead Man's Hand key art: pure CSS, black-green felt with blood slash (no image file) */
+.art-dead-mans-hand{background:radial-gradient(circle at 50% 30%,#1c2b18 0%,#0c110a 55%,#050604 100%)}
+.art-dead-mans-hand::before{content:"\1F0CF";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 16px rgba(201,162,39,.55))}
+.art-dead-mans-hand::after{content:"";position:absolute;left:-25%;right:-25%;top:58%;height:12px;transform:rotate(18deg);background:linear-gradient(90deg,transparent,#a4161a 35%,#e63946 65%,transparent);filter:blur(4px);opacity:.9;z-index:0}

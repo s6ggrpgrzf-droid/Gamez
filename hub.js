@@ -133,7 +133,8 @@
     { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
     { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' },
     { id: 'castaway-cove', name: 'Castaway Cove', cls: 'art-castaway-cove' },
-    { id: 'neon-drift', name: 'Neon Drift', cls: 'art-neon-drift' }
+    { id: 'neon-drift', name: 'Neon Drift', cls: 'art-neon-drift' },
+    { id: 'dead-mans-hand', name: "Dead Man's Hand", cls: 'art-dead-mans-hand' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -220,6 +221,11 @@
         var nd = readJSON('nd_save_v1');
         if (!nd || !nd.tokens) return null;
         return { label: '🏎️ ' + nd.tokens + ' ◈ · ' + (nd.cupsUnlocked || 1) + '/4 cups', frac: Math.min(1, (nd.cupsUnlocked || 1) / 4) };
+      }
+      if (id === 'dead-mans-hand') {
+        var dmh = readJSON('dmh_progress_v1');
+        if (!dmh) return null;
+        return { label: '🃏 Best ' + (dmh.best || 0) + ' · ' + (dmh.rooms || 0) + '/5 rooms', frac: Math.min(1, (dmh.rooms || 0) / 5) };
       }
     } catch (e) { return null; }
     return null;
