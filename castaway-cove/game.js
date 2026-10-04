@@ -1063,6 +1063,7 @@ function drawAngler(g) {
   var surge = phase === 'reeling' ? Math.sin(world.t * 22) * 1.2 : 0;
   g.save();
   g.translate(x, y + breathe * 0.4);
+  if (phase === 'reveal') g.rotate(-0.09); /* leaning back with the catch held high */
   /* legs dangling over the dock edge */
   g.strokeStyle = '#4a5a6a'; g.lineWidth = 9; g.lineCap = 'round';
   g.beginPath(); g.moveTo(-8, 2); g.lineTo(-10, 26); g.stroke();
@@ -1459,6 +1460,11 @@ function depthToY(d) {
 }
 function drawRodAndLine(g) {
   var tipX = heronPerchX() - 40, tipY = dockY() - 96;
+  /* the rod bends under the fish: surges yank the tip down, the reveal holds it bent */
+  var bend = 0;
+  if (phase === 'reeling' && world.pullActive) bend = 16 * (0.4 + 0.6 * world.pullFrac);
+  else if (phase === 'reveal') bend = 10;
+  tipY += bend;
   /* rod */
   g.save();
   g.strokeStyle = '#6b4a2e'; g.lineWidth = 6; g.lineCap = 'round';
