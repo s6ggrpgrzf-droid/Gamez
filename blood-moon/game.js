@@ -438,7 +438,7 @@ var STEP = 1 / 60;
 var G = {
   mode: 'menu', api: null, seed: 1, night: 1,
   daily: false, dailyDate: null, practice: false,
-  cam: { x: 1100, y: 1100 }, shakeT: 0, shakeMag: 0,
+  cam: { x: 1100, y: 1100 }, shakeT: 0, shakeMag: 0, hitStop: 0,
   acc: 0, last: 0,
   particles: [], dmgNums: [], bubbles: [], fx: [],
   decor: [], fogBlobs: [],
@@ -468,6 +468,33 @@ function bloodBurst(x, y, n, big) {
   }
 }
 function shake(mag, t) { G.shakeMag = Math.max(G.shakeMag, mag); G.shakeT = Math.max(G.shakeT, t); }
+// hit-stop: a heavy freeze where the sim holds its breath but the world keeps breathing.
+// duration in ms; long values serve the heavy gothic feel — never snappy, never skipped.
+function hitStop(ms) { G.hitStop = Math.max(G.hitStop, ms / 1000); }
+
+/* ================= HAPTICS ================= */
+// navigator.vibrate vocabulary, fully feature-detected so iOS (no vibrate) is a silent no-op.
+// Honors prefers-reduced-motion; toggleable from the pause menu. Pref stored outside the save.
+var HAP = {
+  on: true, rm: false,
+  init: function () {
+    try { this.rm = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { this.rm = false; }
+    try { var v = localStorage.getItem('bm_haptics'); if (v === '0') this.on = false; } catch (e) {}
+  },
+  set: function (on) {
+    this.on = !!on;
+    try { localStorage.setItem('bm_haptics', this.on ? '1' : '0'); } catch (e) {}
+  },
+  buzz: function (pat) {
+    if (!this.on || this.rm) return;
+    try { if (navigator.vibrate) navigator.vibrate(pat); } catch (e) {}
+  },
+  light: function () { this.buzz(12); },          // bat-form snap, soft taps
+  medium: function () { this.buzz(30); },         // heavy confirm
+  success: function () { this.buzz([12, 40, 12]); },  // elite slain, chest claimed
+  warning: function () { this.buzz([20, 60, 20]); },   // dawn breaks, Helsing stalks
+  error: function () { this.buzz([40, 80, 40, 40, 80, 40]); } // the hunter's blow lands on you
+};
 function bubble(x, y, text) {
   if (G.bubbles.length > 6) G.bubbles.shift();
   G.bubbles.push({ x: x, y: y, text: text, t: 2.4 });
@@ -1090,13 +1117,13 @@ function drainEvents() {
       case 'hit': dmgNum(e.x, e.y, e.dmg, e.dmg >= 30); break;
       case 'kill':
         bloodBurst(e.x, e.y, e.big ? 30 : 9, e.big);
-        if (e.big) { shake(10, 0.5); SFX.nova(); banner('HELSING IS SLAIN'); }
+        if (e.big) { shake(10, 0.5); SFX.nova(); banner('HELSING IS SLAIN'); hitStop(90); HAP.success(); }
         break;
       case 'bite': G.fx.push({ kind: 'bite', x: e.x, y: e.y, ang: e.ang, t: 0.16, max: 0.16 }); SFX.bite(e.crit); break;
       case 'chain': G.fx.push({ kind: 'chain', x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, t: 0.14, max: 0.14 }); SFX.chain(); break;
       case 'pickup': SFX.pickup(); break;
       case 'hurt':
-        SFX.hurt(); shake(7, 0.28);
+        SFX.hurt(); shake(7, 0.28); HAP.error();
         for (var hp2 = 0; hp2 < 6; hp2++) {
           var a = Math.random() * TAU;
           pSpawn(G.api.sim.player.x, G.api.sim.player.y, Math.cos(a) * 160, Math.sin(a) * 160, 0.4, 3, '#e63946', 200);
@@ -1130,8 +1157,8 @@ function drainEvents() {
         if (e.n <= 4) banner('🕯 THE ' + HOUR_NAMES[e.n - 1] + ' HOUR TOLLS');
         else banner('🌅 DAWN APPROACHES');
         break;
-      case 'dawn': SFX.dawn(); G.dawn = true; banner('☀ DAWN — FEAR THE LIGHT'); break;
-      case 'boss': SFX.boss(); shake(9, 0.5); banner('VAN HELSING HAS COME'); break;
+      case 'dawn': SFX.dawn(); G.dawn = true; banner('☀ DAWN — FEAR THE LIGHT'); HAP.warning(); break;
+      case 'boss': SFX.boss(); shake(9, 0.5); banner('VAN HELSING HAS COME'); HAP.warning(); break;
       case 'priestcast':
         G.fx.push({ kind: 'telegraph', x: e.x, y: e.y, r: e.r, t: 1.1, max: 1.1 });
         SFX.priest(); break;
@@ -1157,13 +1184,14 @@ function drainEvents() {
         SFX.surge();
         shake(9, 0.5);
         banner('🩸 BLOOD SURGE — ' + (e.name || '').toUpperCase());
+        HAP.warning();
         break;
       case 'surgeend':
         toast('the thirst ebbs… for now');
         break;
       case 'thwip': SFX.thwip(); break;
       case 'batform': {
-        SFX.batscreech();
+        SFX.batscreech(); HAP.light();
         for (var bfi = 0; bfi < 16; bfi++) {
           var bfa = Math.random() * TAU;
           pSpawn(e.x, e.y, Math.cos(bfa) * 200, Math.sin(bfa) * 200, 0.6, 4, '#0d0a16', 0);
@@ -1211,7 +1239,7 @@ function drainEvents() {
           banner('🎁 THE CHEST YIELDS: ' + pick.name);
           setTimeout(function () { toast(pick.desc); }, 1400);
         }
-        SFX.chest(); shake(8, 0.4);
+        SFX.chest(); shake(8, 0.4); hitStop(60); HAP.success();
         for (var gi2 = 0; gi2 < 30; gi2++) {
           var ga2 = Math.random() * TAU;
           pSpawn(e.x, e.y, Math.cos(ga2) * 240, Math.sin(ga2) * 240, 0.8, 4.5, '#c9a227', 220);
@@ -1231,6 +1259,7 @@ function drainEvents() {
         SFX.bossSting();
         shake(10, 0.6);
         banner('🙏 FINAL PRAYER');
+        hitStop(80); HAP.warning();
         G.bossMusic = true;
         break;
     }
@@ -1246,18 +1275,23 @@ function frame(now) {
   G.last = now;
   pollKeys();
   if (G.mode === 'playing' && G.api) {
-    G.acc += dt;
-    var n = 0;
-    while (G.acc >= STEP && n < 5) {
-      var inp = { mx: IN.mx, my: IN.my, bat: IN.bat };
-      IN.bat = false; // edge-triggered, one shot per press
-      G.api.step(STEP, inp);
-      G.acc -= STEP; n++;
-      drainEvents();
-      if (G.api.sim.pendingLevels > 0) { openLevelUp(); break; }
-      if (G.api.sim.over) { endRun(G.api.sim.state === 'won'); break; }
+    if (G.hitStop > 0) {
+      // heavy freeze: the sim holds its breath while the render loop keeps breathing
+      G.hitStop -= dt;
+    } else {
+      G.acc += dt;
+      var n = 0;
+      while (G.acc >= STEP && n < 5) {
+        var inp = { mx: IN.mx, my: IN.my, bat: IN.bat };
+        IN.bat = false; // edge-triggered, one shot per press
+        G.api.step(STEP, inp);
+        G.acc -= STEP; n++;
+        drainEvents();
+        if (G.api.sim.pendingLevels > 0) { openLevelUp(); break; }
+        if (G.api.sim.over) { endRun(G.api.sim.state === 'won'); break; }
+      }
+      if (n === 5) G.acc = 0; // spiral of death guard
     }
-    if (n === 5) G.acc = 0; // spiral of death guard
     updateHUD();
   }
   render();
@@ -1269,23 +1303,28 @@ var elHp = document.getElementById('hp-bar'), elHpG = document.getElementById('h
     elKills = document.getElementById('kills'), elLvl = document.getElementById('lvl-badge'),
     elNight = document.getElementById('night-label'),
     elBlood = document.getElementById('blood-bar'), elBloodWrap = document.getElementById('blood-wrap');
+// DOM text writes are guarded: only touch the DOM when the string actually changed
+var _hudCache = {};
+function setHudText(el, v) {
+  if (_hudCache[el.id] !== v) { _hudCache[el.id] = v; el.textContent = v; }
+}
 function updateHUD() {
   var sim = G.api.sim, P = sim.player;
   var hpp = clamp(P.hp / P.maxHp * 100, 0, 100);
   elHp.style.width = hpp + '%';
   elHpG.style.width = hpp + '%';
   elXp.style.width = clamp(P.xp / P.xpNext * 100, 0, 100) + '%';
-  elLvl.textContent = P.level;
-  elKills.textContent = '🩸 ' + sim.kills;
+  setHudText(elLvl, '' + P.level);
+  setHudText(elKills, '🩸 ' + sim.kills);
   // blood-thirst meter: fills with every drink, surges when full
   elBlood.style.width = clamp(P.bloodM / P.bloodMax * 100, 0, 100) + '%';
   elBloodWrap.classList.toggle('full', P.surgeT > 0);
   if (sim.state === 'dawn') {
-    elTimer.textContent = '☀ DAWN ' + Math.ceil(sim.dawnT) + 's';
+    setHudText(elTimer, '☀ DAWN ' + Math.ceil(sim.dawnT) + 's');
     elTimer.classList.add('dawn');
   } else {
     var r = Math.max(0, Math.ceil(sim.nightT));
-    elTimer.textContent = '☾ ' + ((r / 60) | 0) + ':' + ('0' + (r % 60)).slice(-2);
+    setHudText(elTimer, '☾ ' + ((r / 60) | 0) + ':' + ('0' + (r % 60)).slice(-2));
     elTimer.classList.remove('dawn');
   }
   AU.heartOn = P.hp < P.maxHp * 0.3 && !sim.over;
@@ -1312,7 +1351,7 @@ function startRun(night, opts) {
   var seed = opts.seed != null ? opts.seed : ((Date.now() ^ (Math.random() * 1e9)) >>> 0);
   G.seed = seed; G.night = night; G.daily = !!opts.daily; G.dailyDate = opts.date || null;
   G.practice = !!opts.practice;
-  G.dawn = false; G.acc = 0; G._submitted = false; G.bossMusic = false; G.sunFlash = 0;
+  G.dawn = false; G.acc = 0; G.hitStop = 0; G._submitted = false; G.bossMusic = false; G.sunFlash = 0;
   G.particles.forEach(function (p) { p.t = 1; });
   G.dmgNums.length = 0; G.bubbles.length = 0; G.fx.length = 0;
   G.api = BloodMoonSim.makeSim(seed, {
@@ -1358,6 +1397,7 @@ function openLevelUp() {
     var st = G.api.sim.player.upg[u.id] || 0;
     var d = document.createElement('div');
     d.className = 'card';
+    d.style.animationDelay = (i * 0.07) + 's'; // summoned one by one, heavy and slow
     d.innerHTML = '<div class="c-name">' + escHtml(u.name) + '</div>' +
       '<div class="c-desc">' + escHtml(u.desc) + '</div>' +
       '<div class="c-flavor">' + escHtml(u.flavor || '') + '</div>' +
@@ -1411,7 +1451,7 @@ function endRun(won) {
     document.getElementById('over-sub').textContent = sim.state === 'dead' && G.dawn ?
       'so close to dawn. the light was merciless.' : 'the mob prevails. the crypt keeps your blood.';
     document.getElementById('again-btn').textContent = '🦇 HUNT AGAIN';
-    SFX.lose();
+    SFX.lose(); HAP.error();
   }
   document.getElementById('f-kills').textContent = sim.kills;
   document.getElementById('f-nights').textContent = won ? G.night : Math.max(0, G.night - 1);
@@ -1667,6 +1707,12 @@ document.getElementById('menu-btn').onclick = function () {
 };
 document.getElementById('pause-btn').onclick = function () { togglePause(); };
 document.getElementById('resume-btn').onclick = function () { togglePause(); };
+// haptics toggle (pause menu) — vocab honored silently on devices without vibration
+HAP.init();
+var hapBtn = document.getElementById('haptics-btn');
+function syncHapBtn() { hapBtn.textContent = '📳 haptics: ' + (HAP.on ? 'on' : 'off'); }
+hapBtn.onclick = function () { HAP.set(!HAP.on); syncHapBtn(); HAP.medium(); };
+syncHapBtn();
 document.getElementById('quit-btn').onclick = function () {
   document.getElementById('pause-menu').classList.add('hidden');
   if (G.api && !G.api.sim.over) {

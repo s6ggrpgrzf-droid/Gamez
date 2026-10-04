@@ -29,7 +29,7 @@ html, body {
 #lvl-badge { position: fixed; top: calc(64px + env(safe-area-inset-top)); left: 12px; width: 40px; height: 40px; border-radius: 50%;
   border: 2px solid #9d4edd; background: #140f1e; color: #e0aaff; font-size: 18px;
   display: flex; align-items: center; justify-content: center; text-shadow: 0 0 8px #9d4edd; }
-#pause-btn { position: fixed; top: calc(64px + env(safe-area-inset-top)); right: 12px; width: 40px; height: 40px; border-radius: 50%;
+#pause-btn { position: fixed; top: calc(64px + env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; border-radius: 50%;
   border: 1px solid #4a2c33; background: rgba(20,12,20,0.7); color: #d8d2c4; font-size: 15px; pointer-events: auto; cursor: pointer; }
 #dash-btn { position: fixed; right: 22px; bottom: calc(30px + env(safe-area-inset-bottom)); width: 76px; height: 76px; border-radius: 50%;
   border: 2px solid #5a189a; background: rgba(30,16,40,0.55); font-size: 30px; z-index: 6;
@@ -44,7 +44,9 @@ html, body {
 /* ---------- Screens ---------- */
 .screen { position: fixed; inset: 0; z-index: 10; overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: radial-gradient(ellipse at 50% 0%, #1b1030 0%, #0a0812 65%);
-  display: flex; flex-direction: column; align-items: center; padding: 40px 20px calc(40px + env(safe-area-inset-bottom)); text-align: center; }
+  display: flex; flex-direction: column; align-items: center; padding: 40px 20px calc(40px + env(safe-area-inset-bottom)); text-align: center;
+  animation: screen-in 0.32s cubic-bezier(0.2, 0.9, 0.25, 1); }
+@keyframes screen-in { from { opacity: 0; } }
 .screen h1 { font-size: clamp(44px, 13vw, 84px); line-height: 0.95; letter-spacing: 8px; color: #e63946;
   text-shadow: 0 0 30px rgba(230,57,70,0.5), 0 4px 0 #4a0a10, 0 6px 18px #000; margin-top: 8px; font-variant: small-caps; }
 .screen h2 { font-size: 22px; letter-spacing: 4px; color: #c9a227; font-variant: small-caps; margin: 18px 0 8px; }
@@ -108,7 +110,9 @@ html, body {
 .lvl-sub { color: #8d8598; font-style: italic; margin-bottom: 16px; }
 #cards { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 560px; }
 .card { width: 150px; padding: 18px 12px; background: linear-gradient(180deg, #1d1430, #100b1a);
-  border: 1px solid #5a189a; border-radius: 12px; cursor: pointer; transition: transform 0.12s; }
+  border: 1px solid #5a189a; border-radius: 12px; cursor: pointer; transition: transform 0.12s;
+  animation: card-in 0.38s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+@keyframes card-in { from { opacity: 0; transform: translateY(28px) scale(0.95); } }
 .card:active { transform: scale(0.94); border-color: #e0aaff; box-shadow: 0 0 24px rgba(157,78,221,0.5); }
 .card .c-name { color: #e0aaff; font-size: 16px; letter-spacing: 1px; font-variant: small-caps; margin-bottom: 8px; }
 .card .c-desc { color: #d8d2c4; font-size: 12.5px; line-height: 1.45; }
