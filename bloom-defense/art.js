@@ -108,15 +108,64 @@ window.BloomArt = (function () {
       if (p.age >= p.life) { parts.splice(i, 1); continue; }
       p.vy += p.grav * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.vr) p.rot += p.vr * dt;
     }
   }
+  /* petal/leaf burst: same signature as puff, kind = 'petal' | 'leaf' */
+  function petal(x, y, n, colors, spd, life, size, grav, kind) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * 6.2832, s = spd * (0.3 + Math.random() * 0.7);
+      parts.push({
+        x: x, y: y,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s - spd * 0.25,
+        life: life * (0.6 + Math.random() * 0.4), age: 0,
+        color: colors[(Math.random() * colors.length) | 0],
+        size: size * (0.6 + Math.random() * 0.8),
+        grav: grav == null ? 300 : grav,
+        kind: kind || 'petal',
+        rot: Math.random() * 6.2832, vr: (Math.random() - 0.5) * 10
+      });
+    }
+  }
+  /* additive sun sparkle */
+  function spark(x, y, n, colors, spd, life, size, grav) {
+    petal(x, y, n, colors, spd, life, size, grav, 'spark');
+  }
   function drawParts(ctx) {
-    for (var i = 0; i < parts.length; i++) {
-      var p = parts[i], k = 1 - p.age / p.life;
+    var i, p, k;
+    for (i = 0; i < parts.length; i++) {
+      p = parts[i]; k = 1 - p.age / p.life;
+      if (p.kind === 'spark') continue; // additive pass below
       ctx.globalAlpha = k;
+      ctx.fillStyle = p.color;
+      if (p.kind === 'petal' || p.kind === 'leaf') {
+        var rx = p.size * k + 0.5, ry = rx * (p.kind === 'petal' ? 0.62 : 0.42);
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        if (p.kind === 'leaf') { // pointed leaf: two quadratic arcs
+          ctx.beginPath();
+          ctx.moveTo(-rx, 0);
+          ctx.quadraticCurveTo(0, -ry * 1.8, rx, 0);
+          ctx.quadraticCurveTo(0, ry * 1.8, -rx, 0);
+          ctx.fill();
+        } else { // petal: soft ellipse
+          ell(ctx, 0, 0, rx, ry, 0); ctx.fill();
+        }
+        ctx.restore();
+      } else {
+        circle(ctx, p.x, p.y, p.size * k + 0.5); ctx.fill();
+      }
+    }
+    // additive sun-sparkle pass
+    ctx.globalCompositeOperation = 'lighter';
+    for (i = 0; i < parts.length; i++) {
+      p = parts[i];
+      if (p.kind !== 'spark') continue;
+      k = 1 - p.age / p.life;
+      ctx.globalAlpha = k * 0.9;
       ctx.fillStyle = p.color;
       circle(ctx, p.x, p.y, p.size * k + 0.5); ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
   function clearParts() { parts.length = 0; }
@@ -125,6 +174,8 @@ window.BloomArt = (function () {
   var DIRT_COLS = ['#8a6b48', '#6e5236', '#a37f52'];
   var LEAF_COLS = ['#58c24a', '#3f9e4d', '#2f7a28'];
   var FIRE_COLS = ['#ffdd44', '#ff9d2e', '#ff5a2e', '#888'];
+  var PETAL_COLS = ['#ffc4d6', '#ff9dc6', '#fff0f5', '#ffd9e8', '#ffe97a']; // cherry-blossom petals
+  var SPARK_COLS = ['#ffe97a', '#fff3b0', '#ffffff']; // sun sparkles (additive)
 
   /* ---------- sun ---------- */
   function drawSun(ctx, x, y, t, r) {
@@ -216,8 +267,9 @@ window.BloomArt = (function () {
     cellX: cellX, cellY: cellY,
     drawLawn: drawLawn,
     drawSun: drawSun, drawMower: drawMower, drawWorm: drawWorm,
-    puff: puff, updateParts: updateParts, drawParts: drawParts, clearParts: clearParts,
+    puff: puff, petal: petal, spark: spark, updateParts: updateParts, drawParts: drawParts, clearParts: clearParts,
     PEA_COLS: PEA_COLS, DIRT_COLS: DIRT_COLS, LEAF_COLS: LEAF_COLS, FIRE_COLS: FIRE_COLS,
+    PETAL_COLS: PETAL_COLS, SPARK_COLS: SPARK_COLS,
     _rr: rr, _circle: circle, _ell: ell, _shadow: shadow, _grad: grad
   };
 })();

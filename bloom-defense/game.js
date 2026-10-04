@@ -5,7 +5,7 @@
    Files: art.js (canvas art), audio.js (sfx), game.js (this: sim + UI). */
 'use strict';
 (function () {
-  var A = window.BloomArt, AU = window.BloomAudio;
+  var A = window.BloomArt, AU = window.BloomAudio, FEEL = window.BloomFeel;
   var $ = function (id) { return document.getElementById(id); };
   var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
 
@@ -123,6 +123,7 @@
       spawnQueue: [], spawnT: 0, spawnGap: 5, waveKilled: 0, waveTotal: 0,
       plants: [], zombies: [], peas: [], melons: [], suns: [],
       mowers: [], craters: {}, cooldowns: {},
+      hitstop: 0, _sunTxt: -1, _scoreTxt: -1, // feel-only runtime (never saved)
       loadout: ['sunflower', 'peashooter', 'wallnut', 'snowpea', 'repeater', 'cherrybomb'],
       selected: null, shovelMode: false,
       skyT: 4, wormT: 18, worm: null,
@@ -273,8 +274,9 @@
       b.classList.toggle('cant', !afford || cdLeft > 0);
       b.style.setProperty('--cdp', cdLeft > 0 ? (cdLeft / p.cd).toFixed(3) : '0');
     });
-    $('sun-count').textContent = S.sun;
-    $('score-count').textContent = S.score;
+    // guarded text writes: only touch the DOM when the value actually changed
+    if (S._sunTxt !== S.sun) { S._sunTxt = S.sun; $('sun-count').textContent = S.sun; }
+    if (S._scoreTxt !== S.score) { S._scoreTxt = S.score; $('score-count').textContent = S.score; }
   }
   function updateWavebar() {
     var pct = S.waveTotal > 0 ? (S.waveKilled / S.waveTotal) * 100 : 0;
@@ -472,6 +474,10 @@
         S.score += bonus;
         toast('Wave ' + S.wave + ' cleared! +' + bonus);
         AU.sun();
+        S.hitstop = 0.06; // micro-freeze: sells the clear (feel only)
+        FEEL.emit('waveclear');
+        FEEL.pop(A.W / 2, 130, '+' + bonus, '#b8f57a');
+        A.petal(A.W / 2, 130, 26, A.PETAL_COLS, 200, 1.2, 5, 120);
         if (S.wave >= WAVES.length) return winGame();
         S.waveState = 'idle';
         var g = S.gid, wn = S.wave;
@@ -486,7 +492,7 @@
     updateSuns(dt);
     updateMowers(dt);
     A.updateParts(dt);
-    if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 3);
+    FEEL.tick(dt); // springy shake clock + number pops
     S.packetT = (S.packetT || 0) + dt;
     if (S.packetT > 0.2) { S.packetT = 0; refreshPackets(); }
 
@@ -520,6 +526,7 @@
       var p = S.plants[i], def = PLANTS[p.id];
       p.t += dt;
       if (p.recoil > 0) p.recoil = Math.max(0, p.recoil - dt * 4);
+      if (p.squash > 0) p.squash = Math.max(0, p.squash - dt * 2.4); // springy placement settle
       var px = p.c + 1; // plant cell-left in lawn units
 
       if (p.id === 'sunflower') {
@@ -574,7 +581,7 @@
         }
       }
       if (p.hp <= 0 && p.id !== 'cherrybomb') {
-        A.puff(A.cellX(p.c), A.cellY(p.r) - 20, 14, A.LEAF_COLS, 90, 0.8, 5, 260);
+        A.petal(A.cellX(p.c), A.cellY(p.r) - 20, 14, A.LEAF_COLS, 90, 0.8, 5, 260, 'leaf');
         AU.shovel();
         S.plants.splice(i, 1);
       }
@@ -589,7 +596,7 @@
 
   function explode(x, y, radiusCells, dmg) {
     AU.boom();
-    S.shake = 1;
+    // NB: no screen shake here — shake is reserved for lawnmower saves (soft & springy)
     A.puff(x, y, 40, A.FIRE_COLS, 320, 0.9, 7, 260);
     A.puff(x, y, 24, A.DIRT_COLS, 220, 1.1, 6, 420);
     var rPx = radiusCells * 80;
@@ -624,6 +631,7 @@
     if (frozen && z.type !== 'brute') z.slowT = 4;
     else if (frozen) z.slowT = 2;
     if (z.hp <= 0) killZombie(z);
+    else z.hitT = 1; // squish on hit (feel only)
   }
 
   function killZombie(z) {
@@ -633,7 +641,9 @@
     S.waveKilled++;
     updateWavebar();
     var zx = z.x * 80 + A.MOWER_W, zy = A.cellY(z.r) - 40;
-    A.puff(zx, zy, 16, ['#9db38a', '#6b5b4c', '#4a4a5a'], 130, 0.8, 5, 320);
+    // garden identity: kills burst into petals + leaf-puffs, never blood/shards
+    A.petal(zx, zy, 12, A.PETAL_COLS, 140, 0.9, 5, 260);
+    A.petal(zx, zy, 8, A.LEAF_COLS, 120, 0.8, 5, 300, 'leaf');
     AU.gulp();
     refreshPackets();
   }
@@ -645,6 +655,7 @@
       var def = ZTYPES[z.type];
       var spd = def.speed * (z.slowT > 0 ? 0.5 : 1) * (z.enraged ? def.enrage : 1);
       if (z.slowT > 0) z.slowT -= dt;
+      if (z.hitT > 0) z.hitT = Math.max(0, z.hitT - dt * 3.5);
       z.walk += dt * (4 + spd * 8);
 
       // vaulting
@@ -683,6 +694,11 @@
         z.eatT = 0;
       }
 
+      // breach warning: zombie near the house while the mower is still available
+      if (z.x < 1.5 && !z.warned && !S.mowers[z.r].used) {
+        z.warned = true;
+        FEEL.emit('breachwarn');
+      }
       // mower check
       if (z.x < 0.45) {
         var m = S.mowers[z.r];
@@ -690,6 +706,7 @@
           m.used = true; m.running = true; m.runT = 0;
           S.stats.mowersUsed++;
           AU.mower();
+          FEEL.shake(7, 0.5); // soft springy wobble, capped
           toast('🚜 Lawnmower save!');
         } else if (z.x < -0.1) {
           return loseGame();
@@ -764,7 +781,7 @@
           if (z.dead || z.r !== m.r) continue;
           var zx = z.x * 80 + A.MOWER_W;
           if (zx > m.x - 40 && zx < m.x + 60) {
-            A.puff(zx, A.cellY(z.r) - 40, 18, ['#9db38a', '#e0393e'], 200, 0.8, 6, 300);
+            A.petal(zx, A.cellY(z.r) - 40, 18, A.LEAF_COLS, 200, 0.8, 6, 300, 'leaf');
             killZombie(z);
           }
         }
@@ -778,9 +795,8 @@
     var t = S.time;
     var cw = canvas.width, scale = cw / A.W;
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    if (S.shake > 0) {
-      ctx.translate((Math.random() - 0.5) * 10 * S.shake, (Math.random() - 0.5) * 8 * S.shake);
-    }
+    var sh = FEEL.shakeOffset(); // soft springy wobble (lawnmower saves only)
+    if (sh) ctx.translate(sh.x, sh.y);
     A.drawLawn(ctx, t);
 
     // craters
@@ -800,8 +816,16 @@
       if (p.id === 'potatomine') o.armed = p.armed;
       if (p.id === 'cherrybomb') o.fuse = clamp(p.fuse / PLANTS.cherrybomb.fuse, 0, 1);
       if (p.id === 'sunflower') o.glow = p.glow > 0;
-      // eat shake
+      var sq = p.squash || 0;
+      if (sq > 0) { // springy squash & stretch on placement
+        var e = FEEL.back(1 - sq);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(1 - 0.18 * (1 - e), 1 + 0.25 * (1 - e));
+        ctx.translate(-x, -y);
+      }
       A.drawPlant(ctx, p.id, x, y, p.t, o);
+      if (sq > 0) ctx.restore();
     });
 
     // mowers (behind zombies)
@@ -818,7 +842,16 @@
         o.vault = z.vault; o.vaultX0 = z.vaultX0; o.vaultX1 = z.vaultX1; o.vaultY0 = z.vaultY0;
         A.drawZombie(ctx, z.type, 0, 0, t, o);
       } else {
+        var hs = z.hitT || 0;
+        if (hs > 0) { // springy squish when a zombie takes a hit
+          var e2 = FEEL.back(1 - hs);
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.scale(1 + 0.14 * (1 - e2), 1 - 0.14 * (1 - e2));
+          ctx.translate(-x, -y);
+        }
         A.drawZombie(ctx, z.type, x, y, t, o);
+        if (hs > 0) ctx.restore();
       }
     });
 
@@ -843,6 +876,7 @@
       A.drawSun(ctx, s.x, s.y, t, 20);
       ctx.globalAlpha = 1;
     });
+    FEEL.drawPops(ctx); // floating number pops
 
     // placement ghost
     if ((S.selected || S.shovelMode) && S.hover) {
@@ -870,7 +904,7 @@
     AU.unlock();
     var p = canvasPos(e);
     // worm?
-    if (S.worm && Math.hypot(p.x - S.worm.x, p.y - (S.worm.y - 20)) < 34) {
+    if (S.worm && Math.hypot(p.x - S.worm.x, p.y - (S.worm.y - 20)) < 48) { // roomier tap target
       S.sun += WORM_VALUE;
       A.puff(S.worm.x, S.worm.y - 30, 14, ['#ffe97a', '#fff3b0'], 110, 0.8, 4, 120);
       toast('🪱 Wally says thanks! +' + WORM_VALUE + ' sun');
@@ -882,10 +916,11 @@
     // sun?
     for (var i = S.suns.length - 1; i >= 0; i--) {
       var s = S.suns[i];
-      if (Math.hypot(p.x - s.x, p.y - s.y) < 34) {
+      if (Math.hypot(p.x - s.x, p.y - s.y) < 48) { // roomier tap target
         S.suns.splice(i, 1);
         S.sun += s.value;
-        A.puff(s.x, s.y, 10, ['#ffe97a', '#fff3b0'], 90, 0.6, 3.5, 80);
+        A.spark(s.x, s.y, 8, A.SPARK_COLS, 110, 0.5, 3.5, 40);
+        FEEL.pop(s.x, s.y - 42, '+' + s.value, '#ffe97a');
         AU.sun();
         refreshPackets();
         bumpSun();
@@ -924,11 +959,13 @@
     if (S.cooldowns[id]) { AU.error(); return; }
     S.sun -= def.cost;
     S.cooldowns[id] = def.cd;
-    var p = { id: id, r: r, c: c, hp: def.hp, maxHp: def.hp, t: Math.random() * 5, cool: 0.4, sunT: 6, armT: def.armTime || 0, armed: false, fuse: def.fuse || 0, recoil: 0, glow: 0 };
+    var p = { id: id, r: r, c: c, hp: def.hp, maxHp: def.hp, t: Math.random() * 5, cool: 0.4, sunT: 6, armT: def.armTime || 0, armed: false, fuse: def.fuse || 0, recoil: 0, glow: 0, squash: 1 };
     S.plants.push(p);
     S.stats.planted++;
     A.puff(A.cellX(c), A.cellY(r) + 4, 10, A.DIRT_COLS, 80, 0.6, 4, 260);
+    A.petal(A.cellX(c), A.cellY(r) + 4, 8, A.LEAF_COLS, 90, 0.7, 5, 260, 'leaf');
     AU.plant();
+    FEEL.emit('plant');
     if (!S.keepSelected) S.selected = null;
     refreshPackets();
   }
@@ -941,7 +978,8 @@
     var best = +(localStorage.getItem(BEST_KEY) || 0);
     if (S.score > best) { best = S.score; localStorage.setItem(BEST_KEY, best); }
     AU.win();
-    A.puff(A.W / 2, A.H / 2, 80, ['#ffe97a', '#ff9d9d', '#7ee06a', '#aee3ff'], 300, 1.6, 6, 200);
+    A.petal(A.W / 2, A.H / 2, 60, A.PETAL_COLS, 300, 1.6, 6, 200);
+    A.petal(A.W / 2, A.H / 2, 20, A.LEAF_COLS, 260, 1.4, 5, 240, 'leaf');
     var g = S.gid;
     setTimeout(function () {
       if (!S || S.gid !== g) return;
@@ -1026,10 +1064,9 @@
     if (!S || !S.running || S.paused || S.screen !== 'game') return;
     var dt = Math.min((ts - lastTs) / 1000 || 0.016, 0.1);
     lastTs = ts;
+    if (S.hitstop > 0) { S.hitstop -= dt; render(); return; } // hit-stop: freeze sim, keep drawing
     update(dt);
     render();
-    // periodic HUD refresh (cheap parts every frame)
-    $('sun-count').textContent = S.sun;
   }
 
   /* ================= BOOT ================= */
@@ -1077,6 +1114,19 @@
       var m = AU.toggle();
       $('mute-btn').textContent = m ? '🔇' : '🔊';
     });
+    // haptics toggle (default ON; guarded so it can never throw on iOS)
+    var hapBtn = $('hap-btn');
+    function paintHap() {
+      var on = FEEL.hapticsOn();
+      hapBtn.textContent = on ? '📳' : '📴';
+      hapBtn.classList.toggle('off', !on);
+    }
+    hapBtn.addEventListener('click', function () {
+      AU.unlock(); AU.click();
+      FEEL.toggleHaptics();
+      paintHap();
+    });
+    paintHap();
     $('quit-btn').addEventListener('click', function () {
       AU.click();
       S.running = false; S.over = true;
