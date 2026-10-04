@@ -7,16 +7,30 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Tiny Fairway — one-touch golf</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body data-biome="0">
 <canvas id="game"></canvas>
 
-<!-- HUD: always visible during play, no buttons -->
+<!-- HUD: always visible during play -->
 <header id="hud" hidden>
   <div id="hud-hole">Hole 1</div>
   <div id="hud-meta">PAR 3</div>
 </header>
+
+<!-- corner buttons during play: undo / skip / trail / sound -->
+<div id="corner-btns" aria-label="Shot tools">
+  <button id="btn-undo" class="corner-btn" type="button" hidden title="Take back last shot">↩</button>
+  <button id="btn-skip" class="corner-btn textual" type="button" hidden title="Skip this hole">⏭ SKIP</button>
+  <button id="btn-trail" class="corner-btn" type="button" hidden title="Ball trail color">🎨</button>
+  <button id="btn-mute" class="corner-btn" type="button" hidden title="Sound">🔊</button>
+</div>
+
+<!-- spin teaching hint (first 3 holes, screen edge) -->
+<div id="spin-hint" hidden></div>
+
+<!-- milestone / info toast -->
+<div id="toast" aria-hidden="true"></div>
 
 <!-- MENU -->
 <section id="menu" class="screen on" aria-label="Menu">
@@ -32,7 +46,8 @@
     </div>
     <div class="howto" id="howto" hidden>
       <p><b>Drag back anywhere</b> on the screen to aim — a dotted arc shows where the ball will go. <b>Release</b> to shoot. Longer drag, longer shot.</p>
-      <p>Sink it in as few strokes as you can: match par for ★★★. Water costs a stroke. Sand is slow. The turtle is harmless, but it <i>will</i> judge a bad hole.</p>
+      <p><b>Spin:</b> while aiming, drag a second finger up/down (or the mouse wheel) — topspin runs on, backspin bites. <b>Overdrive:</b> drag past 90% for a super shot; the shaking red line means it might go anywhere.</p>
+      <p>Sink it in as few strokes as you can: match par for ★★★. Water costs a stroke. Sand is slow. ↩ takes back your last shot; after 20 strokes you can skip the hole. The turtle is harmless, but it <i>will</i> judge a bad hole.</p>
     </div>
     <p class="best" id="menu-best"></p>
   </div>
@@ -63,7 +78,7 @@
 
 <div id="err" hidden></div>
 
-<script src="sim.js?v=1"></script>
-<script src="game.js?v=1"></script>
+<script src="sim.js?v=2"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>
