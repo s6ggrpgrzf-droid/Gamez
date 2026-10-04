@@ -1147,35 +1147,6 @@ App.magicFallback = function () {
   this.magicPaint(c, 'Meadow Dream · offline sketch');
 };
 
-// Build the stroke plan: three passes, wash -> blocking -> detail,
-// each pass a jittered grid in shuffled order.
-App.magicPlan = function (w, h) {
-  var dabs = [];
-  var M = Math.max(w, h);
-  var passes = [
-    { r: M / 12, a: 0.5 },
-    { r: M / 28, a: 0.85 },
-    { r: M / 64, a: 1 }
-  ];
-  for (var p = 0; p < passes.length; p++) {
-    var pr = passes[p].r, step = pr * 1.15, start = dabs.length;
-    for (var y = step * 0.5; y < h + step * 0.5; y += step)
-      for (var xx = step * 0.5; xx < w + step * 0.5; xx += step)
-        dabs.push({
-          x: xx + (Math.random() - 0.5) * step * 0.8,
-          y: y + (Math.random() - 0.5) * step * 0.8,
-          r: pr * (0.85 + Math.random() * 0.3),
-          a: passes[p].a,
-          ang: Math.random() * Math.PI
-        });
-    for (var i = dabs.length - 1; i > start; i--) {
-      var j = start + Math.floor(Math.random() * (i - start + 1));
-      var tmp = dabs[i]; dabs[i] = dabs[j]; dabs[j] = tmp;
-    }
-  }
-  return dabs;
-};
-
 // Soft round brush tip, shared by every dab.
 App.magicDot = function () {
   if (this._magicDot) return this._magicDot;
@@ -1230,22 +1201,33 @@ App.magicPaint = function (img, title) {
   var src = document.createElement('canvas');
   src.width = w; src.height = h;
   src.getContext('2d').drawImage(img, 0, 0, w, h);
-  var dabs = this.magicPlan(w, h);
-  var total = dabs.length;
+
+  // The engine studies the painting and plans real brushstrokes.
+  var plan = MagicEngine.plan(src, w, h);
+  var strokes = plan.strokes, S = strokes.length, D = plan.totalDabs;
+  // Pacing: a slow, deliberate ~80s performance. The brush travels to each
+  // stroke, pauses a beat like it's deciding, then paints it.
+  var travelT = 0.17, pauseT = 0.08;
+  var paintRate = D / Math.max(25, 80 - S * (travelT + pauseT));
+  paintRate = Math.max(28, Math.min(220, paintRate));
   var state = {
-    running: true, dabs: dabs, i: 0, x: x, src: src, w: w, h: h,
-    acc: 0, last: 0, swish: 0, perSec: total / 46
+    running: true, strokes: strokes, si: 0, pi: 0,
+    mode: 'travel', t: 0, acc: 0, last: 0, swish: 0,
+    x: x, src: src, w: w, h: h,
+    dabsDone: 0, totalDabs: D,
+    brushX: w * 0.5, brushY: h * 0.5, fromX: w * 0.5, fromY: h * 0.5,
+    paintRate: paintRate, travelT: travelT, pauseT: pauseT
   };
   this.magicState = state;
   $('magic-title').textContent = title;
-  this.magicSetStatus('Painting…');
+  this.magicSetStatus('Studying the canvas…');
   this.magicProgress(0);
   this.magicButtons(false);
   var brush = $('magic-brush');
   brush.style.display = 'block';
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     x.drawImage(src, 0, 0);
-    state.i = total;
+    state.dabsDone = D;
     this.magicDone();
     return;
   }
@@ -1254,30 +1236,59 @@ App.magicPaint = function (img, title) {
     if (!state.running) return;
     var dt = Math.min(0.1, (now - state.last) / 1000);
     state.last = now;
-    state.acc += dt * state.perSec;
-    var n = Math.floor(state.acc);
-    state.acc -= n;
-    var lastDab = null;
-    for (var k = 0; k < n && state.i < total; k++) {
-      lastDab = dabs[state.i];
-      self.magicDab(state, lastDab);
-      state.i++;
+    state.t += dt;
+    var st = strokes[state.si];
+
+    if (state.mode === 'travel') {
+      // brush glides to the next stroke's starting point
+      var k = Math.min(1, state.t / state.travelT);
+      var e = 1 - Math.pow(1 - k, 3);
+      state.brushX = state.fromX + (st.pts[0].x - state.fromX) * e;
+      state.brushY = state.fromY + (st.pts[0].y - state.fromY) * e;
+      if (k >= 1) { state.mode = 'pause'; state.t = 0; }
+    } else if (state.mode === 'pause') {
+      // the beat before the brush touches down
+      if (state.t >= state.pauseT) {
+        state.mode = 'paint'; state.t = 0; state.pi = 0; state.acc = 0;
+        self.noiseBurst(750 + Math.random() * 250, 0.28, 0.10);
+      }
+    } else {
+      state.acc += dt * state.paintRate;
+      var n = Math.floor(state.acc);
+      state.acc -= n;
+      for (var i = 0; i < n && state.pi < st.pts.length; i++) {
+        var p = st.pts[state.pi];
+        self.magicDab(state, { x: p.x, y: p.y, r: st.r, a: st.a, ang: p.a });
+        state.brushX = p.x; state.brushY = p.y;
+        state.pi++; state.dabsDone++;
+      }
+      state.swish += dt;
+      if (state.swish > 0.7) {
+        state.swish = 0;
+        self.noiseBurst(1500 + Math.random() * 700, 0.18, 0.07);
+      }
+      if (state.pi >= st.pts.length) {
+        state.fromX = state.brushX; state.fromY = state.brushY;
+        state.si++;
+        if (state.si >= strokes.length) { self.magicDone(); return; }
+        state.mode = 'travel'; state.t = 0;
+      }
     }
-    self.magicProgress(state.i / total);
-    if (lastDab && cv.clientWidth) {
+
+    self.magicProgress(state.dabsDone / state.totalDabs);
+    if (cv.clientWidth) {
       var sc = cv.clientWidth / w;
-      brush.style.left = (lastDab.x * sc) + 'px';
-      brush.style.top = (lastDab.y * sc) + 'px';
+      brush.style.left = (state.brushX * sc) + 'px';
+      brush.style.top = (state.brushY * sc) + 'px';
     }
-    state.swish += dt;
-    if (state.swish > 0.45 && state.i < total) {
-      state.swish = 0;
-      self.noiseBurst(1400 + Math.random() * 900, 0.22, 0.16);
-    }
-    if (state.i < total) requestAnimationFrame(frame);
-    else self.magicDone();
+    requestAnimationFrame(frame);
   }
-  requestAnimationFrame(frame);
+  // a small beat before the first stroke, like deciding where to begin
+  setTimeout(function () {
+    if (!state.running) return;
+    self.magicSetStatus('Painting…');
+    requestAnimationFrame(frame);
+  }, 900);
 };
 
 App.magicDone = function () {
