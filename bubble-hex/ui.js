@@ -49,6 +49,139 @@
     }
   }
 
+  /* ================= Feel: floaty, magical, dreamy =================
+   * Haptics (guarded so they can never throw — iOS has no vibrate),
+   * soap-bubble motes that drift UPWARD instead of shard bursts, gentle
+   * squash on impacts, slow-mo micro-dips. NO screen shake by design —
+   * only a whisper-soft shimmer on the biggest drops. Central event →
+   * effects map so feel tunes without touching gameplay code. */
+  var reduceMotion = false;
+  try { reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { reduceMotion = false; }
+  var hapOn = true;
+  try { hapOn = localStorage.getItem('bubblehex_hap') !== 'off'; } catch (e) { hapOn = true; }
+  function hap(pattern) {
+    if (reduceMotion || !hapOn) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator && 'vibrate' in navigator) {
+        try { navigator.vibrate(0); } catch (e0) {} // cancel in-flight buzz (Android ignores retrigger otherwise)
+        navigator.vibrate(pattern);
+      }
+    } catch (e) {}
+  }
+
+  /* magic motes: soft pastel soap-bubble motes that float upward.
+   * This is the dreamy particle identity — never shards, never fast. */
+  var MOTES = ['#ffe9f5', '#d9f2ff', '#e8dcff', '#fffbe8', '#ffd9f2'];
+  function moteBurst(x, y, n) {
+    if (reduceMotion) n = Math.max(1, Math.ceil(n / 3));
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = 16 + Math.random() * 44; // slow drift
+      spawnP(x, y, Math.cos(a) * s, Math.sin(a) * s - 30,
+        1.2 + Math.random() * 0.9, 3 + Math.random() * 3.5,
+        MOTES[(Math.random() * MOTES.length) | 0], -55); // negative grav: floats up
+    }
+  }
+
+  /* Gentle squash pulses keyed by board cell. */
+  function pulseAround(r, c, self) {
+    if (!state || !state.pulseCells) return;
+    if (self) state.pulseCells[E.key(r, c)] = 0;
+    var ns = E.neighbors(r, c);
+    for (var i = 0; i < ns.length; i++) {
+      var k = E.key(ns[i][0], ns[i][1]);
+      if (E.get(state.board, ns[i][0], ns[i][1]) && state.pulseCells[k] == null) state.pulseCells[k] = 0;
+    }
+  }
+
+  var Feel = {
+    pop: function (x, y, bub, big) {
+      popFx(x, y, bub, big);
+      moteBurst(x, y, big ? 10 : 5);
+    },
+    drop: function (x, y, bub) {
+      dropFx(x, y, bub);
+      moteBurst(x, y, 6);
+    }
+  };
+
+  /* Pre-rendered runtime sprites: mist puff, orb aura, Nero/NEXT labels.
+   * Paint once, blit per frame — no per-frame gradients or canvas text. */
+  function uiDpr() { return Math.min(window.devicePixelRatio || 1, 2); }
+  var mistSprite = null;
+  function getMistSprite() {
+    if (!mistSprite) {
+      var c = document.createElement('canvas');
+      var d = uiDpr();
+      c.width = 360 * d; c.height = 120 * d;
+      var x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
+      var g = x.createRadialGradient(180, 60, 10, 180, 60, 180);
+      g.addColorStop(0, 'rgba(150,130,220,.14)');
+      g.addColorStop(1, 'rgba(150,130,220,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 360, 120);
+      mistSprite = c;
+    }
+    return mistSprite;
+  }
+  var auraSprite = null;
+  function getAuraSprite() {
+    if (!auraSprite) {
+      var c = document.createElement('canvas');
+      var d = uiDpr();
+      c.width = 180 * d; c.height = 180 * d;
+      var x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
+      var g = x.createRadialGradient(90, 90, 8, 90, 90, 90);
+      g.addColorStop(0, 'rgba(255,225,77,.42)');
+      g.addColorStop(1, 'rgba(255,225,77,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 180, 180);
+      auraSprite = c;
+    }
+    return auraSprite;
+  }
+  var neroLabelCache = {};
+  function neroLabel(n) {
+    var k = n > 0 ? 'n' + n : 'tap';
+    if (!neroLabelCache[k]) {
+      var big = n > 0;
+      var d = uiDpr();
+      var label = big ? (n + '/4') : 'TAP NERO';
+      var font = (big ? '800 13px' : '600 10px') + ' ui-rounded, system-ui, sans-serif';
+      var meas = document.createElement('canvas').getContext('2d');
+      meas.font = font;
+      var tw = Math.ceil(meas.measureText(label).width) + 16;
+      var c = document.createElement('canvas');
+      c.width = tw * d; c.height = 22 * d;
+      var x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
+      x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle';
+      if (big) {
+        x.fillStyle = 'rgba(14,8,24,.78)';
+        x.beginPath();
+        x.moveTo(11, 1); x.arcTo(tw - 1, 1, tw - 1, 21, 10);
+        x.arcTo(tw - 1, 21, 1, 21, 10); x.arcTo(1, 21, 1, 1, 10);
+        x.arcTo(1, 1, tw - 1, 1, 10); x.closePath(); x.fill();
+      }
+      x.fillStyle = big ? '#ffd34d' : 'rgba(255,255,255,.4)';
+      x.fillText(label, tw / 2, 11.5);
+      neroLabelCache[k] = { c: c, w: tw };
+    }
+    return neroLabelCache[k];
+  }
+  var nextLabelSprite = null;
+  function nextLabel() {
+    if (!nextLabelSprite) {
+      var d = uiDpr();
+      var c = document.createElement('canvas');
+      c.width = 64 * d; c.height = 16 * d;
+      var x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
+      x.font = '600 10px ui-rounded, system-ui, sans-serif';
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = 'rgba(255,255,255,.55)';
+      x.fillText('NEXT', 32, 8.5);
+      nextLabelSprite = { c: c, w: 64 };
+    }
+    return nextLabelSprite;
+  }
+
   /* ================= Resize ================= */
   function resize() {
     var wrap = canvas.parentElement;
@@ -119,7 +252,8 @@
       lastColors: [], shotsSinceDrop: 0,
       stellaPose: 'idle', stellaBob: Math.random() * 7,
       aimPulse: 0, introT: 0,
-      owlsFlying: [], blastArmed: false
+      owlsFlying: [], blastArmed: false,
+      pulseCells: {}, enterT: 0, aimIn: 1, slowmo: null
     };
     state.current = newShooterBubble();
     state.next = newShooterBubble();
@@ -166,10 +300,12 @@
     return k;
   }
 
-  function drawBoardBubble(x, y, bub, scale, alpha) {
+  function drawBoardBubble(x, y, bub, scale, alpha, sqx, sqy) {
     scale = scale || 1; alpha = alpha == null ? 1 : alpha;
     var r = R * scale, d = r * 2;
+    ctx.save();
     ctx.globalAlpha = alpha;
+    if (sqx || sqy) { ctx.translate(x, y); ctx.scale(sqx || 1, sqy || 1); ctx.translate(-x, -y); }
     if (bub.blocker) {
       ctx.drawImage(Art.blocker(), x - d / 2, y - d / 2, d, d);
     } else {
@@ -181,10 +317,9 @@
         // glassy shell over owl
         ctx.globalAlpha = alpha * 0.28;
         ctx.drawImage(Art.bubble('W'), x - d / 2, y - d / 2, d, d);
-        ctx.globalAlpha = alpha;
       }
     }
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   /* ================= Input ================= */
@@ -217,6 +352,7 @@
     if (dx * dx + dy * dy < 42 * 42) { feedNero(); return; }
     HexAudio.unlock();
     state.aiming = true;
+    state.aimIn = 0; // aim guide unfurls with an eased fade-in
     state.stellaPose = 'aim';
     updateAim(p);
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -339,6 +475,7 @@
     else { r = cell[0]; c = cell[1]; }
     E.set(state.board, r, c, f.bub);
     HexAudio.stick();
+    pulseAround(r, c, true); // gentle squash on the landed bubble + neighbors
     var res = E.resolveBoard(state.board, r, c);
     var xy = E.cellXY(r, c, R);
     state.flying = null;
@@ -388,7 +525,7 @@
       var bub = E.get(state.board, cc[0], cc[1]);
       if (!bub || bub.blocker) return;
       E.del(state.board, cc[0], cc[1]);
-      popFx(cc[2], cc[3], bub, true);
+      Feel.pop(cc[2], cc[3], bub, true);
       state.score += 150;
       if (bub.familiar) rescueOwl(cc[2], cc[3]);
       damageWilbur(1);
@@ -415,7 +552,7 @@
         var bb2 = E.get(state.board, +pp[0], +pp[1]);
         E.del(state.board, +pp[0], +pp[1]);
         if (bb2 && !bb2.blocker) {
-          dropFx(xy2[0], xy2[1] + BOARD_TOP, bb2);
+          Feel.drop(xy2[0], xy2[1] + BOARD_TOP, bb2);
           state.score += 60;
           if (bb2.familiar) rescueOwl(xy2[0], xy2[1] + BOARD_TOP);
         }
@@ -441,7 +578,8 @@
     for (i = 0; i < res.popped.length; i++) {
       rc = res.popped[i];
       xy = E.cellXY(rc[0], rc[1], R);
-      popFx(xy[0], xy[1] + BOARD_TOP, { color: rc[2] || 'Y' }, res.popped.length >= 6);
+      Feel.pop(xy[0], xy[1] + BOARD_TOP, { color: rc[2] || 'Y' }, res.popped.length >= 6);
+      pulseAround(rc[0], rc[1], false); // neighbors wobble gently
     }
     // Puzzle Bobble-style exponential drop scoring: 20, 40, 80, ...
     var dropScore = 0;
@@ -459,6 +597,7 @@
     var total = (res.score + dropScore) * mult;
     if (res.popped.length) {
       HexAudio.pop(res.popped.length, mult);
+      hap([20]); // light tap on every match
       state.score += total;
       state.orb = Math.min(state.orbMax, state.orb + res.popped.length);
       if (state.orb >= state.orbMax) {
@@ -479,7 +618,7 @@
     for (i = 0; i < res.dropped.length; i++) {
       rc = res.dropped[i];
       xy = E.cellXY(rc[0], rc[1], R);
-      dropFx(xy[0], xy[1] + BOARD_TOP, { color: rc[2] || 'B' });
+      Feel.drop(xy[0], xy[1] + BOARD_TOP, { color: rc[2] || 'B' });
     }
     if (res.dropped.length) HexAudio.drop();
     updateGhost();
@@ -579,7 +718,16 @@
     if (view !== 'game' || !state) return;
     var dt = Math.min((t - lastT) / 1000 || 0.016, 0.1);
     lastT = t;
-    update(dt, t / 1000);
+    var timeScale = 1;
+    if (state.slowmo) {
+      // slow-mo micro-dip: sim eases back to full speed, visuals stay realtime
+      state.slowmo.t += dt;
+      var st2 = Math.min(1, state.slowmo.t / state.slowmo.dur);
+      var e2 = st2 * st2 * (3 - 2 * st2);
+      timeScale = 0.35 + 0.65 * e2;
+      if (st2 >= 1) state.slowmo = null;
+    }
+    update(dt * timeScale, t / 1000);
     render(t / 1000);
   }
 
@@ -587,6 +735,16 @@
     var s = state;
     s.stellaBob += dt * 2;
     s.aimPulse += dt * 3;
+    if (s.aiming) s.aimIn = Math.min(1, (s.aimIn || 0) + dt * 5);
+    if (s.enterT < 1) s.enterT = Math.min(1, s.enterT + dt / 0.9); // level enter fade
+    // gentle squash pulses age out
+    if (s.pulseCells) {
+      var pk = Object.keys(s.pulseCells);
+      for (var qi = 0; qi < pk.length; qi++) {
+        s.pulseCells[pk[qi]] += dt;
+        if (s.pulseCells[pk[qi]] > 0.5) delete s.pulseCells[pk[qi]];
+      }
+    }
     if (s.descending) {
       s.descendAnim += dt * 2.2;
       if (s.descendAnim >= 1) { s.descendAnim = 1; s.descending = false; }
@@ -647,10 +805,11 @@
   function render(now) {
     var s = state;
     ctx.save();
-    if (s.shake) {
+    if (s.shake && !reduceMotion) {
+      // whisper-soft shimmer, not a shake: smooth drift, a few px at most
       var st = s.shake.t / s.shake.dur;
-      var mag = s.shake.mag * (1 - st);
-      ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+      var mag = s.shake.mag * (1 - st) * 0.35;
+      ctx.translate(Math.sin(st * Math.PI * 3) * mag, Math.cos(st * Math.PI * 2.3) * mag * 0.7);
     }
     ctx.clearRect(-30, -30, W + 60, H + 60);
 
@@ -684,11 +843,18 @@
       if (wb.flee && wb.x > W + 120) wb.fleeGone = true;
     }
 
-    // board bubbles
+    // board bubbles (gentle squash from recent impacts)
     var keys = Object.keys(s.board);
     for (var i = 0; i < keys.length; i++) {
       var p = keys[i].split(','), xy = E.cellXY(+p[0], +p[1], R);
-      drawBoardBubble(xy[0], xy[1] + BOARD_TOP + dy, s.board[keys[i]]);
+      var pt = s.pulseCells ? s.pulseCells[keys[i]] : null;
+      var sqx = 1, sqy = 1;
+      if (pt != null) {
+        var ph = Math.min(1, pt / 0.5);
+        var wob = Math.sin(ph * Math.PI) * 0.12 * (1 - ph * 0.35);
+        sqx = 1 + wob; sqy = 1 - wob * 0.85;
+      }
+      drawBoardBubble(xy[0], xy[1] + BOARD_TOP + dy, s.board[keys[i]], 1, 1, sqx, sqy);
     }
     // ghost
     if (s.ghost) {
@@ -716,17 +882,15 @@
     drawStella(now);
     drawNero(now);
 
-    // next-bubble preview
+    // next-bubble preview (pre-rendered NEXT label: no per-frame text)
     if (s.next && !s.over) {
       var nxx = W / 2 - R * 3.6, nyy = SHOOT_Y + 26;
       ctx.globalAlpha = 0.85;
       var nd = R * 1.1;
       ctx.drawImage(Art.bubble(bubbleKey(s.next)), nxx - nd / 2, nyy - nd / 2, nd, nd);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = 'rgba(255,255,255,.55)';
-      ctx.font = '600 10px ui-rounded, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('NEXT', nxx, nyy + R * 1.15);
+      var nxl = nextLabel();
+      ctx.drawImage(nxl.c, nxx - nxl.w / 2, nyy + R * 1.15 - 8, nxl.w, 16);
     }
 
     // tossed bubble → Nero
@@ -746,7 +910,9 @@
       ctx.globalAlpha = 1;
     }
 
-    // particles (additive-ish)
+    // particles + rings: additive glow pass for the dreamy look
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     var dot = Art.dot();
     for (var pi = 0; pi < particles.length; pi++) {
       var pt = particles[pi];
@@ -767,6 +933,7 @@
       ctx.drawImage(ring, rg.x - rs, rg.y - rs, rs * 2, rs * 2);
       ctx.globalAlpha = 1;
     }
+    ctx.restore();
     // floaters
     ctx.textAlign = 'center';
     for (var fi = 0; fi < floaters.length; fi++) {
@@ -781,13 +948,20 @@
         ctx.drawImage(Art.feather(), fl.x - fs2 / 2, fl.y - fs2 / 2 + ft * 30, fs2, fs2);
         ctx.globalAlpha = 1;
       } else {
+        // gentle scale-pop (ease-out) + cheap stroke outline instead of shadowBlur
+        var pop = 1;
+        if (ft < 0.3) { var pe2 = 1 - ft / 0.3; pop = 1 + 0.42 * pe2 * pe2; }
+        ctx.save();
         ctx.globalAlpha = 1 - ft * ft;
+        ctx.translate(fl.x, fl.y - ft * 44);
+        ctx.scale(pop, pop);
         ctx.font = '800 ' + (fl.big ? 22 : 16) + 'px ui-rounded, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(12,4,26,.85)';
+        ctx.strokeText(fl.text, 0, 0);
         ctx.fillStyle = fl.big ? '#ffe14d' : '#fff';
-        ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 6;
-        ctx.fillText(fl.text, fl.x, fl.y - ft * 44);
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
+        ctx.fillText(fl.text, 0, 0);
+        ctx.restore();
       }
     }
 
@@ -799,18 +973,24 @@
     }
 
     ctx.restore();
+
+    // dreamy level-enter fade (eased)
+    if (s.enterT < 1) {
+      var et2 = 1 - s.enterT;
+      ctx.fillStyle = 'rgba(13,6,32,' + (et2 * et2 * 0.6).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   function drawMist(now) {
+    var spr = getMistSprite();
     for (var i = 0; i < mists.length; i++) {
       var m = mists[i];
       var mx = ((m.x + now * m.sp) % (W + m.w)) - m.w / 2;
-      var g = ctx.createRadialGradient(mx, m.y, 10, mx, m.y, m.w / 2);
-      g.addColorStop(0, 'rgba(150,130,220,' + m.a + ')');
-      g.addColorStop(1, 'rgba(150,130,220,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(mx - m.w / 2, m.y - 60, m.w, 120);
+      ctx.globalAlpha = m.a / 0.14;
+      ctx.drawImage(spr, mx - m.w / 2, m.y - 60, m.w, 120);
     }
+    ctx.globalAlpha = 1;
   }
 
   function drawFireflies(now) {
@@ -834,14 +1014,12 @@
     var dw = STELLA_W, dh = STELLA_W * 132 / 120;
     var a = stellaAnchor();
     var bob = Math.sin(s.stellaBob) * 3;
-    // orb-full aura
+    // orb-full aura (pre-rendered sprite, pulsed)
     if (s.orb >= s.orbMax) {
       var pulse = 0.5 + 0.5 * Math.sin(now * 5);
-      var g = ctx.createRadialGradient(a[0], a[1] - 70, 8, a[0], a[1] - 70, 90);
-      g.addColorStop(0, 'rgba(255,225,77,' + (0.28 + pulse * 0.14) + ')');
-      g.addColorStop(1, 'rgba(255,225,77,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(a[0] - 90, a[1] - 160, 180, 180);
+      ctx.globalAlpha = 0.55 + pulse * 0.35;
+      ctx.drawImage(getAuraSprite(), a[0] - 90, a[1] - 160, 180, 180);
+      ctx.globalAlpha = 1;
     }
     ctx.drawImage(img, a[0] - dw / 2, a[1] - dh + bob, dw, dh);
     // idle wand sparkles
@@ -858,23 +1036,9 @@
     var dw = 62, dh = 62 * 70 / 76;
     var bob = Math.sin(now * 2.2 + 2) * 2;
     ctx.drawImage(img, nx - dw / 2, ny - dh + bob, dw, dh);
-    // discard counter
-    if (s.nero > 0) {
-      ctx.fillStyle = '#0e0818';
-      ctx.font = '800 13px ui-rounded, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      var label = s.nero + '/4';
-      var tw = ctx.measureText(label).width + 14;
-      ctx.fillStyle = 'rgba(14,8,24,.78)';
-      roundRect(nx - tw / 2, ny + 8, tw, 20, 10); ctx.fill();
-      ctx.fillStyle = '#ffd34d';
-      ctx.fillText(label, nx, ny + 22);
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255,.4)';
-      ctx.font = '600 10px ui-rounded, system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('TAP NERO', nx, ny + 20);
-    }
+    // discard counter / hint: pre-rendered label sprite, no per-frame text
+    var nl = neroLabel(s.nero);
+    ctx.drawImage(nl.c, nx - nl.w / 2, ny + 8, nl.w, 22);
     s.neroXY = [nx, ny - 20];
   }
 
@@ -885,7 +1049,9 @@
     var x = o[0], y = o[1];
     var dot = Art.dot();
     var stepLen = 15, drawn = 0;
-    ctx.globalAlpha = 0.85;
+    var ain = s.aimIn == null ? 1 : s.aimIn;
+    ain = 1 - (1 - ain) * (1 - ain); // easeOutQuad: guide unfurls gently
+    ctx.globalAlpha = 0.85 * ain;
     for (var i = 0; i < 90; i++) {
       x += vx * stepLen; y += vy * stepLen;
       if (x < R) { x = R; vx = -vx; }
@@ -899,7 +1065,7 @@
         if (dx * dx + dyy * dyy < (R * 1.7) * (R * 1.7)) { hitB = true; break; }
       }
       if (hitB) break;
-      var ds = 5 + Math.sin(now * 8 - drawn * 0.55) * 1.4;
+      var ds = (5 + Math.sin(now * 8 - drawn * 0.55) * 1.4) * (0.35 + 0.65 * ain);
       ctx.drawImage(dot, x - ds, y - ds, ds * 2, ds * 2);
       drawn++;
     }
@@ -908,7 +1074,7 @@
     var pulse = 1 + Math.sin(now * 6) * 0.12;
     var rs = R * 1.15 * pulse;
     var ring = Art.ring();
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.9 * ain;
     ctx.drawImage(ring, x - rs, y - rs, rs * 2, rs * 2);
     ctx.globalAlpha = 1;
   }
@@ -1011,6 +1177,8 @@
     if (!s || s.over) return;
     s.over = true; s.won = true;
     HexAudio.win();
+    hap([10, 40, 10]); // success shimmer on clear
+    if (!reduceMotion) s.slowmo = { t: 0, dur: 0.9 }; // dreamy micro-dip for the Bubble Rain
     // BWS2-style Bubble Rain: leftover shots shower down as bonus points
     var rainBonus = s.shots * 50;
     s.score += rainBonus;
@@ -1226,6 +1394,20 @@
     $('btn-music').textContent = on ? '🎵' : '🔇';
     $('btn-music').classList.toggle('off', !on);
   };
+  function syncHapBtn() {
+    var b = $('btn-hap');
+    if (!b) return;
+    b.textContent = hapOn ? '📳' : '📴';
+    b.classList.toggle('off', !hapOn);
+  }
+  $('btn-hap').onclick = function () {
+    hapOn = !hapOn;
+    try { localStorage.setItem('bubblehex_hap', hapOn ? 'on' : 'off'); } catch (e) {}
+    syncHapBtn();
+    HexAudio.click();
+    if (hapOn) hap([12]);
+  };
+  syncHapBtn();
   $('orb-wrap').onclick = function () {
     if (!state) return;
     if (state.orb >= state.orbMax) banner('✦ <b>HEX BLAST armed</b> — your next shot unleashes it!');
