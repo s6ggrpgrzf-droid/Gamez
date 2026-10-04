@@ -140,6 +140,38 @@ var sfx = {
   lose:  function () { tone(420, 0.7, 'sawtooth', 0.18, 0, 70); }
 };
 
+/* ============================== haptics ==============================
+ * Named vocabulary per the mobile-feel playbook: light[20] = paper snap on
+ * tile flip, warning[20,60,20] = rope break, success[10,40,10] = solve.
+ * Feature-detected, user-toggled, honors prefers-reduced-motion, and can
+ * never throw on iOS (guarded typeof + try/catch everywhere). */
+var HAP = (function () {
+  var KEY = 'ww_haptics_v1';
+  var enabled = true;
+  try { enabled = localStorage.getItem(KEY) !== 'off'; } catch (e) {}
+  var reduced = false;
+  try { reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  catch (e) {}
+  function ok() {
+    return enabled && !reduced && typeof navigator !== 'undefined' &&
+      typeof navigator.vibrate === 'function';
+  }
+  function buzz(p) {
+    if (!ok()) return;
+    try { navigator.vibrate(p); } catch (e) { /* iOS: vibrate missing/unsupported — silent */ }
+  }
+  return {
+    light:   function () { buzz(20); },
+    warn:    function () { buzz([20, 60, 20]); },
+    success: function () { buzz([10, 40, 10]); },
+    isOn: function () { return enabled; },
+    set: function (v) {
+      enabled = !!v;
+      try { localStorage.setItem(KEY, enabled ? 'on' : 'off'); } catch (e) {}
+    }
+  };
+})();
+
 /* ============================== state ============================== */
 var G = null;            /* {puz, mode:'daily'|'practice', rungs[], ropeMax, ropeLeft, status, streak} */
 var GRAPH = null;        /* WW.buildAnswerGraph() */
@@ -195,7 +227,9 @@ function renderRung(word, prev, animate, tag) {
   if (p) for (i = 0; i < 4; i++) { if (w[i] !== p[i]) { diff = i; break; } }
   for (i = 0; i < 4; i++) {
     var t = document.createElement('div');
-    t.className = 'tile' + (i === diff ? ' gold' : '');
+    /* gold glimmer: the changed letter gets a one-shot sheen sweep when the
+     * rung drops in (animate=true); resumed games render without it. */
+    t.className = 'tile' + (i === diff ? ' gold' + (animate ? ' glimmer' : '') : '');
     t.textContent = w[i];
     div.appendChild(t);
   }
@@ -212,11 +246,21 @@ function renderSlots() {
     els[i].classList.toggle('full', !!slots[i]);
   }
 }
+/* perf: DOM writes here are guarded — they only fire when the rope value
+ * or hint state actually changed (no unconditional per-event text writes). */
+var ropeCache = { left: -1, canHint: null };
 function updateRope() {
-  $('rope-count').textContent = '\u00D7' + G.ropeLeft;
-  $('rope-fill').style.height = Math.max(0, 100 * G.ropeLeft / G.ropeMax) + '%';
-  $('rope-col').classList.toggle('danger', G.ropeLeft <= 2);
-  $('btn-hint').disabled = !(G.status === 'playing' && G.ropeLeft >= 2);
+  if (G.ropeLeft !== ropeCache.left) {
+    ropeCache.left = G.ropeLeft;
+    $('rope-count').textContent = '\u00D7' + G.ropeLeft;
+    $('rope-fill').style.height = Math.max(0, 100 * G.ropeLeft / G.ropeMax) + '%';
+    $('rope-col').classList.toggle('danger', G.ropeLeft <= 2);
+  }
+  var can = G.status === 'playing' && G.ropeLeft >= 2;
+  if (can !== ropeCache.canHint) {
+    ropeCache.canHint = can;
+    $('btn-hint').disabled = !can;
+  }
 }
 function scrollShaft() { var sh = $('shaft'); sh.scrollTop = sh.scrollHeight; }
 
@@ -237,7 +281,7 @@ function startGame(puz, mode, saved) {
   var sh = $('shaft'); sh.innerHTML = '';
   for (var i = 0; i < G.rungs.length; i++)
     sh.appendChild(renderRung(G.rungs[i], i ? G.rungs[i - 1] : null, false, i === 0 ? 'START' : null));
-  renderSlots(); updateRope(); showMsg('');
+  renderSlots(); ropeCache.left = -1; ropeCache.canHint = null; updateRope(); showMsg('');
   $('play-mode').textContent = mode === 'daily' ? fmtDate(puz.date) : 'Practice';
   show('play');
   kbMode = 'play';
@@ -276,9 +320,10 @@ function replayAsPractice() {
   startGame({ start: G.puz.start, end: G.puz.end, par: par, rope: par + 3, date: null }, 'practice', null);
 }
 
-/* Wordle-style 3D tile flip on submit: slots flip staggered, the changed
- * letter is revealed with the illuminated gold treatment at the flip's
- * midpoint. Presentation-only; calls done() when the animation finishes. */
+/* Paper-card tile flip on submit: slots snap staggered with a paper settle,
+ * the changed letter is revealed gold at each tile's edge-on midpoint and
+ * catches a one-shot sheen. Presentation-only; calls done() when finished.
+ * Timing matches the .42s slotFlip animation: 75ms stagger, reveal at ~200ms. */
 function flipSlots(word, prev, done) {
   var els = $('slots').children;
   var w = word.toUpperCase(), p = String(prev).toUpperCase(), diff = -1, i;
@@ -286,15 +331,17 @@ function flipSlots(word, prev, done) {
   var myFlip = ++flipId;
   for (i = 0; i < 4; i++) {
     (function (el, idx) {
-      el.style.animationDelay = (idx * 90) + 'ms';
+      el.style.animationDelay = (idx * 75) + 'ms';
       el.classList.add('flipping');
       setTimeout(function () {
         if (myFlip !== flipId) return;
         el.classList.add('revealed');
         if (idx === diff) el.classList.add('gold');
-      }, idx * 90 + 250);
+      }, idx * 75 + 200);
     })(els[i], i);
   }
+  /* the paper snap: one light buzz as the first tile passes edge-on */
+  setTimeout(function () { if (myFlip === flipId) HAP.light(); }, 180);
   setTimeout(function () {
     if (myFlip !== flipId) return;
     for (var j = 0; j < 4; j++) {
@@ -302,7 +349,7 @@ function flipSlots(word, prev, done) {
       els[j].style.animationDelay = '';
     }
     done();
-  }, 4 * 90 + 340);
+  }, 4 * 75 + 350);
 }
 
 /* ---------- guessing ---------- */
@@ -359,7 +406,11 @@ function useHint() {
 function onWin(fresh) {
   G.status = 'won';
   if (G.mode === 'daily') saveDaily();
-  if (fresh) sfx.win();
+  if (fresh) {
+    sfx.win();
+    HAP.success();
+    spawnPaperfall();
+  }
   var steps = G.rungs.length - 1, puz = G.puz;
   var stars = WW.starsFor(steps, puz.par);
   if (G.mode === 'daily' && fresh) G.streak = bumpStreak(puz.date);
@@ -405,7 +456,11 @@ function onWin(fresh) {
 function onLose(fresh) {
   G.status = 'lost';
   if (G.mode === 'daily') saveDaily();
-  if (fresh) sfx.lose();
+  if (fresh) {
+    sfx.lose();
+    HAP.warn();
+    papShudder();
+  }
   var path = null;
   try { path = WW.bfs(G.puz.start, G.puz.end, GRAPH); } catch (e) {}
   $('lose-path').textContent = path
@@ -413,6 +468,37 @@ function onLose(fresh) {
     : 'The well keeps its secrets.';
   $('btn-lose-replay').hidden = G.mode !== 'daily';
   show('lose');
+}
+
+/* ---------- feel: paper-fall + papery shudder (fresh results only) ---------- */
+/* confetti-lite on solve: ~14 torn manuscript scraps drift down the win
+ * screen, then get removed. Transform-only, one-shot, fires once per win. */
+function spawnPaperfall() {
+  var fall = document.createElement('div');
+  fall.className = 'paperfall';
+  var colors = ['#c9a227', '#f0d060', '#3a2b1c', '#ecdfc2', '#7a1f1f'];
+  for (var i = 0; i < 14; i++) {
+    var p = document.createElement('i');
+    p.style.left = (Math.random() * 100) + '%';
+    p.style.width = (6 + Math.random() * 7) + 'px';
+    p.style.height = (9 + Math.random() * 9) + 'px';
+    p.style.background = colors[(Math.random() * colors.length) | 0];
+    p.style.animationDuration = (1.9 + Math.random() * 1.4) + 's';
+    p.style.animationDelay = (Math.random() * 0.7) + 's';
+    p.style.setProperty('--dx', ((Math.random() - 0.5) * 120) + 'px');
+    p.style.setProperty('--rot', ((Math.random() - 0.5) * 900 + 360) + 'deg');
+    fall.appendChild(p);
+  }
+  document.body.appendChild(fall);
+  setTimeout(function () { if (fall.parentNode) fall.parentNode.removeChild(fall); }, 4200);
+}
+/* papery shudder on rope break: a quick 2px flinch of the whole app, never a
+ * screen shake. The prefers-reduced-motion stylesheet kills it for those users. */
+function papShudder() {
+  var app = document.querySelector('.app');
+  if (!app) return;
+  app.classList.remove('shudder'); void app.offsetWidth; app.classList.add('shudder');
+  setTimeout(function () { app.classList.remove('shudder'); }, 340);
 }
 
 /* ---------- daily intro + invisible AI theme ---------- */
@@ -596,6 +682,17 @@ function init() {
   $('btn-intro-menu').addEventListener('click', function () { refreshMenu(); show('menu'); });
   $('btn-quit').addEventListener('click', function () { refreshMenu(); show('menu'); });
   $('btn-hint').addEventListener('click', function () { audioEnsure(); useHint(); });
+  /* haptics toggle: 📳 full, dimmed when off. Default on; persisted per device. */
+  (function () {
+    var hb = $('btn-haptic');
+    function paintHaptic() {
+      var on = HAP.isOn();
+      hb.classList.toggle('haptic-off', !on);
+      hb.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    hb.addEventListener('click', function () { HAP.set(!HAP.isOn()); paintHaptic(); });
+    paintHaptic();
+  })();
   $('btn-win-practice').addEventListener('click', startPractice);
   $('btn-win-menu').addEventListener('click', function () { refreshMenu(); show('menu'); });
   $('btn-lose-practice').addEventListener('click', startPractice);
