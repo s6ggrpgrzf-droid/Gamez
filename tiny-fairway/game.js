@@ -4,12 +4,25 @@
  *
  * Built against the TF sim contract (sim.js, plain script, global TF):
  *   TF.mulberry32(seed), TF.dailySeed('YYYY-MM-DD') -> uint32
- *   TF.GRAV, TF.REST, TF.BALL_R, TF.CUP_R, TF.MAX_POWER
- *   TF.genHole(seed) -> {seed,W,H, terrain:{h(x),slope(x)}, sand:[{x0,x1}],
+ *   TF.GRAV, TF.REST, TF.BALL_R, TF.CUP_R, TF.MAX_POWER,
+ *   TF.OVERDRIVE_MAX (=75), TF.MAGNET_R (=2.0, magnetic cup radius)
+ *   TF.genHole(seed, opts) -> {seed,W,H, terrain:{h(x),slope(x)}, sand:[{x0,x1}],
  *                        water:[{x0,x1}], waterLevel, tee:{x,y}, cup:{x,y}, par, biome}
- *   TF.newBall(hole) -> ball; TF.shoot(ball,vx,vy) (caps at MAX_POWER);
+ *     opts: {breather} softens amplitudes / limits hazards;
+ *           {twoRoute} centers the water dip on the tee->cup line (risky shortcut
+ *           vs safe route). No opts = classic generator, byte-identical.
+ *   TF.newBall(hole) -> ball (.spin, .impact, .stillT added by revamp)
+ *   TF.shoot(ball,vx,vy,opts) — opts {spin:-1..1 (back/topspin), overdrive}
+ *     overdrive raises the cap to OVERDRIVE_MAX (game adds the accuracy jitter)
  *   TF.simStep(hole,ball) = exactly 1/60s physics
  *   TF.starsFor(strokes,par); TF.inSand(hole,x); TF.inWater(hole,x)
+ *   TF.snapBall(ball)/TF.restoreBall(ball,snap) — one-deep undo
+ *   TF.skipStrokes(par) = par+3 — skip-hole banking
+ *   TF.avgLast(arr,n) — rolling average helper
+ *
+ * Revamp (2026-10-04): spin input, overdrive zone, landing marker, undo,
+ * skip-after-20, last-shot ghost, ball trail, bounce dust, power audio,
+ * rolling-50 HUD, milestone toasts, breather/two-route holes, touch camera lift.
  *
  * Ball-shape note: game.js reads/writes ball.x/.y/.vx/.vy/.resting and treats
  * any of ball.inCup|ball.sunk|ball.holed|ball.potted as the holed flag, with a
@@ -41,7 +54,7 @@
     ox = (cw - vw * sc) / 2; oy = (ch - vh * sc) / 2;
   }
   function X(x) { return ox + x * sc; }
-  function Y(y) { return oy + (vh - y) * sc; }
+  function Y(y) { return oy + (vh - y) * sc - camLift; }   // camLift: touch aim occlusion shift
 
   /* ---------------- biomes: 0 dawn meadow, 1 desert noon, 2 dusk, 3 moonlit snow */
   var BIOMES = [
@@ -62,7 +75,8 @@
 
   /* ---------------- audio (WebAudio, gesture-gated) ---------------- */
   var AU = {
-    ctx: null, master: null, windFilter: null, windGain: null, rollGain: null, noiseBuf: null,
+    ctx: null, master: null, windFilter: null, windGain: null, rollGain: null, rollFilter: null, noiseBuf: null,
+    muted: false, windMuted: false,
     init: function () {
       try {
         if (!this.ctx) {
@@ -83,9 +97,12 @@
           w.start();
           var r = this.ctx.createBufferSource(); r.buffer = buf; r.loop = true; r.playbackRate.value = 0.7;
           var bp = this.ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 750; bp.Q.value = 1.1;
+          this.rollFilter = bp;   // surface-aware roll ticks retune this
           this.rollGain = this.ctx.createGain(); this.rollGain.gain.value = 0;
           r.connect(bp); bp.connect(this.rollGain); this.rollGain.connect(this.master);
           r.start();
+          if (this.muted) this.master.gain.value = 0;
+          if (this.windMuted) this.windGain.gain.value = 0;
         }
         if (this.ctx.state === 'suspended') this.ctx.resume();
       } catch (e) {}
@@ -117,7 +134,26 @@
         s.connect(f); f.connect(g); g.connect(this.master); s.start(t); s.stop(t + dur + 0.02);
       } catch (e) {}
     },
-    thock: function () { this.blip(170, 70, 0.11, 0.30, 'triangle'); this.noise(0.06, 0.18, 2400, 900, 'highpass'); },
+    thock: function (frac) {
+      var f = frac == null ? 0.5 : Math.max(0, Math.min(1.25, frac));
+      this.blip(150 + f * 110, 60, 0.09 + f * 0.05, 0.22 + f * 0.22, 'triangle');
+      this.noise(0.06, 0.14 + f * 0.1, 2400, 900, 'highpass');
+    },
+    clunk: function () {   // disproportionately satisfying cup drop
+      this.noise(0.08, 0.4, 3200, 500, 'lowpass');
+      this.blip(300, 110, 0.16, 0.5, 'triangle');
+      this.blip(880, 840, 0.55, 0.14);
+      var self = this;
+      setTimeout(function () { self.blip(1174.7, 1170, 0.7, 0.10); }, 90);
+    },
+    setMuted: function (m) {
+      this.muted = m;
+      try { if (this.master) this.master.gain.value = m ? 0 : 0.9; } catch (e) {}
+    },
+    setWindMuted: function (m) {
+      this.windMuted = m;
+      try { if (this.windGain) this.windGain.gain.value = m ? 0 : 0.035; } catch (e) {}
+    },
     chime: function (big) {
       var self = this;
       this.blip(659.26, 655, 1.0, 0.16);
@@ -145,13 +181,26 @@
   var turtle = null;
   var speckles = [], nightStars = [];
   var aimPts = [];
+  // revamp state
+  var spinVal = 0, spinPointer = null, spinBase = 0, spinStartY = 0;  // Golf-on-Mars spin
+  var ghost = null;                 // last-shot landing marker (SSG3)
+  var undoSnap = null;              // one-deep undo snapshot
+  var trail = [];                   // ball trail points {x,y,t}
+  var holeScores = [];              // completed-hole strokes (endless), for rolling avg
+  var prevKiller = false;           // previous hole was par+3 or worse -> breather next
+  var maxHole = 1;                  // furthest hole reached (trail unlocks)
+  var trailSel = 'Cloud';           // selected trail color name
+  var camLift = 0, camLiftT = 0;     // touch finger-occlusion camera shift (px)
+  var toastTimer = 0;
+  var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
   /* ---------------- storage ---------------- */
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function saveRun() {
     if (mode !== 'endless') return;
-    lsSet('tf_run', JSON.stringify({ runSeed: runSeed, holeIndex: holeIndex, totalStrokes: totalStrokes, totalStars: totalStars }));
+    lsSet('tf_run', JSON.stringify({ runSeed: runSeed, holeIndex: holeIndex, totalStrokes: totalStrokes,
+      totalStars: totalStars, holeScores: holeScores.slice(-50), prevKiller: prevKiller }));
   }
   function loadRun() { try { return JSON.parse(lsGet('tf_run', 'null')); } catch (e) { return null; } }
   function saveBest() {
@@ -163,10 +212,22 @@
     } catch (e) {}
   }
 
+  /* generator opts for an endless hole: breather after killers, two-route bias */
+  function holeOptsFor(holeSeed, wasKiller) {
+    var o = {};
+    if (wasKiller) o.breather = true;
+    if (TF.mulberry32((holeSeed ^ 0x7f3a9e2) >>> 0)() < 0.5) o.twoRoute = true;
+    return o;
+  }
+  function recordScore(s) {
+    holeScores.push(s);
+    if (holeScores.length > 60) holeScores.splice(0, holeScores.length - 60);
+  }
+
   /* ---------------- hole setup ---------------- */
-  function loadHole(n, s) {
+  function loadHole(n, s, opts) {
     holeIndex = n; seed = s >>> 0;
-    hole = TF.genHole(seed);
+    hole = TF.genHole(seed, opts);
     curBiome = Math.floor((holeIndex - 1) / 8) % 4;
     document.body.setAttribute('data-biome', String(curBiome));
     AU.setBiome(curBiome);
@@ -174,6 +235,8 @@
     ball.vx = 0; ball.vy = 0; ball.resting = true;
     clearHoled(ball);
     strokes = 0; inFlight = false; aiming = false; drag = null; aimPts = [];
+    spinVal = 0; spinPointer = null; ghost = null; undoSnap = null; trail = [];
+    if (n > maxHole) { maxHole = n; lsSet('tf_maxhole', String(maxHole)); }
     lastRest = { x: ball.x, y: ball.y };
     particles = [];
     fit(); skyGrad = null;
@@ -187,6 +250,7 @@
       if (tr && tr.classList.contains('in')) $('transit-name').textContent = nm;
     });
     updateHUD();
+    milestoneCheck(n);
   }
 
   function buildSpeckles() {
@@ -284,20 +348,69 @@
   }
   function par() { return hole.par; }
 
+  /* ---------------- toast + milestones + trail colors ---------------- */
+  var TRAILS = [
+    { n: 'Cloud',  c: '255,255,255', at: 1 },
+    { n: 'Gold',   c: '255,217,74',  at: 50 },
+    { n: 'Ember',  c: '255,122,61',  at: 200 },
+    { n: 'Comet',  c: '122,205,255', at: 500 },
+    { n: 'Aurora', c: '150,255,178', at: 1000 }
+  ];
+  function trailDef() {
+    for (var i = TRAILS.length - 1; i >= 0; i--)
+      if (TRAILS[i].n === trailSel && maxHole >= TRAILS[i].at) return TRAILS[i];
+    return TRAILS[0];
+  }
+  function unlockedTrails() { return TRAILS.filter(function (t) { return maxHole >= t.at; }); }
+  function toast(msg, ms) {
+    var t = $('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, ms || 2600);
+  }
+  var MILESTONES = {
+    50: 'Hole 50 — the fairway salutes you',
+    100: 'Hole 100 — century club',
+    200: 'Hole 200 — unstoppable',
+    500: 'Hole 500 — legend of the fairway',
+    1000: 'Hole 1000 — beyond the horizon'
+  };
+  function milestoneCheck(n) {
+    if (!MILESTONES[n] || mode !== 'endless') return;
+    var msg = '⛳ ' + MILESTONES[n];
+    for (var i = 0; i < TRAILS.length; i++)
+      if (TRAILS[i].at === n) msg += ' · new trail: ' + TRAILS[i].n + ' 🎨';
+    toast(msg, 3200);
+    AU.chime(false);
+  }
+
   /* ---------------- physics step (fixed 1/60) ---------------- */
   function stepPhysics() {
+    var wasInFlight = inFlight;
     TF.simStep(hole, ball);
+    if (ball.impact > 0.5) { dustAt(ball.x, ball.y, ball.impact); ball.impact = 0; }
     if (ballHoled(ball)) { onHoled(); return; }
-    if (inFlight && (ball.inWater || ballInWater(ball))) { onWater(); return; }  // sim flags inWater; game owns the penalty+reset
-    if (ball.resting) { lastRest.x = ball.x; lastRest.y = ball.y; inFlight = false; }
+    if (wasInFlight && (ball.inWater || ballInWater(ball))) { onWater(); return; }  // sim flags inWater; game owns the penalty+reset
+    if (ball.resting) {
+      if (wasInFlight && state === 'play') ghost = { x: ball.x, y: ball.y };  // last-shot ghost
+      lastRest.x = ball.x; lastRest.y = ball.y; inFlight = false;
+      refreshButtons();
+    }
   }
 
   function onHoled() {
     state = 'holed'; inFlight = false; aiming = false; drag = null; aimPts = [];
+    camLiftT = 0;
     var stars = TF.starsFor(strokes, par());
     totalStars += stars;
+    if (mode === 'endless') recordScore(strokes);
+    prevKiller = strokes >= par() + 3;      // breather hole next if this was a killer
     var eagle = strokes <= par() - 2;
     AU.chime(eagle);
+    AU.clunk();
+    refreshButtons();
     slowT = 0.85;                                      // slow-mo on the drop
     if (eagle) petalBurst(hole.cup.x, hole.terrain.h(hole.cup.x) + 3);
     if (strokes > par() + 2) turtleJudge();
@@ -306,7 +419,10 @@
     setTimeout(function () {
       hideStarsPop();
       if (mode === 'daily') showDailyResult(stars);
-      else goToHole(holeIndex + 1, (runSeed + holeIndex + 1) >>> 0);
+      else {
+        var ns = (runSeed + holeIndex + 1) >>> 0;
+        goToHole(holeIndex + 1, ns, holeOptsFor(ns, prevKiller));
+      }
     }, 2300);
   }
 
@@ -322,25 +438,69 @@
     updateHUD();
   }
 
+  /* skip with dignity (Golf on Mars): after 20 strokes, bank par+3 and move on */
+  function skipHole() {
+    if (!(state === 'play' && ball && ball.resting && !inFlight && strokes >= 20)) return;
+    var bank = TF.skipStrokes(par());
+    totalStrokes += bank - strokes;
+    recordScore(bank);
+    prevKiller = true;
+    undoSnap = null;
+    AU.click();
+    toast('Hole skipped · +' + bank + ' banked');
+    saveRun(); saveBest();
+    var ns = (runSeed + holeIndex + 1) >>> 0;
+    goToHole(holeIndex + 1, ns, holeOptsFor(ns, true));
+  }
+
+  /* undo last shot (Golf Peaks): penalty-free, one deep, not after holing */
+  function undoShot() {
+    if (!(undoSnap && ball && ball.resting && !inFlight && state === 'play')) return;
+    AU.click();
+    TF.restoreBall(ball, undoSnap.snap);
+    strokes = undoSnap.strokes;
+    totalStrokes = undoSnap.totalStrokes;
+    ghost = undoSnap.ghost;
+    undoSnap = null;
+    clearHoled(ball);
+    updateHUD();
+    saveRun();
+    toast('Shot taken back');
+  }
+
   /* ---------------- shooting ---------------- */
   var MAX_DRAG_PX = 300;
+  // -> [vx, vy, powerFrac (1.0 = MAX_POWER, up to 1.25), overdrive] or null
   function dragVel() {
     if (!drag) return null;
     var dx = drag.x0 - drag.x1, dy = drag.y0 - drag.y1;   // screen px (y down)
     var len = Math.sqrt(dx * dx + dy * dy);
     if (len < 14) return null;                            // tiny drag = cancel
     var maxDrag = Math.min(MAX_DRAG_PX, window.innerHeight * 0.45);
-    var power = Math.min(len / maxDrag, 1) * TF.MAX_POWER;
-    return [dx / len * power, -dy / len * power, Math.min(len / maxDrag, 1)];
+    var ratio = len / maxDrag;
+    var od = ratio > 0.9;                                 // overdrive zone (OK Golf)
+    var capped = Math.min(ratio, TF.OVERDRIVE_MAX / TF.MAX_POWER);
+    var power = capped * TF.MAX_POWER;
+    return [dx / len * power, -dy / len * power, capped, od];
   }
   function shootFromDrag() {
     var v = dragVel();
     if (!v) return;
-    TF.shoot(ball, v[0], v[1]);                           // sim caps at MAX_POWER
+    undoSnap = { snap: TF.snapBall(ball), strokes: strokes, totalStrokes: totalStrokes,
+                 ghost: ghost ? { x: ghost.x, y: ghost.y } : null };
+    var vx = v[0], vy = v[1], od = v[3];
+    if (od) {                                             // super shot, visibly less accurate
+      var j = (Math.random() * 2 - 1) * 3 * Math.PI / 180; // ±3° jitter
+      var c = Math.cos(j), s = Math.sin(j);
+      var nx = vx * c - vy * s, ny = vx * s + vy * c;
+      vx = nx; vy = ny;
+    }
+    var spin = spinVal; spinVal = 0;                      // spin is per-shot
+    TF.shoot(ball, vx, vy, { spin: spin, overdrive: od });
     strokes++;
     totalStrokes++;
     inFlight = true;
-    AU.thock();
+    AU.thock(v[2] / 1.25);
     rippleAt(ball.x, ball.y);
     updateHUD();
     saveRun();
@@ -352,6 +512,7 @@
     try {
       var b = TF.newBall(hole);
       b.x = ball.x; b.y = ball.y; b.vx = vx; b.vy = vy; b.resting = false;
+      b.spin = spinVal;                                   // spin shapes the preview too
       clearHoled(b);
       var px = -9999, py = -9999, i;
       for (i = 0; i < 60; i++) {                          // ~1s of flight
@@ -369,31 +530,71 @@
   }
 
   /* ---------------- input: drag-back slingshot anywhere on screen ---------------- */
+  function clampSpin(v) { return v > 1 ? 1 : (v < -1 ? -1 : v); }
+  function repredict() {
+    var v = dragVel();
+    if (v) predictAim(v[0], v[1]); else aimPts = [];
+  }
+  function refreshSpinHint() {
+    var h = $('spin-hint');
+    if (!h) return;
+    var show = state === 'play' && aiming && holeIndex <= 3;
+    h.hidden = !show;
+    if (show) h.textContent = isTouchDevice ? 'second finger ↕ drag = spin' : 'mouse wheel = spin';
+  }
   canvas.addEventListener('pointerdown', function (e) {
     AU.init(); AU.resume();
     if (state !== 'play' || !ball || !ball.resting) return;
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
     var r = canvas.getBoundingClientRect();
-    drag = { x0: e.clientX - r.left, y0: e.clientY - r.top, x1: e.clientX - r.left, y1: e.clientY - r.top };
+    var px = e.clientX - r.left, py = e.clientY - r.top;
+    if (aiming && drag && e.pointerId !== drag.pid && spinPointer === null) {
+      spinPointer = e.pointerId; spinStartY = e.clientY; spinBase = spinVal;  // 2nd finger = spin
+      return;
+    }
+    drag = { pid: e.pointerId, x0: px, y0: py, x1: px, y1: py };
     aiming = true;
+    if (e.pointerType === 'touch') camLiftT = ch * 0.07;   // lift view so finger never covers the cup
+    refreshSpinHint();
   });
   canvas.addEventListener('pointermove', function (e) {
     if (!aiming || !drag) return;
     e.preventDefault();
+    if (e.pointerId === spinPointer) {                    // spin finger: vertical drag
+      spinVal = clampSpin(spinBase + (spinStartY - e.clientY) / 140);
+      repredict();
+      return;
+    }
+    if (e.pointerId !== drag.pid) return;
     var r = canvas.getBoundingClientRect();
     drag.x1 = e.clientX - r.left; drag.y1 = e.clientY - r.top;
-    var v = dragVel();
-    if (v) predictAim(v[0], v[1]); else aimPts = [];
+    repredict();
   });
-  function endDrag() {
+  function endDrag(e) {
+    if (e && spinPointer !== null && e.pointerId === spinPointer) {
+      spinPointer = null;                                 // spin value stays for the shot
+      return;
+    }
+    if (e && drag && e.pointerId !== drag.pid) return;
     if (!aiming) return;
-    aiming = false; aimPts = [];
+    aiming = false; aimPts = []; camLiftT = 0;
+    refreshSpinHint();
     if (drag && state === 'play' && ball && ball.resting) shootFromDrag();
     drag = null;
   }
   canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', function () { aiming = false; drag = null; aimPts = []; });
+  canvas.addEventListener('pointercancel', function (e) {
+    if (e && spinPointer !== null && e.pointerId === spinPointer) { spinPointer = null; return; }
+    aiming = false; drag = null; aimPts = []; camLiftT = 0;
+    refreshSpinHint();
+  });
+  canvas.addEventListener('wheel', function (e) {          // desktop: wheel = spin while aiming
+    if (!aiming || !drag) return;
+    e.preventDefault();
+    spinVal = clampSpin(spinVal - e.deltaY / 600);
+    repredict();
+  }, { passive: false });
   canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
   document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
@@ -411,6 +612,16 @@
     }
     particles.push({ k: 'r', x: x, y: y, t: 0, life: 0.7 });
   }
+  function dustAt(x, y, impact) {                          // bounce dust, scaled by impact
+    var n = Math.min(10, 2 + Math.round(impact * 0.6)), i;
+    for (i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI;                    // upward hemisphere
+      particles.push({ k: 'd', x: x + (Math.random() - 0.5) * 1.2, y: y,
+        vx: Math.cos(a) * (1 + Math.random() * 3) * (Math.random() < 0.5 ? -1 : 1),
+        vy: Math.sin(a) * (1 + Math.random() * 2.5),
+        t: 0, life: 0.4 + Math.random() * 0.3, s: 0.5 + Math.random() * 0.9 });
+    }
+  }
   function petalBurst(x, y) {
     var cols = ['#ffd1dc', '#fff6f8', '#f5b81e', '#ffb3c7', '#ffffff'];
     for (var i = 0; i < 26; i++) {
@@ -427,6 +638,7 @@
       if (p.t < 0) continue;
       if (p.t >= p.life) { particles.splice(i, 1); continue; }
       if (p.k === 's') { p.vy -= 22 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+      if (p.k === 'd') { p.vy -= 6 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= (1 - 2.2 * dt); }
       if (p.k === 'p') { p.x += (p.vx + Math.sin(wtime * 3 + p.ph) * 1.6) * dt; p.y += p.vy * dt; p.vy = Math.min(p.vy + 1.2 * dt, 3.2); }
     }
   }
@@ -445,6 +657,10 @@
         a = 0.9 * (1 - f);
         ctx.fillStyle = 'rgba(190,230,250,' + a.toFixed(3) + ')';
         ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 2.4 * (1 - f * 0.5), 0, 6.2832); ctx.fill();
+      } else if (p.k === 'd') {
+        a = 0.55 * (1 - f);
+        ctx.fillStyle = 'rgba(216,196,150,' + a.toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), p.s * sc * 0.5 * (0.6 + f), 0, 6.2832); ctx.fill();
       } else if (p.k === 'p') {
         a = Math.min(1, (1 - f) * 2);
         ctx.save();
@@ -565,6 +781,32 @@
 
     drawTurtle();
 
+    // last-shot ghost (faint dashed ring where the previous shot came to rest)
+    if (ghost && state === 'play') {
+      var gbr = Math.max(3, TF.BALL_R * sc);
+      ctx.strokeStyle = 'rgba(255,255,255,.38)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.arc(X(ghost.x), Y(ghost.y), gbr * 1.5, 0, 6.2832); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // ball trail (0.5s fade, milestone-unlockable colors)
+    if (trail.length > 1 && state !== 'menu') {
+      var tcol = trailDef().c, brt = Math.max(3, TF.BALL_R * sc);
+      ctx.lineCap = 'round';
+      for (i = 1; i < trail.length; i++) {
+        var ta = (1 - trail[i].t / 0.5) * 0.5;
+        if (ta <= 0) continue;
+        ctx.strokeStyle = 'rgba(' + tcol + ',' + ta.toFixed(3) + ')';
+        ctx.lineWidth = Math.max(1.5, brt * 0.7 * (i / trail.length));
+        ctx.beginPath();
+        ctx.moveTo(X(trail[i - 1].x), Y(trail[i - 1].y));
+        ctx.lineTo(X(trail[i].x), Y(trail[i].y));
+        ctx.stroke();
+      }
+    }
+
     // ball + soft shadow (no shadowBlur: plain alpha ellipse)
     if (ball && state !== 'menu') {
       var gy = hole.terrain.h(Math.max(0, Math.min(hole.W, ball.x)));
@@ -585,22 +827,55 @@
 
     drawParticles();
 
-    // aim: dotted predicted arc + power ring
+    // aim: dotted predicted arc + power ring + landing marker + spin indicator
     if (aiming && drag && aimPts.length) {
       var v = dragVel();
-      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      var odAim = !!(v && v[3]);
+      var dotCol = odAim ? '255,110,80' : '255,255,255';
       for (i = 0; i < aimPts.length; i++) {
         ctx.globalAlpha = 0.9 - (i / aimPts.length) * 0.65;
-        ctx.beginPath(); ctx.arc(X(aimPts[i][0]), Y(aimPts[i][1]), 2.4, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = 'rgba(' + dotCol + ',0.95)';
+        var jx = 0, jy = 0;
+        if (odAim) { jx = (Math.random() * 2 - 1) * 3.5; jy = (Math.random() * 2 - 1) * 3.5; }
+        ctx.beginPath(); ctx.arc(X(aimPts[i][0]) + jx, Y(aimPts[i][1]) + jy, 2.4, 0, 6.2832); ctx.fill();
       }
       ctx.globalAlpha = 1;
+      // landing marker: ring at the predicted rest spot; wobbles past 85% power
+      if (aimPts.length > 1) {
+        var lm = aimPts[aimPts.length - 1];
+        var wob = (v && v[2] > 0.85) ? Math.sin(wtime * 28) * 3 : 0;
+        ctx.strokeStyle = odAim ? 'rgba(255,110,80,.9)' : 'rgba(255,255,255,.85)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(X(lm[0]) + wob, Y(lm[1]), 7, 0, 6.2832); ctx.stroke();
+        ctx.fillStyle = odAim ? 'rgba(255,110,80,.9)' : 'rgba(255,255,255,.85)';
+        ctx.beginPath(); ctx.arc(X(lm[0]) + wob, Y(lm[1]), 1.8, 0, 6.2832); ctx.fill();
+      }
       if (v) {
-        ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2;
+        ctx.strokeStyle = odAim ? 'rgba(255,110,80,.85)' : 'rgba(255,255,255,.7)';
+        ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(X(ball.x), Y(ball.y), br2(v[2]), 0, 6.2832); ctx.stroke();
+      }
+      // spin indicator: curved arrow around the ball while aiming
+      if (Math.abs(spinVal) > 0.05) {
+        var bx = X(ball.x), by = Y(ball.y), br = Math.max(3, TF.BALL_R * sc);
+        var rr = br * 2.3, dir = spinVal > 0 ? 1 : -1;
+        var sweep = 0.6 + Math.abs(spinVal) * 2.4;
+        var a0 = -Math.PI / 2 - sweep / 2, a1 = -Math.PI / 2 + sweep / 2;
+        ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(bx, by, rr, a0, a1); ctx.stroke();
+        var ae = dir > 0 ? a1 : a0;
+        var ex = bx + Math.cos(ae) * rr, ey = by + Math.sin(ae) * rr;
+        var tang = ae + dir * Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - Math.cos(tang - dir * 0.55) * 8, ey - Math.sin(tang - dir * 0.55) * 8);
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - Math.cos(tang + dir * 0.55) * 8, ey - Math.sin(tang + dir * 0.55) * 8);
+        ctx.stroke();
       }
     }
   }
-  function br2(frac) { return Math.max(6, TF.BALL_R * sc) + frac * 26; }
+  function br2(frac) { return Math.max(6, TF.BALL_R * sc) + Math.min(frac, 1.25) * 26; }
 
   /* ---------------- main loop: fixed-timestep accumulator ---------------- */
   function loop(ts) {
@@ -610,15 +885,26 @@
     last = ts;
     if (slowT > 0) { slowT -= dt; timeScale = 0.3; } else timeScale = 1;
     wtime += dt;
+    if (Math.abs(camLiftT - camLift) > 0.2) camLift += (camLiftT - camLift) * Math.min(1, dt * 6);
+    else if (camLiftT === 0 && camLift !== 0) camLift = 0;
     if (state === 'play' && hole && ball) {
       acc += dt * timeScale;
       var n = 0;
       while (acc >= STEP && n < 8) { stepPhysics(); acc -= STEP; n++; if (state !== 'play') { acc = 0; break; } }
       if (n === 8) acc = 0;
+      // ball trail: 0.5s fade while in flight
+      if (inFlight && !ball.resting) {
+        trail.push({ x: ball.x, y: ball.y, t: 0 });
+        if (trail.length > 48) trail.shift();
+      }
+    }
+    for (var ti = trail.length - 1; ti >= 0; ti--) {
+      trail[ti].t += dt;
+      if (trail[ti].t > 0.5) trail.splice(ti, 1);
     }
     updateTurtle(dt);
     updateParticles(dt * timeScale);
-    // roll bed follows ball speed
+    // roll bed follows ball speed; bandpass retunes for sand vs grass
     if (AU.ctx && AU.rollGain) {
       var spd = ball && !ball.resting ? Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) : 0;
       var gy2 = ball ? hole.terrain.h(Math.max(0, Math.min(hole.W, ball.x))) : 0;
@@ -626,19 +912,34 @@
       var target = (spd > 1.5 && near) ? Math.min(spd / 30, 1) * 0.10 : 0;
       var g = AU.rollGain.gain;
       g.value += (target - g.value) * 0.25;
+      if (AU.rollFilter && ball && hole) {
+        var sandF = TF.inSand(hole, ball.x) ? 380 : 780;
+        var rf = AU.rollFilter.frequency;
+        rf.value += (sandF - rf.value) * 0.2;
+      }
     }
     render();
   }
 
   /* ---------------- HUD / popups / transitions ---------------- */
+  function refreshButtons() {
+    var canAct = state === 'play' && ball && ball.resting && !inFlight;
+    $('btn-undo').hidden = !(canAct && undoSnap);
+    $('btn-skip').hidden = !(canAct && strokes >= 20);
+    $('btn-trail').hidden = state !== 'play';
+    $('btn-mute').hidden = state !== 'play';
+  }
   function updateHUD() {
     if (!hole) return;
-    var hn = 'Hole ' + holeIndex + (holeNameStr ? ' · ' + holeNameStr : '');
+    var avg = holeScores.length ? TF.avgLast(holeScores, 50) : 0;
+    var hn = 'Hole ' + holeIndex + (holeNameStr ? ' · ' + holeNameStr : '') +
+             (avg ? ' · avg ' + avg.toFixed(1) : '');
     $('hud-hole').textContent = hn;
     var m = 'PAR ' + par() + ' · ' + strokes + (strokes === 1 ? ' STROKE' : ' STROKES');
     if (mode === 'endless') m += ' · Σ ' + totalStrokes + ' · ★ ' + totalStars;
     else m += ' · ★ ' + totalStars;
     $('hud-meta').textContent = m;
+    refreshButtons();
   }
   function scoreLabel(s, p) {
     if (s === 1) return 'Hole in one!';
@@ -658,14 +959,14 @@
   }
   function hideStarsPop() { $('stars-pop').classList.remove('show'); }
 
-  function goToHole(n, s) {
+  function goToHole(n, s, opts) {
     var tr = $('transit');
     $('transit-hole').textContent = 'HOLE ' + n;
     $('transit-name').textContent = '';
     tr.classList.remove('out');
     tr.classList.add('in');
     setTimeout(function () {
-      loadHole(n, s);
+      loadHole(n, s, opts);
       state = 'play';
       saveRun();                                       // persist the new hole so reload resumes here
       tr.classList.remove('in');
@@ -811,6 +1112,7 @@
     } catch (e) {}
     $('result').classList.add('on');
     $('hud').hidden = true;
+    refreshButtons();
     submitDaily(strokes);
     updateDailySub();
   }
@@ -832,11 +1134,16 @@
       runSeed = save.runSeed >>> 0;
       totalStrokes = save.totalStrokes || 0;
       totalStars = save.totalStars || 0;
-      loadHole(save.holeIndex || 1, (runSeed + (save.holeIndex || 1)) >>> 0);
+      holeScores = save.holeScores || [];
+      prevKiller = !!save.prevKiller;
+      var hn = save.holeIndex || 1;
+      var hs = (runSeed + hn) >>> 0;
+      loadHole(hn, hs, holeOptsFor(hs, prevKiller));
     } else {
       runSeed = (Math.random() * 4294967296) >>> 0;
-      totalStrokes = 0; totalStars = 0;
-      loadHole(1, (runSeed + 1) >>> 0);
+      totalStrokes = 0; totalStars = 0; holeScores = []; prevKiller = false;
+      var s0 = (runSeed + 1) >>> 0;
+      loadHole(1, s0, holeOptsFor(s0, false));
     }
     startPlay();
   }
@@ -865,6 +1172,30 @@
     updateDailySub();
   }
 
+  $('btn-undo').addEventListener('click', function (e) { e.stopPropagation(); undoShot(); });
+  $('btn-skip').addEventListener('click', function (e) { e.stopPropagation(); skipHole(); });
+  $('btn-trail').addEventListener('click', function (e) {
+    e.stopPropagation();
+    AU.init(); AU.click();
+    var un = unlockedTrails();
+    var gi = 0;
+    for (var i = 0; i < un.length; i++) if (un[i].n === trailSel) gi = i;
+    trailSel = un[(gi + 1) % un.length].n;
+    lsSet('tf_trail', trailSel);
+    toast('Trail: ' + trailSel + ' (' + (gi + 2 > un.length ? 1 : gi + 2) + '/' + un.length + ')');
+  });
+  var muteState = 0;   // 0: all on, 1: wind off, 2: muted
+  $('btn-mute').addEventListener('click', function (e) {
+    e.stopPropagation();
+    AU.init();
+    muteState = (muteState + 1) % 3;
+    AU.setWindMuted(muteState >= 1);
+    AU.setMuted(muteState === 2);
+    $('btn-mute').textContent = muteState === 2 ? '🔇' : (muteState === 1 ? '🔈' : '🔊');
+    AU.click();
+    toast(muteState === 0 ? 'Sound on' : (muteState === 1 ? 'Wind bed off' : 'All sound off'));
+  });
+
   $('btn-endless').addEventListener('click', startEndless);
   $('btn-daily').addEventListener('click', startDaily);
   $('btn-newrun').addEventListener('click', function () {
@@ -882,6 +1213,7 @@
     running = false;
     $('result').classList.remove('on');
     $('menu').classList.add('on');
+    refreshButtons();
     refreshMenu();
   });
   $('menu-logo').addEventListener('click', function () {   // tiny easter egg: tap the flag
@@ -897,7 +1229,10 @@
 
   /* ---------------- boot ---------------- */
   resize();
+  maxHole = parseInt(lsGet('tf_maxhole', '1'), 10) || 1;
+  trailSel = lsGet('tf_trail', 'Cloud');
   refreshMenu();
+  refreshButtons();
   fetchDaily();                       // prefetch today's hole in the background
   // idle menu backdrop: render hole 1 of a demo seed behind the menu
   try {
@@ -908,5 +1243,5 @@
     running = true; last = performance.now();
   } catch (e) {}
   requestAnimationFrame(loop);
-  window.TF_DEBUG = { loadHole: loadHole, getState: function () { return { state: state, strokes: strokes, ball: ball }; } };
+  window.TF_DEBUG = { loadHole: loadHole, getState: function () { return { state: state, strokes: strokes, totalStrokes: totalStrokes, holeIndex: holeIndex, inFlight: inFlight, aiming: aiming, ball: ball, ghost: ghost, spinVal: spinVal }; } };
 })();
