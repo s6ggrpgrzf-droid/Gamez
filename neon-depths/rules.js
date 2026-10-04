@@ -77,8 +77,17 @@ function createRules(T) {
     return pts;
   }
 
+  function playBalls() {
+    // balls in play or about to return on their own (scoop/saucer/magnet release via timer).
+    // Maw-locked balls are NOT in play — they wait for multiball.
+    let n = sim.balls.length + T.carries.length + (T.magnet.held ? 1 : 0);
+    for (const h of T.holds) if (h.kind !== 'maw') n++;
+    return n;
+  }
+
   function liveBalls() {
-    return sim.balls.length + T.carries.length + T.holds.length + T.mawLocks.length + (T.magnet.held ? 1 : 0);
+    // mawLocks are a subset of holds — count once
+    return playBalls() + T.mawLocks.length;
   }
 
   // ---------------- game flow ----------------
@@ -98,9 +107,9 @@ function createRules(T) {
     serveBall();
   };
 
-  function serveBall() {
+  function serveBall(auto) {
     T.newBallInLane();
-    R.autoPlungeT = 1.2;
+    R.autoPlungeT = auto === false ? 0 : 1.2;
     R.ballSaveT = 20;
     sfx('serve');
   }
@@ -125,6 +134,7 @@ function createRules(T) {
     R.mode = null; R.multiball = false; R.lit = {};
     T.setMagnet(false);
     T.resetInkBank();
+    T.clearMawLocks(); // never leave a ball parked in the maw across balls
     R.lockLit = false; R.locks = 0;
     R.inlanes = {};
     sim.resetTilt();
@@ -137,7 +147,7 @@ function createRules(T) {
     } else {
       R.ball++;
       say('BALL ' + R.ball, 'descend again', 2);
-      serveBall();
+      serveBall(false); // manual plunge from ball 2 on — player owns the skill shot
     }
   }
 
@@ -565,14 +575,15 @@ function createRules(T) {
       }
       case 'drain': {
         sfx('drain');
-        if (R.ballSaveT > 0 && liveBalls() === 0 && R.state === 'play') {
+        const pb = playBalls();
+        if (R.ballSaveT > 0 && pb === 0 && R.state === 'play') {
           say('BALL SAVED', '', 1.5);
           sfx('ballSave');
-          serveBall();
-        } else if (R.multiball && liveBalls() === 1) {
+          serveBall(); // auto-plunge; maw locks persist
+        } else if (R.multiball && pb === 1) {
           endKrakenMultiball();
-        } else if (liveBalls() === 0 && R.state === 'play') {
-          endBall(false);
+        } else if (pb === 0 && R.state === 'play') {
+          endBall(false); // releases maw locks, serves next ball (manual plunge)
         }
         break;
       }

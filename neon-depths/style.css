@@ -143,3 +143,12 @@ html, body {
   letter-spacing: 1px; max-width: 300px;
 }
 @keyframes pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+#plunge-hint {
+  position: absolute; bottom: 24%; left: 50%; transform: translateX(-50%);
+  padding: 10px 22px; border-radius: 999px; z-index: 6; pointer-events: none;
+  font-size: 15px; font-weight: 800; letter-spacing: 1px; white-space: nowrap;
+  color: #0b2a3a; background: #ff9a3c; box-shadow: 0 0 22px rgba(255,154,60,.75);
+  display: none; animation: plungePulse 1s ease-in-out infinite;
+}
+@keyframes plungePulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.07); } }

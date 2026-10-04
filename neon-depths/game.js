@@ -26,6 +26,7 @@
     attractBest: $('attract-best'), mute: $('mute-btn'),
     pause: $('pause-overlay'), taunt: $('taunt'),
     nudgeL: $('nudge-left'), nudgeR: $('nudge-right'),
+    plungeHint: $('plunge-hint'),
   };
   let best = 0;
   try { best = parseInt(localStorage.getItem('neon-depths-best') || '0', 10) || 0; } catch (e) {}
@@ -39,7 +40,7 @@
 
   // ---------- input ----------
   const pointers = new Map(); // pointerId -> 'left'|'right'|'plunger'
-  let plungerStartY = 0, plungerCharge = 0, plungerActive = false;
+  let plungerStartY = 0, plungerCharge = 0, plungerActive = false, plungerDownT = 0;
   let keyPlunger = false, keyCharge = 0;
   const keys = new Set();
 
@@ -61,9 +62,11 @@
     const p = toLogical(ev);
     // lure easter egg
     lureTap(p.x, p.y);
-    if (p.x > 340 && p.y > 560 && ballInLane()) {
+    if (p.x > 320 && p.y > 520 && ballInLane()) {
       pointers.set(ev.pointerId, 'plunger');
       plungerActive = true; plungerStartY = p.y; plungerCharge = 0;
+      plungerDownT = performance.now();
+      R.autoPlungeT = 0; // grabbing the plunger cancels the auto-launch
       canvas.setPointerCapture(ev.pointerId);
     } else if (p.x < 200) {
       pointers.set(ev.pointerId, 'left');
@@ -87,7 +90,11 @@
     else if (kind === 'right') sim.setFlipper('right', false);
     else if (kind === 'plunger') {
       plungerActive = false;
-      if (R.state === 'play' && ballInLane() && plungerCharge > 0.03) T.plunge(plungerCharge);
+      const quickTap = performance.now() - plungerDownT < 260;
+      if (R.state === 'play' && ballInLane()) {
+        if (plungerCharge > 0.03) T.plunge(plungerCharge);
+        else if (quickTap) T.plunge(0.65); // tap = medium launch, no drag needed
+      }
       plungerCharge = 0; renderer.plungerCharge = 0;
     }
   }
@@ -276,6 +283,10 @@
     } else el.saveWrap.style.display = 'none';
     el.tiltFill.style.width = Math.min(100, snap.tilt * 100) + '%';
     el.tiltFill.style.background = snap.tilt > 0.66 ? '#ff5b5b' : '#ffd23c';
+    // manual-plunge prompt: ball waiting in the lane, no auto-launch coming
+    const wantPlunge = snap.state === 'play' && R.autoPlungeT <= 0 &&
+      sim.balls.some(b => b.x > 356 && b.y > 600);
+    el.plungeHint.style.display = wantPlunge ? 'block' : 'none';
     el.combo.textContent = snap.combo >= 2 ? 'COMBO x' + snap.combo : '';
     // banner
     const b = snap.banner;

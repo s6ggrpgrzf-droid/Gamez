@@ -220,8 +220,14 @@ function createTable(sim) {
     return releaseBall(h.ball, 200, 472, vx === undefined ? 80 : vx, vy === undefined ? 420 : vy);
   };
 
-  T.lockBallInMaw = () => {
-    // Called by rules when a lock is earned and the ball is being carried.
+  T.clearMawLocks = () => {
+    // release any balls held in the Maw (end of ball / game over) — never leave a ball parked
+    for (let i = T.holds.length - 1; i >= 0; i--)
+      if (T.holds[i].kind === 'maw') T.holds.splice(i, 1);
+    T.mawLocks.length = 0;
+  };
+
+  T.lockBallInMaw = () => {    // Called by rules when a lock is earned and the ball is being carried.
     // Returns 'held' (1st/2nd) or 'multiball' (3rd -> release all).
     if (T.mawLocks.length < 2) return 'held';
     const locks = T.mawLocks.splice(0);
