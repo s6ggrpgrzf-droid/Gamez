@@ -28,13 +28,20 @@ function createRenderer(canvas, T, R) {
   const r = {
     trauma: 0, time: 0,
     particles: [],
+    pops: [],           // floating score pops (pooled)
     trails: new Map(), // ballId -> [{x,y}]
     plungerCharge: 0,
+    plungerKick: 0,     // spring release animation 1->0
+    rockX: 0, rockV: 0, // table rock from nudges (spring)
+    flashA: 0, flashColor: '#ffffff',
+    rm: false,          // reduced motion: skip shake/flash/squash
     zoneIdx: -1, bgGrad: null,
     staticC: null,
     glowSprites: {},
   };
   for (let i = 0; i < 220; i++) r.particles.push({ life: 0, x: 0, y: 0, vx: 0, vy: 0, color: '#fff', size: 2 });
+  for (let i = 0; i < 24; i++) r.pops.push({ life: 0, maxLife: 1, x: 0, y: 0, text: '', color: '#fff' });
+  const POP_FONT = '700 13px system-ui, sans-serif';
 
   // ---------- glow sprites (cached radial gradients) ----------
   function glowSprite(color) {
@@ -193,7 +200,21 @@ function createRenderer(canvas, T, R) {
       if (++made >= (n || 12)) break;
     }
   };
-  r.shake = (amount) => { r.trauma = Math.min(1, r.trauma + amount); };
+  r.shake = (amount) => { if (!r.rm) r.trauma = Math.min(1, r.trauma + amount); };
+  // table rock: physical nudge of the whole table, springs back (distinct from shake)
+  r.rock = (dx) => { if (!r.rm) r.rockV += dx * 260; };
+  // full-screen soft flash (jackpots, wizard)
+  r.flash = (color, a) => { if (!r.rm) { r.flashColor = color; r.flashA = Math.max(r.flashA, a); } };
+  // floating score pop, drifts up like a bubble
+  r.pop = (x, y, text, color) => {
+    for (const p of r.pops) {
+      if (p.life > 0) continue;
+      p.x = x + (Math.random() - 0.5) * 10; p.y = y - 8;
+      p.text = text; p.color = color || '#eafcff';
+      p.life = p.maxLife = 1.1;
+      return;
+    }
+  };
 
   function stepParticles(dt) {
     for (const p of r.particles) {
@@ -201,6 +222,12 @@ function createRenderer(canvas, T, R) {
       p.life -= dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.vy += 300 * dt; p.vx *= (1 - dt * 1.5);
+    }
+    for (const p of r.pops) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      p.y -= 34 * dt; // weightless bubble rise
+      p.x += Math.sin(r.time * 3 + p.y * 0.05) * 8 * dt;
     }
   }
 
@@ -445,12 +472,21 @@ function createRenderer(canvas, T, R) {
         const a = i / tr.length;
         glow(tr[i].x, tr[i].y, b.r * 2.4 * a + 4, '#4ce0e0', a * 0.35);
       }
-      // ball: bright core + cyan glow
+      // ball: bright core + cyan glow, squash & stretch along velocity when fast
       glow(b.x, b.y, b.r * 4.4, '#4ce0e0', 0.85);
-      const g = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, b.r);
+      const spd = Math.hypot(b.vx, b.vy);
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      if (!r.rm && spd > 700) {
+        const k = Math.min(1.16, 1 + (spd - 700) / 5200); // fluid stretch, capped
+        ctx.rotate(Math.atan2(b.vy, b.vx));
+        ctx.scale(k, 1 / Math.sqrt(k));
+      }
+      const g = ctx.createRadialGradient(-2, -2, 1, 0, 0, b.r);
       g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#bff3ff'); g.addColorStop(1, '#2a9db8');
       ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, b.r, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
     for (const id of [...r.trails.keys()]) if (!seen.has(id)) r.trails.delete(id);
     // carried / held balls (ramps, maw, magnet)
@@ -461,9 +497,10 @@ function createRenderer(canvas, T, R) {
     }
   }
   function drawPlunger() {
-    // spring in the lane; compresses with charge
+    // spring in the lane; compresses with charge, kicks past rest on release
     const ch = r.plungerCharge;
-    const x = 370, y0 = 700, y1 = 700 - ch * 46;
+    const kick = r.plungerKick;
+    const x = 370, y0 = 700, y1 = 700 - ch * 46 - kick * 16;
     ctx.strokeStyle = '#8fa8bf'; ctx.lineWidth = 4;
     ctx.beginPath();
     for (let y = y0; y >= y1; y -= 8) {
@@ -472,21 +509,31 @@ function createRenderer(canvas, T, R) {
     ctx.stroke();
     ctx.fillStyle = '#ff9a3c';
     ctx.fillRect(x - 10, y1 - 8, 20, 8);
-    if (ch > 0.01) glow(x, y1, 30 + ch * 30, '#ff9a3c', 0.4);
+    if (ch > 0.01 || kick > 0.01) glow(x, y1, 30 + ch * 30 + kick * 20, '#ff9a3c', 0.4);
   }
 
   // ---------- main ----------
   r.render = (dt, snap) => {
     r.time += dt;
-    r.trauma = Math.max(0, r.trauma - dt * 1.6);
+    // fluid identity: slow, round shake decay (not sharp)
+    r.trauma = Math.max(0, r.trauma - dt * 1.1);
+    // table rock spring
+    r.rockV += (-r.rockX * 110 - r.rockV * 9) * dt;
+    r.rockX += r.rockV * dt;
+    if (Math.abs(r.rockX) < 0.02 && Math.abs(r.rockV) < 0.5) { r.rockX = 0; r.rockV = 0; }
+    r.flashA = Math.max(0, r.flashA - dt * 2.2);
+    r.plungerKick = Math.max(0, r.plungerKick - dt * 3.2);
     stepParticles(dt);
     const s = r.viewScale || 1;
     ctx.setTransform(s, 0, 0, s, 0, 0);
-    // screen shake
+    // screen shake (capped, decaying) + table rock
+    let ox = 0, oy = 0;
     if (r.trauma > 0) {
-      const sh = r.trauma * r.trauma * 9;
-      ctx.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
+      const sh = r.trauma * r.trauma * 7;
+      ox += (Math.random() - 0.5) * sh; oy += (Math.random() - 0.5) * sh;
     }
+    ox += Math.max(-7, Math.min(7, r.rockX));
+    if (ox || oy) ctx.translate(ox, oy);
     drawBackground(snap);
     if (r.staticC) ctx.drawImage(r.staticC, 0, 0, W, H);
     drawInserts(snap);
@@ -509,6 +556,18 @@ function createRenderer(canvas, T, R) {
       ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
     ctx.globalAlpha = 1;
+    // floating score pops (bubble-rise)
+    if (r.pops.some(p => p.life > 0)) {
+      ctx.font = POP_FONT; ctx.textAlign = 'center';
+      for (const p of r.pops) {
+        if (p.life <= 0) continue;
+        const a = Math.max(0, Math.min(1, p.life / (p.maxLife * 0.6)));
+        ctx.globalAlpha = a;
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.text, p.x, p.y);
+      }
+      ctx.globalAlpha = 1;
+    }
     // crush-depth vignette
     if (snap.crush) {
       const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, H * 0.62);
@@ -516,6 +575,13 @@ function createRenderer(canvas, T, R) {
       vg.addColorStop(1, 'rgba(160,10,30,0.28)');
       ctx.fillStyle = vg;
       ctx.fillRect(0, 0, W, H);
+    }
+    // soft full-screen flash (jackpots etc.)
+    if (r.flashA > 0.004) {
+      ctx.globalAlpha = Math.min(0.5, r.flashA);
+      ctx.fillStyle = r.flashColor;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   };

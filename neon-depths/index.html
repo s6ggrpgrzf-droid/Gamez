@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Neon Depths — Pinball</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 <link rel="stylesheet" href="art.css?v=1">
 </head>
 <body>
@@ -34,6 +34,16 @@
   <button id="nudge-left" class="nudge" aria-label="nudge left">◀</button>
   <button id="nudge-right" class="nudge" aria-label="nudge right">▶</button>
   <button id="mute-btn" aria-label="mute">🔊</button>
+  <button id="gear-btn" aria-label="settings">⚙</button>
+
+  <!-- Settings -->
+  <div id="settings" class="overlay" style="display:none">
+    <div class="title small">SETTINGS</div>
+    <div class="setrow"><span>sound</span><button id="set-sound" class="setbtn">on</button></div>
+    <div class="setrow"><span>haptics</span><button id="set-hap" class="setbtn">on</button></div>
+    <div class="setrow"><span>reduce motion</span><button id="set-rm" class="setbtn">off</button></div>
+    <div class="tap">— tap to close —</div>
+  </div>
 
   <!-- Attract -->
   <div id="attract" class="overlay">
@@ -62,9 +72,9 @@
 
 <script src="sim.js?v=1"></script>
 <script src="table.js?v=1"></script>
-<script src="rules.js?v=1"></script>
-<script src="render.js?v=1"></script>
+<script src="rules.js?v=2"></script>
+<script src="render.js?v=2"></script>
 <script src="audio.js?v=1"></script>
-<script src="game.js?v=1"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>

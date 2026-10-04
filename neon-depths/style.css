@@ -107,10 +107,29 @@ html, body {
 #nudge-right { right: 6px; }
 #mute-btn {
   position: absolute; top: max(8px, env(safe-area-inset-top)); right: 8px; z-index: 8;
-  width: 40px; height: 40px; border-radius: 50%; font-size: 17px;
+  width: 44px; height: 44px; border-radius: 50%; font-size: 17px;
   background: rgba(20, 60, 90, 0.45); color: #fff;
   border: 1px solid rgba(76, 224, 224, 0.35);
 }
+#gear-btn {
+  position: absolute; top: max(8px, env(safe-area-inset-top)); left: 8px; z-index: 8;
+  width: 44px; height: 44px; border-radius: 50%; font-size: 20px;
+  background: rgba(20, 60, 90, 0.45); color: #9fd8ef;
+  border: 1px solid rgba(76, 224, 224, 0.35);
+}
+/* ---------- settings ---------- */
+#settings { cursor: default; }
+.setrow {
+  display: flex; align-items: center; justify-content: space-between;
+  width: min(300px, 78vw); margin-top: 14px;
+  font-size: 15px; letter-spacing: 2px; color: #9fd8ef;
+}
+.setbtn {
+  min-width: 76px; min-height: 44px; padding: 8px 18px; border-radius: 999px;
+  font-size: 15px; font-weight: 700; letter-spacing: 1px;
+  color: #0b2a3a; background: #7dffb0; border: none;
+}
+.setbtn.off { background: #2a4a5e; color: #9fd8ef; }
 /* mute sits below score row: offset it */
 #hud-top { padding-right: 56px; }
 

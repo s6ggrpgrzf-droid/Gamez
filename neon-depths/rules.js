@@ -48,6 +48,7 @@ function createRules(T) {
     banner: null,        // {main, sub, t}
     audio: [],
     ai: [],              // kraken taunt prompts for game.js
+    pops: [],            // score-pop telemetry for the renderer: {id, pts} (feel only)
     trenchSeq: [],
     ventValue: 5000000,
     anglerLits: [],
@@ -63,6 +64,7 @@ function createRules(T) {
   const taunt = (kind, data) => { R.ai.push(Object.assign({ kind }, data || {})); };
   R.takeAudio = () => { const a = R.audio; R.audio = []; return a; };
   R.takeAi = () => { const a = R.ai; R.ai = []; return a; };
+  R.takePops = () => { const p = R.pops; R.pops = []; return p; };
 
   const depthMult = () => 1 + R.depthM / 2750;
   const crush = () => R.depthM >= 6000;
@@ -74,6 +76,8 @@ function createRules(T) {
     R.score += pts;
     R.depthM = Math.min(11000, Math.floor(R.score / 4000));
     T.setSlingBoost(crush() ? 1.25 : 1);
+    // feel telemetry: floating score pops (no gameplay effect)
+    if (pts > 0 && R.state === 'play' && R._popId) R.pops.push({ id: R._popId, pts });
     return pts;
   }
 
@@ -347,6 +351,7 @@ function createRules(T) {
   }
 
   function onShot(id, ev) {
+    R._popId = id; // anchor score pops to this shot (feel telemetry)
     // wizard scoring
     if (R.mode && R.mode.id === 'leviathan') {
       const done = Math.max(1, Object.keys(R.modesDone).length);
@@ -458,6 +463,7 @@ function createRules(T) {
   }
 
   function onBumper(id, impulse) {
+    R._popId = id; // anchor score pops to this bumper (feel telemetry)
     if (R.mode && R.mode.id === 'bloom') {
       R.bloomHits++;
       addScore(1000000);
@@ -479,6 +485,7 @@ function createRules(T) {
 
   // ---------------- table event dispatch ----------------
   function onTableEvent(e) {
+    R._popId = null; // each table event re-anchors its own pops
     switch (e.type) {
       case 'shot': onShot(e.id, e); break;
       case 'rampEnter':
@@ -491,12 +498,14 @@ function createRules(T) {
       case 'flipperHit': sfx('flipper', { impulse: e.impulse }); break;
       case 'ballHit': sfx('ballClack'); break;
       case 'inkDown':
+        R._popId = 'ink' + (e.index + 1);
         addScore(200000);
         sfx('dropTarget');
         onInkDown();
         break;
       case 'inkReset': break;
       case 'abyssHit': {
+        R._popId = 'abyss' + (e.index + 1);
         if (!R.abyss[e.index]) {
           R.abyss[e.index] = true;
           addScore(150000);
