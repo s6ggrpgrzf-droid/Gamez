@@ -61,11 +61,17 @@
     var ribbons = L.ribbons || [];
     var isNew = ribbons.indexOf(S.ribbon.t) < 0;
     if (isNew) ribbons.push(S.ribbon.t);
+    var tree = L.tree || []; // v4: lineage of past lives (newest first, cap 24)
+    try {
+      tree.unshift({ n: S.name, age: S.age, cause: S.deathCause || '', r: S.ribbon.e || '🎗️', d: Date.now() });
+      if (tree.length > 24) tree.length = 24;
+    } catch (e) {}
     saveLegacy({
       lives: (L.lives || 0) + 1,
       best: Math.max(L.best || 0, LifeSim.netWorth(S)),
       ribbons: ribbons,
-      wins: (L.wins || 0) + (S.won ? 1 : 0)
+      wins: (L.wins || 0) + (S.won ? 1 : 0),
+      tree: tree
     });
     if (isNew) addFate(1);   // new ribbon, +1 fate
     if (S.won) addFate(2);   // scenario win, +2 fate
@@ -81,37 +87,50 @@
     clearTimeout(toastT);
     toastT = setTimeout(function () { t.classList.remove('show'); }, 2200);
   }
+  /* v4: confetti() is now a thin wrapper over the pooled FX engine (fx.js).
+     Same signature, zero per-burst allocation. */
   function confetti(count, opts) {
-    if (RM) return;
-    var c = $('confetti');
-    if (!c || !c.getContext) return;
-    count = count || 140;
+    if (!window.FX) return;
     opts = opts || {};
-    var ctx = c.getContext('2d');
-    c.width = window.innerWidth; c.height = window.innerHeight;
-    c.classList.remove('hidden');
-    var colors = ['#ffd166', '#7c5cff', '#4dd0a6', '#ff6b9d', '#2ea8ff'];
-    var parts = [];
-    for (var i = 0; i < count; i++) parts.push({
-      x: (opts.x0 !== undefined) ? opts.x0 + (Math.random() - 0.5) * (opts.spread || 200) : Math.random() * c.width,
-      y: (opts.y0 !== undefined) ? opts.y0 + (Math.random() - 0.5) * (opts.spread || 200) * 0.4 : -20 - Math.random() * c.height * 0.4,
-      w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
-      vy: 2 + Math.random() * 3.5, vx: -1.5 + Math.random() * 3,
-      r: Math.random() * Math.PI, vr: -0.12 + Math.random() * 0.24,
-      col: colors[i % colors.length]
+    FX.burst({
+      count: count || 140,
+      x: (opts.x0 !== undefined) ? opts.x0 : undefined,
+      y: (opts.y0 !== undefined) ? opts.y0 : undefined,
+      spread: opts.spread || 200,
+      colors: opts.colors
     });
-    var t = 0, maxT = Math.max(90, Math.min(200, count + 60));
-    (function tick() {
-      ctx.clearRect(0, 0, c.width, c.height);
-      parts.forEach(function (p) {
-        p.x += p.vx; p.y += p.vy; p.r += p.vr;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
-        ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        ctx.restore();
-      });
-      if (++t < maxT) requestAnimationFrame(tick);
-      else c.classList.add('hidden');
-    })();
+  }
+
+  /* v4: journal timeline filter (All / ★ Highlights), persisted */
+  var journalFilter = 'all';
+  try { journalFilter = localStorage.getItem('lifestory_jf') || 'all'; } catch (e) {}
+  if (journalFilter !== 'star') journalFilter = 'all';
+  var MAJOR_RE = /📰|✨|💍|👶|🏆|⚰️|⭐|🎓|💰|🕶️|🌙|🧸|🎁|💸|🔫|📱/;
+  function wireJournalFilter() {
+    var btns = document.querySelectorAll('#jfilter button');
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.classList.toggle('on', b.dataset.jf === journalFilter);
+        b.onclick = function () {
+          journalFilter = b.dataset.jf;
+          try { localStorage.setItem('lifestory_jf', journalFilter); } catch (e) {}
+          for (var k = 0; k < btns.length; k++) btns[k].classList.toggle('on', btns[k] === b);
+          lastJournalKey = ''; // force re-render
+          sfx('click');
+          render();
+        };
+      })(btns[i]);
+    }
+  }
+
+  /* v4: per-year trace for Life Replay (tiny snapshots, ~100 max per life) */
+  var lifeTrace = [];
+  function traceYear() {
+    if (!S) return;
+    var w = 0;
+    try { w = LifeSim.netWorth(S); } catch (e) {}
+    lifeTrace.push({ age: S.age, happy: S.happy, health: S.health, smarts: S.smarts, looks: S.looks, fame: S.fame, worth: w });
+    if (lifeTrace.length > 160) lifeTrace.shift();
   }
 
   /* ---------- tiny WebAudio SFX ---------- */
@@ -201,6 +220,27 @@
     }, 1100);
   }
 
+  /* ---------- v4: stat delta pops, driven by Bus 'stat:change' ---------- */
+  var statPopPool = [];
+  function statPop(key, delta) {
+    if (RM || !delta || !window.Bus) return;
+    var num = $('b-' + key + '-n');
+    if (!num) return;
+    var p = statPopPool.pop();
+    if (!p) { p = document.createElement('div'); document.body.appendChild(p); }
+    p.className = 'stat-pop ' + (delta > 0 ? 'up' : 'down');
+    p.textContent = (delta > 0 ? '+' : '') + delta;
+    var r = num.getBoundingClientRect();
+    p.style.left = (r.left + r.width / 2 - 8) + 'px';
+    p.style.top = (r.top - 4) + 'px';
+    void p.offsetWidth;
+    p.classList.add('go');
+    setTimeout(function () {
+      p.classList.remove('go');
+      p.className = 'stat-pop';
+      if (statPopPool.length < 8) statPopPool.push(p);
+    }, 950);
+  }
   /* ---------- cash-register money tick ---------- */
   var moneyShown = null, moneyRaf = 0;
   function moneyPopFx() {
@@ -249,6 +289,10 @@
     } else if (/📦 Fired from|🚨 Busted!|⚖️ Divorced/.test(text)) {
       comedicShake();
       buzz(/🚨 Busted!/.test(text) ? HAP.error : HAP.warning);
+    } else if (/💍 Married/.test(text)) {
+      try { FX.hearts(window.innerWidth / 2, 170, 32); } catch (e) {}
+      sfx('up');
+      buzz(HAP.success);
     }
   }
 
@@ -273,11 +317,13 @@
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
-  function drawAvatar() {
-    var cv = $('avatar');
+  /* v4: drawAvatarTo lets Life Replay render the aging face at any size */
+  function drawAvatarTo(cv, size) {
     if (!cv || !cv.getContext || !S) return;
     var ctx = cv.getContext('2d');
-    ctx.clearRect(0, 0, 96, 96);
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    ctx.scale(size / 96, size / 96);
     var skin = S.skin || SKINS[1];
     if (S.jail > 0) { // orange jumpsuit behind the face
       ctx.fillStyle = '#e8722a'; roundRect(ctx, 10, 58, 76, 34, 10); ctx.fill();
@@ -333,7 +379,9 @@
       ctx.beginPath(); ctx.moveTo(30, 57); ctx.lineTo(24, 59); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(66, 57); ctx.lineTo(72, 59); ctx.stroke();
     }
+    ctx.restore();
   }
+  function drawAvatar() { drawAvatarTo($('avatar'), 96); }
 
   /* ---------- dossier data (fallback if sim lacks genDossier) ---------- */
   var PARENT_JOBS = ['bus driver', 'diner cook', 'school janitor', 'retail clerk', 'plumber', 'nurse',
@@ -458,7 +506,7 @@
     var bb = $('begin-life-btn');
     if (bb && !bb.onclick) bb.onclick = function () { sfx('click'); buzz(HAP.medium); beginLife(); };
     var bk = $('dossier-back');
-    if (bk && !bk.onclick) bk.onclick = function () { sfx('click'); buzz(HAP.select); $('dossier').classList.add('hidden'); showStart(); };
+    if (bk && !bk.onclick) bk.onclick = function () { sfx('click'); buzz(HAP.select); showStart(); };
   }
   function spendFate(kind, cost) {
     if (getFate() < cost) { toast('✨ Not enough Fate Points. Die more interestingly.'); return; }
@@ -515,12 +563,13 @@
     prevStats = {};
     try { prevWorth = LifeSim.netWorth(S); } catch (e) { prevWorth = 0; }
     lastJournalKey = ''; lastLogKey = ''; moneyShown = null; lastKids = -1; millionClub = false; // reset juice state
+    lifeTrace = []; // v4: fresh trace for Life Replay
     var doDaily = pendingDaily; pendingDaily = false;
-    $('dossier').classList.add('hidden');
-    $('start').classList.add('hidden');
-    $('death').classList.add('hidden');
+    Scenes.show('life');
     $('sheet').classList.add('hidden');
     render();
+    try { Bus.emit('birth', { name: S.name, country: S.country }); } catch (e) {}
+    traceYear(); // v4: age-0 snapshot for the replay
     var j = $('journal'); if (j) j.scrollTop = 0;
     if (doDaily) setupDaily();
   }
@@ -570,6 +619,7 @@
         bar.classList.remove('up', 'down');
         void bar.offsetWidth;
         bar.classList.add(v > prevStats[pair[0]] ? 'up' : 'down');
+        try { Bus.emit('stat:change', { key: pair[0], from: prevStats[pair[0]], to: v }); } catch (e) {}
       }
       statSfx(pair[0], v);
     });
@@ -594,6 +644,7 @@
       floater('-' + LifeSim.fmt(-delta), 'loss');
     }
     prevWorth = w;
+    if (delta !== 0) { try { Bus.emit('money:change', { from: w - delta, to: w, delta: delta }); } catch (e) {} }
     if (w >= 1000000 && !millionClub) { // first million: confetti-lite milestone
       millionClub = true;
       confetti(70);
@@ -607,12 +658,23 @@
     if (S.kids) lastKids = S.kids.length;
     var j = $('journal');
     if (j) {
-      var jk = S.log.length + '|' + (S.log.length ? S.log[0].age + ':' + (S.log[0].text || '').slice(0, 48) : '');
+      var jk = journalFilter + '|' + S.log.length + '|' + (S.log.length ? S.log[0].age + ':' + (S.log[0].text || '').slice(0, 48) : '');
       if (jk !== lastJournalKey) { // guard: no layout churn when the log didn't change
         lastJournalKey = jk;
-        j.innerHTML = S.log.map(function (e) {
-          return '<div class="entry"><span class="ag">Age ' + e.age + '</span>' + esc(e.text) + '</div>';
-        }).join('');
+        var vis = S.log.filter(function (e) {
+          return journalFilter === 'all' || MAJOR_RE.test(e.text || '');
+        });
+        var html = '', lastAge = -1, k;
+        for (k = 0; k < vis.length; k++) {
+          var e = vis[k];
+          if (e.age !== lastAge) {
+            html += '<div class="tl-age"><span>Age ' + e.age + '</span></div>';
+            lastAge = e.age;
+          }
+          html += '<div class="entry">' + esc(e.text) + '</div>';
+        }
+        if (!html) html = '<div class="entry" style="opacity:.6">No highlights yet — go live a little.</div>';
+        j.innerHTML = html;
       }
       var lk = logTopKey();
       if (lk && lk !== lastLogKey) { // newest journal line changed: jackpot or disaster juice
@@ -937,13 +999,17 @@
     S.pendingEvent = null; // consumed by the UI
     var item = localModalItem(ev);
     var canAI = (typeof LifeSim.aiState === 'function') && (typeof LifeSim.applyAiChoice === 'function');
-    if (canAI && Math.random() < 0.35) fetchAiEvent(item);
+    if (canAI && Math.random() < 0.35) {
+      if (S.age < 13 && Math.random() < 0.6) fetchAiChildhood(item); // v4: childhood vignettes
+      else if (S.age >= 16 && Math.random() < 0.25) fetchAiDream(item); // v4: karmic dreams
+      else fetchAiEvent(item);
+    }
     else { eventQueue.push(item); processQueue(); }
   }
   function validateAiEvent(d) {
     if (!d || typeof d.text !== 'string' || !d.text.trim()) return null;
     if (!Array.isArray(d.choices) || d.choices.length < 2 || d.choices.length > 3) return null;
-    var keys = ['happy', 'health', 'smarts', 'looks', 'money', 'fame'];
+    var keys = ['happy', 'health', 'smarts', 'looks', 'money', 'fame', 'karma'];
     var choices = [];
     for (var i = 0; i < d.choices.length; i++) {
       var c = d.choices[i];
@@ -958,7 +1024,10 @@
     }
     return { text: d.text.trim(), choices: choices };
   }
-  function fetchAiEvent(fallbackItem) {
+  /* v4: one pipeline for every AI choice-event kind (/event, /childhood, /dream).
+     Same non-blocking behavior: 6s timeout, shimmer note, lifeToken guard,
+     silent fallback to the local event. */
+  function fetchAiKind(path, payload, title, fallbackItem) {
     var tok = lifeToken;
     aiInFlight = true;
     showFateNote(true);
@@ -974,13 +1043,11 @@
       eventQueue.push(aiItem || fallbackItem);
       processQueue();
     }
-    var state = null;
-    try { state = LifeSim.aiState(S); } catch (e) { finish(null); return; }
     try {
-      fetch(AI_BASE + '/event', {
+      fetch(AI_BASE + path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: state }),
+        body: JSON.stringify(payload),
         signal: ctrl ? ctrl.signal : undefined
       })
         .then(function (r) { return r.json(); })
@@ -989,7 +1056,7 @@
           if (!v) { finish(null); return; }
           var ev = { text: v.text, choices: v.choices };
           finish({
-            title: '✨ Fate intervenes',
+            title: title,
             text: v.text,
             choices: v.choices.map(function (c, i) {
               return {
@@ -1004,7 +1071,68 @@
         .catch(function () { finish(null); });
     } catch (e) { finish(null); }
   }
+  function fetchAiEvent(fallbackItem) {
+    var state = null;
+    try { state = LifeSim.aiState(S); } catch (e) { state = null; }
+    if (!state) { eventQueue.push(fallbackItem); processQueue(); return; }
+    fetchAiKind('/event', { state: state }, '✨ Fate intervenes', fallbackItem);
+  }
+  function wealthTierName(w) {
+    if (w < 0) return 'in debt';
+    if (w < 50000) return 'broke';
+    if (w < 500000) return 'comfortable';
+    if (w < 5000000) return 'rich';
+    return 'loaded';
+  }
+  function fetchAiChildhood(fallbackItem) {
+    var w = 0;
+    try { w = LifeSim.netWorth(S); } catch (e) {}
+    fetchAiKind('/childhood', {
+      name: S.name, age: S.age,
+      father: (S.parents && S.parents.father) || 'Dad',
+      mother: (S.parents && S.parents.mother) || 'Mom',
+      siblings: S.siblings || [],
+      country: S.country || 'this country',
+      wealthTier: wealthTierName(w)
+    }, '🧸 Childhood', fallbackItem);
+  }
+  function fetchAiDream(fallbackItem) {
+    var kt = 'morally beige';
+    try { kt = (S.karma >= 65) ? 'kind' : (S.karma >= 45 ? 'morally beige' : 'a little rough'); } catch (e) {}
+    var hl = '';
+    try { hl = (S.log[0] && S.log[0].text) || ''; } catch (e) {}
+    fetchAiKind('/dream', {
+      name: S.name, age: S.age, karmaTier: kt, highlight: String(hl).slice(0, 140)
+    }, '🌙 Dream', fallbackItem);
+  }
 
+  /* v4: AI tabloid headlines for the famous — journal entry + toast, never blocking */
+  function fetchAiHeadline() {
+    var tok = lifeToken;
+    var hl = '';
+    try { hl = (S.log[0] && S.log[0].text) || ''; } catch (e) {}
+    var ctrl = null;
+    try { ctrl = new AbortController(); } catch (e) {}
+    var to = setTimeout(function () { try { ctrl && ctrl.abort(); } catch (e) {} }, 6000);
+    fetch(AI_BASE + '/headline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: S.name, fame: S.fame, highlight: String(hl).slice(0, 140) }),
+      signal: ctrl ? ctrl.signal : undefined
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        clearTimeout(to);
+        if (tok !== lifeToken || !S || !S.alive) return;
+        if (d && typeof d.text === 'string' && d.text.trim()) {
+          S.log.unshift({ age: S.age, text: '📰 ' + d.text.trim() });
+          toast('📰 ' + trunc(d.text.trim(), 64));
+          try { Bus.emit('headline', { text: d.text.trim() }); } catch (e) {}
+          render();
+        }
+      })
+      .catch(function () { clearTimeout(to); });
+  }
   /* ---------- daily mode ---------- */
   var dailyExpanded = false;
   var DAILY_FB = [
@@ -1185,6 +1313,7 @@
     var ob = $('d-obit');
     if (ob) ob.textContent = localObitText();
     fetchAiObit();
+    fetchAiBiography();
     var banner = S.won ? '<div class="winbanner">🏆 SCENARIO COMPLETE!</div>' : '';
     $('d-ribbon-e').textContent = S.ribbon.e;
     $('d-ribbon-t').textContent = S.ribbon.t;
@@ -1226,7 +1355,8 @@
     if (djb) djb.textContent = '📖 Read journal';
     var canKid = S.kids.length > 0 && worth > 0;
     $('child-btn').classList.toggle('hidden', !canKid);
-    $('death').classList.remove('hidden');
+    Scenes.show('death');
+    try { Bus.emit('death', { name: S.name, age: S.age, worth: worth }); } catch (e) {}
     confetti(46, { x0: window.innerWidth / 2, y0: 130, spread: 260 }); // gold-ish burst for the ribbon reveal
     arcadeLifeComplete(worth);
     dailyDeathFlow();
@@ -1260,6 +1390,135 @@
         .catch(function () { clearTimeout(to); });
     } catch (e) { clearTimeout(to); }
   }
+  /* v4: AI biography — 3 acts + epitaph, swapped in when it arrives (10s timeout) */
+  function fetchAiBiography() {
+    var box = $('d-bio');
+    if (!box || !S) return;
+    var tok = lifeToken;
+    var highlights = S.log.filter(function (e) { return e.text && e.text.length > 12; })
+      .slice(0, 8).map(function (e) { return e.text; });
+    var w = 0;
+    try { w = LifeSim.netWorth(S); } catch (e) {}
+    var ctrl = null;
+    try { ctrl = new AbortController(); } catch (e) {}
+    var to = setTimeout(function () { try { ctrl && ctrl.abort(); } catch (e) {} }, 10000);
+    fetch(AI_BASE + '/biography', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: S.name, age: S.age, birthYear: S.birthYear || 0,
+        cause: S.deathCause || '', ribbon: (S.ribbon && S.ribbon.t) || '',
+        highlights: highlights,
+        stats: { happy: S.happy, health: S.health, smarts: S.smarts, looks: S.looks, fame: S.fame, worth: w }
+      }),
+      signal: ctrl ? ctrl.signal : undefined
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        clearTimeout(to);
+        if (tok !== lifeToken) return;
+        if (d && Array.isArray(d.acts) && d.acts.length === 3 && typeof d.epitaph === 'string' && d.epitaph.trim()) {
+          var acts = $('d-bio-acts'), ep = $('d-bio-epitaph');
+          if (acts) acts.innerHTML = d.acts.map(function (a, i) {
+            return '<p class="bio-act"><b>' + ['I. Youth', 'II. Prime', 'III. Twilight'][i] + '.</b> ' + esc(a) + '</p>';
+          }).join('');
+          if (ep) ep.textContent = '“' + d.epitaph.trim() + '”';
+          box.classList.remove('hidden');
+          try { Bus.emit('biography', { name: S.name }); } catch (e) {}
+        }
+      })
+      .catch(function () { clearTimeout(to); });
+  }
+  /* v4: Life Replay — watch your life paint itself, year by year.
+     Reuses the real aging face (drawAvatarTo) and the real journal. */
+  var rpTimer = null, rpFrames = [], rpIdx = 0;
+  function buildReplayFrames() {
+    var byAge = {}, i, e;
+    for (i = S.log.length - 1; i >= 0; i--) { // oldest-first into buckets
+      e = S.log[i];
+      if (!byAge[e.age]) byAge[e.age] = [];
+      byAge[e.age].push(e.text);
+    }
+    return lifeTrace.map(function (t) {
+      var lines = byAge[t.age] || [], star = null, first = null, k;
+      for (k = 0; k < lines.length; k++) {
+        if (!first) first = lines[k];
+        if (!star && MAJOR_RE.test(lines[k] || '')) star = lines[k];
+      }
+      return { t: t, line: star || first || '' };
+    });
+  }
+  function drawReplayFrame(f) {
+    var cv = $('rp-face');
+    var sa = S.age, sh = S.happy, sf = S.fame; // wear this year's face, then change back
+    S.age = f.t.age; S.happy = f.t.happy; S.fame = f.t.fame;
+    try { drawAvatarTo(cv, 160); } catch (err) {}
+    S.age = sa; S.happy = sh; S.fame = sf;
+    $('rp-age').textContent = 'Age ' + f.t.age;
+    var line = $('rp-line');
+    if (line) {
+      line.classList.remove('swap'); void line.offsetWidth;
+      line.textContent = f.line;
+      if (f.line) line.classList.add('swap');
+    }
+    var bars = { happy: 'rp-happy', health: 'rp-health', smarts: 'rp-smarts', looks: 'rp-looks' };
+    for (var k in bars) {
+      var el = $(bars[k]);
+      if (el) el.style.width = f.t[k] + '%';
+    }
+  }
+  function stopReplay() { if (rpTimer) { clearInterval(rpTimer); rpTimer = null; } }
+  function closeReplay() { stopReplay(); $('replay').classList.add('hidden'); }
+  function endReplay() {
+    stopReplay();
+    var sk = $('rp-skip'), cl = $('rp-close');
+    if (sk) sk.classList.add('hidden');
+    if (cl) cl.classList.remove('hidden');
+    try { FX.burst({ count: 60 }); sfx('up'); } catch (err) {}
+  }
+  function openReplay() {
+    if (!S || !lifeTrace.length) return;
+    rpFrames = buildReplayFrames();
+    rpIdx = 0;
+    $('rp-name').textContent = S.name;
+    $('rp-skip').classList.remove('hidden');
+    $('rp-close').classList.add('hidden');
+    $('replay').classList.remove('hidden');
+    sfx('click');
+    drawReplayFrame(rpFrames[0]);
+    stopReplay();
+    rpTimer = setInterval(function () {
+      rpIdx++;
+      if (rpIdx >= rpFrames.length) { endReplay(); return; }
+      var f = rpFrames[rpIdx];
+      drawReplayFrame(f);
+      var ln = f.line || '';
+      if (/💍 Married/.test(ln)) { try { FX.hearts(window.innerWidth / 2, 220, 20); } catch (err) {} }
+      else if (/JACKPOT/i.test(ln)) { try { FX.burst({ count: 50 }); } catch (err) {} }
+      if (rpIdx % 10 === 0) sfx('click');
+    }, 480);
+    try { Bus.emit('replay:start', { name: S.name, years: rpFrames.length }); } catch (err) {}
+  }
+
+  /* v4: Lineage — every past life as a tombstone */
+  function openLineage() {
+    var L = legacy(), tree = L.tree || [], body = $('lineage-body');
+    if (!body) return;
+    if (!tree.length) {
+      body.innerHTML = '<div class="lin-empty">No recorded lives yet.<br>The lineage begins with your next death. 🪦</div>';
+    } else {
+      body.innerHTML = tree.map(function (t) {
+        var cause = t.cause ? ' · ' + esc(String(t.cause).charAt(0).toUpperCase() + String(t.cause).slice(1)) : '';
+        return '<div class="lin-card"><div class="lin-e">' + esc(t.r || '🎗️') + '</div>' +
+          '<div class="lin-info"><b>' + esc(t.n || '???') + '</b>' +
+          '<span>Age ' + (t.age || '?') + cause + '</span></div></div>';
+      }).join('');
+    }
+    $('lineage').classList.remove('hidden');
+    sfx('click');
+  }
+  function closeLineage() { $('lineage').classList.add('hidden'); }
+
   function dailyDeathFlow() {
     var box = $('arc-lb-daily');
     if (box) box.innerHTML = '';
@@ -1325,9 +1584,7 @@
     ensureStartExtras();
     updateFateLine();
     showLegacy();
-    $('dossier').classList.add('hidden');
-    $('death').classList.add('hidden');
-    $('start').classList.remove('hidden');
+    Scenes.show('start');
   }
 
   /* ---------- header extras: second chance + mute ---------- */
@@ -1383,8 +1640,11 @@
     sfx('click');
     try { snap = JSON.stringify(S); } catch (e) { snap = null; } // snapshot before every ageUp
     LifeSim.ageUp(S);
+    traceYear(); // v4: snapshot for Life Replay
     doCheckDaily();
     render();
+    try { if (S.alive) Bus.emit('year', { age: S.age }); } catch (e) {}
+    if (S.alive && S.fame >= 40 && Math.random() < 0.22) fetchAiHeadline(); // v4: tabloids notice you
     var j = $('journal'); if (j) j.scrollTop = 0;
     if (!S.alive) { eventQueue.length = 0; hideFateNote(); showDeath(); return; }
     handlePendingEvent();
@@ -1480,5 +1740,37 @@
   ensureEventModal();
   ensureStartExtras();
   buildScenarios();
+  wireJournalFilter();
+  /* v4: replay + lineage wiring */
+  (function () {
+    var drb = $('d-replay-btn');
+    if (drb) drb.onclick = function () { openReplay(); };
+    var sk = $('rp-skip');
+    if (sk) sk.onclick = function () {
+      if (rpFrames.length) { rpIdx = rpFrames.length - 1; drawReplayFrame(rpFrames[rpIdx]); }
+      endReplay();
+    };
+    var cl = $('rp-close');
+    if (cl) cl.onclick = function () { closeReplay(); };
+    var rp = $('replay');
+    if (rp) rp.addEventListener('click', function (e) { if (e.target === rp) closeReplay(); });
+    var lb = $('lineage-btn');
+    if (lb) lb.onclick = function () { openLineage(); };
+    var lx = $('lineage-x');
+    if (lx) lx.onclick = function () { closeLineage(); };
+    var lg = $('lineage');
+    if (lg) lg.addEventListener('click', function (e) { if (e.target === lg) closeLineage(); });
+  })();
+  /* v4: engine wiring — bus subscriptions live here, systems stay decoupled */
+  try {
+    FX.setReducedMotion(RM);
+    Bus.on('stat:change', function (d) { statPop(d.key, d.to - d.from); });
+    Bus.on('money:change', function (d) {
+      if (d.delta >= 50000) FX.money();
+      else if (d.delta <= -50000) FX.shake(5);
+    });
+    Bus.on('death', function () { FX.shake(7); });
+    Bus.on('scene:enter', function (d) { if (d.scene === 'death') FX.ring(); });
+  } catch (e) {}
   showStart();
 })();
