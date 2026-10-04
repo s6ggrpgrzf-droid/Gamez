@@ -130,7 +130,8 @@
     { id: 'reel-empire', name: 'Reel Empire', cls: 'art-reel-empire' },
     { id: 'pdawg', name: 'Pdawg Puzzles', cls: 'art-pdawg' },
     { id: 'word-well', name: 'Word Well', cls: 'art-word-well' },
-    { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' }
+    { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
+    { id: 'castaway-cove', name: 'Castaway Cove', cls: 'art-castaway-cove' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -198,6 +199,14 @@
         var bn = bm.nightsSurvived || 0, bk = bm.bestKills || 0;
         if (!bn && !bk) return null;
         return { label: '🌙 ' + bn + ' night' + (bn === 1 ? '' : 's') + ' · 🩸' + bk + ' best', frac: Math.min(1, bn / 5) };
+      }
+      if (id === 'castaway-cove') {
+        var ccv = readJSON('castaway_cove_v1');
+        if (!ccv) return null;
+        var jc = ccv.journal ? Object.keys(ccv.journal).length : 0;
+        var cs = (ccv.streak && ccv.streak.count) || 0;
+        if (!jc && !cs) return null;
+        return { label: '📖 ' + jc + '/40 · 🔥' + cs, frac: Math.min(1, jc / 40) };
       }
     } catch (e) { return null; }
     return null;
