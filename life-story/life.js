@@ -1188,10 +1188,15 @@ var LifeSim = (function () {
 
   /* ---------------- AI hooks ---------------- */
   function aiState(S) {
+    var kt = S.karma >= 65 ? "kind" : S.karma >= 45 ? "morally beige" : "a little rough";
     return {
       age: S.age, job: S.job ? S.job.t : null, worth: netWorth(S),
       happy: S.happy, health: S.health, smarts: S.smarts, looks: S.looks, fame: S.fame,
-      partner: !!S.partner, kids: S.kids.length, scenario: S.scenario
+      partner: !!S.partner, kids: S.kids.length, scenario: S.scenario,
+      country: S.country || null,
+      partnerName: S.partner ? S.partner.name : null,
+      crimes: S.crimes || 0,
+      karmaTier: kt
     };
   }
   function applyAiChoice(S, ev, i) {
@@ -1202,6 +1207,7 @@ var LifeSim = (function () {
     });
     if (typeof ch.money === 'number' && isFinite(ch.money)) S.money += Math.round(ch.money);
     if (typeof ch.fame === 'number' && isFinite(ch.fame)) S.fame = clamp(S.fame + ch.fame, 0, 100);
+    if (typeof ch.karma === 'number' && isFinite(ch.karma)) S.karma = clamp(S.karma + Math.round(ch.karma), 0, 100);
     var line = '✨ ' + ev.text + ' ' + ch.label;
     log(S, line);
     return line;
