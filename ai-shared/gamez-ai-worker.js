@@ -10,6 +10,8 @@
  *       banner    bloom-defense  wave announcement flavor           {wave, final}
  *       quip      candy-cascade  level-complete celebration         {level, stars}
  *       title     maze-trace     calm level epithet                 {level}
+ *       well      word-well      daily puzzle theme line            {start, end}
+ *       crypt     dead-mans-hand monster taunt at room start       {monster, room}
  *   GET  / -> health check
  *
  * Generations are cached in KV by kind/game/context so one call serves all
@@ -190,6 +192,32 @@ var KINDS = {
       var lv = +((c && c.level) || 1);
       return "Write a serene 2-4 word epithet for puzzle level " + lv +
         " (examples: 'Still Water', 'The Long Turn', 'Quiet Geometry'). Output ONLY the epithet, nothing else.";
+    }
+  },
+  well: {
+    max: 90,
+    sys: "You write playful one-line themes for a daily word-ladder puzzle game. Warm, witty, family-friendly. No politics, no real people.",
+    prompt: function (c) {
+      var s = String((c && c.start) || "COLD").toUpperCase(), e = String((c && c.end) || "WARM").toUpperCase();
+      return "Write a playful one-line theme for a word ladder puzzle from " + s + " to " + e +
+        " (max 12 words). Example: 'From frost to furnace, one letter at a time.'";
+    }
+  },
+  racehype: {
+    max: 90,
+    sys: "You write punchy pre-race hype one-liners for a neon arcade drift-racing game. Energetic, playful, family-friendly. No politics, no real people.",
+    prompt: function (c) {
+      var track = String((c && c.track) || "Neon City");
+      return "Write a hype one-liner shown before a drift race on the '" + track + "' track (max 14 words). Racing energy, avoid clichés like 'start your engines'. Example: 'Tonight the neon bites back. Stay sideways.'";
+    }
+  },
+  crypt: {
+    max: 100,
+    sys: "You are a gothic crypt monster taunting a card player across the poker table. Menacing but playful, never cruel, never graphic, no politics, no real people.",
+    prompt: function (c) {
+      var m = String((c && c.monster) || "a crypt monster"), r = +((c && c.room) || 1);
+      var mood = r >= 5 ? "at full terrifying power for the final room" : r >= 3 ? "confident, mid-dungeon" : "toying with a newcomer";
+      return "Write one taunt line spoken by " + m + ", " + mood + ", to a mortal playing poker hands against it (max 16 words). First person as the monster. Card/gambling menace welcome. Example: 'I have eaten better gamblers than you, little mortal.'";
     }
   }
 };
