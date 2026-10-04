@@ -17,7 +17,8 @@ body{
 .app{position:fixed;inset:0;max-width:520px;margin:0 auto;overflow:hidden;
   background:#e8c98e;box-shadow:0 0 60px rgba(90,50,20,.25)}
 .screen{position:absolute;inset:0;display:none;flex-direction:column}
-.screen.on{display:flex}
+.screen.on{display:flex;animation:screenfade .45s ease}
+@keyframes screenfade{from{opacity:0}to{opacity:1}}
 
 /* ---------- menu ---------- */
 #scr-menu{align-items:center;justify-content:flex-start;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -125,14 +126,23 @@ body{
   display:flex;align-items:center;justify-content:center;flex:0 0 auto;
 }
 .icon-btn:active{transform:scale(.93)}
+.icon-btn.off{opacity:.45;filter:grayscale(.7)}
 .hud-coins{font-size:18px;font-weight:700;background:rgba(255,253,247,.92);border:2px solid #d9c39a;
-  border-radius:14px;padding:10px 12px;white-space:nowrap}
+  border-radius:14px;padding:10px 12px;white-space:nowrap;transform-origin:left center}
+.hud-coins.coinpop{animation:coinpop .9s ease-out}
+@keyframes coinpop{0%{transform:scale(1)}25%{transform:scale(1.14)}100%{transform:scale(1)}}
+/* rising "+N" wisp, like a bubble escaping the coin purse */
+.coin-wisp{position:absolute;left:64px;top:calc(54px + env(safe-area-inset-top));z-index:6;pointer-events:none;
+  font-family:var(--font-ui);font-weight:800;font-size:17px;color:#b07a1e;
+  text-shadow:0 1px 0 rgba(255,255,255,.75);animation:wispup 1.5s ease-out forwards}
+@keyframes wispup{0%{transform:translateY(8px) scale(.85);opacity:0}20%{opacity:1;transform:translateY(0) scale(1)}
+  100%{transform:translateY(-40px);opacity:0}}
 .hud-spot{font-size:13px;color:#7a5c3e;background:rgba(255,253,247,.8);
   border:2px solid #d9c39a;border-radius:14px;padding:9px 10px;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;max-width:120px}
 .hud-sky{font-size:22px;margin-left:auto;background:rgba(255,253,247,.92);border:2px solid #d9c39a;
   border-radius:50%;width:46px;height:46px;display:flex;align-items:center;justify-content:center;
-  box-shadow:inset 0 0 0 3px rgba(217,154,30,.25)}
+  box-shadow:inset 0 0 0 3px rgba(217,154,30,.25);cursor:pointer;padding:0}
 body.quiet .hud,body.quiet .cast-btn{opacity:.15;pointer-events:none}
 .hud,.cast-btn{transition:opacity .6s}
 /* depth gauge: wooden ruler */
@@ -318,7 +328,9 @@ body.quiet .cast-btn:disabled{opacity:.15}
 .catch-where{display:inline-block;margin-left:8px;font-size:14px;color:#8a6f52}
 .catch-badges{display:flex;gap:6px;justify-content:center;margin:8px 0;flex-wrap:wrap}
 .catch-lore{font-family:var(--font-hand);font-size:19px;color:#8a6f52;min-height:20px;margin:6px 0}
-.catch-coins{font-size:26px;font-weight:800;color:#b07a1e;margin:4px 0 8px}
+.catch-coins{font-size:26px;font-weight:800;color:#b07a1e;margin:4px 0 8px;
+  animation:coinsettle .8s ease-out .1s both}
+@keyframes coinsettle{from{transform:scale(1.3);opacity:.35}to{transform:scale(1);opacity:1}}
 /* also biting now */
 .catch-also{margin:6px 0 10px;padding-top:8px;border-top:2px dashed #e0cda4}
 .also-h{font-family:var(--font-hand);font-size:19px;color:#8a6f52;margin:0 0 6px}
@@ -339,5 +351,5 @@ body.quiet .cast-btn:disabled{opacity:.15}
 .row-btns .btn{flex:1;font-size:15px;min-height:52px;padding:10px 8px}
 
 @media (prefers-reduced-motion:reduce){
-  .menu-cloud,.menu-heron,.hook-prompt{animation:none}
+  .menu-cloud,.menu-heron,.hook-prompt,.screen.on,.hud-coins.coinpop,.coin-wisp,.catch-coins{animation:none}
 }
