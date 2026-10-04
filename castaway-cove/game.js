@@ -233,6 +233,41 @@ var AU = {
     this.tone(622, 622, 0.4, 'sine', 0.08, 0.28);
   },
 };
+/* ============================== haptics (gentle only) ============================== */
+/* Vocabulary for a calm game: select / light / success — nothing sharper.
+ * Feature-detected so it never throws on iOS (no Vibration API there);
+ * the HUD toggle hides itself when unsupported. Honors prefers-reduced-motion
+ * by defaulting off, and always cancels in-flight buzzes (many Android
+ * devices swallow vibrate() while one is in progress). */
+var HAP = {
+  ok: function () {
+    try { return ('vibrate' in navigator) && typeof navigator.vibrate === 'function'; } catch (e) { return false; }
+  },
+  on: function () {
+    if (typeof save.hapt === 'boolean') return save.hapt;
+    try {
+      return !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) { return true; }
+  },
+  setHapt: function (h) {
+    save.hapt = !!h; persist();
+    var b = $('btn-hapt');
+    if (b) {
+      b.classList.toggle('off', !save.hapt);
+      b.setAttribute('aria-label', save.hapt ? 'Haptics on' : 'Haptics off');
+    }
+  },
+  buzz: function (pat) {
+    try {
+      if (!this.on() || !this.ok()) return;
+      navigator.vibrate(0);
+      navigator.vibrate(pat);
+    } catch (e) {}
+  },
+  select: function () { this.buzz(10); },
+  light: function () { this.buzz(20); },
+  success: function () { this.buzz([10, 40, 10]); }
+};
 document.addEventListener('pointerdown', function () { AU.ensure(); }, { passive: true });
 
 /* ============================== canvas scene ============================== */
@@ -1764,6 +1799,7 @@ function startBite() {
 }
 function hookIt() {
   if (phase !== 'bite') return;
+  HAP.light();
   pulls = curCatch.reelPulls.slice();
   pulls.forEach(function (p) { p.warned = false; p.held = false; p.scored = false; });
   var last = pulls[pulls.length - 1];
@@ -2013,8 +2049,37 @@ document.addEventListener('visibilitychange', function () {
 /* ============================== HUD ============================== */
 var SKY_ICON = { dawn: '🌅', day: '☀️', dusk: '🌇', night: '🌙' };
 var WX_ICON = { clear: '', rain: '🌧️', fog: '🌫️' };
+/* soft coin ticker: a patient easeOut count, a gentle pill pop, and a rising
+ * "+N" wisp like a bubble — the watery answer to number pops */
+var shownCoins = null, coinTickId = 0;
+function spawnCoinWisp(txt) {
+  try {
+    var hud = document.querySelector('.hud'); if (!hud) return;
+    var w = document.createElement('div');
+    w.className = 'coin-wisp'; w.textContent = txt; w.setAttribute('aria-hidden', 'true');
+    hud.appendChild(w);
+    setTimeout(function () { if (w.parentNode) w.parentNode.removeChild(w); }, 1600);
+  } catch (e) {}
+}
 function updateHud() {
-  $('hud-coins').textContent = '🪙 ' + save.coins.toLocaleString();
+  var target = save.coins, el = $('hud-coins');
+  if (shownCoins === null || shownCoins === target) {
+    shownCoins = target;
+    el.textContent = '🪙 ' + target.toLocaleString();
+  } else {
+    var from = shownCoins;
+    if (target > from) spawnCoinWisp('+' + (target - from).toLocaleString());
+    el.classList.remove('coinpop'); void el.offsetWidth; el.classList.add('coinpop');
+    if (coinTickId) { cancelAnimationFrame(coinTickId); coinTickId = 0; }
+    var t0 = performance.now(), dur = 900;
+    (function tick(t) {
+      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      shownCoins = Math.round(from + (target - from) * e);
+      el.textContent = '🪙 ' + shownCoins.toLocaleString();
+      if (k < 1) coinTickId = requestAnimationFrame(tick);
+      else { shownCoins = target; el.textContent = '🪙 ' + target.toLocaleString(); coinTickId = 0; }
+    })(t0);
+  }
   $('hud-spot').textContent = spotById(save.spot).name;
 }
 function updateSkyHud() {
@@ -2220,7 +2285,7 @@ function collectAquarium() {
   save.coins += coins;
   persist();
   updateHud(); renderAquarium();
-  if (coins > 0) { AU.chime(); toast('+' + coins + ' 🪙 from your aquarium'); }
+  if (coins > 0) { AU.chime(); HAP.success(); toast('+' + coins + ' 🪙 from your aquarium'); }
   else toast('The tank is still saving up…');
 }
 
@@ -2232,6 +2297,7 @@ function bindInput() {
     AU.ensure();
     dragX = e.clientX;
     beginCharge();
+    HAP.select();
     try { cb.setPointerCapture(e.pointerId); } catch (err) {}
   });
   cb.addEventListener('pointermove', function (e) {
@@ -2262,7 +2328,7 @@ function bindInput() {
     if (!$('scr-play').classList.contains('on')) return;
     e.preventDefault();
     AU.ensure();
-    if (phase === 'idle') beginCharge();
+    if (phase === 'idle') { beginCharge(); HAP.select(); }
     else if (phase === 'reeling') holding = true;
     else if (phase === 'bite') hookIt();
   });
@@ -2515,7 +2581,7 @@ function renderShop() {
         var c2 = CC.upgradeCost(kind, save.up[kind]);
         if (c2 == null || save.coins < c2) return;
         save.coins -= c2; save.up[kind]++; persist();
-        AU.chime();
+        AU.chime(); HAP.success();
         marlowMood = 'happy';
         row.classList.add('stamped');
         toast(meta.name + ' → Lv ' + save.up[kind] + '!');
@@ -2543,7 +2609,7 @@ function renderShop() {
       btn.disabled = save.coins < sp.license;
       btn.addEventListener('click', function () {
         var r = CC.buyLicense(save, sp.id);
-        if (r.ok) { persist(); AU.chime(); toast('📜 ' + sp.name + ' — all yours!'); updateHud(); renderShop(); renderSpotCards(); }
+        if (r.ok) { persist(); AU.chime(); HAP.success(); toast('📜 ' + sp.name + ' — all yours!'); updateHud(); renderShop(); renderSpotCards(); }
         else toast('Not enough coins yet — keep fishing.');
       });
     }
@@ -2576,7 +2642,7 @@ function renderShop() {
       btn.addEventListener('click', function () {
         var r = CC.buyRumor(save, legId);
         if (r.ok) {
-          persist(); AU.chime(); updateHud(); renderShop();
+          persist(); AU.chime(); HAP.success(); updateHud(); renderShop();
           toast('Marlow pockets the coins…');
         } else if (r.reason === 'broke') toast('Not enough coins for that rumor.');
       });
@@ -2686,6 +2752,7 @@ function paintCatchArt(g, f) {
 }
 function showCatchCard(f, coins, quality, isNew, isRecord, caughtDaily, sizeCm) {
   openOv('ov-catch');
+  HAP.success();
   var card = document.querySelector('#ov-catch .catch-card');
   card.className = 'catch-card r-' + f.rarity;
   $('catch-pun').textContent = '“' + f.pun + '”';
@@ -2809,6 +2876,14 @@ function bindUi() {
     r.hidden = !r.hidden;
   });
   $('btn-mute').addEventListener('click', function () { AU.ensure(); AU.setMuted(!save.muted); });
+  $('btn-hapt').addEventListener('click', function () { HAP.setHapt(!HAP.on()); });
+  $('hud-sky').addEventListener('click', function () {
+    /* the sky icon's meaning was hover-only (title attr) — speak it on tap */
+    var tc = timeCat();
+    var tl = { dawn: 'dawn', day: 'midday', dusk: 'dusk', night: 'night' }[tc] || tc;
+    var wl = { clear: 'clear skies', rain: 'soft rain', fog: 'drifting mist' }[world.weather] || world.weather;
+    toast(SKY_ICON[tc] + ' ' + tl + ' · ' + wl);
+  });
   $('btn-aqua-collect').addEventListener('click', collectAquarium);
   $('btn-journal').addEventListener('click', function () { $('journal-detail').hidden = true; journalCells(); openOv('ov-journal'); });
   $('btn-journal-menu').addEventListener('click', function () { $('journal-detail').hidden = true; journalCells(); openOv('ov-journal'); });
@@ -2826,7 +2901,7 @@ function bindUi() {
     var f = curCatch && curCatch.fish;
     if (f) {
       var r = CC.aquariumAdd(save, f.id);
-      if (r.ok) toast('🐠 ' + f.name + ' is swimming in your tank!');
+      if (r.ok) { HAP.light(); toast('🐠 ' + f.name + ' is swimming in your tank!'); }
       else if (r.reason === 'full') toast('Tank is full (6) — the heron approves of restraint.');
       else if (r.reason === 'duplicate') toast('One of those is already in the tank.');
       persist();
@@ -2851,6 +2926,8 @@ function boot() {
   bindInput();
   bindUi();
   AU.setMuted(!!save.muted);
+  HAP.setHapt(HAP.on());
+  if (!HAP.ok()) { var hb = $('btn-hapt'); if (hb) hb.style.display = 'none'; }
   updateHud();
   updateMenu();
   if (!save.seenHelp) { save.seenHelp = true; persist(); $('rules-card').hidden = false; }
