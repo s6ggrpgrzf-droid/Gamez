@@ -261,6 +261,10 @@ class PondLife {
       p.nx = p.bx + Math.cos(p.driftA) * p.driftR;
       p.ny = p.by + Math.sin(p.driftA * 0.8) * p.driftR;
       p.rot += dt * p.rotV;
+      // smoothed ride height: pads are rigid bodies — they bob with the
+      // water instead of shearing (smoothing kills wave jitter)
+      const targetBob = this.water.heightAt(p.nx, p.ny) * 0.012;
+      p.bobS = (p.bobS == null) ? targetBob : p.bobS + (targetBob - p.bobS) * Math.min(1, dt * 8);
       // lotus open/close follows the day phase (morning open, dusk closed),
       // or the systems override (phase 5: real day/night cycle)
       const dp = this.dayPhase;
@@ -463,12 +467,6 @@ class PondLife {
     let o;
 
     const bobOf = (nx, ny) => water.heightAt(nx, ny) * 0.012;
-    const tiltOf = (nx, ny, out) => {
-      const e = 0.006;
-      out[0] = (water.heightAt(nx + e, ny) - water.heightAt(nx - e, ny)) / (2 * e) * 0.010;
-      out[1] = (water.heightAt(nx, ny + e) - water.heightAt(nx, ny - e)) / (2 * e) * 0.010;
-    };
-    const tilt = [0, 0];
     const roundH = (r) => r / aspect; // UV circle → screen-round
 
     // petals (under pads); kind 1 = maple leaves, tinted red via vertex color
@@ -486,23 +484,22 @@ class PondLife {
     }
     if (o > 0) surf.tris(this._texPetal, buf, o / 8);
 
-    // pad shadows (soft dark ellipses, slightly offset down-sun)
+    // pad shadows (soft dark ellipses, slightly offset down-sun; ride with the pad)
     o = 0;
     for (let i = 0; i < this.pads.length; i++) {
       const p = this.pads[i];
       const s = p.r * 2.15;
-      o = this._quad(o, p.nx + 0.006, p.ny + 0.009, s, roundH(s), 0, 0, 0, 0.05, 0.10, 0.10, 0.30);
+      o = this._quad(o, p.nx + 0.006, p.ny + 0.009 + (p.bobS || 0), s, roundH(s), 0, 0, 0, 0.05, 0.10, 0.10, 0.30);
     }
     if (o > 0) surf.tris(this._texPadShadow, buf, o / 8);
 
-    // lily pads
+    // lily pads — rigid: they bob with the smoothed wave height, never shear
     o = 0;
     for (let i = 0; i < this.pads.length; i++) {
       const p = this.pads[i];
-      tiltOf(p.nx, p.ny, tilt);
-      const by = p.ny + bobOf(p.nx, p.ny);
+      const by = p.ny + (p.bobS || 0);
       const s = p.r * 2;
-      o = this._quad(o, p.nx, by, s, roundH(s), p.rot, tilt[0], tilt[1], 1, 1, 1, 1);
+      o = this._quad(o, p.nx, by, s, roundH(s), p.rot, 0, 0, 1, 1, 1, 1);
     }
     if (o > 0) surf.tris(this._texPad, buf, o / 8);
 
@@ -512,7 +509,7 @@ class PondLife {
     for (let i = 0; i < this.pads.length; i++) {
       const p = this.pads[i];
       if (!p.flower) continue;
-      const fx = p.nx + p.r * 0.3, fy = p.ny - p.r * 0.25 + bobOf(p.nx, p.ny);
+      const fx = p.nx + p.r * 0.3, fy = p.ny - p.r * 0.25 + (p.bobS || 0);
       const bs = 0.030 * (1 - p.open) + 0.004;
       if (bs > 0.006) {
         ob = this._quad(ob, fx, fy, bs, bs / aspect, 0, 0, 0, 1, 1, 1, 1);
