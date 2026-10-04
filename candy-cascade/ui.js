@@ -23,6 +23,94 @@ if (progress.hammers == null) progress.hammers = 3;
 if (progress.streak == null) progress.streak = 0;
 function saveProgress() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch (e) {} }
 
+/* ---------------- feel: centralized tuning + haptics + event->effects map ----------------
+   Feel identity: "squishy, sparkling, jubilant".
+   - squishy:   anticipation squish + overshoot pop on matches, spring easings
+   - sparkling: sugar-crystal diamond particles, additive screen blend
+   - jubilant:  tiny happy board bounce (never harsh shake), warm haptic pops
+   All numbers live here so feel tunes without touching gameplay code. */
+const FEEL = {
+  spring: 'cubic-bezier(.34,1.56,.64,1)', // signature overshoot easing of this game
+  popDur: 300,
+  sparkPool: 84,      // pooled sugar-crystal particles (zero per-frame allocation)
+  sparkPerPop: 7,
+  sparkPerBig: 9,
+  hapticThrottle: 150, // ms between repeatable match buzzes
+  haptic: { select: 10, match: 20, combo: 30, win: [10, 40, 10], warn: [20, 60, 20], error: [40, 80, 40] },
+};
+
+const CCHaptic = (() => {
+  const KEY = 'cc_settings_v1'; // separate key: save format (cc_progress_v1) untouched
+  let settings = null;
+  try { settings = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { settings = {}; }
+  let enabled = settings.haptic !== false;
+  const mq = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)')) || null;
+  function reducedMotion() { return !!(mq && mq.matches); }
+  function buzz(pattern) {
+    if (!enabled || reducedMotion()) return;
+    try {
+      if (!('vibrate' in navigator)) return; // iOS Safari: no Vibration API, never throw
+      navigator.vibrate(0); // cancel in-flight so retriggers register (Android gotcha)
+      navigator.vibrate(pattern);
+    } catch (e) { /* unsupported: stay silent */ }
+  }
+  let lastMatch = 0;
+  return {
+    select() { buzz(FEEL.haptic.select); },
+    match() {
+      const n = performance.now();
+      if (n - lastMatch < FEEL.hapticThrottle) return;
+      lastMatch = n;
+      buzz(FEEL.haptic.match);
+    },
+    combo() { buzz(FEEL.haptic.combo); },
+    win() { buzz(FEEL.haptic.win); },
+    lose() { buzz(FEEL.haptic.error); },
+    warn() { buzz(FEEL.haptic.warn); },
+    reducedMotion,
+    isEnabled: () => enabled && !reducedMotion(),
+    setEnabled(v) {
+      enabled = !!v;
+      try { localStorage.setItem(KEY, JSON.stringify({ haptic: enabled })); } catch (e) {}
+    },
+  };
+})();
+
+function reducedMotion() { return CCHaptic.reducedMotion(); }
+
+/* event->effects map: gameplay emits intent, juice stays decoupled */
+function scorePop() {
+  if (reducedMotion()) return;
+  const el = $('score');
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+}
+function happyBounce() {
+  if (reducedMotion()) return; // sweet game: tiny joyful bounce, never harsh shake
+  const w = $('board-wrap');
+  w.classList.remove('happy-bounce'); void w.offsetWidth; w.classList.add('happy-bounce');
+}
+const FEEL_EVENTS = {
+  select:  () => CCHaptic.select(),
+  match:   d => { CCHaptic.match(); if (d.gain > 0) scorePop(); },
+  cascade: d => { CCHaptic.combo(); happyBounce(); if (d.gain > 0) scorePop(); },
+  blast:   d => { CCHaptic.combo(); happyBounce(); if (d.gain > 0) scorePop(); },
+  hammer:  d => { CCHaptic.combo(); if (d.gain > 0) scorePop(); },
+  win:     () => CCHaptic.win(),
+  lose:    () => CCHaptic.lose(),
+  lowmoves: () => CCHaptic.warn(),
+};
+function emitFeel(ev, data) {
+  const f = FEEL_EVENTS[ev];
+  if (!f) return;
+  try { f(data || {}); } catch (e) { /* juice must never break gameplay */ }
+}
+function feelForStep(step) {
+  if (step.k === 'hammer') return 'hammer';
+  if ((step.effects || []).some(e => e.t === 'megablast' || e.t === 'boardclear')) return 'blast';
+  if (step.k === 'combo' || step.round >= 2) return 'cascade';
+  return 'match';
+}
+
 /* ---------------- state ---------------- */
 let st = null, levelDef = null;
 let tiles = [], jellyEls = [], frostEls = [];
@@ -185,6 +273,7 @@ function setTilePos(el, r, c) {
 function buildBoard() {
   boardEl.innerHTML = '<div id="fx"></div>'; // fx lives inside #board; rebuild it
   fxEl = $('fx');
+  sparkInit(); // rebuild the pooled sparkle layer inside the fresh #fx
   tiles = []; jellyEls = []; frostEls = [];
   for (let r = 0; r < st.rows; r++) {
     tiles.push([]); jellyEls.push([]); frostEls.push([]);
@@ -272,22 +361,32 @@ function goalText() {
   return '';
 }
 
+let _lastScoreTxt = null;
+function setScoreText(v) {
+  const txt = Math.round(v).toLocaleString();
+  if (txt !== _lastScoreTxt) { _lastScoreTxt = txt; $('score').textContent = txt; }
+}
 function updateHUD(instant) {
-  $('moves').textContent = st.movesLeft;
+  const mvTxt = String(st.movesLeft);
+  if ($('moves').textContent !== mvTxt) $('moves').textContent = mvTxt;
   $('hud-moves').classList.toggle('low', st.movesLeft <= 5);
+  if (!st.warnedLow && st.movesLeft <= 5 && st.movesLeft > 0 && !st.over) {
+    st.warnedLow = true;
+    emitFeel('lowmoves'); // warm warning buzz, once per level
+  }
   CCAudio.setIntensity(st.movesLeft <= 5 && st.movesLeft > 0 && !st.over);
   $('hud-goal').innerHTML = goalText();
-  // score tween
+  // score tween — guarded writes: touch the DOM only when the value changes
   const from = shownScore, to = st.score;
   if (instant || Math.abs(to - from) < 1) {
     shownScore = to;
-    $('score').textContent = to.toLocaleString();
+    setScoreText(to);
   } else {
     const t0 = performance.now(), dur = 350;
     (function tick(now) {
       const p = Math.min(1, (now - t0) / dur);
       shownScore = from + (to - from) * (1 - Math.pow(1 - p, 3));
-      $('score').textContent = Math.round(shownScore).toLocaleString();
+      setScoreText(Math.round(shownScore));
       if (p < 1) requestAnimationFrame(tick);
     })(t0);
   }
@@ -302,23 +401,44 @@ function updateHUD(instant) {
   });
 }
 
-/* ---------------- fx ---------------- */
-function burst(r, c, colorIdx) {
-  const cx = (c + 0.5) * ts, cy = (r + 0.5) * ts;
-  for (let i = 0; i < 8; i++) {
+/* ---------------- pooled sugar-crystal sparkles (additive, zero per-frame allocation) ---------------- */
+let sparkPool = [], sparkCursor = 0;
+function sparkInit() {
+  sparkPool = []; sparkCursor = 0;
+  for (let i = 0; i < FEEL.sparkPool; i++) {
     const p = document.createElement('div');
-    p.className = 'particle';
-    const col = colorIdx == null ? '#ffffff' : CANDY_CSS[colorIdx];
-    p.style.background = col;
-    p.style.left = cx + 'px'; p.style.top = cy + 'px';
-    p.style.boxShadow = `0 0 8px ${col}`;
+    p.className = 'spark';
+    p.style.display = 'none';
     fxEl.appendChild(p);
-    const ang = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
-    const dist = ts * (0.9 + Math.random() * 0.9);
-    p.animate([
-      { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
-      { transform: `translate(${Math.cos(ang) * dist - 5}px, ${Math.sin(ang) * dist - 5}px) scale(0.2)`, opacity: 0 }
-    ], { duration: 380 + Math.random() * 200, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => p.remove();
+    sparkPool.push(p);
+  }
+}
+function sparkle(r, c, colorIdx, n) {
+  if (!fxEl || reducedMotion()) return; // silent game must still read visually: pops stay
+  const cx = (c + 0.5) * ts, cy = (r + 0.5) * ts;
+  const col = colorIdx == null ? '#ffffff' : CANDY_CSS[colorIdx];
+  n = n || FEEL.sparkPerPop;
+  for (let i = 0; i < n; i++) {
+    const el = sparkPool[sparkCursor];
+    sparkCursor = (sparkCursor + 1) % sparkPool.length;
+    try {
+      if (el.getAnimations) el.getAnimations().forEach(a => a.cancel());
+    } catch (e) {}
+    el.style.display = 'block';
+    el.style.background = col;
+    el.style.boxShadow = `0 0 10px ${col}, 0 0 3px #fff`;
+    const size = 5 + Math.random() * 6;
+    el.style.width = el.style.height = size + 'px';
+    el.style.left = cx + 'px'; el.style.top = cy + 'px';
+    const ang = Math.random() * Math.PI * 2;
+    const dist = ts * (0.6 + Math.random() * 1.1);
+    const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+    const rot = (Math.random() * 360) | 0;
+    el.animate([
+      { transform: `translate(-50%,-50%) rotate(${rot}deg) scale(1)`, opacity: 1 },
+      { transform: `translate(calc(-50% + ${dx.toFixed(1)}px), calc(-50% + ${dy.toFixed(1)}px)) rotate(${rot + 180}deg) scale(.15)`, opacity: 0 }
+    ], { duration: 420 + Math.random() * 260, easing: 'cubic-bezier(.2,.7,.3,1)' })
+      .onfinish = () => { el.style.display = 'none'; };
   }
 }
 
@@ -330,10 +450,10 @@ function floater(r, c, text) {
   f.style.top = ((r + 0.5) * ts) + 'px';
   fxEl.appendChild(f);
   f.animate([
-    { transform: 'translate(-50%,-50%) scale(.7)', opacity: 0 },
-    { transform: 'translate(-50%,-90%) scale(1.1)', opacity: 1, offset: 0.3 },
+    { transform: 'translate(-50%,-50%) scale(1.4)', opacity: 0 },      // scale-pop in
+    { transform: 'translate(-50%,-72%) scale(1.0)', opacity: 1, offset: 0.28 },
     { transform: 'translate(-50%,-190%) scale(1)', opacity: 0 }
-  ], { duration: 900, easing: 'ease-out' }).onfinish = () => f.remove();
+  ], { duration: 900, easing: FEEL.spring }).onfinish = () => f.remove();
 }
 
 function beamFx(effect) {
@@ -392,14 +512,15 @@ function flash(color) {
     .onfinish = () => f.remove();
 }
 
-function showBanner(text) {
+function showBanner(text, mega) {
   const b = $('banner');
   b.textContent = text;
+  b.classList.toggle('mega', !!mega);
   b.classList.remove('show', 'hidden');
   void b.offsetWidth;
   b.classList.add('show');
   clearTimeout(showBanner._t);
-  showBanner._t = setTimeout(() => b.classList.add('hidden'), 1050);
+  showBanner._t = setTimeout(() => b.classList.add('hidden'), mega ? 1400 : 1050);
 }
 
 function clearSelection() {
@@ -439,12 +560,21 @@ async function playSwap(step) {
   await wait(300);
 }
 
-function popTile(el, colorIdx) {
+function popTile(el) {
+  const base = el.style.transform;
+  if (reducedMotion()) {
+    return el.animate([
+      { transform: base + ' scale(1)', opacity: 1 },
+      { transform: base + ' scale(0)', opacity: 0 }
+    ], { duration: 180, easing: 'ease-in' }).finished.catch(() => {});
+  }
+  // squishy: anticipation squish, then overshoot puff, then pop
   return el.animate([
-    { transform: el.style.transform + ' scale(1)', opacity: 1 },
-    { transform: el.style.transform + ' scale(1.35)', opacity: 1, offset: 0.35 },
-    { transform: el.style.transform + ' scale(0)', opacity: 0 }
-  ], { duration: 300, easing: 'ease-in' }).finished.catch(() => {});
+    { transform: base + ' scale(1,1)', opacity: 1, offset: 0 },
+    { transform: base + ' scale(1.24,.74)', opacity: 1, offset: 0.32 },
+    { transform: base + ' scale(1.34,1.34)', opacity: 1, offset: 0.62 },
+    { transform: base + ' scale(0,0)', opacity: 0, offset: 1 }
+  ], { duration: FEEL.popDur, easing: 'ease-in' }).finished.catch(() => {});
 }
 
 async function applyFallVisual(fall) {
@@ -469,7 +599,7 @@ async function playCollect(step) {
   const jobs = [];
   for (const it of step.items) {
     const el = tiles[it.r] && tiles[it.r][it.c];
-    burst(it.r, it.c, null);
+    sparkle(it.r, it.c, null, FEEL.sparkPerBig);
     floater(it.r, it.c, '+1,000 🍒');
     if (el) {
       jobs.push(popTile(el).then(() => el.remove()));
@@ -477,6 +607,7 @@ async function playCollect(step) {
     }
   }
   CCAudio.special();
+  emitFeel('match', { gain: step.gain });
   await Promise.all(jobs);
   await wait(120);
   await applyFallVisual(step.fall);
@@ -489,7 +620,7 @@ async function playClearStep(step) {
     for (const cr of step.creations) {
       const el = tiles[cr.r] && tiles[cr.r][cr.c];
       if (el) {
-        burst(cr.r, cr.c, cr.color);
+        sparkle(cr.r, cr.c, cr.color, FEEL.sparkPerBig);
         CCAudio.special();
         await wait(120);
         const cell = st.board[cr.r][cr.c];
@@ -511,18 +642,19 @@ async function playClearStep(step) {
     const el = tiles[r] && tiles[r][c];
     if (el) {
       const col = el.firstChild.firstChild.dataset.color;
-      burst(r, c, col == null ? null : +col);
-      pops.push(popTile(el, col).then(() => el.remove()));
+      sparkle(r, c, col == null ? null : +col, FEEL.sparkPerPop);
+      pops.push(popTile(el).then(() => el.remove()));
       tiles[r][c] = null;
     }
   }
-  CCAudio.pop(step.round || 1);
+  CCAudio.pop(step.round || 1); // pitch already rises with round (combo feel)
+  emitFeel(feelForStep(step), { gain: step.gain });
   if (step.clear.length) {
     const n = step.clear.length;
     floater(fr / n, fc / n, '+' + step.gain.toLocaleString());
   }
   for (const cl of step.collected || []) {
-    burst(cl.r, cl.c, null);
+    sparkle(cl.r, cl.c, null, FEEL.sparkPerBig);
     floater(cl.r, cl.c, '+1,000 🍒');
   }
   // 3. effect beams / blasts
@@ -540,7 +672,7 @@ async function playClearStep(step) {
   for (const br of step.frostBroken || []) {
     const f = frostEls[br.r] && frostEls[br.r][br.c];
     if (f) {
-      burst(br.r, br.c, null);
+      sparkle(br.r, br.c, null, FEEL.sparkPerPop);
       CCAudio.frost();
       await f.animate([
         { transform: pos(br.r, br.c) + ' scale(1)', opacity: 1 },
@@ -555,13 +687,13 @@ async function playClearStep(step) {
     const jEl = jellyEls[j.r] && jellyEls[j.r][j.c];
     if (jEl) {
       if (j.left <= 0) {
-        burst(j.r, j.c, null);
+        sparkle(j.r, j.c, null, FEEL.sparkPerPop);
         jEl.style.opacity = '0';
         setTimeout(() => jEl.remove(), 320);
         jellyEls[j.r][j.c] = null;
       } else {
         jEl.classList.remove('j2'); jEl.classList.add('j1');
-        burst(j.r, j.c, null);
+        sparkle(j.r, j.c, null, FEEL.sparkPerPop);
       }
       CCAudio.jelly();
     }
@@ -692,6 +824,7 @@ function onCellPress(r, c) {
   selected = { r, c };
   tiles[r][c].classList.add('sel');
   CCAudio.select();
+  emitFeel('select');
 }
 
 function bindInput() {
@@ -757,7 +890,8 @@ function goalToast() {
 function startLevel(n) {
   levelDef = LEVELS[n - 1];
   st = CC.newGame(levelDef);
-  selected = null; inputLocked = false; shownScore = 0;
+  st.warnedLow = false; // per-level low-moves warning flag (feel only)
+  selected = null; inputLocked = false; shownScore = 0; _lastScoreTxt = null;
   disarmHammer(); updateBoosterBar();
   $('score').textContent = '0';
   buildBoard();
@@ -799,6 +933,7 @@ async function playEnd(step) {
   const n = levelDef.n;
   if (step.won) {
     CCAudio.win();
+    emitFeel('win');
     // win streak: every 3rd consecutive win earns a hammer
     progress.streak = (progress.streak || 0) + 1;
     let streakNote = '';
@@ -808,30 +943,38 @@ async function playEnd(step) {
     }
     saveProgress();
     updateBoosterBar();
-    // Sugar Crush: burn leftover moves into bonus points, tap to skip
+    // Sugar Crush: burn leftover moves into bonus points, tap to skip.
+    // slow-mo micro-dip: the first ~300ms count at 0.35x, then accelerate.
     if (step.bonus > 0) {
-      showBanner('Sugar Crush!');
+      showBanner('Sugar Crush!', true);
       CCAudio.sugar();
+      scorePop();
       const from = step.score - step.bonus, to = step.score;
       const mv = Math.round(step.bonus / 250);
       const s = levelDef.stars, max = s[2];
       const t0 = performance.now(), dur = Math.min(2000, 500 + mv * 130);
-      let skipped = false;
+      let skipped = false, lastMvTxt = null;
       const skip = () => { skipped = true; };
-      $('board-wrap').addEventListener('pointerdown', skip, { once: true });
+      const wrap = $('board-wrap');
+      wrap.addEventListener('pointerdown', skip, { once: true });
+      wrap.classList.add('sugar-slow');
       $('moves').textContent = mv;
       await new Promise(res => {
         const done = () => {
-          $('board-wrap').removeEventListener('pointerdown', skip);
+          wrap.removeEventListener('pointerdown', skip);
+          wrap.classList.remove('sugar-slow');
           updateHUD(true);
           res();
         };
         (function tick(now) {
           const p = Math.min(1, (now - t0) / dur);
           if (skipped || p >= 1) { done(); return; }
-          const v = from + (to - from) * p;
-          $('score').textContent = Math.round(v).toLocaleString();
-          $('moves').textContent = Math.ceil(mv * (1 - p));
+          // dip: first 30% of time advances only ~10% of the score (0.35x), then catches up
+          const dp = p < 0.3 ? p * 0.35 : 0.105 + (p - 0.3) * 1.279;
+          const v = from + (to - from) * dp;
+          setScoreText(v);
+          const mt = String(Math.ceil(mv * (1 - p)));
+          if (mt !== lastMvTxt) { lastMvTxt = mt; $('moves').textContent = mt; }
           $('starfill').style.width = Math.min(100, (v / max) * 100) + '%';
           requestAnimationFrame(tick);
         })(t0);
@@ -861,6 +1004,7 @@ async function playEnd(step) {
     fillQuip(n, earned);
   } else {
     CCAudio.lose();
+    emitFeel('lose');
     progress.streak = 0;
     saveProgress();
     showModal({
@@ -928,6 +1072,9 @@ function init() {
         { label: '▶ Resume', onClick: hideModal },
         { label: progress.muted ? '🔈 Unmute' : '🔇 Mute', ghost: true, onClick: () => {
             progress.muted = !progress.muted; CCAudio.setMuted(progress.muted); saveProgress(); hideModal();
+          } },
+        { label: CCHaptic.isEnabled() ? '📳 Haptics: On' : '📳 Haptics: Off', ghost: true, onClick: () => {
+            CCHaptic.setEnabled(!CCHaptic.isEnabled()); hideModal();
           } },
         { label: '↻ Restart Level', ghost: true, onClick: () => { hideModal(); startLevel(levelDef.n); } },
         { label: '🗺 Quit to Map', ghost: true, onClick: () => { hideModal(); renderMap(); showScreen('map'); } },
