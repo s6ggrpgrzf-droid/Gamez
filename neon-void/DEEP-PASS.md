@@ -122,3 +122,29 @@ allocation in hot loops; spatial reasoning unnecessary at this entity count
 sanity) → smoke.js CLEAN on exact push files → push via github push_files (diff
 remote first) → curl live files, diff byte-identical → note for parent: live-browser
 play-through (subagent cannot drive a live browser).
+
+## 5. Results (2026-10-04)
+
+**Tests — all green:**
+- `node --check` on config.js, audio.js, game.js: clean.
+- `test-headless.js`: 33/33 pass (mulberry32 determinism, config sanity, DOM id coverage).
+- `smoke.js neon-void`: CLEAN (boot → start → canvas rendering, no page errors).
+- `nv-deep.js` headless gameplay driver (kept at `~/workspace/tools/smoke-test/nv-deep.js`):
+  17/17 pass — twin-stick touch input, bullets, rift telegraphs, kills, score,
+  dash + cooldown, bomb field-clear, pause/resume overlay, 3 deaths → game over,
+  final score, retry reset, quit to menu, **daily mode with offline seed fallback**,
+  canvas non-blank, 47–61fps headless. Zero page errors.
+
+**Real bugs found by testing (fixed):**
+1. `C_REMEMBER.salvageScore` missing from config.js → `undefined * mult` = NaN score
+   on wreck salvage. The deep driver caught it (score:null after retry). Fixed.
+2. Menu/over/pause overlays used `justify-content: center` + `overflow-y: auto` —
+   tall content clipped the title off the top with no way to scroll to it (visible
+   in screenshot). Fixed with `.panel { margin: auto }` wrappers.
+3. Wreck salvage could trigger instantly on spawn (wrecks cluster at the respawn
+   point). Added 1.5s spawn grace.
+
+**Push:** 4 commits via `github push_files` (config / audio / game / html+css+docs).
+Live files curl-verified **byte-identical** to local for all 5 game files.
+
+**Live:** https://s6ggrpgrzf-droid.github.io/Gamez/neon-void/
