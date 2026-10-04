@@ -603,6 +603,7 @@ App.openSheet = function (id) {
     if (id === 'gallery-sheet') this.renderGallery();
   } else {
     this.sheetOpen = false;
+    this.magicStop();
   }
   this.pokeZen();
 };
@@ -978,6 +979,342 @@ App.dailyPage = function () {
     .catch(fallback);
 };
 
+/* ------------------------------------------------------------------ */
+/* Canvas Magic: watch a random painting paint itself, stroke by stroke */
+/* ------------------------------------------------------------------ */
+
+var MAGIC_AI = 'https://canvas-magic.chaoticutopia84.workers.dev';
+
+App.magicStop = function () {
+  if (this.magicState) this.magicState.running = false;
+  this.magicState = null;
+  this.magicRun = (this.magicRun || 0) + 1;
+  var b = $('magic-brush');
+  if (b) b.style.display = 'none';
+};
+
+App.magicSetStatus = function (msg) {
+  var el = $('magic-status');
+  if (el) el.textContent = msg;
+};
+
+App.magicProgress = function (frac) {
+  var el = $('magic-fill');
+  if (el) el.style.width = Math.round(frac * 100) + '%';
+};
+
+App.magicButtons = function (on) {
+  ['magic-new', 'magic-replay', 'magic-save'].forEach(function (id) {
+    var b = $(id);
+    if (b) b.disabled = !on;
+  });
+};
+
+App.magicBlank = function () {
+  var cv = $('magic-canvas');
+  cv.width = 600; cv.height = 800;
+  var x = cv.getContext('2d');
+  x.fillStyle = '#f8f3e8';
+  x.fillRect(0, 0, 600, 800);
+};
+
+App.openMagic = function () {
+  var self = this;
+  this.wakeAudio();
+  this.magicStop();
+  var run = this.magicRun;
+  this.openSheet('magic-sheet');
+  $('magic-title').textContent = 'Canvas Magic';
+  this.magicSetStatus('Mixing paints…');
+  this.magicProgress(0);
+  this.magicButtons(false);
+  this.magicBlank();
+  var settled = false;
+  var timer = setTimeout(function () {
+    if (self.magicRun !== run || settled) return;
+    settled = true;
+    self.magicFallback();
+  }, 60000);
+  function giveUp() {
+    if (self.magicRun !== run || settled) return;
+    settled = true;
+    clearTimeout(timer);
+    self.magicFallback();
+  }
+  fetch(MAGIC_AI + '/paint').then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (self.magicRun !== run || settled) return;
+      if (!j || !j.key) { giveUp(); return; }
+      $('magic-title').textContent = j.title || 'Untitled';
+      self.magicPoll(j.key, j.title || 'Untitled', run,
+        function (img) {
+          if (self.magicRun !== run || settled) return;
+          settled = true;
+          clearTimeout(timer);
+          self.magicSrcImg = img;
+          self.magicPaint(img, j.title || 'Untitled');
+        },
+        giveUp);
+    })
+    .catch(giveUp);
+};
+
+App.magicPoll = function (key, title, run, onImg, onFail) {
+  var self = this, tries = 0;
+  this.magicSetStatus('Dreaming up “' + title + '”…');
+  (function poll() {
+    if (self.magicRun !== run) return;
+    tries++;
+    fetch(MAGIC_AI + '/paint?key=' + encodeURIComponent(key))
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (self.magicRun !== run) return;
+        if (j && j.image) {
+          var img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = function () { onImg(img); };
+          img.onerror = onFail;
+          img.src = j.image;
+          return;
+        }
+        if (j && j.pending && tries < 48) {
+          self.magicSetStatus('Painting “' + title + '”…');
+          setTimeout(poll, 2500);
+          return;
+        }
+        onFail();
+      })
+      .catch(function () {
+        if (self.magicRun !== run) return;
+        if (tries < 48) setTimeout(poll, 2500);
+        else onFail();
+      });
+  })();
+};
+
+// Offline fallback: a small procedural landscape, painted the same way.
+App.magicFallback = function () {
+  var c = document.createElement('canvas');
+  c.width = 720; c.height = 960;
+  var x = c.getContext('2d');
+  var sky = x.createLinearGradient(0, 0, 0, 640);
+  sky.addColorStop(0, '#7fa8c9');
+  sky.addColorStop(0.55, '#e8c9a0');
+  sky.addColorStop(1, '#f7b267');
+  x.fillStyle = sky;
+  x.fillRect(0, 0, 720, 640);
+  var glow = x.createRadialGradient(360, 470, 10, 360, 470, 190);
+  glow.addColorStop(0, 'rgba(255,244,200,0.95)');
+  glow.addColorStop(1, 'rgba(255,244,200,0)');
+  x.fillStyle = glow;
+  x.fillRect(150, 260, 420, 420);
+  x.fillStyle = '#fff3c4';
+  x.beginPath(); x.arc(360, 470, 62, 0, 7); x.fill();
+  x.fillStyle = '#9db38a';
+  x.beginPath();
+  x.moveTo(0, 640);
+  x.bezierCurveTo(180, 520, 420, 560, 720, 600);
+  x.lineTo(720, 720); x.lineTo(0, 720);
+  x.closePath(); x.fill();
+  var md = x.createLinearGradient(0, 640, 0, 960);
+  md.addColorStop(0, '#8aa864');
+  md.addColorStop(1, '#5d7f43');
+  x.fillStyle = md;
+  x.fillRect(0, 640, 720, 320);
+  x.fillStyle = '#6b4a33';
+  x.fillRect(500, 560, 26, 130);
+  x.fillStyle = '#4f7a3d';
+  [[513, 520, 95], [450, 570, 70], [578, 572, 72]].forEach(function (cc) {
+    x.beginPath(); x.arc(cc[0], cc[1], cc[2], 0, 7); x.fill();
+  });
+  x.fillStyle = '#5d8a48';
+  x.beginPath(); x.arc(490, 500, 60, 0, 7); x.fill();
+  x.strokeStyle = '#4a3f35';
+  x.lineWidth = 4;
+  x.lineCap = 'round';
+  [[200, 220], [260, 260], [150, 300]].forEach(function (bp) {
+    x.beginPath(); x.arc(bp[0] - 14, bp[1], 14, 3.4, 5.9); x.stroke();
+    x.beginPath(); x.arc(bp[0] + 14, bp[1], 14, 3.5, 6.0); x.stroke();
+  });
+  var cols = ['#e86a5e', '#f2e394', '#ffffff', '#c96a9b'];
+  for (var i = 0; i < 90; i++) {
+    x.fillStyle = cols[i % 4];
+    x.beginPath();
+    x.arc(20 + Math.random() * 680, 700 + Math.random() * 240, 4 + Math.random() * 5, 0, 7);
+    x.fill();
+  }
+  this.magicSrcImg = c;
+  this.magicPaint(c, 'Meadow Dream · offline sketch');
+};
+
+// Build the stroke plan: three passes, wash -> blocking -> detail,
+// each pass a jittered grid in shuffled order.
+App.magicPlan = function (w, h) {
+  var dabs = [];
+  var M = Math.max(w, h);
+  var passes = [
+    { r: M / 12, a: 0.5 },
+    { r: M / 28, a: 0.85 },
+    { r: M / 64, a: 1 }
+  ];
+  for (var p = 0; p < passes.length; p++) {
+    var pr = passes[p].r, step = pr * 1.15, start = dabs.length;
+    for (var y = step * 0.5; y < h + step * 0.5; y += step)
+      for (var xx = step * 0.5; xx < w + step * 0.5; xx += step)
+        dabs.push({
+          x: xx + (Math.random() - 0.5) * step * 0.8,
+          y: y + (Math.random() - 0.5) * step * 0.8,
+          r: pr * (0.85 + Math.random() * 0.3),
+          a: passes[p].a,
+          ang: Math.random() * Math.PI
+        });
+    for (var i = dabs.length - 1; i > start; i--) {
+      var j = start + Math.floor(Math.random() * (i - start + 1));
+      var tmp = dabs[i]; dabs[i] = dabs[j]; dabs[j] = tmp;
+    }
+  }
+  return dabs;
+};
+
+// Soft round brush tip, shared by every dab.
+App.magicDot = function () {
+  if (this._magicDot) return this._magicDot;
+  var c = document.createElement('canvas');
+  c.width = c.height = 128;
+  var g = c.getContext('2d');
+  var gr = g.createRadialGradient(64, 64, 8, 64, 64, 62);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.72, 'rgba(255,255,255,0.9)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 128, 128);
+  this._magicDot = c;
+  return c;
+};
+
+// Stamp one dab: copy the matching patch of the source painting
+// through a soft, slightly elliptical, rotated brush mask.
+App.magicDab = function (st, d) {
+  var r = d.r, rr = Math.ceil(r * 2);
+  var t = this._magicTmp;
+  if (!t) { t = document.createElement('canvas'); this._magicTmp = t; }
+  if (t.width !== rr) { t.width = rr; t.height = rr; }
+  var tc = t.getContext('2d');
+  tc.clearRect(0, 0, rr, rr);
+  tc.save();
+  tc.translate(rr / 2, rr / 2);
+  tc.rotate(d.ang);
+  tc.scale(1, 0.72);
+  tc.drawImage(st.src, d.x - r, d.y - r, 2 * r, 2 * r, -r, -r, 2 * r, 2 * r);
+  tc.globalCompositeOperation = 'destination-in';
+  tc.drawImage(this.magicDot(), -r, -r, 2 * r, 2 * r);
+  tc.restore();
+  st.x.save();
+  st.x.globalAlpha = d.a;
+  st.x.drawImage(t, d.x - r, d.y - r);
+  st.x.restore();
+};
+
+App.magicPaint = function (img, title) {
+  var self = this;
+  this.magicStop();
+  this.magicTitle = title;
+  var cv = $('magic-canvas');
+  var iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  var s = Math.min(1, 880 / Math.max(iw, ih));
+  var w = Math.max(2, Math.round(iw * s)), h = Math.max(2, Math.round(ih * s));
+  cv.width = w; cv.height = h;
+  var x = cv.getContext('2d');
+  x.fillStyle = '#f8f3e8';
+  x.fillRect(0, 0, w, h);
+  var src = document.createElement('canvas');
+  src.width = w; src.height = h;
+  src.getContext('2d').drawImage(img, 0, 0, w, h);
+  var dabs = this.magicPlan(w, h);
+  var total = dabs.length;
+  var state = {
+    running: true, dabs: dabs, i: 0, x: x, src: src, w: w, h: h,
+    acc: 0, last: 0, swish: 0, perSec: total / 46
+  };
+  this.magicState = state;
+  $('magic-title').textContent = title;
+  this.magicSetStatus('Painting…');
+  this.magicProgress(0);
+  this.magicButtons(false);
+  var brush = $('magic-brush');
+  brush.style.display = 'block';
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    x.drawImage(src, 0, 0);
+    state.i = total;
+    this.magicDone();
+    return;
+  }
+  state.last = performance.now();
+  function frame(now) {
+    if (!state.running) return;
+    var dt = Math.min(0.1, (now - state.last) / 1000);
+    state.last = now;
+    state.acc += dt * state.perSec;
+    var n = Math.floor(state.acc);
+    state.acc -= n;
+    var lastDab = null;
+    for (var k = 0; k < n && state.i < total; k++) {
+      lastDab = dabs[state.i];
+      self.magicDab(state, lastDab);
+      state.i++;
+    }
+    self.magicProgress(state.i / total);
+    if (lastDab && cv.clientWidth) {
+      var sc = cv.clientWidth / w;
+      brush.style.left = (lastDab.x * sc) + 'px';
+      brush.style.top = (lastDab.y * sc) + 'px';
+    }
+    state.swish += dt;
+    if (state.swish > 0.45 && state.i < total) {
+      state.swish = 0;
+      self.noiseBurst(1400 + Math.random() * 900, 0.22, 0.16);
+    }
+    if (state.i < total) requestAnimationFrame(frame);
+    else self.magicDone();
+  }
+  requestAnimationFrame(frame);
+};
+
+App.magicDone = function () {
+  var self = this;
+  if (this.magicState) this.magicState.running = false;
+  this.magicState = null;
+  var b = $('magic-brush');
+  if (b) b.style.display = 'none';
+  this.magicProgress(1);
+  this.magicSetStatus('Finished — “' + (this.magicTitle || 'Untitled') + '”');
+  this.magicButtons(true);
+  this.tone(523, 784, 0.3, 0.4);
+  setTimeout(function () { self.blip(1046); }, 200);
+};
+
+App.magicReplay = function () {
+  if (this.magicSrcImg) this.magicPaint(this.magicSrcImg, this.magicTitle || 'Untitled');
+};
+
+App.magicSave = function () {
+  var cv = $('magic-canvas');
+  if (!cv || !cv.width) return;
+  try {
+    var url = cv.toDataURL('image/jpeg', 0.88);
+    var pieces = this.getPieces();
+    pieces.unshift({
+      id: 'm' + Date.now(),
+      title: '✨ ' + (this.magicTitle || 'Canvas Magic'),
+      ts: Date.now(), img: this.makeThumb(cv), full: url
+    });
+    store('pieces', JSON.stringify(pieces.slice(0, 24)));
+    this.openSheet('gallery-sheet');
+    this.toast('Saved to your gallery');
+    this.tone(523, 784, 0.25, 0.4);
+  } catch (e) { this.toast('Could not save that one'); }
+};
+
 App.bindAI = function () {
   var self = this;
   $('photo-input').addEventListener('change', function (e) {
@@ -988,6 +1325,10 @@ App.bindAI = function () {
   $('mood-go').onclick = function () { self.paletteStudio($('mood-input').value); };
   $('mood-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') self.paletteStudio(e.target.value); });
   $('daily-btn').onclick = function () { self.dailyPage(); };
+  $('magic-btn').onclick = function () { self.openMagic(); };
+  $('magic-new').onclick = function () { self.openMagic(); };
+  $('magic-replay').onclick = function () { self.magicReplay(); };
+  $('magic-save').onclick = function () { self.magicSave(); };
   $('timelapse-btn').onclick = function () { self.playTimelapse(); };
 };
 

@@ -97,6 +97,7 @@
       <button id="mood-go" class="bigbtn">Palette</button>
     </div>
     <button id="daily-btn" class="bigbtn">📅 Today’s AI page</button>
+    <button id="magic-btn" class="bigbtn">🖌️ Canvas Magic — watch it paint</button>
     <button id="timelapse-btn" class="bigbtn">🎬 Replay as time-lapse</button>
     <p class="note">AI features need a connection; everything else works offline.</p>
   </div>
@@ -115,9 +116,29 @@
   </div>
 </div>
 
+<!-- canvas magic sheet -->
+<div class="sheet" id="magic-sheet">
+  <div class="card wide">
+    <button class="sheet-x" aria-label="Close">✕</button>
+    <h2 id="magic-title">Canvas Magic</h2>
+    <div id="magic-status" class="magic-status">Mixing paints…</div>
+    <div id="magic-frame">
+      <canvas id="magic-canvas"></canvas>
+      <div id="magic-brush">🖌️</div>
+    </div>
+    <div id="magic-bar"><div id="magic-fill"></div></div>
+    <div class="magic-row">
+      <button id="magic-new" class="bigbtn">🎲 New</button>
+      <button id="magic-replay" class="bigbtn">↩️ Replay</button>
+      <button id="magic-save" class="bigbtn">🖼 Save</button>
+    </div>
+    <p class="note">Sit back and watch it paint, stroke by stroke.</p>
+  </div>
+</div>
+
 <div id="toast"></div>
 
-<script src="engine.js?v=20261004a"></script>
-<script src="app.js?v=20261004a"></script>
+<script src="engine.js?v=20261004b"></script>
+<script src="app.js?v=20261004b"></script>
 </body>
 </html>
