@@ -164,6 +164,43 @@
     click: function () { this.blip(520, 480, 0.07, 0.10, 'triangle'); }
   };
 
+  /* ---------------- haptics: minimal vibration vocabulary ----------------
+   * Fits the "precise, calm, minimal" identity: exactly two pulses —
+   * light [20] on shoot, success [10,40,10] on hole-out. Nothing else.
+   * Feature-detected and fully guarded (never throws on iOS, where the
+   * Vibration API doesn't exist), honors prefers-reduced-motion, and is
+   * user-toggleable from the menu (persisted under tf_haptic; no other
+   * save data is touched). */
+  var RM = false;
+  try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+  var HAP = {
+    supported: ('vibrate' in navigator),
+    enabled: true,
+    init: function () {
+      this.enabled = lsGet('tf_haptic', 'on') === 'on';
+      var b = $('btn-haptic');
+      if (!b) return;
+      if (!this.supported) { b.hidden = true; return; }   // iOS: no vibrate API — hide rather than show a dead toggle
+      this.paint();
+    },
+    ok: function () { return this.supported && this.enabled && !RM; },
+    buzz: function (pat) {
+      if (!this.ok()) return;
+      try { navigator.vibrate(pat); } catch (e) {}
+    },
+    toggle: function () {
+      this.enabled = !this.enabled;
+      lsSet('tf_haptic', this.enabled ? 'on' : 'off');
+      this.paint();
+      toast(this.enabled ? 'Haptics on' : 'Haptics off');
+    },
+    paint: function () {
+      var b = $('btn-haptic'), s = $('haptic-state');
+      if (b) b.setAttribute('aria-pressed', this.enabled ? 'true' : 'false');
+      if (s) s.textContent = this.enabled ? 'On' : 'Off';
+    }
+  };
+
   /* ---------------- state ---------------- */
   var STEP = 1 / 60;
   var state = 'menu';           // menu | play | holed | result
@@ -411,8 +448,9 @@
     AU.chime(eagle);
     AU.clunk();
     refreshButtons();
-    slowT = 0.85;                                      // slow-mo on the drop
-    if (eagle) petalBurst(hole.cup.x, hole.terrain.h(hole.cup.x) + 3);
+    slowT = RM ? 0 : 0.85;                              // slow-mo on the drop (off for reduced motion)
+    HAP.buzz([10, 40, 10]);                             // quiet success pulse on every hole-out
+    if (eagle && !RM) petalBurst(hole.cup.x, hole.terrain.h(hole.cup.x) + 3);
     if (strokes > par() + 2) turtleJudge();
     saveRun(); saveBest();
     setTimeout(showStarsPop, 650);
@@ -501,6 +539,7 @@
     totalStrokes++;
     inFlight = true;
     AU.thock(v[2] / 1.25);
+    HAP.buzz(20);                                       // light pulse on every shot
     rippleAt(ball.x, ball.y);
     updateHUD();
     saveRun();
@@ -1089,7 +1128,7 @@
     }
     if (name) { go(name); return; }
     box.innerHTML = '<div class="arc-lb-form"><input id="arc-lb-name" maxlength="12" placeholder="YOUR NAME" autocomplete="off">' +
-      '<button id="arc-lb-go" class="btn" type="button" style="width:auto;padding:10px 16px">SAVE</button></div>';
+      '<button id="arc-lb-go" class="btn" type="button" style="width:auto;padding:12px 18px">SAVE</button></div>';
     $('arc-lb-go').onclick = function () {
       var v = $('arc-lb-name').value.trim().slice(0, 12);
       if (!v) return;
@@ -1207,6 +1246,10 @@
     AU.init(); AU.click();
     var h = $('howto'); h.hidden = !h.hidden;
   });
+  $('btn-haptic').addEventListener('click', function () {
+    AU.init(); AU.click();
+    HAP.toggle();
+  });
   $('btn-menu').addEventListener('click', function () {
     AU.click();
     state = 'menu';
@@ -1228,9 +1271,10 @@
   });
 
   /* ---------------- boot ---------------- */
-  resize();
+    resize();
   maxHole = parseInt(lsGet('tf_maxhole', '1'), 10) || 1;
   trailSel = lsGet('tf_trail', 'Cloud');
+  HAP.init();
   refreshMenu();
   refreshButtons();
   fetchDaily();                       // prefetch today's hole in the background
