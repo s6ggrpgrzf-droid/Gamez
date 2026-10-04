@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#101312">
+<title>Moss &amp; Stone — a living koi pond</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #101312; overflow: hidden; }
+  #garden, #pond, #air { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #garden { z-index: 0; }
+  #dim { position: fixed; inset: 0; background: #0a0f14; opacity: 0; pointer-events: none; z-index: 1; }
+  #pond { z-index: 2; touch-action: none; }
+  #air { z-index: 3; pointer-events: none; }
+  #bloom {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at 50% 42%, rgba(255,246,220,0.85) 0%, rgba(255,240,200,0.35) 30%, rgba(255,240,200,0) 65%);
+    transition: opacity 0.6s ease;
+  }
+  /* ---------- title moment ---------- */
+  #title {
+    position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; background: #101312;
+    transition: opacity 1.6s ease; pointer-events: none;
+  }
+  #title.gone { opacity: 0; }
+  #title h1 {
+    margin: 0; font-family: Georgia, 'Times New Roman', serif; font-weight: normal;
+    font-size: 34px; letter-spacing: 0.28em; text-indent: 0.28em; color: #e8dcc0;
+  }
+  #title p {
+    margin: 14px 0 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+    font-size: 15px; letter-spacing: 0.12em; color: rgba(216,192,138,0.65);
+  }
+  #title .rule { width: 64px; height: 1px; background: rgba(216,192,138,0.4); margin: 18px 0 0; }
+  /* ---------- onboarding chips ---------- */
+  #chips {
+    position: fixed; left: 0; right: 0; bottom: calc(108px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    z-index: 5; pointer-events: none;
+  }
+  .chip {
+    background: rgba(16,20,18,0.72); border: 1px solid rgba(216,192,138,0.35);
+    color: #e8dcc0; font: 13px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.14em;
+    padding: 11px 18px; border-radius: 20px;
+    opacity: 1; transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .chip.gone { opacity: 0; transform: translateY(6px); }
+  .chip[hidden] { display: none; }
+  /* ---------- buttons ---------- */
+  .uibtn {
+    position: fixed; z-index: 6;
+    width: 44px; height: 44px; border-radius: 22px;
+    background: rgba(16,20,18,0.72); border: 1px solid rgba(216,192,138,0.35);
+    color: #e8dcc0; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #btn-journal { left: 14px; bottom: calc(48px + env(safe-area-inset-bottom)); }
+  #btn-collection { right: 14px; bottom: calc(48px + env(safe-area-inset-bottom)); }
+  #btn-settings { right: 14px; top: calc(14px + env(safe-area-inset-top)); }
+  .dot {
+    position: absolute; top: 8px; right: 8px; width: 9px; height: 9px;
+    border-radius: 5px; background: #e8b45a; display: block;
+  }
+  .dot[hidden] { display: none; }
+  /* ---------- overlays ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 7; display: flex;
+    align-items: center; justify-content: center;
+    background: rgba(5,8,7,0.55); padding: 20px; box-sizing: border-box;
+  }
+  .overlay[hidden] { display: none; }
+  .card {
+    width: 100%; max-width: 420px; max-height: 72vh; overflow: hidden;
+    display: flex; flex-direction: column;
+    background: rgba(18,23,20,0.96); border: 1px solid rgba(216,192,138,0.35);
+    border-radius: 14px; color: #e8dcc0;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  .card-h {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px 10px; border-bottom: 1px solid rgba(216,192,138,0.22);
+    font-size: 18px; letter-spacing: 0.06em; color: #d8c08a;
+  }
+  .card-h .x {
+    background: none; border: none; color: #d8c08a; font-size: 18px;
+    width: 44px; height: 44px; cursor: pointer;
+  }
+  .list { overflow-y: auto; padding: 6px 16px 16px; }
+  .entry { padding: 9px 0; border-bottom: 1px solid rgba(216,192,138,0.12); font-size: 15px; line-height: 1.5; }
+  .entry .when { display: block; font-size: 11px; color: rgba(216,192,138,0.6); letter-spacing: 0.08em; margin-top: 3px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 16px 18px; overflow-y: auto; }
+  .cell { text-align: center; font-size: 12px; color: #cbbf9f; }
+  .cell img { width: 100%; border-radius: 8px; border: 1px solid rgba(216,192,138,0.25); background: #0d2b33; }
+  .cell .nm { margin-top: 4px; color: #e8dcc0; font-size: 13px; }
+  .cell .st { font-size: 11px; color: rgba(216,192,138,0.65); font-style: italic; }
+  .count { padding: 0 16px 12px; font-size: 13px; color: rgba(216,192,138,0.7); font-style: italic; }
+  /* ---------- settings ---------- */
+  .setrow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 13px 16px; border-bottom: 1px solid rgba(216,192,138,0.12);
+    font-size: 15px;
+  }
+  .setrow .lab small { display: block; font-size: 12px; color: rgba(216,192,138,0.6); font-style: italic; margin-top: 2px; }
+  .tgl {
+    width: 52px; height: 32px; border-radius: 16px; border: 1px solid rgba(216,192,138,0.4);
+    background: rgba(216,192,138,0.12); position: relative; cursor: pointer; flex: none;
+  }
+  .tgl::after {
+    content: ''; position: absolute; top: 3px; left: 4px; width: 24px; height: 24px;
+    border-radius: 12px; background: rgba(216,192,138,0.55); transition: left 0.18s ease, background 0.18s ease;
+  }
+  .tgl[aria-checked="true"] { background: rgba(216,192,138,0.35); }
+  .tgl[aria-checked="true"]::after { left: 22px; background: #e8dcc0; }
+  .danger {
+    margin: 14px 16px 18px; padding: 12px; border-radius: 10px;
+    border: 1px solid rgba(200,90,80,0.5); background: rgba(120,40,35,0.15);
+    color: #e8b0a0; font-size: 14px; text-align: center; cursor: pointer; width: calc(100% - 32px);
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  .danger.confirm { background: rgba(160,50,45,0.35); color: #ffd9d0; }
+  #nogl {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #cfd8d3; font: 15px/1.6 -apple-system, system-ui, sans-serif; text-align: center; padding: 32px; z-index: 30;
+  }
+  #nogl[hidden] { display: none; }
+</style>
+</head>
+<body>
+<canvas id="garden"></canvas>
+<div id="dim"></div>
+<canvas id="pond"></canvas>
+<canvas id="air"></canvas>
+<div id="bloom"></div>
+<div id="chips">
+  <div class="chip" id="chip-touch" hidden>touch the water</div>
+  <div class="chip" id="chip-feed" hidden>double-tap to feed</div>
+  <div class="chip" id="chip-rake" hidden>drag the sand to rake</div>
+</div>
+<button id="btn-journal" class="uibtn" aria-label="Garden journal">📖<span id="jdot" class="dot" hidden></span></button>
+<button id="btn-collection" class="uibtn" aria-label="Pattern collection">🎏</button>
+<button id="btn-settings" class="uibtn" aria-label="Settings">⚙</button>
+<div id="title"><h1>Moss &amp; Stone</h1><div class="rule"></div><p>a living koi pond</p></div>
+<div id="journal-ov" class="overlay" hidden>
+  <div class="card">
+    <div class="card-h"><span>Garden Journal</span><button class="x" data-close="journal-ov" aria-label="Close">✕</button></div>
+    <div id="journal-list" class="list"></div>
+  </div>
+</div>
+<div id="collection-ov" class="overlay" hidden>
+  <div class="card">
+    <div class="card-h"><span>Pattern Collection</span><button class="x" data-close="collection-ov" aria-label="Close">✕</button></div>
+    <div class="count" id="collection-count"></div>
+    <div id="collection-grid" class="grid"></div>
+  </div>
+</div>
+<div id="settings-ov" class="overlay" hidden>
+  <div class="card">
+    <div class="card-h"><span>Settings</span><button class="x" data-close="settings-ov" aria-label="Close">✕</button></div>
+    <div class="list">
+      <div class="setrow"><div class="lab">Sound<small>generative koto &amp; water</small></div><button class="tgl" id="set-sound" role="switch" aria-checked="true" aria-label="Sound"></button></div>
+      <div class="setrow"><div class="lab">Gentle haptics<small>a soft tap when you feed</small></div><button class="tgl" id="set-hap" role="switch" aria-checked="true" aria-label="Haptics"></button></div>
+      <div class="setrow"><div class="lab">Reduce motion<small>calms sway &amp; glows</small></div><button class="tgl" id="set-rm" role="switch" aria-checked="false" aria-label="Reduce motion"></button></div>
+      <button class="danger" id="btn-reset">Reset garden…</button>
+    </div>
+  </div>
+</div>
+<div id="nogl" hidden><div>This garden needs WebGL2.<br>Please try a recent browser.</div></div>
+<script src="water-engine.js"></script>
+<script src="koi-engine.js"></script>
+<script src="pond-life.js"></script>
+<script src="garden.js"></script>
+<script src="pond-ai-banks.js"></script>
+<script src="pond-ai-client.js"></script>
+<script src="systems.js"></script>
+<script src="audio-engine.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ================= prefs (separate from the garden save) ================= */
+  var PREFS_KEY = 'moss-stone-prefs';
+  var prefs = { haptics: true, reducedMotion: false };
+  try {
+    var rawP = localStorage.getItem(PREFS_KEY);
+    if (rawP) {
+      var dP = JSON.parse(rawP);
+      if (typeof dP.haptics === 'boolean') prefs.haptics = dP.haptics;
+      if (typeof dP.reducedMotion === 'boolean') prefs.reducedMotion = dP.reducedMotion;
+    } else if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      prefs.reducedMotion = true; // first run: honor the OS
+      prefs.haptics = false;
+    }
+  } catch (e) {}
+  function savePrefs() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {}
+  }
+
+  /* ================= haptics: sparse and light ================= */
+  var HAP = { feed: [10], success: [10, 40, 10] };
+  var hapLast = 0;
+  function buzz(kind) {
+    if (!prefs.haptics || prefs.reducedMotion) return;
+    var now = performance.now();
+    if (now - hapLast < 900) return; // zen: never buzzy
+    hapLast = now;
+    try { if (navigator.vibrate) navigator.vibrate(HAP[kind] || HAP.feed); } catch (e) {}
+  }
+
+  /* ================= boot ================= */
+  var gardenCanvas = document.getElementById('garden');
+  var canvas = document.getElementById('pond');
+  var airCanvas = document.getElementById('air');
+  var dim = document.getElementById('dim');
+  var bloom = document.getElementById('bloom');
+  var title = document.getElementById('title');
+  var water = new WaterEngine(canvas, { seed: 20261004, transparentRim: true });
+
+  function sizeCanvas(c) {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.max(2, Math.round(window.innerWidth * dpr));
+    c.height = Math.max(2, Math.round(window.innerHeight * dpr));
+  }
+  function resize() {
+    sizeCanvas(canvas); sizeCanvas(gardenCanvas); sizeCanvas(airCanvas);
+    if (water.gl) { water.resize(); if (gardenReady) garden.resize(); }
+  }
+  function fail() {
+    document.getElementById('nogl').hidden = false;
+    title.classList.add('gone');
+  }
+  sizeCanvas(canvas); sizeCanvas(gardenCanvas); sizeCanvas(airCanvas);
+  if (!water.init()) { fail(); return; }
+
+  var koi = new KoiEngine(water, { count: 8, seed: 777 });
+  if (!koi.init()) { fail(); return; }
+
+  var life = new PondLife(water, koi, { seed: 4242 });
+  if (!life.init()) { fail(); return; }
+
+  var garden = new Garden(gardenCanvas, water, life, { seed: 909090 });
+  if (!garden.init()) { fail(); return; }
+  var gardenReady = true;
+
+  var sys = new Systems(water, koi, life, garden, { seed: 5150, air: airCanvas });
+  if (!sys.init()) { fail(); return; }
+  sys.setReducedMotion(prefs.reducedMotion);
+  try {
+    if (typeof PondAI !== 'undefined') {
+      sys.pondAI = PondAI;
+      PondAI.prefetchNames(6);
+    }
+  } catch (e) {}
+  var bootState = sys.load();
+
+  /* ================= milestone juice: blooms, not pops ================= */
+  sys.onMilestone = function (kind, data) {
+    if (kind === 'hatch' && data) {
+      // petal-burst where the fry hatched + a soft ripple ring
+      var ux = data.x + 0.5, uy = data.y / water.aspect + 0.5;
+      for (var i = 0; i < 5; i++) {
+        life.dropPetal(ux + (Math.random() - 0.5) * 0.04, uy + (Math.random() - 0.5) * 0.04, 0);
+      }
+      water.disturb(ux, uy, 4, 1.6);
+      life.spawnRing(ux, uy, 0.04);
+      buzz('success');
+    } else if (kind === 'ascension') {
+      // the bloom overlay already glows; add one slow parting ring
+      buzz('success');
+    }
+  };
+
+  /* ================= audio ================= */
+  var audio = new AudioEngine({ seed: 31337 });
+  sys.audio = audio;
+  var prevEat = koi.onKoiEat;
+  koi.onKoiEat = function (k) {
+    if (prevEat) prevEat(k);
+    audio.gulp();
+  };
+  window.addEventListener('pointerdown', function () { audio.unlock(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { sys.save(); audio.suspend(); }
+    else { audio.resume(); }
+  });
+  window.addEventListener('pagehide', function () { sys.save(); });
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
+  setInterval(function () { sys.save(); }, 30000);
+
+  /* ================= title moment ================= */
+  var titleGone = false;
+  function dismissTitle() {
+    if (titleGone) return;
+    titleGone = true;
+    title.classList.add('gone');
+    setTimeout(function () { title.style.display = 'none'; }, 1700);
+    showChips();
+  }
+  setTimeout(dismissTitle, 2600);
+  window.addEventListener('pointerdown', dismissTitle, { once: false });
+
+  /* ================= onboarding chips (wordless, self-dismissing) ================= */
+  var chips = {
+    touch: document.getElementById('chip-touch'),
+    feed: document.getElementById('chip-feed'),
+    rake: document.getElementById('chip-rake'),
+  };
+  function showChips() {
+    if (sys.onboardDone()) return;
+    // stagger them gently: touch first, then feed, then rake
+    var order = ['touch', 'feed', 'rake'];
+    var delay = 0;
+    order.forEach(function (k) {
+      if (!sys.onboard[k]) {
+        var el = chips[k];
+        setTimeout(function () {
+          if (!sys.onboard[k]) el.hidden = false;
+        }, delay);
+        delay += 1400;
+      }
+    });
+  }
+  function dismissChip(k) {
+    if (sys.markOnboard(k)) {
+      var el = chips[k];
+      el.classList.add('gone');
+      setTimeout(function () { el.hidden = true; }, 850);
+      sys.save();
+    }
+  }
+
+  /* ================= input ================= */
+  function toUV(e) {
+    var r = canvas.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+  }
+  function onWater(p) { return water.pondInfo(p[0], p[1])[0] > 0.5; }
+
+  var mode = null, down = false, lx = 0, ly = 0, downT = 0;
+  var lastUpT = 0, lastUpX = 0, lastUpY = 0;
+  var lastPlipT = 0;
+  var rlx = 0, rly = 0, rlt = 0;
+
+  canvas.addEventListener('pointerdown', function (e) {
+    var p = toUV(e);
+    down = true; downT = performance.now();
+    lx = e.clientX; ly = e.clientY;
+    if (onWater(p)) {
+      mode = 'water';
+      water.disturb(p[0], p[1], 4, 2.4);
+      koi.setPointer(p[0], p[1], true);
+      audio.plip();
+      lastPlipT = performance.now();
+      dismissChip('touch');
+    } else {
+      var si = garden.stoneAt(p[0], p[1]);
+      if (si >= 0) { mode = 'stone'; garden.dragStoneStart(si); }
+      else {
+        mode = 'rake'; garden.rakeStart(p[0], p[1]);
+        audio.rakeStart();
+        rlx = e.clientX; rly = e.clientY; rlt = performance.now();
+        dismissChip('rake');
+      }
+      koi.setPointer(p[0], p[1], false);
+    }
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    var p = toUV(e);
+    var now = performance.now();
+    if (down && mode === 'water') {
+      var dx = e.clientX - lx, dy = e.clientY - ly;
+      if (dx * dx + dy * dy > 100) {
+        lx = e.clientX; ly = e.clientY;
+        water.disturb(p[0], p[1], 3, 1.3);
+      }
+      if (now - lastPlipT > 380) { lastPlipT = now; audio.plip(); }
+      koi.setPointer(p[0], p[1], true);
+    } else if (down && mode === 'rake') {
+      garden.rakeMove(p[0], p[1]);
+      var rdx = e.clientX - rlx, rdy = e.clientY - rly;
+      var rdt = now - rlt;
+      if (rdt > 0) {
+        var spd = Math.sqrt(rdx * rdx + rdy * rdy) / rdt;
+        audio.rakeSet(spd / 1.5);
+        rlx = e.clientX; rly = e.clientY; rlt = now;
+      }
+    } else if (down && mode === 'stone') {
+      garden.dragStoneMove(p[0], p[1]);
+    } else if (!down) {
+      koi.setPointer(p[0], p[1], false);
+    }
+  });
+  function up(e) {
+    var p = toUV(e);
+    var now = performance.now();
+    if (mode === 'water') {
+      if (now - lastUpT < 350) {
+        var ddx = e.clientX - lastUpX, ddy = e.clientY - lastUpY;
+        if (ddx * ddx + ddy * ddy < 1600 && onWater(p)) {
+          var nPellets = life.feed(p[0], p[1]);
+          if (nPellets > 0) { audio.plop(nPellets); buzz('feed'); dismissChip('feed'); }
+          lastUpT = 0;
+          koi.setPointer(p[0], p[1], false);
+          down = false; mode = null;
+          return;
+        }
+      }
+      lastUpT = now; lastUpX = e.clientX; lastUpY = e.clientY;
+      if (now - downT < 220) {
+        water.disturb(p[0], p[1], 5, 3.2);
+        koi.splash(p[0], p[1], 3.2);
+      }
+      koi.setPointer(p[0], p[1], false);
+    } else if (mode === 'rake') {
+      garden.rakeEnd();
+      audio.rakeEnd();
+    } else if (mode === 'stone') {
+      garden.dragStoneEnd();
+      audio.stone();
+    }
+    down = false; mode = null;
+  }
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+
+  /* ================= journal + collection ================= */
+  var jov = document.getElementById('journal-ov');
+  var cov = document.getElementById('collection-ov');
+  var sov = document.getElementById('settings-ov');
+  var jdot = document.getElementById('jdot');
+
+  function fmtWhen(t) {
+    var d = new Date(t);
+    var now = new Date();
+    var sameDay = d.toDateString() === now.toDateString();
+    var hh = d.getHours(), mm = ('0' + d.getMinutes()).slice(-2);
+    var ap = hh >= 12 ? 'pm' : 'am';
+    hh = hh % 12 || 12;
+    return (sameDay ? 'today' : d.toLocaleDateString()) + ', ' + hh + ':' + mm + ap;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function renderJournal() {
+    var list = document.getElementById('journal-list');
+    var items = sys.journalList();
+    if (!items.length) { list.innerHTML = '<div class="entry">Nothing yet. The pond is waiting.</div>'; return; }
+    list.innerHTML = items.map(function (e) {
+      return '<div class="entry">' + esc(e.text) +
+        '<span class="when">' + esc(fmtWhen(e.t)) + '</span></div>';
+    }).join('');
+  }
+  function renderCollection() {
+    var cells = sys.collectionList();
+    document.getElementById('collection-count').textContent =
+      cells.length + (cells.length === 1 ? ' pattern discovered' : ' patterns discovered') + ' — every koi is one of a kind';
+    var grid = document.getElementById('collection-grid');
+    grid.innerHTML = cells.map(function (c) {
+      var img = c.thumb ? '<img src="' + c.thumb + '" alt="">' : '<div style="height:52px"></div>';
+      return '<div class="cell">' + img +
+        '<div class="nm">' + esc(c.name) + '</div>' +
+        '<div class="st">' + esc(c.style) + '</div></div>';
+    }).join('');
+  }
+  document.getElementById('btn-journal').addEventListener('click', function () {
+    renderJournal();
+    jov.hidden = false;
+    sys.clearAwayCount();
+    jdot.hidden = true;
+  });
+  document.getElementById('btn-collection').addEventListener('click', function () {
+    renderCollection();
+    cov.hidden = false;
+  });
+  document.getElementById('btn-settings').addEventListener('click', function () {
+    sov.hidden = false;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (b) {
+    b.addEventListener('click', function () {
+      document.getElementById(b.getAttribute('data-close')).hidden = true;
+    });
+  });
+  [jov, cov, sov].forEach(function (ov) {
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.hidden = true; });
+  });
+
+  /* ================= settings ================= */
+  var setSound = document.getElementById('set-sound');
+  var setHap = document.getElementById('set-hap');
+  var setRm = document.getElementById('set-rm');
+  function paintToggles() {
+    setSound.setAttribute('aria-checked', String(!audio.muted));
+    setHap.setAttribute('aria-checked', String(prefs.haptics));
+    setRm.setAttribute('aria-checked', String(prefs.reducedMotion));
+  }
+  paintToggles();
+  setSound.addEventListener('click', function () {
+    audio.unlock();
+    audio.setMuted(!audio.muted);
+    paintToggles();
+    sys.save();
+  });
+  setHap.addEventListener('click', function () {
+    prefs.haptics = !prefs.haptics;
+    savePrefs();
+    paintToggles();
+  });
+  setRm.addEventListener('click', function () {
+    prefs.reducedMotion = !prefs.reducedMotion;
+    sys.setReducedMotion(prefs.reducedMotion);
+    savePrefs();
+    paintToggles();
+  });
+  var resetBtn = document.getElementById('btn-reset');
+  var resetArmed = false;
+  resetBtn.addEventListener('click', function () {
+    if (!resetArmed) {
+      resetArmed = true;
+      resetBtn.textContent = 'Tap again to erase everything';
+      resetBtn.classList.add('confirm');
+      setTimeout(function () {
+        resetArmed = false;
+        resetBtn.textContent = 'Reset garden…';
+        resetBtn.classList.remove('confirm');
+      }, 4000);
+      return;
+    }
+    try {
+      localStorage.removeItem('moss-stone-v1');
+      localStorage.removeItem('moss-stone-prefs');
+    } catch (e) {}
+    location.reload();
+  });
+
+  /* ================= test hooks ================= */
+  window.__water = {
+    disturb: function (x, y, r, s) { water.disturb(x, y, r, s); },
+    maxAbs: function () { return water.maxAbs(); },
+    setAmbient: function (v) { water.setAmbient(v); },
+    getTime: function () { return water.time; },
+    engine: water
+  };
+  window.__koi = {
+    count: function () { return koi.koi.length; },
+    positions: function () {
+      return koi.koi.map(function (k) { return [k.x, k.y, k.depth, k.state]; });
+    },
+    engine: koi
+  };
+  window.__pond = {
+    ok: function () { return life.ok; },
+    feed: function (x, y) { return life.feed(x, y); },
+    forceRain: function (v) { life.forceRain(v); },
+    rainActive: function () { return life.rainActive(); },
+    gloom: function () { return life.gloom; },
+    clarity: function () { return life.clarity; },
+    pelletCount: function () { return life.pelletCount(); },
+    padCount: function () { return life.padCount(); },
+    petalCount: function () { return life.petalCount(); },
+    fastForward: function (sec) { life.fastForward(sec); },
+    engine: life
+  };
+  window.__garden = {
+    ok: function () { return garden.ok; },
+    rakeStroke: function (pts) {
+      garden.rakeStart(pts[0][0], pts[0][1]);
+      for (var i = 1; i < pts.length; i++) garden.rakeMove(pts[i][0], pts[i][1]);
+      garden.rakeEnd();
+    },
+    furrowAmount: function () { return garden.furrowAmount(); },
+    stonePositions: function () { return garden.stonePositions(); },
+    moveStone: function (i, nx, ny) {
+      garden.dragStoneStart(i); garden.dragStoneMove(nx, ny); garden.dragStoneEnd();
+    },
+    seedMoss: function (nx, ny, r, vig) { garden.seedMoss(nx, ny, r, vig); },
+    mossCoverage: function () { return garden.mossCoverage(); },
+    patchCount: function () { return garden.patches.length; },
+    fastForward: function (sec) { garden.fastForward(sec); },
+    serialize: function () { return garden.serialize(); },
+    engine: garden
+  };
+  window.__audio = {
+    info: function () { return audio.info(); },
+    unlock: function () { return audio.unlock(); },
+    engine: audio,
+  };
+  window.__sys = {
+    ok: function () { return sys.ok; },
+    bootState: function () { return bootState; },
+    save: function () { return sys.save(); },
+    setSaveEnabled: function (v) { sys.saveEnabled = !!v; },
+    hasSave: function () { return sys.hasSave(); },
+    journal: function () { return sys.journal.map(function (e) { return e.text; }); },
+    awayCount: function () { return sys.awayCount(); },
+    collectionCount: function () { return Object.keys(sys.discovered).length; },
+    koiInfo: function () {
+      return sys.koi.koi.map(function (k) {
+        return { id: k.id, name: k.name, growthT: +k.growthT.toFixed(2), style: k.style, meals: k.meals };
+      });
+    },
+    dayInfo: function () {
+      return { dayF: +sys.dayF.toFixed(2), nightF: +sys.nightF.toFixed(2), duskF: +sys.duskF.toFixed(2) };
+    },
+    setClockOverride: function (h) { sys.setClockOverride(h); },
+    clearClockOverride: function () { sys.clearClockOverride(); },
+    debugBreed: function () { return sys.debugBreed(); },
+    debugHatch: function () { return sys.debugHatch(); },
+    debugAscension: function () { return sys.debugAscension(); },
+    fastForward: function (sec) { sys.fastForward(sec); },
+    blessings: function () { return sys.blessings; },
+    openJournal: function () { document.getElementById('btn-journal').click(); },
+    openCollection: function () { document.getElementById('btn-collection').click(); },
+    openSettings: function () { document.getElementById('btn-settings').click(); },
+    prefs: function () { return { haptics: prefs.haptics, reducedMotion: prefs.reducedMotion }; },
+    setReducedMotion: function (v) { sys.setReducedMotion(!!v); },
+    onboard: function () { return sys.onboard; },
+    engine: sys
+  };
+
+  function loop(now) {
+    koi.frame(now);
+    life.frame(now);
+    garden.frame(now);
+    sys.frame(now);
+    water.frame(now);
+    audio.tick(now, {
+      dayF: sys.dayF, nightF: sys.nightF, duskF: sys.duskF,
+      raining: life.rainActive(), gloom: life.gloom,
+    });
+    dim.style.opacity = Math.max(life.gloom * 0.38, sys.nightF * 0.5).toFixed(3);
+    // reduced motion: no ascension bloom glow
+    bloom.style.opacity = sys.reducedMotion ? '0' : sys.bloomF.toFixed(3);
+    if (sys.awayCount() > 0) jdot.hidden = false;
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
