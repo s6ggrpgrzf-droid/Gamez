@@ -586,6 +586,16 @@ function setPhase(p) {
   cb.classList.toggle('charging', p === 'charging');
   hp.hidden = p !== 'bite';
   dg.classList.toggle('show', p === 'charging');
+  if (p === 'charging') {
+    /* position zone-boundary marks for this line level: fill grows upward = deeper */
+    var maxD = CC.maxDepthFor(save.up.line);
+    var gmMid = document.getElementById('gm-mid'), gmDeep = document.getElementById('gm-deep');
+    var f1 = 1 / maxD, f2 = 2 / maxD;
+    gmMid.style.bottom = (f1 * 100).toFixed(1) + '%';
+    gmDeep.style.bottom = (f2 * 100).toFixed(1) + '%';
+    gmMid.style.display = f1 < 0.99 ? '' : 'none';
+    gmDeep.style.display = f2 < 0.99 ? '' : 'none';
+  }
   if (p === 'idle') cb.querySelector('span').textContent = 'HOLD TO CAST';
 }
 
