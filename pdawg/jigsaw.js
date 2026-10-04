@@ -687,6 +687,10 @@ function deserializeState(saved) {
     });
   }
   applyWhimsy(S);
+  // Heal: groups saved before the exact-seating fix may carry snap slop;
+  // pull every surviving group's internal seams exactly flush on load.
+  var lg = Object.keys(S.groups);
+  for (var gi = 0; gi < lg.length; gi++) seatGroupExact(S, lg[gi]);
   return S;
 }
 
