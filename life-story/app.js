@@ -81,22 +81,26 @@
     clearTimeout(toastT);
     toastT = setTimeout(function () { t.classList.remove('show'); }, 2200);
   }
-  function confetti() {
+  function confetti(count, opts) {
+    if (RM) return;
     var c = $('confetti');
     if (!c || !c.getContext) return;
+    count = count || 140;
+    opts = opts || {};
     var ctx = c.getContext('2d');
     c.width = window.innerWidth; c.height = window.innerHeight;
     c.classList.remove('hidden');
     var colors = ['#ffd166', '#7c5cff', '#4dd0a6', '#ff6b9d', '#2ea8ff'];
     var parts = [];
-    for (var i = 0; i < 140; i++) parts.push({
-      x: Math.random() * c.width, y: -20 - Math.random() * c.height * 0.4,
+    for (var i = 0; i < count; i++) parts.push({
+      x: (opts.x0 !== undefined) ? opts.x0 + (Math.random() - 0.5) * (opts.spread || 200) : Math.random() * c.width,
+      y: (opts.y0 !== undefined) ? opts.y0 + (Math.random() - 0.5) * (opts.spread || 200) * 0.4 : -20 - Math.random() * c.height * 0.4,
       w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
       vy: 2 + Math.random() * 3.5, vx: -1.5 + Math.random() * 3,
       r: Math.random() * Math.PI, vr: -0.12 + Math.random() * 0.24,
       col: colors[i % colors.length]
     });
-    var t = 0;
+    var t = 0, maxT = Math.max(90, Math.min(200, count + 60));
     (function tick() {
       ctx.clearRect(0, 0, c.width, c.height);
       parts.forEach(function (p) {
@@ -105,7 +109,7 @@
         ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
         ctx.restore();
       });
-      if (++t < 200) requestAnimationFrame(tick);
+      if (++t < maxT) requestAnimationFrame(tick);
       else c.classList.add('hidden');
     })();
   }
@@ -147,6 +151,105 @@
       else if (name === 'coin') { tone(988, 0, 0.08, 'sine', 0.1); tone(1319, 0.08, 0.14, 'sine', 0.1); }
       else if (name === 'death') { tone(220, 0, 0.9, 'triangle', 0.12, 55); tone(110, 0.1, 1.0, 'sine', 0.08, 40); }
     } catch (e) {}
+  }
+
+  /* ---------- juice: haptics vocabulary + reduced motion (feel-only) ---------- */
+  var HAP = { select: 10, light: 20, medium: 30, success: [10, 40, 10], warning: [20, 60, 20], error: [40, 80, 40, 40, 80, 40] };
+  var RM = false; // prefers-reduced-motion
+  try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+  var hapticsOn = !RM;
+  try {
+    var _hs = localStorage.getItem('lifestory_haptics');
+    if (_hs === '1') hapticsOn = true;
+    else if (_hs === '0') hapticsOn = false;
+  } catch (e) {}
+  if (RM && document.body) document.body.classList.add('reduced-motion');
+  function buzz(pattern) {
+    if (!hapticsOn) return; // RM only changes the default; an explicit user toggle always wins
+    try {
+      if (!('vibrate' in navigator)) return; // iOS Safari: no-op, never throws
+      try { navigator.vibrate(0); } catch (e0) {} // cancel stale buzz first (Android ignores vibrate() mid-buzz)
+      navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+  function comedicShake() {
+    if (RM) return;
+    var a = $('app');
+    if (!a) return;
+    a.classList.remove('shake');
+    void a.offsetWidth;
+    a.classList.add('shake');
+  }
+
+  /* ---------- floating delta numbers (pooled) ---------- */
+  var floaterPool = [];
+  function floater(text, cls) {
+    if (RM) return;
+    var f = floaterPool.pop();
+    if (!f) { f = document.createElement('div'); document.body.appendChild(f); }
+    f.className = 'floater ' + (cls || '');
+    f.textContent = text;
+    var m = $('pmoney'), r = m ? m.getBoundingClientRect() : null;
+    f.style.left = (r ? (r.left + r.width / 2) : (window.innerWidth / 2)) + 'px';
+    f.style.top = ((r ? r.bottom : 90) + 8) + 'px';
+    void f.offsetWidth;
+    f.classList.add('go');
+    setTimeout(function () {
+      f.classList.remove('go');
+      f.className = 'floater';
+      if (floaterPool.length < 6) floaterPool.push(f);
+    }, 1100);
+  }
+
+  /* ---------- cash-register money tick ---------- */
+  var moneyShown = null, moneyRaf = 0;
+  function moneyPopFx() {
+    if (RM) return;
+    var el = $('pmoney');
+    if (!el) return;
+    el.classList.remove('money-pop');
+    void el.offsetWidth;
+    el.classList.add('money-pop');
+  }
+  function setMoneyTick(w) {
+    var el = $('pmoney');
+    if (!el) return;
+    if (moneyShown === null || moneyShown === w) {
+      moneyShown = w;
+      if (moneyRaf) { cancelAnimationFrame(moneyRaf); moneyRaf = 0; }
+      el.textContent = LifeSim.fmt(w);
+      return;
+    }
+    var from = moneyShown, delta = w - from;
+    moneyShown = w;
+    if (RM || Math.abs(delta) < 1000) { el.textContent = LifeSim.fmt(w); return; }
+    if (moneyRaf) cancelAnimationFrame(moneyRaf);
+    var t0 = performance.now(), dur = 480;
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / dur);
+      var e = 1 - Math.pow(1 - k, 3); // ease-out-cubic
+      el.textContent = LifeSim.fmt(Math.round(from + delta * e));
+      if (k < 1) moneyRaf = requestAnimationFrame(step);
+      else { el.textContent = LifeSim.fmt(w); moneyRaf = 0; }
+    })(t0);
+  }
+
+  /* ---------- per-life juice state (transient UI state, never saved) ---------- */
+  var lastKids = -1, millionClub = false;
+  var lastJournalKey = '', lastLogKey = '';
+  function logTopKey() {
+    if (!S || !S.log.length) return '';
+    return S.log[0].age + '|' + (S.log[0].text || '').slice(0, 48);
+  }
+  function logMilestones(text) {
+    text = text || '';
+    if (/JACKPOT|jackpot ticket/i.test(text)) {
+      confetti(90);
+      buzz(HAP.success);
+    } else if (/📦 Fired from|🚨 Busted!|⚖️ Divorced/.test(text)) {
+      comedicShake();
+      buzz(/🚨 Busted!/.test(text) ? HAP.error : HAP.warning);
+    }
   }
 
   /* ---------- canvas avatar (replaces emoji #avatar) ---------- */
@@ -350,12 +453,12 @@
       } else if (kind === 'name') {
         b.innerHTML = '🎲 Reroll name' + (dossierName ? ': <b>' + esc(dossierName) + '</b>' : '') + '<span class="fate-cost">free</span>';
       }
-      b.onclick = function () { spendFate(kind, cost); };
+      b.onclick = function () { buzz(HAP.light); spendFate(kind, cost); };
     });
     var bb = $('begin-life-btn');
-    if (bb && !bb.onclick) bb.onclick = function () { sfx('click'); beginLife(); };
+    if (bb && !bb.onclick) bb.onclick = function () { sfx('click'); buzz(HAP.medium); beginLife(); };
     var bk = $('dossier-back');
-    if (bk && !bk.onclick) bk.onclick = function () { sfx('click'); $('dossier').classList.add('hidden'); showStart(); };
+    if (bk && !bk.onclick) bk.onclick = function () { sfx('click'); buzz(HAP.select); $('dossier').classList.add('hidden'); showStart(); };
   }
   function spendFate(kind, cost) {
     if (getFate() < cost) { toast('✨ Not enough Fate Points. Die more interestingly.'); return; }
@@ -411,6 +514,7 @@
     snap = null; eventQueue.length = 0; modalOpen = false; aiInFlight = false;
     prevStats = {};
     try { prevWorth = LifeSim.netWorth(S); } catch (e) { prevWorth = 0; }
+    lastJournalKey = ''; lastLogKey = ''; moneyShown = null; lastKids = -1; millionClub = false; // reset juice state
     var doDaily = pendingDaily; pendingDaily = false;
     $('dossier').classList.add('hidden');
     $('start').classList.add('hidden');
@@ -454,12 +558,14 @@
     if (S.fame >= 20) extra += ' · ⭐' + S.fame;
     if (S.followers >= 1000) extra += ' · 📱' + LifeSim.fmtN(S.followers);
     $('page').textContent = stage(S.age) + ' · Age ' + S.age + ' · ' + S.city + extra;
-    $('pmoney').textContent = LifeSim.fmt(LifeSim.netWorth(S));
     [['happy', 'b-happy'], ['health', 'b-health'], ['smarts', 'b-smarts'], ['looks', 'b-looks']].forEach(function (pair) {
       var bar = $(pair[1]), num = $(pair[1] + '-n'), v = S[pair[0]];
       if (!bar) return;
       bar.style.width = v + '%';
-      if (num) num.textContent = v;
+      if (num && num.textContent !== String(v)) {
+        num.textContent = v;
+        if (!RM) { num.classList.remove('npop'); void num.offsetWidth; num.classList.add('npop'); }
+      }
       if (prevStats[pair[0]] !== undefined && prevStats[pair[0]] !== v) {
         bar.classList.remove('up', 'down');
         void bar.offsetWidth;
@@ -477,13 +583,42 @@
     }
     var w = 0;
     try { w = LifeSim.netWorth(S); } catch (e) {}
-    if (prevWorth > 0 && w - prevWorth >= 20000) sfx('coin');
+    var delta = (prevWorth > 0) ? w - prevWorth : 0;
+    setMoneyTick(w);
+    if (delta >= 20000) {
+      moneyPopFx();
+      floater('+' + LifeSim.fmt(delta), 'gain');
+      buzz(HAP.light);
+      sfx('coin');
+    } else if (delta <= -20000) {
+      floater('-' + LifeSim.fmt(-delta), 'loss');
+    }
     prevWorth = w;
+    if (w >= 1000000 && !millionClub) { // first million: confetti-lite milestone
+      millionClub = true;
+      confetti(70);
+      buzz(HAP.success);
+    }
+    if (S.kids && lastKids >= 0 && S.kids.length > lastKids) { // a baby was born
+      var mr = $('pmoney'), mb = mr ? mr.getBoundingClientRect() : null;
+      confetti(40, { x0: mb ? mb.left + mb.width / 2 : window.innerWidth / 2, y0: 110, spread: 220 });
+      buzz(HAP.success);
+    }
+    if (S.kids) lastKids = S.kids.length;
     var j = $('journal');
     if (j) {
-      j.innerHTML = S.log.map(function (e) {
-        return '<div class="entry"><span class="ag">Age ' + e.age + '</span>' + esc(e.text) + '</div>';
-      }).join('');
+      var jk = S.log.length + '|' + (S.log.length ? S.log[0].age + ':' + (S.log[0].text || '').slice(0, 48) : '');
+      if (jk !== lastJournalKey) { // guard: no layout churn when the log didn't change
+        lastJournalKey = jk;
+        j.innerHTML = S.log.map(function (e) {
+          return '<div class="entry"><span class="ag">Age ' + e.age + '</span>' + esc(e.text) + '</div>';
+        }).join('');
+      }
+      var lk = logTopKey();
+      if (lk && lk !== lastLogKey) { // newest journal line changed: jackpot or disaster juice
+        lastLogKey = lk;
+        logMilestones(S.log[0].text);
+      }
     }
     if (aiInFlight) showFateNote(true);
     renderDailyBanner();
@@ -501,6 +636,7 @@
     if (disabledReason) { b.disabled = true; }
     else b.onclick = function () {
       if (modalOpen) return;
+      buzz(HAP.select);
       var r = fn();
       if (r && r.ok === false) toast(r.msg);
       doCheckDaily();
@@ -534,7 +670,7 @@
       var b = document.createElement('button');
       b.className = 'act';
       b.innerHTML = '<span>' + p[1] + '<small>' + p[2] + '</small></span><span class="go">›</span>';
-      b.onclick = function () { doPray(p[0]); };
+      b.onclick = function () { buzz(HAP.select); doPray(p[0]); };
       box.appendChild(b);
     });
     $('pray-modal').classList.remove('hidden');
@@ -745,9 +881,18 @@
       box.appendChild(b);
     });
     $('event-modal').classList.remove('hidden');
+    // playful entrance: emoji pops in late, choices deal in with a stagger
+    var em2 = $('em-emoji');
+    if (em2) { em2.classList.remove('pop'); void em2.offsetWidth; em2.classList.add('pop'); }
+    for (var ci = 0; ci < box.children.length; ci++) {
+      var ch = box.children[ci];
+      ch.style.animationDelay = (0.05 + ci * 0.055) + 's';
+      ch.classList.add('enter');
+    }
   }
   function resolveModal(fn) {
     if (!S) return;
+    buzz(HAP.medium); // major choice committed
     var n0 = S.log.length, line = null;
     try { line = fn(); } catch (e) { line = null; }
     // sim run() returns the journal line; if it didn't log it, log it here
@@ -977,6 +1122,7 @@
       b.className = 'crate';
       b.textContent = c.label || ('🎁 Crate ' + (i + 1));
       b.onclick = function () {
+        buzz(HAP.medium);
         var line = null;
         try { line = LifeSim.applyCrate(S, i); } catch (e) {}
         if (c.reward === 'fate4') { addFate(4); toast('✨ +4 Fate Points! Spend them on your next baby.'); }
@@ -1028,6 +1174,7 @@
     if (!S) return;
     recordDeath();
     sfx('death');
+    buzz(HAP.error);
     ensureDeathExtras();
     var by = S.birthYear || (new Date().getFullYear() - S.age);
     var dd = $('d-dates');
@@ -1080,9 +1227,10 @@
     var canKid = S.kids.length > 0 && worth > 0;
     $('child-btn').classList.toggle('hidden', !canKid);
     $('death').classList.remove('hidden');
+    confetti(46, { x0: window.innerWidth / 2, y0: 130, spread: 260 }); // gold-ish burst for the ribbon reveal
     arcadeLifeComplete(worth);
     dailyDeathFlow();
-    if (S.won) setTimeout(confetti, 350);
+    if (S.won) { setTimeout(confetti, 350); buzz(HAP.success); }
   }
   function fetchAiObit() {
     var tok = lifeToken;
@@ -1147,7 +1295,7 @@
   /* ---------- start screen ---------- */
   function ensureStartExtras() {
     var db = $('daily-life-btn');
-    if (db && !db.onclick) db.onclick = function () { sfx('click'); openDossier('classic', true); };
+    if (db && !db.onclick) db.onclick = function () { sfx('click'); buzz(HAP.select); openDossier('classic', true); };
   }
   function updateFateLine() {
     var f = $('start-fate');
@@ -1161,7 +1309,7 @@
       var b = document.createElement('button');
       b.className = 'scen';
       b.innerHTML = '<b>' + esc(sc.name) + '</b><small>' + esc(sc.desc) + '</small>';
-      b.onclick = function () { sfx('click'); openDossier(sc.id); };
+      b.onclick = function () { sfx('click'); buzz(HAP.select); openDossier(sc.id); };
       wrap.appendChild(b);
     });
   }
@@ -1187,6 +1335,7 @@
     var scb = $('second-chance-btn');
     if (scb && !scb.onclick) scb.onclick = function () {
       if (!S || !S.alive || modalOpen || !snap || S.secondChance === false) return;
+      buzz(HAP.medium);
       var restored = null;
       try { restored = JSON.parse(snap); } catch (e) { return; }
       S = restored;
@@ -1198,6 +1347,9 @@
       hideFateNote();
       prevStats = {};
       try { prevWorth = LifeSim.netWorth(S); } catch (e) { prevWorth = 0; }
+      moneyShown = prevWorth; // snap the money display to the restored state
+      lastKids = S.kids ? S.kids.length : -1;
+      lastLogKey = logTopKey(); // don't re-fire milestone juice for the restored line
       render();
       toast('⏪ A year, undone.');
     };
@@ -1209,6 +1361,17 @@
         try { localStorage.setItem('lifestory_mute', muted ? '1' : '0'); } catch (e) {}
         mb.textContent = muted ? '🔇' : '🔊';
         if (!muted) sfx('click');
+      };
+    }
+    var hb = $('haptic-btn');
+    if (hb && !hb.onclick) {
+      hb.textContent = '📳';
+      hb.classList.toggle('off', !hapticsOn);
+      hb.onclick = function () {
+        hapticsOn = !hapticsOn;
+        try { localStorage.setItem('lifestory_haptics', hapticsOn ? '1' : '0'); } catch (e) {}
+        hb.classList.toggle('off', !hapticsOn);
+        if (hapticsOn) { sfx('click'); buzz(HAP.select); }
       };
     }
   }
@@ -1283,8 +1446,16 @@
 
   /* ---------- init ---------- */
   $('age-btn').onclick = ageTap;
+  var ageBtnEl = $('age-btn');
+  ageBtnEl.addEventListener('pointerdown', function () { // optimistic feedback on the input frame
+    if (!S || !S.alive || modalOpen) return;
+    ageBtnEl.classList.remove('squash');
+    void ageBtnEl.offsetWidth;
+    ageBtnEl.classList.add('squash');
+    buzz(HAP.select);
+  });
   document.querySelectorAll('#tabs button').forEach(function (b) {
-    b.onclick = function () { if (S && S.alive && !modalOpen) openSheet(b.dataset.tab); };
+    b.onclick = function () { if (S && S.alive && !modalOpen) { buzz(HAP.light); openSheet(b.dataset.tab); } };
   });
   function closeSheet() {
     $('sheet').classList.add('hidden');
@@ -1292,8 +1463,9 @@
   }
   $('sheet-x').onclick = closeSheet;
   $('sheet').addEventListener('click', function (e) { if (e.target === $('sheet')) closeSheet(); });
-  $('again-btn').onclick = function () { showStart(); };
+  $('again-btn').onclick = function () { buzz(HAP.select); showStart(); };
   $('child-btn').onclick = function () {
+    buzz(HAP.medium);
     var kidName = S.kids[0].name;
     var money = LifeSim.netWorth(S);
     inheritPending = { money: money };

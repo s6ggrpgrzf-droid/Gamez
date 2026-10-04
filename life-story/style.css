@@ -410,3 +410,87 @@ h1 { margin: 10px 0 6px; font-size: 32px; font-weight: 800; letter-spacing: .5px
 
 /* ---------- start screen v3 bits ---------- */
 #daily-life-btn { margin-top: 10px; }
+
+/* ================= juice pass: satirical · snappy · alive ================= */
+/* feel signature for this game: deal-in overshoot cards, thumb-squash age
+   button, cash-register money ticks. (Distinct easing per game — no sharing.) */
+
+/* --- age button: thumb-perfect + squash-and-stretch on press --- */
+#age-btn { min-height: 64px; }
+#age-btn.squash { animation: thumbSquash .24s cubic-bezier(.3,1.4,.4,1); }
+@keyframes thumbSquash {
+  0% { transform: scale(1, 1); }
+  35% { transform: scale(.86, .9); }
+  70% { transform: scale(1.07, 1.04); }
+  100% { transform: scale(1, 1); }
+}
+
+/* --- HUD buttons + sheet close: 44px min targets --- */
+#mute-btn, #haptic-btn { min-width: 44px; min-height: 44px; }
+#haptic-btn.off { opacity: .45; }
+.x { width: 44px; height: 44px; }
+
+/* --- event modal: dealt-card entrance (overshoot + tiny tilt, NOT the sheet slide) --- */
+#event-modal .panel { animation: dealIn .42s cubic-bezier(.3,1.5,.45,1); }
+@keyframes dealIn {
+  0% { transform: translateY(46px) scale(.92) rotate(-1.4deg); opacity: 0; }
+  60% { transform: translateY(-4px) scale(1.015) rotate(.5deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+#em-emoji { display: inline-block; }
+#em-emoji.pop { animation: emPop .5s cubic-bezier(.3,1.7,.4,1) .08s backwards; }
+@keyframes emPop {
+  0% { transform: scale(.4) rotate(-14deg); }
+  60% { transform: scale(1.35) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.choice.enter { animation: choiceIn .34s cubic-bezier(.34,1.5,.44,1) backwards; }
+@keyframes choiceIn {
+  0% { transform: translateY(18px) scale(.96); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+/* --- money: cash-register pop on big swings --- */
+#pmoney.money-pop { animation: moneyPop .5s cubic-bezier(.3,1.5,.4,1); }
+@keyframes moneyPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+/* --- stat numbers tick-pop --- */
+.stat > b { display: inline-block; }
+.stat > b.npop { animation: npop .3s ease-out; }
+@keyframes npop { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+
+/* --- comedic wobble for disasters: small, funny, not harsh --- */
+#app.shake { animation: oops .34s cubic-bezier(.36,.07,.19,.97); }
+@keyframes oops {
+  10% { transform: translateX(-7px) rotate(-.6deg); }
+  30% { transform: translateX(6px) rotate(.5deg); }
+  50% { transform: translateX(-4px); }
+  70% { transform: translateX(3px); }
+  90% { transform: translateX(-1px); }
+}
+
+/* --- floating delta numbers --- */
+.floater {
+  position: fixed; z-index: 70; pointer-events: none;
+  transform: translate(-50%, 0); opacity: 0;
+  font-weight: 800; font-size: 19px; letter-spacing: .3px;
+  text-shadow: 0 2px 10px rgba(0,0,0,.6);
+  font-variant-numeric: tabular-nums;
+}
+.floater.gain { color: var(--good); }
+.floater.loss { color: var(--bad); }
+.floater.go { animation: floatUp 1.05s ease-out forwards; }
+@keyframes floatUp {
+  0% { transform: translate(-50%, 0); opacity: 0; }
+  18% { opacity: 1; }
+  100% { transform: translate(-50%, -52px); opacity: 0; }
+}
+
+/* --- reduced motion: honor the OS setting, kill all non-essential motion --- */
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
+  animation: none !important; transition: none !important;
+}
