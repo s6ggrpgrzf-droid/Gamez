@@ -14,6 +14,10 @@ function fmtM(v) {
   return (neg ? "-" : "") + "$" + s;
 }
 function stars(n) { var s = ""; for (var i = 0; i < 5; i++) s += i < Math.round(n) ? "★" : "☆"; return s; }
+/* feel-layer safe call: feel.js hooks are optional and must never throw */
+function jx(fn) { try { fn(); } catch (e) {} }
+/* feel.js present and motion allowed? never throws */
+function feelOn() { try { return motionOK(); } catch (e) { return false; } }
 var uidc = 1;
 function uid() { return "x" + (uidc++) + Date.now().toString(36); }
 
@@ -145,7 +149,7 @@ function traitChips(t) {
   if (!t.traits || !t.traits.length) return "";
   return t.traits.map(function (id) {
     var tr = TRAITS[id];
-    return "<span class='trait' title='" + tr.desc + "'>" + tr.icon + " " + tr.name + "</span>";
+    return "<span class='trait' title='" + tr.desc + "' data-trait='" + id + "'>" + tr.icon + " " + tr.name + "</span>";
   }).join(" ");
 }
 function genTalent(type, starter) {
@@ -454,7 +458,10 @@ function tickWeek() {
         S.stats.released++;
         requestAIPoster(f); // paint real AI key art in the background
         var profit = f.totalGross * 0.5 - f.budget - f.marketing - scriptCostOf(f);
-        if (f.critic >= 70 && f.totalGross * 0.5 > (f.budget + f.marketing) * 1.5) S.stats.hits++;
+        if (f.critic >= 70 && f.totalGross * 0.5 > (f.budget + f.marketing) * 1.5) {
+          S.stats.hits++;
+          jx(function () { goldDustBurst(28); sfx("chime"); }); // a hit picture showers gold
+        }
         if (profit < 0) S.stats.flops++;
         // franchise fanbase
         var key = f.franchise || f.title;
@@ -876,23 +883,42 @@ function premiereModal(filmId) {
   pauseForModal();
   var stars5 = f.critic >= 85 ? "★★★★★" : f.critic >= 70 ? "★★★★" : f.critic >= 55 ? "★★★" : f.critic >= 40 ? "★★" : "★";
   var verdict = f.critic >= 75 ? "The crowd goes wild! 🎉" : f.critic >= 55 ? "A solid opening night. 🥂" : f.critic >= 40 ? "Polite applause… 😬" : "Critics are sharpening their knives. 🔪";
+  /* Dramatic beat: the numbers are tallied AFTER a drumroll, then revealed with a marquee count-up. */
+  var statsHtml = "<div class='prem-stats'><div><span>Opening weekend</span><b id='premOpen'>" + fmtM(f.opening) + "</b></div>" +
+    "<div><span>Critics</span><b>" + f.critic + "/100 " + stars5 + "</b></div></div>" +
+    "<p class='verdict'>" + verdict + "</p>" +
+    (f.breakdown ? "<div class='sub'>Script " + f.breakdown.Script + " · Direction " + f.breakdown.Direction + " · Cast " + f.breakdown.Cast + " · Craft " + f.breakdown.Craft + "</div>" : "");
   var html = "<div class='premiere'>" +
     "<div class='prem-carpet'></div>" +
     "<h2>🌟 Premiere Night</h2>" +
     "<div class='prem-poster'>" + posterImg(f) + "</div>" +
     "<div class='pt'>" + f.title + "</div>" +
     "<div class='pg'>" + GENRES[f.genre].icon + " " + GENRES[f.genre].name + " · 🎭 " + (f.theme || "") + "</div>" +
-    "<div class='prem-stats'><div><span>Opening weekend</span><b>" + fmtM(f.opening) + "</b></div>" +
-    "<div><span>Critics</span><b>" + f.critic + "/100 " + stars5 + "</b></div></div>" +
-    "<p class='verdict'>" + verdict + "</p>" +
-    (f.breakdown ? "<div class='sub'>Script " + f.breakdown.Script + " · Direction " + f.breakdown.Direction + " · Cast " + f.breakdown.Cast + " · Craft " + f.breakdown.Craft + "</div>" : "") +
+    "<div id='premReveal'><p class='sub'>🎟 Tallying the box office…</p></div>" +
     "<button class='btn amber mt' onclick='closeModal()'>🎬 Back to the studio</button></div>";
-  confettiBurst();
   showModal(html);
+  function revealNow() {
+    var r = document.getElementById("premReveal");
+    if (!r) return;
+    r.innerHTML = statsHtml;
+    r.classList.add("revealed");
+    jx(function () {
+      var ob = document.getElementById("premOpen");
+      if (ob) marqueeCount(ob, f.opening);
+      goldDustBurst(36);
+      cashShimmer();
+      var hit = f.critic >= 75;
+      hap(hit ? "success" : (f.critic >= 55 ? "medium" : "select"));
+      sfx(hit ? "tada" : "pop");
+    });
+  }
+  if (feelOn()) { jx(function () { sfx("drumroll"); }); setTimeout(revealNow, 750); }
+  else revealNow();
 }
 
 var activeTab = "studio";
 function switchTab(t) {
+  jx(function () { hap("select"); sfx("tick"); });
   activeTab = t;
   var btns = document.querySelectorAll("#bottomnav button");
   for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("on", btns[i].dataset.tab === t);
@@ -1103,9 +1129,23 @@ function lotSVG() {
     "<text x='281' y='61' text-anchor='middle' font-size='11' font-weight='bold' fill='#1a1408'>REEL</text></g>" +
     "<rect x='0' y='200' width='600' height='6' fill='#d4a94e' opacity='.35'/></svg>";
 }
-var displayedCash = null, cashRaf = null;
+var displayedCash = null, cashRaf = null, cashWasNeg = false;
+/* Feel: gold shimmer on big box-office jumps; warning haptic when cash crosses below $0 (bankruptcy risk). */
+function cashFeel(target) {
+  jx(function () {
+    if (displayedCash !== null && displayedCash !== undefined) {
+      if (target - displayedCash >= 1) cashShimmer();
+      var neg = target < 0;
+      if (neg && !cashWasNeg) { hap("warning"); sfx("warn"); }
+      cashWasNeg = neg;
+    } else {
+      cashWasNeg = target < 0;
+    }
+  });
+}
 function tweenCash(target) {
   var el = $("tbCash");
+  cashFeel(target);
   if (typeof requestAnimationFrame === "undefined") {
     displayedCash = target; el.textContent = fmtM(target);
     el.classList.toggle("neg", target < 0); return;
@@ -1570,7 +1610,7 @@ function glConfirm() {
   var f = greenlight(GL.scriptId, GL.directorId, GL.castIds, GL.budget, GL.depts);
   GL = null;
   closeModal();
-  if (f) { toast("🎬 Production started!"); renderAll(); }
+  if (f) { jx(function () { hap("medium"); sfx("clap"); goldDustBurst(24); }); toast("🎬 Production started!"); renderAll(); }
   else toast("Not enough cash.");
 }
 
@@ -1606,7 +1646,7 @@ function rivalHint(w) {
 function relConfirm() {
   var ok = releaseFilm(window._relFilm, parseInt($("relWeek").value), window._relMkt);
   closeModal();
-  if (ok) { toast("📅 Release dated!"); renderAll(); }
+  if (ok) { jx(function () { hap("medium"); sfx("whoosh"); }); toast("📅 Release dated!"); renderAll(); }
   else toast("Not enough cash for marketing.");
 }
 
@@ -1723,6 +1763,15 @@ function awardsModal(a) {
   else if (S.scriptTier === 2 && S.stats.awardsWon >= 6) { S.scriptTier = 3; log("📝 Script office tier 3 unlocked by awards!"); }
   html += "<button class='btn amber mt' onclick='closeModal()'>Take a bow</button>";
   showModal(html);
+  jx(function () { // award-ceremony flourish: spotlight glow, staggered reveals
+    var mb = document.querySelector("#mback .modal");
+    if (mb) {
+      mb.classList.add("ceremony");
+      var rows = mb.querySelectorAll(".kv");
+      for (var i = 0; i < rows.length; i++) rows[i].style.animationDelay = (0.3 + i * 0.22) + "s";
+    }
+    hap("success"); sfx("tada"); goldDustBurst(30);
+  });
 }
 function winModal() {
   showModal("<h2>👑 Hollywood Legend!</h2><p>Your studio is worth over <b>$1B</b>. From westerns to world domination — the town is yours.</p>" +
@@ -1731,9 +1780,15 @@ function winModal() {
     "<div class='kv'><span>Total box office</span><b>" + fmtM(S.stats.totalGross) + "</b></div>" +
     "<div id='arc-lb' class='arc-lb'></div>" +
     "<button class='btn amber mt' onclick='closeModal()'>Keep building the empire</button>");
+  jx(function () { // Hollywood Legend: the full ceremony
+    var mb = document.querySelector("#mback .modal");
+    if (mb) mb.classList.add("ceremony");
+    hap("success"); sfx("fanfare"); goldDustBurst(70);
+  });
   arcadeStudioWin(Math.floor(studioValue()));
 }
 function gameOverModal() {
+  jx(function () { hap("error"); sfx("thud"); });
   showModal("<h2>💸 Bankrupt</h2><p>The studio gates close. The final reel:</p>" +
     "<div class='kv'><span>Films released</span><b>" + S.stats.released + "</b></div>" +
     "<div class='kv'><span>Awards won</span><b>" + S.stats.awardsWon + "</b></div>" +
@@ -1775,6 +1830,9 @@ function init() {
    so without this every button in the game is dead). */
 window.$ = $;
 window.fmtM = fmtM;
+window.toast = toast;
+window.showModal = showModal;
+window.pauseForModal = pauseForModal;
 window.overWarn = overWarn;
 Object.defineProperty(window, "GL", { get: function () { return GL; }, set: function (v) { GL = v; } });
 window.closeModal = closeModal;
