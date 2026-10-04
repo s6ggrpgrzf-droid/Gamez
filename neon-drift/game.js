@@ -19,7 +19,7 @@ function defSave() {
     glows: ['#4dd8ff'],
     upg: { engine: 0, tires: 0, drift: 0 },
     best: {}, ghosts: {},
-    assist: false, mute: false, difficulty: 1,
+    assist: false, mute: false, difficulty: 1, haptic: true,
     cupWins: []
   };
 }
@@ -173,6 +173,35 @@ var AU = {
         note(l * 1.5, spb * 3, 'triangle', 0.03, 2400);
       }
     }, spb * 1000);
+  }
+};
+
+/* ---------------- haptics ---------------- */
+// Vibration API: Android Chrome/Firefox only. iOS Safari ignores vibrate() —
+// every call is feature-detected AND try/catch-guarded so it can never throw
+// there. Vocabulary is speed-coupled to the drift identity: the buzz rises
+// with the drift charge tier (blue -> orange -> pink). Layering order is
+// visual -> audio -> haptic, each within ~50ms of the event.
+var HZ = {
+  ok: false, reduced: false,
+  select: [10], light: [20], medium: [30],
+  tierBuzz: [[], [15], [25], [40]],  // indexed by drift tier 1..3
+  boostBuzz: [[], [30], [40], [50]], // indexed by boost tier 1..3
+  success: [10, 40, 10], warning: [20, 60, 20],
+  init: function () {
+    try {
+      this.reduced = !!(window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      this.ok = !!(navigator && 'vibrate' in navigator &&
+        typeof navigator.vibrate === 'function');
+    } catch (e) { this.ok = false; }
+  },
+  play: function (pat) {
+    if (!this.ok || this.reduced || !S.haptic || !pat || !pat.length) return;
+    // cancel-then-fire: many Android devices ignore vibrate() while one is
+    // already in progress, so retriggerable events (tiers) need the cancel.
+    try { navigator.vibrate(0); navigator.vibrate(pat); }
+    catch (e) {}
   }
 };
 
@@ -516,6 +545,8 @@ function refreshMenu() {
     'No races yet — the neon awaits.';
   $('btn-assist').textContent = 'steer assist: ' + (S.assist ? 'on' : 'off');
   $('btn-assist').classList.toggle('on', S.assist);
+  $('btn-haptic').textContent = 'haptics: ' + (S.haptic ? 'on' : 'off');
+  $('btn-haptic').classList.toggle('on', !!S.haptic);
   raceHype('menu', 'menu', $('menu-hype'));
 }
 
@@ -731,6 +762,7 @@ function startRace(mode, cup, raceIdx) {
   G.nameSprites = makeNameSprites(drivers);
   G.race = ND.newRace(track, drivers, laps, {});
   G.acc = 0; G.paused = false; G.shake = 0; G.countShown = -1;
+  G.lastTier = 0; // drift-tier haptic tracker resets each race
   G.resultsShown = false;
   G.rec = []; G.recLapTicks = []; G.tick = 0;
   G.ghost = null; G.ghostDev = false;
@@ -797,6 +829,7 @@ var bd = $('btn-drift');
 bd.addEventListener('pointerdown', function (e) {
   e.preventDefault(); e.stopPropagation();
   AU.init(); IN.drift = true; bd.classList.add('held');
+  HZ.play(HZ.light); // drift press: the first beat of the drift-coupled vocabulary
 });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
   bd.addEventListener(ev, function (e) {
@@ -878,7 +911,7 @@ function tickSim() {
   var evs = race.ev;
   for (var i = 0; i < evs.length; i++) {
     var e = evs[i];
-    if (e === 'go') { $('countdown').textContent = 'GO!'; AU.countBeep(0); G.shake = 4; }
+    if (e === 'go') { $('countdown').textContent = 'GO!'; AU.countBeep(0); G.shake = 4; HZ.play(HZ.medium); }
     else if (e === 'done') { onRaceDone(); }
     else if (e.car === 0) handlePlayerEvent(e.type);
   }
@@ -896,6 +929,11 @@ function tickSim() {
     else setTimeout(function () { $('countdown').hidden = true; }, 700);
     G.countShown = 99;
   }
+
+  // drift-tier haptics: the buzz rises as sparks build blue -> orange -> pink
+  var pc0 = race.cars[0];
+  if (pc0.tier > (G.lastTier | 0)) HZ.play(HZ.tierBuzz[pc0.tier]);
+  G.lastTier = pc0.tier;
 
   // audio + camera
   var pc = race.cars[0];
@@ -932,12 +970,13 @@ function tickSim() {
     spawnP(bx, by, -Math.cos(pc.th) * 20 + (Math.random() - 0.5) * 10,
       -Math.sin(pc.th) * 20 + (Math.random() - 0.5) * 10, 0.3, 2.4, '#ffb84d', 2);
   }
-  if (G.shake > 0) G.shake *= Math.exp(-6 * ND.DT);
+  if (HZ.reduced) G.shake = 0; // prefers-reduced-motion: shake is pure juice
+  else if (G.shake > 0) G.shake *= Math.exp(-6 * ND.DT);
 }
 
 function handlePlayerEvent(type) {
   if (type === 'wall') {
-    AU.thump(); G.shake = 7;
+    AU.thump(); G.shake = 7; HZ.play(HZ.warning);
     var pc = G.race.cars[0];
     for (var i = 0; i < 10; i++) {
       spawnP(pc.x, pc.y, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40,
@@ -945,15 +984,18 @@ function handlePlayerEvent(type) {
     }
   } else if (type === 'boost1' || type === 'boost2' || type === 'boost3') {
     AU.whoosh();
+    var bt = +type.slice(5); // boost tier 1..3, matches charge tier
+    HZ.play(HZ.boostBuzz[bt]);
     if (type === 'boost3') AU.chime();
     G.shake = Math.max(G.shake, 3);
   } else if (type === 'lap') {
     AU.beep(980, 0.16, 'triangle', 0.14);
+    HZ.play(HZ.select);
     G.recLapTicks.push(G.tick);
     var pc2 = G.race.cars[0];
     if (pc2.lap < G.laps) toast('LAP ' + (pc2.lap + 1) + '/' + G.laps, 1400);
   } else if (type === 'finish') {
-    AU.chime();
+    AU.chime(); HZ.play(HZ.success);
   } else if (type === 'overtake') {
     banter('overtake'); AU.beep(1200, 0.12, 'triangle', 0.1);
   } else if (type === 'overtaken') {
@@ -1327,6 +1369,10 @@ function wire() {
     S.assist = !S.assist; save(); refreshMenu();
     toast(S.assist ? 'Steer assist on — we\'ve got the corners with you.' : 'Steer assist off — all you.');
   };
+  $('btn-haptic').onclick = function () {
+    S.haptic = !S.haptic; save(); refreshMenu();
+    if (S.haptic) HZ.play(HZ.select); // preview buzz so the toggle feels alive
+  };
   $('btn-picker-back').onclick = function () { refreshMenu(); show('menu'); };
   $('btn-garage-back').onclick = function () { refreshMenu(); show('menu'); };
   $('btn-pre-back').onclick = function () {
@@ -1408,6 +1454,7 @@ function frame(t) {
 
 function boot() {
   wire();
+  HZ.init();
   if (S.mute) $('btn-mute').textContent = '🔇';
   refreshMenu();
   show('menu');
