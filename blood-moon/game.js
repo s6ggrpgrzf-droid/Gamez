@@ -122,6 +122,33 @@ function spriteHunter() {
   return c;
 }
 
+/* The Pale Confessor: ash-grey shroud, hollow hood, two pale eyes, a censer chain */
+function spriteStalker() {
+  var s = 96, c = charCanvas(s), g = c.getContext('2d');
+  drawShadowBlob(g, s);
+  // long shroud
+  g.fillStyle = '#8d8a96';
+  g.beginPath();
+  g.moveTo(s / 2, s * 0.08);
+  g.quadraticCurveTo(s * 0.78, s * 0.4, s * 0.72, s * 0.86);
+  g.lineTo(s * 0.28, s * 0.86);
+  g.quadraticCurveTo(s * 0.22, s * 0.4, s / 2, s * 0.08);
+  g.fill();
+  // hollow hood
+  g.fillStyle = '#101018';
+  g.beginPath(); g.ellipse(s / 2, s * 0.3, s * 0.15, s * 0.13, 0, 0, TAU); g.fill();
+  // two pale eyes — the only bright thing on it
+  g.fillStyle = '#e8ecff';
+  g.beginPath(); g.arc(s / 2 - s * 0.06, s * 0.3, s * 0.022, 0, TAU); g.fill();
+  g.beginPath(); g.arc(s / 2 + s * 0.06, s * 0.3, s * 0.022, 0, TAU); g.fill();
+  // censer chain
+  g.strokeStyle = '#5c5a68'; g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(s * 0.68, s * 0.5); g.quadraticCurveTo(s * 0.86, s * 0.66, s * 0.8, s * 0.8); g.stroke();
+  g.fillStyle = '#c9a227';
+  g.beginPath(); g.arc(s * 0.8, s * 0.82, s * 0.045, 0, TAU); g.fill();
+  return c;
+}
+
 /* Van Helsing: long dark coat, wide hat, glowing stake */
 function spriteHelsing() {
   var s = 128, c = charCanvas(s), g = c.getContext('2d');
@@ -224,6 +251,7 @@ var SPR = {
   priest: spritePriest(),
   hunter: spriteHunter(),
   vanhelsing: spriteHelsing(),
+  stalker: spriteStalker(),
   bat: [spriteBat(0), spriteBat(1)],
   orb: spriteOrb(),
   tree: spriteTree(),
@@ -235,6 +263,7 @@ var SPR = {
 var AU = {
   ctx: null, master: null, musicG: null, sfxG: null,
   noiseBuf: null, musicOn: false, heartOn: false, heartT: 0,
+  heartRate: 0.85, stalkerHush: false, // horror: threat-proximity heartbeat; the stalker cuts it
   seqT: 0, seqStep: 0
 };
 function auInit() {
@@ -314,11 +343,11 @@ function musicTick() {
     }
     AU.seqT += stepDur;
   }
-  // heartbeat when hurt
-  if (AU.heartOn && AU.ctx) {
+  // heartbeat: hurt, or close to something dangerous — unless the Confessor is near
+  if (AU.heartOn && AU.ctx && !AU.stalkerHush) {
     AU.heartT -= 0.24;
     if (AU.heartT <= 0) {
-      AU.heartT = 0.85;
+      AU.heartT = AU.heartRate || 0.85;
       tone(58, 0.14, 'sine', 0.5, AU.sfxG, 40);
       tone(52, 0.12, 'sine', 0.35, AU.sfxG, 38, 0.18);
     }
@@ -430,7 +459,34 @@ var SFX = {
   lose: function () {
     var seq = [220, 196, 164.81, 130.81];
     for (var i = 0; i < seq.length; i++) tone(seq[i], 0.7, 'triangle', 0.2, AU.sfxG, null, i * 0.22);
-  }
+  },
+  /* ---- Coffin Shift: hunter audio signatures (the listening verb) ----
+     Sparse by design: every deviation is data. */
+  sigMarch: function () { // torch mob boots
+    for (var i = 0; i < 3; i++) tone(65, 0.12, 'sine', 0.3, AU.sfxG, 40, i * 0.24);
+    noise(0.1, 0.1, 400);
+  },
+  sigMurmur: function () { // priest prayer-murmur
+    tone(110, 1.4, 'triangle', 0.12, AU.sfxG, 107);
+    tone(165, 1.4, 'triangle', 0.08, AU.sfxG, 162, 0.12);
+  },
+  sigSniff: function () { // bloodhound
+    for (var i = 0; i < 4; i++) noise(0.07, 0.2, 1200, 'bandpass', i * 0.17);
+  },
+  chant: function (level) { // inquisitor rite, swells with ritual
+    var v = 0.03 + (level / 100) * 0.1;
+    tone(98, 1.8, 'sawtooth', v, AU.sfxG, 96);
+    tone(147, 1.8, 'sawtooth', v * 0.7, AU.sfxG, 145, 0.06);
+  },
+  shutterClang: function () {
+    tone(180, 0.3, 'square', 0.22, AU.sfxG, 90);
+    noise(0.2, 0.22, 800);
+  },
+  ravenCaw: function () {
+    tone(820, 0.14, 'sawtooth', 0.14, AU.sfxG, 420);
+    tone(700, 0.18, 'sawtooth', 0.11, AU.sfxG, 360, 0.13);
+  },
+  wardMendSfx: function () { tone(520, 0.3, 'triangle', 0.14, AU.sfxG, 780); }
 };
 
 /* ================= GAME STATE ================= */
@@ -557,6 +613,32 @@ function endTouch(e) {
 canvas.addEventListener('touchend', endTouch);
 canvas.addEventListener('touchcancel', endTouch);
 
+// Coffin Shift: pointer events for tap/hold on the lid schematic
+canvas.addEventListener('pointerdown', function (e) {
+  if (G.mode !== 'crypt' || CR.over || CR.holdId !== null) return;
+  auInit();
+  var x = e.clientX, y = e.clientY;
+  var btn = cryptHitButton(x, y);
+  if (btn) { cryptPressButton(btn); return; }
+  var lane = cryptHitLane(x, y);
+  if (lane >= 0) {
+    CR.holdLane = lane; CR.holdT0 = performance.now(); CR.holdId = e.pointerId;
+  }
+});
+function cryptRelease(e) {
+  if (G.mode !== 'crypt') return;
+  if (CR.holdId !== null && (e.pointerId === undefined || e.pointerId === CR.holdId)) {
+    var held = performance.now() - CR.holdT0;
+    if (held < 350 && CR.holdLane >= 0) {
+      CR.shut[CR.holdLane] = !CR.shut[CR.holdLane]; // tap = shutter
+      SFX.click();
+    }
+    CR.holdLane = -1; CR.holdId = null; CR.listenLane = -1;
+  }
+}
+canvas.addEventListener('pointerup', cryptRelease);
+canvas.addEventListener('pointercancel', cryptRelease);
+
 // the old dash button is now the BAT button (bat-form panic)
 var dashBtn = document.getElementById('dash-btn');
 dashBtn.innerHTML = '🦇';
@@ -572,11 +654,19 @@ window.addEventListener('keydown', function (e) {
   if (k === 'b' && G.mode === 'playing') IN.bat = true;
   if (k === 'p' || k === 'escape') togglePause();
   if (G.mode === 'levelup' && ['1', '2', '3'].indexOf(k) >= 0) pickUpgrade(+k - 1);
+  // Coffin Shift keys (desktop testing)
+  if (G.mode === 'crypt' && !CR.over) {
+    if (k === '1' || k === '2' || k === '3') { CR.shut[+k - 1] = !CR.shut[+k - 1]; SFX.click(); }
+    else if (k === 'r') CR.ravenPulse = true;
+    else if (k === 't') { CR.thrallOn = !CR.thrallOn; SFX.click(); }
+    else if (k === 'm') CR.mendPulse = true;
+    else if (k === 'v') { CR.vent = CR.vent >= 2 ? -1 : CR.vent + 1; SFX.click(); }
+  }
 });
 window.addEventListener('keyup', function (e) { IN.keys[e.key.toLowerCase()] = false; });
 window.addEventListener('blur', function () { IN.keys = {}; IN.mx = 0; IN.my = 0; dragId = null; });
 document.addEventListener('visibilitychange', function () {
-  if (document.hidden && G.mode === 'playing') togglePause(true);
+  if (document.hidden && (G.mode === 'playing' || G.mode === 'crypt')) togglePause(true);
 });
 
 function pollKeys() {
@@ -594,6 +684,7 @@ function pollKeys() {
 function worldToScreen(x, y) { return { x: x - G.cam.x + W / 2, y: y - G.cam.y + H / 2 }; }
 
 function render() {
+  if (G.mode === 'crypt') { renderCrypt(); return; }
   var sim = G.api ? G.api.sim : null;
   ctx.fillStyle = '#0d0a14';
   ctx.fillRect(0, 0, W, H);
@@ -787,7 +878,7 @@ function render() {
   }
 
   // enemies
-  for (var ei = 0; ei < sim.enemies.length; ei++) drawEnemy(sim.enemies[ei]);
+  for (var ei = 0; ei < sim.enemies.length; ei++) drawEnemy(sim.enemies[ei], P.primeId);
 
   // bats
   if (P.bats > 0) {
@@ -812,10 +903,19 @@ function render() {
   // player vampire — a real gothic man (drawVampire), not a blob
   var nowP = performance.now();
   drawVampire(P, nowP);
+  drawThirstRing(P, nowP);
+  // Crimson Rally: the open wound glows until you drink it back or it scabs
+  if (P.wound > 1) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = clamp(P.wound / (P.maxHp * 0.35), 0, 0.5);
+    ctx.drawImage(GLOW.red, P.x - 45, P.y - 45, 90, 90);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
   // dash cooldown arc near player
   if (P.upg.dash && P.dashCd > 0) {
     ctx.strokeStyle = 'rgba(157,78,221,0.6)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(P.x, P.y, 26, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - P.dashCd / P.dashMax)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(P.x, P.y, VAMP.ready ? 42 : 26, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - P.dashCd / P.dashMax)); ctx.stroke();
   }
 
   // boss HP bar (world-anchored)
@@ -963,11 +1063,17 @@ function render() {
   }
 }
 
-function drawEnemy(e) {
+function drawEnemy(e, primeId) {
   var spr = SPR[e.type] || SPR.villager;
   var size = e.type === 'vanhelsing' ? 110 : (e.type === 'priest' ? 74 : 68);
   // face movement direction-ish: face the player is fine for top-down
   ctx.drawImage(spr, e.x - size / 2, e.y - size / 2 - 6, size, size);
+  // prime prey: the marked one glows gold — his blood sings
+  if (primeId && e.id === primeId) {
+    var pr = 30 + Math.sin(performance.now() / 200) * 4;
+    ctx.strokeStyle = 'rgba(201,162,39,0.85)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(e.x, e.y - 6, pr, 0, TAU); ctx.stroke();
+  }
   // hp pip for tough enemies
   if ((e.type === 'priest' || e.type === 'hunter' || e.type === 'vanhelsing') && e.hp < e.maxHp) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -995,19 +1101,105 @@ function roundRect(x, y, w, h, r) {
   ctx.closePath();
 }
 
-/* ============ THE VAMPIRE — a real gothic man, drawn live ============
-   Pale face, dark swept hair, high collar, red-lined cape that flares
-   behind his velocity. During Blood Surge the cape billows and his eyes
-   burn. Bat Form bursts him into a swirl of bats that re-form. */
+/* ---- realistic vampire atlas (AI-generated, chroma-keyed at load) ----
+   art/vamp-master.png: 2x2 grid of front/back/left/right views.
+   Loads async at boot; the procedural vampire draws until it's ready, so the
+   game can never break on art.
+   SHIPPING: the github connector can't carry binary, so on Pages the PNG is
+   absent and the loader falls back to the base64 text bundles
+   (art/vamp-master.png.b64.NN + .manifest) via Blob URL. Locally the PNG
+   loads directly. */
+var VAMP = { ready: false, cells: null };
+function chromaKey(g, w, h) {
+  // tight magenta threshold: keeps the crimson cape lining, kills the backdrop
+  var id = g.getImageData(0, 0, w, h), px = id.data;
+  for (var i = 0; i < px.length; i += 4) {
+    var r = px[i], gg = px[i + 1], b = px[i + 2];
+    if (r > 200 && b > 150 && gg < 120 && (r - b) < 120) px[i + 3] = 0;
+  }
+  g.putImageData(id, 0, 0);
+}
+function keyAtlas(img) {
+  var CS = (img.width / 2) | 0, cells = {};
+  var defs = { front: [0, 0], back: [CS, 0], left: [0, CS], right: [CS, CS] };
+  for (var k in defs) {
+    var c = makeCanvas(CS, CS), g = c.getContext('2d');
+    g.drawImage(img, defs[k][0], defs[k][1], CS, CS, 0, 0, CS, CS);
+    chromaKey(g, CS, CS);
+    cells[k] = c;
+  }
+  VAMP.cells = cells; VAMP.ready = true;
+}
+function loadVampAtlas() {
+  var img = new Image();
+  img.onload = function () {
+    try { keyAtlas(img); } catch (err) { /* procedural fallback stands */ }
+  };
+  img.onerror = loadVampAtlasB64; // Pages: PNG can't ship as binary; use text bundles
+  img.src = 'art/vamp-master.png';
+}
+function loadVampAtlasB64() {
+  fetch('art/vamp-master.png.b64.manifest').then(function (r) {
+    if (!r.ok) throw new Error('no atlas bundles');
+    return r.text();
+  }).then(function (t) {
+    var n = parseInt(t.trim(), 10) || 0, parts = [], i = 0;
+    (function next() {
+      if (i >= n) {
+        var bin = atob(parts.join(''));
+        var bytes = new Uint8Array(bin.length);
+        for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+        var url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+        var img2 = new Image();
+        img2.onload = function () { URL.revokeObjectURL(url); try { keyAtlas(img2); } catch (e) {} };
+        img2.onerror = function () { /* procedural fallback stands */ };
+        img2.src = url;
+        return;
+      }
+      var idx = ('0' + i).slice(-2);
+      fetch('art/vamp-master.png.b64.' + idx).then(function (r2) {
+        if (!r2.ok) throw new Error('missing bundle ' + idx);
+        return r2.text();
+      }).then(function (b64) { parts.push(b64.trim()); i++; next(); })
+        .catch(function () { /* procedural fallback stands */ });
+    })();
+  }).catch(function () { /* procedural fallback stands */ });
+}
+loadVampAtlas();
+/* 8-way facing from the 4 atlas views (no flip needed: each octant has a view) */
+function vampViewFor(facing) {
+  var n = ((facing % TAU) + TAU) % TAU;
+  var oct = Math.round(n / (TAU / 8)) % 8; // 0=E 1=SE 2=S 3=SW 4=W 5=NW 6=N 7=NE
+  if (oct === 0 || oct === 1 || oct === 7) return 'right';
+  if (oct === 3 || oct === 4 || oct === 5) return 'left';
+  return oct === 2 ? 'front' : 'back';
+}
+function drawVampSprite(P, now, surging) {
+  var cell = VAMP.cells[vampViewFor(P.facing)];
+  var S = 84, bob = Math.sin(now / 180) * 2;
+  var pulse = surging ? 1 + Math.sin(now / 130) * 0.03 : 1;
+  if (surging) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.3 + 0.12 * Math.sin(now / 120);
+    ctx.drawImage(GLOW.red, P.x - 60, P.y - 60, 120, 120);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  var blink = P.invuln > 0 && (((now / 90) | 0) % 2 === 0);
+  ctx.globalAlpha = blink ? 0.35 : 1;
+  ctx.drawImage(cell, P.x - S * pulse / 2, P.y - S * pulse / 2 + bob - 6, S * pulse, S * pulse);
+  ctx.globalAlpha = 1;
+}
 function drawVampire(P, now) {
   var speed = Math.hypot(P.vx, P.vy);
   var flare = clamp(speed / 450, 0.15, 1);
   var surging = P.surgeT > 0;
+  var sprited = VAMP.ready; // realistic atlas when loaded; procedural fallback otherwise
 
   // high-contrast player marker (legibility guardrail)
   ctx.strokeStyle = surging ? 'rgba(255,42,42,0.75)' : 'rgba(232,228,216,0.4)';
   ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(P.x, P.y, 23, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.arc(P.x, P.y, sprited ? 40 : 23, 0, TAU); ctx.stroke();
 
   // --- BAT FORM: burst into bats that swirl and re-form ---
   if (P.batFormT > 0) {
@@ -1021,6 +1213,9 @@ function drawVampire(P, now) {
     }
     return;
   }
+
+  // realistic atlas takes over here; the procedural man below is the fallback
+  if (sprited) { drawVampSprite(P, now, surging); return; }
 
   ctx.save();
   ctx.translate(P.x, P.y);
@@ -1107,6 +1302,23 @@ function drawVampire(P, now) {
   }
 }
 
+/* Blood-thirst as a diegetic ring on the world itself (no shadowBlur — layered
+   strokes only, per the perf playbook). Flares as the meter fills; during a
+   Blood Surge it burns full and pulsing. */
+function drawThirstRing(P, now) {
+  var f = clamp(P.bloodM / P.bloodMax, 0, 1);
+  var surging = P.surgeT > 0;
+  if (f < 0.02 && !surging) return;
+  var r = (VAMP.ready ? 46 : 30) + (surging ? Math.sin(now / 130) * 3 : 0);
+  ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(122,12,20,0.30)';
+  ctx.beginPath(); ctx.arc(P.x, P.y, r, 0, TAU); ctx.stroke();
+  var pulse = (!surging && f >= 0.999) ? 0.7 + 0.3 * Math.sin(now / 150) : 1;
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = surging ? 'rgba(255,70,70,' + (0.9 * pulse).toFixed(2) + ')'
+                            : 'rgba(255,42,42,' + (0.35 + 0.45 * pulse).toFixed(2) + ')';
+  ctx.beginPath(); ctx.arc(P.x, P.y, r, -Math.PI / 2, -Math.PI / 2 + TAU * (surging ? 1 : f)); ctx.stroke();
+}
+
 /* ================= EVENT DRAIN → effects + audio ================= */
 var HOUR_NAMES = ['FIRST', 'SECOND', 'THIRD', 'FOURTH'];
 function drainEvents() {
@@ -1156,9 +1368,39 @@ function drainEvents() {
         SFX.bell();
         if (e.n <= 4) banner('🕯 THE ' + HOUR_NAMES[e.n - 1] + ' HOUR TOLLS');
         else banner('🌅 DAWN APPROACHES');
+        whisper(BELL_WHISPERS[Math.min(Math.max(e.n - 1, 0), BELL_WHISPERS.length - 1)]);
         break;
-      case 'dawn': SFX.dawn(); G.dawn = true; banner('☀ DAWN — FEAR THE LIGHT'); HAP.warning(); break;
-      case 'boss': SFX.boss(); shake(9, 0.5); banner('VAN HELSING HAS COME'); HAP.warning(); break;
+      case 'frenzy':
+        whisper('MINE. MINE. MINE.');
+        SFX.surge(); shake(12, 0.6); HAP.error();
+        document.getElementById('dreadveil').classList.add('frenzy');
+        break;
+      case 'frenzyend':
+        document.getElementById('dreadveil').classList.remove('frenzy');
+        whisper('...what have I done.');
+        break;
+      case 'clarity':
+        whisper('perfect. still. mine.');
+        break;
+      case 'humstage':
+        if (e.stage === 2) whisper('the edges fray.');
+        else if (e.stage === 1) whisper('their faces blur. good.');
+        else if (e.stage === 0) whisper('something is slipping.');
+        break;
+      case 'stalker':
+        // nothing announces it — the horror is the silence. heartbeat cuts instead.
+        whisper('the night just went quiet.');
+        break;
+      case 'prime':
+        if (!G._primeWhispered) { G._primeWhispered = true; whisper('that one. his blood sings.'); }
+        break;
+      case 'primefed': whisper('sweet. steady.'); break;
+      case 'braced':
+        SFX.hurt(); shake(6, 0.25);
+        whisper('not head-on. never head-on.');
+        break;
+      case 'dawn': SFX.dawn(); G.dawn = true; banner('☀ DAWN — FEAR THE LIGHT'); HAP.warning(); whisper('it burns. IT BURNS.'); break;
+      case 'boss': SFX.boss(); shake(9, 0.5); banner('VAN HELSING HAS COME'); HAP.warning(); whisper('he does not miss.'); break;
       case 'priestcast':
         G.fx.push({ kind: 'telegraph', x: e.x, y: e.y, r: e.r, t: 1.1, max: 1.1 });
         SFX.priest(); break;
@@ -1185,6 +1427,7 @@ function drainEvents() {
         shake(9, 0.5);
         banner('🩸 BLOOD SURGE — ' + (e.name || '').toUpperCase());
         HAP.warning();
+        whisper('FEED.');
         break;
       case 'surgeend':
         toast('the thirst ebbs… for now');
@@ -1249,6 +1492,7 @@ function drainEvents() {
       case 'elite':
         SFX.boss();
         banner('⚠ ' + (e.type === 'bellringer' ? 'THE BELL-RINGER' : 'THE WITCHFINDER CAPTAIN') + ' STALKS THE NIGHT');
+        whisper('take his heart.');
         break;
       case 'omen':
         SFX.bell();
@@ -1274,7 +1518,21 @@ function frame(now) {
   var dt = Math.min((now - G.last) / 1000, 0.1);
   G.last = now;
   pollKeys();
-  if (G.mode === 'playing' && G.api) {
+  if (G.mode === 'crypt' && CR.siege && !CR.over) {
+    // hold-to-listen: ear to the lid after 350ms
+    if (CR.holdId !== null && CR.listenLane < 0 && performance.now() - CR.holdT0 > 350) {
+      CR.listenLane = CR.holdLane;
+    }
+    CR.acc += dt;
+    var cn = 0;
+    while (CR.acc >= STEP && cn < 5) {
+      var cevs = CR.siege.step(STEP, cryptInput());
+      drainSiegeEvents(cevs);
+      CR.acc -= STEP; cn++;
+      if (CR.siege.sim.over) { endShift(CR.siege.sim.won); break; }
+    }
+    if (cn === 5) CR.acc = 0;
+  } else if (G.mode === 'playing' && G.api) {
     if (G.hitStop > 0) {
       // heavy freeze: the sim holds its breath while the render loop keeps breathing
       G.hitStop -= dt;
@@ -1298,28 +1556,90 @@ function frame(now) {
 }
 
 /* ================= HUD ================= */
-var elHp = document.getElementById('hp-bar'), elHpG = document.getElementById('hp-ghost'),
+var elMedCv = document.getElementById('medallion-cv'), elMedLvl = document.getElementById('medallion-lvl'),
     elXp = document.getElementById('xp-bar'), elTimer = document.getElementById('timer'),
-    elKills = document.getElementById('kills'), elLvl = document.getElementById('lvl-badge'),
-    elNight = document.getElementById('night-label'),
-    elBlood = document.getElementById('blood-bar'), elBloodWrap = document.getElementById('blood-wrap');
+    elKills = document.getElementById('kills'), elNight = document.getElementById('night-label'),
+    elNightFill = document.getElementById('nightbar-fill'), elNightBar = document.getElementById('nightbar'),
+    elMoon = document.getElementById('moon-icon'), elWhisper = document.getElementById('whisper');
 // DOM text writes are guarded: only touch the DOM when the string actually changed
 var _hudCache = {};
 function setHudText(el, v) {
   if (_hudCache[el.id] !== v) { _hudCache[el.id] = v; el.textContent = v; }
 }
+/* Portrait medallion: the only persistent face in the game. HP reads as a blood
+   ring; the face pales and the eyes kindle during a Blood Surge. Redrawn only
+   when something actually changed (cached key). */
+var _medCache = '';
+function drawMedallion(P) {
+  var key = (P.hp | 0) + ':' + P.level + ':' + (P.surgeT > 0 ? 1 : 0) + ':' + P.humStage;
+  if (_medCache === key) return;
+  _medCache = key;
+  var g = elMedCv.getContext('2d'), S = 72, c = S / 2, surging = P.surgeT > 0;
+  g.clearRect(0, 0, S, S);
+  // iron ring
+  g.lineWidth = 5; g.strokeStyle = '#2c2438';
+  g.beginPath(); g.arc(c, c, c - 4, 0, TAU); g.stroke();
+  // HP as a blood ring
+  var hpp = clamp(P.hp / P.maxHp, 0, 1);
+  g.lineWidth = 4; g.strokeStyle = hpp < 0.3 ? '#ff2a2a' : '#8d0801';
+  g.beginPath(); g.arc(c, c, c - 4, -Math.PI / 2, -Math.PI / 2 + TAU * hpp); g.stroke();
+  // pale face
+  g.fillStyle = surging ? '#f2dcdc' : '#d8d2c4';
+  g.beginPath(); g.ellipse(c, c + 3, 14, 17, 0, 0, TAU); g.fill();
+  // dark swept hair
+  g.fillStyle = '#0d0a12';
+  g.beginPath(); g.arc(c, c - 3, 14, Math.PI * 0.95, Math.PI * 2.05); g.fill();
+  g.fillRect(c - 14, c - 3, 5, 13); g.fillRect(c + 9, c - 3, 5, 13);
+  // eyes — kindle during a surge
+  var er = surging ? 3.4 : 2.1;
+  g.fillStyle = surging ? '#ff2a2a' : '#7a0c14';
+  g.beginPath(); g.arc(c - 5.5, c + 4, er, 0, TAU); g.fill();
+  g.beginPath(); g.arc(c + 5.5, c + 4, er, 0, TAU); g.fill();
+  if (surging) {
+    g.strokeStyle = 'rgba(255,42,42,0.85)'; g.lineWidth = 2;
+    g.beginPath(); g.arc(c, c, c - 4, 0, TAU); g.stroke();
+  }
+  // horror: as humanity slips, the portrait cracks
+  if (P.humStage <= 1) {
+    g.strokeStyle = 'rgba(18,6,10,0.9)'; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(c - 10, c - 17); g.lineTo(c - 2, c - 3); g.lineTo(c - 9, c + 12); g.stroke();
+    g.beginPath(); g.moveTo(c + 11, c - 11); g.lineTo(c + 4, c + 1); g.lineTo(c + 10, c + 14); g.stroke();
+    if (P.humStage === 0) {
+      g.beginPath(); g.moveTo(c - 3, c - 17); g.lineTo(c + 1, c + 16); g.stroke();
+    }
+  }
+  setHudText(elMedLvl, '' + P.level);
+}
+/* Whisper subtitles: faint, unstable, bottom-third. One line at a time. */
+var BELL_WHISPERS = [
+  'they are waking.',
+  'bolt your doors, little mice.',
+  'something pale walks the fog.',
+  'the last hour. make it count.',
+  'dawn. run.'
+];
+function whisper(text) {
+  elWhisper.textContent = text;
+  elWhisper.classList.remove('hidden');
+  elWhisper.classList.remove('show');
+  void elWhisper.offsetWidth; // restart the animation
+  elWhisper.classList.add('show');
+}
 function updateHUD() {
   var sim = G.api.sim, P = sim.player;
-  var hpp = clamp(P.hp / P.maxHp * 100, 0, 100);
-  elHp.style.width = hpp + '%';
-  elHpG.style.width = hpp + '%';
+  drawMedallion(P);
   elXp.style.width = clamp(P.xp / P.xpNext * 100, 0, 100) + '%';
-  setHudText(elLvl, '' + P.level);
   setHudText(elKills, '🩸 ' + sim.kills);
-  // blood-thirst meter: fills with every drink, surges when full
-  elBlood.style.width = clamp(P.bloodM / P.bloodMax * 100, 0, 100) + '%';
-  elBloodWrap.classList.toggle('full', P.surgeT > 0);
-  if (sim.state === 'dawn') {
+  // night progress: one readable dial; the moon waxes toward the blood moon
+  var dawn = sim.state === 'dawn';
+  var prog = dawn ? 1 : clamp(1 - sim.nightT / BloodMoonSim.NIGHT_LEN, 0, 1);
+  elNightFill.style.width = (prog * 100) + '%';
+  elMoon.style.left = (prog * 100) + '%';
+  elNightBar.classList.toggle('dawn', dawn);
+  var mph = dawn ? '☀' : (prog >= 0.6 && sim.kills >= 40) ? '🔴'
+    : prog < 0.25 ? '🌑' : prog < 0.5 ? '🌒' : prog < 0.75 ? '🌓' : '🌕'; // the moon keeps score
+  if (_hudCache.moon !== mph) { _hudCache.moon = mph; elMoon.textContent = mph; }
+  if (dawn) {
     setHudText(elTimer, '☀ DAWN ' + Math.ceil(sim.dawnT) + 's');
     elTimer.classList.add('dawn');
   } else {
@@ -1327,7 +1647,32 @@ function updateHUD() {
     setHudText(elTimer, '☾ ' + ((r / 60) | 0) + ':' + ('0' + (r % 60)).slice(-2));
     elTimer.classList.remove('dawn');
   }
-  AU.heartOn = P.hp < P.maxHp * 0.3 && !sim.over;
+  // horror: threat-proximity heartbeat — quickens as danger closes in.
+  // The Pale Confessor emits NO heartbeat: the sound cuts out when it's near.
+  var threatD = 1e9, stalkerNear = false;
+  var ens = sim.enemies;
+  for (var ti = 0; ti < ens.length; ti++) {
+    var te = ens[ti];
+    if (te.dead) continue;
+    var tt = te.type;
+    if (tt !== 'priest' && tt !== 'hunter' && tt !== 'bellringer' && tt !== 'witchfinder' && tt !== 'vanhelsing' && tt !== 'stalker') continue;
+    var tdx = te.x - P.x, tdy = te.y - P.y;
+    var tdist = Math.sqrt(tdx * tdx + tdy * tdy);
+    if (tt === 'stalker') { if (tdist < 460) stalkerNear = true; }
+    else if (tdist < threatD) threatD = tdist;
+  }
+  AU.stalkerHush = stalkerNear;
+  if (stalkerNear) AU.heartOn = false;
+  else {
+    AU.heartOn = (P.hp < P.maxHp * 0.3 || threatD < 560) && !sim.over;
+    AU.heartRate = threatD < 560 ? clamp(0.85 - (560 - threatD) / 560 * 0.55, 0.3, 0.85) : 0.85;
+  }
+  // horror: the veil frays as humanity slips
+  document.getElementById('dreadveil').classList.toggle('fraying', P.humStage <= 1 && P.frenzyT <= 0 && !sim.over);
+  if (P.hp < P.maxHp * 0.3 && !G._lowHpWhispered && !sim.over) {
+    G._lowHpWhispered = true;
+    whisper('not like this. not in the dirt.');
+  }
   // bat-form panic button: innate, shows cooldown
   var db = document.getElementById('dash-btn');
   db.classList.remove('hidden');
@@ -1350,8 +1695,12 @@ function startRun(night, opts) {
   opts = opts || {};
   var seed = opts.seed != null ? opts.seed : ((Date.now() ^ (Math.random() * 1e9)) >>> 0);
   G.seed = seed; G.night = night; G.daily = !!opts.daily; G.dailyDate = opts.date || null;
-  G.practice = !!opts.practice;
+  G.practice = !!opts.practice; G.afterShift = null;
   G.dawn = false; G.acc = 0; G.hitStop = 0; G._submitted = false; G.bossMusic = false; G.sunFlash = 0;
+  G._lowHpWhispered = false; _medCache = ''; _hudCache = {};
+  G._primeWhispered = false;
+  var dv = document.getElementById('dreadveil');
+  if (dv) dv.classList.remove('frenzy', 'fraying');
   G.particles.forEach(function (p) { p.t = 1; });
   G.dmgNums.length = 0; G.bubbles.length = 0; G.fx.length = 0;
   G.api = BloodMoonSim.makeSim(seed, {
@@ -1426,6 +1775,8 @@ function endRun(won) {
   G.won = won;
   document.getElementById('hud').classList.add('hidden');
   document.getElementById('dash-btn').classList.add('hidden');
+  var dv2 = document.getElementById('dreadveil');
+  if (dv2) dv2.classList.remove('frenzy', 'fraying');
   AU.heartOn = false;
   var sim = G.api.sim;
   var banked = Math.round(sim.blood);
@@ -1439,11 +1790,19 @@ function endRun(won) {
   saveMeta(); renderMeta(); renderBloodlines();
 
   var title = document.getElementById('over-title');
+  // labels may have been repurposed by a day shift — restore night labels
+  var labs = document.querySelectorAll('#over .final-stats label');
+  if (labs[0]) labs[0].textContent = 'kills';
+  if (labs[1]) labs[1].textContent = 'nights';
+  if (labs[2]) labs[2].textContent = 'level';
+  if (labs[3]) labs[3].textContent = 'blood banked';
   if (won) {
     title.textContent = sim.bossRef && sim.bossRef.dead ? 'HELSING SLAIN — DAWN SURVIVED' : '☀ DAWN SURVIVED';
     title.className = 'won';
     document.getElementById('over-sub').textContent = 'the village cowers. the night is yours… for now.';
     document.getElementById('again-btn').textContent = '🌅 NEXT NIGHT →';
+    // the day shift: bar the crypt while the sun is up
+    document.getElementById('dayshift-btn').classList.remove('hidden');
     SFX.win();
   } else {
     title.textContent = 'THE SUN CLAIMS YOU';
@@ -1451,6 +1810,7 @@ function endRun(won) {
     document.getElementById('over-sub').textContent = sim.state === 'dead' && G.dawn ?
       'so close to dawn. the light was merciless.' : 'the mob prevails. the crypt keeps your blood.';
     document.getElementById('again-btn').textContent = '🦇 HUNT AGAIN';
+    document.getElementById('dayshift-btn').classList.add('hidden');
     SFX.lose(); HAP.error();
   }
   document.getElementById('f-kills').textContent = sim.kills;
@@ -1463,7 +1823,381 @@ function endRun(won) {
   loadBoards();
 }
 
+/* ================= COFFIN SHIFT — crypt defense mode =================
+   The day interlude. The vampire lies in torpor; hunters siege the crypt.
+   FNAF-style management, inverted: blood is the power bar.
+   Tap a corridor = shutter. Hold a corridor = press your ear to the lid. */
+var CR = {
+  siege: null, day: 1, acc: 0, over: false,
+  shut: [false, false, false],
+  listenLane: -1, thrallOn: false, vent: -1,
+  mendPulse: false, ravenPulse: false,
+  holdLane: -1, holdT0: 0, holdId: null,
+  lastSig: '', lastSigLane: -1, chantT: 0,
+  btnRects: []
+};
+
+function startShift(day, blood) {
+  var seed = ((Date.now() ^ (Math.random() * 1e9)) >>> 0);
+  CR.siege = BloodMoonSiege.makeSiege(seed, { day: day, blood: blood });
+  CR.day = day; CR.acc = 0; CR.over = false;
+  CR.shut = [false, false, false];
+  CR.listenLane = -1; CR.thrallOn = false; CR.vent = -1;
+  CR.mendPulse = false; CR.ravenPulse = false;
+  CR.holdLane = -1; CR.holdId = null; CR.lastSig = ''; CR.chantT = 0;
+  ['menu', 'over', 'pause-menu', 'levelup'].forEach(function (id) {
+    document.getElementById(id).classList.add('hidden');
+  });
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('dash-btn').classList.add('hidden');
+  var dv = document.getElementById('dreadveil');
+  if (dv) dv.classList.remove('frenzy', 'fraying');
+  G.mode = 'crypt';
+  G.last = 0;
+  auInit(); SFX.click();
+  banner('☀ THE DAY SHIFT — BAR THE CRYPT');
+  setTimeout(function () { if (G.mode === 'crypt') whisper('lie still. they are coming.'); }, 1400);
+}
+
+function cryptInput() {
+  var inp = {
+    shutters: CR.shut.slice(),
+    listen: CR.listenLane + 1,
+    ventLane: CR.vent,
+    mend: CR.mendPulse,
+    lookout: CR.ravenPulse ? 1 : 0,
+    thrall: CR.thrallOn
+  };
+  CR.mendPulse = false; CR.ravenPulse = false;
+  return inp;
+}
+
+function drainSiegeEvents(evs) {
+  for (var i = 0; i < evs.length; i++) {
+    var e = evs[i];
+    switch (e.kind) {
+      case 'hour':
+        SFX.bell();
+        banner('🕯 THE ' + BloodMoonSiege.HOURS[e.hour].toUpperCase() + ' HOUR');
+        break;
+      case 'bang': SFX.shutterClang(); shake(7, 0.35); break;
+      case 'breach':
+        SFX.hurt(); shake(12, 0.5); HAP.error();
+        whisper('they are inside.');
+        break;
+      case 'sprint':
+        SFX.sigSniff(); SFX.hurt(); shake(10, 0.4);
+        whisper('the hound runs.');
+        break;
+      case 'sig':
+        CR.lastSig = e.sig; CR.lastSigLane = e.lane;
+        if (e.sig === 'march') SFX.sigMarch();
+        else if (e.sig === 'murmur') SFX.sigMurmur();
+        else if (e.sig === 'sniff') SFX.sigSniff();
+        break;
+      case 'chant':
+        CR.chantT -= 1 / 60;
+        if (CR.chantT <= 0 && e.level > 5) { CR.chantT = 3.2; SFX.chant(e.level); }
+        break;
+      case 'ritualwarn':
+        if (e.level === 'orange') { whisper('the chant swells.'); SFX.priest(); }
+        else { whisper('THE RITE NEARS COMPLETION.'); SFX.priest(); shake(6, 0.3); }
+        break;
+      case 'ritualdone':
+        SFX.nova(); shake(14, 0.6);
+        whisper('it is done. hold the wards.');
+        break;
+      case 'torpor':
+        if (e.stage === 1) whisper('the blood runs thin. stay sharp.');
+        else if (e.stage === 2) whisper('torpor pulls. NOT YET.');
+        break;
+      case 'report': SFX.ravenCaw(); break;
+      case 'mend': SFX.wardMendSfx(); break;
+    }
+  }
+}
+
+function endShift(won) {
+  CR.over = true;
+  G.mode = 'over';
+  AU.heartOn = false;
+  var s = CR.siege.sim;
+  var title = document.getElementById('over-title');
+  var sub = document.getElementById('over-sub');
+  var againBtn = document.getElementById('again-btn');
+  document.getElementById('dayshift-btn').classList.add('hidden');
+  // restore night labels (shift repurposes them below)
+  var labs = document.querySelectorAll('#over .final-stats label');
+  if (won) {
+    title.textContent = '🌅 DUSK SURVIVED';
+    title.className = 'won';
+    sub.textContent = 'day ' + CR.day + ' endured. the sun releases you — hunt.';
+    againBtn.textContent = '🦇 HUNT NIGHT ' + (CR.day + 1);
+    G.afterShift = { day: CR.day };
+    if (labs[0]) labs[0].textContent = 'repelled';
+    if (labs[1]) labs[1].textContent = 'shift';
+    if (labs[2]) labs[2].textContent = 'score';
+    if (labs[3]) labs[3].textContent = 'blood left';
+    setHudText(document.getElementById('f-kills'), '' + (s.stats.bangs + s.stats.sprints));
+    setHudText(document.getElementById('f-nights'), 'day ' + CR.day);
+    setHudText(document.getElementById('f-level'), '' + CR.siege.score());
+    setHudText(document.getElementById('f-blood'), '' + Math.round(s.blood));
+    SFX.win();
+  } else {
+    title.textContent = '⚰️ THE CRYPT IS BREACHED';
+    title.className = 'dead';
+    sub.textContent = s.blood <= 0 ? 'torpor took you. they lifted the lid.' : 'the wards broke. they lifted the lid.';
+    againBtn.textContent = '🦇 HUNT AGAIN';
+    G.afterShift = null;
+    if (labs[0]) labs[0].textContent = 'kills';
+    if (labs[1]) labs[1].textContent = 'nights';
+    if (labs[2]) labs[2].textContent = 'level';
+    if (labs[3]) labs[3].textContent = 'blood banked';
+    setHudText(document.getElementById('f-kills'), '' + (s.stats.bangs + s.stats.sprints));
+    setHudText(document.getElementById('f-nights'), 'day ' + CR.day);
+    setHudText(document.getElementById('f-level'), '' + CR.siege.score());
+    setHudText(document.getElementById('f-blood'), '' + Math.round(s.blood));
+    SFX.lose(); HAP.error();
+  }
+  document.getElementById('over').classList.remove('hidden');
+}
+
+/* ---- Coffin Shift renderer: the lid schematic ----
+   The "office" is a management schematic etched into the coffin lid:
+   corridors, shutter gates, hunter dots, glowing etchings. Diegetic. */
+function cryptGeometry() {
+  var cx = W / 2;
+  var topY = 168, botY = H - 216;
+  var cy = (topY + botY) / 2;
+  return {
+    cx: cx, cy: cy, topY: topY, botY: botY,
+    lanes: [
+      { name: 'WEST', x0: 30, y0: cy, x1: cx - 68, y1: cy },
+      { name: 'EAST', x0: W - 30, y0: cy, x1: cx + 68, y1: cy },
+      { name: 'CHAPEL', x0: cx, y0: topY + 16, x1: cx, y1: cy - 68 }
+    ]
+  };
+}
+function laneStagePos(L, stage) {
+  var t = 1 - stage / 4;
+  return { x: L.x0 + (L.x1 - L.x0) * t, y: L.y0 + (L.y1 - L.y0) * t };
+}
+function distToSeg(px, py, x0, y0, x1, y1) {
+  var dx = x1 - x0, dy = y1 - y0;
+  var l2 = dx * dx + dy * dy || 1;
+  var t = clamp(((px - x0) * dx + (py - y0) * dy) / l2, 0, 1);
+  return Math.hypot(px - (x0 + dx * t), py - (y0 + dy * t));
+}
+function cryptMeter(x, y, w, label, f, color) {
+  ctx.fillStyle = 'rgba(232,228,216,0.55)';
+  ctx.font = '600 11px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText(label, x, y + 11);
+  var bx = x + 86, bw = w - 86;
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  ctx.fillRect(bx, y, bw, 14);
+  ctx.fillStyle = color;
+  ctx.fillRect(bx, y, bw * clamp(f, 0, 1), 14);
+}
+function cryptButton(id, x, y, w, h, label, sub, active, dimmed) {
+  ctx.fillStyle = active ? 'rgba(201,162,39,0.28)' : 'rgba(255,255,255,0.05)';
+  ctx.strokeStyle = active ? '#c9a227' : 'rgba(232,228,216,0.25)';
+  ctx.lineWidth = active ? 2 : 1;
+  roundRect(x, y, w, h, 8); ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = dimmed ? 0.35 : 1;
+  ctx.fillStyle = '#e8e4d8'; ctx.font = '700 13px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText(label, x + w / 2, y + 22);
+  ctx.fillStyle = 'rgba(232,228,216,0.55)'; ctx.font = '11px system-ui';
+  ctx.fillText(sub, x + w / 2, y + 40);
+  ctx.globalAlpha = 1;
+  CR.btnRects.push({ id: id, x: x, y: y, w: w, h: h });
+}
+
+var CRYPT_HUNTER_COLORS = { torch: '#ff9a3c', priest: '#e8e4d8', hound: '#e63946' };
+function renderCrypt() {
+  var s = CR.siege.sim;
+  var now = performance.now();
+  CR.btnRects.length = 0;
+  ctx.fillStyle = '#0b0912';
+  ctx.fillRect(0, 0, W, H);
+  var vg = ctx.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, Math.max(W, H) * 0.72);
+  vg.addColorStop(0, 'rgba(34,26,44,0.55)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.8)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+
+  // header: day, canonical hour, dusk countdown
+  ctx.textAlign = 'left'; ctx.fillStyle = '#e8e4d8'; ctx.font = '600 15px system-ui';
+  ctx.fillText('☀ DAY ' + CR.day, 14, 30);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#c9a227';
+  ctx.fillText('— ' + BloodMoonSiege.HOURS[s.hour].toUpperCase() + ' —', W / 2, 30);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#8d8a96';
+  ctx.fillText('dusk ' + Math.max(0, Math.ceil(BloodMoonSiege.SHIFT_LEN - s.time)) + 's', W - 14, 30);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(14, 40, W - 28, 4);
+  ctx.fillStyle = '#c9a227';
+  ctx.fillRect(14, 40, (W - 28) * clamp(s.time / BloodMoonSiege.SHIFT_LEN, 0, 1), 4);
+
+  // meters
+  var torporDim = s.torpor === 2 ? 0.45 + 0.2 * Math.sin(now / 300) : 1;
+  ctx.globalAlpha = torporDim;
+  cryptMeter(14, 58, W - 28, '🩸 BLOOD', s.blood / 100, s.torpor >= 2 ? '#7a0c14' : '#e63946');
+  cryptMeter(14, 84, W - 28, '🛡 WARD', s.ward / 100, '#c9a227');
+  var riteCol = s.ritual >= 80 ? '#ff2a2a' : s.ritual >= 50 ? '#ff9a3c' : '#9d4edd';
+  cryptMeter(14, 110, W - 28, '🕯 RITE', s.ritual / 100, riteCol);
+  cryptMeter(14, 136, W - 28, '💨 SMOKE', s.smoke / 100, s.smoke > 70 ? '#ff9a3c' : '#8d8a96');
+  ctx.globalAlpha = 1;
+
+  var GEO = cryptGeometry();
+  // etched corridors
+  for (var li = 0; li < 3; li++) {
+    (function (L, lane) {
+      var occupied = false;
+      for (var hi = 0; hi < s.hunters.length; hi++)
+        if (s.hunters[hi].lane === lane) occupied = true;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = occupied ? 'rgba(180,120,160,0.30)' : 'rgba(157,120,180,0.16)';
+      ctx.lineWidth = 30;
+      ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke();
+      ctx.strokeStyle = 'rgba(220,190,240,0.10)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(L.x0, L.y0); ctx.lineTo(L.x1, L.y1); ctx.stroke();
+      // stage ticks
+      ctx.fillStyle = 'rgba(220,190,240,0.18)';
+      for (var st = 0; st <= 4; st++) {
+        var p = laneStagePos(L, st);
+        ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
+      }
+      // lane name at the far end
+      ctx.fillStyle = 'rgba(232,228,216,0.4)';
+      ctx.font = '600 10px system-ui'; ctx.textAlign = 'center';
+      var np = laneStagePos(L, 4.6);
+      ctx.fillText(L.name, np.x, np.y + (lane === 2 ? -8 : 20));
+      // shutter gate between stage 0 and the coffin
+      var sp = { x: L.x1 + (GEO.cx - L.x1) * 0.42, y: L.y1 + (GEO.cy - L.y1) * 0.42 };
+      var ang = Math.atan2(L.y1 - L.y0, L.x1 - L.x0) + Math.PI / 2;
+      var gl = 20;
+      if (s.shutters[lane]) {
+        ctx.strokeStyle = '#d8d4c8'; ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(sp.x - Math.cos(ang) * gl, sp.y - Math.sin(ang) * gl);
+        ctx.lineTo(sp.x + Math.cos(ang) * gl, sp.y + Math.sin(ang) * gl);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(216,212,200,0.25)'; ctx.lineWidth = 9;
+        ctx.beginPath();
+        ctx.moveTo(sp.x - Math.cos(ang) * gl, sp.y - Math.sin(ang) * gl);
+        ctx.lineTo(sp.x + Math.cos(ang) * gl, sp.y + Math.sin(ang) * gl);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = 'rgba(216,212,200,0.18)'; ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(sp.x - Math.cos(ang) * gl, sp.y - Math.sin(ang) * gl);
+        ctx.lineTo(sp.x + Math.cos(ang) * gl, sp.y + Math.sin(ang) * gl);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      // vent marker
+      if (CR.vent === lane) {
+        ctx.fillStyle = '#8fd0ff'; ctx.font = '600 10px system-ui';
+        ctx.fillText('▲ VENT', sp.x, sp.y - 26);
+      }
+      // listening rings
+      if (CR.listenLane === lane) {
+        var pr = 26 + 10 * Math.sin(now / 180);
+        ctx.strokeStyle = 'rgba(143,208,255,0.5)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(sp.x, sp.y, pr, 0, TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sp.x, sp.y, pr * 1.5, 0, TAU); ctx.stroke();
+        ctx.fillStyle = '#8fd0ff'; ctx.font = '600 11px system-ui';
+        var sigName = CR.lastSig ? CR.lastSig.toUpperCase() : '…';
+        ctx.fillText('👂 ' + sigName, sp.x, sp.y + 40);
+      }
+    })(GEO.lanes[li], li);
+  }
+  // hunter dots
+  for (var hi2 = 0; hi2 < s.hunters.length; hi2++) {
+    (function (h) {
+      var L = GEO.lanes[h.lane];
+      var p = laneStagePos(L, h.stage);
+      var col = CRYPT_HUNTER_COLORS[h.type] || '#fff';
+      var pulse = h.stage === 0 ? 0.7 + 0.3 * Math.sin(now / 150) : 1;
+      ctx.globalAlpha = 0.3 * pulse;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 16, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, TAU); ctx.fill();
+      if (h.type === 'priest') {
+        ctx.fillStyle = '#c9a227';
+        ctx.beginPath(); ctx.arc(p.x, p.y - 9, 3, 0, TAU); ctx.fill();
+      }
+    })(s.hunters[hi2]);
+  }
+  // the coffin: you, in torpor
+  var cX = GEO.cx - 44, cY = GEO.cy - 58;
+  ctx.fillStyle = '#241a12';
+  roundRect(cX, cY, 88, 116, 14); ctx.fill();
+  ctx.strokeStyle = s.torpor >= 2 ? '#7a0c14' : '#c9a227';
+  ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = 'rgba(232,228,216,0.6)';
+  ctx.font = '600 11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('YOU', GEO.cx, GEO.cy - 8);
+  ctx.fillStyle = 'rgba(232,228,216,0.35)'; ctx.font = '10px system-ui';
+  var torporName = s.torpor === 0 ? 'alert' : s.torpor === 1 ? 'sluggish' : 'FAILING';
+  ctx.fillText(torporName, GEO.cx, GEO.cy + 10);
+  if (s.thrallPosted) {
+    ctx.fillStyle = '#9d4edd'; ctx.font = '10px system-ui';
+    ctx.fillText('thrall at the wards', GEO.cx, GEO.cy + 26);
+  }
+
+  // controls
+  var bw = (W - 28 - 30) / 4, by = H - 196, bh = 58;
+  var ravenDis = s.ravenCd > 0 || s.blood < 5;
+  var mendDis = s.mendCd > 0 || s.blood < 8 || s.ward >= 100;
+  cryptButton('raven', 14, by, bw, bh, '🐦 RAVEN',
+    s.ravenCd > 0 ? Math.ceil(s.ravenCd) + 's' : 'report', false, ravenDis);
+  cryptButton('thrall', 14 + (bw + 10), by, bw, bh, '🕯 THRALL',
+    CR.thrallOn ? 'POSTED' : 'post', CR.thrallOn, false);
+  cryptButton('mend', 14 + (bw + 10) * 2, by, bw, bh, '🛡 MEND',
+    s.mendCd > 0 ? Math.ceil(s.mendCd) + 's' : '+18 ward', false, mendDis);
+  var ventName = CR.vent < 0 ? 'off' : BloodMoonSiege.LANES[CR.vent].toUpperCase();
+  cryptButton('vent', 14 + (bw + 10) * 3, by, bw, bh, '💨 VENT', ventName, CR.vent >= 0, false);
+  // hint line
+  ctx.fillStyle = 'rgba(232,228,216,0.4)';
+  ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('tap a corridor = shutter · hold a corridor = listen', W / 2, H - 118);
+}
+
+function cryptHitButton(x, y) {
+  for (var i = 0; i < CR.btnRects.length; i++) {
+    var b = CR.btnRects[i];
+    if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b.id;
+  }
+  return null;
+}
+function cryptHitLane(x, y) {
+  var GEO = cryptGeometry();
+  for (var li = 0; li < 3; li++) {
+    var L = GEO.lanes[li];
+    if (distToSeg(x, y, L.x0, L.y0, L.x1, L.y1) < 48) return li;
+  }
+  return -1;
+}
+function cryptPressButton(id) {
+  if (id === 'raven') CR.ravenPulse = true;
+  else if (id === 'thrall') { CR.thrallOn = !CR.thrallOn; SFX.click(); }
+  else if (id === 'mend') CR.mendPulse = true;
+  else if (id === 'vent') { CR.vent = CR.vent >= 2 ? -1 : CR.vent + 1; SFX.click(); }
+}
+
 function togglePause(force) {
+  if (G.mode === 'crypt') {
+    G.mode = 'paused'; G._pausedCrypt = true;
+    var ss = CR.siege.sim;
+    document.getElementById('run-stats').innerHTML =
+      'day ' + CR.day + ' &nbsp;•&nbsp; blood ' + Math.round(ss.blood) + ' &nbsp;•&nbsp; ward ' + Math.round(ss.ward);
+    document.getElementById('pause-menu').classList.remove('hidden');
+    return;
+  }
   if (G.mode === 'playing' || force === true) {
     if (G.mode !== 'playing') return;
     G.mode = 'paused';
@@ -1472,7 +2206,8 @@ function togglePause(force) {
       'night ' + G.night + ' &nbsp;•&nbsp; ' + sim.kills + ' kills &nbsp;•&nbsp; level ' + sim.level;
     document.getElementById('pause-menu').classList.remove('hidden');
   } else if (G.mode === 'paused') {
-    G.mode = 'playing';
+    G.mode = G._pausedCrypt ? 'crypt' : 'playing';
+    G._pausedCrypt = false;
     document.getElementById('pause-menu').classList.add('hidden');
     G.last = 0;
   }
@@ -1686,9 +2421,17 @@ function renderMenuBg(now) {
 }
 
 /* ================= BOOT ================= */
-document.getElementById('start-btn').onclick = function () { auInit(); G.carry = null; startRun(1); };
+document.getElementById('start-btn').onclick = function () { auInit(); G.carry = null; G.afterShift = null; startRun(1); };
 document.getElementById('daily-btn').onclick = function () { G.carry = null; startDaily(false); };
 document.getElementById('practice-btn').onclick = function () { G.carry = null; startDaily(true); };
+document.getElementById('shift-btn').onclick = function () { auInit(); G.carry = null; startShift(1, 70); };
+document.getElementById('dayshift-btn').onclick = function () {
+  auInit();
+  var reserve = 30;
+  if (G.api && G.api.sim) reserve = clamp(Math.round(30 + G.api.sim.blood * 0.08), 30, 100);
+  G.carry = null;
+  startShift(G.night, reserve);
+};
 document.getElementById('nightmare-btn').onclick = function () {
   auInit(); META.nightmareOn = !META.nightmareOn; saveMeta(); renderNightmare(); SFX.click();
   toast(META.nightmareOn ? '🔔 nightmare wakes — the night is hungrier' : '🔔 nightmare sleeps');
@@ -1696,6 +2439,7 @@ document.getElementById('nightmare-btn').onclick = function () {
 document.getElementById('again-btn').onclick = function () {
   auInit();
   if (G.practice) { G.carry = null; startDaily(true); return; } // practice again, unranked
+  if (G.afterShift) { var d = G.afterShift.day; G.afterShift = null; startRun(d + 1, {}); return; }
   if (G.won) startRun(G.night + 1, {});
   else { G.carry = null; startRun(1); }
 };
@@ -1745,6 +2489,9 @@ setTimeout(primeAi, 0);
 G.mode = 'menu';
 requestAnimationFrame(frame);
 requestAnimationFrame(menuFrame);
+
+// debug/testing handle: lets automated checks poke the live game (sim, vampire atlas state)
+window.BM = { G: G, VAMP: VAMP, AU: AU, CR: CR };
 
 })();
 
