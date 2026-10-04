@@ -432,6 +432,119 @@ h1 { margin: 10px 0 6px; font-size: 32px; font-weight: 800; letter-spacing: .5px
 
 /* --- event modal: dealt-card entrance (overshoot + tiny tilt, NOT the sheet slide) --- */
 #event-modal .panel { animation: dealIn .42s cubic-bezier(.3,1.5,.45,1); }
+
+/* v4 scene entrances — CSS-driven (display:none -> shown restarts the animation) */
+#start .panel, #dossier .panel, #death .panel { animation: sceneIn .38s cubic-bezier(.2,.9,.3,1) both; }
+@keyframes sceneIn { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #start .panel, #dossier .panel, #death .panel { animation: none; }
+}
+
+/* v4 stat delta pops (Bus 'stat:change' -> statPop) */
+.stat-pop { position: fixed; z-index: 90; font-weight: 800; font-size: 13px; pointer-events: none; opacity: 0; }
+.stat-pop.up { color: #4dd0a6; }
+.stat-pop.down { color: #ff6b6b; }
+.stat-pop.go { animation: statPop .9s ease-out both; }
+@keyframes statPop { 0% { opacity: 0; transform: translateY(6px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-22px); } }
+@media (prefers-reduced-motion: reduce) { .stat-pop.go { animation: none; } }
+
+/* v4 title screen: gradient title, floating logo, staggered entrance */
+.game-title {
+  font-size: 46px; margin: 4px 0 2px; letter-spacing: .5px; font-weight: 900;
+  background: linear-gradient(135deg, #ffd166 10%, #ff6b9d 55%, #7c5cff 90%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.logo-float {
+  display: inline-block; font-size: 54px;
+  animation: logoFloat 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 18px rgba(124,92,255,.45));
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-9px) rotate(5deg); }
+}
+#start .panel > * { animation: startIn .5s cubic-bezier(.2,.9,.3,1) both; }
+#start .panel > *:nth-child(1) { animation-delay: .02s; }
+#start .panel > *:nth-child(2) { animation-delay: .08s; }
+#start .panel > *:nth-child(3) { animation-delay: .14s; }
+#start .panel > *:nth-child(4) { animation-delay: .20s; }
+#start .panel > *:nth-child(5) { animation-delay: .26s; }
+#start .panel > *:nth-child(6) { animation-delay: .32s; }
+#start .panel > *:nth-child(7) { animation-delay: .38s; }
+@keyframes startIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .logo-float { animation: none; }
+  #start .panel > * { animation: none; }
+}
+
+/* v4 death moment: staggered reveal */
+#death .panel > * { animation: deathIn .55s cubic-bezier(.2,.9,.3,1) both; }
+#death .panel > *:nth-child(1) { animation-delay: .05s; }
+#death .panel > *:nth-child(2) { animation-delay: .12s; }
+#death .panel > *:nth-child(3) { animation-delay: .19s; }
+#death .panel > *:nth-child(4) { animation-delay: .26s; }
+#death .panel > *:nth-child(5) { animation-delay: .33s; }
+#death .panel > *:nth-child(6) { animation-delay: .40s; }
+#death .panel > *:nth-child(7) { animation-delay: .47s; }
+#death .panel > *:nth-child(8) { animation-delay: .54s; }
+#death .panel > *:nth-child(9) { animation-delay: .61s; }
+#death .panel > *:nth-child(10) { animation-delay: .68s; }
+#death .panel > *:nth-child(n+11) { animation-delay: .75s; }
+@keyframes deathIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #death .panel > * { animation: none; }
+}
+
+/* v4 journal timeline */
+#jfilter { display: flex; gap: 8px; margin: 10px 0 4px; }
+#jfilter button {
+  flex: 1; padding: 7px 0; border-radius: 10px; font-size: 13px; font-weight: 700;
+  background: rgba(255,255,255,.05); color: var(--dim); border: 1px solid var(--line); cursor: pointer;
+}
+#jfilter button.on { background: rgba(124,92,255,.18); color: #fff; border-color: var(--acc); }
+.tl-age { margin: 12px 0 4px; display: flex; align-items: center; gap: 8px; }
+.tl-age span {
+  font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--gold); background: rgba(255,209,102,.1); border: 1px solid rgba(255,209,102,.3);
+  padding: 2px 10px; border-radius: 20px; white-space: nowrap;
+}
+.tl-age::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+#journal .entry { position: relative; padding-left: 18px; }
+#journal .entry::before {
+  content: ''; position: absolute; left: 4px; top: 8px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--acc); opacity: .7;
+}
+
+/* v4 replay + lineage */
+.replay-panel { text-align: center; }
+.rp-name { font-weight: 800; font-size: 18px; margin-bottom: 6px; }
+#rp-face { border-radius: 50%; border: 3px solid var(--acc); background: #12141c; margin: 4px auto; display: block; }
+#rp-age { font-size: 26px; font-weight: 900; color: var(--gold); margin: 6px 0; }
+.rp-line { min-height: 44px; font-size: 14px; color: #d5d9e4; margin: 4px 0 10px; line-height: 1.5; }
+.rp-line.swap { animation: rpSwap .4s ease both; }
+@keyframes rpSwap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#rp-bars { margin: 0 0 12px; }
+.rp-bar { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+.rp-bar > span { width: 22px; text-align: center; }
+#rp-happy { background: linear-gradient(90deg, #ffb3c7, #ff6b9d); }
+#rp-health { background: linear-gradient(90deg, #ff9a9a, #ff4d4d); }
+#rp-smarts { background: linear-gradient(90deg, #9ae6ff, #2ea8ff); }
+#rp-looks { background: linear-gradient(90deg, #c7b3ff, #7c5cff); }
+.replay-row { display: flex; gap: 8px; justify-content: center; }
+.lineage-body { display: flex; flex-direction: column; gap: 8px; max-height: 52vh; overflow-y: auto; }
+.lin-card { display: flex; gap: 12px; align-items: center; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; text-align: left; }
+.lin-e { font-size: 28px; }
+.lin-info b { display: block; font-size: 15px; }
+.lin-info span { font-size: 12px; color: var(--dim); }
+.lin-empty { text-align: center; color: var(--dim); padding: 24px 0; line-height: 1.7; }
+@media (prefers-reduced-motion: reduce) { .rp-line.swap { animation: none; } }
+
+/* v4 biography (AI 3-act life story on the death screen) */
+.bio { margin: 14px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.03); text-align: left; }
+.bio h3 { margin: 0 0 8px; font-size: 16px; }
+.bio-act { margin: 0 0 10px; font-size: 14px; line-height: 1.55; color: #d5d9e4; }
+.bio-act b { color: #ffd166; }
+.bio .epitaph { margin: 6px 0 0; font-style: italic; text-align: center; color: #aeb6c9; font-size: 14px; }
 @keyframes dealIn {
   0% { transform: translateY(46px) scale(.92) rotate(-1.4deg); opacity: 0; }
   60% { transform: translateY(-4px) scale(1.015) rotate(.5deg); opacity: 1; }

@@ -41,6 +41,7 @@
 
   <div id="fate-note"><span class="shimmer">✨ consulting fate…</span></div>
 
+  <div id="jfilter"><button data-jf="all" class="on">📜 All</button><button data-jf="star">★ Highlights</button></div>
   <div id="journal"></div>
 
   <div class="age-row">
@@ -67,12 +68,13 @@
 
 <div id="start" class="overlay">
   <div class="panel">
-    <div class="logo">📖</div>
-    <h1>Life Story</h1>
+    <div class="logo logo-float">📖</div>
+    <h1 class="game-title">Life Story</h1>
     <p class="tag">One tap per year. School, work, love, crime, fortune — then the obituary. How will your story read?</p>
     <div id="start-fate" class="fate-line">✨ 0 Fate Points</div>
     <div id="scenario-pick"></div>
     <button id="daily-life-btn" class="ghost-btn">📅 Daily Life</button>
+    <button id="lineage-btn" class="ghost-btn">🪦 Lineage</button>
     <div id="legacy"></div>
   </div>
 </div>
@@ -138,6 +140,11 @@
     <p class="tag engraved" id="d-dates"></p>
     <p class="tag" id="d-cause"></p>
     <p id="d-obit"></p>
+    <div id="d-bio" class="bio hidden">
+      <h3>📖 The Life Story</h3>
+      <div id="d-bio-acts"></div>
+      <p id="d-bio-epitaph" class="epitaph"></p>
+    </div>
     <p id="d-karma"></p>
     <div class="ribbon"><span id="d-ribbon-e"></span><b id="d-ribbon-t"></b><p id="d-ribbon-d"></p></div>
     <div class="dstats" id="d-stats"></div>
@@ -145,15 +152,46 @@
     <div class="arc-lb" id="arc-lb-daily"></div>
     <button id="d-journal-btn" class="ghost-btn">📖 Read journal</button>
     <div id="d-journal"></div>
+    <button id="d-replay-btn" class="ghost-btn">▶ Replay my life</button>
     <button id="again-btn" class="big-btn">🍼 New Life</button>
     <button id="child-btn" class="ghost-btn hidden">👶 Continue as my child</button>
+  </div>
+</div>
+
+<div id="replay" class="overlay hidden">
+  <div class="panel replay-panel">
+    <div class="grab"></div>
+    <h2>▶ Life Replay</h2>
+    <div id="rp-name" class="rp-name"></div>
+    <canvas id="rp-face" width="160" height="160"></canvas>
+    <div id="rp-age">Age 0</div>
+    <div id="rp-line" class="rp-line"></div>
+    <div id="rp-bars">
+      <div class="rp-bar"><span>😊</span><div class="bar"><i id="rp-happy"></i></div></div>
+      <div class="rp-bar"><span>❤️</span><div class="bar"><i id="rp-health"></i></div></div>
+      <div class="rp-bar"><span>🧠</span><div class="bar"><i id="rp-smarts"></i></div></div>
+      <div class="rp-bar"><span>✨</span><div class="bar"><i id="rp-looks"></i></div></div>
+    </div>
+    <div class="replay-row">
+      <button id="rp-skip" class="ghost-btn">⏩ Skip to the end</button>
+      <button id="rp-close" class="ghost-btn hidden">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="lineage" class="overlay hidden">
+  <div class="panel">
+    <div class="grab"></div>
+    <div class="panel-head"><h2>🪦 Lineage</h2><button id="lineage-x" class="x">✕</button></div>
+    <div id="lineage-body" class="lineage-body"></div>
   </div>
 </div>
 
 <div id="toast"></div>
 <canvas id="confetti" class="hidden"></canvas>
 
-<script src="life.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="life.js?v=4"></script>
+<script src="fx.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
