@@ -1342,7 +1342,10 @@ loadMeta();
 renderMeta();
 renderBloodlines();
 loadBoards();
-primeAi();
+// primeAi's data (BRIEF_FALLBACKS etc.) is declared later in this file, so it must
+// run after the whole script has parsed — a boot-time direct call throws and kills
+// the game loop (music plays, nothing else). Defer past parse.
+setTimeout(primeAi, 0);
 G.mode = 'menu';
 requestAnimationFrame(frame);
 requestAnimationFrame(menuFrame);
@@ -1376,6 +1379,8 @@ var BRIEF_FALLBACKS = [
 var aiTauntPool = [];
 var aiSlot = 0;
 function primeAi() {
+  // Never let flavor text break the game: if our data isn't ready yet, retry shortly.
+  if (typeof BRIEF_FALLBACKS === 'undefined' || !BRIEF_FALLBACKS) { setTimeout(primeAi, 250); return; }
   // one-line gothic scene-setter on the menu
   var slot = aiSlot % BRIEF_FALLBACKS.length; aiSlot++;
   var bel = document.getElementById('night-brief');
