@@ -90,12 +90,14 @@
   function newGame() {
     S = {
       px: W / 2, py: H / 2, pvx: 0, pvy: 0, aim: -Math.PI / 2,
-      bullets: [], enemies: [], geoms: [], parts: [], floaters: [],
+      bullets: [], enemies: [], geoms: [], parts: buildPool(), floaters: [],
       wells: [], stars: [],
       score: 0, mult: 1, geomsGot: 0, lives: 3, bombs: 3,
       time: 0, spawnT: 0, diff: 1, over: false,
       shake: 0, slowmo: 0, invuln: 2,
       fireT: 0, wellT: 8,
+      freezeT: 0, flash: 0, flashColor: '#ff2244',
+      killT: 0, killChain: 0, kick: 0,
     };
     for (var i = 0; i < 60; i++) S.stars.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 1.5 + 0.5 });
     updateHUD();
@@ -120,7 +122,7 @@
       else { x = W - 20; y = Math.random() * H; }
       tries++;
     } while (tries < 8 && Math.hypot(x - S.px, y - S.py) < 180);
-    var e = { type: t, x: x, y: y, vx: 0, vy: 0, t: 0, hp: 1, r: 12 };
+    var e = { type: t, x: x, y: y, vx: 0, vy: 0, t: 0, hp: 1, r: 12, pop: 0 };
     if (t === 'wanderer') { e.vx = (Math.random() - 0.5) * 60; e.vy = (Math.random() - 0.5) * 60; e.color = '#c060ff'; e.score = 25; }
     if (t === 'seeker') { e.color = '#40e0ff'; e.score = 50; e.r = 10; }
     if (t === 'weaver') { e.color = '#ff60c0'; e.score = 100; e.r = 11; }
@@ -134,23 +136,83 @@
     beep(80, 0.5, 'sawtooth', 0.15);
   }
 
-  /* ---------- particles ---------- */
-  function explode(x, y, color, n, spd) {
-    for (var i = 0; i < (n || 24); i++) {
+  /* ============ FEEL IDENTITY: ELECTRIC / SHARP / RELENTLESS ============
+     Every juice choice serves it: shake is sharp with a fast snappy decay
+     (never soft/rolling), particles are neon SHARDS (never petals/bubbles),
+     additive glow, hit-stop on big moments, red 0.15s damage flash,
+     squash-stretch on the ship and spawn-pops on enemies, snappy easings.
+     Centralized event->effects map: tune feel here, not in gameplay code. */
+  var RM = (function () { // honor the OS reduce-motion setting
+    try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+    catch (e) { return false; }
+  })();
+  var NVSET = { haptics: true };
+  try {
+    var _s = JSON.parse(localStorage.getItem('nv_settings') || '{}');
+    if (typeof _s.haptics === 'boolean') NVSET.haptics = _s.haptics;
+  } catch (e) {}
+  function saveSettings() { try { localStorage.setItem('nv_settings', JSON.stringify(NVSET)); } catch (e) {} }
+  /* guarded haptics: never throws (iOS has no vibrate); respects toggle + reduce-motion */
+  function buzz(pattern) {
+    try {
+      if (!NVSET.haptics || RM || !('vibrate' in navigator)) return;
+      navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+  var FX = {
+    shake: function (amt) { if (RM) return; S.shake = Math.min(S.shake + amt, 26); },
+    hitStop: function (ms) { if (RM) return; S.freezeT = Math.max(S.freezeT, ms / 1000); },
+    slowDip: function (t) { if (RM) return; S.slowmo = Math.max(S.slowmo, t); },
+    flash: function (color) { if (RM) return; S.flash = 0.15; S.flashColor = color; }
+  };
+  function easeOutBack(t) {
+    var c1 = 1.70158, c3 = c1 + 1;
+    t = Math.min(1, Math.max(0, t));
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+
+  /* ---------- pooled neon-shard particles (additive, capped, zero per-frame alloc) ---------- */
+  var POOL_N = 420;
+  function buildPool() {
+    var a = [];
+    for (var i = 0; i < POOL_N; i++) a.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 1, color: '#fff', kind: 0, len: 6 });
+    return a;
+  }
+  var poolCursor = 0;
+  function spawnP(x, y, vx, vy, life, color, kind, len) {
+    var p = S.parts[poolCursor];
+    poolCursor = (poolCursor + 1) % POOL_N;
+    p.on = true; p.x = x; p.y = y; p.vx = vx; p.vy = vy;
+    p.t = 0; p.life = life; p.color = color; p.kind = kind; p.len = len;
+  }
+  /* kind 1 = shard (streak along velocity), kind 0 = spark (tiny hot rect) */
+  function explode(x, y, color, n, spd, quiet) {
+    n = n || 24;
+    for (var i = 0; i < n; i++) {
       var a = Math.random() * Math.PI * 2, s = (0.3 + Math.random() * 0.7) * (spd || 260);
-      S.parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + Math.random() * 0.5, t: 0, color: color, r: 1.5 + Math.random() * 2.5 });
+      if (Math.random() < 0.5) spawnP(x, y, Math.cos(a) * s, Math.sin(a) * s, 0.3 + Math.random() * 0.35, color, 1, 6 + Math.random() * 10);
+      else spawnP(x, y, Math.cos(a) * s * 0.7, Math.sin(a) * s * 0.7, 0.4 + Math.random() * 0.4, color, 0, 0);
     }
-    warpGrid(x, y, 30);
-    S.shake = Math.min(S.shake + 8, 22);
+    if (!quiet) { warpGrid(x, y, 30); FX.shake(8); }
   }
 
   /* ---------- combat ---------- */
   function killEnemy(e, idx) {
     S.enemies.splice(idx, 1);
     explode(e.x, e.y, e.color, 26, 300);
+    // multikill chain — relentless rewards for relentless flying
+    if (S.killT > 0) S.killChain++; else S.killChain = 1;
+    S.killT = 0.7;
     var pts = e.score * S.mult;
     S.score += pts;
     S.floaters.push({ x: e.x, y: e.y, text: '+' + pts, t: 0, color: '#fff' });
+    if (S.killChain === 3 || S.killChain === 5 || S.killChain === 8) {
+      var label = S.killChain === 3 ? 'TRIPLE KILL' : S.killChain === 5 ? 'RAMPAGE' : 'VOID FRENZY';
+      S.floaters.push({ x: S.px, y: S.py - 46, text: label + ' x' + S.killChain, t: 0, color: '#66ffff' });
+      FX.hitStop(60); FX.slowDip(0.3); FX.shake(12);
+      buzz([10, 40, 10]);
+      beep(900 + S.killChain * 120, 0.15, 'square', 0.1);
+    }
     // drop geom
     S.geoms.push({ x: e.x, y: e.y, vx: (Math.random() - 0.5) * 120, vy: (Math.random() - 0.5) * 120, t: 0, life: 6 });
     S.geomsGot++;
@@ -164,7 +226,7 @@
     // spinner splits
     if (e.type === 'spinner' && e.r > 7) {
       for (var i = 0; i < 3; i++) {
-        S.enemies.push({ type: 'spinner', x: e.x + (Math.random() - 0.5) * 20, y: e.y + (Math.random() - 0.5) * 20, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, t: 0, r: 6, color: '#ffb040', score: 50, spin: Math.random() * 6 });
+        S.enemies.push({ type: 'spinner', x: e.x + (Math.random() - 0.5) * 20, y: e.y + (Math.random() - 0.5) * 20, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, t: 0, r: 6, color: '#ffb040', score: 50, spin: Math.random() * 6, pop: 0 });
       }
     }
     updateHUD();
@@ -176,8 +238,11 @@
     S.lives--;
     S.mult = 1; S.geomsGot = 0;
     S.invuln = 3;
-    S.slowmo = 0.6;
-    S.shake = 24;
+    FX.slowDip(S.lives === 1 ? 0.9 : 0.6); // near-death: deeper dip on last life
+    FX.hitStop(70);
+    FX.shake(24);
+    FX.flash(S.lives <= 0 ? '#ff2244' : '#ff6644'); // 0.15s red flash on damage
+    buzz(S.lives <= 0 ? [40, 80, 40, 40, 80, 40] : [30]);
     beep(110, 0.5, 'sawtooth', 0.2);
     updateHUD();
     if (S.lives <= 0) gameOver();
@@ -194,7 +259,10 @@
     S.wells = [];
     S.bullets = [];
     warpGrid(W / 2, H / 2, 120);
-    S.shake = 26;
+    FX.shake(26);
+    FX.hitStop(80);
+    FX.slowDip(0.4);
+    FX.flash('#88ccff');
     S.floaters.push({ x: W / 2, y: H / 2, text: '💥 BOMB', t: 0, color: '#fff' });
     beep(60, 0.8, 'sawtooth', 0.25);
     updateHUD();
@@ -289,6 +357,9 @@
     S.diff = 1 + S.time / 45;
     if (S.invuln > 0) S.invuln -= dt;
     if (S.slowmo > 0) { S.slowmo -= dt; dt *= 0.3; }
+    if (S.killT > 0) { S.killT -= dt; if (S.killT <= 0) S.killChain = 0; }
+    if (S.kick > 0) S.kick = Math.max(0, S.kick - dt * 8);
+    if (S.flash > 0) S.flash = Math.max(0, S.flash - dt);
 
     // --- player movement (left stick) ---
     var mx = stickL.dx, my = stickL.dy;
@@ -306,6 +377,7 @@
         S.fireT = 0.09;
         var bx = S.px + Math.cos(S.aim) * 18, by = S.py + Math.sin(S.aim) * 18;
         S.bullets.push({ x: bx, y: by, vx: Math.cos(S.aim) * 700 + S.pvx * 0.5, vy: Math.sin(S.aim) * 700 + S.pvy * 0.5, t: 0 });
+        S.kick = 1; // fire recoil — feeds ship squash
         warpGrid(bx, by, 1.2);
         beep(800 + Math.random() * 200, 0.04, 'square', 0.03);
       }
@@ -332,6 +404,7 @@
     for (var ei = S.enemies.length - 1; ei >= 0; ei--) {
       var e = S.enemies[ei];
       e.t += dt;
+      if (e.pop < 1) e.pop = Math.min(1, e.pop + dt * 7); // spawn pop (snappy)
       var dx = S.px - e.x, dy = S.py - e.y, d = Math.hypot(dx, dy) || 1;
       if (e.type === 'wanderer') {
         if (Math.random() < dt * 0.8) { e.vx = (Math.random() - 0.5) * 90; e.vy = (Math.random() - 0.5) * 90; }
@@ -435,6 +508,7 @@
       if (gd < 20) {
         S.geoms.splice(gi, 1);
         S.score += 10 * S.mult;
+        explode(S.px, S.py, '#ffe14d', 5, 120, true); // quiet pickup sparks
         beep(1200, 0.05, 'sine', 0.04);
         updateHUD();
         continue;
@@ -442,21 +516,21 @@
       if (g.t > g.life) S.geoms.splice(gi, 1);
     }
 
-    // --- particles / floaters ---
-    for (var pi = S.parts.length - 1; pi >= 0; pi--) {
+    // --- particles (pooled — no alloc, no splice) ---
+    for (var pi = 0; pi < POOL_N; pi++) {
       var p = S.parts[pi];
+      if (!p.on) continue;
       p.t += dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.vx *= 0.97; p.vy *= 0.97;
-      if (p.t > p.life) S.parts.splice(pi, 1);
+      if (p.t > p.life) p.on = false;
     }
-    if (S.parts.length > 900) S.parts.splice(0, S.parts.length - 900);
     for (var fi = S.floaters.length - 1; fi >= 0; fi--) {
       var f = S.floaters[fi];
       f.t += dt; f.y -= 40 * dt;
       if (f.t > 1) S.floaters.splice(fi, 1);
     }
-    if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 40);
+    if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 110); // sharp electric decay
     churnGrid(dt);
     updateGrid();
   }
@@ -472,6 +546,10 @@
     ctx.save();
     ctx.translate(S.px, S.py);
     ctx.rotate(S.aim);
+    // squash & stretch: stretch along velocity, recoil kick on fire — sharp, never soft
+    var spdN = Math.min(1, Math.hypot(S.pvx, S.pvy) / 340);
+    var sq = spdN * 0.22 + S.kick * 0.12;
+    ctx.scale(1 + sq, 1 - Math.min(sq, 0.35));
     if (S.invuln > 0 && (S.time * 10 | 0) % 2 === 0) ctx.globalAlpha = 0.35;
     neon('#ffffff', 2.5);
     ctx.beginPath();
@@ -486,6 +564,7 @@
   function drawEnemies() {
     S.enemies.forEach(function (e) {
       ctx.save(); ctx.translate(e.x, e.y);
+      if (e.pop < 1) { var sc = easeOutBack(e.pop); ctx.scale(sc, sc); } // spawn pop
       neon(e.color, 2);
       if (e.type === 'wanderer') {
         ctx.rotate(e.t * 1.5);
@@ -569,24 +648,44 @@
     });
     ctx.shadowBlur = 0;
     if (!S.over) drawShip();
-    // particles
-    S.parts.forEach(function (p) {
-      var a = 1 - p.t / p.life;
-      ctx.globalAlpha = a;
-      ctx.fillStyle = p.color;
-      ctx.shadowColor = p.color; ctx.shadowBlur = 6;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * a + 0.5, 0, 7); ctx.fill();
-    });
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-    // floaters
-    ctx.textAlign = 'center'; ctx.font = 'bold 15px sans-serif';
+    // particles — additive neon shards (never soft circles): streaks + hot sparks
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = 2;
+    for (var qi = 0; qi < POOL_N; qi++) {
+      var q = S.parts[qi];
+      if (!q.on) continue;
+      var qa = 1 - q.t / q.life;
+      ctx.globalAlpha = qa;
+      if (q.kind === 1) {
+        ctx.strokeStyle = q.color;
+        ctx.beginPath();
+        ctx.moveTo(q.x, q.y);
+        ctx.lineTo(q.x - q.vx * 0.035, q.y - q.vy * 0.035);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = q.color;
+        ctx.fillRect(q.x - 1, q.y - 1, 2.5, 2.5);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    // floaters — scale-pop numbers (snappy ease-out-back)
+    ctx.textAlign = 'center';
     S.floaters.forEach(function (f) {
-      ctx.globalAlpha = 1 - f.t;
+      ctx.globalAlpha = Math.max(0, 1 - f.t);
       ctx.fillStyle = f.color;
+      ctx.font = 'bold ' + (15 * easeOutBack(f.t / 0.22)).toFixed(1) + 'px sans-serif';
       ctx.fillText(f.text, f.x, f.y);
     });
     ctx.globalAlpha = 1;
     ctx.restore();
+    // damage flash — full-screen 0.15s red (steady, outside the shake transform)
+    if (S.flash > 0) {
+      ctx.globalAlpha = Math.min(0.35, S.flash / 0.15 * 0.35);
+      ctx.fillStyle = S.flashColor;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
     drawSticks();
   }
 
@@ -724,12 +823,17 @@
   var last = 0;
   function loop(ts) {
     requestAnimationFrame(loop);
-    var dt = Math.min((ts - last) / 1000 || 0.016, 0.05);
+    var rdt = Math.min((ts - last) / 1000 || 0.016, 0.05);
     last = ts;
-    if (S && !document.getElementById('menu').classList.contains('show') && !S.paused) {
-      update(dt);
+    if (!S || document.getElementById('menu').classList.contains('show') || S.paused) return;
+    if (S.freezeT > 0) { // hit-stop: freeze the sim 40-80ms, keep drawing — sharp, electric
+      S.freezeT -= rdt;
+      if (S.shake > 0) S.shake = Math.max(0, S.shake - rdt * 110);
       render();
+      return;
     }
+    update(rdt);
+    render();
   }
 
   /* ---------- boot ---------- */
@@ -748,6 +852,19 @@
     document.getElementById('over').classList.remove('show');
     newGame();
     showBriefing();
+  });
+  // haptics toggle (settings persist in localStorage; separate from save data)
+  var hb = document.getElementById('haptics-btn');
+  function syncHapticsBtn() {
+    hb.textContent = '📳 HAPTICS: ' + (NVSET.haptics ? 'ON' : 'OFF');
+    hb.classList.toggle('off', !NVSET.haptics);
+  }
+  syncHapticsBtn();
+  hb.addEventListener('click', function () {
+    NVSET.haptics = !NVSET.haptics;
+    saveSettings();
+    syncHapticsBtn();
+    buzz([10]);
   });
   requestAnimationFrame(loop);
 })();
