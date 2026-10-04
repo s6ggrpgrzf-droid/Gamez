@@ -11,6 +11,7 @@
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="dreadveil"></div>
 
 <!-- HUD -->
 <div id="hud" class="hidden">
@@ -19,12 +20,12 @@
     <div id="timer">☾ 5:00</div>
     <div id="kills">🩸 0</div>
   </div>
-  <div id="hp-wrap"><div id="hp-bar"></div><div id="hp-ghost"></div></div>
-  <div id="blood-wrap" aria-label="blood thirst — fill it to unleash a Blood Surge"><div id="blood-bar"></div></div>
+  <div id="nightbar" aria-label="night progress"><div id="nightbar-fill"></div><div id="moon-icon">🌑</div></div>
+  <div id="medallion" aria-label="your condition"><canvas id="medallion-cv" width="72" height="72"></canvas><span id="medallion-lvl">1</span></div>
   <div id="xp-wrap"><div id="xp-bar"></div></div>
-  <div id="lvl-badge">1</div>
   <button id="pause-btn" aria-label="pause">II</button>
 </div>
+<div id="whisper" class="hidden"></div>
 <div id="dash-btn" class="hidden">💨</div>
 <div id="banner" class="hidden"></div>
 
@@ -40,6 +41,9 @@
   <div class="menu-row">
     <button id="daily-btn" class="mid-btn">🌙 DAILY BLOOD MOON</button>
     <button id="practice-btn" class="mid-btn hidden">🩸 PRACTICE MOON</button>
+  </div>
+  <div class="menu-row">
+    <button id="shift-btn" class="mid-btn">☀ COFFIN SHIFT — DAY DEFENSE</button>
   </div>
   <div class="menu-row">
     <button id="nightmare-btn" class="mid-btn hidden">🔔 NIGHTMARE: off</button>
@@ -96,6 +100,7 @@
     <div id="over-lb" class="lb-list"><div class="lb-empty">loading…</div></div>
   </div>
   <button id="again-btn" class="big-btn">🦇 HUNT AGAIN</button>
+  <button id="dayshift-btn" class="big-btn hidden">☀ BEGIN THE DAY SHIFT</button>
   <button id="menu-btn" class="mid-btn">return to the crypt</button>
 </div>
 
@@ -103,6 +108,7 @@
 
 <script src="content.js"></script>
 <script src="sim.js"></script>
+<script src="siege.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

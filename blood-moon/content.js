@@ -15,6 +15,7 @@
                 novaDmg: 24, novaR: 150, castTime: 1.4, keepDist: 180, elite: true },
     witchfinder: { name: 'Witchfinder Captain', hp: 300, speed: 105, dmg: 8, r: 16, xp: 25, color: '#4a3f5c', kind: 'elite',
                 boltDmg: 16, boltSpeed: 480, keepDist: 320, shotCd: 1.6, aimTime: 0.7, elite: true },
+    stalker:  { name: 'The Pale Confessor', hp: 380, speed: 150, dmg: 22, r: 18, xp: 30, color: '#b8b0c0', kind: 'elite', elite: true },
     vanhelsing: { name: 'VAN HELSING', hp: 950, speed: 88, dmg: 14, r: 26, xp: 60, color: '#3a3f5c', kind: 'boss',
                 stakeDmg: 20, stakeSpeed: 460, shotCd: 1.6, summonCd: 12 }
   };

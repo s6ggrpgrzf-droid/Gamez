@@ -18,6 +18,7 @@
   }
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function angDiff(a, b) { var d = a - b; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; }
   function dist2(ax, ay, bx, by) { var dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; }
 
   var WORLD = 2200;
@@ -50,6 +51,7 @@
       enemyId: 1, omenIdx: 0, nextElite: 100, eliteFlip: false,
       bloodMoonT: 0, killTimes: [], flavorCount: {},
       nightmare: !!opts.nightmare,
+      primeT: 14, // horror: prime-prey marker timer
       over: false
     };
 
@@ -91,7 +93,12 @@
       auraDps: 0, auraR: 0,
       whipDmg: 0, whipR: 130, whipCd: 0, whipRate: 2.4,
       novaDmg: 0, novaR: 0, novaCd: 8,
-      charm: 0, facing: 0
+      charm: 0, facing: 0,
+      // horror rework: humanity, rally wounds, dread, noise
+      humanity: 80, humStage: 3, frenzyT: 0, clarityT: 0,
+      wound: 0, woundT: 0,
+      dread: 0, heat: 0, noiseX: 0, noiseY: 0, noiseT: -99,
+      stalkerUp: false, primeId: 0, dreadMaxed: false
     };
     if (P.verb === 'swarm') { P.bats = 2; P.pickupR *= 1.3; }
     if (P.verb === 'dominator') { P.fearR = 260; }
@@ -162,6 +169,7 @@
         state: 'chase', t: 0, cd: rng() * 0.8, atkCd: 0, batCd: 0,
         pend: [], phase: 1, aimT: 0, aimAng: 0, fireT: 0,
         panicT: 0, panicCd: 0,
+        alert: 0, braced: false, efacing: 0,
         tx: x, ty: y, name: null, dead: false
       };
       if (type === 'villager' || type === 'torch') {
@@ -218,25 +226,61 @@
     function damageEnemy(e, dmg, kx, ky) {
       if (e.dead) return;
       var P = sim.player;
+      // --- Carrion ambush rule: strike the unaware or the flanked = execution.
+      //     Braced enemies (below, on contact) punish frontal assaults instead.
+      var exec = false;
+      if (e.foe && !e.braced && e.type !== 'vanhelsing' && e.type !== 'stalker') {
+        var angToP = Math.atan2(P.y - e.y, P.x - e.x);
+        var behind = Math.abs(angDiff(angToP, (e.efacing || 0) + Math.PI)) < 0.9;
+        if (e.alert === 0 || behind) { exec = true; dmg *= 2.5; }
+      }
       if (P.surgeT > 0) dmg *= 1.5 + P.surgeDmg;                    // Blood Surge
+      if (P.clarityT > 0) dmg *= 1.5;                              // Predator Clarity
       if (P.verb === 'blur' && (P.vx * P.vx + P.vy * P.vy) > 3600) dmg *= 1.15; // Celerity
       if (e.type === 'vanhelsing' && e.t > 60) dmg *= 3;            // mercy: the duel ends
       e.hp -= dmg;
       if (P.surgeT > 0 && !e.dead) {
         P.hp = Math.min(P.maxHp, P.hp + dmg * 0.2);                // surge lifesteal
       }
+      // Crimson Rally: deal damage inside the 3s window to drink the wound back as thirst
+      if (P.woundT > 0 && P.wound > 0) {
+        var rec = Math.min(P.wound, dmg * 0.5);
+        P.wound -= rec;
+        P.bloodM = Math.min(P.bloodMax, P.bloodM + rec * 0.8);
+        if (P.bloodM >= P.bloodMax) startSurge();
+      }
       ev('hit', { x: e.x, y: e.y, dmg: Math.round(dmg) });
       if (kx) { e.vx += kx; e.vy += ky; }
-      if (e.hp <= 0) killEnemy(e);
+      if (e.hp <= 0) killEnemy(e, exec);
     }
 
-    function killEnemy(e) {
+    function killEnemy(e, exec) {
       if (e.dead) return;
       e.dead = true;
       var P = sim.player;
       var d = C.ENEMIES[e.type];
       sim.kills++;
       sim.killTimes.push(sim.time);
+      // horror: feeding drains humanity; frenzy kills drain deeper
+      var humDrain = exec ? 0.8 : (d.elite ? 4 : 1.5);
+      if (P.frenzyT > 0) humDrain *= 2;
+      P.humanity = clamp(P.humanity - humDrain, 0, 100);
+      // horror: kills are LOUD unless they're executions — noise draws the mob
+      var loud = exec ? 1 : (d.elite ? 20 : (e.type === 'priest' || e.type === 'hunter' ? 10 : (e.type === 'torch' ? 8 : 6)));
+      P.heat = Math.min(100, P.heat + loud);
+      P.dread = Math.min(100, P.dread + loud * 0.6);
+      P.noiseX = e.x; P.noiseY = e.y; P.noiseT = sim.time;
+      // prime prey: the marked one feeds double and steadies you
+      if (e.id === P.primeId) {
+        P.primeId = 0;
+        P.humanity = Math.min(100, P.humanity + 15);
+        for (var pi2 = 0; pi2 < 4; pi2++) {
+          var pa2 = rng() * TAU;
+          sim.orbs.push({ x: e.x, y: e.y, vx: Math.cos(pa2) * 140, vy: Math.sin(pa2) * 140, val: d.xp * 0.6, t: 0 });
+        }
+        ev('primefed', { x: e.x, y: e.y });
+      }
+      if (e.type === 'stalker') P.humanity = Math.min(100, P.humanity + 20); // killing your hunter steadies you
       // mythic: Blood Frenzy — kills during the surge feed it
       if (P.surgeT > 0 && P.surgeExt < 6) {
         P.surgeT += 0.35; P.surgeExt += 0.35; P.surgeDmg += 0.05;
@@ -276,6 +320,9 @@
       var P = sim.player;
       if (P.invuln > 0 || sim.state === 'won' || sim.over) return;
       dmg = Math.max(1, dmg - P.armor);
+      // Crimson Rally: 40% of the blow becomes an open wound — 3s to drink it back
+      var wcap = P.maxHp * 0.35 - P.wound;
+      if (wcap > 0) { P.wound += Math.min(dmg * 0.4, wcap); P.woundT = 3; }
       P.hp -= dmg;
       ev('hurt', { dmg: Math.round(dmg) });
       if (P.hp <= 0) { P.hp = 0; sim.state = 'dead'; sim.over = true; ev('dead'); }
@@ -384,6 +431,13 @@
         if (minute !== sim.bell && sim.nightT > 0) {
           sim.bell = minute;
           ev('bell', { n: minute });
+          // horror: at the third bell the Pale Confessor is loosed — it hunts YOU
+          if (minute === 3 && !P.stalkerUp && sim.state === 'night') {
+            P.stalkerUp = true;
+            var sp = spawnPos();
+            spawnEnemy('stalker', sp.x, sp.y);
+            ev('stalker', { x: sp.x, y: sp.y });
+          }
         }
         if (sim.nightT <= 0) {
           sim.state = 'dawn'; sim.dawnT = DAWN_LEN;
@@ -433,6 +487,7 @@
         }
         if (sim.dawnT <= 0) {
           sim.state = 'won'; sim.over = true;
+          P.humanity = Math.min(100, P.humanity + 25); // surviving the night steadies you
           ev('won');
         }
       }
@@ -482,6 +537,51 @@
         P.bloodM = Math.max(0, P.bloodM - 0.8 * dt); // the thirst grows
       }
       if (P.holyResistT > 0) P.holyResistT -= dt;
+      // ---- horror rework: the beast within ----
+      if (P.dread >= 100) P.dreadMaxed = true; // latched before decay: full dread calls Him early
+      if (P.woundT > 0) { P.woundT -= dt; if (P.woundT <= 0) P.wound = 0; } // the wound scabs
+      P.heat = Math.max(0, P.heat - dt * 4);
+      P.dread = Math.max(0, P.dread - dt * 1.2);
+      if (P.frenzyT > 0) {
+        // FRENZY: the beast takes the wheel — charge the nearest prey, unsteerable
+        P.frenzyT -= dt;
+        var fp = nearestFoe(P.x, P.y, 1100);
+        if (fp) {
+          var fa2 = Math.atan2(fp.y - P.y, fp.x - P.x);
+          P.vx = Math.cos(fa2) * P.speed * 1.35;
+          P.vy = Math.sin(fa2) * P.speed * 1.35;
+          P.facing = fa2;
+        }
+        if (P.frenzyT <= 0) { P.frenzyT = 0; P.humanity = 30; ev('frenzyend'); }
+      } else if (P.humanity <= 0 && !sim.over) {
+        P.frenzyT = 3;
+        ev('frenzy');
+      }
+      if (P.clarityT > 0) P.clarityT -= dt;
+      // Predator Clarity: full humanity, briefly — perfect predation
+      if (P.humanity >= 99.5 && P.clarityT <= 0 && P.frenzyT <= 0) {
+        P.clarityT = 6; P.humanity = 99; ev('clarity');
+      }
+      // starving gnaws at control
+      if (P.bloodM < 15 && P.surgeT <= 0 && P.frenzyT <= 0)
+        P.humanity = Math.max(0, P.humanity - dt * 1.2);
+      var hstage = P.humanity > 60 ? 3 : P.humanity > 40 ? 2 : P.humanity > 20 ? 1 : 0;
+      if (hstage !== P.humStage) { P.humStage = hstage; ev('humstage', { stage: hstage }); }
+      // prime prey: every so often one hunter/priest/torch is marked — take it
+      sim.primeT -= dt;
+      if (sim.primeT <= 0) {
+        sim.primeT = 22;
+        var cands = [];
+        for (var pei = 0; pei < sim.enemies.length; pei++) {
+          var pe = sim.enemies[pei];
+          if (!pe.dead && (pe.type === 'hunter' || pe.type === 'priest' || pe.type === 'torch')) cands.push(pe);
+        }
+        if (cands.length) {
+          var prime = cands[(rng() * cands.length) | 0];
+          P.primeId = prime.id;
+          ev('prime', { x: prime.x, y: prime.y });
+        }
+      }
       if (P.spdBoostT > 0) P.spdBoostT -= dt;
       if (P.burnTrailT > 0) {
         P.burnTrailT -= dt;
@@ -608,8 +708,8 @@
           spawnEnemy(sim.eliteFlip ? 'bellringer' : 'witchfinder', ep.x, ep.y);
           ev('elite', { x: ep.x, y: ep.y, type: sim.eliteFlip ? 'bellringer' : 'witchfinder' });
         }
-        // Van Helsing arrives one minute before dawn
-        if (!sim.bossSpawned && sim.time >= C.UNLOCK_AT.vanhelsing) {
+        // Van Helsing arrives one minute before dawn — or early, if the dread maxed out
+        if (!sim.bossSpawned && (sim.time >= C.UNLOCK_AT.vanhelsing || P.dreadMaxed)) {
           sim.bossSpawned = true;
           var bp = spawnPos();
           var boss = spawnEnemy('vanhelsing', bp.x, bp.y);
@@ -771,6 +871,17 @@
       var dist = Math.hypot(dx, dy) || 1;
       dx /= dist; dy /= dist;
 
+      // horror: facing / alertness / brace state — feeds the Carrion ambush rule.
+      // Unaware or flanked prey dies clean; braced prey punishes a frontal charge.
+      if (Math.abs(e.vx) + Math.abs(e.vy) > 4) e.efacing = Math.atan2(e.vy, e.vx);
+      if (isFoe && (dist < 420 || (sim.time - P.noiseT < 5 && dist2(e.x, e.y, P.noiseX, P.noiseY) < 500 * 500))) e.alert = 1;
+      e.braced = false;
+      if (isFoe && (e.type === 'torch' || e.type === 'priest') && dist < 240) {
+        var toP = Math.atan2(P.y - e.y, P.x - e.x);
+        if (Math.abs(angDiff(toP, e.efacing)) < 1.1) e.braced = true;
+      }
+      if (isFoe && e.type === 'hunter' && e.state === 'aim') e.braced = true; // never charge an aiming hunter
+
       if ((e.type === 'priest' || e.type === 'bellringer') && isFoe) {
         if (e.state === 'chase') {
           if (dist < d.keepDist) { e.state = 'cast'; e.t = 0; ev('priestcast', { x: tx, y: ty, r: d.novaR }); }
@@ -859,6 +970,22 @@
         }
         e.x = clamp(e.x + e.vx * dt, 24, WORLD - 24);
         e.y = clamp(e.y + e.vy * dt, 24, WORLD - 24);
+      } else if (e.type === 'stalker' && isFoe) {
+        // THE PALE CONFESSOR: relentless — pathfinds to your recent noise, else to you.
+        // No heartbeat, no boss bar. It simply comes.
+        var gx, gy;
+        if (sim.time - P.noiseT < 8) { gx = P.noiseX; gy = P.noiseY; }
+        else { gx = P.x; gy = P.y; }
+        var sdx = gx - e.x, sdy = gy - e.y, sd = Math.hypot(sdx, sdy) || 1;
+        moveToward(e, sdx / sd, sdy / sd, dt * 1.2);
+        e.x = clamp(e.x + e.vx * dt, 24, WORLD - 24);
+        e.y = clamp(e.y + e.vy * dt, 24, WORLD - 24);
+        if (e.atkCd > 0) e.atkCd -= dt;
+        if (sd < e.r + P.r + 8 && e.atkCd <= 0) {
+          e.atkCd = 0.7;
+          hurtPlayer(e.dmg);
+          ev('melee', { x: e.x, y: e.y });
+        }
       } else {
         // melee chaser (villager, torch, allies)
         var fleeing = false;
@@ -869,11 +996,22 @@
             e.panicT = 2.5; e.panicCd = 6; // panic burst, then they come back
             if (rng() < 0.3)
               ev('taunt', { x: e.x, y: e.y - 16, text: C.FLEE_QUOTES[(rng() * C.FLEE_QUOTES.length) | 0] });
+            // horror: screams are loud — panic draws the mob toward the screaming
+            if (rng() < 0.5) {
+              P.noiseX = e.x; P.noiseY = e.y; P.noiseT = sim.time;
+              P.heat = Math.min(100, P.heat + 4);
+            }
           }
           if (e.panicT > 0) { e.panicT -= dt; fleeing = true; }
         }
+        // horror: torch mobs converge on recent noise — your kills call them
+        var mdx = dx, mdy = dy;
+        if (isFoe && e.type === 'torch' && !fleeing && sim.time - P.noiseT < 6) {
+          var ndx = P.noiseX - e.x, ndy = P.noiseY - e.y, nd = Math.hypot(ndx, ndy) || 1;
+          if (nd > 220) { mdx = ndx / nd; mdy = ndy / nd; }
+        }
         if (fleeing) moveToward(e, -dx, -dy, dt);
-        else moveToward(e, dx, dy, dt);
+        else moveToward(e, mdx, mdy, dt);
         e.x = clamp(e.x + e.vx * dt, 24, WORLD - 24);
         e.y = clamp(e.y + e.vy * dt, 24, WORLD - 24);
         // torch mobs leave fire trails (area denial)
@@ -884,7 +1022,15 @@
         if (isFoe) {
           if (dist < e.r + P.r + 6 && e.atkCd <= 0) {
             e.atkCd = 0.85;
-            hurtPlayer(e.dmg);
+            // horror: charging a braced enemy head-on doubles the pain and bounces you
+            var pdmg = e.dmg, bounced = false;
+            var toP2 = Math.atan2(P.y - e.y, P.x - e.x);
+            if (e.braced && Math.abs(angDiff(toP2, e.efacing)) < 1.1) {
+              pdmg *= 2; bounced = true;
+              P.vx += Math.cos(toP2) * 340; P.vy += Math.sin(toP2) * 340;
+            }
+            hurtPlayer(pdmg);
+            if (bounced) ev('braced', { x: e.x, y: e.y });
             ev('melee', { x: e.x, y: e.y });
           }
         } else {
