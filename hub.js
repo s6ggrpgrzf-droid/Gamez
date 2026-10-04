@@ -131,7 +131,7 @@
     { id: 'pdawg', name: 'Pdawg Puzzles', cls: 'art-pdawg' },
     { id: 'word-well', name: 'Word Well', cls: 'art-word-well' },
     { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
-    { id: 'castaway-cove', name: 'Castaway Cove', cls: 'art-castaway-cove' }
+    { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -200,13 +200,11 @@
         if (!bn && !bk) return null;
         return { label: '🌙 ' + bn + ' night' + (bn === 1 ? '' : 's') + ' · 🩸' + bk + ' best', frac: Math.min(1, bn / 5) };
       }
-      if (id === 'castaway-cove') {
-        var ccv = readJSON('castaway_cove_v1');
-        if (!ccv) return null;
-        var jc = ccv.journal ? Object.keys(ccv.journal).length : 0;
-        var cs = (ccv.streak && ccv.streak.count) || 0;
-        if (!jc && !cs) return null;
-        return { label: '📖 ' + jc + '/40 · 🔥' + cs, frac: Math.min(1, jc / 40) };
+      if (id === 'tiny-fairway') {
+        var tf = readJSON('tf_best');
+        if (!tf || !tf.holes) return null;
+        var tst = tf.stars || 0, th = tf.holes;
+        return { label: '⛳ best ' + tf.strokes + ' strokes · ★' + tst, frac: Math.min(1, tst / (th * 3)) };
       }
     } catch (e) { return null; }
     return null;
