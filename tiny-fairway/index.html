@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1c2b1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tiny Fairway — one-touch golf</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body data-biome="0">
+<canvas id="game"></canvas>
+
+<!-- HUD: always visible during play, no buttons -->
+<header id="hud" hidden>
+  <div id="hud-hole">Hole 1</div>
+  <div id="hud-meta">PAR 3</div>
+</header>
+
+<!-- MENU -->
+<section id="menu" class="screen on" aria-label="Menu">
+  <div class="menu-inner">
+    <div class="logo" id="menu-logo">⛳</div>
+    <h1>Tiny Fairway</h1>
+    <p class="tagline">One finger. Infinite holes.</p>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-endless" type="button">Endless<span class="btn-sub" id="endless-sub"></span></button>
+      <button class="btn" id="btn-daily" type="button">Daily Hole<span class="btn-sub" id="daily-sub">same hole, worldwide</span></button>
+      <button class="btn ghost" id="btn-newrun" type="button" hidden>↺ new run</button>
+      <button class="btn ghost" id="btn-how" type="button">How to play</button>
+    </div>
+    <div class="howto" id="howto" hidden>
+      <p><b>Drag back anywhere</b> on the screen to aim — a dotted arc shows where the ball will go. <b>Release</b> to shoot. Longer drag, longer shot.</p>
+      <p>Sink it in as few strokes as you can: match par for ★★★. Water costs a stroke. Sand is slow. The turtle is harmless, but it <i>will</i> judge a bad hole.</p>
+    </div>
+    <p class="best" id="menu-best"></p>
+  </div>
+</section>
+
+<!-- HOLE TRANSITION -->
+<div id="transit" aria-hidden="true">
+  <div id="transit-hole">Hole 1</div>
+  <div id="transit-name"></div>
+</div>
+
+<!-- STARS POPUP (endless) -->
+<div id="stars-pop" aria-hidden="true">
+  <div id="stars-pop-stars">★★★</div>
+  <div id="stars-pop-label">Par</div>
+</div>
+
+<!-- RESULT (daily) -->
+<section id="result" class="screen" aria-label="Result">
+  <div class="card">
+    <div class="res-stars" id="result-stars">★★★</div>
+    <h2 id="result-title">Hole complete</h2>
+    <p id="result-sub"></p>
+    <div id="arc-lb"></div>
+    <button class="btn primary" id="btn-menu" type="button">Menu</button>
+  </div>
+</section>
+
+<div id="err" hidden></div>
+
+<script src="sim.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
