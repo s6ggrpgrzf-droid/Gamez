@@ -181,6 +181,9 @@ html, body {
 
 /* canvas magic */
 .magic-status { text-align: center; font-family: var(--serif); font-style: italic; color: var(--ink-soft); margin: 0 0 10px; min-height: 22px; }
+.magic-style { display: flex; background: var(--paper-deep); border-radius: 14px; padding: 3px; margin: 0 0 10px; }
+.magic-style button { flex: 1; border: none; background: transparent; border-radius: 11px; padding: 10px; font-size: 15px; font-family: var(--serif); color: var(--ink-soft); cursor: pointer; }
+.magic-style button.sel { background: #fff; color: var(--ink); box-shadow: 0 1px 6px rgba(58,49,41,.18); }
 #magic-frame { position: relative; background: #f8f3e8; border-radius: 14px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line), 0 4px 18px rgba(58,49,41,.12); }
 #magic-canvas { width: 100%; display: block; }
 #magic-brush { position: absolute; left: 0; top: 0; font-size: 30px; line-height: 1; pointer-events: none; display: none; transform: translate(-14px, -26px) rotate(-24deg); filter: drop-shadow(0 2px 2px rgba(58,49,41,.3)); }

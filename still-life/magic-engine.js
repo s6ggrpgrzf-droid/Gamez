@@ -1,13 +1,18 @@
 /* MagicEngine — painterly stroke planner for Canvas Magic.
  *
- * The AI worker dreams up the painting; this engine performs it the way a
- * real painter would: it studies the picture (luminance, edges, color
- * regions), then plans intentional brushstrokes in a painter's order:
+ * The AI worker dreams up the painting; this engine performs it the way
+ * Bob Ross painted: it studies the picture (luminance, edges, color
+ * regions), then works his order —
  *
- *   1. washes   — broad, confident strokes that lay in the big shapes
- *   2. forms    — strokes that flow ALONG the picture's forms, following
- *                 the local orientation field (perpendicular to edges)
- *   3. details  — short strokes placed only where the picture has edges
+ *   1. liquid white  — a thin wet glaze over the whole canvas
+ *   2. the sky       — broad washes, top down
+ *   3. the distance  — background first: smooth, far regions before busy ones
+ *   4. details       — dark to light, the way Ross layered ("a thin paint
+ *                      sticks to a thick paint; the lightest lights last")
+ *   5. highlights    — tiny bright touches on the brightest areas, last
+ *
+ * Sketch style skips the paint and works like a drawing: contours first,
+ * then shading, dark to light, paper showing through.
  *
  * Each stroke is a curved path of dab positions with per-point angles, so
  * the client can draw it progressively and move the brush visibly between
@@ -78,11 +83,16 @@ var MagicEngine = (function () {
     return [f.rgb[i], f.rgb[i + 1], f.rgb[i + 2]];
   }
 
+  function lumAt(f, x, y) {
+    var cc = colorAt(f, x, y);
+    return (cc[0] + cc[1] + cc[2]) / 3;
+  }
+
   /* Trace a stroke through the orientation field, both directions from the
    * seed, stopping at form boundaries (color change) or max length. */
   function traceStroke(f, sx, sy, opt) {
     function walk(ix, iy, dx, dy) {
-      var pts = [];
+      var pts = [], magSum = 0, lumSum = 0;
       var base = colorAt(f, sx, sy);
       var cx = ix, cy = iy;
       for (var i = 0; i < opt.maxSteps; i++) {
@@ -98,9 +108,11 @@ var MagicEngine = (function () {
         var cc = colorAt(f, cx, cy);
         var dist = Math.abs(cc[0] - base[0]) + Math.abs(cc[1] - base[1]) + Math.abs(cc[2] - base[2]);
         if (dist > opt.colorTol) break;
+        magSum += fieldMag(f, cx, cy);
+        lumSum += (cc[0] + cc[1] + cc[2]) / 3;
         pts.push({ x: cx, y: cy, a: Math.atan2(dy, dx) });
       }
-      return { pts: pts, dx: dx, dy: dy };
+      return { pts: pts, magSum: magSum, lumSum: lumSum };
     }
     var a0 = fieldAngle(f, sx, sy);
     var fwd = walk(sx, sy, Math.cos(a0), Math.sin(a0));
@@ -113,84 +125,126 @@ var MagicEngine = (function () {
       var p0 = pts[j - 1], p1 = pts[j + 1];
       pts[j].a = Math.atan2(p1.y - p0.y, p1.x - p0.x);
     }
-    return pts;
+    var n = pts.length;
+    var meanMag = (bwd.magSum + fwd.magSum + fieldMag(f, sx, sy)) / n;
+    var meanLum = (bwd.lumSum + fwd.lumSum + lumAt(f, sx, sy)) / n;
+    return { pts: pts, meanMag: meanMag, meanLum: meanLum };
   }
 
-  function plan(srcCanvas, w, h) {
+  function plan(srcCanvas, w, h, style) {
+    style = (style === 'sketch') ? 'sketch' : 'paint';
     var f = buildField(srcCanvas, w, h);
     var M = Math.max(w, h);
     var strokes = [];
     var totalDabs = 0;
 
-    var passes = [
-      // washes: broad confident strokes, thin paint, generous overlap
-      { r: M / 11, alpha: 0.5, gap: 1.25, maxSteps: 24, colorTol: 95, mode: 'grid' },
-      // forms: follow the picture's own directions
-      { r: M / 26, alpha: 0.8, gap: 1.15, maxSteps: 13, colorTol: 70, mode: 'grid' },
-      // details: short strokes only where there are edges to honor
-      { r: M / 58, alpha: 1.0, gap: 1.0, maxSteps: 6, colorTol: 55, mode: 'edges' }
-    ];
-
-    for (var p = 0; p < passes.length; p++) {
-      var P = passes[p];
-      var r = P.r, step = r * 0.9;
+    function runPass(cfg) {
+      var r = cfg.r, step = r * 0.9;
       var cell = Math.max(2, r * 1.1);
       var gw = Math.ceil(w / cell), gh = Math.ceil(h / cell);
       var covered = new Uint8Array(gw * gh);
-      function isCovered(x, y) {
-        var cx = Math.max(0, Math.min(gw - 1, Math.floor(x / cell)));
-        var cy = Math.max(0, Math.min(gh - 1, Math.floor(y / cell)));
-        return covered[cy * gw + cx] === 1;
-      }
       function cover(x, y) {
         var cx = Math.max(0, Math.min(gw - 1, Math.floor(x / cell)));
         var cy = Math.max(0, Math.min(gh - 1, Math.floor(y / cell)));
         covered[cy * gw + cx] = 1;
       }
-
-      // gather seeds
+      function isCovered(x, y) {
+        var cx = Math.max(0, Math.min(gw - 1, Math.floor(x / cell)));
+        var cy = Math.max(0, Math.min(gh - 1, Math.floor(y / cell)));
+        return covered[cy * gw + cx] === 1;
+      }
       var seeds = [];
-      if (P.mode === 'grid') {
-        var gs = r * P.gap;
+      if (cfg.mode === 'grid') {
+        var gs = r * cfg.gap;
         for (var yy = gs * 0.5; yy < h; yy += gs)
           for (var xx = gs * 0.5; xx < w; xx += gs)
-            seeds.push({
-              x: xx + (Math.random() - 0.5) * gs * 0.7,
-              y: yy + (Math.random() - 0.5) * gs * 0.7
-            });
+            seeds.push({ x: xx + (Math.random() - 0.5) * gs * 0.7, y: yy + (Math.random() - 0.5) * gs * 0.7 });
       } else {
-        // detail seeds: random points that land on real edges
-        var tries = 0;
-        while (seeds.length < 260 && tries < 4000) {
+        var tries = 0, target = cfg.seedTarget || 200;
+        while (seeds.length < target && tries < 6000) {
           tries++;
           var ex = Math.random() * w, ey = Math.random() * h;
-          if (fieldMag(f, ex, ey) > f.meanMag * 0.9)
-            seeds.push({ x: ex, y: ey });
+          if (cfg.mode === 'edges') {
+            if (fieldMag(f, ex, ey) > f.meanMag * 0.9) seeds.push({ x: ex, y: ey });
+          } else if (cfg.mode === 'bright') {
+            if (lumAt(f, ex, ey) > cfg.lumThresh) seeds.push({ x: ex, y: ey });
+          }
         }
       }
-      // painters often work top-down; bias the order that way with jitter
-      seeds.sort(function (a, b) {
-        return (a.y + Math.random() * h * 0.35) - (b.y + Math.random() * h * 0.35);
-      });
-
+      var passStrokes = [];
       for (var s = 0; s < seeds.length; s++) {
         var sd = seeds[s];
-        if (isCovered(sd.x, sd.y)) continue;
-        var pts = traceStroke(f, sd.x, sd.y, {
-          r: r, step: step, maxSteps: P.maxSteps, colorTol: P.colorTol
+        if (!cfg.flat && isCovered(sd.x, sd.y)) continue;
+        var tr = traceStroke(f, sd.x, sd.y, {
+          r: r, step: step, maxSteps: cfg.maxSteps, colorTol: cfg.colorTol
         });
-        if (pts.length < 2) continue;
-        for (var k = 0; k < pts.length; k++) cover(pts[k].x, pts[k].y);
-        strokes.push({
-          pts: pts,
+        if (tr.pts.length < (cfg.flat ? 1 : 2)) continue;
+        for (var k = 0; k < tr.pts.length; k++) cover(tr.pts[k].x, tr.pts[k].y);
+        var cySum = 0;
+        for (var m = 0; m < tr.pts.length; m++) cySum += tr.pts[m].y;
+        passStrokes.push({
+          pts: tr.pts,
           r: r * (0.9 + Math.random() * 0.2),
-          a: Math.max(0.25, Math.min(1, P.alpha * (0.9 + Math.random() * 0.2)))
+          a: Math.max(0.2, Math.min(1, cfg.alpha * (0.9 + Math.random() * 0.2))),
+          passName: cfg.passName,
+          flat: cfg.flat || null,
+          bg: tr.meanMag,    // edge energy: low = background
+          lum: tr.meanLum,    // mean luminance: dark first, lights last
+          cy: cySum / tr.pts.length
         });
-        totalDabs += pts.length;
+      }
+      // Bob Ross ordering within the pass
+      if (cfg.sort === 'y') passStrokes.sort(function (a, b) { return a.cy - b.cy; });
+      else if (cfg.sort === 'bg') passStrokes.sort(function (a, b) { return a.bg - b.bg; });
+      else if (cfg.sort === 'lum') passStrokes.sort(function (a, b) { return a.lum - b.lum; });
+      for (var i = 0; i < passStrokes.length; i++) {
+        strokes.push(passStrokes[i]);
+        totalDabs += passStrokes[i].pts.length;
       }
     }
 
-    return { strokes: strokes, w: w, h: h, totalDabs: totalDabs };
+    if (style === 'paint') {
+      // 1. liquid white: a thin wet glaze over everything, left wet
+      runPass({
+        r: M / 6, alpha: 0.14, gap: 2.2, maxSteps: 10, colorTol: 1e9, mode: 'grid',
+        passName: 'Laying down liquid white…', flat: '#fdfbf4', sort: 'y'
+      });
+      // 2. the almighty sky, top down
+      runPass({
+        r: M / 11, alpha: 0.5, gap: 1.25, maxSteps: 24, colorTol: 95, mode: 'grid',
+        passName: 'Painting the sky…', sort: 'y'
+      });
+      // 3. background first: far, quiet regions before busy foreground
+      runPass({
+        r: M / 26, alpha: 0.8, gap: 1.15, maxSteps: 13, colorTol: 70, mode: 'grid',
+        passName: 'Blocking in the distance…', sort: 'bg'
+      });
+      // 4. details, dark to light — thin paint sticks to thick paint
+      runPass({
+        r: M / 58, alpha: 1.0, gap: 1.0, maxSteps: 6, colorTol: 55,
+        mode: 'edges', seedTarget: 260,
+        passName: 'Details, dark to light…', sort: 'lum'
+      });
+      // 5. the lightest lights go on last
+      runPass({
+        r: M / 95, alpha: 0.95, gap: 1.0, maxSteps: 3, colorTol: 60,
+        mode: 'bright', seedTarget: 120, lumThresh: 165,
+        passName: 'Final highlights…'
+      });
+    } else {
+      // sketch: contours first, then shading — dark to light, paper showing through
+      runPass({
+        r: M / 70, alpha: 0.85, gap: 1.0, maxSteps: 16, colorTol: 60, mode: 'grid',
+        passName: 'Sketching the contours…', sort: 'bg'
+      });
+      runPass({
+        r: M / 150, alpha: 1.0, gap: 1.0, maxSteps: 5, colorTol: 50,
+        mode: 'edges', seedTarget: 300,
+        passName: 'Shading…', sort: 'lum'
+      });
+    }
+
+    return { strokes: strokes, w: w, h: h, totalDabs: totalDabs, style: style };
   }
 
   return { plan: plan };

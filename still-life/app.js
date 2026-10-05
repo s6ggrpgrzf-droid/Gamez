@@ -1041,7 +1041,7 @@ App.openMagic = function () {
     clearTimeout(timer);
     self.magicFallback();
   }
-  fetch(MAGIC_AI + '/paint').then(function (r) { return r.json(); })
+  fetch(MAGIC_AI + '/paint?style=' + (self.magicStyle || 'paint')).then(function (r) { return r.json(); })
     .then(function (j) {
       if (self.magicRun !== run || settled) return;
       if (!j || !j.key) { giveUp(); return; }
@@ -1164,7 +1164,8 @@ App.magicDot = function () {
 };
 
 // Stamp one dab: copy the matching patch of the source painting
-// through a soft, slightly elliptical, rotated brush mask.
+// through a soft, slightly elliptical, rotated brush mask —
+// or lay a flat glaze (liquid white) when d.flat is set.
 App.magicDab = function (st, d) {
   var r = d.r, rr = Math.ceil(r * 2);
   var t = this._magicTmp;
@@ -1172,14 +1173,23 @@ App.magicDab = function (st, d) {
   if (t.width !== rr) { t.width = rr; t.height = rr; }
   var tc = t.getContext('2d');
   tc.clearRect(0, 0, rr, rr);
-  tc.save();
-  tc.translate(rr / 2, rr / 2);
-  tc.rotate(d.ang);
-  tc.scale(1, 0.72);
-  tc.drawImage(st.src, d.x - r, d.y - r, 2 * r, 2 * r, -r, -r, 2 * r, 2 * r);
-  tc.globalCompositeOperation = 'destination-in';
-  tc.drawImage(this.magicDot(), -r, -r, 2 * r, 2 * r);
-  tc.restore();
+  tc.globalCompositeOperation = 'source-over';
+  if (d.flat) {
+    tc.fillStyle = d.flat;
+    tc.fillRect(0, 0, rr, rr);
+    tc.globalCompositeOperation = 'destination-in';
+    tc.drawImage(this.magicDot(), 0, 0, rr, rr);
+  } else {
+    tc.save();
+    tc.translate(rr / 2, rr / 2);
+    tc.rotate(d.ang);
+    tc.scale(1, 0.72);
+    tc.drawImage(st.src, d.x - r, d.y - r, 2 * r, 2 * r, -r, -r, 2 * r, 2 * r);
+    tc.globalCompositeOperation = 'destination-in';
+    tc.drawImage(this.magicDot(), -r, -r, 2 * r, 2 * r);
+    tc.restore();
+    tc.globalCompositeOperation = 'source-over';
+  }
   st.x.save();
   st.x.globalAlpha = d.a;
   st.x.drawImage(t, d.x - r, d.y - r);
@@ -1203,7 +1213,18 @@ App.magicPaint = function (img, title) {
   src.getContext('2d').drawImage(img, 0, 0, w, h);
 
   // The engine studies the painting and plans real brushstrokes.
-  var plan = MagicEngine.plan(src, w, h);
+  // Guaranteed to finish: if the engine fails or plans nothing, the
+  // painting is revealed directly rather than stalling mid-performance.
+  var plan = null;
+  try {
+    plan = MagicEngine.plan(src, w, h, self.magicStyle || 'paint');
+  } catch (e) { plan = null; }
+  if (!plan || !plan.strokes || !plan.strokes.length) {
+    x.drawImage(src, 0, 0);
+    this.magicProgress(1);
+    this.magicDone();
+    return;
+  }
   var strokes = plan.strokes, S = strokes.length, D = plan.totalDabs;
   // Pacing: a slow, deliberate ~80s performance. The brush travels to each
   // stroke, pauses a beat like it's deciding, then paints it.
@@ -1232,16 +1253,33 @@ App.magicPaint = function (img, title) {
     return;
   }
   state.last = performance.now();
+  state.passName = null;
   function frame(now) {
     if (!state.running) return;
+    try {
+      frameInner(now);
+    } catch (e) {
+      // never stall mid-painting: reveal what's left and finish
+      try { x.drawImage(src, 0, 0); } catch (e2) {}
+      self.magicDone();
+      return;
+    }
+  }
+  function frameInner(now) {
     var dt = Math.min(0.1, (now - state.last) / 1000);
     state.last = now;
     state.t += dt;
     var st = strokes[state.si];
+    // narrate the Bob Ross beats as the passes change
+    if (st.passName !== state.passName) {
+      state.passName = st.passName;
+      self.magicSetStatus(st.passName);
+    }
 
     if (state.mode === 'travel') {
       // brush glides to the next stroke's starting point
-      var k = Math.min(1, state.t / state.travelT);
+      var tt = Math.max(0.02, state.travelT);
+      var k = Math.min(1, state.t / tt);
       var e = 1 - Math.pow(1 - k, 3);
       state.brushX = state.fromX + (st.pts[0].x - state.fromX) * e;
       state.brushY = state.fromY + (st.pts[0].y - state.fromY) * e;
@@ -1258,7 +1296,7 @@ App.magicPaint = function (img, title) {
       state.acc -= n;
       for (var i = 0; i < n && state.pi < st.pts.length; i++) {
         var p = st.pts[state.pi];
-        self.magicDab(state, { x: p.x, y: p.y, r: st.r, a: st.a, ang: p.a });
+        self.magicDab(state, { x: p.x, y: p.y, r: st.r, a: st.a, ang: p.a, flat: st.flat });
         state.brushX = p.x; state.brushY = p.y;
         state.pi++; state.dabsDone++;
       }
@@ -1308,6 +1346,14 @@ App.magicReplay = function () {
   if (this.magicSrcImg) this.magicPaint(this.magicSrcImg, this.magicTitle || 'Untitled');
 };
 
+App.setMagicStyle = function (s) {
+  if (this.magicStyle === s) return;
+  this.magicStyle = s;
+  $('magic-style-paint').classList.toggle('sel', s === 'paint');
+  $('magic-style-sketch').classList.toggle('sel', s === 'sketch');
+  this.openMagic();
+};
+
 App.magicSave = function () {
   var cv = $('magic-canvas');
   if (!cv || !cv.width) return;
@@ -1340,6 +1386,8 @@ App.bindAI = function () {
   $('magic-new').onclick = function () { self.openMagic(); };
   $('magic-replay').onclick = function () { self.magicReplay(); };
   $('magic-save').onclick = function () { self.magicSave(); };
+  $('magic-style-paint').onclick = function () { self.setMagicStyle('paint'); };
+  $('magic-style-sketch').onclick = function () { self.setMagicStyle('sketch'); };
   $('timelapse-btn').onclick = function () { self.playTimelapse(); };
 };
 
@@ -1355,6 +1403,7 @@ App.init = function () {
     this.slots = JSON.parse(read('slots') || '[null,null,null]');
   } catch (e) {}
   this.soundOn = read('sound') !== '0';
+  this.magicStyle = 'paint';
 
   // engine
   this.gl = new StillGL();
