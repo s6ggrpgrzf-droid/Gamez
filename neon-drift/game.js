@@ -20,6 +20,7 @@ function defSave() {
     upg: { engine: 0, tires: 0, drift: 0 },
     best: {}, ghosts: {},
     assist: false, mute: false, difficulty: 1, haptic: true,
+    controls: 'pedals', // 'pedals' (gas+brake) or 'auto' (auto-accel cruise)
     cupWins: []
   };
 }
@@ -411,10 +412,14 @@ function show(id) {
   });
   G.screen = id;
   var racing = (id === null);
+  var pedals = S.controls === 'pedals';
   $('hud').hidden = !racing;
   $('hud-speed').hidden = !racing;
   $('minimap').hidden = !racing;
   $('btn-drift').hidden = !racing;
+  $('btn-brake').hidden = !racing;
+  $('btn-gas').hidden = !racing || !pedals;
+  document.body.classList.toggle('pedals', racing && pedals);
   if (!racing) { $('countdown').hidden = true; }
 }
 
@@ -487,6 +492,10 @@ function fmtMs(ms) {
   var s = ms / 1000, m = Math.floor(s / 60);
   return m + ':' + (s - m * 60).toFixed(2).padStart(5, '0');
 }
+function fmtRaceT(t) { // m:ss.t for the live race clock
+  var m = Math.floor(t / 60), s = t - m * 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
+}
 function renderBoard(top, rank, me, ms) {
   var box = $('arc-lb');
   var h = '';
@@ -545,6 +554,7 @@ function refreshMenu() {
     'No races yet — the neon awaits.';
   $('btn-assist').textContent = 'steer assist: ' + (S.assist ? 'on' : 'off');
   $('btn-assist').classList.toggle('on', S.assist);
+  $('btn-controls').textContent = S.controls === 'pedals' ? '🎮 pedals' : '🛟 auto cruise';
   $('btn-haptic').textContent = 'haptics: ' + (S.haptic ? 'on' : 'off');
   $('btn-haptic').classList.toggle('on', !!S.haptic);
   raceHype('menu', 'menu', $('menu-hype'));
@@ -802,9 +812,9 @@ function devGhostTape(cup, race) {
 
 /* ---------------- input ---------------- */
 
-var IN = { steer: 0, drift: false };
+var IN = { steer: 0, drift: false, gas: false, brake: false };
 var steerPtr = null; // {id, anchorX}
-var keyL = false, keyR = false, keyD = false;
+var keyL = false, keyR = false, keyD = false, keyG = false, keyB = false;
 
 cv.addEventListener('pointerdown', function (e) {
   AU.init();
@@ -825,32 +835,50 @@ function endSteer(e) {
 cv.addEventListener('pointerup', endSteer);
 cv.addEventListener('pointercancel', endSteer);
 
-var bd = $('btn-drift');
-bd.addEventListener('pointerdown', function (e) {
-  e.preventDefault(); e.stopPropagation();
-  AU.init(); IN.drift = true; bd.classList.add('held');
-  HZ.play(HZ.light); // drift press: the first beat of the drift-coupled vocabulary
-});
-['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
-  bd.addEventListener(ev, function (e) {
-    e.preventDefault(); IN.drift = false; bd.classList.remove('held');
+// Pedal / drift buttons: per-pointer tracking so a held pedal is never
+// cancelled by the steering finger (Pointer Events + capture). Neon press
+// state + haptic tick on every press (research: instant acknowledgment).
+function holdButton(id, key) {
+  var b = $(id), pid = null;
+  b.addEventListener('pointerdown', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    AU.init(); pid = e.pointerId; IN[key] = true;
+    b.classList.add('held'); HZ.play(HZ.light);
+    if (b.setPointerCapture) { try { b.setPointerCapture(e.pointerId); } catch (err) {} }
   });
-});
+  function off(e) {
+    if (pid !== null && e.pointerId !== pid) return;
+    pid = null; IN[key] = false; b.classList.remove('held');
+    e.preventDefault();
+  }
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+    b.addEventListener(ev, off);
+  });
+}
+holdButton('btn-drift', 'drift');
+holdButton('btn-gas', 'gas');
+holdButton('btn-brake', 'brake');
 
 window.addEventListener('keydown', function (e) {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') keyL = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') keyR = true;
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') keyG = true;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') keyB = true;
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'Space') { keyD = true; e.preventDefault(); }
   if (e.code === 'Escape' && G.screen === null) togglePause();
 });
 window.addEventListener('keyup', function (e) {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') keyL = false;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') keyR = false;
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') keyG = false;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') keyB = false;
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'Space') keyD = false;
 });
 window.addEventListener('blur', function () {
-  keyL = keyR = keyD = false; IN.steer = 0; IN.drift = false;
-  steerPtr = null; bd.classList.remove('held');
+  keyL = keyR = keyD = keyG = keyB = false;
+  IN.steer = 0; IN.drift = false; IN.gas = false; IN.brake = false;
+  steerPtr = null;
+  ['btn-drift', 'btn-gas', 'btn-brake'].forEach(function (id) { $(id).classList.remove('held'); });
 });
 document.addEventListener('visibilitychange', function () {
   if (document.hidden && G.screen === null && !G.paused) togglePause();
@@ -860,11 +888,19 @@ function playerInput() {
   var steer = IN.steer, drift = IN.drift;
   if (keyL) steer = -1; if (keyR) steer = 1;
   if (keyD) drift = true;
+  var gas, brake;
+  if (S.controls === 'auto') {
+    gas = 1; // cruise: the car accelerates itself
+    brake = (IN.brake || keyB) ? 1 : 0;
+  } else {
+    gas = (IN.gas || keyG) ? 1 : 0;
+    brake = (IN.brake || keyB) ? 1 : 0;
+  }
   if (S.assist && G.race) {
     var ai = ND.aiInput(G.track, G.race.cars[0], 0.95);
     steer = steer * 0.45 + ai.steer * 0.55;
   }
-  return { steer: clamp(steer, -1, 1), drift: drift };
+  return { steer: clamp(steer, -1, 1), drift: drift, gas: gas, brake: brake };
 }
 
 function togglePause() {
@@ -911,19 +947,27 @@ function tickSim() {
   var evs = race.ev;
   for (var i = 0; i < evs.length; i++) {
     var e = evs[i];
-    if (e === 'go') { $('countdown').textContent = 'GO!'; AU.countBeep(0); G.shake = 4; HZ.play(HZ.medium); }
+    if (e === 'go') {
+      var cde = $('countdown');
+      cde.textContent = 'GO!';
+      cde.classList.remove('pop'); void cde.offsetWidth; cde.classList.add('pop');
+      AU.countBeep(0); G.shake = 4; HZ.play(HZ.medium);
+    }
     else if (e === 'done') { onRaceDone(); }
     else if (e.car === 0) handlePlayerEvent(e.type);
   }
 
-  // countdown beeps
+  // countdown beeps + revving engine while the lights count down
   if (race.state === 'countdown') {
     var n = Math.ceil(race.countT - 0.4);
     if (n !== G.countShown && n >= 1 && n <= 3) {
       G.countShown = n;
-      $('countdown').textContent = n;
+      var cdn = $('countdown');
+      cdn.textContent = n;
+      cdn.classList.remove('pop'); void cdn.offsetWidth; cdn.classList.add('pop');
       AU.countBeep(1);
     }
+    AU.engine(0.10 + (3.4 - race.countT) * 0.07, false, 0);
   } else if (G.countShown !== 99) {
     if ($('countdown').textContent !== 'GO!') $('countdown').hidden = true;
     else setTimeout(function () { $('countdown').hidden = true; }, 700);
@@ -1044,6 +1088,16 @@ function drawCar(g, car, color, glow, ghost) {
   // nose stripe
   g.fillStyle = 'rgba(255,255,255,0.75)';
   g.fillRect(4.4, -0.9, 2.2, 1.8);
+  // brake lights: the tail glows red while the brake pedal is down
+  if (!ghost && car.braking > 0) {
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = 0.3 + 0.6 * car.braking;
+    g.fillStyle = '#ff2d3f';
+    g.beginPath(); g.ellipse(-7.6, 0, 3.4, 5.6, 0, 0, 6.2832); g.fill();
+    g.fillRect(-8.6, -3.4, 1.6, 6.8);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+  }
   g.restore();
 }
 function roundRect(g, x, y, w, h, r) {
@@ -1160,8 +1214,18 @@ function hud() {
   var race = G.race, pc = race.cars[0];
   var pos = ND.playerPos(race);
   var lapShow = Math.min(pc.lap + 1, G.laps);
-  $('hud-pos').textContent = 'P' + pos + '/' + race.cars.length + ' · LAP ' + lapShow + '/' + G.laps;
-  $('hud-speed').textContent = Math.round(ND.speedOf(pc) * 2.2);
+  $('hud-pos').textContent = 'P' + pos + '/' + race.cars.length;
+  $('hud-lap').textContent = 'LAP ' + lapShow + '/' + G.laps + ' · ' + fmtRaceT(race.t);
+  $('spd-num').textContent = Math.round(ND.speedOf(pc) * 2.2);
+
+  // dedicated drift-charge meter: fills blue -> orange -> pink, flashes at max
+  var df = $('drift-fill');
+  var frac = clamp(pc.charge / 1.7, 0, 1);
+  var col = TIER_COLORS[pc.tier] || '#4dd8ff';
+  df.style.width = (frac * 100).toFixed(1) + '%';
+  df.style.background = col;
+  df.style.boxShadow = '0 0 10px ' + col;
+  df.classList.toggle('max', pc.tier >= 3 && pc.drifting);
 
   // delta (time trial, progress-based)
   var dd = $('hud-delta');
@@ -1207,6 +1271,18 @@ function onRaceDone() {
 
 function bestKey() {
   return G.mode === 'daily' ? 'daily-' + (G.dailyInfo ? G.dailyInfo.date : todayStr()) : trackKey(G.cup, G.raceIdx);
+}
+
+function countUp(el, target, pre, suf) {
+  // animated reward count-up (ease-out); no-op if the element is gone
+  if (!el || !(target > 0)) return;
+  var t0 = performance.now(), dur = 750;
+  (function fr(t) {
+    if (!el.isConnected) return;
+    var f = Math.min(1, (t - t0) / dur);
+    el.textContent = pre + Math.round(target * (1 - Math.pow(1 - f, 3))) + suf;
+    if (f < 1) requestAnimationFrame(fr);
+  })(t0);
 }
 
 function showResults() {
@@ -1265,7 +1341,7 @@ function showResults() {
       rows += row('P' + (i + 1) + ' ' + esc(nm), tm, order[i] === 0);
     }
     tokens = RACE_TOKENS[pos - 1] || 1;
-    rows += row('Tokens +' + tokens + ' ◈', '', true);
+    rows += '<div class="rr me"><span>Tokens</span><b id="tok-val">+0 ◈</b></div>';
     if (G.mode === 'cup') {
       for (var pi = 0; pi < order.length; pi++) G.cupPoints[order[pi]] += RACE_POINTS[pi];
     }
@@ -1279,6 +1355,7 @@ function showResults() {
   $('result-sub').textContent = sub;
   $('result-rows').innerHTML = rows;
   $('arc-lb').innerHTML = '';
+  countUp($('tok-val'), tokens, '+', ' ◈');
 
   var rb = $('btn-rematch');
   if (G.mode === 'cup' && G.raceIdx < 2) {
@@ -1365,6 +1442,14 @@ function wire() {
     h.hidden = !h.hidden;
   };
   $('btn-mute').onclick = function () { AU.init(); AU.setMute(!S.mute); };
+  $('btn-controls').onclick = function () {
+    AU.init();
+    S.controls = S.controls === 'pedals' ? 'auto' : 'pedals';
+    save(); refreshMenu(); HZ.play(HZ.select);
+    toast(S.controls === 'pedals' ?
+      '🎮 Pedals: hold GAS to launch, BRAKE late, DRIFT the corners.' :
+      '🛟 Auto cruise: the car accelerates itself — steer, brake, drift.');
+  };
   $('btn-assist').onclick = function () {
     S.assist = !S.assist; save(); refreshMenu();
     toast(S.assist ? 'Steer assist on — we\'ve got the corners with you.' : 'Steer assist off — all you.');
@@ -1502,11 +1587,28 @@ function selftest() {
       if (!$('prerace').classList.contains('on')) throw new Error('prerace not on');
       if ($('grid-list').children.length !== 6) throw new Error('expected 6 grid rows');
     });
+    step('control schemes shape input', function () {
+      var keep = S.controls;
+      S.controls = 'auto'; IN.brake = true; IN.gas = false;
+      var a = playerInput();
+      if (a.gas !== 1) throw new Error('auto: gas should be 1, got ' + a.gas);
+      if (a.brake !== 1) throw new Error('auto: brake should follow pedal');
+      S.controls = 'pedals'; IN.brake = false;
+      if (playerInput().gas !== 0) throw new Error('pedals: gas 0 when released');
+      IN.gas = true;
+      if (playerInput().gas !== 1) throw new Error('pedals: gas 1 when held');
+      IN.gas = false; IN.brake = false; S.controls = keep;
+    });
     step('full race completes to results', function () {
       // AI drives the player slot; run the real tickSim loop
       playerInput = function () { return ND.aiInput(G.track, G.race.cars[0], 0.9); };
       $('btn-go').click();
       if (G.screen !== null) throw new Error('race screen did not start');
+      if ($('btn-gas').hidden) throw new Error('gas pedal not shown in pedals mode');
+      if ($('btn-brake').hidden) throw new Error('brake pedal not shown');
+      if ($('btn-drift').hidden) throw new Error('drift button not shown');
+      if (!document.body.classList.contains('pedals')) throw new Error('body.pedals class missing');
+      if ($('spd-num') == null || $('drift-fill') == null) throw new Error('speed/drift HUD missing');
       var n = 0;
       while (G.race.state !== 'done' && n < 40000) { tickSim(); n++; }
       if (G.race.state !== 'done') throw new Error('race did not finish in 40000 ticks');

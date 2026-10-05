@@ -227,7 +227,7 @@
       x: g.x, y: g.y, th: g.th, vx: 0, vy: 0,
       si: g.idx, lap: 0, prog: -track.N,
       drifting: false, wasDrifting: false, started: false,
-      charge: 0, tier: 0, boostT: 0,
+      charge: 0, tier: 0, boostT: 0, braking: 0,
       finished: false, finishT: 0, lapT: 0, lastLap: 0, bestLap: 0,
       ev: []  // per-step events drained by the renderer: 'boost1..3','wall','lap','finish','pass'
     };
@@ -235,30 +235,70 @@
 
   ND.speedOf = function (car) { return Math.hypot(car.vx, car.vy); };
 
-  // Advance ONE car by exactly DT. inp = {steer:-1..1, drift:bool}.
+  // Normalize any input shape into {steer:-1..1, drift:bool, gas:0..1, brake:0..1}.
+  // Accepts objects ({steer,drift,gas,brake}), legacy 2-elem tapes [steer,drift],
+  // and 4-elem tapes [steer,drift,gas,brake]. Missing gas defaults to 1 (full
+  // auto-throttle) so AI drivers, legacy callers, and old tapes behave exactly
+  // like the original auto-accelerate game. Idempotent — safe to call twice.
+  ND.normInput = function (inp) {
+    if (Array.isArray(inp)) {
+      return {
+        steer: clamp(inp[0] || 0, -1, 1),
+        drift: !!inp[1],
+        gas: inp.length > 2 && inp[2] != null ? clamp(inp[2], 0, 1) : 1,
+        brake: inp.length > 3 ? clamp(inp[3] || 0, 0, 1) : 0
+      };
+    }
+    inp = inp || {};
+    return {
+      steer: clamp(inp.steer || 0, -1, 1),
+      drift: !!inp.drift,
+      gas: inp.gas == null ? 1 : clamp(inp.gas, 0, 1),
+      brake: inp.brake == null ? 0 : clamp(inp.brake, 0, 1)
+    };
+  };
+
+  // Advance ONE car by exactly DT. inp = {steer:-1..1, drift:bool, gas:0..1, brake:0..1}.
   ND.stepCar = function (track, car, inp, dt) {
     car.ev.length = 0;
+    inp = ND.normInput(inp);
     var spec = car.spec;
-    var steer = clamp(inp.steer || 0, -1, 1);
-    var wantDrift = !!inp.drift;
+    var steer = inp.steer;
+    var wantDrift = inp.drift;
 
     var fx = Math.cos(car.th), fy = Math.sin(car.th);
     var sf = car.vx * fx + car.vy * fy;      // forward speed
 
-    // --- auto-accelerate toward top speed (boost raises the ceiling) ---
+    // --- pedals: brake > throttle > coast (boost raises the ceiling) ---
     var ceiling = spec.top * (car.boostT > 0 ? 1.22 : 1);
     if (car.boostT > 0) car.boostT -= dt;
-    if (sf < ceiling) {
-      var ar = 26 * (1 - sf / (ceiling * 1.35)); // tapering acceleration
-      if (ar < 6) ar = 6;
+    if (inp.brake > 0) {
+      // brake pedal: hard decel, no throttle this tick
+      var bd = 62 * inp.brake * dt;
+      if (bd > sf) bd = Math.max(0, sf);
+      car.vx -= fx * bd; car.vy -= fy * bd;
+      sf -= bd;
+      car.braking = inp.brake;
+    } else if (inp.gas > 0 && sf < ceiling) {
+      // throttle: the original tapering auto-accel curve, scaled by pedal
+      var ar = 26 * inp.gas * (1 - sf / (ceiling * 1.35));
+      if (ar < 6 * inp.gas) ar = 6 * inp.gas;
       var dv = ar * dt;
       if (sf + dv > ceiling) dv = ceiling - sf;
       car.vx += fx * dv; car.vy += fy * dv;
       sf += dv;
+      car.braking = 0;
+    } else if (inp.gas <= 0 && sf > 0) {
+      // coasting (pedal released): gentle engine braking
+      var cd = Math.min(sf, 9 * dt);
+      car.vx -= fx * cd; car.vy -= fy * cd;
+      sf -= cd;
+      car.braking = 0;
     } else {
       var pull = (ceiling - sf) * Math.min(1, 1.2 * dt); // soft cap
       car.vx += fx * pull; car.vy += fy * pull;
       sf += pull;
+      car.braking = 0;
     }
 
     // --- steering / yaw ---
@@ -488,8 +528,8 @@
       if (car.finished) continue;
       var inp;
       if (car.driver.isPlayer) {
-        inp = inputs[0] || { steer: 0, drift: false };
-        if (race.rec) race.rec.push([inp.steer, inp.drift ? 1 : 0]);
+        inp = ND.normInput(inputs[0]);
+        if (race.rec) race.rec.push([inp.steer, inp.drift ? 1 : 0, inp.gas, inp.brake]);
       } else {
         inp = ND.aiInput(race.track, car, car.driver.skill);
       }
@@ -530,6 +570,8 @@
 
   // Headless replay: run inputs through a fresh race, sampling car 0's
   // pose every tick. Used for ghosts AND the dev ghost in time trial.
+  // Inputs may be objects or raw tape arrays (2- or 4-element); stepRace
+  // normalizes them, so legacy tapes replay with their original steering.
   ND.replay = function (track, drivers, laps, inputs) {
     var race = ND.newRace(track, drivers, laps, {});
     var out = [];

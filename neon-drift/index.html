@@ -7,21 +7,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Neon Drift — one-touch drift racing</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <canvas id="game"></canvas>
 
 <!-- HUD -->
 <header id="hud" hidden>
-  <div id="hud-pos">P6/6 · LAP 1/3</div>
+  <div id="hud-left"><div id="hud-pos">P6/6</div><div id="hud-lap">LAP 1/3</div></div>
   <div id="hud-delta"></div>
   <button id="btn-pause" type="button" aria-label="Pause">II</button>
 </header>
-<div id="hud-speed" hidden>0</div>
+<div id="hud-speed" hidden><span id="spd-num">0</span><div id="drift-meter"><div id="drift-fill"></div></div></div>
 <canvas id="minimap" width="132" height="132" hidden></canvas>
 
-<!-- drift button -->
+<!-- pedals + drift -->
+<button id="btn-brake" type="button" hidden>BRAKE</button>
+<button id="btn-gas" type="button" hidden>GAS</button>
 <button id="btn-drift" type="button" hidden>DRIFT</button>
 
 <!-- countdown -->
@@ -35,7 +37,7 @@
   <div class="menu-inner">
     <div class="logo" id="menu-logo">🏎️</div>
     <h1>Neon Drift</h1>
-    <p class="tagline">One finger. Full sideways.</p>
+    <p class="tagline">Brake late. Send it sideways.</p>
     <p class="hype" id="menu-hype"></p>
     <div class="menu-btns">
       <button class="btn primary" id="btn-quick" type="button">Quick Race</button>
@@ -46,16 +48,20 @@
       <button class="btn ghost" id="btn-how" type="button">How to play</button>
     </div>
     <div class="howto" id="howto" hidden>
-      <p><b>Drag left / right anywhere</b> to steer — your car accelerates on its own.
-      <b>Hold DRIFT</b> through corners: sparks build <span class="c1">blue</span> →
-      <span class="c2">orange</span> → <span class="c3">pink</span>. <b>Release</b> at the
-      corner exit for a boost. Pinker = bigger.</p>
-      <p>Hard steering scrubs speed — that's your brake. No rubber-banding here:
-      rivals drive the same physics you do. Beat them clean.</p>
+      <p><b>Drag left / right anywhere</b> to steer. <b>Hold GAS</b> to launch,
+      <b>BRAKE</b> late into corners, and <b>hold DRIFT</b> while turning: sparks build
+      <span class="c1">blue</span> → <span class="c2">orange</span> →
+      <span class="c3">pink</span>. <b>Release DRIFT</b> at the corner exit for a boost.
+      Pinker = bigger. Lift off GAS to coast.</p>
+      <p>Prefer one-finger driving? Switch to <b>auto cruise</b> below — the car
+      accelerates itself and you just steer, brake, and drift.</p>
+      <p>Hard steering scrubs speed. No rubber-banding here: rivals drive the same
+      physics you do. Beat them clean.</p>
     </div>
     <p class="best" id="menu-best"></p>
     <p class="rowline">
       <button class="mini" id="btn-mute" type="button">🔊</button>
+      <button class="mini" id="btn-controls" type="button">🎮 pedals</button>
       <button class="mini" id="btn-assist" type="button">steer assist: off</button>
       <button class="mini" id="btn-haptic" type="button">haptics: on</button>
     </p>
@@ -135,7 +141,7 @@
 
 <div id="err" hidden></div>
 
-<script src="sim.js?v=2"></script>
-<script src="game.js?v=2"></script>
+<script src="sim.js?v=3"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>
