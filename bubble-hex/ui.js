@@ -37,6 +37,7 @@
       if (!p.on) {
         p.on = true; p.x = x; p.y = y; p.vx = vx; p.vy = vy;
         p.life = life; p.age = 0; p.size = size; p.color = color; p.grav = grav || 0;
+        p.glint = false;
         return;
       }
     }
@@ -69,8 +70,19 @@
     } catch (e) {}
   }
 
-  /* magic motes: soft pastel soap-bubble motes that float upward.
-   * This is the dreamy particle identity — never shards, never fast. */
+  /* idle shimmer glints: sparkle sprites that twinkle on board bubbles */
+  function spawnGlint(x, y, size, vy) {
+    if (reduceMotion) return;
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      if (!p.on) {
+        p.on = true; p.x = x; p.y = y; p.vx = 0; p.vy = vy || -14;
+        p.life = 0.6; p.age = 0; p.size = size; p.color = '#ffffff';
+        p.grav = 0; p.glint = true;
+        return;
+      }
+    }
+  }
   var MOTES = ['#ffe9f5', '#d9f2ff', '#e8dcff', '#fffbe8', '#ffd9f2'];
   function moteBurst(x, y, n) {
     if (reduceMotion) n = Math.max(1, Math.ceil(n / 3));
@@ -98,10 +110,12 @@
     pop: function (x, y, bub, big) {
       popFx(x, y, bub, big);
       moteBurst(x, y, big ? 10 : 5);
+      scatterFlies(x, y);
     },
     drop: function (x, y, bub) {
       dropFx(x, y, bub);
       moteBurst(x, y, 6);
+      scatterFlies(x, y);
     }
   };
 
@@ -205,12 +219,27 @@
       fireflies.push({
         x: Math.random() * W, y: Math.random() * H * 0.8,
         ph: Math.random() * 7, sp: 0.4 + Math.random() * 0.8,
-        amp: 12 + Math.random() * 22
+        amp: 12 + Math.random() * 22, svx: 0, svy: 0
       });
     }
     mists = [];
     for (var j = 0; j < 3; j++) {
       mists.push({ x: Math.random() * W, y: H * (0.35 + j * 0.2), sp: 6 + j * 5, w: W * 0.7, a: 0.05 + j * 0.02 });
+    }
+  }
+
+  /* Fireflies scatter away from nearby pops, then drift back. The unrequested touch. */
+  function scatterFlies(x, y) {
+    if (reduceMotion) return;
+    for (var i = 0; i < fireflies.length; i++) {
+      var f = fireflies[i];
+      var dx = f.x - x, dy = f.y - y;
+      var d2 = dx * dx + dy * dy;
+      if (d2 < 130 * 130 && d2 > 1) {
+        var d = Math.sqrt(d2);
+        f.svx += dx / d * 110;
+        f.svy += dy / d * 110;
+      }
     }
   }
 
@@ -262,9 +291,40 @@
     updateHUD();
     showScreen('game');
     HexAudio.music(true);
+    coachForLevel(idx, L);
     if (state.wilbur) {
       // Wilbur gloats on arrival; the taunt arrives async and never blocks play
       setTimeout(function () { if (state && state.wilbur && !state.over) wilburTaunt(idx, 100); }, 1200);
+    }
+  }
+
+  /* ---- Coach marks: one tiny pointer, never a text wall ---- */
+  var coachTimer = null;
+  function lsFlag(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k) { try { localStorage.setItem(k, '1'); } catch (e) {} }
+  function showCoach(html, holdMs) {
+    var c = $('coach');
+    c.innerHTML = '<span class="hand">👆</span>' + html;
+    c.classList.remove('hidden');
+    if (coachTimer) clearTimeout(coachTimer);
+    if (holdMs) coachTimer = setTimeout(hideCoach, holdMs);
+  }
+  function hideCoach() {
+    $('coach').classList.add('hidden');
+    if (coachTimer) { clearTimeout(coachTimer); coachTimer = null; }
+  }
+  function coachForLevel(idx, L) {
+    hideCoach();
+    if (idx === 0 && !lsFlag('bubblehex_coached')) {
+      lsSet('bubblehex_coached');
+      showCoach('<b>Drag to aim</b>, release to shoot!<br>Match 3+ bubbles to pop them.');
+      return;
+    }
+    // contextual coach the first time doom bubbles appear
+    var hasDoom = L.layout.some(function (row) { return row.indexOf('K') >= 0; });
+    if (hasDoom && !lsFlag('bubblehex_doomseen')) {
+      lsSet('bubblehex_doomseen');
+      showCoach('😈 <b>Doom bubbles</b> can\'t be matched —<br>drop them or blast around them!', 7000);
     }
   }
 
@@ -412,6 +472,7 @@
   /* ================= Firing ================= */
   function fire() {
     if (!state || state.flying || state.over || state.castT > 0) return;
+    hideCoach(); // the pointing hand did its job
     var bub = state.current;
     var armed = state.orb >= state.orbMax;
     if (armed) {
@@ -495,7 +556,7 @@
     state.shots--;
     state.shake = { t: 0, dur: 1.2, mag: 10 };
     updateHUD();
-    $('orb-wrap').classList.remove('full');
+    $('orb-btn').classList.remove('full');
   }
 
   function stepBlast(dt) {
@@ -601,7 +662,7 @@
       state.score += total;
       state.orb = Math.min(state.orbMax, state.orb + res.popped.length);
       if (state.orb >= state.orbMax) {
-        $('orb-wrap').classList.add('full');
+        $('orb-btn').classList.add('full');
         banner('✦ <b>HEX BLAST READY</b> — fire to unleash it!');
         HexAudio.orbReady();
       }
@@ -613,7 +674,10 @@
       floaters.push({ x: x, y: y - 34, t: 0, dur: 1.2, text: 'DROP +' + dropScore * mult, kind: 'text' });
     }
     if (res.popped.length >= 6 || res.dropped.length >= 4) {
-      state.shake = { t: 0, dur: 0.3, mag: 8 };
+      // escalating shake on big pops (whisper-soft stays for small moments)
+      var pc = res.popped.length + res.dropped.length;
+      if (!reduceMotion) state.shake = { t: 0, dur: 0.34, mag: Math.min(18, 5 + pc * 1.4) };
+      if (pc >= 6 && !reduceMotion) state.flash = Math.min(0.4, 0.1 + pc * 0.025);
     }
     for (i = 0; i < res.dropped.length; i++) {
       rc = res.dropped[i];
@@ -712,12 +776,12 @@
     return -(1 - state.descendAnim) * R * 1.732;
   }
 
-  var lastT = 0;
+  var lastT = 0, lastDt = 0.016;
   function tick(t) {
     requestAnimationFrame(tick);
     if (view !== 'game' || !state) return;
     var dt = Math.min((t - lastT) / 1000 || 0.016, 0.1);
-    lastT = t;
+    lastT = t; lastDt = dt;
     var timeScale = 1;
     if (state.slowmo) {
       // slow-mo micro-dip: sim eases back to full speed, visuals stay realtime
@@ -784,6 +848,22 @@
       ow.x += ow.vx * dt; ow.y += ow.vy * dt;
       if (ow.y < -60) s.owlsFlying.splice(oi, 1);
     }
+    // firefly scatter drift (decays back to ambient)
+    for (var fly = 0; fly < fireflies.length; fly++) {
+      var ff = fireflies[fly];
+      if (ff.svx || ff.svy) {
+        ff.x += ff.svx * dt; ff.y += ff.svy * dt;
+        var dec = Math.max(0, 1 - dt * 2.2);
+        ff.svx *= dec; ff.svy *= dec;
+        if (Math.abs(ff.svx) < 2) ff.svx = 0;
+        if (Math.abs(ff.svy) < 2) ff.svy = 0;
+      }
+    }
+    // Nero idly paws at the shooter bubble every few seconds
+    if (s.neroPaw > 0) s.neroPaw -= dt;
+    else if (!s.aiming && !s.flying && !s.over && Math.random() < dt * 0.16) s.neroPaw = 0.55;
+    // screen flash decay
+    if (s.flash > 0) s.flash = Math.max(0, s.flash - dt * 0.55);
     // Nero toss anim
     if (s.tossAnim) {
       s.tossAnim.t += dt * 2.4;
@@ -794,8 +874,9 @@
     if (wb) {
       if (wb.flee) { wb.x += dt * 260; wb.y -= dt * 200; }
       else {
-        wb.x = W / 2 + Math.sin(now * 1.3) * 14;
-        wb.y = 6 + Math.sin(now * 2.1) * 4 + boardDY();
+        // slow menacing hover (was twitchy; now a dreadnought drift)
+        wb.x = W / 2 + Math.sin(now * 0.65) * 18;
+        wb.y = 6 + Math.sin(now * 1.05) * 6 + boardDY();
       }
       if (wb.hitT > 0) wb.hitT -= dt;
     }
@@ -815,10 +896,14 @@
 
     // background layers
     var bgs = Art.background(W, H);
+    // bg layers: 0 sky, 1 far pines, 2 mid pines (wide, sways), 3 near trees
     ctx.drawImage(bgs[0], 0, 0, W, H);
     ctx.drawImage(bgs[1], 0, 0, W, H);
+    var swayX = reduceMotion ? 0 : Math.sin(now * 0.22) * 12;
+    ctx.drawImage(bgs[2], -24 + swayX, 0, W + 48, H);
     drawMist(now);
-    ctx.drawImage(bgs[2], 0, 0, W, H);
+    ctx.drawImage(bgs[3], 0, 0, W, H);
+    drawTwinkles(now);
     drawFireflies(now);
 
     var dy = boardDY();
@@ -831,6 +916,16 @@
     if (s.wilbur && !s.wilbur.fleeGone) {
       var wb = s.wilbur;
       var ws = 96;
+      // menacing aura, pulsing slowly
+      if (!reduceMotion) {
+        var ap = 0.7 + 0.3 * Math.sin(now * 1.4);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = ap;
+        var aura = Art.wilburAura();
+        ctx.drawImage(aura, wb.x - ws, wb.y - 20 - ws / 2, ws * 2, ws * 2);
+        ctx.restore();
+      }
       var wimg = Art.wilbur(wb.hitT > 0);
       ctx.drawImage(wimg, wb.x - ws / 2, wb.y - 20, ws, ws * 132 / 130);
       // hp bar
@@ -854,7 +949,24 @@
         var wob = Math.sin(ph * Math.PI) * 0.12 * (1 - ph * 0.35);
         sqx = 1 + wob; sqy = 1 - wob * 0.85;
       }
-      drawBoardBubble(xy[0], xy[1] + BOARD_TOP + dy, s.board[keys[i]], 1, 1, sqx, sqy);
+      var bbx = xy[0], bby = xy[1] + BOARD_TOP + dy;
+      var bdat = s.board[keys[i]];
+      drawBoardBubble(bbx, bby, bdat, 1, 1, sqx, sqy);
+      if (!reduceMotion) {
+        if (bdat.color === 'K') {
+          // doom bubbles pulse with animated purple crackle
+          var cp = 0.5 + 0.5 * Math.sin(now * 6.5 + bbx * 0.05 + bby * 0.07);
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = 0.4 + 0.45 * cp;
+          var gring = Art.glowRing('K');
+          ctx.drawImage(gring, bbx - R * 1.7, bby - R * 1.7, R * 3.4, R * 3.4);
+          ctx.restore();
+        } else if (Math.random() < lastDt * 0.045) {
+          // idle shimmer: a glint drifts off a random bubble every so often
+          spawnGlint(bbx + (Math.random() - 0.5) * R, bby + (Math.random() - 0.5) * R, 4 + Math.random() * 4);
+        }
+      }
     }
     // ghost
     if (s.ghost) {
@@ -880,6 +992,7 @@
     if (s.castBeam) drawBeam(s.castBeam, now);
 
     drawStella(now);
+    drawCurrentBubble(now); // after Stella: nothing ever covers the loaded ball
     drawNero(now);
 
     // next-bubble preview (pre-rendered NEXT label: no per-frame text)
@@ -913,15 +1026,19 @@
     // particles + rings: additive glow pass for the dreamy look
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    var dot = Art.dot();
+    var dot = Art.dot(), glintS = Art.glint();
     for (var pi = 0; pi < particles.length; pi++) {
       var pt = particles[pi];
       if (!pt.on) continue;
       var lt = pt.age / pt.life;
       ctx.globalAlpha = 1 - lt;
-      ctx.fillStyle = pt.color;
       var psz = pt.size * (1 - lt * 0.5);
-      ctx.drawImage(dot, pt.x - psz, pt.y - psz, psz * 2, psz * 2);
+      if (pt.glint) {
+        ctx.drawImage(glintS, pt.x - psz, pt.y - psz, psz * 2, psz * 2);
+      } else {
+        ctx.fillStyle = pt.color;
+        ctx.drawImage(dot, pt.x - psz, pt.y - psz, psz * 2, psz * 2);
+      }
       ctx.globalAlpha = 1;
     }
     // rings
@@ -974,6 +1091,12 @@
 
     ctx.restore();
 
+    // soft screen flash on big pops (6+), decaying via s.flash
+    if (s.flash > 0) {
+      ctx.fillStyle = 'rgba(255,246,224,' + (s.flash * 0.5).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+
     // dreamy level-enter fade (eased)
     if (s.enterT < 1) {
       var et2 = 1 - s.enterT;
@@ -993,6 +1116,22 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawTwinkles(now) {
+    if (reduceMotion) return;
+    var tw = Art.twinkles(W, H);
+    var glint = Art.glint();
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < tw.length; i++) {
+      var t = tw[i];
+      var a = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(now * 1.6 + t[3]));
+      ctx.globalAlpha = a * 0.8;
+      var s2 = t[2] * 2;
+      ctx.drawImage(glint, t[0] - s2, t[1] - s2, s2 * 2, s2 * 2);
+    }
+    ctx.restore();
+  }
+
   function drawFireflies(now) {
     var dot = Art.dot();
     for (var i = 0; i < fireflies.length; i++) {
@@ -1007,6 +1146,32 @@
     ctx.globalAlpha = 1;
   }
 
+  /* The loaded shooter bubble — Jimmy's hard requirement.
+   * LARGE (1.32x), wrapped in a soft additive glow ring tinted in its OWN
+   * color, with a gentle pulse. Drawn AFTER Stella so she, the aim guide,
+   * and every effect never obscure it. Positioned at the wand tip — the
+   * exact spot the shot launches from. The next-bubble preview and the HUD
+   * ammo chip back it up. */
+  function drawCurrentBubble(now) {
+    var s = state;
+    if (!s.current || s.over) return;
+    var wt = wandTip();
+    var key = bubbleKey(s.current);
+    var d = R * 2 * 1.32;
+    var pulse = reduceMotion ? 1 : 1 + Math.sin(now * 3.2) * 0.035;
+    // color-tinted glow ring (additive, behind the bubble)
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = reduceMotion ? 0.65 : 0.65 + 0.3 * (0.5 + 0.5 * Math.sin(now * 3.2));
+    var gr = Art.glowRing(key);
+    var gd = d * 2.4;
+    ctx.drawImage(gr, wt[0] - gd / 2, wt[1] - gd / 2, gd, gd);
+    ctx.restore();
+    // the bubble itself
+    var dd = d * pulse;
+    ctx.drawImage(Art.bubble(key), wt[0] - dd / 2, wt[1] - dd / 2, dd, dd);
+  }
+
   function drawStella(now) {
     var s = state;
     var pose = s.stellaPose;
@@ -1014,6 +1179,14 @@
     var dw = STELLA_W, dh = STELLA_W * 132 / 120;
     var a = stellaAnchor();
     var bob = Math.sin(s.stellaBob) * 3;
+    // cast flick: Stella leans into the shot for a beat
+    var flick = 0, stretchY = 1;
+    if (s.castT > 0 && !reduceMotion) {
+      flick = Math.sin(Math.min(1, s.castT / 0.25) * Math.PI) * 6;
+      stretchY = 1 + Math.sin(Math.min(1, s.castT / 0.25) * Math.PI) * 0.04;
+    }
+    // idle breathing: gentle scale on the draw height
+    var breathe = reduceMotion ? 1 : 1 + Math.sin(now * 2.2) * 0.008;
     // orb-full aura (pre-rendered sprite, pulsed)
     if (s.orb >= s.orbMax) {
       var pulse = 0.5 + 0.5 * Math.sin(now * 5);
@@ -1021,7 +1194,8 @@
       ctx.drawImage(getAuraSprite(), a[0] - 90, a[1] - 160, 180, 180);
       ctx.globalAlpha = 1;
     }
-    ctx.drawImage(img, a[0] - dw / 2, a[1] - dh + bob, dw, dh);
+    var dh2 = dh * breathe * stretchY;
+    ctx.drawImage(img, a[0] - dw / 2 + flick, a[1] - dh2 + bob, dw, dh2);
     // idle wand sparkles
     if (Math.random() < 0.06) {
       var wt = wandTip();
@@ -1032,7 +1206,7 @@
   function drawNero(now) {
     var s = state;
     var nx = W / 2 + R * 3.4, ny = SHOOT_Y + 34;
-    var img = Art.nero(s.neroEat > 0);
+    var img = Art.nero(s.neroEat > 0, s.neroPaw > 0);
     var dw = 62, dh = 62 * 70 / 76;
     var bob = Math.sin(now * 2.2 + 2) * 2;
     ctx.drawImage(img, nx - dw / 2, ny - dh + bob, dw, dh);
@@ -1047,11 +1221,13 @@
     var o = wandTip();
     var vx = Math.cos(s.aimAngle), vy = Math.sin(s.aimAngle);
     var x = o[0], y = o[1];
-    var dot = Art.dot();
     var stepLen = 15, drawn = 0;
     var ain = s.aimIn == null ? 1 : s.aimIn;
     ain = 1 - (1 - ain) * (1 - ain); // easeOutQuad: guide unfurls gently
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter'; // soft additive glow on the path
     ctx.globalAlpha = 0.85 * ain;
+    var dot = Art.aimDot();
     for (var i = 0; i < 90; i++) {
       x += vx * stepLen; y += vy * stepLen;
       if (x < R) { x = R; vx = -vx; }
@@ -1069,13 +1245,20 @@
       ctx.drawImage(dot, x - ds, y - ds, ds * 2, ds * 2);
       drawn++;
     }
+    ctx.restore();
     ctx.globalAlpha = 1;
-    // landing ring
-    var pulse = 1 + Math.sin(now * 6) * 0.12;
-    var rs = R * 1.15 * pulse;
+    // landing ring: double ring, pulsing
+    var pulse = 1 + Math.sin(now * 6) * 0.14;
     var ring = Art.ring();
-    ctx.globalAlpha = 0.9 * ain;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.95 * ain;
+    var rs = R * 1.15 * pulse;
     ctx.drawImage(ring, x - rs, y - rs, rs * 2, rs * 2);
+    ctx.globalAlpha = 0.4 * ain;
+    var rs2 = R * 1.5 * (1.6 - pulse * 0.6);
+    ctx.drawImage(ring, x - rs2, y - rs2, rs2 * 2, rs2 * 2);
+    ctx.restore();
     ctx.globalAlpha = 1;
   }
 
@@ -1126,7 +1309,13 @@
     var s = state;
     if (!s) return;
     $('shots').textContent = s.shots;
+    // shots warning: amber + pulse + warning icon at ≤5 (never color alone)
+    $('hud-shots').classList.toggle('low', s.shots <= 5 && !s.over);
     $('score-num').textContent = s.score.toLocaleString();
+    // ammo chip: loaded bubble → next bubble (backup for the wand-ball)
+    var curKey = s.current ? bubbleKey(s.current) : '', nextKey = s.next ? bubbleKey(s.next) : '';
+    if (curKey !== s._ammoCur) { s._ammoCur = curKey; if (curKey) $('ammo-cur').src = Art.bubbleImg(curKey); }
+    if (nextKey !== s._ammoNext) { s._ammoNext = nextKey; if (nextKey) $('ammo-next').src = Art.bubbleImg(nextKey); }
     var L = s.level, goal = '';
     if (L.type === 'clear') goal = '✨ Pop every bubble';
     else if (L.type === 'rescue') {
@@ -1147,9 +1336,9 @@
       mk.style.left = (th[i] / max * 100) + '%';
       mk.classList.toggle('lit', s.score >= th[i]);
     }
-    // orb
-    s.orbEl.style.width = (s.orb / s.orbMax * 100) + '%';
-    $('orb-wrap').classList.toggle('full', s.orb >= s.orbMax);
+    // orb: chunky round button, fills bottom-up
+    s.orbEl.style.height = (s.orb / s.orbMax * 100) + '%';
+    $('orb-btn').classList.toggle('full', s.orb >= s.orbMax);
     // music tension rises as shots run low
     HexAudio.setTension(s.shots <= 10 ? 1 - s.shots / 10 : 0);
   }
@@ -1179,21 +1368,23 @@
     HexAudio.win();
     hap([10, 40, 10]); // success shimmer on clear
     if (!reduceMotion) s.slowmo = { t: 0, dur: 0.9 }; // dreamy micro-dip for the Bubble Rain
-    // BWS2-style Bubble Rain: leftover shots shower down as bonus points
+    // BWS2-style Bubble Rain, now GOLD confetti with rising chimes
     var rainBonus = s.shots * 50;
     s.score += rainBonus;
     if (rainBonus > 0) {
-      banner('🌧 <b>Bubble Rain!</b> +' + rainBonus.toLocaleString());
+      banner('✨ <b>Gold Bubble Rain!</b> +' + rainBonus.toLocaleString());
       var n = Math.min(s.shots, 24);
+      var golds = ['#ffd34d', '#fff3b0', '#ffb52e', '#ffe14d', '#ffdf80'];
       for (var i = 0; i < n; i++) {
         (function (k) {
           setTimeout(function () {
             if (state !== s) return;
             var rx = Math.random() * W;
             for (var j = 0; j < 4; j++) {
-              spawnP(rx, -10, (Math.random() - 0.5) * 40, 200 + Math.random() * 120, 1.1, 5, '#ffe14d', 60);
+              spawnP(rx, -10, (Math.random() - 0.5) * 40, 200 + Math.random() * 120, 1.1, 5,
+                golds[(Math.random() * golds.length) | 0], 60);
             }
-            HexAudio.tick();
+            HexAudio.rainTick(k); // pitch climbs as the rain falls
           }, k * 55);
         })(i);
       }
@@ -1202,36 +1393,73 @@
     setTimeout(function () { if (state === s && view === 'game') showWinModal(); }, rainBonus > 0 ? 1450 : 250);
   }
 
+  /* Daily streak persistence (pure logic lives in daily.js). */
+  function streakRec() {
+    try { return JSON.parse(localStorage.getItem('bubblehex_streak') || 'null') || { last: null, streak: 0, dates: [] }; }
+    catch (e) { return { last: null, streak: 0, dates: [] }; }
+  }
+  function streakBump() {
+    var rec = HexDaily.streakUpdate(streakRec(), dailyDateStr());
+    try { localStorage.setItem('bubblehex_streak', JSON.stringify(rec)); } catch (e) {}
+    return rec;
+  }
+
   function showWinModal() {
     var s = state;
     var st = starsEarned();
     if (!s.daily) saveStars(s.idx, st);
     var isDaily = !!s.daily;
     var title = isDaily ? '📅 Daily Hex Complete!' : 'Level Complete!';
+    var streakHtml = '';
+    if (isDaily) {
+      var rec = streakBump();
+      streakHtml = '<div class="win-streak">🔥 ' + rec.streak + '-day streak!' +
+        (rec.streak >= 3 ? ' · ×' + Math.min(rec.streak, 5) + ' coin bonus' : '') + '</div>';
+    }
     showModal(title,
-      '<div class="win-stars" id="win-stars">☆☆☆</div>' +
+      '<img class="win-stella' + (st === 3 ? ' twirl' : '') + '" src="' + Art.stellaImg('win') + '" alt="Stella celebrates">' +
+      '<div class="win-stars" id="win-stars"><span class="wstar" data-i="0">★</span><span class="wstar" data-i="1">★</span><span class="wstar" data-i="2">★</span></div>' +
+      streakHtml +
       '<div class="win-score">Score: <b id="win-score">0</b></div>' +
       (isDaily ? '<div class="win-sub">Come back tomorrow for a new board</div>' : '') +
       '<div id="arc-lb" class="arc-lb"></div>',
-      [{ t: s.daily ? 'Replay Daily' : (s.idx + 1 < LEVELS.length ? 'Next Level →' : 'Map'), fn: function () { hideModal(); if (s.daily) playDaily(); else if (s.idx + 1 < LEVELS.length) showIntro(s.idx + 1); else { showScreen('map'); renderMap(); } } },
-       { t: 'Replay', fn: function () { hideModal(); if (s.daily) playDaily(); else showIntro(s.idx); } },
-       { t: 'Map', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
-    // animated stars + count-up
-    var si = 0;
-    var starTimer = setInterval(function () {
-      si++;
-      var el = $('win-stars');
-      if (el) el.textContent = '★'.repeat(Math.min(si, st)) + '☆'.repeat(3 - Math.min(si, st));
-      if (si >= 3) clearInterval(starTimer);
-    }, 350);
-    var shown = 0, target = s.score;
-    var cntTimer = setInterval(function () {
-      shown += Math.max(1, Math.ceil((target - shown) / 8));
-      if (shown >= target) { shown = target; clearInterval(cntTimer); }
+      [{ t: isDaily ? 'Replay Daily' : (s.idx + 1 < LEVELS.length ? 'Next Level →' : 'Map'), cls: 'primary', fn: function () { hideModal(); if (s.daily) playDaily(); else if (s.idx + 1 < LEVELS.length) showIntro(s.idx + 1); else { showScreen('map'); renderMap(); } } },
+       { t: 'Replay', cls: 'quiet', fn: function () { hideModal(); if (s.daily) playDaily(); else showIntro(s.idx); } },
+       { t: 'Map', cls: 'quiet', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
+    // Staged ceremony — banner → stars one at a time with rising chimes →
+    // score count-up → Next pulses in the thumb zone. Tap skips, never auto-skips.
+    var timers = [], ceremonyDone = false;
+    function finishCeremony() {
+      if (ceremonyDone) return; ceremonyDone = true;
+      timers.forEach(clearTimeout);
+      var ws = document.querySelectorAll('#win-stars .wstar');
+      for (var i = 0; i < 3; i++) ws[i].classList.toggle('lit', i < st);
+      var se = $('win-score'); if (se) se.textContent = s.score.toLocaleString();
+      var nb = document.querySelector('#modal-card .mbtn.primary'); if (nb) nb.classList.add('ready');
+    }
+    var i;
+    for (i = 0; i < st; i++) {
+      (function (ii) {
+        timers.push(setTimeout(function () {
+          var el = document.querySelector('#win-stars .wstar[data-i="' + ii + '"]');
+          if (el) el.classList.add('lit');
+          HexAudio.starTick(ii);
+        }, reduceMotion ? 80 : 550 + ii * 520));
+      })(i);
+    }
+    timers.push(setTimeout(function () {
       var el2 = $('win-score');
-      if (el2) el2.textContent = shown.toLocaleString();
-      else clearInterval(cntTimer);
-    }, 40);
+      if (!el2) { finishCeremony(); return; }
+      var shown = 0, target = s.score;
+      var cntTimer = setInterval(function () {
+        shown += Math.max(1, Math.ceil((target - shown) / 8));
+        if (shown >= target) { shown = target; clearInterval(cntTimer); finishCeremony(); }
+        var e2 = $('win-score');
+        if (e2) e2.textContent = shown.toLocaleString(); else clearInterval(cntTimer);
+      }, 40);
+    }, reduceMotion ? 80 : 550 + st * 520));
+    if (isDaily) HexAudio.coinBurst();
+    $('modal-card').onclick = function () { finishCeremony(); };
     var board = isDaily ? 'daily-' + dailyDateStr() : 'level-' + (s.idx + 1);
     arcadeLevelComplete('bubble-hex', board, isDaily ? 0 : s.idx + 1, s.score, isDaily);
   }
@@ -1241,10 +1469,18 @@
     if (!s || s.over) return;
     s.over = true;
     HexAudio.lose();
-    showModal('So close!', (reason || 'Try a different approach.') +
+    var copy = [
+      'The woods believe in you. One more try?',
+      'So close! The bubbles are rooting for you.',
+      'Shake it off, witch — the next one\'s yours.'
+    ];
+    // retry-first: one big hopeful Retry, quiet Map exit, consoling Stella
+    showModal('So close!',
+      '<img class="fail-stella" src="' + Art.stellaImg('sad') + '" alt="Stella looks sad">' +
+      '<div class="fail-reason">' + (reason || copy[Math.floor(Math.random() * copy.length)]) + '</div>' +
       '<div id="arc-lb" class="arc-lb"></div>',
-      [{ t: 'Retry', fn: function () { hideModal(); if (s.daily) playDaily(); else showIntro(s.idx); } },
-       { t: 'Map', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
+      [{ t: '↻ Retry', cls: 'primary', fn: function () { hideModal(); if (s.daily) playDaily(); else showIntro(s.idx); } },
+       { t: 'Map', cls: 'quiet', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
   }
 
   /* ================= Map ================= */
@@ -1264,34 +1500,104 @@
     return dailyInfo ? dailyInfo.date : new Date().toISOString().slice(0, 10);
   }
 
+  /* Winding moonlit level path: 3 episodes of 10, level 1 at the bottom. */
+  var EPISODES = ['Moonlit Hollow', 'The Deep Woods', "Wilbur's Roost"];
   function renderMap() {
     var saved = getStars();
     var total = 0;
     Object.keys(saved).forEach(function (k) { total += saved[k]; });
     $('total-stars').textContent = total;
-    var path = $('map-path');
-    path.innerHTML = '';
-    // Daily Hex card
+    var wind = $('map-wind');
+    wind.innerHTML = '';
+    // Daily Hex card (top): 7-day strip + streak flame
+    var rec = streakRec();
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var strip = HexDaily.weekStrip(rec.dates, todayStr);
+    var DOW = 'SMTWTFS';
+    var stripHtml = strip.map(function (d) {
+      var dow = DOW[new Date(d.date + 'T12:00:00').getDay()];
+      return '<div class="dc-day' + (d.hit ? ' hit' : '') + (d.today ? ' today' : '') + '" title="' + d.date + '">' + dow + '</div>';
+    }).join('');
     var dc = document.createElement('div');
     dc.className = 'daily-card';
     dc.innerHTML = '<div class="dc-cal">📅</div><div class="dc-body"><b>Daily Hex</b>' +
       '<span id="daily-sub">a fresh board every day…</span></div>' +
-      '<div class="dc-best" id="daily-best"></div>';
+      (rec.streak > 0 ? '<div class="dc-streak">🔥 ' + rec.streak + '</div>' : '') +
+      '<div class="dc-week">' + stripHtml + '</div>';
     dc.onclick = function () { HexAudio.click(); playDaily(); };
-    path.appendChild(dc);
+    wind.appendChild(dc);
     fetchDaily();
-    // level nodes
+    // winding path (extra breathing room between episodes for the gates)
+    var ROW = 118, EP_GAP = 96, TOP = 60, BOT = 110;
+    var Hh = 30 * ROW + 2 * EP_GAP + TOP + BOT;
+    var wpath = document.createElement('div');
+    wpath.className = 'wind';
+    wpath.style.height = Hh + 'px';
+    // node centers (level 1 at bottom)
+    function nodeXY(i) {
+      var y = Hh - BOT - (i * ROW + Math.floor(i / 10) * EP_GAP) - ROW / 2;
+      var x = 50 + 30 * Math.sin(i * 0.72);
+      return [x, y];
+    }
+    // dotted moonlit trail through all nodes
+    var dAttr = '';
+    for (var s = 0; s <= 300; s++) {
+      var fi = s / 300 * 29;
+      var i0 = Math.floor(fi), f = fi - i0;
+      var p0 = nodeXY(i0), p1 = nodeXY(Math.min(29, i0 + 1));
+      var px = p0[0] + (p1[0] - p0[0]) * f, py = p0[1] + (p1[1] - p0[1]) * f;
+      dAttr += (s === 0 ? 'M' : 'L') + px.toFixed(1) + ',' + py.toFixed(1);
+    }
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'wind-path-svg');
+    svg.setAttribute('viewBox', '0 0 100 ' + Hh);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    var pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathEl.setAttribute('d', dAttr);
+    pathEl.setAttribute('fill', 'none');
+    pathEl.setAttribute('stroke', 'rgba(255,230,160,.4)');
+    pathEl.setAttribute('stroke-width', '1.6');
+    pathEl.setAttribute('vector-effect', 'non-scaling-stroke');
+    pathEl.setAttribute('stroke-dasharray', '1 5');
+    pathEl.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(pathEl);
+    wpath.appendChild(svg);
+    // episode gates every 10 levels, centered in the episode gaps
+    for (var ep = 0; ep < 3; ep++) {
+      var gp = nodeXY(ep * 10);
+      var gate = document.createElement('div');
+      gate.className = 'wind-gate';
+      gate.style.top = (gp[1] + ROW / 2 + EP_GAP / 2 - 20) + 'px';
+      gate.textContent = '✦ ' + EPISODES[ep] + ' ✦';
+      wpath.appendChild(gate);
+    }
+    // nodes
+    var typeIcon = { clear: '✨', rescue: '🦉', ghost: '👻', boss: '🐈‍⬛' };
+    var firstUnplayed = -1;
     LEVELS.forEach(function (L, i) {
       var unlocked = i === 0 || saved[i - 1];
-      var n = document.createElement('div');
-      n.className = 'level-node' + (unlocked ? '' : ' locked');
-      var typeIcon = { clear: '✨', rescue: '🦉', ghost: '👻', boss: '🐈‍⬛' }[L.type] || '✨';
-      n.innerHTML = '<span class="ln-num">' + (i + 1) + '</span>' +
-        '<span class="ln-stars">' + (saved[i] ? '★'.repeat(saved[i]) + '☆'.repeat(3 - saved[i]) : (unlocked ? '☆☆☆' : '🔒')) + '</span>' +
-        '<span class="ln-name">' + typeIcon + ' ' + L.name + '</span>';
-      if (unlocked) n.onclick = function () { HexAudio.click(); showIntro(i); };
-      path.appendChild(n);
+      var played = !!saved[i];
+      if (firstUnplayed < 0 && unlocked && !played) firstUnplayed = i;
+      var pos = nodeXY(i);
+      var el = document.createElement(unlocked ? 'button' : 'div');
+      el.className = 'wind-node' + (unlocked ? '' : ' locked') + (i === firstUnplayed ? ' current' : '');
+      el.style.left = pos[0] + '%';
+      el.style.top = (pos[1] - 40) + 'px';
+      el.setAttribute('aria-label', 'Level ' + (i + 1) + ': ' + L.name + (unlocked ? '' : ' (locked)'));
+      el.innerHTML = '<span class="wn-circle">' + (unlocked ? (i + 1) : '🔒') + '</span>' +
+        '<span class="wn-stars">' + (played ? '★'.repeat(saved[i]) + '☆'.repeat(3 - saved[i]) : (unlocked ? '☆☆☆' : '')) + '</span>' +
+        '<span class="wn-name">' + (typeIcon[L.type] || '✨') + ' ' + L.name + '</span>';
+      if (unlocked) {
+        (function (idx) { el.onclick = function () { HexAudio.click(); showIntro(idx); }; })(i);
+      }
+      wpath.appendChild(el);
     });
+    wind.appendChild(wpath);
+    // scroll the current level into view
+    var cur = wpath.querySelector('.wind-node.current');
+    if (cur && cur.scrollIntoView) {
+      setTimeout(function () { cur.scrollIntoView({ block: 'center', behavior: 'auto' }); }, 60);
+    }
   }
 
   function fetchDaily() {
@@ -1361,54 +1667,70 @@
 
   /* ================= Screens & modal ================= */
   function showScreen(which) {
-    view = which === 'game' ? 'game' : 'map';
+    view = which === 'game' ? 'game' : which;
+    $('screen-title').classList.toggle('hidden', which !== 'title');
     $('screen-map').classList.toggle('hidden', which !== 'map');
     $('screen-game').classList.toggle('hidden', which !== 'game');
     if (which === 'game') { resize(); }
-    if (which === 'map') HexAudio.music(false);
+    if (which === 'title' || which === 'map') HexAudio.music(false);
   }
   function showModal(title, html, buttons) {
     var m = $('modal'), card = $('modal-card');
     card.innerHTML = '<h2>' + title + '</h2><div class="modal-body">' + html + '</div><div class="modal-btns"></div>';
+    card.onclick = null; // ceremony skip hooks attach their own
     var btns = card.querySelector('.modal-btns');
     buttons.forEach(function (b) {
       var btn = document.createElement('button');
-      btn.className = 'mbtn'; btn.textContent = b.t; btn.onclick = b.fn;
+      btn.className = 'mbtn' + (b.cls ? ' ' + b.cls : ''); btn.textContent = b.t; btn.onclick = b.fn;
       btns.appendChild(btn);
     });
     m.classList.remove('hidden');
   }
   function hideModal() { $('modal').classList.add('hidden'); }
 
-  $('btn-quit').onclick = function () { HexAudio.click(); showScreen('map'); renderMap(); };
+  /* inline settings rows (pause menu + title gear): sound/music/haptics */
+  function settingsHtml() {
+    function row(icon, label, key, on) {
+      return '<div class="set-row"><span>' + icon + ' ' + label + '</span>' +
+        '<button class="set-tog" data-set="' + key + '" aria-pressed="' + on + '">' + (on ? 'ON' : 'OFF') + '</button></div>';
+    }
+    return row('🔊', 'Sound FX', 'sfx', HexAudio.sfx()) +
+           row('🎵', 'Music', 'music', HexAudio.music()) +
+           row('📳', 'Haptics', 'hap', hapOn);
+  }
+  function wireSettings(card) {
+    var btns = card.querySelectorAll('.set-tog');
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.onclick = function (e) {
+          if (e && e.stopPropagation) e.stopPropagation();
+          HexAudio.click();
+          var k = b.getAttribute('data-set'), on;
+          if (k === 'sfx') on = HexAudio.sfxToggle();
+          else if (k === 'music') on = HexAudio.musicToggle();
+          else {
+            hapOn = !hapOn;
+            try { localStorage.setItem('bubblehex_hap', hapOn ? 'on' : 'off'); } catch (e2) {}
+            on = hapOn;
+            if (on) hap([12]);
+          }
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+          b.textContent = on ? 'ON' : 'OFF';
+        };
+      })(btns[i]);
+    }
+  }
+
   $('btn-pause').onclick = function () {
     if (!state || state.over || view !== 'game') return;
     HexAudio.click();
-    showModal('Paused', 'Take a breath, witch.',
-      [{ t: 'Resume', fn: hideModal },
-       { t: 'Restart', fn: function () { hideModal(); showIntro(state.idx, state.daily); } },
-       { t: 'Map', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
+    showModal('Paused', 'Take a breath, witch.' + settingsHtml(),
+      [{ t: '▶ Resume', cls: 'primary', fn: hideModal },
+       { t: '↻ Restart', cls: 'quiet', fn: function () { hideModal(); showIntro(state.idx, state.daily); } },
+       { t: 'Map', cls: 'quiet', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
+    wireSettings($('modal-card'));
   };
-  $('btn-music').onclick = function () {
-    var on = HexAudio.musicToggle();
-    $('btn-music').textContent = on ? '🎵' : '🔇';
-    $('btn-music').classList.toggle('off', !on);
-  };
-  function syncHapBtn() {
-    var b = $('btn-hap');
-    if (!b) return;
-    b.textContent = hapOn ? '📳' : '📴';
-    b.classList.toggle('off', !hapOn);
-  }
-  $('btn-hap').onclick = function () {
-    hapOn = !hapOn;
-    try { localStorage.setItem('bubblehex_hap', hapOn ? 'on' : 'off'); } catch (e) {}
-    syncHapBtn();
-    HexAudio.click();
-    if (hapOn) hap([12]);
-  };
-  syncHapBtn();
-  $('orb-wrap').onclick = function () {
+  $('orb-btn').onclick = function () {
     if (!state) return;
     if (state.orb >= state.orbMax) banner('✦ <b>HEX BLAST armed</b> — your next shot unleashes it!');
     else banner('✦ Pop bubbles to charge the spell orb (' + state.orb + '/' + state.orbMax + ')');
@@ -1503,10 +1825,62 @@
     });
   }
 
+  /* ================= Title screen ================= */
+  function renderTitle() {
+    var stella = $('title-stella');
+    stella.src = Art.stellaImg('idle');
+    stella.alt = 'Stella the witch';
+    var saved = getStars(), total = 0;
+    Object.keys(saved).forEach(function (k) { total += saved[k]; });
+    $('title-stars').textContent = total;
+    $('title-streak').textContent = streakRec().streak;
+    // floating bubbles drift behind the logo
+    var box = $('title-bubbles');
+    box.innerHTML = '';
+    var cols = ['R', 'B', 'G', 'Y', 'P'];
+    for (var i = 0; i < 8; i++) {
+      var img = document.createElement('img');
+      img.src = Art.bubbleImg(cols[i % cols.length]);
+      img.alt = '';
+      var sz = 28 + (i * 37) % 44;
+      img.style.width = sz + 'px'; img.style.height = sz + 'px';
+      img.style.left = (4 + (i * 41) % 84) + '%';
+      img.style.top = (3 + (i * 29) % 26) + '%';
+      img.style.animationDelay = (i * 0.55) + 's';
+      box.appendChild(img);
+    }
+  }
+
+  $('title-play').onclick = function () {
+    HexAudio.click();
+    HexAudio.music(true); // AudioContext must start on a user gesture
+    showScreen('map');
+    renderMap();
+  };
+  $('title-gear').onclick = function () {
+    HexAudio.click();
+    showModal('⚙️ Settings', settingsHtml(),
+      [{ t: 'Done', cls: 'primary', fn: hideModal }]);
+    wireSettings($('modal-card'));
+  };
+
+  /* Debug hook: ?hexdebug=1 exposes a tiny API for scripted screenshots.
+   * Never shown in production UI. */
+  if (location.search.indexOf('hexdebug=1') >= 0) {
+    window.HexUI = {
+      showScreen: showScreen, renderMap: renderMap, showIntro: showIntro,
+      loadLevel: loadLevel, win: win, lose: lose,
+      fireAt: function (ang) { if (state) { state.aimAngle = ang; state.aiming = true; fire(); } },
+      get state() { return state; },
+      showCoach: showCoach, hideCoach: hideCoach
+    };
+  }
+
   /* ================= Boot ================= */
   Art.warm();
   resize();
+  renderTitle();
   renderMap();
-  showScreen('map');
+  showScreen('title');
   requestAnimationFrame(tick);
 })();
