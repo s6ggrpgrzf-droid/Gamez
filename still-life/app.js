@@ -1163,6 +1163,23 @@ App.magicDot = function () {
   return c;
 };
 
+// Tighter-edged dot for pencil work: graphite marks, not soft blooms.
+App.magicDotHard = function () {
+  if (this._magicDotHard) return this._magicDotHard;
+  var c = document.createElement('canvas');
+  c.width = c.height = 128;
+  var g = c.getContext('2d');
+  var gr = g.createRadialGradient(64, 64, 8, 64, 64, 62);
+  gr.addColorStop(0, 'rgba(255,255,255,1)');
+  gr.addColorStop(0.8, 'rgba(255,255,255,0.95)');
+  gr.addColorStop(0.93, 'rgba(255,255,255,0.35)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 128, 128);
+  this._magicDotHard = c;
+  return c;
+};
+
 // Stamp one dab: copy the matching patch of the source painting
 // through a soft, slightly elliptical, rotated brush mask —
 // or lay a flat glaze (liquid white) when d.flat is set.
@@ -1174,11 +1191,12 @@ App.magicDab = function (st, d) {
   var tc = t.getContext('2d');
   tc.clearRect(0, 0, rr, rr);
   tc.globalCompositeOperation = 'source-over';
+  var dot = d.hard ? this.magicDotHard() : this.magicDot();
   if (d.flat) {
     tc.fillStyle = d.flat;
     tc.fillRect(0, 0, rr, rr);
     tc.globalCompositeOperation = 'destination-in';
-    tc.drawImage(this.magicDot(), 0, 0, rr, rr);
+    tc.drawImage(dot, 0, 0, rr, rr);
   } else {
     tc.save();
     tc.translate(rr / 2, rr / 2);
@@ -1186,7 +1204,7 @@ App.magicDab = function (st, d) {
     tc.scale(1, 0.72);
     tc.drawImage(st.src, d.x - r, d.y - r, 2 * r, 2 * r, -r, -r, 2 * r, 2 * r);
     tc.globalCompositeOperation = 'destination-in';
-    tc.drawImage(this.magicDot(), -r, -r, 2 * r, 2 * r);
+    tc.drawImage(dot, -r, -r, 2 * r, 2 * r);
     tc.restore();
     tc.globalCompositeOperation = 'source-over';
   }
@@ -1206,7 +1224,10 @@ App.magicPaint = function (img, title) {
   var w = Math.max(2, Math.round(iw * s)), h = Math.max(2, Math.round(ih * s));
   cv.width = w; cv.height = h;
   var x = cv.getContext('2d');
-  x.fillStyle = '#f8f3e8';
+  // Sketch mode works on white paper, like a real sketchbook: only the
+  // graphite-dark marks show, so pale dabs vanish instead of reading
+  // as white strokes.
+  x.fillStyle = (self.magicStyle === 'sketch') ? '#ffffff' : '#f8f3e8';
   x.fillRect(0, 0, w, h);
   var src = document.createElement('canvas');
   src.width = w; src.height = h;
@@ -1296,7 +1317,7 @@ App.magicPaint = function (img, title) {
       state.acc -= n;
       for (var i = 0; i < n && state.pi < st.pts.length; i++) {
         var p = st.pts[state.pi];
-        self.magicDab(state, { x: p.x, y: p.y, r: st.r, a: st.a, ang: p.a, flat: st.flat });
+        self.magicDab(state, { x: p.x, y: p.y, r: st.r, a: st.a, ang: p.a, flat: st.flat, hard: st.hard });
         state.brushX = p.x; state.brushY = p.y;
         state.pi++; state.dabsDone++;
       }
