@@ -1448,6 +1448,11 @@ Game.onUp = function (e) {
       this.updateProgress();
       if (res.placed) this.checkWin();
     }
+    // A real drag ends with the piece let go; a tap just selects it.
+    if (this.downInfo && this.downInfo.moved) {
+      this.selection = null;
+      this.updateRotateBtn();
+    }
     this.scheduleSave();
     this.markDirty();
   }
@@ -1492,6 +1497,10 @@ Game.onTap = function (e, g, quick) {
       if (res.placed) this.checkWin();
       this.updateProgress();
       this.scheduleSave();
+      // put down means let go: the piece stays where it landed and later
+      // taps pan the camera instead of dragging it around again.
+      this.selection = null;
+      this.updateRotateBtn();
     } else {
       this.selection = null;
       this.updateRotateBtn();
