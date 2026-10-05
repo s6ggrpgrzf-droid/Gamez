@@ -5,6 +5,14 @@
   --ink:#fff; --ink-dim:rgba(255,255,255,.62);
   --glass:rgba(255,255,255,.08); --glass-brd:rgba(255,255,255,.16);
   --ts:40px; /* tile size, set by JS */
+  /* candy palette: hi / mid / deep / rim — tune the whole set here */
+  --c0-hi:#ffc9c9; --c0-mid:#f43f5e; --c0-deep:#be123c; --c0-rim:#7f0d28;
+  --c1-hi:#ffe0b8; --c1-mid:#fb923c; --c1-deep:#c2410c; --c1-rim:#7c2d12;
+  --c2-hi:#fff7c2; --c2-mid:#facc15; --c2-deep:#a16207; --c2-rim:#713f12;
+  --c3-hi:#c9f7d6; --c3-mid:#4ade80; --c3-deep:#15803d; --c3-rim:#14532d;
+  --c4-hi:#d3efff; --c4-mid:#38bdf8; --c4-deep:#0369a1; --c4-rim:#0c4a6e;
+  --c5-hi:#ecd9ff; --c5-mid:#a855f7; --c5-deep:#6b21a8; --c5-rim:#3b0764;
+  --aurora-i:0; --aurora-h:285; /* combo aurora intensity / hue, set by JS */
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{height:100%;}
@@ -37,9 +45,10 @@ body{
 }
 .logo{width:58px;height:58px;flex:0 0 58px;}
 .logo-candy{display:block;width:100%;height:100%;border-radius:38% 42% 40% 44%;
-  background:radial-gradient(circle at 32% 28%, #fff8 0 12%, transparent 40%),
-             radial-gradient(circle at 50% 55%, #ff7ab8, #e23a8c 70%, #b3125f);
-  box-shadow:0 6px 18px rgba(255,95,162,.5), inset 0 -6px 12px rgba(120,0,60,.35);
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255,255,255,.95) 0 9%, transparent 32%),
+    radial-gradient(circle at 50% 55%, #ff8ac2, #e23a8c 55%, #8f0c4c 100%);
+  box-shadow:0 6px 18px rgba(255,95,162,.5), inset 0 -6px 12px rgba(120,0,60,.35), inset 0 4px 8px rgba(255,255,255,.3);
   animation:bob 3s ease-in-out infinite;}
 @keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg);}50%{transform:translateY(-7px) rotate(5deg);}}
 .stars-total{margin-left:auto; font-size:20px; font-weight:800; color:var(--gold);
@@ -49,8 +58,12 @@ body{
 #map-scroll{flex:1; overflow-y:auto; padding:10px 0 30px; scrollbar-width:none;}
 #map-scroll::-webkit-scrollbar{display:none;}
 #map-path{position:relative; display:flex; flex-direction:column-reverse; align-items:center; gap:6px; padding:20px 0 40px;}
+#map-path::before{content:""; position:absolute; top:24px; bottom:44px; left:50%; width:8px;
+  transform:translateX(-50%);
+  background-image:radial-gradient(circle, rgba(255,255,255,.4) 3px, transparent 3.6px);
+  background-size:8px 20px;}
 .lvl-node{
-  position:relative; width:74px; height:74px; border-radius:50%;
+  position:relative; z-index:1; width:74px; height:74px; border-radius:50%;
   border:3px solid rgba(255,255,255,.25);
   background:radial-gradient(circle at 35% 30%, #ffffff22, transparent 45%), linear-gradient(145deg,#5b2a9d,#3a1663);
   color:#fff; font-size:22px; font-weight:900; cursor:pointer;
@@ -117,18 +130,36 @@ body{
 #board-wrap{position:relative; flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:4px 12px;}
 #board{
   position:relative; width:min(94vw, 52dvh, 480px); aspect-ratio:1/1;
-  border-radius:22px; touch-action:none;
-  background:rgba(10,4,26,.55);
-  border:1px solid rgba(255,255,255,.12);
+  border-radius:28px; touch-action:none;
+  border:8px solid transparent; /* candy-cane frame */
+  background:
+    linear-gradient(rgba(10,4,26,.66), rgba(10,4,26,.66)) padding-box,
+    repeating-linear-gradient(45deg, #ff5fa2 0 14px, #ffd7e8 14px 28px) border-box;
   box-shadow:0 18px 50px rgba(0,0,0,.5), inset 0 2px 18px rgba(0,0,0,.5);
   overflow:hidden;
 }
+/* combo aurora: background glow that answers to cascades (JS sets --aurora-i / --aurora-h) */
+#aurora{position:fixed; inset:-25vmax; z-index:0; pointer-events:none; opacity:var(--aurora-i);
+  background:conic-gradient(from 180deg at 50% 50%,
+    transparent 0deg, hsl(var(--aurora-h,285) 90% 62% / .32) 70deg, transparent 130deg,
+    hsl(calc(var(--aurora-h,285) + 70) 90% 62% / .26) 210deg, transparent 270deg,
+    hsl(var(--aurora-h,285) 90% 62% / .32) 360deg);
+  filter:blur(46px); transition:opacity 1.4s ease; animation:auroraSpin 30s linear infinite;}
+@keyframes auroraSpin{to{transform:rotate(360deg);}}
+/* checkerboard tile depth */
+.tile.alt .pad{background:rgba(255,255,255,.05); border-radius:24%;}
 #fx{position:absolute; inset:0; z-index:4; pointer-events:none; overflow:hidden; border-radius:22px;}
 .cell-jelly{position:absolute; border-radius:26%; pointer-events:none;
-  background:radial-gradient(circle at 50% 50%, rgba(160,220,255,.28), rgba(160,220,255,.10));
-  border:2px solid rgba(170,225,255,.35); transition:opacity .3s;}
-.cell-jelly.j2{background:radial-gradient(circle at 50% 50%, rgba(170,225,255,.5), rgba(140,200,255,.22));
-  border-color:rgba(190,235,255,.7); box-shadow:inset 0 0 12px rgba(160,215,255,.5);}
+  background:
+    radial-gradient(ellipse 62% 40% at 50% 16%, rgba(255,255,255,.55), transparent 62%),
+    radial-gradient(circle at 50% 55%, rgba(160,220,255,.32), rgba(120,190,255,.12));
+  border:2px solid rgba(170,225,255,.35); transition:opacity .3s;
+  box-shadow:inset 0 2px 6px rgba(255,255,255,.25);}
+.cell-jelly.j2{background:
+    radial-gradient(ellipse 62% 40% at 50% 16%, rgba(255,255,255,.7), transparent 62%),
+    radial-gradient(circle at 50% 55%, rgba(170,225,255,.55), rgba(140,200,255,.25));
+  border-color:rgba(190,235,255,.75);
+  box-shadow:inset 0 0 14px rgba(160,215,255,.55), inset 0 2px 6px rgba(255,255,255,.3);}
 .tile{position:absolute; left:0; top:0; transition:transform .30s cubic-bezier(.3,.9,.35,1.05); will-change:transform;}
 .tile .pad{position:absolute; inset:9%;}
 .candy{position:relative; width:100%; height:100%; transition:transform .18s;}
@@ -138,13 +169,38 @@ body{
   background:radial-gradient(ellipse at center, rgba(255,255,255,.85), transparent 70%);
   transform:rotate(-18deg); pointer-events:none;
 }
-/* six candy personalities */
-.c0{background:radial-gradient(circle at 35% 30%, #ff9d9d, #f43f5e 55%, #be123c); border-radius:26%; box-shadow:inset 0 -5px 8px rgba(120,0,20,.45), 0 3px 6px rgba(0,0,0,.35);}
-.c1{background:radial-gradient(circle at 35% 30%, #ffd9a0, #fb923c 55%, #c2410c); border-radius:50%/46%; box-shadow:inset 0 -5px 8px rgba(120,50,0,.45), 0 3px 6px rgba(0,0,0,.35);}
-.c2{background:radial-gradient(circle at 35% 30%, #fff3b0, #facc15 55%, #a16207); border-radius:50% 50% 50% 8%; transform:rotate(0deg); box-shadow:inset 0 -5px 8px rgba(120,80,0,.45), 0 3px 6px rgba(0,0,0,.35);}
-.c3{background:radial-gradient(circle at 35% 30%, #b8f5c8, #4ade80 55%, #15803d); border-radius:22%; box-shadow:inset 0 -5px 8px rgba(0,90,30,.45), 0 3px 6px rgba(0,0,0,.35);}
-.c4{background:radial-gradient(circle at 35% 30%, #bfe6ff, #38bdf8 55%, #0369a1); border-radius:50%; box-shadow:inset 0 -5px 8px rgba(0,60,110,.5), 0 3px 6px rgba(0,0,0,.35);}
-.c5{background:radial-gradient(circle at 35% 30%, #e3c6ff, #a855f7 55%, #6b21a8); clip-path:polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); box-shadow:0 3px 6px rgba(0,0,0,.35);}
+/* six candy personalities — layered 3D: top light + main radial + rim depth */
+.c0{border-radius:26%;
+  background:
+    radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.6), transparent 70%),
+    radial-gradient(circle at 35% 30%, var(--c0-hi) 0%, var(--c0-mid) 52%, var(--c0-deep) 80%, var(--c0-rim) 100%);
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(90,0,18,.55), 0 4px 8px rgba(0,0,0,.4);}
+.c1{border-radius:50%/46%;
+  background:
+    radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.6), transparent 70%),
+    radial-gradient(circle at 35% 30%, var(--c1-hi) 0%, var(--c1-mid) 52%, var(--c1-deep) 80%, var(--c1-rim) 100%);
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(90,30,0,.55), 0 4px 8px rgba(0,0,0,.4);}
+.c2{border-radius:50% 50% 50% 8%;
+  background:
+    radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.65), transparent 70%),
+    radial-gradient(circle at 35% 30%, var(--c2-hi) 0%, var(--c2-mid) 52%, var(--c2-deep) 80%, var(--c2-rim) 100%);
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.4), inset 0 -7px 10px rgba(90,55,0,.55), 0 4px 8px rgba(0,0,0,.4);}
+.c3{border-radius:22%;
+  background:
+    radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.6), transparent 70%),
+    radial-gradient(circle at 35% 30%, var(--c3-hi) 0%, var(--c3-mid) 52%, var(--c3-deep) 80%, var(--c3-rim) 100%);
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(0,70,25,.55), 0 4px 8px rgba(0,0,0,.4);}
+.c4{border-radius:50%;
+  background:
+    radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.65), transparent 70%),
+    radial-gradient(circle at 35% 30%, var(--c4-hi) 0%, var(--c4-mid) 52%, var(--c4-deep) 80%, var(--c4-rim) 100%);
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.4), inset 0 -7px 10px rgba(0,45,85,.6), 0 4px 8px rgba(0,0,0,.4);}
+.c5{border-radius:0;
+  background:
+    radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(circle at 35% 30%, var(--c5-hi) 0%, var(--c5-mid) 52%, var(--c5-deep) 80%, var(--c5-rim) 100%);
+  clip-path:polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.4));}
 .c5::after{left:30%;} /* gloss nudge for hexagon */
 /* specials */
 .tile.sp-sh .candy::before, .tile.sp-sv .candy::before{
@@ -153,15 +209,25 @@ body{
   mix-blend-mode:screen;
 }
 .tile.sp-sv .candy::before{background:repeating-linear-gradient(90deg, rgba(255,255,255,.85) 0 18%, transparent 18% 38%);}
-.tile.sp-sh .candy, .tile.sp-sv .candy{filter:saturate(1.25); box-shadow:0 0 12px currentColor;}
-.tile.sp-w .candy{animation:wrapGlow 1.2s ease-in-out infinite;}
+.tile.sp-sh .candy, .tile.sp-sv .candy{filter:saturate(1.3); box-shadow:0 0 14px rgba(255,255,255,.55);}
+/* striped sheen: a light sweep glides across the candy */
+.tile.sp-sh .candy::after, .tile.sp-sv .candy::after{
+  left:0; top:0; width:100%; height:100%; transform:none; border-radius:inherit;
+  background:linear-gradient(115deg, transparent 42%, rgba(255,255,255,.7) 50%, transparent 58%);
+  background-size:280% 100%;
+  animation:sheenSweep 2.4s ease-in-out infinite; pointer-events:none;
+}
+@keyframes sheenSweep{0%{background-position:130% 0;}100%{background-position:-130% 0;}}
+.tile.sp-w .candy{animation:wrapGlow 1.2s ease-in-out infinite;
+  box-shadow:0 0 20px rgba(255,255,255,.7), inset 0 -5px 8px rgba(0,0,0,.3);}
 @keyframes wrapGlow{0%,100%{filter:brightness(1) drop-shadow(0 0 4px #fff);}50%{filter:brightness(1.35) drop-shadow(0 0 14px #fff);}}
 .tile.sp-w .candy::before{content:""; position:absolute; inset:-7%; border-radius:30%;
   border:3px dashed rgba(255,255,255,.9); animation:spin 6s linear infinite; pointer-events:none;}
 @keyframes spin{to{transform:rotate(360deg);}}
+/* color bomb: dark sphere + rotating prismatic sheen + candy dots */
 .tile.sp-b .candy{background:
     radial-gradient(circle at 30% 25%, #6b4a36, #3a2418 60%, #1c100a);
-  border-radius:50%; box-shadow:0 0 16px rgba(255,211,77,.55), inset 0 -5px 10px #000;}
+  border-radius:50%; box-shadow:0 0 18px rgba(255,211,77,.6), inset 0 -5px 10px #000;}
 .tile.sp-b .candy::before{content:""; position:absolute; inset:12%; border-radius:50%; pointer-events:none;
   background:
     radial-gradient(circle 3px at 25% 30%, #ff5fa2 98%, transparent),
@@ -169,6 +235,14 @@ body{
     radial-gradient(circle 3px at 75% 60%, #ffd34d 98%, transparent),
     radial-gradient(circle 3px at 35% 70%, #7CFC00 98%, transparent),
     radial-gradient(circle 3px at 55% 45%, #c084fc 98%, transparent);}
+.tile.sp-b .candy::after{
+  left:0; top:0; width:100%; height:100%; transform:none; border-radius:50%;
+  background:conic-gradient(from 0deg,
+    rgba(255,95,162,.5), rgba(255,211,77,.5), rgba(74,222,128,.5),
+    rgba(77,227,255,.5), rgba(168,85,247,.5), rgba(255,95,162,.5));
+  filter:blur(3px); mix-blend-mode:screen; pointer-events:none;
+  animation:prismSpin 5s linear infinite;}
+@keyframes prismSpin{to{transform:rotate(360deg);}}
 .tile.sp-b{animation:bombPulse 1.4s ease-in-out infinite;}
 @keyframes bombPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
 /* frosting blocker */
@@ -195,7 +269,8 @@ body{
   border:4px solid #fff; box-shadow:0 0 24px #fff, inset 0 0 24px #ffd34d; mix-blend-mode:screen;}
 .flash{position:absolute; inset:0; pointer-events:none; z-index:7; opacity:0; background:#fff;}
 #banner{position:absolute; left:50%; top:42%; transform:translate(-50%,-50%) scale(.6); z-index:8;
-  font-size:44px; font-weight:900; letter-spacing:1px; white-space:nowrap; pointer-events:none;
+  font-size:44px; font-weight:900; letter-spacing:1px; white-space:normal; text-align:center;
+  line-height:1.15; max-width:94vw; pointer-events:none;
   background:linear-gradient(100deg,#ffd34d,#ff5fa2,#4de3ff); -webkit-background-clip:text; background-clip:text; color:transparent;
   filter:drop-shadow(0 4px 14px rgba(0,0,0,.6)); opacity:0;}
 #banner.mega{font-size:56px;}
@@ -211,6 +286,17 @@ body{
 /* ---------- feel: happy bounce (never harsh shake), score pop, sugar-crush slow-mo ---------- */
 #board-wrap.happy-bounce{animation:happyBounce .42s cubic-bezier(.34,1.56,.64,1);}
 @keyframes happyBounce{0%{transform:translateY(0);}40%{transform:translateY(-8px);}100%{transform:translateY(0);}}
+/* tiny shake reserved for the biggest blasts (4+ matches stay a bounce — this game's identity) */
+#board-wrap.shake{animation:shakeIt .32s;}
+@keyframes shakeIt{0%,100%{transform:translate(0,0);}20%{transform:translate(-5px,3px);}40%{transform:translate(4px,-3px);}60%{transform:translate(-3px,-2px);}80%{transform:translate(3px,2px);}}
+/* impact punch on megablast / board clear */
+#board.impact{animation:impactPunch .32s ease-out;}
+@keyframes impactPunch{0%{transform:scale(1);}35%{transform:scale(1.03);}100%{transform:scale(1);}}
+/* star threshold tick: marker pops the moment its threshold is crossed */
+#starbar i.tick{animation:starTick .5s cubic-bezier(.34,1.56,.64,1);}
+@keyframes starTick{0%{transform:translate(-50%,-58%) scale(.3);}60%{transform:translate(-50%,-58%) scale(1.8);}100%{transform:translate(-50%,-58%) scale(1);}}
+/* moves urgency: color + pulse + icon (never color alone) */
+.hud-pill.moves.low label::before{content:"⚠ ";}
 #score.pop{animation:scorePop .35s cubic-bezier(.34,1.56,.64,1); transform-origin:center;}
 @keyframes scorePop{0%{transform:scale(1);}45%{transform:scale(1.35);}100%{transform:scale(1);}}
 #board-wrap.sugar-slow #board{filter:saturate(1.25) brightness(1.07);
@@ -219,7 +305,14 @@ body{
   #modal:not(.hidden) #modal-card{animation:none;}
   #banner.show{animation-duration:.3s;}
   #board-wrap.happy-bounce{animation:none;}
+  #board-wrap.shake{animation:none;}
+  #board.impact{animation:none;}
+  #starbar i.tick{animation:none;}
   #score.pop{animation:none;}
+  #aurora{animation:none; opacity:0;}
+  #modal-card.win-fx::before{animation:none;}
+  .tile.sp-sh .candy::after,.tile.sp-sv .candy::after{animation:none;}
+  .tile.sp-b .candy::after{animation:none;}
   .lvl-node.current,.hud-pill.moves.low span,.tile.hint .candy,.boost.armed,
   #streak-flame,.logo-candy{animation:none;}
 }
@@ -231,8 +324,14 @@ body{
 #modal.hidden{opacity:0; pointer-events:none;}
 #modal-card{background:linear-gradient(160deg,#2c1547,#1b0d33); border:1px solid var(--glass-brd);
   border-radius:26px; padding:28px 30px; text-align:center; max-width:340px; width:100%;
-  box-shadow:0 24px 70px rgba(0,0,0,.6); transform:scale(1);
+  box-shadow:0 24px 70px rgba(0,0,0,.6); transform:scale(1); isolation:isolate;
   transition:transform .35s cubic-bezier(.34,1.56,.64,1), opacity .25s;}
+/* win rays: slow-turning celebration rays behind the card content */
+#modal-card.win-fx::before{content:""; position:absolute; inset:-70px; z-index:-1; border-radius:50%;
+  background:repeating-conic-gradient(from 0deg, rgba(255,211,77,.13) 0 7deg, transparent 7deg 15deg);
+  -webkit-mask:radial-gradient(circle, #000 28%, transparent 68%);
+  mask:radial-gradient(circle, #000 28%, transparent 68%);
+  animation:spin 26s linear infinite; pointer-events:none;}
 #modal.hidden #modal-card{transform:scale(.9);}
 #modal:not(.hidden) #modal-card{animation:cardSpring .55s cubic-bezier(.34,1.56,.64,1);}
 @keyframes cardSpring{0%{transform:scale(.72) translateY(26px);}60%{transform:scale(1.045) translateY(-4px);}100%{transform:scale(1) translateY(0);}}

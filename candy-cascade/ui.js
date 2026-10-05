@@ -89,11 +89,30 @@ function happyBounce() {
   const w = $('board-wrap');
   w.classList.remove('happy-bounce'); void w.offsetWidth; w.classList.add('happy-bounce');
 }
+function shakeIt() {
+  if (reducedMotion()) return; // tiny shake, reserved for the biggest blasts only
+  const w = $('board-wrap');
+  w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake');
+}
+function impactPunch() {
+  if (reducedMotion()) return; // hit-stop punch on megablast / board clear
+  const b = $('board');
+  b.classList.remove('impact'); void b.offsetWidth; b.classList.add('impact');
+}
+/* combo aurora: the background answers to cascades (CSS var driven, transform-only) */
+function auroraBump(level) {
+  if (reducedMotion()) return;
+  const root = document.documentElement;
+  root.style.setProperty('--aurora-i', Math.min(1, 0.22 + level).toFixed(2));
+  root.style.setProperty('--aurora-h', String(280 + Math.round(level * 70)));
+  clearTimeout(auroraBump._t);
+  auroraBump._t = setTimeout(() => root.style.setProperty('--aurora-i', '0'), 2800);
+}
 const FEEL_EVENTS = {
   select:  () => CCHaptic.select(),
   match:   d => { CCHaptic.match(); if (d.gain > 0) scorePop(); },
-  cascade: d => { CCHaptic.combo(); happyBounce(); if (d.gain > 0) scorePop(); },
-  blast:   d => { CCHaptic.combo(); happyBounce(); if (d.gain > 0) scorePop(); },
+  cascade: d => { CCHaptic.combo(); happyBounce(); if (d.gain > 0) scorePop(); auroraBump(Math.min(1, (d.round || 2) / 5)); },
+  blast:   d => { CCHaptic.combo(); shakeIt(); impactPunch(); if (d.gain > 0) scorePop(); auroraBump(1); },
   hammer:  d => { CCHaptic.combo(); if (d.gain > 0) scorePop(); },
   win:     () => CCHaptic.win(),
   lose:    () => CCHaptic.lose(),
@@ -240,9 +259,9 @@ function paintCandy(candy, cell) {
   }
 }
 
-function makeTile(cell) {
+function makeTile(cell, r, c) {
   const el = document.createElement('div');
-  el.className = 'tile';
+  el.className = 'tile' + ((((r || 0) + (c || 0)) & 1) ? ' alt' : ''); // checkerboard depth
   el.style.width = el.style.height = ts + 'px';
   el.style.zIndex = 2;
   const pad = document.createElement('div');
@@ -294,7 +313,7 @@ function buildBoard() {
       const cell = st.board[r][c];
       let tEl = null;
       if (cell && cell.t === 'c') {
-        tEl = makeTile(cell);
+        tEl = makeTile(cell, r, c);
         setTilePos(tEl, r, c);
         boardEl.appendChild(tEl);
       }
@@ -399,6 +418,17 @@ function updateHUD(instant) {
     el.style.left = posns[i] + '%';
     el.classList.toggle('lit', st.score >= s[i]);
   });
+  // threshold tick: pop the marker the moment its star is earned
+  const litNow = s.filter(th => st.score >= th).length;
+  if (st._litStars == null) st._litStars = litNow;
+  if (litNow > st._litStars && !reducedMotion()) {
+    for (let i = st._litStars; i < litNow; i++) {
+      const el = bars[i];
+      if (el) { el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); }
+    }
+    CCAudio.special();
+  }
+  st._litStars = litNow;
 }
 
 /* ---------------- pooled sugar-crystal sparkles (additive, zero per-frame allocation) ---------------- */
@@ -585,7 +615,7 @@ async function applyFallVisual(fall) {
     if (el) setTilePos(el, m.tr, m.tc);
   }
   for (const s of fall.spawns) {
-    const el = makeTile(s.ing ? { t: 'i' } : { color: s.color, sp: null });
+    const el = makeTile(s.ing ? { t: 'i' } : { color: s.color, sp: null }, s.r, s.c);
     el.style.transform = `translate(${s.c * ts}px, ${(s.r - s.drop) * ts}px)`;
     boardEl.appendChild(el);
     void el.offsetWidth;
@@ -648,7 +678,7 @@ async function playClearStep(step) {
     }
   }
   CCAudio.pop(step.round || 1); // pitch already rises with round (combo feel)
-  emitFeel(feelForStep(step), { gain: step.gain });
+  emitFeel(feelForStep(step), { gain: step.gain, round: step.round });
   if (step.clear.length) {
     const n = step.clear.length;
     floater(fr / n, fc / n, '+' + step.gain.toLocaleString());
@@ -891,6 +921,8 @@ function startLevel(n) {
   levelDef = LEVELS[n - 1];
   st = CC.newGame(levelDef);
   st.warnedLow = false; // per-level low-moves warning flag (feel only)
+  st._litStars = 0; // star-threshold tick tracker (feel only)
+  document.documentElement.style.setProperty('--aurora-i', '0'); // aurora rests between levels
   selected = null; inputLocked = false; shownScore = 0; _lastScoreTxt = null;
   disarmHammer(); updateBoosterBar();
   $('score').textContent = '0';
@@ -925,7 +957,7 @@ function showModal(o) {
   });
   $('modal').classList.remove('hidden');
 }
-function hideModal() { $('modal').classList.add('hidden'); }
+function hideModal() { $('modal').classList.add('hidden'); $('modal-card').classList.remove('win-fx'); }
 
 async function playEnd(step) {
   updateHUD(true);
@@ -1002,6 +1034,8 @@ async function playEnd(step) {
       ],
     });
     fillQuip(n, earned);
+    $('modal-card').classList.add('win-fx'); // celebration rays behind the card
+    if (earned === 3 && !reducedMotion()) confetti(); // 3 stars rain confetti
   } else {
     CCAudio.lose();
     emitFeel('lose');
