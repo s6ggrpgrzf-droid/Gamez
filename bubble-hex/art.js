@@ -23,17 +23,19 @@
   }
 
   /* ---------------- Bubbles ----------------
-   * Glossy jewel orbs: dark rim, radial jewel gradient, big soft
-   * crescent highlight, small hot dot, bottom bounce-light. */
+   * Glossy jewel orbs, layered: gemstone base gradient (light crown →
+   * saturated mid → deep base → dark edge), big soft crescent highlight,
+   * hot dot, inner sparkle, bottom bounce-light, bright rim light. */
   var BUBBLE_BASE = {
-    R: ['#ff7d95', '#e8234f', '#8f0f2e'],
-    B: ['#8fc4ff', '#2f7fe8', '#0f3a8f'],
-    G: ['#9dffb8', '#2fe86f', '#0f8f3f'],
-    Y: ['#fff3a0', '#f5c81e', '#9c7408'],
-    P: ['#df9dff', '#a63df0', '#5f1a9c'],
-    K: ['#5a4a72', '#241a38', '#0c0716'], // black doom bubble (BWS3 trouble bubble)
+    R: ['#ff9db0', '#ff5f82', '#d81f4c', '#7d0c28'],
+    B: ['#a8d4ff', '#5fa8f5', '#2f6fd6', '#123a7d'],
+    G: ['#b8ffcc', '#5ff59a', '#22c75f', '#0c6e32'],
+    Y: ['#fff7b8', '#ffe14d', '#f0b41a', '#8a5f06'],
+    P: ['#eec2ff', '#c47df5', '#9333e0', '#4d1485'],
+    K: ['#6a5586', '#453563', '#241a38', '#0a0614'], // black doom bubble (BWS3 trouble bubble)
     W: null // rainbow — special
   };
+  var BUBBLE_GLOW = { R: '#ff5f82', B: '#5fa8f5', G: '#5ff59a', Y: '#ffe14d', P: '#c47df5', K: '#c44dff', W: '#ffffff', X: '#8a8a9a' };
 
   var bubbleCache = {};
 
@@ -60,35 +62,46 @@
       x.fillStyle = sheen; circle(x, cx, cy, r); x.fill();
     } else {
       var cols = BUBBLE_BASE[key[0]];
-      var g = x.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r * 1.05);
+      // gemstone base: light crown → saturated mid → deep base → dark edge
+      var g = x.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.08, cx, cy, r * 1.08);
       g.addColorStop(0, cols[0]);
-      g.addColorStop(0.45, cols[1]);
-      g.addColorStop(1, cols[2]);
+      g.addColorStop(0.42, cols[1]);
+      g.addColorStop(0.82, cols[2]);
+      g.addColorStop(1, cols[3]);
       x.fillStyle = g; circle(x, cx, cy, r); x.fill();
       // inner depth shadow bottom
       var g2 = x.createRadialGradient(cx, cy + r * 0.55, r * 0.1, cx, cy + r * 0.55, r * 0.9);
       g2.addColorStop(0, 'rgba(0,0,0,.35)');
       g2.addColorStop(1, 'rgba(0,0,0,0)');
       x.fillStyle = g2; circle(x, cx, cy, r); x.fill();
-      // crescent highlight
-      x.fillStyle = 'rgba(255,255,255,.5)';
+      // inner facet sheen (gemstone cut feel)
+      x.fillStyle = 'rgba(255,255,255,.10)';
       x.beginPath();
-      x.ellipse(cx - r * 0.32, cy - r * 0.38, r * 0.30, r * 0.18, -0.6, 0, 7);
+      x.moveTo(cx - r * 0.5, cy + r * 0.1);
+      x.lineTo(cx, cy - r * 0.55); x.lineTo(cx + r * 0.5, cy + r * 0.1);
+      x.lineTo(cx, cy + r * 0.42); x.closePath(); x.fill();
+      // big crescent highlight
+      x.fillStyle = 'rgba(255,255,255,.55)';
+      x.beginPath();
+      x.ellipse(cx - r * 0.32, cy - r * 0.38, r * 0.36, r * 0.21, -0.6, 0, 7);
       x.fill();
       // hot dot
-      x.fillStyle = 'rgba(255,255,255,.9)';
-      circle(x, cx - r * 0.38, cy - r * 0.46, r * 0.09); x.fill();
+      x.fillStyle = 'rgba(255,255,255,.95)';
+      circle(x, cx - r * 0.40, cy - r * 0.48, r * 0.10); x.fill();
+      // inner sparkle (tiny 4-point star)
+      sparkle4(x, cx + r * 0.26, cy + r * 0.18, r * 0.13, 'rgba(255,255,255,.75)');
+      sparkle4(x, cx - r * 0.12, cy + r * 0.34, r * 0.08, 'rgba(255,255,255,.5)');
       // bottom bounce light
       x.fillStyle = 'rgba(255,255,255,.22)';
       x.beginPath();
       x.ellipse(cx + r * 0.15, cy + r * 0.55, r * 0.35, r * 0.12, 0.25, 0, 7);
       x.fill();
     }
-    // rim
+    // rim: dark edge + bright rim-light arc
     x.strokeStyle = 'rgba(10,4,24,.55)'; x.lineWidth = 3;
     circle(x, cx, cy, r - 1.5); x.stroke();
-    x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = 1.5;
-    x.beginPath(); x.arc(cx, cy, r - 3, -2.4, -0.6); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 2.5;
+    x.beginPath(); x.arc(cx, cy, r - 3, -2.6, -0.4); x.stroke();
 
     // black doom bubble: cursed purple cracks
     if (key[0] === 'K') {
@@ -190,15 +203,39 @@
     // eyes
     x.fillStyle = '#2a1633';
     var eyeY = hy + 2, look = pose === 'aim' ? 1.5 : 0;
-    ell(x, -8, eyeY, 3.4, 4.4); x.fill(); ell(x, 8, eyeY, 3.4, 4.4); x.fill();
-    x.fillStyle = '#fff';
-    circle(x, -8 + look + 1.2, eyeY - 1.5, 1.3); x.fill();
-    circle(x, 8 + look + 1.2, eyeY - 1.5, 1.3); x.fill();
+    if (pose === 'sad') {
+      // closed, downcast eyes
+      x.strokeStyle = '#2a1633'; x.lineWidth = 2.4; x.lineCap = 'round';
+      x.beginPath(); x.arc(-8, eyeY - 1, 4.5, 0.3, Math.PI - 0.3); x.stroke();
+      x.beginPath(); x.arc(8, eyeY - 1, 4.5, 0.3, Math.PI - 0.3); x.stroke();
+      x.fillStyle = '#2a1633';
+      // tear
+      x.fillStyle = 'rgba(140,200,255,.9)';
+      x.beginPath(); x.ellipse(-13, eyeY + 8, 2.2, 3.4, 0, 0, 7); x.fill();
+    } else if (pose === 'win') {
+      // happy ^ ^ eyes
+      x.strokeStyle = '#2a1633'; x.lineWidth = 2.8; x.lineCap = 'round';
+      x.beginPath(); x.arc(-8, eyeY + 2, 5, Math.PI + 0.3, -0.3); x.stroke();
+      x.beginPath(); x.arc(8, eyeY + 2, 5, Math.PI + 0.3, -0.3); x.stroke();
+      x.fillStyle = '#2a1633';
+    } else {
+      ell(x, -8, eyeY, 3.4, 4.4); x.fill(); ell(x, 8, eyeY, 3.4, 4.4); x.fill();
+      x.fillStyle = '#fff';
+      circle(x, -8 + look + 1.2, eyeY - 1.5, 1.3); x.fill();
+      circle(x, 8 + look + 1.2, eyeY - 1.5, 1.3); x.fill();
+    }
     // cheeks + smile
     x.fillStyle = 'rgba(255,120,130,.5)';
     circle(x, -13, eyeY + 7, 3.4); x.fill(); circle(x, 13, eyeY + 7, 3.4); x.fill();
     x.strokeStyle = '#5a2c1e'; x.lineWidth = 2; x.lineCap = 'round';
-    x.beginPath(); x.arc(0, eyeY + 5, 6, 0.35, Math.PI - 0.35); x.stroke();
+    if (pose === 'sad') {
+      x.beginPath(); x.arc(0, eyeY + 12, 6, Math.PI + 0.35, -0.35); x.stroke(); // frown
+    } else if (pose === 'win') {
+      x.fillStyle = '#7a2c1e';
+      x.beginPath(); x.ellipse(0, eyeY + 8, 6.5, 5, 0, 0, 7); x.fill(); // open happy mouth
+    } else {
+      x.beginPath(); x.arc(0, eyeY + 5, 6, 0.35, Math.PI - 0.35); x.stroke();
+    }
 
     // witch hat
     var hg2 = x.createLinearGradient(0, -18, 0, 28);
@@ -216,10 +253,14 @@
     x.fillStyle = '#ffd34d'; x.fillRect(-13, 20, 26, 6); // hat band
     x.fillStyle = '#ff8a3d'; star(x, 0, 23, 6, 2.6); x.fill();
 
-    // arms + wand (right arm raised when aiming/casting)
+    // arms + wand (right arm raised when aiming/casting; both up for win)
     x.strokeStyle = '#f0a97e'; x.lineWidth = 7; x.lineCap = 'round';
-    x.beginPath(); x.moveTo(-16, 74); x.quadraticCurveTo(-26, 86, -24, 96); x.stroke(); // left arm
-    var wandAng = pose === 'cast' ? -1.15 : (pose === 'aim' ? -0.9 : -0.35);
+    if (pose === 'win') {
+      x.beginPath(); x.moveTo(-16, 74); x.quadraticCurveTo(-30, 60, -34, 44); x.stroke(); // left arm up
+    } else {
+      x.beginPath(); x.moveTo(-16, 74); x.quadraticCurveTo(-26, 86, -24, 96); x.stroke(); // left arm
+    }
+    var wandAng = pose === 'win' ? -1.9 : (pose === 'cast' ? -1.15 : (pose === 'aim' ? -0.9 : -0.35));
     var ax = 16, ay = 74;
     var hx = ax + Math.cos(wandAng) * 20, hyy = ay + Math.sin(wandAng) * 20;
     x.beginPath(); x.moveTo(ax, ay); x.lineTo(hx, hyy); x.stroke();
@@ -250,6 +291,18 @@
     x.closePath();
   }
 
+  // tiny 4-point sparkle (inner bubble glints, idle shimmer)
+  function sparkle4(x, px, py, r, fill) {
+    x.fillStyle = fill;
+    x.beginPath();
+    x.moveTo(px, py - r);
+    x.quadraticCurveTo(px, py, px + r, py);
+    x.quadraticCurveTo(px, py, px, py + r);
+    x.quadraticCurveTo(px, py, px - r, py);
+    x.quadraticCurveTo(px, py, px, py - r);
+    x.closePath(); x.fill();
+  }
+
   function stella(pose) {
     if (!stellaCache[pose]) stellaCache[pose] = paintStella(pose);
     return stellaCache[pose];
@@ -257,7 +310,7 @@
 
   // Nero — black cat familiar. Anchor: bottom center. Sitting ~64px.
   var neroCache = {};
-  function paintNero(mouth) {
+  function paintNero(mouth, paw) {
     var Wd = 76, Ht = 70;
     var cv = mkCanvas(Wd, Ht), c = cv[0], x = cv[1];
     var cx = 38, base = 64;
@@ -270,9 +323,16 @@
     var bg = x.createRadialGradient(cx - 6, base - 30, 4, cx, base - 22, 24);
     bg.addColorStop(0, '#2c2440'); bg.addColorStop(1, '#14101e');
     x.fillStyle = bg; ell(x, cx, base - 22, 19, 24); x.fill();
-    // paws
+    // paws (one raised mid-bat when pawing at the shooter bubble)
     x.fillStyle = '#14101e';
-    ell(x, cx - 10, base - 2, 8, 5); x.fill(); ell(x, cx + 10, base - 2, 8, 5); x.fill();
+    if (paw) {
+      ell(x, cx + 10, base - 2, 8, 5); x.fill();
+      x.strokeStyle = '#14101e'; x.lineWidth = 7; x.lineCap = 'round';
+      x.beginPath(); x.moveTo(cx - 12, base - 22); x.quadraticCurveTo(cx - 26, base - 34, cx - 30, base - 46); x.stroke();
+      ell(x, cx - 30, base - 48, 7, 6, -0.4); x.fill();
+    } else {
+      ell(x, cx - 10, base - 2, 8, 5); x.fill(); ell(x, cx + 10, base - 2, 8, 5); x.fill();
+    }
     // head
     x.fillStyle = '#1a1428'; circle(x, cx, base - 46, 15); x.fill();
     // ears
@@ -322,9 +382,9 @@
     });
     return c;
   }
-  function nero(mouth) {
-    var k = mouth ? 'open' : 'shut';
-    if (!neroCache[k]) neroCache[k] = paintNero(mouth);
+  function nero(mouth, paw) {
+    var k = (mouth ? 'open' : 'shut') + (paw ? '-paw' : '');
+    if (!neroCache[k]) neroCache[k] = paintNero(mouth, paw);
     return neroCache[k];
   }
 
@@ -486,6 +546,8 @@
 
   /* ---------------- Particles & fx sprites ---------------- */
   var dotSprite = null, sparkSprite = null, ringSprite = null, featherSprite = null;
+  var glintSprite = null, wilburAuraSprite = null;
+  var glowRingCache = {}, bubbleImgCache = {}, stellaImgCache = {};
 
   function paintDot() {
     var cv = mkCanvas(16, 16), c = cv[0], x = cv[1];
@@ -495,6 +557,68 @@
     g.addColorStop(1, 'rgba(255,240,200,0)');
     x.fillStyle = g; circle(x, 8, 8, 8); x.fill();
     return c;
+  }
+  // soft gold glow dot for the aim guide (additive)
+  var aimDotSprite = null;
+  function paintAimDot() {
+    var cv = mkCanvas(24, 24), c = cv[0], x = cv[1];
+    var g = x.createRadialGradient(12, 12, 1, 12, 12, 12);
+    g.addColorStop(0, 'rgba(255,250,225,1)');
+    g.addColorStop(0.35, 'rgba(255,225,140,.85)');
+    g.addColorStop(1, 'rgba(255,200,100,0)');
+    x.fillStyle = g; circle(x, 12, 12, 12); x.fill();
+    return c;
+  }
+  // idle shimmer glint: 4-point star with halo
+  function paintGlint() {
+    var cv = mkCanvas(28, 28), c = cv[0], x = cv[1];
+    var g = x.createRadialGradient(14, 14, 1, 14, 14, 14);
+    g.addColorStop(0, 'rgba(255,255,255,.9)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; circle(x, 14, 14, 14); x.fill();
+    sparkle4(x, 14, 14, 10, 'rgba(255,255,255,.95)');
+    return c;
+  }
+  // color-tinted glow ring for the loaded shooter bubble (and doom pulse)
+  function paintGlowRing(key) {
+    var S = 128, cx = 64, cy = 64, r = 60;
+    var cv = mkCanvas(S, S), c = cv[0], x = cv[1];
+    var col = BUBBLE_GLOW[key[0]] || '#ffffff';
+    var g = x.createRadialGradient(cx, cy, r * 0.28, cx, cy, r);
+    g.addColorStop(0, hexA(col, 0));
+    g.addColorStop(0.55, hexA(col, 0.5));
+    g.addColorStop(0.8, hexA(col, 0.16));
+    g.addColorStop(1, hexA(col, 0));
+    x.fillStyle = g; circle(x, cx, cy, r); x.fill();
+    return c;
+  }
+  function hexA(hex, a) {
+    var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  function glowRing(key) {
+    if (!glowRingCache[key]) glowRingCache[key] = paintGlowRing(key);
+    return glowRingCache[key];
+  }
+  // Wilbur's menacing aura
+  function paintWilburAura() {
+    var S = 200, cx = 100, cy = 100;
+    var cv = mkCanvas(S, S), c = cv[0], x = cv[1];
+    var g = x.createRadialGradient(cx, cy, 20, cx, cy, 100);
+    g.addColorStop(0, 'rgba(120,40,180,.35)');
+    g.addColorStop(0.6, 'rgba(150,60,220,.18)');
+    g.addColorStop(1, 'rgba(150,60,220,0)');
+    x.fillStyle = g; circle(x, cx, cy, 100); x.fill();
+    return c;
+  }
+  // bubble sprite as a data URL (HUD ammo chip, title art) — cached
+  function bubbleImg(key) {
+    if (!bubbleImgCache[key]) bubbleImgCache[key] = bubbleSprite(key).toDataURL();
+    return bubbleImgCache[key];
+  }
+  function stellaImg(pose) {
+    if (!stellaImgCache[pose]) stellaImgCache[pose] = stella(pose).toDataURL();
+    return stellaImgCache[pose];
   }
   function paintSpark() {
     var cv = mkCanvas(28, 28), c = cv[0], x = cv[1];
@@ -537,10 +661,12 @@
     x0.fillStyle = sky; x0.fillRect(0, 0, w, h);
     // stars
     var srng = mulberry(w * 7 + h * 13);
+    var twinkles = [];
     for (var i = 0; i < 90; i++) {
       var sx = srng() * w, sy = srng() * h * 0.7, ss = srng();
       x0.fillStyle = 'rgba(255,255,255,' + (0.25 + ss * 0.6) + ')';
       circle(x0, sx, sy, ss < 0.85 ? 1 : 1.8); x0.fill();
+      if (ss > 0.93) twinkles.push([sx, sy, 2 + srng() * 3, srng() * 7]); // x, y, size, phase
     }
     // moon
     var mx = w * 0.82, my = h * 0.13, mr = Math.min(w, h) * 0.09;
@@ -565,6 +691,16 @@
       pine(x1, tx, h * 0.94, tw, th);
     }
     layers.push(c1);
+
+    // L1b: mid-distance pines (lighter, painted wide for parallax sway)
+    var cv1b = mkCanvas(w + 48, h), c1b = cv1b[0], x1b = cv1b[1];
+    x1b.fillStyle = 'rgba(64,44,120,.9)';
+    var mrng = mulberry(w * 5 + 31);
+    for (var tx2 = -20; tx2 < w + 68; tx2 += 52 + mrng() * 44) {
+      var th2 = h * (0.14 + mrng() * 0.12), tw2 = 34 + mrng() * 26;
+      pine(x1b, tx2, h * 0.96, tw2, th2);
+    }
+    layers.push(c1b);
 
     // L2: near twisted trees (dark) with hanging lanterns
     var cv2 = mkCanvas(w, h), c2 = cv2[0], x2 = cv2[1];
@@ -597,8 +733,13 @@
       }
     });
     layers.push(c2);
-    bgCache = { w: w, h: h, layers: layers };
+    bgCache = { w: w, h: h, layers: layers, twinkles: twinkles, midW: w + 48 };
     return layers;
+  }
+
+  function bgTwinkles(w, h) {
+    paintBackground(w, h);
+    return bgCache.twinkles || [];
   }
 
   function pine(x, bx, by, w, h) {
@@ -674,30 +815,42 @@
   /* pre-warm everything */
   function warm() {
     ['R', 'B', 'G', 'Y', 'P', 'W', 'K', 'Rbomb', 'Bbomb', 'Gbomb', 'Ybomb', 'Pbomb',
-     'Rlight', 'Blight', 'Glight', 'Ylight', 'Plight'].forEach(bubbleSprite);
+     'Rlight', 'Blight', 'Glight', 'Ylight', 'Plight'].forEach(function (k) {
+      bubbleSprite(k); glowRing(k); bubbleImg(k);
+    });
     blockerSprite = paintBlocker();
     owlSprite = paintOwl();
     ghostSprite = paintGhost();
     dotSprite = paintDot(); sparkSprite = paintSpark();
     ringSprite = paintRing(); featherSprite = paintFeather();
-    stella('idle'); stella('aim'); stella('cast');
-    nero(false); nero(true);
+    glintSprite = paintGlint(); aimDotSprite = paintAimDot();
+    wilburAuraSprite = paintWilburAura();
+    stella('idle'); stella('aim'); stella('cast'); stella('sad'); stella('win');
+    stellaImg('sad'); stellaImg('win');
+    nero(false, false); nero(true, false); nero(false, true);
     wilbur(false); wilbur(true);
   }
 
   window.HexArt = {
     bubble: bubbleSprite,
+    bubbleImg: bubbleImg,
     blocker: function () { return blockerSprite; },
     owl: function () { return owlSprite; },
     ghost: function () { return ghostSprite; },
     stella: stella,
+    stellaImg: stellaImg,
     nero: nero,
     wilbur: wilbur,
+    wilburAura: function () { return wilburAuraSprite; },
     dot: function () { return dotSprite; },
+    aimDot: function () { return aimDotSprite; },
+    glint: function () { return glintSprite; },
+    glowRing: glowRing,
     spark: function () { return sparkSprite; },
     ring: function () { return ringSprite; },
     feather: function () { return featherSprite; },
     background: paintBackground,
+    twinkles: bgTwinkles,
     branch: paintBranch,
     star: star,
     warm: warm

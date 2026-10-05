@@ -102,9 +102,44 @@ function genDailyLevel(seed) {
 /* Human-readable daily id, e.g. "2026-10-03". */
 function dailyId(dateStr) { return dateStr; }
 
+/* ---- Daily streak (pure, localStorage-free; ui.js owns persistence) ----
+ * rec: {last: 'YYYY-MM-DD'|null, streak: n, dates: ['YYYY-MM-DD', ...]}
+ * Returns the updated record for "today". Streak continues only from
+ * yesterday; replaying today's daily keeps the streak. */
+function prevDayStr(today) {
+  var p = today.split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  d.setDate(d.getDate() - 1);
+  var m = '' + (d.getMonth() + 1), day = '' + d.getDate();
+  return d.getFullYear() + '-' + (m.length < 2 ? '0' + m : m) + '-' + (day.length < 2 ? '0' + day : day);
+}
+function streakUpdate(rec, today) {
+  rec = rec || { last: null, streak: 0, dates: [] };
+  var dates = (rec.dates || []).slice(-6);
+  if (dates.indexOf(today) < 0) dates.push(today);
+  dates = dates.slice(-7);
+  if (rec.last === today) return { last: today, streak: rec.streak, dates: dates };
+  var streak = (rec.last === prevDayStr(today)) ? rec.streak + 1 : 1;
+  return { last: today, streak: streak, dates: dates };
+}
+/* 7-day strip ending today: [{date, hit, today}] oldest → newest. */
+function weekStrip(dates, today) {
+  dates = dates || [];
+  var out = [];
+  var p = today.split('-');
+  for (var i = 6; i >= 0; i--) {
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    d.setDate(d.getDate() - i);
+    var m = '' + (d.getMonth() + 1), day = '' + d.getDate();
+    var ds = d.getFullYear() + '-' + (m.length < 2 ? '0' + m : m) + '-' + (day.length < 2 ? '0' + day : day);
+    out.push({ date: ds, hit: dates.indexOf(ds) >= 0, today: i === 0 });
+  }
+  return out;
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { mulberry32: mulberry32, genDailyLevel: genDailyLevel, dailyId: dailyId };
+  module.exports = { mulberry32: mulberry32, genDailyLevel: genDailyLevel, dailyId: dailyId, streakUpdate: streakUpdate, weekStrip: weekStrip, prevDayStr: prevDayStr };
 }
 if (typeof window !== 'undefined') {
-  window.HexDaily = { mulberry32: mulberry32, genDailyLevel: genDailyLevel, dailyId: dailyId };
+  window.HexDaily = { mulberry32: mulberry32, genDailyLevel: genDailyLevel, dailyId: dailyId, streakUpdate: streakUpdate, weekStrip: weekStrip };
 }

@@ -1,7 +1,8 @@
 /* Bubble Hex audio — WebAudio synth SFX + generative music-box soundtrack. */
 var HexAudio = (function () {
   var ctx = null, master = null, musicGain = null;
-  var musicOn = true, tension = 0, musicTimer = null, step = 0;
+  var musicOn = true, sfxOn = true, tension = 0, musicTimer = null, step = 0;
+  try { sfxOn = localStorage.getItem('bubblehex_sfx') !== 'off'; } catch (e) { sfxOn = true; }
 
   function ac() {
     if (!ctx) {
@@ -16,6 +17,7 @@ var HexAudio = (function () {
   }
   function tone(freq, dur, type, vol, slide, dest) {
     var c = ac(); if (!c) return;
+    if (!sfxOn && dest !== musicGain) return; // music box keeps playing; SFX mute here
     var o = c.createOscillator(), g = c.createGain();
     o.type = type || 'sine'; o.frequency.value = freq;
     if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, slide), c.currentTime + dur);
@@ -25,7 +27,7 @@ var HexAudio = (function () {
     o.start(); o.stop(c.currentTime + dur + 0.02);
   }
   function noise(dur, vol, freq) {
-    var c = ac(); if (!c) return;
+    var c = ac(); if (!c || !sfxOn) return;
     var len = Math.floor(c.sampleRate * dur);
     var buf = c.createBuffer(1, len, c.sampleRate);
     var d = buf.getChannelData(0);
@@ -93,6 +95,13 @@ var HexAudio = (function () {
       music(musicOn);
       return musicOn;
     },
+    sfx: function (on) {
+      if (on === undefined) return sfxOn;
+      sfxOn = !!on;
+      try { localStorage.setItem('bubblehex_sfx', sfxOn ? 'on' : 'off'); } catch (e) {}
+      return sfxOn;
+    },
+    sfxToggle: function () { return this.sfx(!sfxOn); },
 
     shoot: function () { tone(520, 0.14, 'sine', 0.10, 940); noise(0.06, 0.03, 3000); },
     tick: function () { tone(880, 0.05, 'sine', 0.05); },
@@ -141,6 +150,20 @@ var HexAudio = (function () {
     win: function () {
       [523, 659, 784, 1047, 1319, 1568].forEach(function (f, i) {
         setTimeout(function () { tone(f, 0.35, 'triangle', 0.11); tone(f * 2, 0.25, 'sine', 0.04); }, i * 130);
+      });
+    },
+    // staged win ceremony: one rising music-box tick per star
+    starTick: function (i) {
+      var f = 1046.5 * Math.pow(1.26, Math.min(i, 6));
+      tone(f, 0.5, 'triangle', 0.11); tone(f * 2, 0.3, 'sine', 0.035);
+      setTimeout(function () { tone(f * 1.5, 0.4, 'sine', 0.04); }, 90);
+    },
+    // Bubble Rain drops: pitch climbs as the rain falls
+    rainTick: function (i) { tone(880 + i * 36, 0.14, 'sine', 0.055); tone(1760 + i * 72, 0.1, 'sine', 0.02); },
+    // daily streak claim burst
+    coinBurst: function () {
+      [1318.5, 1568, 2093, 2637].forEach(function (f, i) {
+        setTimeout(function () { tone(f, 0.3, 'triangle', 0.09); tone(f * 2, 0.2, 'sine', 0.03); }, i * 75);
       });
     },
     lose: function () { tone(320, 0.6, 'sine', 0.10, 140); tone(210, 0.8, 'triangle', 0.08, 90); }
