@@ -452,65 +452,7 @@ function sunPos() {
   return { x: x, y: y, isMoon: isMoon };
 }
 
-/* ---------- fish drawing (shared by scene, journal, cards) ---------- */
-function patternFor(id) {
-  /* per-fish pattern from a stable id hash: stripes | spots | bands */
-  var h = 0;
-  for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return ['stripes', 'spots', 'bands'][h % 3];
-}
-function drawFish(g, x, y, s, color, o) {
-  o = o || {};
-  g.save();
-  g.translate(x, y);
-  if (o.flip) g.scale(-1, 1);
-  var L = 34 * s, Hh = 15 * s * (o.slim ? 0.62 : 1); /* darters are slim: shape = information */
-  if (o.silhouette) {
-    g.fillStyle = 'rgba(25,45,65,0.55)';
-  } else {
-    g.fillStyle = color;
-    /* soft contact shadow: pre-drawn ellipse, no shadowBlur */
-    g.fillStyle = 'rgba(10,25,35,0.16)';
-    g.beginPath(); g.ellipse(2, Hh * 0.5, L * 0.46, Hh * 0.2, 0, 0, 6.283); g.fill();
-    g.fillStyle = color;
-  }
-  g.beginPath(); /* tail */
-  g.moveTo(-L * 0.42, 0); g.lineTo(-L * 0.72, -Hh * 0.75); g.lineTo(-L * 0.72, Hh * 0.75);
-  g.closePath(); g.fill();
-  g.beginPath(); /* body */
-  g.ellipse(0, 0, L * 0.5, Hh * 0.62, 0, 0, 6.283); g.fill();
-  if (!o.silhouette) {
-    /* per-fish pattern, clipped to the body */
-    if (o.pattern && color) {
-      g.save();
-      g.beginPath(); g.ellipse(0, 0, L * 0.5, Hh * 0.62, 0, 0, 6.283); g.clip();
-      g.fillStyle = shade(color, -28);
-      if (o.pattern === 'stripes') {
-        for (var i = -1; i <= 1; i++) {
-          g.beginPath(); g.ellipse(i * L * 0.22, 0, L * 0.07, Hh * 0.62, 0, 0, 6.283); g.fill();
-        }
-      } else if (o.pattern === 'spots') {
-        var spots = [[-0.25, -0.3], [0.05, 0.25], [0.3, -0.15], [-0.05, -0.05], [0.22, 0.32], [-0.35, 0.28]];
-        for (var j = 0; j < spots.length; j++) {
-          g.beginPath(); g.arc(spots[j][0] * L, spots[j][1] * Hh, L * 0.055, 0, 6.283); g.fill();
-        }
-      } else {
-        for (var k2 = -1; k2 <= 1; k2++) {
-          g.fillRect(-L * 0.5, k2 * Hh * 0.42 - Hh * 0.1, L, Hh * 0.2);
-        }
-      }
-      g.restore();
-    }
-    g.fillStyle = 'rgba(255,255,255,0.35)';
-    g.beginPath(); g.ellipse(L * 0.08, -Hh * 0.22, L * 0.3, Hh * 0.22, -0.2, 0, 6.283); g.fill();
-    g.fillStyle = 'rgba(20,20,20,0.75)';
-    g.beginPath(); g.arc(L * 0.3, -Hh * 0.1, Math.max(1.4, 2.4 * s), 0, 6.283); g.fill();
-    g.fillStyle = 'rgba(255,255,255,0.85)';
-    g.beginPath(); g.arc(L * 0.3 + 0.8, -Hh * 0.1 - 0.8, Math.max(0.7, 0.9 * s), 0, 6.283); g.fill();
-  }
-  g.restore();
-}
-
+/* Species art lives in critters.js (global drawSpecies/patternFor). */
 /* ---------- the heron (kept, all of it) ---------- */
 var heron = {
   mode: 'away', t: 0, nextVisit: 45 + Math.random() * 60,
@@ -1486,7 +1428,7 @@ function drawCatchArc(g) {
   var hang = 1 + Math.sin(Math.min(1, p.k) * Math.PI) * 0.15;
   g.save();
   g.globalAlpha = Math.min(1, (ca.dur - ca.t) * 4 + 0.4);
-  drawFish(g, p.x, p.y, 1.9 * f.size * hang, f.color,
+  drawSpecies(g, p.x, p.y, 1.9 * f.size * hang, f,
     { slim: f.behavior === 'darter', pattern: patternFor(f.id), flip: p.k > 0.5 });
   g.restore();
 }
@@ -1544,7 +1486,7 @@ function drawSilhs(g) {
   g.save();
   for (var i = 0; i < world.silhs.length; i++) {
     var s = world.silhs[i];
-    drawFish(g, s.x, s.y + Math.sin(world.t * 2 + s.ph) * 5, 0.85 * s.fish.size, null,
+    drawSpecies(g, s.x, s.y + Math.sin(world.t * 2 + s.ph) * 5, 0.85 * s.fish.size, s.fish,
       { silhouette: true, flip: s.dir < 0, slim: s.fish.behavior === 'darter' });
   }
   g.restore();
@@ -2265,7 +2207,7 @@ function paintAquariumFrame() {
     var yy = a.y + Math.sin(aquaT * 2.2 + a.ph) * 5;
     if (a.x < 12) { a.x = 12; a.vx = Math.abs(a.vx); }
     if (a.x > W2 - 12) { a.x = W2 - 12; a.vx = -Math.abs(a.vx); }
-    drawFish(g, a.x, yy, 0.52 * a.f.size, a.f.color, {
+    drawSpecies(g, a.x, yy, 0.52 * a.f.size, a.f, {
       slim: a.f.behavior === 'darter', pattern: patternFor(a.f.id), flip: a.vx < 0
     });
   });
@@ -2382,7 +2324,7 @@ function journalCells() {
     cell.className = 'jcell' + (caught ? ' caught' : ' locked');
     var c = document.createElement('canvas');
     c.width = 96; c.height = 60;
-    drawFish(c.getContext('2d'), 48, 30, 0.85, f.color,
+    drawSpecies(c.getContext('2d'), 48, 30, 0.85, f,
       { silhouette: !caught, slim: f.behavior === 'darter', pattern: caught ? patternFor(f.id) : null });
     cell.appendChild(c);
     var n = document.createElement('div');
@@ -2671,7 +2613,7 @@ function openDaily() {
     '<p class="sheet-sub">🔥 streak: <b>' + save.streak.count + '</b> day' + (save.streak.count === 1 ? '' : 's') +
     ' · 📖 journal: <b>' + Object.keys(save.journal).length + '/' + CC.FISH.length + '</b></p>';
   var g = $('daily-fish').getContext('2d');
-  drawFish(g, 110, 64, 1.7, f.color, { silhouette: !caught, slim: f.behavior === 'darter' });
+  drawSpecies(g, 110, 64, 1.7, f, { silhouette: !caught, slim: f.behavior === 'darter' });
   renderDailyBoard(d);
 }
 function renderDailyBoard(d) {
@@ -2738,7 +2680,7 @@ function paintCatchArt(g, f) {
   }
   g.restore();
   /* the fish, large and proud */
-  drawFish(g, W2 / 2, H2 / 2 + 4, 2.6 * f.size, f.color, { slim: f.behavior === 'darter', pattern: patternFor(f.id) });
+  drawSpecies(g, W2 / 2, H2 / 2 + 4, 2.6 * f.size, f, { slim: f.behavior === 'darter', pattern: patternFor(f.id) });
   /* sparkle for rare+ */
   if (f.rarity === 'rare' || f.rarity === 'legendary') {
     g.save(); g.globalCompositeOperation = 'lighter';
@@ -2789,7 +2731,7 @@ function showCatchCard(f, coins, quality, isNew, isRecord, caughtDaily, sizeCm) 
     var btns = ab.querySelectorAll('.also-fish');
     others.forEach(function (o, i) {
       var c = btns[i].querySelector('canvas');
-      drawFish(c.getContext('2d'), 36, 22, 0.62 * o.size, o.color, { slim: o.behavior === 'darter', pattern: patternFor(o.id) });
+      drawSpecies(c.getContext('2d'), 36, 22, 0.62 * o.size, o, { slim: o.behavior === 'darter', pattern: patternFor(o.id) });
       btns[i].addEventListener('click', function () {
         closeOv('ov-catch');
         $('journal-detail').hidden = true; journalCells(); openOv('ov-journal');
