@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Arrow Slide</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="css/font-display.css?v=1">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -13,30 +14,40 @@
 <header id="topbar">
   <button id="back-btn" class="top-btn" aria-label="Levels">‹</button>
   <div id="title-block">
-    <div id="lvl-label">Level 1</div>
+    <div id="lvl-label" class="font-display">Level 1</div>
     <div id="diff-label">Easy</div>
+    <div id="prog"><div id="prog-fill"></div></div>
   </div>
   <button id="theme-btn" class="top-btn" aria-label="Theme">🎨</button>
   <button id="sound-btn" class="top-btn" aria-label="Sound">🔊</button>
   <button id="haptic-btn" class="top-btn" aria-label="Haptics">📳</button>
 </header>
 
-<div id="lives-row"><span id="lives">💧💧💧</span></div>
+<div id="lives-row"><span id="lives">
+  <svg class="drop" viewBox="0 0 24 32"><path d="M12 2 C12 2 4 14 4 21 a8 8 0 0 0 16 0 C20 14 12 2 12 2z"/></svg>
+  <svg class="drop" viewBox="0 0 24 32"><path d="M12 2 C12 2 4 14 4 21 a8 8 0 0 0 16 0 C20 14 12 2 12 2z"/></svg>
+  <svg class="drop" viewBox="0 0 24 32"><path d="M12 2 C12 2 4 14 4 21 a8 8 0 0 0 16 0 C20 14 12 2 12 2z"/></svg>
+</span></div>
 
-<div id="hint-toast">Stuck? Tap 💡 for a hint — or hold an arrow to preview its lane.</div>
+<div id="hint-toast">Stuck? Tap the lamp for a hint — or hold an arrow to preview its lane.</div>
 
 <div id="dock">
-  <button id="map-btn" class="dock-btn" aria-label="Level map">
-    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/>
-      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>
-    </svg>
-  </button>
-  <button id="hint-btn" class="dock-btn" aria-label="Hint">
-    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.8.6 1.5 1.4 1.5 2.1h4c0-.7.7-1.5 1.5-2.1A6 6 0 0 0 12 3z"/>
-    </svg>
-  </button>
+  <div class="dock-item">
+    <button id="map-btn" class="dock-btn" aria-label="Level map">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M4 5.5 C 7 4.5, 9 6.5, 12 5.5 S 17 4.5, 20 5.5"/><path d="M4 12 C 7 11, 9 13, 12 12 S 17 11, 20 12"/><path d="M4 18.5 C 7 17.5, 9 19.5, 12 18.5 S 17 17.5, 20 18.5"/>
+      </svg>
+    </button>
+    <span class="dock-label">Map</span>
+  </div>
+  <div class="dock-item">
+    <button id="hint-btn" class="dock-btn" aria-label="Hint">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.8.6 1.5 1.4 1.5 2.1h4c0-.7.7-1.5 1.5-2.1A6 6 0 0 0 12 3z"/>
+      </svg>
+    </button>
+    <span class="dock-label">Hint</span>
+  </div>
 </div>
 
 <div id="zoom-ctl">
@@ -50,21 +61,21 @@
       <path d="M8 50 C 30 50, 30 10, 52 10 S 74 40, 96 30"/>
       <path d="M96 30 l-12 -3 M96 30 l-4 -12" stroke-width="4"/>
     </svg>
-    <h1>Arrow Slide</h1>
+    <h1 class="font-display">Arrow Slide</h1>
     <p class="tag">A quiet puzzle for loud days.</p>
     <button id="play-btn" class="big-btn">▶ Play</button>
     <button id="daily-btn" class="daily-btn">☀️ Daily Slide</button>
     <div id="daily-sub" class="daily-sub">fetching today&rsquo;s board…</div>
     <p class="help">Tap an arrow — if its path to the edge is clear, it glides away.<br>
-    A blocked arrow costs a 💧 — lose all three and it&rsquo;s over.<br>
+    A blocked arrow costs a drop — lose all three and it&rsquo;s over.<br>
     <b>Hold</b> an arrow to preview its lane. Clear the board. Breathe.</p>
   </div>
 </div>
 
 <div id="win-modal" class="overlay">
   <div class="card">
-    <div class="stars" id="win-stars">⭐⭐⭐</div>
-    <h2 id="win-title">Board Clear</h2>
+    <div class="stars" id="win-stars">★★★</div>
+    <h2 id="win-title" class="font-display">Board Clear</h2>
     <div class="stats">
       <div><span>Cleared</span><b id="clear-label">0/0</b></div>
       <div><span>Time</span><b id="win-time">0:00</b></div>
@@ -81,8 +92,12 @@
 
 <div id="lives-modal" class="overlay">
   <div class="card">
-    <h2>Out of drops</h2>
-    <div class="drops">🤍🤍🤍</div>
+    <h2 class="font-display">Out of drops</h2>
+    <div class="drops">
+      <svg class="drop lost" viewBox="0 0 24 32"><path d="M12 2 C12 2 4 14 4 21 a8 8 0 0 0 16 0 C20 14 12 2 12 2z"/></svg>
+      <svg class="drop lost" viewBox="0 0 24 32"><path d="M12 2 C12 2 4 14 4 21 a8 8 0 0 0 16 0 C20 14 12 2 12 2z"/></svg>
+      <svg class="drop lost" viewBox="0 0 24 32"><path d="M12 2 C12 2 4 14 4 21 a8 8 0 0 0 16 0 C20 14 12 2 12 2z"/></svg>
+    </div>
     <p class="tag">The board keeps its secrets… this time.</p>
     <button id="retry-btn2" class="big-btn">↻ Try again</button>
     <button id="lives-map-btn" class="ghost-btn">Levels</button>
@@ -91,7 +106,7 @@
 
 <div id="map-modal" class="overlay">
   <div class="card wide">
-    <h2>Levels</h2>
+    <h2 class="font-display">Levels</h2>
     <div id="map-grid"></div>
     <button id="map-close" class="ghost-btn">Close</button>
   </div>
@@ -99,6 +114,7 @@
 
 <script src="maze.js?v=2"></script>
 <script src="audio.js?v=2"></script>
-<script src="game.js?v=3"></script>
+<script src="thumbs.js?v=1"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

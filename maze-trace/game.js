@@ -30,10 +30,12 @@
 
   /* ---------- themes ---------- */
   var THEMES = {
-    day:   { bg: '#f6f1e3', ink: '#6f4f33', faint: 'rgba(111,79,51,.28)', gold: '#c08a2d',
-             sub: '#a58a73', drop: '#4da3ff', paper: '#fffdf8', grain: '111,79,51' },
-    night: { bg: '#221b13', ink: '#d9c9a4', faint: 'rgba(217,201,164,.25)', gold: '#e0a83e',
-             sub: '#8d7c63', drop: '#4da3ff', paper: '#2e2417', grain: '217,201,164' },
+    day:   { bg: '#f6f1e3', ink: '#6f4f33', inkDeep: '#453322', faint: 'rgba(111,79,51,.28)', gold: '#c08a2d',
+             goldDeep: '#8f6520', sub: '#a58a73', drop: '#4da3ff', paper: '#fffdf8', grain: '111,79,51',
+             card: '#fffdf6', cardEdge: '#e3d5b8', vignette: 'rgba(111,79,51,.10)' },
+    night: { bg: '#221b13', ink: '#d9c9a4', inkDeep: '#9d8a68', faint: 'rgba(217,201,164,.25)', gold: '#e0a83e',
+             goldDeep: '#a97c26', sub: '#8d7c63', drop: '#4da3ff', paper: '#2e2417', grain: '217,201,164',
+             card: '#33291a', cardEdge: '#5a4a30', vignette: 'rgba(0,0,0,.28)' },
   };
   function theme() { return THEMES[S && S.theme || 'day']; }
   function loadPref(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
@@ -58,6 +60,7 @@
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', S.theme);
     buildGrain();
+    buildStatic();
     document.getElementById('sound-btn').textContent = S.sound ? '🔊' : '🔇';
     document.getElementById('haptic-btn').textContent = S.haptic ? '📳' : '📴';
     draw();
@@ -77,6 +80,172 @@
       g.beginPath(); g.arc(Math.random() * 140, Math.random() * 140, r, 0, 7); g.fill();
     }
     grainTile = t;
+  }
+
+  /* ---------- brush-ink rendering ----------
+   * The whole board (paper card + dots + arrows) is painted once into an
+   * offscreen layer at fixed resolution (LR px per maze unit) and blitted
+   * each frame. Arrows never overlap — every cell belongs to exactly one
+   * arrow — so a released arrow is erased incrementally from the layer
+   * instead of rebuilding it. Dynamic things (flying arrows, guide lane,
+   * particles) draw on top every frame. */
+  var LR = 112;        // layer px per maze unit (2x the 56px cell)
+  var LPAD = 0.7;      // paper margin around the board, in units
+  var layer = null;
+
+  function hashStr(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+
+  function polyPath(g, pts) {
+    g.beginPath();
+    for (var i = 0; i < pts.length; i++) {
+      if (i === 0) g.moveTo(pts[i][0], pts[i][1]); else g.lineTo(pts[i][0], pts[i][1]);
+    }
+  }
+
+  /* Paint one arrow as layered brush strokes. pts are in the target
+   * context's pixels. o: { w (base width px), ink, deep, seed, alpha, mode }
+   * mode 'full': wash + tapered jittered core + dry-brush edge + head.
+   * mode 'wash': the pale wash pass only (halos, ghost previews). */
+  function paintBrush(g, pts, o) {
+    var n = pts.length;
+    if (n < 2) return;
+    var alpha = o.alpha == null ? 1 : o.alpha;
+    var STEPS = 5, sub = [], i, s2;
+    for (i = 0; i < n - 1; i++) {
+      for (s2 = 0; s2 < STEPS; s2++) {
+        var t0 = s2 / STEPS, t1 = (s2 + 1) / STEPS;
+        sub.push([
+          [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t0, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t0],
+          [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t1, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t1],
+          (i + t0) / (n - 1), (i + t1) / (n - 1)
+        ]);
+      }
+    }
+    function widthAt(t) { return o.w * (0.42 + 0.58 * Math.pow(t, 0.65)); }
+    var rng = mulberry32((o.seed == null ? 1 : o.seed) >>> 0);
+    var jits = [];
+    for (i = 0; i < sub.length; i++) jits.push((rng() - 0.5) * o.w * 0.16);
+    g.save();
+    g.lineCap = 'round';
+    function segPath(k, off) {
+      var sg = sub[k], dx = sg[1][0] - sg[0][0], dy = sg[1][1] - sg[0][1];
+      var len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, jo = off + jits[k];
+      g.beginPath();
+      g.moveTo(sg[0][0] + nx * jo, sg[0][1] + ny * jo);
+      g.lineTo(sg[1][0] + nx * jo, sg[1][1] + ny * jo);
+    }
+    // pass 1: pale wash halo
+    var washA = o.washA == null ? 0.16 : o.washA;
+    g.strokeStyle = hexA(o.ink, washA * alpha);
+    g.lineWidth = o.w * 1.7;
+    polyPath(g, pts); g.stroke();
+    if (o.mode === 'wash') { g.restore(); return; }
+    // pass 2: tapered core, jittered like a hand
+    for (i = 0; i < sub.length; i++) {
+      g.strokeStyle = hexA(o.ink, 0.92 * alpha);
+      g.lineWidth = Math.max(0.75, widthAt((sub[i][2] + sub[i][3]) / 2));
+      segPath(i, 0); g.stroke();
+    }
+    // pass 3: dry-brush edge, darker, offset to one side
+    for (i = 0; i < sub.length; i++) {
+      g.strokeStyle = hexA(o.deep, 0.42 * alpha);
+      g.lineWidth = Math.max(0.5, widthAt((sub[i][2] + sub[i][3]) / 2) * 0.45);
+      segPath(i, o.w * 0.16); g.stroke();
+    }
+    // head: filled triangle + darker spine
+    var hd = pts[n - 1], pv = pts[n - 2];
+    var ang = Math.atan2(hd[1] - pv[1], hd[0] - pv[0]);
+    var hl = o.w * 2.9, hw = o.w * 2.3;
+    g.save(); g.translate(hd[0], hd[1]); g.rotate(ang);
+    g.fillStyle = hexA(o.ink, 0.95 * alpha);
+    g.beginPath();
+    g.moveTo(hl * 0.75, 0); g.lineTo(-hl * 0.35, -hw * 0.5); g.lineTo(-hl * 0.35, hw * 0.5);
+    g.closePath(); g.fill();
+    g.strokeStyle = hexA(o.deep, 0.5 * alpha); g.lineWidth = Math.max(0.75, o.w * 0.14);
+    g.beginPath(); g.moveTo(hl * 0.6, 0); g.lineTo(-hl * 0.3, 0); g.stroke();
+    g.restore();
+    g.restore();
+  }
+
+  /* deckled paper edge: jittered polygon around the board card, stable per board */
+  var DECKLE_SEG = 9;
+  function decklePath(g, R) {
+    var b = S.board, pad = LPAD, j = S.deckle, pts = [];
+    function edge(x0, y0, x1, y1, k0) {
+      for (var i = 0; i <= DECKLE_SEG; i++) {
+        var t = i / DECKLE_SEG, nx = -(y1 - y0), ny = (x1 - x0);
+        var len = Math.hypot(nx, ny) || 1; nx /= len; ny /= len;
+        var off = j[(k0 + i) % j.length] * 0.09;
+        pts.push([(x0 + (x1 - x0) * t + nx * off + pad) * R, (y0 + (y1 - y0) * t + ny * off + pad) * R]);
+      }
+    }
+    edge(-pad, -pad, b.w + pad, -pad, 0);
+    edge(b.w + pad, -pad, b.w + pad, b.h + pad, DECKLE_SEG + 1);
+    edge(b.w + pad, b.h + pad, -pad, b.h + pad, 2 * (DECKLE_SEG + 1));
+    edge(-pad, b.h + pad, -pad, -pad, 3 * (DECKLE_SEG + 1));
+    polyPath(g, pts); g.closePath();
+  }
+
+  function paintDots(g, R) {
+    var b = S.board, T = theme();
+    g.fillStyle = T.faint;
+    for (var gy = 0; gy <= b.h; gy++) for (var gx = 0; gx <= b.w; gx++) {
+      g.beginPath();
+      g.arc((gx + LPAD) * R, (gy + LPAD) * R, Math.max(1, R * 0.028), 0, 7);
+      g.fill();
+    }
+  }
+
+  function paintArrowOn(g, id, a, R, T) {
+    paintBrush(g, a.pts.map(function (c) {
+      return [((c[0] + 0.5) + LPAD) * R, ((c[1] + 0.5) + LPAD) * R];
+    }), { w: R * 0.13, ink: T.ink, deep: T.inkDeep, seed: hashStr(id) });
+  }
+
+  function buildStatic() {
+    if (!S) return;
+    var b = S.board, T = theme(), R = LR;
+    if (!layer) layer = document.createElement('canvas');
+    layer.width = Math.ceil((b.w + 2 * LPAD) * R);
+    layer.height = Math.ceil((b.h + 2 * LPAD) * R);
+    var g = layer.getContext('2d');
+    g.clearRect(0, 0, layer.width, layer.height);
+    // soft shadow: expanding dark strokes behind the card (no ctx.filter — old Safari)
+    g.save(); g.lineJoin = 'round';
+    [[30, 0.05], [18, 0.08], [9, 0.12]].forEach(function (sw) {
+      decklePath(g, R);
+      g.strokeStyle = 'rgba(60,42,26,' + sw[1].toFixed(2) + ')';
+      g.lineWidth = sw[0];
+      g.stroke();
+    });
+    g.restore();
+    // the paper card
+    decklePath(g, R); g.fillStyle = T.card; g.fill();
+    decklePath(g, R); g.strokeStyle = T.cardEdge; g.lineWidth = Math.max(1.5, R * 0.03); g.stroke();
+    paintDots(g, R);
+    Object.keys(b.arrows).forEach(function (id) { paintArrowOn(g, id, b.arrows[id], R, T); });
+  }
+
+  /* incremental erase: repaint card + dots inside the arrow's bbox only */
+  function eraseArrowFromLayer(a) {
+    if (!layer || !S) return;
+    var R = LR, T = theme(), m = R * 0.5;
+    var minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    a.pts.forEach(function (c) {
+      var x = ((c[0] + 0.5) + LPAD) * R, y = ((c[1] + 0.5) + LPAD) * R;
+      if (x < minX) minX = x; if (y < minY) minY = y;
+      if (x > maxX) maxX = x; if (y > maxY) maxY = y;
+    });
+    var g = layer.getContext('2d');
+    g.save();
+    g.beginPath(); g.rect(minX - m, minY - m, (maxX - minX) + 2 * m, (maxY - minY) + 2 * m); g.clip();
+    decklePath(g, R); g.fillStyle = T.card; g.fill();
+    paintDots(g, R);
+    g.restore();
   }
 
   /* ---------- sizing / view ---------- */
@@ -137,17 +306,27 @@
       n: o.n, L: o.L, board: o.board, daily: o.daily,
       lives: 3, mistakes: 0, cleared: 0, total: o.board.count,
       t0: Date.now(), won: false,
-      flying: [], trails: [], ripples: [], motes: [],
-      glowT: 0,
+      flying: [], trails: [], ripples: [], motes: [], splashes: [], blots: [],
+      glowT: 0, shake: null,
       badFlash: null, hintKey: null, hintT: 0,
       guide: null, guideT: 0,
+      deckle: null, onboardId: null,
       theme: loadPref('as_theme', 'day'),
       sound: loadPref('as_sound', '1') === '1',
       haptic: loadPref('as_haptic', '1') === '1',
     };
+    // deckled-edge jitter, one stable set per board
+    S.deckle = [];
+    for (var di = 0; di < 4 * (DECKLE_SEG + 1); di++) S.deckle.push(Math.random() * 2 - 1);
     try { MT_Audio.setEnabled(S.sound); } catch (e) {}
     applyTheme();
     fitBoard(true);
+    buildStatic();
+    // first-timer onboarding: pulse one free arrow until the first release
+    if (!S.daily && S.n === 1 && loadPref('as_onboarded', '0') !== '1') {
+      var free = ArrowGen.freeArrows(S.board);
+      if (free.length) S.onboardId = free[(Math.random() * free.length) | 0];
+    }
     updateHUD();
     hideOverlays();
     document.getElementById('hint-toast').classList.remove('show');
@@ -196,18 +375,42 @@
       pts: a.pts.map(function (p) { return [p[0], p[1]]; }),
       dir: a.dir, dx: dx, dy: dy, dist: dist,
       t: 0, dur: isFinal ? 1.2 : 0.42, final: isFinal,
+      ribbon: isFinal ? [] : null,
     });
     ArrowGen.pathCells(b.w, b.h, a).forEach(function (cc, i) {
       var pc = cellCenter(cc[0], cc[1]);
       S.trails.push({ x: pc[0], y: pc[1], t: -i * 0.02, life: 0.5 });
     });
+    // ink splash at the exit edge: droplets + a fading splat decal
+    (function () {
+      var hd = ArrowGen.headOf(a), hc = cellCenter(hd[0], hd[1]);
+      var ex = hc[0] + ArrowGen.DX[a.dir] * cell * 0.6, ey = hc[1] + ArrowGen.DY[a.dir] * cell * 0.6;
+      var srng = mulberry32(((Date.now() & 0xffff) ^ hashStr(id)) >>> 0);
+      var baseA = Math.atan2(ArrowGen.DY[a.dir], ArrowGen.DX[a.dir]);
+      var drops = [];
+      for (var si = 0; si < 14; si++) {
+        var sang = baseA + (srng() - 0.5) * 1.7;
+        var spd = (0.6 + srng() * 1.7) * cell;
+        drops.push({
+          x: ex, y: ey, vx: Math.cos(sang) * spd, vy: Math.sin(sang) * spd,
+          t: 0, life: 0.45 + srng() * 0.35, r: 1.5 + srng() * 2.6
+        });
+      }
+      var blobs = [];
+      for (var bi = 0; bi < 7; bi++) {
+        blobs.push({ ang: (bi / 7) * Math.PI * 2 + srng() * 0.6, d: srng() * 0.22, r: 0.10 + srng() * 0.14 });
+      }
+      S.splashes.push({ drops: drops, decal: { x: ex, y: ey, t: 0, life: 1.3, blobs: blobs }, gold: isFinal });
+    })();
     // soft placement pulse: a slow, low-alpha gold ring breathing out from
     // the tail cell where the arrow was lifted from
     var tl = a.pts[0], tc = cellCenter(tl[0], tl[1]);
     S.ripples.push({ x: tc[0], y: tc[1], t: 0, life: 1.6, maxA: 0.22, grow: 2.4 });
+    eraseArrowFromLayer(a);
     ArrowGen.removeArrow(b, id);
     S.cleared++;
     S.hintKey = null; S.guide = null;
+    if (S.onboardId) { S.onboardId = null; savePref('as_onboarded', '1'); }
     try { if (S.sound) MT_Audio.slide(); } catch (e) {}
     haptic([10]);
     updateHUD();
@@ -218,8 +421,20 @@
   function wrongTap(id) {
     S.mistakes++;
     S.lives--;
-    // no camera shake in this game — a wrong tap just tints the arrow red, briefly
+    // a wrong tap: the smallest possible shake + an ink blot that spreads and fades
+    S.shake = { t: 0, dur: 0.22, mag: REDUCED ? 0 : 4 };
     S.badFlash = { id: id, t: 0 };
+    (function () {
+      var a = S.board.arrows[id];
+      if (!a) return;
+      var hd = ArrowGen.headOf(a), hc = cellCenter(hd[0], hd[1]);
+      var brng = mulberry32(((Date.now() & 0xffff) ^ hashStr(id + 'blot')) >>> 0);
+      var blobs = [];
+      for (var bi = 0; bi < 8; bi++) {
+        blobs.push({ ang: (bi / 8) * Math.PI * 2 + brng() * 0.6, d: brng() * 0.25, r: 0.12 + brng() * 0.16 });
+      }
+      S.blots.push({ x: hc[0], y: hc[1], t: 0, life: 1.4, blobs: blobs });
+    })();
     S.guide = null;
     try { if (S.sound) MT_Audio.bad(); } catch (e) {}
     updateHUD();
@@ -257,7 +472,9 @@
         x: Math.random() * W, y: H * 0.25 + Math.random() * H * 0.75,
         vx: (Math.random() - 0.5) * 10, vy: -(8 + Math.random() * 14),
         r: 1.5 + Math.random() * 2.5, ph: Math.random() * 7,
-        t: -Math.random() * 2.5, life: 7 + Math.random() * 5
+        t: -Math.random() * 2.5, life: 7 + Math.random() * 5,
+        rect: m % 3 === 0, // every third mote is a tumbling paper fleck
+        col: [theme().gold, theme().sub, theme().ink][m % 3]
       });
     }
     var delay = S.flying.length ? 1150 : 500; // let the final arrow finish its slow glide
@@ -290,38 +507,25 @@
   }
 
   /* ---------- rendering ---------- */
-  function strokePath(pts, close) {
-    ctx.beginPath();
-    pts.forEach(function (p, i) {
-      var q = toScreen(p[0], p[1]);
-      if (i === 0) ctx.moveTo(q[0], q[1]); else ctx.lineTo(q[0], q[1]);
+  // screen-space pixel centers of an arrow's cells
+  function arrowScreenPts(a) {
+    return a.pts.map(function (c) {
+      var p = cellCenter(c[0], c[1]);
+      return toScreen(p[0], p[1]);
     });
-    if (close) ctx.closePath();
   }
 
-  // one thin line-art arrow: polyline + small head. `pts` in maze coords.
-  function drawArrowShape(pts, dir, color, widthScale) {
-    var wdt = cell * zoom * 0.13 * (widthScale || 1);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = wdt;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    strokePath(pts.map(function (c) { return cellCenter(c[0], c[1]); }));
-    ctx.stroke();
-    // head
-    var hd = pts[pts.length - 1];
-    var hc = cellCenter(hd[0], hd[1]);
-    var q = toScreen(hc[0], hc[1]);
-    var ang = Math.atan2(ArrowGen.DY[dir], ArrowGen.DX[dir]);
-    var hl = cell * zoom * 0.38, hw = cell * zoom * 0.30;
-    ctx.fillStyle = color;
-    ctx.save(); ctx.translate(q[0], q[1]); ctx.rotate(ang);
-    ctx.beginPath();
-    ctx.moveTo(hl * 0.75, 0);
-    ctx.lineTo(-hl * 0.35, -hw * 0.5);
-    ctx.lineTo(-hl * 0.35, hw * 0.5);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
+  // irregular ink blob from precomputed lobes; unitR scales the whole blob
+  function blob(g, q, lobes, unitR, color, alpha, growT) {
+    if (alpha <= 0.004) return;
+    g.fillStyle = hexA(color, Math.max(0, Math.min(1, alpha)));
+    var gr = 0.35 + 0.65 * Math.min(1, growT * 3);
+    lobes.forEach(function (lb) {
+      g.beginPath();
+      g.arc(q[0] + Math.cos(lb.ang) * lb.d * unitR, q[1] + Math.sin(lb.ang) * lb.d * unitR,
+        Math.max(0.5, unitR * lb.r * gr), 0, 7);
+      g.fill();
+    });
   }
 
   function draw() {
@@ -332,6 +536,12 @@
       ctx.fillStyle = ctx.createPattern(grainTile, 'repeat');
       ctx.fillRect(0, 0, W, H);
     }
+    // vignette: darker edges pull the eye to the board
+    var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, T.vignette);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
     if (!S) return;
     // win glow: warm gold light that breathes — faint, slow, sleepy
     if (S.won && S.glowT > 0) {
@@ -343,33 +553,78 @@
       ctx.fillRect(0, 0, W, H);
     }
     ctx.save();
-
+    // wrong-tap shake: tiny, damped, gone in a blink
+    if (S.shake && S.shake.mag > 0 && S.shake.t < S.shake.dur) {
+      var sp = 1 - S.shake.t / S.shake.dur;
+      ctx.translate((Math.random() - 0.5) * S.shake.mag * sp, (Math.random() - 0.5) * S.shake.mag * sp);
+    }
     var b = S.board;
-
-    // grid dots
-    ctx.fillStyle = T.faint;
-    for (var gy = 0; gy <= b.h; gy++) for (var gx = 0; gx <= b.w; gx++) {
-      var gp = toScreen(gx * cell, gy * cell);
-      ctx.beginPath(); ctx.arc(gp[0], gp[1], 1.5, 0, 7); ctx.fill();
+    // the pre-painted board: paper card, dots, all arrows
+    if (layer) {
+      ctx.drawImage(layer,
+        panX - LPAD * cell * zoom, panY - LPAD * cell * zoom,
+        (b.w + 2 * LPAD) * cell * zoom, (b.h + 2 * LPAD) * cell * zoom);
     }
 
-    // guidance lane (long-press preview)
+    // onboarding: one free arrow breathes gold until the first release
+    if (S.onboardId && b.arrows[S.onboardId]) {
+      var oa = b.arrows[S.onboardId];
+      var op = REDUCED ? 0.4 : 0.3 + 0.22 * Math.sin(Date.now() / 430);
+      paintBrush(ctx, arrowScreenPts(oa),
+        { w: cell * zoom * 0.13, ink: T.gold, deep: T.goldDeep, seed: 7, mode: 'wash', washA: op });
+      var ohd = ArrowGen.headOf(oa);
+      var oq = toScreen((ohd[0] + 0.5) * cell, (ohd[1] + 0.5) * cell);
+      var orr = (Date.now() / 1300) % 1;
+      ctx.strokeStyle = hexA(T.gold, (1 - orr) * 0.65);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(oq[0], oq[1], 6 + orr * cell * zoom * 0.5, 0, 7); ctx.stroke();
+    }
+
+    // hint halo: gold wash breathing over the hinted arrow
+    if (S.hintKey && b.arrows[S.hintKey]) {
+      var ha = b.arrows[S.hintKey];
+      var hp = REDUCED ? 0.34 : 0.27 + 0.13 * Math.sin(Date.now() / 900);
+      paintBrush(ctx, arrowScreenPts(ha),
+        { w: cell * zoom * 0.13, ink: T.gold, deep: T.goldDeep, seed: hashStr(S.hintKey), mode: 'wash', washA: hp });
+    }
+
+    // guidance lane (long-press preview): soft wash + chevrons marching to the exit
     if (S.guide) {
       var ga = b.arrows[S.guide.id];
       if (ga) {
         var ghd = ArrowGen.headOf(ga);
-        var ghc = cellCenter(ghd[0], ghd[1]);
-        var gq = toScreen(ghc[0], ghc[1]);
         var lane = S.guide.cells.map(function (c) { var p = cellCenter(c[0], c[1]); return toScreen(p[0], p[1]); });
-        lane.unshift(gq);
+        lane.unshift(toScreen((ghd[0] + 0.5) * cell, (ghd[1] + 0.5) * cell));
+        var gcol = S.guide.blocked ? '217,64,64' : '77,163,255';
         ctx.save();
-        ctx.setLineDash([7, 7]);
-        ctx.strokeStyle = S.guide.blocked ? 'rgba(217,64,64,.55)' : 'rgba(77,163,255,.65)';
-        ctx.lineWidth = Math.max(2, cell * zoom * 0.07);
         ctx.lineCap = 'round';
-        ctx.beginPath();
-        lane.forEach(function (p, i) { if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]); });
-        ctx.stroke();
+        ctx.strokeStyle = 'rgba(' + gcol + ',' + (S.guide.blocked ? 0.30 : 0.32) + ')';
+        ctx.lineWidth = Math.max(3, cell * zoom * 0.10);
+        polyPath(ctx, lane); ctx.stroke();
+        var cum = [0], li;
+        for (li = 0; li < lane.length - 1; li++) {
+          cum.push(cum[li] + Math.hypot(lane[li + 1][0] - lane[li][0], lane[li + 1][1] - lane[li][1]));
+        }
+        var totalLen = cum[cum.length - 1];
+        var csp = Math.max(20, cell * zoom * 0.55);
+        var march = REDUCED ? 0 : (Date.now() / 26) % csp;
+        ctx.strokeStyle = 'rgba(' + gcol + ',0.85)';
+        ctx.lineWidth = Math.max(2, cell * zoom * 0.055);
+        for (var dpos = march + csp * 0.5; dpos < totalLen; dpos += csp) {
+          var si = 0;
+          while (si < cum.length - 2 && cum[si + 1] < dpos) si++;
+          var segL = (cum[si + 1] - cum[si]) || 1;
+          var gt = (dpos - cum[si]) / segL;
+          var gx = lane[si][0] + (lane[si + 1][0] - lane[si][0]) * gt;
+          var gy = lane[si][1] + (lane[si + 1][1] - lane[si][1]) * gt;
+          var gta = Math.atan2(lane[si + 1][1] - lane[si][1], lane[si + 1][0] - lane[si][0]);
+          var cs = Math.max(5, cell * zoom * 0.15);
+          ctx.beginPath();
+          ctx.moveTo(gx - Math.cos(gta - 0.5) * cs, gy - Math.sin(gta - 0.5) * cs);
+          ctx.lineTo(gx, gy);
+          ctx.lineTo(gx - Math.cos(gta + 0.5) * cs, gy - Math.sin(gta + 0.5) * cs);
+          ctx.stroke();
+        }
         ctx.restore();
         if (S.guide.blocked) {
           var bc = cellCenter(S.guide.blocked[0], S.guide.blocked[1]);
@@ -389,32 +644,19 @@
     // trails
     S.trails.forEach(function (tr) {
       if (tr.t < 0) return;
-      var a = Math.max(0, 1 - tr.t / tr.life);
-      var p = toScreen(tr.x, tr.y);
-      ctx.fillStyle = hexA(T.ink, a * 0.30);
-      ctx.beginPath(); ctx.arc(p[0], p[1], cell * zoom * 0.28 * a + 1.5, 0, 7); ctx.fill();
+      var ta = Math.max(0, 1 - tr.t / tr.life);
+      var tp = toScreen(tr.x, tr.y);
+      ctx.fillStyle = hexA(T.ink, ta * 0.30);
+      ctx.beginPath(); ctx.arc(tp[0], tp[1], cell * zoom * 0.28 * ta + 1.5, 0, 7); ctx.fill();
     });
 
-    // arrows — uniform line art
-    Object.keys(b.arrows).forEach(function (id) {
-      var a = b.arrows[id];
-      var col = T.ink;
-      if (S.badFlash && S.badFlash.id === id) col = '#d94040';
-      var pulse = 1;
-      if (S.hintKey === id) pulse = REDUCED ? 1.08 : 1 + 0.12 * Math.sin(Date.now() / 900); // slow breathing halo
-      if (S.hintKey === id) {
-        // soft gold halo under the hinted arrow
-        ctx.save();
-        ctx.strokeStyle = hexA(T.gold, 0.30);
-        ctx.lineWidth = cell * zoom * 0.42;
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        strokePath(a.pts.map(function (c) { return cellCenter(c[0], c[1]); }));
-        ctx.stroke();
-        ctx.restore();
-        col = T.gold;
-      }
-      drawArrowShape(a.pts, a.dir, col, pulse);
-    });
+    // wrong-tap flash: red brush painted over the layer's ink arrow
+    if (S.badFlash && b.arrows[S.badFlash.id]) {
+      var bfa = b.arrows[S.badFlash.id];
+      var bfp = Math.max(0, 1 - S.badFlash.t / 0.6);
+      paintBrush(ctx, arrowScreenPts(bfa),
+        { w: cell * zoom * 0.13, ink: '#d94040', deep: '#8f2424', seed: hashStr(S.badFlash.id), alpha: 0.35 + 0.65 * bfp });
+    }
 
     // flying arrows — the final one glides on a smoothstep ease (slow start,
     // slow landing) instead of the snappier easeOut used for the rest
@@ -422,27 +664,77 @@
       var fx = Math.min(1, f.t / f.dur);
       var p = f.final ? fx * fx * (3 - 2 * fx) : 1 - Math.pow(1 - fx, 2);
       var ox = f.dx * f.dist * p, oy = f.dy * f.dist * p;
-      var moved = f.pts.map(function (c) { return [c[0] + ox / cell, c[1] + oy / cell]; });
+      var moved = f.pts.map(function (c) {
+        var q = cellCenter(c[0] + ox / cell, c[1] + oy / cell);
+        return toScreen(q[0], q[1]);
+      });
+      // gold ribbon unfurling behind the final arrow
+      if (f.final && f.ribbon && f.ribbon.length > 1) {
+        ctx.save(); ctx.lineCap = 'round';
+        for (var ri = 1; ri < f.ribbon.length; ri++) {
+          var rfr = ri / f.ribbon.length;
+          ctx.strokeStyle = hexA(T.gold, 0.45 * rfr * (1 - p * 0.4));
+          ctx.lineWidth = Math.max(1, cell * zoom * 0.09 * rfr);
+          ctx.beginPath();
+          ctx.moveTo(f.ribbon[ri - 1][0], f.ribbon[ri - 1][1]);
+          ctx.lineTo(f.ribbon[ri][0], f.ribbon[ri][1]);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      ctx.save();
       ctx.globalAlpha = f.final ? Math.max(0, 1 - p * 0.9) : 1 - p * 0.55;
-      drawArrowShape(moved, f.dir, f.final ? T.gold : T.ink, 1);
-      ctx.globalAlpha = 1;
+      paintBrush(ctx, moved, {
+        w: cell * zoom * 0.13, ink: f.final ? T.gold : T.ink,
+        deep: f.final ? T.goldDeep : T.inkDeep, seed: 99
+      });
+      ctx.restore();
+    });
+
+    // ink splashes: droplets + a fading splat decal at the exit edge
+    S.splashes.forEach(function (sp2) {
+      var spInk = sp2.gold ? T.gold : T.ink;
+      var dc = sp2.decal;
+      if (dc.t < dc.life) {
+        blob(ctx, toScreen(dc.x, dc.y), dc.blobs, cell * zoom, spInk, (1 - dc.t / dc.life) * 0.30, dc.t);
+      }
+      sp2.drops.forEach(function (dr) {
+        if (dr.t >= dr.life) return;
+        var da = 1 - dr.t / dr.life;
+        var dq = toScreen(dr.x, dr.y);
+        ctx.fillStyle = hexA(spInk, da * 0.75);
+        ctx.beginPath(); ctx.arc(dq[0], dq[1], Math.max(0.4, dr.r * (cell * zoom / 56) * da), 0, 7); ctx.fill();
+      });
+    });
+
+    // wrong-tap ink blots: spread, then fade
+    S.blots.forEach(function (bl) {
+      var bap = bl.t < 0.9 ? 0.45 : Math.max(0, 0.45 * (1 - (bl.t - 0.9) / 0.5));
+      blob(ctx, toScreen(bl.x, bl.y), bl.blobs, cell * zoom, '#8a2a2a', bap, bl.t);
     });
 
     // soft ripples — placement pulses (low alpha, wide) and the final ripple
     S.ripples.forEach(function (r) {
-      var p = r.t / r.life;
-      var q = toScreen(r.x, r.y);
-      ctx.strokeStyle = hexA(T.gold, (1 - p) * (r.maxA == null ? 0.6 : r.maxA));
+      var rp = r.t / r.life;
+      var rq = toScreen(r.x, r.y);
+      ctx.strokeStyle = hexA(T.gold, (1 - rp) * (r.maxA == null ? 0.6 : r.maxA));
       ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(q[0], q[1], 8 + p * cell * zoom * (r.grow == null ? 1.6 : r.grow), 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(rq[0], rq[1], 8 + rp * cell * zoom * (r.grow == null ? 1.6 : r.grow), 0, 7); ctx.stroke();
     });
 
-    // drifting motes on win: tiny warm specks floating up, fading in and out
+    // drifting motes on win: warm specks and paper flecks floating up
     S.motes.forEach(function (mo) {
       if (mo.t < 0) return;
       var ma = Math.sin(Math.PI * Math.min(1, mo.t / mo.life)) * 0.35;
-      ctx.fillStyle = hexA(T.gold, ma);
-      ctx.beginPath(); ctx.arc(mo.x, mo.y, mo.r, 0, 7); ctx.fill();
+      if (mo.rect) {
+        ctx.save(); ctx.translate(mo.x, mo.y); ctx.rotate(mo.ph + mo.t * 0.4);
+        ctx.fillStyle = hexA(mo.col, ma);
+        ctx.fillRect(-mo.r, -mo.r * 0.6, mo.r * 2, mo.r * 1.2);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = hexA(T.gold, ma);
+        ctx.beginPath(); ctx.arc(mo.x, mo.y, mo.r, 0, 7); ctx.fill();
+      }
     });
 
     ctx.restore();
@@ -576,9 +868,12 @@
       document.getElementById('diff-label').textContent = S.L.diff;
     }
     document.getElementById('clear-label').textContent = S.cleared + '/' + S.total;
-    var drops = '';
-    for (var i = 0; i < 3; i++) drops += i < S.lives ? '💧' : '🤍';
-    document.getElementById('lives').textContent = drops;
+    var prog = document.getElementById('prog-fill');
+    if (prog) prog.style.width = (S.total ? Math.round(100 * S.cleared / S.total) : 0) + '%';
+    var drops = document.querySelectorAll('#lives .drop');
+    for (var i = 0; i < drops.length; i++) {
+      drops[i].classList.toggle('lost', i >= S.lives);
+    }
   }
   function hideOverlays() {
     ['win-modal', 'lives-modal', 'map-modal'].forEach(function (id) {
@@ -586,7 +881,8 @@
     });
   }
   function showWin(stars, secs) {
-    document.getElementById('win-stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    document.getElementById('win-stars').innerHTML =
+      '<span class="on">' + '★'.repeat(stars) + '</span><span class="off">' + '★'.repeat(3 - stars) + '</span>';
     document.getElementById('win-title').textContent = S.mistakes === 0 ? 'Perfect Calm' : 'Board Clear';
     document.getElementById('win-time').textContent = fmtTime(secs);
     document.getElementById('win-moves').textContent = S.mistakes + ' miss' + (S.mistakes === 1 ? '' : 'es');
@@ -597,16 +893,50 @@
   }
   function showOutOfLives() { document.getElementById('lives-modal').classList.add('show'); }
   function fmtTime(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  /* level-map thumbnails: seeded mini boards, painted once per theme and cached */
+  var thumbCache = {};
+  function drawThumb(cv, th, T) {
+    var g = cv.getContext('2d');
+    var cw = cv.width, ch = cv.height;
+    g.clearRect(0, 0, cw, ch);
+    var s = Math.min(cw / (th.w + 1.2), ch / (th.h + 1.2));
+    var ox = (cw - th.w * s) / 2, oy = (ch - th.h * s) / 2;
+    th.a.forEach(function (ar, i) {
+      var pts = [];
+      for (var k = 1; k < ar.length; k++) {
+        var v = ar[k];
+        pts.push([ox + ((((v / 32) | 0) + 0.5) * s), oy + (((v % 32) + 0.5) * s)]);
+      }
+      paintBrush(g, pts, { w: Math.max(1.1, s * 0.15), ink: T.ink, deep: T.inkDeep, seed: 5000 + i * 13 });
+    });
+  }
   function showMap() {
-    var p = best();
+    var p = best(), T = theme();
     var grid = document.getElementById('map-grid');
     grid.innerHTML = '';
+    var thumbs = window.MT_THUMBS || [];
     LEVELS.forEach(function (L) {
       var b = document.createElement('button');
       b.className = 'map-cell' + (p[L.n] ? ' done' : '') + (L.n === S.n && !S.daily ? ' cur' : '');
-      b.innerHTML = '<span class="mc-n">' + L.n + '</span><span class="mc-s">' + ('⭐'.repeat(p[L.n] || 0) || L.diff) + '</span>';
+      var stars = '★'.repeat(p[L.n] || 0);
+      b.innerHTML = '<canvas class="mc-thumb" width="72" height="72"></canvas>' +
+        '<span class="mc-n">' + L.n + '</span><span class="mc-s">' + (stars || L.diff) + '</span>';
       b.addEventListener('click', function () { newLevel(L.n); });
       grid.appendChild(b);
+      var th = thumbs[L.n - 1];
+      if (th) {
+        var key = L.n + ':' + S.theme;
+        var cv = b.querySelector('.mc-thumb');
+        if (!thumbCache[key]) {
+          drawThumb(cv, th, T);
+          var cc = document.createElement('canvas');
+          cc.width = cv.width; cc.height = cv.height;
+          cc.getContext('2d').drawImage(cv, 0, 0);
+          thumbCache[key] = cc;
+        } else {
+          cv.getContext('2d').drawImage(thumbCache[key], 0, 0);
+        }
+      }
     });
     document.getElementById('map-modal').classList.add('show');
   }
@@ -710,6 +1040,28 @@
     if (!S) return;
     var dirty = false;
     if (S.badFlash) { S.badFlash.t += dt; if (S.badFlash.t > 0.6) S.badFlash = null; dirty = true; }
+    if (S.shake && S.shake.t < S.shake.dur) { S.shake.t += dt; dirty = true; }
+    if (S.onboardId) dirty = true; // breathing halo + tap ring animate
+    for (var si = S.splashes.length - 1; si >= 0; si--) {
+      var sp = S.splashes[si], spLive = false;
+      sp.decal.t += dt;
+      if (sp.decal.t < sp.decal.life) spLive = true;
+      for (var di = 0; di < sp.drops.length; di++) {
+        var dr = sp.drops[di];
+        if (dr.t < dr.life) {
+          spLive = true;
+          dr.t += dt;
+          dr.vy += 300 * dt; // maze-px gravity
+          dr.x += dr.vx * dt; dr.y += dr.vy * dt;
+        }
+      }
+      if (spLive) dirty = true; else S.splashes.splice(si, 1);
+    }
+    for (var bi = S.blots.length - 1; bi >= 0; bi--) {
+      var bl = S.blots[bi];
+      bl.t += dt;
+      if (bl.t >= bl.life) S.blots.splice(bi, 1); else dirty = true;
+    }
     if (S.hintT > 0) { S.hintT -= dt; if (S.hintT <= 0) S.hintKey = null; dirty = true; }
     else if (S.hintKey) dirty = true;
     if (S.guideT > 0) { S.guideT -= dt; if (S.guideT <= 0) S.guide = null; dirty = true; }
@@ -717,6 +1069,15 @@
     for (var i = S.flying.length - 1; i >= 0; i--) {
       var f = S.flying[i];
       f.t += dt; dirty = true;
+      if (f.final && f.ribbon) {
+        // record the head's screen trail for the gold ribbon
+        var fhd = f.pts[f.pts.length - 1];
+        var fx2 = Math.min(1, f.t / f.dur);
+        var fp = fx2 * fx2 * (3 - 2 * fx2);
+        var hq = cellCenter(fhd[0] + f.dx * f.dist * fp / cell, fhd[1] + f.dy * f.dist * fp / cell);
+        f.ribbon.push(toScreen(hq[0], hq[1]));
+        if (f.ribbon.length > 42) f.ribbon.shift();
+      }
       if (f.t >= f.dur) {
         S.flying.splice(i, 1);
         if (f.final) {
