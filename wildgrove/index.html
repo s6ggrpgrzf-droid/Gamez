@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a2b1e">
+<title>Wildgrove — a living forest</title>
+<link rel="stylesheet" href="css/font-display.css?v=1">
+<link rel="stylesheet" href="css/style.css?v=2">
+</head>
+<body>
+<div id="app">
+  <!-- title screen -->
+  <div id="title" class="screen">
+    <img id="title-art" alt="Wildgrove at dawn">
+    <div class="title-text">
+      <h1>Wildgrove</h1>
+      <p class="tagline">a living forest, kept by you</p>
+      <button id="enter-btn" class="big-btn">Enter the grove</button>
+      <p id="title-note" class="tiny"></p>
+    </div>
+  </div>
+
+  <!-- main game -->
+  <div id="game" class="screen hidden">
+    <canvas id="scene"></canvas>
+
+    <!-- top HUD -->
+    <div id="hud">
+      <div id="vitality-wrap">
+        <svg id="vine" viewBox="0 0 300 36" preserveAspectRatio="none" aria-hidden="true">
+          <path id="vine-track" d="M8 24 C 70 24, 80 10, 130 14 C 180 18, 190 28, 240 20 C 265 16, 280 14, 292 14"
+            fill="none" stroke="rgba(255,255,255,0.20)" stroke-width="5" stroke-linecap="round"/>
+          <path id="vine-fill" d="M8 24 C 70 24, 80 10, 130 14 C 180 18, 190 28, 240 20 C 265 16, 280 14, 292 14"
+            fill="none" stroke="#93d36e" stroke-width="5" stroke-linecap="round"/>
+          <g id="vine-leaves"></g>
+          <circle id="vine-bud" r="5" fill="#b8e69a" stroke="#5a8a3e" stroke-width="1.5"/>
+        </svg>
+        <div id="stage-name">Quiet Ground</div>
+      </div>
+      <div id="env-icons">
+        <span id="season-icon" title="season"></span>
+        <span id="daynight-icon" title="time"></span>
+        <span id="weather-icon" title="weather"></span>
+      </div>
+    </div>
+
+    <!-- recap sheet -->
+    <div id="recap" class="sheet hidden">
+      <h2>While you were away…</h2>
+      <div id="recap-list"></div>
+      <button id="recap-close" class="big-btn">Tend the grove</button>
+    </div>
+
+    <!-- bottom tool bar -->
+    <div id="toolbar">
+      <button class="tool" data-tool="hand" aria-label="observe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12C4.5 7.5 8 5 12 5s7.5 2.5 9.5 7c-2 4.5-5.5 7-9.5 7s-7.5-2.5-9.5-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button class="tool" data-tool="plant" aria-label="plant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-8"/><path d="M12 13c0-5-4-8-8.5-8 0 5 4 8 8.5 8z"/><path d="M12 11c0-4 3.5-6.5 8-6.5 0 4.5-3.5 6.5-8 6.5z"/></svg></button>
+      <button class="tool" data-tool="water" aria-label="water"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.5 4.5 6.5 8 6.5 12a6.5 6.5 0 1 1-13 0C5.5 11 8.5 7.5 12 3z"/><path d="M9.2 14.2a3.2 3.2 0 0 0 2.4 2.9"/></svg></button>
+      <button class="tool" data-tool="journal" aria-label="journal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 4.8 7 4.5 4 5v13c3-.5 6-.2 8 1.5 2-1.7 5-2 8-1.5V5c-3-.5-6-.2-8 1.5z"/><path d="M12 6.5v13"/></svg></button>
+      <button class="tool" data-tool="chronicle" aria-label="chronicle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-6 0-11 3-13 9l-3 7 7-3c6-2 9-7 9-13z"/><path d="M4 20L16 8"/></svg></button>
+    </div>
+
+    <!-- plant picker -->
+    <div id="plant-picker" class="sheet hidden">
+      <h2>Plant a seed</h2>
+      <div id="plant-grid"></div>
+      <button id="plant-cancel" class="ghost-btn">cancel</button>
+    </div>
+
+    <!-- journal -->
+    <div id="journal" class="sheet hidden">
+      <h2>Field Journal</h2>
+      <div id="journal-tabs">
+        <button data-jtab="fauna" class="jtab active">Fauna</button>
+        <button data-jtab="flora" class="jtab">Flora</button>
+      </div>
+      <div id="journal-list"></div>
+      <button class="ghost-btn sheet-close">close</button>
+    </div>
+
+    <!-- chronicle -->
+    <div id="chronicle" class="sheet hidden">
+      <h2>The Chronicle</h2>
+      <p class="subtitle">the story the forest writes about itself</p>
+      <div id="chronicle-list"></div>
+      <button class="ghost-btn sheet-close">close</button>
+    </div>
+
+    <!-- observe card -->
+    <div id="observe-card" class="hidden">
+      <img id="observe-img" alt="">
+      <div class="observe-body">
+        <h3 id="observe-name"></h3>
+        <p id="observe-species" class="tiny"></p>
+        <p id="observe-blurb"></p>
+        <p id="observe-habits" class="tiny"></p>
+        <p id="observe-fact" class="fact"></p>
+      </div>
+      <button id="observe-close" aria-label="close">✕</button>
+    </div>
+
+    <!-- toast -->
+    <div id="toast" class="hidden"></div>
+
+    <!-- tutorial hint -->
+    <div id="hint" class="hidden"></div>
+  </div>
+</div>
+
+<script src="js/species.js?v=1"></script>
+<script src="js/engine.js?v=1"></script>
+<script src="js/content.js?v=1"></script>
+<script src="art/spr-0.js?v=1"></script>
+<script src="art/spr-1.js?v=1"></script>
+<script src="art/spr-2.js?v=1"></script>
+<script src="art/spr-3.js?v=1"></script>
+<script src="art/spr-4.js?v=1"></script>
+<script src="art/spr-5.js?v=1"></script>
+<script src="art/spr-6.js?v=1"></script>
+<script src="art/spr-7.js?v=1"></script>
+<script src="art/spr-8.js?v=1"></script>
+<script src="art/spr-9.js?v=1"></script>
+<script src="art/spr-10.js?v=1"></script>
+<script src="art/spr-11.js?v=1"></script>
+<script src="art/spr-12.js?v=1"></script>
+<script src="js/ai.js?v=1"></script>
+<script src="js/audio.js?v=1"></script>
+<script src="js/render.js?v=1"></script>
+<script src="js/input.js?v=1"></script>
+<script src="js/ui.js?v=1"></script>
+<script src="js/main.js?v=1"></script>
+</body>
+</html>
