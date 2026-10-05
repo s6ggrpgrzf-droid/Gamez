@@ -1428,10 +1428,20 @@ Game.clampCam = function () {
 };
 
 Game.onUp = function (e) {
-  var wasTap = this.downInfo && !this.downInfo.moved &&
-    (performance.now() - this.downInfo.t) < 350 && this.pointers.size === 1;
-  this.pointers.delete(e.pointerId);
   var g = this.gesture;
+  // Tap detection, forgiving edition: a press that barely wanders counts as a
+  // tap no matter how long it was held. The strict quick-tap (<350ms, <10px)
+  // keeps its old meaning for double-tap arming; a slow-but-steady press on
+  // empty board space still means "put the selected piece here".
+  var drift = 1e9, pressMs = 1e9;
+  if (this.downInfo) {
+    drift = Math.hypot(e.clientX - this.downInfo.x, e.clientY - this.downInfo.y);
+    pressMs = performance.now() - this.downInfo.t;
+  }
+  var wasTap = this.downInfo && !this.downInfo.moved &&
+    pressMs < 350 && this.pointers.size === 1;
+  var tapLike = this.downInfo && this.pointers.size === 1 && drift <= 24;
+  this.pointers.delete(e.pointerId);
   if (g && g.type === 'drag' && this.pointers.size === 0) {
     var res = resolveDrop(this.S, g.gid);
     if (res.merged || res.placed) {
@@ -1442,7 +1452,7 @@ Game.onUp = function (e) {
     this.markDirty();
   }
   if (this.pointers.size === 0) {
-    if (wasTap && g) this.onTap(e, g);
+    if (g && (wasTap || tapLike)) this.onTap(e, g, wasTap);
     this.gesture = null;
   } else if (this.pointers.size === 1 && g && g.type === 'pinch') {
     // pinch ended with one finger left: start fresh pan on next move
@@ -1455,10 +1465,11 @@ Game.onUp = function (e) {
   this.downInfo = null;
 };
 
-Game.onTap = function (e, g) {
+Game.onTap = function (e, g, quick) {
   var S = this.S;
   if (!S || this._dblFired) { this._dblFired = false; return; }
-  this._lastTap = { x: e.clientX, y: e.clientY, t: performance.now() };
+  // Only quick taps arm double-tap-to-rotate; slow "put it here" taps don't.
+  if (quick) this._lastTap = { x: e.clientX, y: e.clientY, t: performance.now() };
   var b = this.toBoard(e.clientX, e.clientY);
   if (g.type === 'drag') {
     // tapped a piece: select it (already set on down)
