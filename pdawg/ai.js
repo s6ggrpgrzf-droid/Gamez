@@ -27,21 +27,35 @@ var THEME_PROMPTS = [
 
 function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
+/* fetch with a hard timeout: a stalled connection must fail visibly instead
+ * of hanging the UI's spinner forever (seen on a real phone: "Painting your
+ * puzzle…" stuck for 30+ minutes). Aborted/timed-out fetches throw. */
+function fetchTimeout(url, opts, ms) {
+  var ctrl;
+  try { ctrl = new AbortController(); } catch (e) { return fetch(url, opts); }
+  var t = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms);
+  var o = {};
+  for (var k in (opts || {})) o[k] = opts[k];
+  o.signal = ctrl.signal;
+  return fetch(url, o).then(function (r) { clearTimeout(t); return r; },
+    function (e) { clearTimeout(t); throw e; });
+}
+
 async function pollReady(key, onTick) {
   for (var i = 0; i < 40; i++) {           // ~2 min max
     await sleep(3000);
     try {
-      var r = await fetch(AI_BASE + '/status?key=' + encodeURIComponent(key));
+      var r = await fetchTimeout(AI_BASE + '/status?key=' + encodeURIComponent(key), null, 12000);
       var d = await r.json();
       if (d && d.status === 'ready' && d.url) return d.url;
       if (onTick) onTick(i);
-    } catch (e) { /* keep polling */ }
+    } catch (e) { /* keep polling */ if (onTick) onTick(i); }
   }
   return null;
 }
 
 async function fetchImage(url) {
-  var r = await fetch(AI_BASE + url);
+  var r = await fetchTimeout(AI_BASE + url, null, 30000);
   if (!r.ok) return null;
   return await r.blob();
 }
@@ -53,11 +67,11 @@ var AI = {
   /* Generate from a prompt. Resolves to an image Blob, or null on failure. */
   generate: async function (prompt, onTick) {
     try {
-      var r = await fetch(AI_BASE + '/generate', {
+      var r = await fetchTimeout(AI_BASE + '/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt })
-      });
+      }, 30000);
       if (r.status === 429) return { error: 'hourly' };
       var d = await r.json();
       if (!d || !d.key) return null;
@@ -76,7 +90,7 @@ var AI = {
   /* Today's (or a given date's) global daily image. Null if unavailable. */
   daily: async function (dateStr) {
     try {
-      var r = await fetch(AI_BASE + '/daily?date=' + encodeURIComponent(dateStr || ''));
+      var r = await fetchTimeout(AI_BASE + '/daily?date=' + encodeURIComponent(dateStr || ''), null, 20000);
       var d = await r.json();
       if (!d || !d.key) return null;
       var url = d.url;

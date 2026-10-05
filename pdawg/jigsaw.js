@@ -1970,10 +1970,18 @@ var UI = {
   generateAI: function (prompt, label) {
     var st = $('#aiStatus');
     st.style.display = 'flex';
+    if (!window.PDAWG_AI) {
+      st.innerHTML = '<span>The AI studio is unavailable right now — try a gallery puzzle.</span>';
+      return;
+    }
     st.innerHTML = '<span class="spin"></span><span>Painting your puzzle… AI art takes ~20–40 seconds.</span>';
     sfx('click');
     var self = this;
-    window.PDAWG_AI.generate(prompt).then(function (res) {
+    window.PDAWG_AI.generate(prompt, function (i) {
+      // keep the status alive while polling so it never looks stuck
+      st.innerHTML = '<span class="spin"></span><span>Painting your puzzle… ' +
+        Math.round((i + 1) * 3) + 's so far.</span>';
+    }).then(function (res) {
       if (!res || res.error || !res.size) {
         st.innerHTML = '<span>' + (res && res.error === 'hourly'
           ? 'Hourly AI limit reached — try again later, or pick a gallery puzzle.'
@@ -1992,8 +2000,10 @@ var UI = {
           } catch (e) {}
           self.renderAIGallery();
           self.openCountChooser({ imageKind: 'custom', imageId: imageId, title: label || 'AI Dream' });
-        });
+        }).catch(function () { st.innerHTML = '<span>Could not save the painting — try again.</span>'; });
       }).catch(function () { st.innerHTML = '<span>Could not read the painting — try again.</span>'; });
+    }).catch(function () {
+      st.innerHTML = '<span>Something went wrong reaching the AI — try again in a bit.</span>';
     });
   },
 
