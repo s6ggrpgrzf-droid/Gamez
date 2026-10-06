@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#14161f">
+<meta name="theme-color" content="#f5f2ea">
 <title>Pdawg Puzzles — Gamez Edition</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -33,18 +33,19 @@
   </section>
 
   <section id="shelfSection" class="shelf-sec" style="display:none">
-    <h2>My Puzzles <small>— pick up where you left off</small></h2>
+    <div class="eyebrow">My puzzles <small>— pick up where you left off</small></div>
     <div id="shelfRow" class="shelf-row"></div>
   </section>
 
   <section class="upload-sec">
+    <div class="eyebrow" style="text-align:center">Make your own</div>
     <button id="uploadBtn" class="btn primary big">📷 Make a puzzle from your photo</button>
     <p class="hint">…or drag &amp; drop an image here, or paste one from your clipboard</p>
     <input type="file" id="fileInput" accept="image/*" hidden>
   </section>
 
   <section class="gal-sec">
-    <h2>Gallery</h2>
+    <div class="eyebrow">Gallery</div>
     <div id="galleryGrid" class="gal-grid"></div>
   </section>
 
@@ -77,7 +78,6 @@
     <h3>Choose difficulty</h3>
     <div id="countBtns" class="count-btns"></div>
     <label class="rot-row"><input type="checkbox" id="rotToggle"> ↻ Rotation mode <small>(pieces can turn — harder!)</small></label>
-    <label class="rot-row"><input type="checkbox" id="whimsyToggle" checked> ✨ Whimsy pieces <small>(hidden shaped pieces!)</small></label>
     <button id="countClose" class="btn">Cancel</button>
   </div>
 </div>
@@ -107,7 +107,6 @@
   <div class="sheet win">
     <div class="win-emoji">🎉</div>
     <h3>Puzzle complete!</h3>
-    <div id="winWhimsy" class="win-whimsy" style="display:none"></div>
     <div id="winBest" class="best-badge" style="display:none"></div>
     <div id="winTime" class="win-time">0:00</div>
     <div id="winSub" class="hint"></div>
@@ -125,6 +124,6 @@
 <script src="gallery.js"></script>
 <script src="audio.js?v=1"></script>
 <script src="ai.js?v=2"></script>
-<script src="jigsaw.js?v=8"></script>
+<script src="jigsaw.js?v=10"></script>
 </body>
 </html>

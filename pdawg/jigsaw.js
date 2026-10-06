@@ -16,6 +16,15 @@ function el(tag, cls, html) {
   return d;
 }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+/* Small SVG progress ring for the daily hero card. */
+function heroRingSVG(pct) {
+  var r = 21, c = (2 * Math.PI * r).toFixed(1);
+  var arc = (2 * Math.PI * r * Math.max(0, Math.min(100, pct)) / 100).toFixed(1);
+  return '<svg width="54" height="54" viewBox="0 0 54 54">' +
+    '<circle cx="27" cy="27" r="' + r + '" fill="none" stroke="#e9e4d6" stroke-width="5"/>' +
+    '<circle cx="27" cy="27" r="' + r + '" fill="none" stroke="#f2a007" stroke-width="5" ' +
+    'stroke-linecap="round" stroke-dasharray="' + arc + ' ' + c + '" transform="rotate(-90 27 27)"/></svg>';
+}
 /* canvas.cloneNode() copies dimensions but NOT painted pixels — draw a real copy. */
 function canvasCopy(cv) {
   var c = document.createElement('canvas');
@@ -302,12 +311,9 @@ function tracePiecePath(ctx, ox, oy, w, h, e) {
   ctx.closePath();
 }
 
-/* ---------------- whimsy pieces ----------------
- * Special shaped pieces (paw, star, heart, bone) hidden in each puzzle — a
- * beloved physical-puzzle tradition. A whimsy's 4 shared boundaries are cut
- * flat (like border pieces), so the silhouette drops into a clean rectangular
- * home. Works with the Path2D-recording fake ctx (moveTo/lineTo/bezier only). */
-var WHIMSY = ['paw', 'star', 'heart', 'bone'];
+/* ---------------- whimsy pieces (REMOVED 2026-10-05) ----------------
+ * Whimsy pieces are gone from new puzzles. traceWhimsyPath + applyWhimsy stay
+ * so older saves that contain them still render correctly. */
 
 function bezEllipsePath(c, cx, cy, rx, ry) {
   var kx = 0.5523 * rx, ky = 0.5523 * ry;
@@ -355,23 +361,7 @@ function traceWhimsyPath(c, ox, oy, w, h, shape) {
   }
 }
 
-/* Choose whimsy cells deterministically from the seed: interior, non-adjacent. */
-function chooseWhimsy(rows, cols, seed) {
-  if (rows < 4 || cols < 4) return [];
-  var total = rows * cols;
-  var count = total <= 54 ? 1 : total <= 216 ? 2 : 3;
-  var rng = mulberry32(hashStr('whimsy:' + seed));
-  var cells = [], tries = 0;
-  while (cells.length < count && tries++ < 300) {
-    var r = 1 + ((rng() * (rows - 2)) | 0), c = 1 + ((rng() * (cols - 2)) | 0);
-    var ok = true, i;
-    for (i = 0; i < cells.length; i++) {
-      if (Math.abs(cells[i].r - r) < 2 && Math.abs(cells[i].c - c) < 2) { ok = false; break; }
-    }
-    if (ok) cells.push({ r: r, c: c, shape: cells.length % WHIMSY.length });
-  }
-  return cells;
-}
+/* (chooseWhimsy removed with the feature; old saves carry their own cells.) */
 
 /* Cut whimsy homes flat in the edge table and mark the pieces. */
 function applyWhimsy(S) {
@@ -535,10 +525,10 @@ function gridForCount(n, aspect) {
 
 /* Build a fresh puzzle state object (no DOM needed except piece canvases). */
 function newPuzzleState(opts) {
-  // opts: {id,title,imageKind,galleryIdx,imgW,imgH,rows,cols,seed,rotationOn,whimsy}
+  // opts: {id,title,imageKind,galleryIdx,imgW,imgH,rows,cols,seed,rotationOn}
   var rng = mulberry32(opts.seed);
   var E = buildEdges(opts.rows, opts.cols, rng, false);
-  var whimsyCells = opts.whimsy === false ? [] : chooseWhimsy(opts.rows, opts.cols, opts.seed);
+  var whimsyCells = []; // whimsies removed 2026-10-05; old saves keep theirs
   var imgW = opts.imgW, imgH = opts.imgH;
   var boardW = imgW * 2.3, boardH = imgH * 2.3;
   var imgOX = (boardW - imgW) / 2, imgOY = (boardH - imgH) / 2;
@@ -1597,28 +1587,25 @@ Game.checkWin = function () {
   if (isBest) bests.set(key, Math.round(S.elapsed));
   this.saveNow();
   // daily completion + streak
-  var whimsyFound = 0, i;
-  for (i = 0; i < S.pieces.length; i++) if (S.pieces[i].whimsy >= 0 && S.pieces[i].placed) whimsyFound++;
   if (S.imageKind === 'daily') {
     try { localStorage.setItem('pdawg-daily', JSON.stringify({ date: dailyStr(), ms: Math.round(S.elapsed) })); } catch (e) {}
   }
-  statsRecordWin(S, whimsyFound);
+  statsRecordWin(S);
   var self = this;
-  setTimeout(function () { UI.showWin(isBest, prev, whimsyFound); }, 900);
+  setTimeout(function () { UI.showWin(isBest, prev); }, 900);
   this.markDirty();
 };
 
 /* ---------------- lifetime stats ---------------- */
 var STATS_KEY = 'pdawg-stats-v1';
 function statsRead() {
-  try { return Object.assign({ solved: 0, pieces: 0, whimsies: 0, streak: 0, streakDate: '' }, JSON.parse(localStorage.getItem(STATS_KEY) || '{}')); }
-  catch (e) { return { solved: 0, pieces: 0, whimsies: 0, streak: 0, streakDate: '' }; }
+  try { return Object.assign({ solved: 0, pieces: 0, streak: 0, streakDate: '' }, JSON.parse(localStorage.getItem(STATS_KEY) || '{}')); }
+  catch (e) { return { solved: 0, pieces: 0, streak: 0, streakDate: '' }; }
 }
-function statsRecordWin(S, whimsyFound) {
+function statsRecordWin(S) {
   var st = statsRead();
   st.solved++;
   st.pieces += S.pieces.length;
-  st.whimsies += whimsyFound;
   if (S.imageKind === 'daily') {
     var today = dailyStr();
     var y = new Date(); y.setDate(y.getDate() - 1);
@@ -1859,18 +1846,11 @@ function snapCurve(t) {
   return 1 + FEEL.snapPopAmt * (easeOutBack(t) - t);
 }
 
-var WHIMSY_NAMES = { 0: 'paw print', 1: 'star', 2: 'heart', 3: 'dog bone' };
-function whimsyName(s) { return WHIMSY_NAMES[s] || 'whimsy'; }
-
-/* Shared drop resolution: snap, sounds, whimsy celebration, win check. */
+/* Shared drop resolution: snap, sounds, win check. */
 function resolveDrop(S, gid) {
   var before = groupMembers(S, gid);   // dragged group's pieces (pre-merge)
   var res = snapAfterDrop(S, gid);
-  if (res.placedWhimsy && res.placedWhimsy.length) {
-    sfx('whimsy');
-    var names = res.placedWhimsy.map(whimsyName).join(' + ');
-    setTimeout(function () { toast('✨ Whimsy found: ' + names + '!'); }, 350);
-  } else if (res.placed) {
+  if (res.placed) {
     sfx('snap');
   } else if (res.merged) {
     sfx('click');
@@ -1918,24 +1898,40 @@ var UI = {
     var wrap = $('#dailyCard');
     var dateStr = dailyStr();
     wrap.innerHTML = '';
-    var tag = el('div', 'card-tag', '✨ DAILY PUZZLE · SAME FOR EVERYONE');
-    var title = el('div', 'card-title', 'Today\'s AI painting');
-    var sub = el('div', 'card-sub', levelForCount(spec.count).name + ' · ' + spec.count + ' pieces' + (done ? ' &nbsp;·&nbsp; done in ' + fmtTime(done.ms) : ''));
-    var btn = el('button', 'btn primary', done ? 'Play again' : 'Play today');
-    var im = el('div', 'card-thumb');
-    im.appendChild(el('div', 'gal-thumb-loading'));
-    wrap.appendChild(im);
-    var tx = el('div', 'card-text');
-    tx.appendChild(tag); tx.appendChild(title); tx.appendChild(sub);
-    wrap.appendChild(tx); wrap.appendChild(btn);
+    wrap.className = 'card daily hero';
+    // progress + streak for the hero treatment
+    var pct = 0, inProgress = false;
+    try {
+      var list = shelf.read();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id === spec.id && !list[i].done) { pct = list[i].pct || 0; inProgress = pct > 0; break; }
+      }
+    } catch (e) {}
+    var st = statsRead();
+    var art = el('div', 'hero-art');
+    art.appendChild(el('div', 'gal-thumb-loading'));
+    if (inProgress) {
+      var ring = el('div', 'hero-ring');
+      ring.innerHTML = heroRingSVG(pct) + '<b>' + pct + '%</b>';
+      art.appendChild(ring);
+    }
+    wrap.appendChild(art);
+    wrap.appendChild(el('div', 'card-tag', '✨ DAILY PUZZLE · SAME FOR EVERYONE'));
+    wrap.appendChild(el('div', 'card-title', 'Today\'s AI painting'));
+    var subBits = [levelForCount(spec.count).name + ' · ' + spec.count + ' pieces'];
+    if (done) subBits.push('done in ' + fmtTime(done.ms));
+    else if (st.streak > 1) subBits.push('🔥 ' + st.streak + '-day streak');
+    wrap.appendChild(el('div', 'card-sub', subBits.join(' &nbsp;·&nbsp; ')));
+    var btn = el('button', 'btn primary big', done ? 'Play again' : (inProgress ? 'Continue' : 'Play today'));
+    wrap.appendChild(btn);
     btn.onclick = function () { UI.startDaily(); };
     wrap.onclick = function (e) { if (e.target !== btn) UI.startDaily(); };
     // fill the thumbnail: cached/AI daily image, else gallery fallback
     dailyImageBlob(dateStr).then(function (blob) {
       function setThumb(srcCanvas) {
-        im.innerHTML = '';
-        var c = canvasCopy(srcCanvas);
-        im.appendChild(c);
+        var l = art.querySelector('.gal-thumb-loading');
+        if (l) l.remove();
+        art.insertBefore(canvasCopy(srcCanvas), art.firstChild);
       }
       if (blob) {
         imageBlobToBitmap(blob).then(function (bmp) {
@@ -2050,7 +2046,6 @@ var UI = {
     }
     stat('🧩', st.solved, 'solved');
     stat('🧷', st.pieces.toLocaleString(), 'pieces placed');
-    stat('✨', st.whimsies, 'whimsies');
     if (st.streak > 1) stat('🔥', st.streak, 'day streak');
   },
 
@@ -2145,10 +2140,9 @@ var UI = {
     var base = this._pending;
     closeModal('#countModal');
     var rot = $('#rotToggle').checked;
-    var whimsy = $('#whimsyToggle').checked;
     this.createAndStart({
       imageKind: base.imageKind, galleryIdx: base.galleryIdx, imageId: base.imageId,
-      title: base.title, count: n, rotationOn: rot, whimsy: whimsy,
+      title: base.title, count: n, rotationOn: rot,
       seed: (Math.random() * 1e9) | 0
     });
   },
@@ -2180,7 +2174,6 @@ var UI = {
         imageKind: opts.imageKind, galleryIdx: opts.galleryIdx, imageId: opts.imageId,
         imgW: imgW, imgH: imgH, rows: grid.rows, cols: grid.cols,
         seed: opts.seed, rotationOn: opts.rotationOn,
-        whimsy: opts.whimsy === false ? false : true,
         thumb: makeThumb(imgCanvas)
       });
       self.showGame();
@@ -2220,7 +2213,7 @@ var UI = {
     });
   },
 
-  showWin: function (isBest, prev, whimsyFound) {
+  showWin: function (isBest, prev) {
     var S = Game.S;
     if (!S || !S.won) return;
     $('#winTime').textContent = fmtTime(S.elapsed);
@@ -2230,12 +2223,6 @@ var UI = {
       badge.style.display = '';
       badge.textContent = prev ? 'New best time!' : 'First completion!';
     } else badge.style.display = 'none';
-    var ww = $('#winWhimsy');
-    if (S.whimsy && S.whimsy.length) {
-      ww.style.display = '';
-      var names = S.whimsy.map(function (w) { return whimsyName(w.shape); }).join(', ');
-      ww.innerHTML = '✨ Whimsies found: <b>' + whimsyFound + '/' + S.whimsy.length + '</b> <small>(' + escHtml(names) + ')</small>';
-    } else ww.style.display = 'none';
     arcadeSubmitWin(S);
     openModal('#winModal');
   },
@@ -2320,8 +2307,7 @@ var UI = {
       var fresh = newPuzzleState({
         id: S.id, title: S.title, imageKind: S.imageKind, galleryIdx: S.galleryIdx,
         imageId: S.imageId, imgW: S.imgW, imgH: S.imgH, rows: S.rows, cols: S.cols,
-        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn,
-        whimsy: S.whimsy && S.whimsy.length > 0, thumb: S.thumb
+        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn, thumb: S.thumb
       });
       Game.start(fresh, Game.imgCanvas);
       Game.saveNow();
@@ -2411,8 +2397,7 @@ var UI = {
         id: uid('p'), title: S.title, imageKind: S.imageKind === 'daily' ? 'gallery' : S.imageKind,
         galleryIdx: S.galleryIdx, imageId: S.imageId,
         imgW: S.imgW, imgH: S.imgH, rows: S.rows, cols: S.cols,
-        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn,
-        whimsy: S.whimsy && S.whimsy.length > 0, thumb: S.thumb
+        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn, thumb: S.thumb
       });
       if (fresh.imageKind === 'daily') fresh.imageKind = 'gallery';
       Game.start(fresh, Game.imgCanvas);
@@ -2454,8 +2439,8 @@ if (typeof module !== 'undefined' && module.exports) {
     neighborsOf: neighborsOf,
     snapAfterDrop: snapAfterDrop, rotateGroup: rotateGroup,
     placedCount: placedCount, isComplete: isComplete,
-    WHIMSY: WHIMSY, traceWhimsyPath: traceWhimsyPath,
-    chooseWhimsy: chooseWhimsy, applyWhimsy: applyWhimsy,
+    traceWhimsyPath: traceWhimsyPath,
+    applyWhimsy: applyWhimsy,
     serializeState: serializeState, deserializeState: deserializeState,
     renderPieceCanvases: renderPieceCanvases,
     dailySpec: dailySpec, COUNTS: COUNTS, LEVELS: LEVELS, levelForCount: levelForCount,
