@@ -55,6 +55,8 @@ function loadSave() {
   return CC.migrateV1({});
 }
 var save = loadSave();
+/* the sound engine lives in audio.js now — hand it its window into the game */
+AUENV.save = save; AUENV.persist = persist; AUENV.el = $;
 if (!save.spot || !spotById(save.spot)) save.spot = 'sunny-cove';
 if (!CC.canAccess(save.spot, save)) save.spot = 'sunny-cove';
 function persist() {
@@ -62,177 +64,7 @@ function persist() {
 }
 
 /* ============================== audio ============================== */
-var AU = {
-  ctx: null, master: null, filt: null, musicT: 0, birdT: 5,
-  ensure: function () {
-    try {
-      if (!this.ctx) {
-        var AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return;
-        this.ctx = new AC();
-        /* master chain: sources -> master gain -> underwater low-pass -> destination */
-        this.filt = this.ctx.createBiquadFilter();
-        this.filt.type = 'lowpass'; this.filt.frequency.value = 18000;
-        this.master = this.ctx.createGain();
-        this.master.gain.value = save.muted ? 0 : 0.9;
-        this.master.connect(this.filt);
-        this.filt.connect(this.ctx.destination);
-        this.startLap();
-        this.startWind();
-        this.musicT = 3; this.birdT = 4;
-      }
-      if (this.ctx.state === 'suspended') this.ctx.resume();
-    } catch (e) {}
-  },
-  setMuted: function (m) {
-    save.muted = m; persist();
-    if (this.master) this.master.gain.value = m ? 0 : 0.9;
-    $('btn-mute').textContent = m ? '🔇' : '🔊';
-  },
-  setUnderwater: function (on) {
-    /* the underwater strip gets the muffled world: 18kHz -> ~700Hz */
-    try {
-      if (!this.ctx || !this.filt) return;
-      var t = this.ctx.currentTime;
-      this.filt.frequency.cancelScheduledValues(t);
-      this.filt.frequency.setTargetAtTime(on ? 700 : 18000, t, 0.4);
-    } catch (e) {}
-  },
-  noiseBuf: function () {
-    var c = this.ctx, len = c.sampleRate * 2, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
-    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    return b;
-  },
-  startLap: function () {
-    /* gentle water lapping: looped noise -> lowpass, slow LFO on gain */
-    try {
-      var c = this.ctx;
-      var src = c.createBufferSource(); src.buffer = this.noiseBuf(); src.loop = true;
-      var lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = 0.6;
-      var g = c.createGain(); g.gain.value = 0.045;
-      var lfo = c.createOscillator(); lfo.frequency.value = 0.12;
-      var lg = c.createGain(); lg.gain.value = 0.028;
-      lfo.connect(lg); lg.connect(g.gain);
-      src.connect(lp); lp.connect(g); g.connect(this.master);
-      src.start(); lfo.start();
-    } catch (e) {}
-  },
-  startWind: function () {
-    /* wind swells: banded noise breathing on a slow LFO */
-    try {
-      var c = this.ctx;
-      var src = c.createBufferSource(); src.buffer = this.noiseBuf(); src.loop = true;
-      var bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 380; bp.Q.value = 0.4;
-      var g = c.createGain(); g.gain.value = 0.018;
-      var lfo = c.createOscillator(); lfo.frequency.value = 0.06;
-      var lg = c.createGain(); lg.gain.value = 0.014;
-      lfo.connect(lg); lg.connect(g.gain);
-      src.connect(bp); bp.connect(g); g.connect(this.master);
-      src.start(); lfo.start();
-    } catch (e) {}
-  },
-  tone: function (f0, f1, dur, type, vol, when) {
-    try {
-      var c = this.ctx, t = c.currentTime + (when || 0);
-      var o = c.createOscillator(), g = c.createGain();
-      o.type = type || 'sine';
-      o.frequency.setValueAtTime(f0, t);
-      if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(g); g.connect(this.master);
-      o.start(t); o.stop(t + dur + 0.05);
-    } catch (e) {}
-  },
-  burst: function (dur, freq, vol, when) {
-    try {
-      var c = this.ctx, t = c.currentTime + (when || 0);
-      var src = c.createBufferSource(); src.buffer = this.noiseBuf();
-      var lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = freq || 900;
-      var g = c.createGain();
-      g.gain.setValueAtTime(vol || 0.25, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      src.connect(lp); lp.connect(g); g.connect(this.master);
-      src.start(t); src.stop(t + dur + 0.05);
-    } catch (e) {}
-  },
-  pluck: function () {
-    /* sparse generative folk: pentatonic, soft, never demanding */
-    var scale = [293.66, 329.63, 369.99, 440.0, 493.88, 587.33];
-    var f = scale[Math.floor(Math.random() * scale.length)];
-    this.tone(f, f * 0.995, 1.6, 'triangle', 0.055);
-    if (Math.random() < 0.3) {
-      var f2 = scale[Math.floor(Math.random() * scale.length)];
-      this.tone(f2, f2 * 0.995, 1.8, 'triangle', 0.04, 0.5 + Math.random() * 0.6);
-    }
-  },
-  chirp: function () {
-    /* sparse birdsong: a few quick descending chirps */
-    var n = 2 + Math.floor(Math.random() * 3);
-    for (var i = 0; i < n; i++) {
-      var f = 2300 + Math.random() * 900;
-      this.tone(f, f * 0.72, 0.09, 'sine', 0.045, i * (0.14 + Math.random() * 0.1));
-    }
-  },
-  scheduleAmbient: function (dt, cat) {
-    if (!this.ctx || this.ctx.state !== 'running' || save.muted) return;
-    this.musicT -= dt;
-    if (this.musicT <= 0) { this.pluck(); this.musicT = 4 + Math.random() * 5; }
-    this.birdT -= dt;
-    if (this.birdT <= 0) {
-      if (cat !== 'night') this.chirp();
-      this.birdT = 7 + Math.random() * 13;
-    }
-  },
-  plip: function () { this.tone(520, 240, 0.16, 'sine', 0.22); },
-  nibbleTick: function () { this.tone(1500, 950, 0.07, 'square', 0.07); },
-  hook: function () { this.tone(660, 990, 0.12, 'triangle', 0.2); },
-  splash: function () { this.burst(0.28, 800, 0.28); },
-  bite: function () {
-    /* THE bite: big splash + low thump — the unmistakable cue */
-    this.burst(0.55, 750, 0.42);
-    this.tone(95, 42, 0.5, 'sine', 0.5);
-    this.tone(190, 120, 0.2, 'triangle', 0.14, 0.05);
-  },
-  reelClick: function () { this.tone(2100, 1700, 0.03, 'square', 0.045); },
-  warn: function () { this.tone(300, 200, 0.22, 'sawtooth', 0.1); this.tone(300, 200, 0.22, 'sawtooth', 0.1, 0.24); },
-  chime: function () {
-    var scale = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
-    var start = Math.floor(Math.random() * 3), n = 4;
-    for (var i = 0; i < n; i++) {
-      this.tone(scale[(start + i) % scale.length], 0, 0.55, 'triangle', 0.16, i * 0.1);
-    }
-  },
-  fanfare: function () {
-    /* NEW RECORD fanfare */
-    var notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
-    for (var i = 0; i < notes.length; i++) {
-      this.tone(notes[i], 0, 0.5, 'triangle', 0.18, i * 0.11);
-      this.tone(notes[i] / 2, 0, 0.5, 'sine', 0.1, i * 0.11);
-    }
-  },
-  mrrp: function () { this.tone(300, 230, 0.14, 'sine', 0.12); this.tone(260, 200, 0.12, 'sine', 0.1, 0.13); }
-  ,
-  duck: function () {
-    /* the world holds its breath: brief master dip on the hook */
-    try {
-      if (!this.ctx || !this.master) return;
-      var t = this.ctx.currentTime, g = this.master.gain;
-      g.cancelScheduledValues(t);
-      g.setValueAtTime(g.value, t);
-      g.linearRampToValueAtTime(0.25, t + 0.08);
-      g.linearRampToValueAtTime(save.muted ? 0 : 0.9, t + 0.7);
-    } catch (e) {}
-  },
-  rareSting: function () {
-    /* Dredge's flat-key trick, audible: rare catches get their own sting */
-    this.tone(392, 392, 0.16, 'triangle', 0.16);
-    this.tone(370, 370, 0.16, 'triangle', 0.16, 0.14);
-    this.tone(311, 311, 0.3, 'triangle', 0.18, 0.28);
-    this.tone(622, 622, 0.4, 'sine', 0.08, 0.28);
-  },
-};
+/* (moved to audio.js — the sound engine lives there now; game.js got too big to push) */
 /* ============================== haptics (gentle only) ============================== */
 /* Vocabulary for a calm game: select / light / success — nothing sharper.
  * Feature-detected so it never throws on iOS (no Vibration API there);
@@ -293,7 +125,7 @@ var world = {
   clouds: [], stars: [], fireflies: [], rain: [], silhs: [], ripples: [], parts: [],
   birds: [], meteors: [], birdT: 8, meteorT: 12,
   motes: [], bubbles: [], seaweed: [], reeds: [], dflies: [], otters: [], moths: [], glints: [],
-  bobX: 0, bobY: 0, bobDepth: 0.5, dipT: 0, pullActive: false, pullFrac: 0,
+  bobX: 0, bobY: 0, bobDepth: 0.5, dipT: 0, pullActive: false, pullFrac: 0, tension: 0,
   slowT: 0, zoomK: 0, catchArc: null,
   cat: { x: 80, dir: 1, mode: 'sit', t: 0, nextMove: 6, petT: 0, batT: 0, batX: 0, y: 0 },
   lanterns: []
@@ -1039,7 +871,9 @@ function anglerX() { return heronPerchX() - 104; }
 function rodGeom() {
   var tipX = heronPerchX() - 40, tipY = dockY() - 96;
   var bend = 0;
-  if (phase === 'reeling' && world.pullActive) bend = 16 * (0.4 + 0.6 * world.pullFrac);
+  /* the pole flexes with line tension — deep under a surging fish, easing as
+     the fish tires. The bend is hard-capped: this pole bends, it never breaks. */
+  if (phase === 'reeling') bend = Math.min(1, world.tension || 0) * 40;
   else if (phase === 'reveal') bend = 10;
   tipY += bend;
   return { bx: anglerX() + 30, by: dockY() - 54, cx: tipX - 20, cy: tipY + 40, tx: tipX, ty: tipY };
@@ -1056,7 +890,7 @@ function drawAngler(g) {
   g.save();
   g.translate(x, y0);
   if (phase === 'reveal') g.rotate(-0.09); /* leaning back with the catch held high */
-  else if (phase === 'reeling') g.rotate(0.04); /* leaning into the fight */
+  else if (phase === 'reeling') g.rotate(0.02 + 0.05 * (world.tension || 0)); /* leaning into the fight */
   /* boots planted on the planks */
   g.fillStyle = '#5a4632';
   g.beginPath(); g.ellipse(-9, -3.5, 10, 4.5, 0, 0, 6.283); g.fill();
@@ -1467,8 +1301,14 @@ function depthToY(d) {
   return waterTop + 16 + (Math.min(3.4, d) / 3.4) * (H - waterTop - 70);
 }
 function drawRodAndLine(g) {
-  /* the rod bends under the fish: surges yank the tip down, the reveal holds it bent */
+  /* the rod bends under the fish: runs yank the tip down, the reveal holds it bent.
+     Near max bend the tip shudders — straining, never snapping. */
   var r = rodGeom(), tipX = r.tx, tipY = r.ty;
+  var tension = Math.min(1, world.tension || 0);
+  if (phase === 'reeling' && tension > 0.72) {
+    tipX += Math.sin(world.t * 55) * 1.6;
+    tipY += Math.cos(world.t * 47) * 1.2;
+  }
   /* rod */
   g.save();
   g.strokeStyle = '#6b4a2e'; g.lineWidth = 6; g.lineCap = 'round';
@@ -1479,10 +1319,17 @@ function drawRodAndLine(g) {
   if (phase === 'idle' || phase === 'menu') return;
   var bx = world.bobX, by = world.bobY;
   g.save();
-  /* the line reddens while the fish surges — the world tells you to ease off */
-  g.strokeStyle = world.pullActive ? 'rgba(210,70,50,0.95)' : 'rgba(240,240,235,0.85)';
-  g.lineWidth = world.pullActive ? 2.6 : 1.6;
-  g.beginPath(); g.moveTo(tipX, tipY); g.lineTo(bx, by); g.stroke();
+  /* the line reddens under strain — the world telling you to ease off.
+     Slack when the fish rests: the line visibly sags instead of staying taut. */
+  var strained = tension > 0.45;
+  g.strokeStyle = strained ? 'rgba(210,70,50,0.95)' : 'rgba(240,240,235,0.85)';
+  g.lineWidth = strained ? 2.6 : 1.6;
+  g.beginPath(); g.moveTo(tipX, tipY);
+  if (phase === 'reeling' && tension < 0.2) {
+    var sag = 26 * (1 - tension / 0.2);
+    g.quadraticCurveTo((tipX + bx) / 2, (tipY + by) / 2 + sag, bx, by);
+  } else g.lineTo(bx, by);
+  g.stroke();
   /* bobber */
   var bob = Math.sin(world.t * 3) * 2.5;
   if (phase === 'bite') bob = 7 + Math.sin(world.t * 26) * 3.5; /* plunging */
@@ -1653,6 +1500,7 @@ var holdMs = 0, castT = 0, sinkT = 0, waitT = 0, biteDelay = 0;
 var nibbleT = 0, nibbleEvents = [];
 var biteLeft = 0;
 var reelProg = 0, reelEnd = 4000, pulls = [], holding = false, clickT = 0;
+var fightT = 0, fightStam = 1, fightTension = 0, creakT = 0; /* the struggle's state */
 var pullResults = [];
 var castDepthV = 0.5, castTargetX = 0, castTargetY = 0, castFromX = 0, castFromY = 0;
 var curCatch = null; /* CC.resolveCatch result for this cast */
@@ -1695,7 +1543,7 @@ function setPhase(p) {
     gmMid.style.display = f1 < 0.99 ? '' : 'none';
     gmDeep.style.display = f2 < 0.99 ? '' : 'none';
   }
-  if (p === 'idle') { cb.querySelector('span').textContent = 'HOLD TO CAST'; world.pullActive = false; }
+  if (p === 'idle') { cb.querySelector('span').textContent = 'HOLD TO CAST'; world.pullActive = false; world.tension = 0; }
 }
 
 function castPoint() { return { x: heronPerchX() + 96, y: 0 }; }
@@ -1769,12 +1617,13 @@ function startBite() {
 function hookIt() {
   if (phase !== 'bite') return;
   HAP.light();
-  pulls = curCatch.reelPulls.slice();
+  var fight = curCatch.fight;
+  pulls = fight.runs.slice();
   pulls.forEach(function (p) { p.warned = false; p.held = false; p.scored = false; });
-  var last = pulls[pulls.length - 1];
-  reelEnd = last.at + last.dur + 600;
-  reelProg = 0; pullResults = []; clickT = 0;
-  world.pullActive = false;
+  reelEnd = fight.dist;
+  reelProg = 0; fightT = 0; fightStam = 1; fightTension = 0; creakT = 0;
+  pullResults = []; clickT = 0;
+  world.tension = 0; world.pullActive = false;
   /* the world holds its breath: slow-mo dip + subtle zoom + audio duck */
   world.slowT = 0.5;
   world.zoomTarget = 1;
@@ -1964,29 +1813,59 @@ function loop(ts) {
     world.bobY = castTargetY + Math.sin(world.t * 3) * 2;
     if (biteLeft <= 0) missedBite();
   } else if (phase === 'reeling') {
-    /* auto-progresses (~4s base); HOLD to reel 2x faster.
-     * Fish surges at reelPulls times — holding during a pull = 'rough'. */
-    reelProg += dt * 1000 * (holding ? 2 : 1);
+    /* THE STRUGGLE. Hold to gain line; the fish answers with runs that bend
+     * the rod deep and rip line back out. Ease off during a run (gentle) and
+     * the fish spends itself sooner; muscle through it (rough) and it fights
+     * harder. The fish tires as the fight wears on — late runs are flickers.
+     * No fail state: the pole bends, it never breaks. */
+    var F = CC.FIGHT;
+    fightT += dt * 1000;
     var active = null;
     for (i = 0; i < pulls.length; i++) {
       var pu = pulls[i];
-      if (!pu.warned && reelProg >= pu.at) { pu.warned = true; AU.warn(); }
-      if (reelProg >= pu.at && reelProg <= pu.at + pu.dur) {
+      if (!pu.warned && fightT >= pu.at) {
+        pu.warned = true; AU.warn(); HAP.buzz(35);
+        /* the run erupts: spray flies, the bobber gets yanked */
+        for (var s = 0; s < 8; s++) world.parts.push({
+          k: 'drop', x: world.bobX + (Math.random() - 0.5) * 20, y: waterTop + 4,
+          vx: (Math.random() - 0.5) * 200, vy: -120 - Math.random() * 160,
+          r: 1.5 + Math.random() * 2, life: 0.8, max: 0.8
+        });
+      }
+      if (fightT >= pu.at && fightT <= pu.at + pu.dur) {
         active = pu;
         if (holding) pu.held = true;
       }
-      if (!pu.scored && reelProg > pu.at + pu.dur) {
+      if (!pu.scored && fightT > pu.at + pu.dur) {
         pu.scored = true;
         pullResults.push(pu.held ? 'rough' : 'gentle');
       }
     }
+    /* the fish tires: runs weaken as stamina burns off */
+    var runStr = active ? active.str * (0.35 + 0.65 * fightStam) : 0;
+    /* tension snaps up fast, eases down slow — the rod follows the fish */
+    var tTarget = active ? (holding ? 0.55 + 0.45 * runStr : 0.3 + 0.5 * runStr)
+                         : (holding ? 0.26 : 0.07);
+    fightTension += (tTarget - fightTension) * Math.min(1, dt * (tTarget > fightTension ? 7 : 2.5));
+    world.tension = fightTension;
     world.pullActive = !!active;
-    world.pullFrac = active ? Math.min(1, (reelProg - active.at) / active.dur) : 0;
-    world.bobX = castTargetX;
-    world.bobY = castTargetY + Math.sin(world.t * (active ? 30 : 6)) * (active ? 5 : 2);
+    world.pullFrac = runStr;
+    /* ground gained, line lost */
+    var rate;
+    if (holding) rate = F.holdRate * (active ? (1 - F.stall * runStr) : 1);
+    else rate = active ? -runStr * F.pulloutRate : F.idleRate;
+    reelProg = Math.max(0, Math.min(reelEnd, reelProg + rate * dt));
+    /* stamina burns while the fish runs, trickles away otherwise */
+    fightStam = Math.max(0, fightStam - dt * (active ? F.stamRunDrain * runStr + 0.02 : F.stamIdleDrain));
+    /* the pole strains near max bend — it creaks, it shudders, it holds */
+    creakT -= dt;
+    if (fightTension > 0.72 && creakT <= 0) { AU.creak(); creakT = 0.65 + Math.random() * 0.3; }
+    /* the bobber gets dragged outward by the run, thrashing */
+    world.bobX = castTargetX + (active ? runStr * 30 : 0);
+    world.bobY = castTargetY + (active ? runStr * 6 : 0) + Math.sin(world.t * (active ? 34 : 6)) * (active ? 5 : 2);
     clickT -= dt;
     if (clickT <= 0) { AU.reelClick(); clickT = holding ? 0.16 : 0.3; }
-    $('reel-fill').style.width = Math.min(100, reelProg / reelEnd * 100).toFixed(1) + '%';
+    $('reel-fill').style.width = (reelProg / reelEnd * 100).toFixed(1) + '%';
     if (reelProg >= reelEnd) finishReel();
   } else if (phase === 'reveal' && world.catchArc) {
     /* the staged catch: fish arcs out with a droplet trail, then the card */
