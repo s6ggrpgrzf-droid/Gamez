@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2b1e4e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Skyhook — one-button swing</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HUD during play -->
+<header id="hud" hidden>
+  <div id="hud-score">0</div>
+  <div id="hud-sub"><span id="hud-tower">TOWER 1</span><span id="hud-fire" hidden>🔥 ON FIRE</span></div>
+  <div id="hud-rainbow" title="Rainbows collected">🌈 <span id="hud-rainbow-n">0</span></div>
+</header>
+
+<!-- corner buttons -->
+<div id="corner-btns">
+  <button id="btn-pause" class="corner-btn" type="button" hidden title="Pause">⏸</button>
+  <button id="btn-mute" class="corner-btn" type="button" hidden title="Sound">🔊</button>
+</div>
+
+<!-- teaching hint (first run only, wordless) -->
+<div id="hold-hint" hidden><div class="pulse-ring"></div><span>HOLD</span></div>
+<div id="toast" aria-hidden="true"></div>
+
+<!-- MENU -->
+<section id="menu" class="screen on" aria-label="Menu">
+  <div class="menu-inner">
+    <div class="logo" id="menu-logo">🪝</div>
+    <h1>Skyhook</h1>
+    <p class="tagline">Hold. Swing. Stick the landing.</p>
+    <div class="best-row"><span>🏆 Best <b id="menu-best">0</b></span><span>🌈 <b id="menu-rainbows">0</b> all time</span></div>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-endless" type="button">Swing<span class="btn-sub">endless towers</span></button>
+      <button class="btn" id="btn-daily" type="button">Daily Peaks<span class="btn-sub">same towers, worldwide</span></button>
+      <button class="btn ghost" id="btn-how" type="button">How to play</button>
+      <button class="btn ghost" id="btn-haptic" type="button" aria-pressed="true">Haptics: <span id="haptic-state">On</span></button>
+      <button class="btn ghost" id="btn-motion" type="button" aria-pressed="false">Calm motion: <span id="motion-state">Off</span></button>
+    </div>
+    <div class="howto" id="howto" hidden>
+      <p><b>Hold anywhere</b> to pull Mochi back on the rope — longer hold, bigger swing.</p>
+      <p><b>Release</b> to swing across. Land on the next tower. Dead center = <b>PERFECT</b> (+2).</p>
+      <p>Three perfects in a row catches <b>🔥 fire</b> — double points. Grab <b>🌈 rainbows</b> mid-swing.</p>
+      <p>Every 8 towers: pick an upgrade. Miss a landing and the run ends.</p>
+    </div>
+  </div>
+</section>
+
+<!-- UPGRADE DRAFT -->
+<section id="upgrade" class="screen" aria-label="Choose an upgrade">
+  <div class="sheet">
+    <h2>Tower 8 — pick a gift</h2>
+    <div class="up-cards" id="up-cards"></div>
+  </div>
+</section>
+
+<!-- PAUSE -->
+<section id="pause" class="screen" aria-label="Paused">
+  <div class="sheet">
+    <h2>Paused</h2>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-resume" type="button">Resume</button>
+      <button class="btn ghost" id="btn-quit" type="button">Quit run</button>
+    </div>
+  </div>
+</section>
+
+<!-- GAME OVER -->
+<section id="over" class="screen" aria-label="Run over">
+  <div class="sheet">
+    <h2 id="over-title">Splashed!</h2>
+    <p class="over-flavor" id="over-flavor"></p>
+    <div class="over-stats">
+      <div><b id="over-score">0</b><span>score</span></div>
+      <div><b id="over-towers">0</b><span>towers</span></div>
+      <div><b id="over-perfects">0</b><span>perfects</span></div>
+      <div><b id="over-rainbows">0</b><span>🌈</span></div>
+    </div>
+    <p class="newbest" id="over-newbest" hidden>🏆 New best!</p>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-again" type="button">Swing again</button>
+      <button class="btn ghost" id="btn-tomenu" type="button">Menu</button>
+    </div>
+  </div>
+</section>
+
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
