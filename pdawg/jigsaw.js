@@ -2299,6 +2299,11 @@ var UI = {
       try { $('#haptToggle').checked = window.PDAWG_SFX && PDAWG_SFX.hapticsOn(); } catch (e) {}
       openModal('#pauseModal');
     };
+    /* light haptic tick on every UI button press (no-op where unsupported, e.g. iOS) */
+    document.addEventListener('pointerdown', function (e) {
+      var t = e.target && e.target.closest ? e.target.closest('.btn,.tbtn,.ai-theme,.count-btn,.theme-opt,.daily.hero') : null;
+      if (t && window.PDAWG_SFX) { try { PDAWG_SFX.tap(); } catch (err) {} }
+    }, { passive: true });
     $('#resumeBtn').onclick = function () { closeModal('#pauseModal'); Game.paused = false; Game.markDirty(); };
     $('#restartBtn').onclick = function () {
       if (!confirm('Restart this puzzle from scratch?')) return;

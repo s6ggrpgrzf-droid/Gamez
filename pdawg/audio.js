@@ -56,6 +56,7 @@ function buzz(ms) {
 }
 var SFX = {
   unlock: function () { ac(); },
+  tap: function () { buzz(12); },   /* light tick for UI button presses */
   hapticsOn: function () { return haptics; },
   setHaptics: function (on) {
     haptics = !!on;
