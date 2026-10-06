@@ -870,13 +870,18 @@ function anglerX() { return heronPerchX() - 104; }
    grip always lands on the rod even as it bends under a fighting fish */
 function rodGeom() {
   var tipX = heronPerchX() - 40, tipY = dockY() - 96;
-  var bend = 0;
-  /* the pole flexes with line tension — deep under a surging fish, easing as
-     the fish tires. The bend is hard-capped: this pole bends, it never breaks. */
-  if (phase === 'reeling') bend = Math.min(1, world.tension || 0) * 40;
-  else if (phase === 'reveal') bend = 10;
+  var bend = 0, mid = 0;
+  /* progressive loading, like a real blank: light strain bends the tip;
+     heavy strain works the curve down into the midsection (parabolic).
+     The bend is hard-capped: this pole bends, it never breaks. */
+  if (phase === 'reeling') {
+    var t = Math.min(1, world.tension || 0);
+    bend = t * 40;
+    mid = Math.pow(t, 1.5) * 24;
+  }
+  else if (phase === 'reveal') { bend = 10; mid = 4; }
   tipY += bend;
-  return { bx: anglerX() + 30, by: dockY() - 54, cx: tipX - 20, cy: tipY + 40, tx: tipX, ty: tipY };
+  return { bx: anglerX() + 30, by: dockY() - 54, cx: tipX - 20, cy: tipY + 40 + mid, tx: tipX, ty: tipY };
 }
 function rodPoint(r, t) {
   var u = 1 - t;
