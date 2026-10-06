@@ -2033,6 +2033,7 @@ var UI = {
         }).catch(function () {});
       });
     });
+    this.updateGalCount();
   },
 
   renderStats: function () {
@@ -2089,6 +2090,16 @@ var UI = {
       card.onclick = function () { UI.openCountChooser({ imageKind: 'gallery', galleryIdx: i, title: g.title }); };
       grid.appendChild(card);
     });
+    this.updateGalCount();
+  },
+
+  /* "N puzzles" label on the gallery eyebrow */
+  updateGalCount: function () {
+    var gc = $('#galCount');
+    if (!gc || !window.PDAWG_GALLERY) return;
+    var n = window.PDAWG_GALLERY.GALLERY.length;
+    try { n += JSON.parse(localStorage.getItem('pdawg-ai-list') || '[]').length; } catch (e) {}
+    gc.textContent = n + ' puzzles';
   },
 
   buildThumbs: function () {
