@@ -135,7 +135,8 @@
     { id: 'castaway-cove', name: 'Castaway Cove', cls: 'art-castaway-cove' },
     { id: 'neon-drift', name: 'Neon Drift', cls: 'art-neon-drift' },
     { id: 'dead-mans-hand', name: "Dead Man's Hand", cls: 'art-dead-mans-hand' },
-    { id: 'neon-depths', name: 'Neon Depths', cls: 'art-neon-depths' }
+    { id: 'neon-depths', name: 'Neon Depths', cls: 'art-neon-depths' },
+    { id: 'skyhook', name: 'Skyhook', cls: 'art-skyhook' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -159,6 +160,10 @@
       if (id === 'bloom-defense') {
         var bb = +(read('bloom2_best') || 0); if (!bb) return null;
         return { label: 'Best ' + bb.toLocaleString(), frac: Math.min(1, bb / 50000) };
+      }
+      if (id === 'skyhook') {
+        var sh = +(read('skyhook_best') || 0); if (!sh) return null;
+        return { label: 'Best ' + sh, frac: Math.min(1, sh / 50) };
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;
