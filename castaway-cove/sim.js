@@ -268,20 +268,61 @@ function nibblePlan(rng, fish) {
 var PULL_MIN = { darter: 4, lurker: 2, nibbler: 3, steady: 3 };
 var PULL_MAX = { darter: 5, lurker: 3, nibbler: 3, steady: 3 };
 
-/* -> [{at, dur}] pull events in ms: tap-and-hold in time with the fish */
-function reelSession(rng, fish) {
+/* ---------------- the fight ---------------- */
+/* Every number the struggle runs on lives here — one home for tuning. */
+var FIGHT = {
+  holdRate: 15,      /* distance/s gained while holding (calm water) */
+  idleRate: 5,       /* distance/s gained while not holding */
+  pulloutRate: 17,   /* distance/s the fish rips back at str 1 while you ease off */
+  stall: 0.82,       /* how much a full-strength run stalls your reeling (0..1) */
+  expectBase: 4500,  /* ms of fight for the meekest fish */
+  expectPerStr: 6500,/* +ms of fight per point of strength */
+  stamRunDrain: 0.22,/* stamina/s burned per point of run strength */
+  stamIdleDrain: 0.015
+};
+var RARITY_STR = { common: 0, uncommon: 0.08, rare: 0.16, legendary: 0.3 };
+var BEHAVIOR_STR = { darter: 0.12, lurker: -0.08, nibbler: -0.04, steady: 0 };
+
+function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+
+/* how hard this fish fights, 0..1 — build + rarity + temperament */
+function fightStrength(fish) {
+  var sizePart = ((fish.size || 1) - 0.6) / (2.2 - 0.6); /* 0..1 across the table */
+  var s = 0.3 + 0.35 * clamp01(sizePart)
+        + (RARITY_STR[fish.rarity] || 0)
+        + (BEHAVIOR_STR[fish.behavior] || 0);
+  return Math.round(clamp01(s) * 100) / 100;
+}
+
+/* -> {runs:[{at,dur,str}], dist, str, expectMs}
+   The whole struggle, scheduled on the fight clock (ms since hook).
+   Runs carry a strength 0..1; the game weakens them as the fish tires. */
+function fightPlan(rng, fish) {
+  var str = fightStrength(fish);
   var b = fish.behavior || 'steady';
   var lo = PULL_MIN[b] != null ? PULL_MIN[b] : 3;
   var hi = PULL_MAX[b] != null ? PULL_MAX[b] : 3;
   var n = lo + Math.floor(rng() * (hi - lo + 1));
   if (fish.rarity === 'legendary') n += 1;
-  var pulls = [];
-  var at = Math.round(500 + rng() * 200); /* first pull ~600ms in */
-  for (var i = 0; i < n; i++) {
-    pulls.push({ at: at, dur: Math.round(600 + rng() * 300) }); /* 600-900ms */
-    at += Math.round(700 + rng() * 900); /* pulls 700-1600ms apart */
+  var expectMs = Math.round(FIGHT.expectBase + str * FIGHT.expectPerStr);
+  var avgRate = (FIGHT.holdRate + FIGHT.idleRate) / 2;
+  var dist = Math.round(expectMs / 1000 * avgRate);
+  var runs = [];
+  var at = Math.round(700 + rng() * 400); /* first run ~1s in */
+  for (var i = 0; i < n && at < expectMs - 900; i++) {
+    var dur = Math.round(700 + rng() * 500); /* 700-1200ms runs */
+    runs.push({
+      at: at, dur: dur,
+      str: Math.round(clamp01(str * (0.75 + rng() * 0.5)) * 100) / 100
+    });
+    at += Math.round(dur + 900 + rng() * 1400); /* runs 1.6s-3.5s apart */
   }
-  return pulls;
+  return { runs: runs, dist: dist, str: str, expectMs: expectMs };
+}
+
+/* legacy shape: the timed pull list, strength stripped */
+function reelSession(rng, fish) {
+  return fightPlan(rng, fish).runs.map(function (r) { return { at: r.at, dur: r.dur }; });
 }
 
 /* ---------------- catch quality ---------------- */
@@ -325,7 +366,7 @@ function catchCoins(fish, lureLevel, isDaily) {
 }
 
 /* opts: {rng, spotId, targetId, depth, timeCat, weather, upgrades, dailyId}
-   -> {fish, sizeCm, isDaily, biteWindowMs, reelPulls}
+   -> {fish, sizeCm, isDaily, biteWindowMs, fight}
    (NOT coins/quality — those need the player's reel input.) */
 function resolveCatch(opts) {
   opts = opts || {};
@@ -342,7 +383,7 @@ function resolveCatch(opts) {
     sizeCm: catchSize(rng, fish),
     isDaily: isDaily,
     biteWindowMs: biteWindowMs(fish.rarity, fish.behavior, up.rod),
-    reelPulls: reelSession(rng, fish)
+    fight: fightPlan(rng, fish)
   };
 }
 
@@ -511,6 +552,9 @@ var CC = {
   pickFish: pickFish,
   nibblePlan: nibblePlan,
   reelSession: reelSession,
+  fightPlan: fightPlan,
+  fightStrength: fightStrength,
+  FIGHT: FIGHT,
   scoreQuality: scoreQuality,
   qualityMult: qualityMult,
   catchSize: catchSize,
