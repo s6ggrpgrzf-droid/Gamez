@@ -306,7 +306,10 @@ function resolveLanding() {
       G.flash = Math.max(G.flash, 0.3);
       SkyAudio.milestone();
     }
-    target.x = Math.min(target.x, cur().x); // merge: swallow the gap
+    // merge: new tower extends left to swallow the gap; right edge (anchor) stays fixed
+    const rightEdge = target.x + target.w;
+    target.x = Math.min(target.x, cur().x);
+    target.w = rightEdge - target.x;
     G.landT = 0; G.phase = 'landed';
     updateHUD();
   } else {
