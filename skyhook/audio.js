@@ -88,6 +88,37 @@
     upgrade() { tone(523.25, 0.12, 'triangle', 0.25); tone(659.25, 0.12, 'triangle', 0.25, 0.09); tone(783.99, 0.2, 'triangle', 0.28, 0.18); },
     over() { tone(392, 0.2, 'triangle', 0.25); tone(311, 0.2, 'triangle', 0.25, 0.16); tone(233, 0.34, 'triangle', 0.28, 0.32); },
     daily() { tone(784, 0.1, 'triangle', 0.22); tone(1046, 0.18, 'triangle', 0.24, 0.1); },
+    // --- Swinicorn-faithful additions ---
+    creakStart() {
+      if (!ensure() || chargeOsc) return;
+      chargeOsc = ctx.createOscillator(); chargeGain = ctx.createGain();
+      chargeOsc.type = 'sawtooth'; chargeOsc.frequency.value = 70;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
+      chargeGain.gain.value = 0.0001;
+      chargeGain.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.1);
+      chargeOsc.connect(f); f.connect(chargeGain); chargeGain.connect(master);
+      chargeOsc.start();
+    },
+    creakSet(p) { // p: 0..1 rope tension
+      if (chargeOsc) {
+        chargeOsc.frequency.setTargetAtTime(70 + p * 160 + Math.random() * 8, ctx.currentTime, 0.05);
+      }
+    },
+    creakStop() { this.chargeStop(); },
+    twang(p) { // release: pitch rises with pull 0..1
+      tone(140 + p * 320, 0.28, 'triangle', 0.35, 0, 90);
+      noise(0.18, 0.2, 0, 2500, 'highpass');
+    },
+    whoosh() { noise(0.4, 0.22, 0, 700, 'bandpass', 3400); },
+    wobble() { tone(196, 0.5, 'sine', 0.22, 0, 130); tone(196, 0.5, 'sine', 0.15, 0.12, 150); },
+    fizzle() { noise(0.5, 0.18, 0, 4000, 'highpass', 800); },
+    neigh() { tone(520, 0.12, 'sawtooth', 0.2, 0, 780); tone(660, 0.14, 'sawtooth', 0.2, 0.1, 920); },
+    boing() { tone(180, 0.22, 'sine', 0.28, 0, 520); },
+    newBest() { [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.16, 'triangle', 0.24, i * 0.09)); },
+    milestone() { tone(784, 0.12, 'triangle', 0.22); tone(988, 0.2, 'triangle', 0.24, 0.1); },
+    // raw note for the generative music scheduler in game.js
+    note(freq, dur, type, vol, when) { tone(freq, dur, type || 'triangle', vol || 0.14, when || 0); },
+    noiseHit(dur, vol, freq) { noise(dur, vol, 0, freq || 6000, 'highpass'); },
   };
 
   window.SkyAudio = S;
