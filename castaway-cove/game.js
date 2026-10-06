@@ -549,7 +549,7 @@ function drawHeron(g) {
 }
 
 /* ---------- scene painters ---------- */
-var UI_FONT = '"Baloo 2","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif';
+var UI_FONT = '"Baloo 2","Trebuchet MS",Verdana,sans-serif';
 var HAND_FONT = '"Caveat","Segoe Script","Comic Sans MS",cursive';
 function drawSky(g, pal, cat) {
   var gr = gradeFor(cat);
@@ -1032,39 +1032,70 @@ function drawDock(g) {
   g.beginPath(); g.arc(168, y + 8, 4.5, 0, 6.283); g.stroke();
   g.restore();
 }
-/* ---------- the angler (you) ---------- */
+/* ---------- the angler (you), standing on the dock ---------- */
 function anglerX() { return heronPerchX() - 104; }
+/* rod geometry shared by the rod painter and the angler's hands, so the
+   grip always lands on the rod even as it bends under a fighting fish */
+function rodGeom() {
+  var tipX = heronPerchX() - 40, tipY = dockY() - 96;
+  var bend = 0;
+  if (phase === 'reeling' && world.pullActive) bend = 16 * (0.4 + 0.6 * world.pullFrac);
+  else if (phase === 'reveal') bend = 10;
+  tipY += bend;
+  return { bx: anglerX() + 30, by: dockY() - 54, cx: tipX - 20, cy: tipY + 40, tx: tipX, ty: tipY };
+}
+function rodPoint(r, t) {
+  var u = 1 - t;
+  return { x: u * u * r.bx + 2 * u * t * r.cx + t * t * r.tx,
+           y: u * u * r.by + 2 * u * t * r.cy + t * t * r.ty };
+}
 function drawAngler(g) {
   var x = anglerX(), y = dockY();
   var breathe = Math.sin(world.t * 1.4) * 1.6;
-  var surge = phase === 'reeling' ? Math.sin(world.t * 22) * 1.2 : 0;
+  var y0 = y + breathe * 0.4;
   g.save();
-  g.translate(x, y + breathe * 0.4);
+  g.translate(x, y0);
   if (phase === 'reveal') g.rotate(-0.09); /* leaning back with the catch held high */
-  /* legs dangling over the dock edge */
-  g.strokeStyle = '#4a5a6a'; g.lineWidth = 9; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(-8, 2); g.lineTo(-10, 26); g.stroke();
-  g.beginPath(); g.moveTo(8, 2); g.lineTo(10, 26 + Math.sin(world.t * 1.1) * 2); g.stroke();
+  else if (phase === 'reeling') g.rotate(0.04); /* leaning into the fight */
+  /* boots planted on the planks */
+  g.fillStyle = '#5a4632';
+  g.beginPath(); g.ellipse(-9, -3.5, 10, 4.5, 0, 0, 6.283); g.fill();
+  g.beginPath(); g.ellipse(11, -3.5, 10, 4.5, 0, 0, 6.283); g.fill();
+  /* legs: an easy stance, front foot forward */
+  g.strokeStyle = '#4a5a6a'; g.lineWidth = 10; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(-9, -6); g.lineTo(-11, -40); g.stroke();
+  g.beginPath(); g.moveTo(11, -6); g.lineTo(13, -40); g.stroke();
   /* body: warm rust shirt */
   g.fillStyle = '#c96f4a';
   g.beginPath();
-  g.moveTo(-16, 4); g.quadraticCurveTo(-18, -26, -8, -30);
-  g.lineTo(8, -30); g.quadraticCurveTo(18, -26, 16, 4); g.closePath(); g.fill();
+  g.moveTo(-14, -38);
+  g.quadraticCurveTo(-16, -62, -7, -70);
+  g.lineTo(9, -70);
+  g.quadraticCurveTo(18, -62, 15, -38);
+  g.closePath(); g.fill();
   g.fillStyle = shadeH('#c96f4a', -24);
-  g.beginPath(); g.ellipse(9, -14, 6, 12, 0.2, 0, 6.283); g.fill(); /* shaded side */
-  /* arms reaching to the rod */
+  g.beginPath(); g.ellipse(10, -54, 5.5, 13, 0.18, 0, 6.283); g.fill(); /* shaded side */
+  /* belt */
+  g.fillStyle = '#5a4632';
+  g.fillRect(-14, -43, 29, 5);
+  /* hands grip the rod: placed on the rod's own curve so they never miss it */
+  var r = rodGeom();
+  var h1 = rodPoint(r, 0.18), h2 = rodPoint(r, 0.38);
+  var lx1 = h1.x - x, ly1 = h1.y - y0, lx2 = h2.x - x, ly2 = h2.y - y0;
   g.strokeStyle = '#c96f4a'; g.lineWidth = 8;
-  g.beginPath(); g.moveTo(6, -24); g.quadraticCurveTo(30, -26 + surge, 52, -34); g.stroke();
+  g.beginPath(); g.moveTo(0, -64); g.quadraticCurveTo(14, -62, lx1, ly1); g.stroke(); /* far arm */
+  g.beginPath(); g.moveTo(8, -62); g.quadraticCurveTo(20, -62, lx2, ly2); g.stroke(); /* near arm */
   g.fillStyle = '#e8b98a';
-  g.beginPath(); g.arc(53, -34, 5, 0, 6.283); g.fill(); /* hand */
+  g.beginPath(); g.arc(lx1, ly1, 5, 0, 6.283); g.fill();
+  g.beginPath(); g.arc(lx2, ly2, 5, 0, 6.283); g.fill();
   /* head + straw hat */
   g.fillStyle = '#e8b98a';
-  g.beginPath(); g.arc(0, -40, 11, 0, 6.283); g.fill();
+  g.beginPath(); g.arc(2, -82, 11, 0, 6.283); g.fill();
   g.fillStyle = '#e8c56a';
-  g.beginPath(); g.ellipse(0, -46, 20, 6, 0, 0, 6.283); g.fill(); /* brim */
-  g.beginPath(); g.ellipse(0, -50, 11, 8, 0, Math.PI, 0); g.fill(); /* crown */
+  g.beginPath(); g.ellipse(2, -88, 20, 6, 0, 0, 6.283); g.fill(); /* brim */
+  g.beginPath(); g.ellipse(2, -92, 11, 8, 0, Math.PI, 0); g.fill(); /* crown */
   g.strokeStyle = '#a8432f'; g.lineWidth = 2.5;
-  g.beginPath(); g.moveTo(-11, -48); g.quadraticCurveTo(0, -44, 11, -48); g.stroke(); /* hat band */
+  g.beginPath(); g.moveTo(-9, -90); g.quadraticCurveTo(2, -86, 13, -90); g.stroke(); /* hat band */
   g.restore();
 }
 function drawAnglerReflection(g) {
@@ -1436,18 +1467,14 @@ function depthToY(d) {
   return waterTop + 16 + (Math.min(3.4, d) / 3.4) * (H - waterTop - 70);
 }
 function drawRodAndLine(g) {
-  var tipX = heronPerchX() - 40, tipY = dockY() - 96;
   /* the rod bends under the fish: surges yank the tip down, the reveal holds it bent */
-  var bend = 0;
-  if (phase === 'reeling' && world.pullActive) bend = 16 * (0.4 + 0.6 * world.pullFrac);
-  else if (phase === 'reveal') bend = 10;
-  tipY += bend;
+  var r = rodGeom(), tipX = r.tx, tipY = r.ty;
   /* rod */
   g.save();
   g.strokeStyle = '#6b4a2e'; g.lineWidth = 6; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(tipX - 70, dockY() - 8); g.quadraticCurveTo(tipX - 20, tipY + 30, tipX, tipY); g.stroke();
+  g.beginPath(); g.moveTo(r.bx, r.by); g.quadraticCurveTo(r.cx, r.cy, tipX, tipY); g.stroke();
   g.strokeStyle = '#8a6844'; g.lineWidth = 3;
-  g.beginPath(); g.moveTo(tipX - 70, dockY() - 8); g.quadraticCurveTo(tipX - 20, tipY + 30, tipX, tipY); g.stroke();
+  g.beginPath(); g.moveTo(r.bx, r.by); g.quadraticCurveTo(r.cx, r.cy, tipX, tipY); g.stroke();
   g.restore();
   if (phase === 'idle' || phase === 'menu') return;
   var bx = world.bobX, by = world.bobY;
@@ -2198,7 +2225,7 @@ function paintAquariumFrame() {
   /* the residents, swimming */
   if (!aquaFish.length) {
     g.fillStyle = 'rgba(240,235,224,0.75)';
-    g.font = '13px Georgia,serif'; g.textAlign = 'center';
+    g.font = '600 26px ' + HAND_FONT; g.textAlign = 'center';
     g.fillText('Your tank is empty — keep a catch from the catch card.', W2 / 2, H2 / 2 + 4);
     g.textAlign = 'start';
   }
