@@ -144,3 +144,4 @@ h1 { font-size: 46px; font-weight: 800; letter-spacing: .02em; margin: 6px 0 2px
 @media (prefers-reduced-motion: reduce) {
   .logo, #hud-fire, .newbest, .pulse-ring { animation: none; }
 }
+.build-tag { margin-top: 14px; font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 0.08em; }
