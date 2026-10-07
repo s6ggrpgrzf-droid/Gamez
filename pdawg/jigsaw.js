@@ -1668,6 +1668,7 @@ Game.setTrayOpen = function (open) {
   if (!!this.tray.open === !!open) return;
   this.tray.open = !!open;
   $('#tray').style.display = open ? '' : 'none';
+  $('#game').classList.toggle('tray-open', !!open);
   $('#edgeBtn').classList.toggle('on', open);
   this.resize(); // canvas flexes around the tray strip
   if (open) this.trayGather();
@@ -2387,12 +2388,22 @@ var UI = {
     this._pending = base;
     var wrap = $('#countBtns');
     wrap.innerHTML = '';
-    LEVELS.forEach(function (L) {
+    var self = this;
+    this._selCount = 54; /* Classic is the default segment */
+    LEVELS.forEach(function (L, i) {
       var b = el('button', 'btn count');
-      b.innerHTML = '<div class="lvl-name">' + L.name + '</div><div class="lvl-count">' + L.count + ' pieces</div>';
-      b.onclick = function () { UI.startWithCount(L.count); };
+      b.innerHTML = '<div class="lvl-name">' + L.count + '</div><div class="lvl-count">' + L.name + '</div>';
+      if (L.count === self._selCount) b.classList.add('sel');
+      b.onclick = function () {
+        self._selCount = L.count;
+        wrap.style.setProperty('--sel', i);
+        var btns = wrap.querySelectorAll('.btn.count');
+        for (var k = 0; k < btns.length; k++) btns[k].classList.toggle('sel', k === i);
+        sfx('click');
+      };
       wrap.appendChild(b);
     });
+    wrap.style.setProperty('--sel', 1);
     $('#rotToggle').checked = rotPref();
     openModal('#countModal');
   },
@@ -2680,6 +2691,7 @@ var UI = {
       Game.markDirty();
     };
     $('#countClose').onclick = function () { closeModal('#countModal'); };
+    $('#countStart').onclick = function () { UI.startWithCount(UI._selCount || 54); };
     // persist rotation preference whenever the chooser toggle changes
     var rt = $('#rotToggle');
     if (rt) rt.addEventListener('change', function () { setRotPref(rt.checked); });
