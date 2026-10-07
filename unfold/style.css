@@ -336,7 +336,10 @@ body{
 .ins-face{position:absolute;left:0;top:0;transform-style:preserve-3d;
   backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .ins-face .pf{width:100%;height:100%}
+.ins-shade{position:absolute;left:0;top:0;right:0;bottom:0;background:#000;opacity:0;pointer-events:none}
 .ins-prop{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d}
+.ins-handleg{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;
+  transition:transform .75s var(--spring)}
 .ins-crank{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d}
 #inspect-layer.cranking .ins-crank{animation:crankspin 2.4s linear infinite}
 #inspect-layer.cranking .ins-drum{animation:drumspin 2.4s linear infinite}
@@ -359,4 +362,5 @@ body{
 @media (prefers-reduced-motion:reduce){
   #inspect-layer.cranking .ins-crank,#inspect-layer.cranking .ins-drum{animation:none}
   .ins-lid{transition:none}
+  .ins-handleg{transition:none}
 }

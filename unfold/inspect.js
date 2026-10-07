@@ -123,11 +123,17 @@
     extras: extrasLunchbox
   };
   function extrasLunchbox(M, P, cuboid, place) {
-    // 3D handle bar riding on the lid top (moves with the lid)
+    // 3D handle bar riding on the lid top (moves with the lid). It lives in a
+    // folding group: when the lid opens the handle flops flat against the lid
+    // instead of swinging rigidly down into the box interior.
     var steel = { top: '#aeb8bf', front: '#8f9aa3', side: '#6e787f' };
-    place(cuboid(12, 22, 12, steel), -46, -LB.lidH - 11, LB.D / 2, M.lidG);
-    place(cuboid(12, 22, 12, steel), 46, -LB.lidH - 11, LB.D / 2, M.lidG);
-    place(cuboid(104, 12, 18, steel), 0, -LB.lidH - 26, LB.D / 2, M.lidG);
+    var handleG = P('div', 'ins-handleg');
+    place(cuboid(12, 22, 12, steel), -46, -11, 0, handleG);
+    place(cuboid(12, 22, 12, steel), 46, -11, 0, handleG);
+    place(cuboid(104, 12, 18, steel), 0, -26, 0, handleG);
+    handleG.style.transform = 'translate3d(0px,' + (-LB.lidH) + 'px,' + (LB.D / 2) + 'px)';
+    M.lidG.appendChild(handleG);
+    M.handleG = handleG;
     // sandwich + note inside the box, riding on a raised tray insert
     var bread = { top: '#eec27f', front: '#d9a75e', side: '#c08f4c' };
     var lettuce = { top: '#8fce7e', front: '#6db35f', side: '#54944a' };
@@ -139,7 +145,7 @@
     // note: a face keeps its own transform, so it needs a positioning wrapper
     // (place() would overwrite the face's rotateX/centering)
     var noteWrap = P('div', 'ins-prop');
-    noteWrap.appendChild(M.face(92, 64, 0, 0, 0, -90, 14,
+    noteWrap.appendChild(M.face(92, 64, 0, 0, 0, 90, 14,
       svg(92, 64, '<rect width="92" height="64" fill="#fbf7ec"/>' +
         '<rect width="92" height="64" fill="none" stroke="#d8cdb4" stroke-width="2"/>' +
         [14, 26, 38, 50].map(function (y) { return '<line x1="12" y1="' + y + '" x2="80" y2="' + y + '" stroke="#8a7f6a" stroke-width="2" opacity=".7"/>'; }).join('') +
@@ -220,9 +226,13 @@
     var steel = { top: '#c3ccd3', front: '#9aa6ae', side: '#78838b' };
     var dark = { top: '#3a434b', front: '#2c353d', side: '#20262c' };
     var red = { top: '#d94f3d', front: '#b03324', side: '#8e2318' };
-    place(cuboid(12, 22, 12, dark), -48, -TB.lidH - 11, TB.D / 2, M.lidG);
-    place(cuboid(12, 22, 12, dark), 48, -TB.lidH - 11, TB.D / 2, M.lidG);
-    place(cuboid(108, 13, 20, dark), 0, -TB.lidH - 27, TB.D / 2, M.lidG);
+    var handleG = P('div', 'ins-handleg');
+    place(cuboid(12, 22, 12, dark), -48, -11, 0, handleG);
+    place(cuboid(12, 22, 12, dark), 48, -11, 0, handleG);
+    place(cuboid(108, 13, 20, dark), 0, -27, 0, handleG);
+    handleG.style.transform = 'translate3d(0px,' + (-TB.lidH) + 'px,' + (TB.D / 2) + 'px)';
+    M.lidG.appendChild(handleG);
+    M.handleG = handleG;
     // top tray with tools, riding high like a real toolbox tray
     place(cuboid(280, 22, 130, dark), 0, -40, 0, M.bodyG);
     var trayTop = -51;
@@ -338,6 +348,12 @@
     d.style.width = w + 'px'; d.style.height = h + 'px';
     d.style.transform = 'translate(-50%,-50%) translate3d(' + x + 'px,' + y + 'px,' + z + 'px)' +
       ' rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+    // model-space normal = Rx(rx)·Ry(ry)·(0,0,1), CSS coords (+y = down).
+    // NOTE: rotateX(+90) tips the normal UP (-y); rotateX(-90) tips it DOWN.
+    var a = rx * Math.PI / 180, b = ry * Math.PI / 180;
+    d._nx = Math.sin(b);
+    d._ny = -Math.sin(a) * Math.cos(b);
+    d._nz = Math.cos(a) * Math.cos(b);
     if (inner) d.innerHTML = inner;
     return d;
   }
@@ -348,8 +364,8 @@
     g.appendChild(face(w, h, 0, 0, -d / 2, 0, 180, solid(c.front)));
     g.appendChild(face(d, h, w / 2, 0, 0, 0, 90, solid(c.side)));
     g.appendChild(face(d, h, -w / 2, 0, 0, 0, -90, solid(c.side)));
-    g.appendChild(face(w, d, 0, -h / 2, 0, -90, 0, solid(c.top)));
-    g.appendChild(face(w, d, 0, h / 2, 0, 90, 0, solid(c.side)));
+    g.appendChild(face(w, d, 0, -h / 2, 0, 90, 0, solid(c.top)));
+    g.appendChild(face(w, d, 0, h / 2, 0, -90, 0, solid(c.side)));
     return g;
   }
   function placeProp(el, x, y, z, parent, extra) {
@@ -359,31 +375,40 @@
   }
   P.place = placeProp;
 
+  var shadeFaces = []; // per-model dynamic-lighting registry, rebuilt in buildModel
+  function regShade(f, isLid) {
+    var s = P('div', 'ins-shade');
+    f.appendChild(s);
+    shadeFaces.push({ sh: s, nx: f._nx, ny: f._ny, nz: f._nz, lid: !!isLid });
+  }
+
   function buildModel(def) {
     var Dm = def.dims, W = Dm.W, H = Dm.H, D = Dm.D, lidH = Dm.lidH;
     var model = document.getElementById('inspect-model');
     model.innerHTML = '';
+    shadeFaces = [];
     var bodyG = div('ins-body');
-    bodyG.appendChild(face(W, H, 0, 0, D / 2, 0, 0, def.faces.front()));
-    bodyG.appendChild(face(W, H, 0, 0, -D / 2, 0, 180, def.faces.back()));
-    bodyG.appendChild(face(D, H, W / 2, 0, 0, 0, 90, def.faces.right()));
-    bodyG.appendChild(face(D, H, -W / 2, 0, 0, 0, -90, def.faces.left()));
-    bodyG.appendChild(face(W, D, 0, H / 2, 0, 90, 0, def.faces.bottom()));
+    regShade(bodyG.appendChild(face(W, H, 0, 0, D / 2, 0, 0, def.faces.front())), false);
+    regShade(bodyG.appendChild(face(W, H, 0, 0, -D / 2, 0, 180, def.faces.back())), false);
+    regShade(bodyG.appendChild(face(D, H, W / 2, 0, 0, 0, 90, def.faces.right())), false);
+    regShade(bodyG.appendChild(face(D, H, -W / 2, 0, 0, 0, -90, def.faces.left())), false);
+    regShade(bodyG.appendChild(face(W, D, 0, H / 2, 0, -90, 0, def.faces.bottom())), false);
     // interior tub (lining), slightly inset
-    bodyG.appendChild(face(W - 16, D - 16, 0, H / 2 - 10, 0, -90, 0, def.lining(W - 16, D - 16)));
-    bodyG.appendChild(face(W - 16, H - 16, 0, -1, D / 2 - 9, 0, 180, def.lining(W - 16, H - 16)));
-    bodyG.appendChild(face(W - 16, H - 16, 0, -1, -(D / 2 - 9), 0, 0, def.lining(W - 16, H - 16)));
-    bodyG.appendChild(face(D - 16, H - 16, W / 2 - 9, -1, 0, 0, -90, def.lining(D - 16, H - 16)));
-    bodyG.appendChild(face(D - 16, H - 16, -(W / 2 - 9), -1, 0, 0, 90, def.lining(D - 16, H - 16)));
-    // lid on a hinge along the back top edge
+    regShade(bodyG.appendChild(face(W - 16, D - 16, 0, H / 2 - 10, 0, 90, 0, def.lining(W - 16, D - 16))), false);
+    regShade(bodyG.appendChild(face(W - 16, H - 16, 0, -1, D / 2 - 9, 0, 180, def.lining(W - 16, H - 16))), false);
+    regShade(bodyG.appendChild(face(W - 16, H - 16, 0, -1, -(D / 2 - 9), 0, 0, def.lining(W - 16, H - 16))), false);
+    regShade(bodyG.appendChild(face(D - 16, H - 16, W / 2 - 9, -1, 0, 0, -90, def.lining(D - 16, H - 16))), false);
+    regShade(bodyG.appendChild(face(D - 16, H - 16, -(W / 2 - 9), -1, 0, 0, 90, def.lining(D - 16, H - 16))), false);
+    // lid on a hinge along the back top edge; faces sit 1px proud so the lid
+    // reads as a lip and never z-fights the coplanar body faces
     var lidG = div('ins-lid');
-    lidG.appendChild(face(W, D, 0, -lidH, D / 2, -90, 0, def.lid.top()));
-    lidG.appendChild(face(W, lidH, 0, -lidH / 2, D, 0, 0, def.lid.front()));
-    lidG.appendChild(face(W, lidH, 0, -lidH / 2, 0, 0, 180, def.lid.back()));
-    lidG.appendChild(face(D, lidH, -W / 2, -lidH / 2, D / 2, 0, -90, def.lid.left()));
-    lidG.appendChild(face(D, lidH, W / 2, -lidH / 2, D / 2, 0, 90, def.lid.right()));
-    lidG.appendChild(face(W - 12, D - 12, 0, -3, D / 2, 90, 0, def.lining(W - 12, D - 12)));
-    var M = { bodyG: bodyG, lidG: lidG, face: face, def: def };
+    regShade(lidG.appendChild(face(W, D, 0, -lidH - 1, D / 2, 90, 0, def.lid.top())), true);
+    regShade(lidG.appendChild(face(W, lidH, 0, -lidH / 2, D + 1, 0, 0, def.lid.front())), true);
+    regShade(lidG.appendChild(face(W, lidH, 0, -lidH / 2, -1, 0, 180, def.lid.back())), true);
+    regShade(lidG.appendChild(face(D, lidH, -(W / 2 + 1), -lidH / 2, D / 2, 0, -90, def.lid.left())), true);
+    regShade(lidG.appendChild(face(D, lidH, W / 2 + 1, -lidH / 2, D / 2, 0, 90, def.lid.right())), true);
+    regShade(lidG.appendChild(face(W - 12, D - 12, 0, -3, D / 2, -90, 0, def.lining(W - 12, D - 12))), true);
+    var M = { bodyG: bodyG, lidG: lidG, face: face, def: def, handleG: null };
     def.extras(M, P, cuboid, placeProp);
     model.appendChild(bodyG);
     model.appendChild(lidG);
@@ -395,9 +420,14 @@
       titleEl = null, lidBtn = null, shadowEl = null;
   var isOpenFlag = false, modelId = null, M = null, lidOpen = false;
   var rx = -14, ry = 32, vx = 0, vy = 0, zoom = 1;
-  var auto = true, dragging = false, raf = 0;
-  var pts = new Map(), lastX = 0, lastY = 0, downX = 0, downY = 0, downT = 0;
+  var auto = true, dragging = false, raf = 0, running = false, lastT = 0, lidUntil = 0;
+  var pts = new Map(), lastX = 0, lastY = 0, downX = 0, downY = 0, downT = 0, lastMoveT = 0;
   var pinchD0 = 0, zoom0 = 1, lastTapT = 0, lastTapX = 0, lastTapY = 0;
+  // fixed studio key light, viewer space (+y down, +z toward viewer), normalized
+  var LIGHT = (function () {
+    var l = [-0.45, -0.72, 0.55], m = Math.sqrt(l[0] * l[0] + l[1] * l[1] + l[2] * l[2]);
+    return [l[0] / m, l[1] / m, l[2] / m];
+  })();
 
   function ensureLayer() {
     if (layer) return;
@@ -429,7 +459,9 @@
       if (pts.size === 1) {
         dragging = true; auto = false;
         lastX = downX = e.clientX; lastY = downY = e.clientY; downT = Date.now();
+        lastMoveT = performance.now();
         vx = 0; vy = 0;
+        kick();
       } else if (pts.size === 2) {
         dragging = false;
         var p = Array.from(pts.values());
@@ -452,8 +484,17 @@
       lastX = e.clientX; lastY = e.clientY;
       ry += dx * 0.45; rx -= dy * 0.45;
       if (rx > 85) rx = 85; if (rx < -85) rx = -85;
-      vx = dx * 0.45; vy = -dy * 0.45;
+      // time-based release velocity (deg per 60fps frame), smoothed + clamped
+      var now = performance.now();
+      var dtm = Math.max(8, now - lastMoveT); lastMoveT = now;
+      var k = 0.45 * 16.7 / dtm;
+      var ivx = dx * k, ivy = -dy * k;
+      if (ivx > 28) ivx = 28; else if (ivx < -28) ivx = -28;
+      if (ivy > 28) ivy = 28; else if (ivy < -28) ivy = -28;
+      vx = vx * 0.65 + ivx * 0.35;
+      vy = vy * 0.65 + ivy * 0.35;
       applyView();
+      updateShading();
     });
     function endPt(e) {
       var wasSingle = pts.size === 1 && dragging;
@@ -461,7 +502,8 @@
       pts.delete(e.pointerId);
       if (pts.size === 0) {
         dragging = false;
-        if (reduced) { ry = Math.round(ry / 45) * 45; vx = 0; vy = 0; applyView(); }
+        if (reduced) { ry = Math.round(ry / 45) * 45; vx = 0; vy = 0; applyView(); updateShading(); }
+        else kick(); // let inertia decay in the loop
         if (wasSingle && moved < 14 && Date.now() - downT < 450) {
           var now = Date.now();
           if (now - lastTapT < 350 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 30) {
@@ -484,17 +526,76 @@
     shadowEl.style.transform = 'translateX(-50%) scale(' + zoom.toFixed(3) + ')';
   }
 
-  function loop() {
-    if (!isOpenFlag) return;
-    if (!dragging) {
-      ry += vy; rx += vx;
-      vx *= 0.94; vy *= 0.94;
-      if (Math.abs(vx) < 0.02) vx = 0;
-      if (Math.abs(vy) < 0.02) vy = 0;
-      if (auto && !reduced) ry += 0.35;
-      if (rx > 85) rx = 85; if (rx < -85) rx = -85;
+  function kick() {
+    if (isOpenFlag && !running) {
+      running = true; lastT = performance.now();
+      raf = requestAnimationFrame(loop);
     }
-    applyView();
+  }
+
+  // live lid hinge angle (degrees) read off the composited transform, so face
+  // lighting stays correct mid-swing while the CSS transition runs
+  function lidAngle() {
+    if (!M) return 0;
+    try {
+      var t = getComputedStyle(M.lidG).transform;
+      if (!t || t === 'none') return 0;
+      var m = new DOMMatrix(t);
+      return Math.atan2(m.m23, m.m22) * 180 / Math.PI;
+    } catch (e) { return lidOpen ? -105 : 0; }
+  }
+
+  // per-face dynamic lighting: each registered face's model-space normal is
+  // rotated by the hinge (lid faces) then the orbit, dotted against the fixed
+  // studio light; a black overlay darkens faces turned away from the light so
+  // the object reads as solid instead of papery while rotating
+  function updateShading() {
+    var n = shadeFaces.length;
+    if (!n || !orbitEl) return;
+    var rxr = rx * Math.PI / 180, ryr = ry * Math.PI / 180;
+    var cx = Math.cos(rxr), sx = Math.sin(rxr), cy = Math.cos(ryr), sy = Math.sin(ryr);
+    var la = lidAngle() * Math.PI / 180, cl = Math.cos(la), sl = Math.sin(la);
+    for (var i = 0; i < n; i++) {
+      var s = shadeFaces[i], nx = s.nx, ny = s.ny, nz = s.nz;
+      if (s.lid) { // hinge rotation first: Rx(lidA)
+        var hy = cl * ny - sl * nz, hz = sl * ny + cl * nz;
+        ny = hy; nz = hz;
+      }
+      // orbit R = Rx(rx)·Ry(ry): Ry first, then Rx
+      var qx = cy * nx + sy * nz, qy = ny, qz = -sy * nx + cy * nz;
+      var b = qx * LIGHT[0] + (cx * qy - sx * qz) * LIGHT[1] + (sx * qy + cx * qz) * LIGHT[2];
+      var op = 0.26 * (1 - b);
+      if (op < 0) op = 0; else if (op > 0.62) op = 0.62;
+      s.sh.style.opacity = op.toFixed(3);
+    }
+  }
+
+  function loop(t) {
+    if (!isOpenFlag) { running = false; raf = 0; return; }
+    var dt = (t - lastT) / 1000; lastT = t;
+    if (!(dt > 0)) dt = 0.016;
+    if (dt > 0.05) dt = 0.05;
+    var s = dt * 60, moved = dragging;
+    if (!dragging) {
+      if (vx !== 0 || vy !== 0) {
+        rx += vy * s; ry += vx * s;
+        var dec = Math.pow(0.94, s);
+        vx *= dec; vy *= dec;
+        if (Math.abs(vx) < 0.015) vx = 0;
+        if (Math.abs(vy) < 0.015) vy = 0;
+        moved = true;
+      }
+      if (auto && !reduced) { ry += 0.35 * s; moved = true; }
+      if (rx > 85) rx = 85; else if (rx < -85) rx = -85;
+    }
+    var lidMoving = performance.now() < lidUntil;
+    if (moved || lidMoving) {
+      applyView();
+      updateShading();
+    }
+    if (!dragging && vx === 0 && vy === 0 && !(auto && !reduced) && !lidMoving) {
+      running = false; raf = 0; return; // settled: sleep until next interaction
+    }
     raf = requestAnimationFrame(loop);
   }
 
@@ -505,6 +606,14 @@
     var D = M.def.dims;
     M.lidG.style.transform = 'translate3d(0px,' + (-D.H / 2) + 'px,' + (-D.D / 2) + 'px)' +
       ' rotateX(' + (openIt ? -105 : 0) + 'deg)';
+    // flop the carry handle flat against the lid as it opens (a rigid handle
+    // would swing straight down into the box interior)
+    if (M.handleG) {
+      M.handleG.style.transform = 'translate3d(0px,' + (-D.lidH) + 'px,' + (D.D / 2) + 'px)' +
+        ' rotateX(' + (openIt ? -92 : 0) + 'deg)';
+    }
+    lidUntil = performance.now() + 850; // keep the loop alive through the swing
+    kick();
     layer.classList.toggle('lid-open', openIt);
     layer.classList.toggle('cranking', openIt && modelId === 'musicbox');
     lidBtn.textContent = openIt ? 'Close the lid' : 'Open the lid';
@@ -525,15 +634,18 @@
     var g = G(); if (g) g.paused = true;
     setLid(false, true);
     applyView();
+    updateShading();
     isOpenFlag = true;
     if (raf) cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(loop);
+    running = false;
+    kick();
     sfx('tap');
     return true;
   }
   function close() {
     if (!isOpenFlag) return;
     isOpenFlag = false;
+    running = false;
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     layer.classList.add('hidden');
     var g = G(); if (g) g.paused = false;
@@ -544,7 +656,7 @@
     MODELS: MODELS,
     open: open, close: close, toggleLid: toggleLid,
     isOpen: function () { return isOpenFlag; },
-    setView: function (rx2, ry2) { rx = rx2; ry = ry2; vx = 0; vy = 0; auto = false; applyView(); },
+    setView: function (rx2, ry2) { rx = rx2; ry = ry2; vx = 0; vy = 0; auto = false; applyView(); updateShading(); kick(); },
     state: function () { return { open: isOpenFlag, id: modelId, rx: rx, ry: ry, zoom: zoom, lid: lidOpen }; }
   };
 })();
