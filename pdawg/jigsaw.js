@@ -508,6 +508,15 @@ function levelForCount(n) {
   return { name: n + ' pieces', count: n };
 }
 
+/* Rotation-mode preference, persisted across sessions. */
+var ROT_KEY = 'pdawg-rotation';
+function rotPref() {
+  try { return localStorage.getItem(ROT_KEY) === '1'; } catch (e) { return false; }
+}
+function setRotPref(on) {
+  try { localStorage.setItem(ROT_KEY, on ? '1' : '0'); } catch (e) {}
+}
+
 function gridForCount(n, aspect) {
   // Pick rows x cols whose product hits n exactly when possible (so a
   // "24 pieces" puzzle really has 24); break ties by aspect match so cells
@@ -563,6 +572,7 @@ function newPuzzleState(opts) {
     galleryIdx: opts.galleryIdx === undefined ? -1 : opts.galleryIdx,
     imageId: opts.imageId || null,
     rows: opts.rows, cols: opts.cols, seed: opts.seed, rotationOn: !!opts.rotationOn, geom: 2,
+    mystery: !!opts.mystery, mysteryTitle: opts.mysteryTitle || null,
     imgW: imgW, imgH: imgH, boardW: boardW, boardH: boardH,
     imgOX: imgOX, imgOY: imgOY, cellW: cellW, cellH: cellH, margin: M,
     pieces: pieces, groups: groups, zorder: zorder,
@@ -631,9 +641,9 @@ function serializeState(S) {
   return {
     id: S.id, title: S.title, imageKind: S.imageKind, galleryIdx: S.galleryIdx,
     imageId: S.imageId, rows: S.rows, cols: S.cols, seed: S.seed, geom: 2,
-    rotationOn: S.rotationOn, imgW: S.imgW, imgH: S.imgH,
-    pieces: S.pieces.map(function (p) {
-      return { id: p.id, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, rot: p.rot, placed: p.placed, gid: p.gid };
+    rotationOn: S.rotationOn, mystery: !!S.mystery, mysteryTitle: S.mysteryTitle || null,
+    imgW: S.imgW, imgH: S.imgH,
+    pieces: S.pieces.map(function (p) {      return { id: p.id, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, rot: p.rot, placed: p.placed, gid: p.gid };
     }),
     groups: S.groups, zorder: S.zorder,
     elapsed: Math.round(S.elapsed), won: S.won,
@@ -645,6 +655,7 @@ function serializeState(S) {
 function deserializeState(saved) {
   var d = {
     imageKind: 'gallery', galleryIdx: 0, imageId: null, rotationOn: false,
+    mystery: false, mysteryTitle: null,
     thumb: null, won: false, elapsed: 0, title: 'Puzzle'
   };
   for (var k in saved) d[k] = saved[k];
@@ -659,6 +670,7 @@ function deserializeState(saved) {
   var S = {
     id: d.id, title: d.title, imageKind: d.imageKind, galleryIdx: d.galleryIdx,
     imageId: d.imageId, rows: d.rows, cols: d.cols, seed: d.seed, rotationOn: !!d.rotationOn,
+    mystery: !!d.mystery, mysteryTitle: d.mysteryTitle || null,
     imgW: imgW, imgH: imgH, boardW: boardW, boardH: boardH,
     imgOX: (boardW - imgW) / 2, imgOY: (boardH - imgH) / 2,
     cellW: imgW / d.cols, cellH: imgH / d.rows,
@@ -813,6 +825,7 @@ var Game = {
   dpr: 1, cw: 0, ch: 0,
   dirty: true, raf: 0, lastT: 0,
   selection: null, edgeHi: false,
+  ghostOn: false, hintReadyAt: 0,   // hint system: ghost overlay + place-a-piece (60s cooldown)
   paused: false, confetti: null,
   pointers: new Map(), gesture: null, downInfo: null,
   saveTimer: 0,
@@ -856,7 +869,9 @@ var Game = {
     // below the fold on desktop.)
     var topbar = wrap.querySelector('.topbar');
     var toolbar = wrap.querySelector('.toolbar');
-    var chromeH = (topbar ? topbar.offsetHeight : 0) + (toolbar ? toolbar.offsetHeight : 0);
+    var tray = document.getElementById('tray');
+    var chromeH = (topbar ? topbar.offsetHeight : 0) + (toolbar ? toolbar.offsetHeight : 0) +
+      (tray && tray.style.display !== 'none' ? tray.offsetHeight : 0);
     this.cw = wrap.clientWidth;
     this.ch = Math.max(50, wrap.clientHeight - chromeH);
     this.canvas.width = Math.round(this.cw * this.dpr);
@@ -955,6 +970,9 @@ var Game = {
     this.paused = false;
     this.confetti = null;
     this.edgeHi = false;
+    this.ghostOn = false;
+    this.hintReadyAt = 0;
+    this.tray = { open: false };
     this.snapFx = [];
     this.glide = null;
     // warm the gold-dust pool once (zero per-frame allocation afterwards)
@@ -968,12 +986,29 @@ var Game = {
     }
     this.dustOn = false;
     $('#edgeBtn').classList.remove('on');
+    $('#ghostBtn').classList.remove('on');
+    this.updateRotateBtn();
+    // tray is session-only: always start closed
+    this.tray = { open: false };
+    var trayEl = $('#tray');
+    if (trayEl) { trayEl.style.display = 'none'; $('#trayRow').innerHTML = ''; }
+    this.updateHintBtn();
+    // mystery mode: no peeking — hide preview + ghost
+    var mys = !!S.mystery;
+    $('#previewBtn').style.display = mys ? 'none' : '';
+    $('#ghostBtn').style.display = mys ? 'none' : '';
     this.resize();
     this.fitBoard();
     this.lastT = performance.now();
     $('#timer').textContent = fmtTime(S.elapsed);
     $('#puzzleTitle').textContent = S.title;
     cancelAnimationFrame(this.raf);
+    if (this._saveIv) clearInterval(this._saveIv);
+    // safety net: save every 10s during active play, even without changes
+    var selfIv = this;
+    this._saveIv = setInterval(function () {
+      if (selfIv.S && !selfIv.S.won) selfIv.saveNow();
+    }, 10000);
     var self = this;
     function loop(t) {
       self.frame(t);
@@ -987,6 +1022,7 @@ var Game = {
   stop: function () {
     cancelAnimationFrame(this.raf);
     this.raf = 0;
+    if (this._saveIv) { clearInterval(this._saveIv); this._saveIv = 0; }
     this.saveNow();
     this.S = null;
   },
@@ -1004,6 +1040,7 @@ var Game = {
         // perf: only touch the DOM when the displayed value actually changes
         var tt = fmtTime(S.elapsed);
         if (tt !== this._lastTimerTxt) { this._lastTimerTxt = tt; $('#timer').textContent = tt; }
+        this.updateHintBtn();
       }
     }
     if (this.confetti) this.updateConfetti(dt);
@@ -1059,16 +1096,24 @@ var Game = {
     ctx.strokeStyle = 'rgba(255,255,255,0.14)';
     ctx.lineWidth = 2 / s;
     ctx.strokeRect(S.imgOX, S.imgOY, S.imgW, S.imgH);
+    // ghost hint: faint full image behind the pieces (never in mystery mode)
+    if (this.ghostOn && !S.mystery && this.imgCanvas) {
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.drawImage(this.imgCanvas, S.imgOX, S.imgOY, S.imgW, S.imgH);
+      ctx.restore();
+    }
     // placed pieces first
     var i, p;
     for (i = 0; i < S.pieces.length; i++) {
       p = S.pieces[i];
-      if (p.placed) this.drawPiece(p, false);
+      if (p.placed && !p.inTray) this.drawPiece(p, false);
     }
     // loose groups in z-order
     for (i = 0; i < S.zorder.length; i++) {
       var members = groupMembers(S, S.zorder[i]);
       for (var j = 0; j < members.length; j++) {
+        if (members[j].inTray) continue;
         var dim = this.edgeHi && !isEdgePiece(members[j], S);
         this.drawPiece(members[j], dim);
       }
@@ -1286,6 +1331,7 @@ Game.hitTest = function (bx, by) {
     var members = groupMembers(S, S.zorder[i]);
     for (var j = members.length - 1; j >= 0; j--) {
       var p = members[j];
+      if (p.inTray) continue;
       var lx = bx - (p.x - M), ly = by - (p.y - M);
       if (p.rot) {
         var cx = M + S.cellW / 2, cy = M + S.cellH / 2;
@@ -1523,11 +1569,202 @@ Game.rotateSelection = function () {
   this.markDirty();
 };
 
+/* Hint system — free forever, 60s cooldown. */
+Game.HINT_CD = 60000;
+Game.updateHintBtn = function () {
+  var btn = $('#hintBtn');
+  if (!btn) return;
+  var S = this.S;
+  var small = btn.querySelector('small');
+  if (!S || S.won) { btn.classList.remove('cooling'); if (small) small.textContent = 'Hint'; return; }
+  var remain = this.hintReadyAt - Date.now();
+  if (remain > 0) {
+    btn.classList.add('cooling');
+    if (small) small.textContent = fmtTime(remain).replace(/^0:/, '');
+  } else {
+    btn.classList.remove('cooling');
+    if (small) small.textContent = 'Hint';
+  }
+};
+
+Game.placeHintPiece = function () {
+  var S = this.S;
+  if (!S || this.paused || S.won || this.glide) return;
+  var remain = this.hintReadyAt - Date.now();
+  if (remain > 0) {
+    toast('Next hint in ' + Math.ceil(remain / 1000) + 's — free, just a breather');
+    return;
+  }
+  // candidates: unplaced, solo (ungrouped), not in the edge tray
+  var cands = [];
+  for (var i = 0; i < S.pieces.length; i++) {
+    var p = S.pieces[i];
+    if (p.placed || p.inTray) continue;
+    var g = S.groups[p.gid];
+    if (!g || g.length !== 1) continue;
+    cands.push(p);
+  }
+  if (!cands.length) { toast('No loose pieces left to place'); return; }
+  var p = cands[(Math.random() * cands.length) | 0];
+  // lift it out of its solo group, exactly like a snap placement
+  if (this.selection === p.gid) this.selection = null;
+  delete S.groups[p.gid];
+  S.zorder = S.zorder.filter(function (g) { return g !== p.gid; });
+  p.x = trueX(p, S); p.y = trueY(p, S); p.rot = 0; p.placed = true; p.gid = null;
+  var cx = p.x + S.cellW / 2, cy = p.y + S.cellH / 2;
+  this.snapPop([p.id], cx, cy);
+  this.spawnDust(cx, cy, FEEL.dustCount * 2);
+  sfx('snap');
+  this.hintReadyAt = Date.now() + this.HINT_CD;
+  this.updateHintBtn();
+  this.updateProgress();
+  this.scheduleSave();
+  this.checkWin();
+  this.markDirty();
+  toast('✨ One piece, placed with love');
+};
+
+/* ---------------- edge sorting tray ----------------
+ * A calm bottom strip that gathers loose edge pieces. Tap a tray piece
+ * to bring it back to the board. Session-only: inTray is never saved. */
 Game.updateRotateBtn = function () {
   var btn = $('#rotBtn');
   if (!this.S || !this.S.rotationOn) { btn.style.display = 'none'; return; }
   btn.style.display = '';
   btn.classList.toggle('on', !!(this.selection && this.S.groups[this.selection]));
+};
+Game.toScreen = function (bx, by) {
+  return {
+    x: (bx - this.cam.x) * this.cam.s + this.cw / 2 + (this._rectL || 0),
+    y: (by - this.cam.y) * this.cam.s + this.ch / 2 + (this._rectT || 0)
+  };
+};
+
+Game.makePieceThumb = function (p, size) {
+  var S = this.S;
+  var src = this.pieceCv[p.id];
+  var cv = document.createElement('canvas');
+  var sc = size / src.width;
+  cv.width = size; cv.height = Math.max(1, Math.round(src.height * sc));
+  cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height);
+  return cv;
+};
+
+Game.freeBoardSpot = function (S) {
+  // random open spot clear of the central image rect (scatter-style)
+  var x, y, tries = 0;
+  do {
+    x = Math.random() * Math.max(1, S.boardW - S.cellW);
+    y = Math.random() * Math.max(1, S.boardH - S.cellH);
+    tries++;
+  } while (tries < 40 && x > S.imgOX - S.cellW && x < S.imgOX + S.imgW &&
+           y > S.imgOY - S.cellH && y < S.imgOY + S.imgH);
+  return { x: x, y: y };
+};
+
+Game.setTrayOpen = function (open) {
+  var S = this.S;
+  if (!S || S.won || this.glide) return;
+  if (!!this.tray.open === !!open) return;
+  this.tray.open = !!open;
+  $('#tray').style.display = open ? '' : 'none';
+  $('#edgeBtn').classList.toggle('on', open);
+  this.resize(); // canvas flexes around the tray strip
+  if (open) this.trayGather();
+  else this.trayReturnAll(true);
+  this.markDirty();
+};
+
+Game.trayGather = function () {
+  var S = this.S, self = this;
+  var cands = [];
+  for (var i = 0; i < S.pieces.length; i++) {
+    var p = S.pieces[i];
+    if (p.placed || p.inTray) continue;
+    if (!isEdgePiece(p, S)) continue;
+    var g = S.groups[p.gid];
+    if (!g || g.length !== 1) continue; // never break up a joined group
+    cands.push(p);
+  }
+  if (!cands.length) { this.renderTray(); toast('No loose edge pieces — nice work!'); return; }
+  // hide from the canvas at once; the flying thumbs are the visual
+  for (var j = 0; j < cands.length; j++) cands[j].inTray = true;
+  this.markDirty();
+  var trayRect = $('#trayRow').getBoundingClientRect();
+  var tx = trayRect.left + 30, ty = trayRect.top + 20;
+  cands.forEach(function (p, idx) {
+    var sp = self.toScreen(p.x + S.cellW / 2, p.y + S.cellH / 2);
+    var fly = self.makePieceThumb(p, 56);
+    fly.className = 'tray-fly';
+    fly.style.left = Math.round(sp.x - 28) + 'px';
+    fly.style.top = Math.round(sp.y - 28) + 'px';
+    fly.style.width = '56px';
+    document.body.appendChild(fly);
+    // stagger slightly, then fly toward the tray
+    setTimeout(function () {
+      fly.style.left = Math.round(tx + (idx % 8) * 8) + 'px';
+      fly.style.top = Math.round(ty) + 'px';
+      fly.style.transform = 'scale(.6)';
+      fly.style.opacity = '0.4';
+      setTimeout(function () { fly.remove(); }, 420);
+    }, idx * 35);
+  });
+  setTimeout(function () { self.renderTray(); self.scheduleSave(); }, cands.length * 35 + 450);
+  sfx('scatter');
+};
+
+Game.renderTray = function () {
+  var row = $('#trayRow');
+  if (!row) return;
+  row.innerHTML = '';
+  var S = this.S, n = 0, self = this;
+  if (S) {
+    for (var i = 0; i < S.pieces.length; i++) {
+      (function (p) {
+        if (!p.inTray) return;
+        n++;
+        var b = document.createElement('button');
+        b.className = 'tray-thumb';
+        b.setAttribute('aria-label', 'Return edge piece to board');
+        b.appendChild(self.makePieceThumb(p, 56));
+        b.onclick = function () { self.trayReturn(p); };
+        row.appendChild(b);
+      })(S.pieces[i]);
+    }
+  }
+  $('#trayLabel').textContent = n ? n + ' edge piece' + (n > 1 ? 's' : '') + ' — tap one to bring it back' : 'Tray is empty';
+};
+
+Game.trayReturn = function (p) {
+  var S = this.S;
+  if (!S || !p.inTray) return;
+  p.inTray = false;
+  var spot = this.freeBoardSpot(S);
+  p.x = spot.x; p.y = spot.y;
+  this.spawnDust(p.x + S.cellW / 2, p.y + S.cellH / 2, FEEL.dustCount);
+  sfx('pickup');
+  this.renderTray();
+  this.scheduleSave();
+  this.markDirty();
+};
+
+Game.trayReturnAll = function (quiet) {
+  var S = this.S;
+  if (!S) return;
+  var n = 0;
+  for (var i = 0; i < S.pieces.length; i++) {
+    if (S.pieces[i].inTray) {
+      var p = S.pieces[i];
+      p.inTray = false;
+      var spot = this.freeBoardSpot(S);
+      p.x = spot.x; p.y = spot.y;
+      n++;
+    }
+  }
+  this.renderTray();
+  if (n && !quiet) toast(n + ' edge piece' + (n > 1 ? 's' : '') + ' back on the board');
+  this.scheduleSave();
+  this.markDirty();
 };
 
 /* Gallery access that works in browser and Node (tests). */
@@ -1759,6 +1996,19 @@ function makeThumb(imgCanvas) {
     // The thumb is cosmetic — never let it abort puzzle startup.
     return '';
   }
+}
+
+/* Mystery mode: a "?" placeholder thumb that never reveals the image. */
+function makeMysteryThumb() {
+  var cv = document.createElement('canvas');
+  cv.width = 168; cv.height = 112;
+  var c = cv.getContext('2d');
+  c.fillStyle = '#2b2f3a'; c.fillRect(0, 0, 168, 112);
+  c.fillStyle = '#f2a007';
+  c.font = '700 64px -apple-system, sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('?', 84, 60);
+  try { return cv.toDataURL('image/png'); } catch (e) { return ''; }
 }
 
 /* ---------------- daily (AI-painted, same image worldwide) ---------------- */
@@ -2143,7 +2393,7 @@ var UI = {
       b.onclick = function () { UI.startWithCount(L.count); };
       wrap.appendChild(b);
     });
-    $('#rotToggle').checked = false;
+    $('#rotToggle').checked = rotPref();
     openModal('#countModal');
   },
 
@@ -2154,8 +2404,22 @@ var UI = {
     this.createAndStart({
       imageKind: base.imageKind, galleryIdx: base.galleryIdx, imageId: base.imageId,
       title: base.title, count: n, rotationOn: rot,
+      mystery: base.mystery, mysteryTitle: base.mysteryTitle,
       seed: (Math.random() * 1e9) | 0
     });
+  },
+
+  startMystery: function () {
+    var G = getGallery();
+    if (!G || !G.GALLERY.length) { toast('Gallery is not ready yet'); return; }
+    var idx = (Math.random() * G.GALLERY.length) | 0;
+    var realTitle = G.GALLERY[idx].title;
+    this.openCountChooser({
+      imageKind: 'gallery', galleryIdx: idx,
+      title: '🎲 Mystery Puzzle',
+      mystery: true, mysteryTitle: realTitle
+    });
+    toast('Shh… no peeking! 🎲');
   },
 
   startDaily: function () {
@@ -2185,7 +2449,8 @@ var UI = {
         imageKind: opts.imageKind, galleryIdx: opts.galleryIdx, imageId: opts.imageId,
         imgW: imgW, imgH: imgH, rows: grid.rows, cols: grid.cols,
         seed: opts.seed, rotationOn: opts.rotationOn,
-        thumb: makeThumb(imgCanvas)
+        mystery: opts.mystery, mysteryTitle: opts.mysteryTitle,
+        thumb: opts.mystery ? makeMysteryThumb() : makeThumb(imgCanvas)
       });
       self.showGame();
       Game.start(S, imgCanvas);
@@ -2228,7 +2493,21 @@ var UI = {
     var S = Game.S;
     if (!S || !S.won) return;
     $('#winTime').textContent = fmtTime(S.elapsed);
-    $('#winSub').textContent = S.pieces.length + ' pieces · ' + S.title;
+    // mystery reveal: unmask the title + show the hidden picture
+    var rev = $('#winReveal');
+    rev.style.display = 'none'; rev.innerHTML = '';
+    if (S.mystery && S.mysteryTitle) {
+      $('#winSub').textContent = '🎉 It was "' + S.mysteryTitle + '"! ' + S.pieces.length + ' pieces';
+      rev.style.display = '';
+      var cv = document.createElement('canvas');
+      var w = Math.min(420, S.imgW), h = Math.round(w * S.imgH / S.imgW);
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(Game.imgCanvas, 0, 0, w, h);
+      cv.className = 'win-reveal-img';
+      rev.appendChild(cv);
+    } else {
+      $('#winSub').textContent = S.pieces.length + ' pieces · ' + S.title;
+    }
     var badge = $('#winBest');
     if (isBest) {
       badge.style.display = '';
@@ -2283,6 +2562,8 @@ var UI = {
   bindGlobal: function () {
     var self = this;
     $('#uploadBtn').onclick = function () { $('#fileInput').click(); };
+    var mysBtn = $('#mysteryBtn');
+    if (mysBtn) mysBtn.onclick = function () { UI.startMystery(); };
     $('#fileInput').addEventListener('change', function (e) {
       self.handleFiles(e.target.files);
       e.target.value = '';
@@ -2323,7 +2604,8 @@ var UI = {
       var fresh = newPuzzleState({
         id: S.id, title: S.title, imageKind: S.imageKind, galleryIdx: S.galleryIdx,
         imageId: S.imageId, imgW: S.imgW, imgH: S.imgH, rows: S.rows, cols: S.cols,
-        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn, thumb: S.thumb
+        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn, thumb: S.thumb,
+        mystery: S.mystery, mysteryTitle: S.mysteryTitle
       });
       Game.start(fresh, Game.imgCanvas);
       Game.saveNow();
@@ -2335,10 +2617,16 @@ var UI = {
       if (e.target.id === 'previewModal') closeModal('#previewModal');
     });
     $('#rotBtn').onclick = function () { Game.rotateSelection(); };
-    $('#edgeBtn').onclick = function () {
-      Game.edgeHi = !Game.edgeHi;
-      $('#edgeBtn').classList.toggle('on', Game.edgeHi);
+    $('#ghostBtn').onclick = function () {
+      var S = Game.S;
+      if (!S || S.mystery) { toast('No peeking in Mystery mode! 🎲'); return; }
+      Game.ghostOn = !Game.ghostOn;
+      $('#ghostBtn').classList.toggle('on', Game.ghostOn);
       Game.markDirty();
+    };
+    $('#hintBtn').onclick = function () { Game.placeHintPiece(); };
+    $('#edgeBtn').onclick = function () {
+      Game.setTrayOpen(!Game.tray.open);
     };
     $('#fitBtn').onclick = function () { Game.fitBoard(); };
     $('#scatterBtn').onclick = function () {
@@ -2392,6 +2680,9 @@ var UI = {
       Game.markDirty();
     };
     $('#countClose').onclick = function () { closeModal('#countModal'); };
+    // persist rotation preference whenever the chooser toggle changes
+    var rt = $('#rotToggle');
+    if (rt) rt.addEventListener('change', function () { setRotPref(rt.checked); });
     // haptics setting (pause modal)
     var ht = $('#haptToggle');
     if (ht) ht.addEventListener('change', function () {
@@ -2399,8 +2690,7 @@ var UI = {
       sfx('click');
     });
     // AI studio
-    $('#aiGenBtn').onclick = function () {
-      var v = $('#aiPrompt').value.trim();
+    $('#aiGenBtn').onclick = function () {      var v = $('#aiPrompt').value.trim();
       if (!v) { toast('Type an idea first — or tap a theme above'); return; }
       UI.generateAI(v, v.slice(0, 28));
     };
@@ -2413,7 +2703,8 @@ var UI = {
         id: uid('p'), title: S.title, imageKind: S.imageKind === 'daily' ? 'gallery' : S.imageKind,
         galleryIdx: S.galleryIdx, imageId: S.imageId,
         imgW: S.imgW, imgH: S.imgH, rows: S.rows, cols: S.cols,
-        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn, thumb: S.thumb
+        seed: (Math.random() * 1e9) | 0, rotationOn: S.rotationOn, thumb: S.thumb,
+        mystery: S.mystery, mysteryTitle: S.mysteryTitle
       });
       if (fresh.imageKind === 'daily') fresh.imageKind = 'gallery';
       Game.start(fresh, Game.imgCanvas);
@@ -2441,9 +2732,11 @@ if (typeof document !== 'undefined' && typeof document.querySelector === 'functi
   else boot();
 }
 
+/* browser handle for automation/testing (read-only convenience; harmless in production) */
+if (typeof window !== 'undefined') window.Pdawg = { UI: UI, Game: Game, shelf: shelf, idb: idb };
+
 /* test exports */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
+if (typeof module !== 'undefined' && module.exports) {  module.exports = {
     mulberry32: mulberry32, hashStr: hashStr, clamp: clamp, fmtTime: fmtTime,
     canvasCopy: canvasCopy,
     NPROF: NPROF, PROFILES: PROFILES,
