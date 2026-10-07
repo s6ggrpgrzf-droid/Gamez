@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#141216">
 <title>UNFOLD — tiny escape rooms</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div id="app">
@@ -56,7 +56,27 @@
 
     <div id="stage">
       <div id="spot"></div>
-      <div id="stage-art"></div>
+      <div id="stage-tilt">
+        <div id="stage-sway">
+          <div id="stage-shadow"></div>
+          <div id="stage-art"></div>
+          <div id="stage-sheen"></div>
+          <div id="stage-fg" aria-hidden="true">
+            <div class="fg-edge top"></div>
+            <div class="fg-edge left"></div>
+            <div class="fg-edge right"></div>
+            <div class="fg-edge bottom"></div>
+            <div class="fg-blob b1"></div>
+            <div class="fg-blob b2"></div>
+            <div class="dust" style="--z:60px;left:18%;top:30%;animation-duration:11s"></div>
+            <div class="dust" style="--z:95px;left:74%;top:22%;animation-duration:14s;animation-delay:-6s"></div>
+            <div class="dust" style="--z:45px;left:60%;top:64%;animation-duration:9s;animation-delay:-3s"></div>
+            <div class="dust" style="--z:110px;left:32%;top:74%;animation-duration:16s;animation-delay:-9s"></div>
+            <div class="dust" style="--z:70px;left:85%;top:55%;animation-duration:12s;animation-delay:-4s"></div>
+            <div class="dust" style="--z:50px;left:8%;top:58%;animation-duration:13s;animation-delay:-7s"></div>
+          </div>
+        </div>
+      </div>
       <div id="say" class="say hidden"></div>
     </div>
 
@@ -100,7 +120,7 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="audio.js?v=1"></script>
-<script src="rooms.js?v=2"></script>
-<script src="game.js?v=2"></script>
+<script src="rooms.js?v=3"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>

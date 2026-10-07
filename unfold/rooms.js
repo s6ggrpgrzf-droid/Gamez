@@ -649,8 +649,11 @@
       for (var i = 0; i < 5; i++) {
         var h = 92 - i * 12, bx = 93 + i * 43, by = 566 - h;
         s += '<g data-hot="xylo-' + i + '">' + haloRect(bx - 5, by - 8, 44, h + 18, 10) +
-          '<rect id="xyb-' + i + '" x="' + bx + '" y="' + by + '" width="34" height="' + h + '" rx="8" fill="' + XYLO_COLORS[i] + '" stroke="#00000055" stroke-width="1.5"/>' +
-          '<circle cx="' + (bx + 17) + '" cy="' + (by + 9) + '" r="3.5" fill="#fff" opacity="0.5"/></g>';
+          '<g class="xyb" id="xyb-' + i + '">' +
+          '<rect x="' + bx + '" y="' + (by + 7) + '" width="34" height="' + h + '" rx="8" fill="#000000" opacity="0.45"/>' +
+          '<rect x="' + bx + '" y="' + by + '" width="34" height="' + h + '" rx="8" fill="' + XYLO_COLORS[i] + '" stroke="#00000055" stroke-width="1.5"/>' +
+          '<rect x="' + (bx + 4) + '" y="' + (by + 4) + '" width="26" height="' + Math.round(h * 0.32) + '" rx="7" fill="#ffffff" opacity="0.20"/>' +
+          '<circle cx="' + (bx + 17) + '" cy="' + (by + 9) + '" r="3.5" fill="#fff" opacity="0.5"/></g></g>';
       }
       s += '</g>';
       s += '<g data-hot="replay">' + haloRect(155, 576, 90, 36, 18) +
@@ -767,7 +770,7 @@
             api.hot('xylo-' + n, function () {
               Sfx.xylo(n);
               var bar = document.querySelector('#xyb-' + n);
-              if (bar) { bar.style.transform = 'scaleY(0.92)'; setTimeout(function () { bar.style.transform = ''; }, 160); }
+              if (bar) { bar.classList.add('xyb-hit'); setTimeout(function () { bar.classList.remove('xyb-hit'); }, 180); }
               if (n === mel[pos]) {
                 var d = document.querySelector('#mdot-' + pos);
                 if (d) d.setAttribute('fill', XYLO_COLORS[n]);

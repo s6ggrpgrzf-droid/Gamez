@@ -268,6 +268,49 @@
     armIdleGlow();
   }
 
+  /* ---------- 3D stage tilt + dynamic light ---------- */
+  (function initTilt() {
+    var stage = $('#stage'), tilt = $('#stage-tilt');
+    if (!stage || !tilt) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    var dragging = false, moved = false, sx = 0, sy = 0, raf = 0;
+    function setTilt(rx, ry) {
+      rx = Math.max(-8, Math.min(8, rx));
+      ry = Math.max(-8, Math.min(8, ry));
+      tilt.style.setProperty('--rx', rx.toFixed(2) + 'deg');
+      tilt.style.setProperty('--ry', ry.toFixed(2) + 'deg');
+      /* light stays fixed in the room: highlight drifts opposite the tilt */
+      stage.style.setProperty('--lx', (50 - ry * 2.4).toFixed(1) + '%');
+      stage.style.setProperty('--ly', (46 - rx * 2.4).toFixed(1) + '%');
+    }
+    stage.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('[data-hot]') || e.target.closest('button')) return;
+      dragging = true; moved = false; sx = e.clientX; sy = e.clientY;
+    });
+    window.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 12) return;
+      if (!moved) { moved = true; tilt.classList.add('dragging'); }
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(function () { setTilt(-dy * 0.05, dx * 0.05); });
+    });
+    function end() {
+      if (!dragging) return;
+      dragging = false;
+      tilt.classList.remove('dragging');
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      if (moved) {
+        tilt.classList.add('snapping');
+        setTilt(0, 0);
+        setTimeout(function () { tilt.classList.remove('snapping'); }, 650);
+      }
+    }
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  })();
+
   /* ---------- hotspots ---------- */
   $('#stage-art').addEventListener('pointerdown', function (e) {
     Sfx.resume();
@@ -430,10 +473,11 @@
       var i = +w.getAttribute('data-w');
       vals[i] = (vals[i] + 1) % 10;
       w.textContent = vals[i];
-      w.classList.remove('shake'); void w.offsetWidth;
+      w.classList.remove('shake'); w.classList.remove('spin'); void w.offsetWidth; w.classList.add('spin');
       var ok = vals.every(function (v, j) { return v === cfg.answer[j]; });
       if (ok) {
         locked = true;
+        m.classList.add('solving');
         $$('.wheel', m).forEach(function (x) { x.classList.add('locked'); });
         Sfx.unlock(); buzz(25);
         setTimeout(function () { closeModal(); cfg.onSolve(); }, 650);
@@ -487,6 +531,7 @@
         Sfx.slide(); draw();
         if (solved()) {
           done = true;
+          m.classList.add('solving');
           $$('.tile', box).forEach(function (x) { if (!x.classList.contains('empty')) x.classList.add('right'); });
           Sfx.unlock(); buzz(25);
           setTimeout(function () { closeModal(); cfg.onSolve(); }, 700);
@@ -517,9 +562,11 @@
       var i = +w.getAttribute('data-w');
       vals[i] = (vals[i] + 1) % 26;
       w.textContent = ABC[vals[i]];
+      w.classList.remove('spin'); void w.offsetWidth; w.classList.add('spin');
       var word = vals.map(function (v) { return ABC[v]; }).join('');
       if (word === cfg.answer) {
         locked = true;
+        m.classList.add('solving');
         $$('.wheel', m).forEach(function (x) { x.classList.add('locked'); });
         Sfx.unlock(); buzz(25);
         setTimeout(function () { closeModal(); cfg.onSolve(); }, 650);
