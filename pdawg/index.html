@@ -20,6 +20,13 @@
 
   <section id="dailyCard" class="card daily" aria-label="Daily puzzle"></section>
 
+  <section class="card mystery" aria-label="Mystery puzzle">
+    <div class="card-tag">🎲 MYSTERY MODE</div>
+    <div class="card-title">Solve it blind</div>
+    <p class="card-sub">A random gallery picture — hidden until you finish. No preview, no ghost. Brave?</p>
+    <button id="mysteryBtn" class="btn primary big">🎲 Start a mystery</button>
+  </section>
+
   <section class="card ai-studio" aria-label="AI puzzle studio">
     <div class="card-tag">✨ AI STUDIO</div>
     <div class="card-title">Dream up a puzzle</div>
@@ -63,8 +70,14 @@
     <button id="pauseBtn" class="tbtn" title="Pause">❚❚</button>
   </div>
   <canvas id="board"></canvas>
+  <div id="tray" class="tray" style="display:none" aria-label="Edge piece tray">
+    <div id="trayLabel" class="tray-label"></div>
+    <div id="trayRow" class="tray-row"></div>
+  </div>
   <div class="toolbar">
     <button id="previewBtn" class="tbtn" title="Preview picture">🖼️<small>Preview</small></button>
+    <button id="ghostBtn" class="tbtn" title="Ghost image hint">👻<small>Ghost</small></button>
+    <button id="hintBtn" class="tbtn" title="Place one piece for you">✨<small>Hint</small></button>
     <button id="rotBtn" class="tbtn" title="Rotate selected 90°" style="display:none">↻<small>Rotate</small></button>
     <button id="edgeBtn" class="tbtn" title="Gather edge pieces">🧩<small>Edges</small></button>
     <button id="scatterBtn" class="tbtn" title="Scatter loose pieces">🎲<small>Scatter</small></button>
@@ -77,7 +90,7 @@
   <div class="sheet">
     <h3>Choose difficulty</h3>
     <div id="countBtns" class="count-btns"></div>
-    <label class="rot-row"><input type="checkbox" id="rotToggle"> ↻ Rotation mode <small>(pieces can turn — harder!)</small></label>
+    <label class="rot-row"><input type="checkbox" id="rotToggle"> ↻ Rotation mode <small>(pieces start turned — double-tap a piece to rotate it!)</small></label>
     <button id="countClose" class="btn">Cancel</button>
   </div>
 </div>
@@ -107,6 +120,7 @@
   <div class="sheet win">
     <div class="win-emoji">🎉</div>
     <h3>Puzzle complete!</h3>
+    <div id="winReveal" style="display:none"></div>
     <div id="winBest" class="best-badge" style="display:none"></div>
     <div id="winTime" class="win-time">0:00</div>
     <div id="winSub" class="hint"></div>
