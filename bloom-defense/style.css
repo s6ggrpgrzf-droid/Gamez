@@ -258,3 +258,20 @@ body {
   .packet { width: 62px; }
   .packet canvas { width: 44px; height: 44px; }
 }
+
+/* ============ PORTRAIT: seed packets become a bottom bar, lawn goes full-width ============ */
+@media (orientation: portrait) {
+  #stage { flex-direction: column; }
+  #board-wrap {
+    order: 1; flex: 1; min-height: 0; width: 100%;
+    align-items: flex-start; padding-top: 8px;
+  }
+  #packets {
+    order: 2; width: 100%; flex-shrink: 0;
+    flex-direction: row; align-items: center;
+    overflow-x: auto; overflow-y: hidden;
+    padding: 8px 10px; gap: 8px;
+    background: rgba(0,0,0,.35);
+  }
+  .packet { flex: 0 0 auto; }
+}
