@@ -204,6 +204,10 @@
     G.stepIdx = -1;
     $('#room-title').textContent = roomDef.title + (isDaily ? ' · daily' : '');
     $('#spot').style.setProperty('--spot', roomDef.theme.spot);
+    // inspect FAB: only the three classic centerpiece rooms
+    var im = (window.Inspect && Inspect.MODELS[G.room.id]) || null;
+    $('#inspect-btn').hidden = !im;
+    if (im) $('#inspect-label').textContent = 'Inspect ' + im.short;
     renderInv();
     showScene('play');
     startTimer();
@@ -436,6 +440,10 @@
   function hideHint() { $('#hint-panel').classList.add('hidden'); }
   $('#hint-btn').addEventListener('click', function (e) { e.stopPropagation(); showHint(); });
   $('#hint-close').addEventListener('click', function (e) { e.stopPropagation(); hideHint(); });
+  $('#inspect-btn').addEventListener('click', function (e) {
+    e.stopPropagation(); Sfx.resume(); Sfx.tap();
+    if (window.Inspect) Inspect.open(G.room.id);
+  });
   $('#hint-more').addEventListener('click', function (e) {
     e.stopPropagation();
     if (G.hintTier < 2) {
@@ -738,7 +746,8 @@
     G: G, api: api, store: store, AI: AI,
     startRoom: startRoom, nextStep: nextStep, loadStep: loadStep,
     done: done, todayStr: todayStr,
-    aiFetch: aiFetch, paintDailyCard: paintDailyCard, maybeFetchAIDaily: maybeFetchAIDaily
+    aiFetch: aiFetch, paintDailyCard: paintDailyCard, maybeFetchAIDaily: maybeFetchAIDaily,
+    Inspect: (window.Inspect || null)
   };
   // track current scene for pause logic
   var _showScene = showScene;
