@@ -95,6 +95,11 @@ h1 { font-size: 46px; font-weight: 800; letter-spacing: .02em; margin: 6px 0 2px
 .tagline { color: var(--ink-dim); margin-bottom: 14px; font-size: 15px; }
 .best-row { display: flex; gap: 18px; justify-content: center; margin-bottom: 18px; font-size: 14px; color: var(--ink-dim); }
 .best-row b { color: var(--ink); }
+.best-row span { display: inline-block; }
+.best-row span.pop { animation: pop .45s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.28); } 100% { transform: scale(1); } }
+.over-alltime { font-size: 13px; color: var(--ink-dim); margin: 0 0 12px; }
+.over-alltime b { color: var(--ink); }
 .menu-btns { display: flex; flex-direction: column; gap: 10px; }
 .btn {
   appearance: none; border: 1px solid rgba(255,255,255,.2); border-radius: 18px;

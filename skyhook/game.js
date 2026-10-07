@@ -55,6 +55,11 @@ const RB_CHANCE = 0.4, RB_HOT_CHANCE = 0.8, RB_WINDOW = 20;
 const LAND_PAUSE = 0.6;
 const HIT_STOP = 0.06;
 const TRAIL_N = 24;
+const FLIP_DUR = 0.5;      // seconds for one backflip spin
+const FLIP_MAX_QUEUE = 4;  // max taps queued per swing
+const RIBBON_N = 40;       // painted-arc points kept for the ride check
+const RIDE_W = 34;         // landing-x px tolerance to the ribbon = RIDE
+const RB_MILESTONE = 100;  // all-time rainbow collection milestone
 
 /* ---------------- canvas ---------------- */
 const canvas = $('game');
@@ -123,6 +128,8 @@ const G = {
   teeter: 0, teeterDir: 1,
   squash: 0, flash: 0,
   trail: [],
+  flips: 0, flipT: -1, flipPending: 0,   // mid-air trick state (visual + bonus only)
+  ribbon: [],                            // painted rainbow arc for the RIDE check
   popups: [],
   newBest: false,
   hint: false, hintStage: 0,
@@ -191,6 +198,7 @@ function newRun(mode) {
   G.pull = 0; G.fl = null; G.fall = null;
   G.score = 0; G.combo = 0; G.fire = false;
   G.rainbows = 0; G.perfects = 0;
+  G.flips = 0; G.flipT = -1; G.flipPending = 0; G.ribbon = [];
   G.shake = 0; G.freeze = 0; G.teeter = 0; G.squash = 0; G.flash = 0;
   G.trail = []; G.popups = []; G.newBest = false;
   G.palette = 0; G.musicStep = 0; G.nextNoteT = 0;
@@ -220,6 +228,8 @@ function release() {
     t: 0, dropping: false, dropT: 0, fromX: 0, fromY: 0,
   };
   G.phase = 'swinging';
+  G.flips = 0; G.flipT = -1; G.flipPending = 0;  // fresh trick state per swing
+  G.ribbon = [];                                 // ribbon clears on each new swing
   burst(G.px, G.py - 10, 6, '#ffffff', 90, 0.3, 4, 0, false);
   SkyAudio.creakStop();
   SkyAudio.twang(clamp(pull / MAX_PULL, 0, 1));
@@ -250,11 +260,19 @@ function resolveLanding() {
     const rb = G.towers[i] && G.towers[i].rainbow;
     if (!rb || rb.taken || rb.falling) continue;
     if (landed && Math.abs(x - rb.x) < RB_WINDOW) {
-      rb.taken = true; G.rainbows++; G.rainbowsTotal++;
+      rb.taken = true; G.rainbows++;
+      const prevTotal = G.rainbowsTotal;
+      G.rainbowsTotal++;
       store.set('rainbows', G.rainbowsTotal);
       burst(rb.x, rb.y, 18, '#ff8fd1', 200, 0.8, 4, 100, true);
       SkyAudio.rainbow(); buzz(10);
       popup('+🌈', x, G.py - 100, '#ff8fd1');
+      // all-time collection milestone every 100
+      if (Math.floor(G.rainbowsTotal / RB_MILESTONE) > Math.floor(prevTotal / RB_MILESTONE)) {
+        popup('🌈 ' + G.rainbowsTotal + ' ALL-TIME!', x, G.py - 150, '#ff8fd1');
+        burst(x, G.py - 80, 36, '#ff8fd1', 320, 1.2, 5, 150, true);
+        SkyAudio.milestone(); buzz(30);
+      }
     } else if (G.towers[i] === target) {
       rb.falling = true; rb.vy = -350; SkyAudio.boing();
     }
@@ -267,15 +285,45 @@ function resolveLanding() {
     const close = edgeDist < EDGE_W;
     const wasHot = hot();
     const oldScore = G.score;
+    // rainbow ride: land on your own painted arc — with style.
+    // (The swing arc always crosses the landing x, so the paint check alone
+    // would fire on every landing; gating on a completed flip makes the ride
+    // earned: flip through your paint, then stick it.)
+    const styled = G.flips > 0;
+    let ride = false;
+    if (styled) {
+      for (let i = 5; i < G.ribbon.length; i++) {
+        if (Math.abs(G.ribbon[i].x - x) < RIDE_W) { ride = true; break; }
+      }
+    }
     G.combo = perfect ? G.combo + 1 : 0;
     G.fire = hot();
-    G.score += perfect ? 2 : 1;
+    let base = perfect ? 2 : 1;
+    if (ride) base *= 2;
+    G.score += base;
+    // trick bonus: completed backflips (doubled on a perfect landing)
+    const flipsDone = G.flips;
+    const flipBonus = flipsDone * (perfect ? 2 : 1);
+    if (flipBonus > 0) G.score += flipBonus;
+    // tricks never carry into the next swing
+    G.flips = 0; G.flipT = -1; G.flipPending = 0;
     if (perfect) G.perfects++;
     G.towersCleared++;
     G.squash = 1;
     G.palette = Math.floor(G.score / 10) % PALETTES.length;
-    popup(perfect ? '+2 PERFECT' + (G.combo > 1 ? ' ×' + G.combo : '') : close ? 'CLOSE!' : '+1',
-      x, G.py - 90, perfect ? '#ffe14d' : close ? '#ff9f1c' : '#ffffff');
+    let py = -90;
+    popup(perfect ? '+' + base + ' PERFECT' + (G.combo > 1 ? ' ×' + G.combo : '') : close ? 'CLOSE!' : '+' + base,
+      x, G.py + py, perfect ? '#ffe14d' : close ? '#ff9f1c' : '#ffffff');
+    if (flipBonus > 0) {
+      py -= 26;
+      popup('BACKFLIP ×' + flipsDone + ' +' + flipBonus, x, G.py + py, '#59e3ff');
+    }
+    if (ride) {
+      py -= 26;
+      popup('🌈 RAINBOW RIDE ×2!', x, G.py + py, '#ff8fd1');
+      burst(x, G.py - 40, 30, '#ff8fd1', 300, 1.0, 5, 120, true);
+      SkyAudio.ride(); buzz(25);
+    }
     burst(x, G.py, 8, '#ffffff', 120, 0.35, 4, 0, false);
     if (perfect) {
       burst(x, G.py - 30, 24, '#ffe14d', 260, 0.9, 5, 150, true);
@@ -288,7 +336,8 @@ function resolveLanding() {
     buzz(perfect ? 25 : 12);
     if (close) { G.teeter = 1; G.teeterDir = x > cx ? 1 : -1; SkyAudio.wobble(); }
     if (G.combo === HOT_N) {
-      popup('ON FIRE!', x, G.py - 116, '#ff9f1c');
+      py -= 26;
+      popup('ON FIRE!', x, G.py + py, '#ff9f1c');
       SkyAudio.neigh(); SkyAudio.fire();
     } else if (wasHot && !perfect) {
       burst(x, G.py - 60, 10, '#bbbbbb', 60, 0.6, 4, -30, false);
@@ -298,7 +347,8 @@ function resolveLanding() {
       G.best = G.score; store.set('best', G.best);
       if (!G.newBest) {
         G.newBest = true;
-        popup('NEW BEST!', x, G.py - 142, '#ffe14d');
+        py -= 26;
+        popup('NEW BEST!', x, G.py + py, '#ffe14d');
         burst(x, G.py - 60, 40, '#ffe14d', 300, 1.5, 5, 200, true);
         SkyAudio.newBest();
       }
@@ -314,6 +364,7 @@ function resolveLanding() {
     updateHUD();
   } else {
     G.combo = 0; G.fire = false;
+    G.flips = 0; G.flipT = -1; G.flipPending = 0;  // tricks die with the fall
     G.fall = { x, y: target.top - 10, vx: x < target.x ? -40 : 40, vy: -100 };
     if (x < target.x) {
       G.fall.x = target.x - 10;
@@ -425,6 +476,22 @@ function update(dt) {
       G.trail.push({ x: G.px, y: G.py - 14, life: 0.5 });
       if (G.trail.length > TRAIL_N * (hot() ? 1.5 : 1)) G.trail.shift();
     }
+    // mid-air tricks: queued backflips spin the creature (visual + bonus only,
+    // never affects the landing)
+    if (G.flipT >= 0) {
+      G.flipT += dt / FLIP_DUR;
+      if (G.flipT >= 1) { G.flipT = -1; G.flips++; }
+    } else if (G.flipPending > 0) {
+      G.flipPending--; G.flipT = 0;
+      burst(G.px, G.py - 20, 10, '#59e3ff', 160, 0.5, 4, 60, true);
+      SkyAudio.flip(); buzz(8);
+    }
+    // paint the rainbow ribbon (sweep only — the drop falls straight down,
+    // so it can't paint over the landing and hand out free rides)
+    if (!f.dropping) {
+      G.ribbon.push({ x: G.px, y: G.py });
+      if (G.ribbon.length > RIBBON_N) G.ribbon.shift();
+    }
   }
   for (let i = G.trail.length - 1; i >= 0; i--) {
     G.trail[i].life -= dt;
@@ -464,6 +531,7 @@ function gameOver() {
   $('over-score').textContent = G.score;
   $('over-perfects').textContent = G.perfects;
   $('over-rainbows').textContent = G.rainbows;
+  $('over-rainbows-total').textContent = G.rainbowsTotal;
   $('over-towers').textContent = G.towersCleared;
   $('over-newbest').hidden = !G.newBest;
   const flavors = G.score === 0 ? 'The rope slipped!' :
@@ -641,6 +709,27 @@ function drawTrail() {
   ctx.globalAlpha = 1;
 }
 
+function drawRibbon() {
+  const n = G.ribbon.length;
+  if (n < 2) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.lineWidth = 7 * S;
+  if (!G.calm) ctx.shadowBlur = 12 * S;
+  for (let i = 1; i < n; i++) {
+    const a = G.ribbon[i - 1], b = G.ribbon[i];
+    const hue = (i * 9) % 360;
+    ctx.strokeStyle = `hsla(${hue},90%,65%,0.8)`;
+    if (!G.calm) ctx.shadowColor = `hsl(${hue},90%,65%)`;
+    ctx.beginPath();
+    ctx.moveTo(w2sx(a.x), w2sy(a.y));
+    ctx.lineTo(w2sx(b.x), w2sy(b.y));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawCreature() {
   if (G.scene !== 'play' && G.scene !== 'over') return;
   const sx = w2sx(G.px), sy = w2sy(G.py);
@@ -653,6 +742,8 @@ function drawCreature() {
   if (G.teeter > 0) tilt += Math.sin(G.time * 18) * 0.22 * G.teeter * G.teeterDir;
   if (G.phase === 'falling') tilt = G.tilt;
   ctx.rotate(tilt);
+  // mid-air backflip: a full 360 spin layered over the swing tilt
+  if (G.flipT >= 0) ctx.rotate(easeInOut(clamp(G.flipT, 0, 1)) * TAU);
   ctx.scale(scX, scY);
   // walk bob
   const bob = G.phase === 'pulling' ? Math.abs(Math.sin(G.walkPh)) * 4 * s : 0;
@@ -737,6 +828,7 @@ function render() {
   drawClouds();
   drawTowers();
   drawTrail();
+  drawRibbon();
   drawRopeAndHook();
   drawCreature();
   drawParts();
@@ -759,7 +851,13 @@ function updateHUD() {
   $('hud-rainbow-n').textContent = G.rainbows;
   $('hud-fire').hidden = !G.fire;
   $('menu-best').textContent = G.best;
-  $('menu-rainbows').textContent = G.rainbowsTotal;
+  const mr = $('menu-rainbows');
+  if (mr.textContent !== String(G.rainbowsTotal)) {
+    mr.textContent = G.rainbowsTotal;
+    // little pop when the all-time count ticks up mid-session
+    const wrap = mr.closest('span');
+    if (wrap) { wrap.classList.remove('pop'); void wrap.offsetWidth; wrap.classList.add('pop'); }
+  }
 }
 function showScene(name) {
   G.scene = name;
@@ -796,6 +894,12 @@ function press(e) {
   if (G.scene !== 'play') return;
   if (holding) return;
   holding = true;
+  if (G.phase === 'swinging') {
+    // mid-air trick: a tap queues a backflip. Visual + bonus only —
+    // it never touches the landing.
+    if (G.flipPending < FLIP_MAX_QUEUE) G.flipPending++;
+    return;
+  }
   if (G.phase === 'ready') startPull();
   else if (G.phase === 'done') startRun(G.mode);
 }
@@ -892,7 +996,7 @@ else init();
 
 // headless test hook (pure mechanics)
 window.__skyhook = {
-  G, newRun, spawnTower, startPull, release, swingPos, resolveLanding,
+  G, newRun, spawnTower, startPull, press, release, swingPos, resolveLanding,
   TUNE: { PULL_SPEED, MAX_PULL, LAND_RATIO, FOOT, PERFECT_W },
 };
 

@@ -111,6 +111,8 @@
     },
     whoosh() { noise(0.4, 0.22, 0, 700, 'bandpass', 3400); },
     wobble() { tone(196, 0.5, 'sine', 0.22, 0, 130); tone(196, 0.5, 'sine', 0.15, 0.12, 150); },
+    flip() { tone(280, 0.32, 'sine', 0.22, 0, 980); noise(0.25, 0.12, 0, 1200, 'bandpass', 4200); },
+    ride() { [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => tone(f, 0.14, 'triangle', 0.22, i * 0.07)); noise(0.5, 0.1, 0, 3000, 'highpass', 6000); },
     fizzle() { noise(0.5, 0.18, 0, 4000, 'highpass', 800); },
     neigh() { tone(520, 0.12, 'sawtooth', 0.2, 0, 780); tone(660, 0.14, 'sawtooth', 0.2, 0.1, 920); },
     boing() { tone(180, 0.22, 'sine', 0.28, 0, 520); },
