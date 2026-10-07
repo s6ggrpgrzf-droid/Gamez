@@ -77,6 +77,7 @@
   };
 
   /* ---------- audio + haptics ---------- */
+  var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function buzz(ms) {
     if (store.data.settings.haptics) Sfx.buzz(ms);
   }
@@ -148,6 +149,10 @@
     var st = d.daily.streak;
     $('#streak-pill').hidden = !(st > 0);
     $('#streak-n').textContent = st;
+    // hidden-detail discoveries (inspect mode, flavor only)
+    var dn = Object.keys(d.details || {}).length;
+    $('#details-line').hidden = !(dn > 0);
+    $('#details-n').textContent = dn;
     // daily card (seeded instantly; AI swaps in when it arrives)
     dailyDef = null;
     paintDailyCard();
@@ -209,6 +214,7 @@
     $('#inspect-btn').hidden = !im;
     if (im) $('#inspect-label').textContent = 'Inspect ' + im.short;
     renderInv();
+    clearPins();
     showScene('play');
     startTimer();
     nextStep();
@@ -249,11 +255,19 @@
     G.hintTier = 0; G.hintReadyAt = 0;
     hideHint();
     var art = $('#stage-art');
-    art.classList.remove('swap'); void art.offsetWidth;
+    art.classList.remove('swap'); art.classList.remove('solving'); void art.offsetWidth;
     art.innerHTML = step.scene(G.room.vars);
     art.classList.remove('hint-glow');
     art.classList.add('swap');
     renderDots();
+    // objective line: one quiet always-visible goal for this step
+    var ob = $('#objective');
+    var goal = step.goal || step.name;
+    ob.textContent = '';
+    var obB = document.createElement('b'); obB.textContent = '▸ ';
+    ob.appendChild(obB);
+    ob.appendChild(document.createTextNode(goal));
+    ob.hidden = !goal;
     step.setup(api);
     if (step.intro) say(step.intro, 5200); // AI room flavor text
     armIdleGlow();
@@ -371,6 +385,9 @@
     el.textContent = text; el.classList.remove('hidden');
     if (sayTimer) clearTimeout(sayTimer);
     sayTimer = setTimeout(function () { el.classList.add('hidden'); }, ms || 3600);
+    // room speech triggered from inspect mode must surface in the inspect
+    // layer — #say sits underneath it
+    if (window.Inspect && Inspect.isOpen()) Inspect.say(text, ms);
   }
   var toastTimer = null;
   function toast(text) {
@@ -380,8 +397,8 @@
     toastTimer = setTimeout(function () { el.classList.add('hidden'); }, 2200);
   }
 
-  /* ---------- hints ---------- */
-  var TIERS = ['Nudge', 'Hint', 'Answer'];
+  /* ---------- hints: Wright's notebook ---------- */
+  var TIERS = ["Wright's nudge", "Wright's hint", 'Wright spells it out'];
   /* Ask the gamemaster worker for a contextual hint. Resolves the hint
    * text, or null when AI is off/unreachable — caller falls back silently. */
   function aiHint(tier) {
@@ -421,7 +438,7 @@
     }
     G.hintsUsed++;
     var tier = Math.min(G.hintTier, 2);
-    $('#hint-tier').textContent = '💡 ' + TIERS[tier];
+    $('#hint-tier').textContent = '✎ ' + TIERS[tier];
     $('#hint-more').style.display = G.hintTier < 2 ? '' : 'none';
     $('#hint-panel').classList.remove('hidden');
     var fallback = step.hints[tier];
@@ -442,8 +459,39 @@
   $('#hint-close').addEventListener('click', function (e) { e.stopPropagation(); hideHint(); });
   $('#inspect-btn').addEventListener('click', function (e) {
     e.stopPropagation(); Sfx.resume(); Sfx.tap();
-    if (window.Inspect) Inspect.open(G.room.id);
+    if (window.Inspect) Inspect.open(G.room.id, makeInspectCtx());
   });
+  /* context handed to inspect-mode interactions: lets the 3D objects play
+   * real room steps. The lunchbox keyhole performs the latch unlock through
+   * the same registered api.use handler the flat scene uses — take, say,
+   * and step-advance stay consistent, and state syncs both ways because the
+   * bridge reads G.uses live. */
+  function makeInspectCtx() {
+    return {
+      has: hasItem,
+      say: say,
+      detail: function (id, label) {
+        // hidden-detail discovery: flavor only, never required for solving.
+        // persists across sessions; the menu shows the n/3 count.
+        store.data.details = store.data.details || {};
+        if (store.data.details[id]) { say('You already found this one. ✦'); return false; }
+        store.data.details[id] = true; store.save();
+        Sfx.pickup(); buzz(12);
+        toast('A hidden detail… ✦' + (label ? ' ' + label : ''));
+        return true;
+      },
+      hasDetail: function (id) { return !!(store.data.details && store.data.details[id]); },
+      latch: {
+        active: function () { return !!G.uses['latch']; },
+        hasKey: function () { return hasItem('small-key'); },
+        use: function () {
+          var u = G.uses['latch'];
+          if (u && hasItem(u.item)) { selectItem(u.item); u.fn(); return true; }
+          return false;
+        }
+      }
+    };
+  }
   $('#hint-more').addEventListener('click', function (e) {
     e.stopPropagation();
     if (G.hintTier < 2) {
@@ -487,7 +535,7 @@
         locked = true;
         m.classList.add('solving');
         $$('.wheel', m).forEach(function (x) { x.classList.add('locked'); });
-        Sfx.unlock(); buzz(25);
+        Sfx.clunk(); Sfx.unlock(); buzz(25);
         setTimeout(function () { closeModal(); cfg.onSolve(); }, 650);
       }
     });
@@ -540,8 +588,8 @@
         if (solved()) {
           done = true;
           m.classList.add('solving');
-          $$('.tile', box).forEach(function (x) { if (!x.classList.contains('empty')) x.classList.add('right'); });
-          Sfx.unlock(); buzz(25);
+          $$('.tile', box).forEach(function (x, xi) { if (!x.classList.contains('empty')) { x.style.animationDelay = (xi * 45) + 'ms'; x.classList.add('right'); } });
+          Sfx.clunk(); Sfx.unlock(); buzz(25);
           setTimeout(function () { closeModal(); cfg.onSolve(); }, 700);
         }
       } else {
@@ -576,7 +624,7 @@
         locked = true;
         m.classList.add('solving');
         $$('.wheel', m).forEach(function (x) { x.classList.add('locked'); });
-        Sfx.unlock(); buzz(25);
+        Sfx.clunk(); Sfx.unlock(); buzz(25);
         setTimeout(function () { closeModal(); cfg.onSolve(); }, 650);
       }
     });
@@ -584,14 +632,78 @@
   }
 
   function verseModal(lines, title) {
+    var verseHtml = lines.map(function (l) {
+      return '<div><b>' + l.charAt(0) + '</b>' + l.slice(1) + '</div>';
+    }).join('');
     var m = openModal('<h3>' + title + '</h3><div class="sub">read carefully…</div>' +
-      '<div style="text-align:left;font-family:Georgia,serif;font-style:italic;line-height:2;font-size:16px;color:#e8dfc8">' +
-      lines.map(function (l) {
-        return '<div><b style="color:#f6d47c;font-style:normal">' + l.charAt(0) + '</b>' + l.slice(1) + '</div>';
-      }).join('') + '</div><br>' +
-      '<button class="btn small" id="m-cancel">Close</button>');
+      '<div class="verse-lines">' + verseHtml + '</div><br>' +
+      '<button class="btn small" id="m-pin">📌 Pin</button> ' +
+      '<button class="btn small ghost" id="m-cancel">Close</button>');
     m.querySelector('#m-cancel').onclick = function () { Sfx.tap(); closeModal(); };
+    m.querySelector('#m-pin').onclick = function () {
+      Sfx.place(); pinNote(title, '<div class="verse-lines">' + verseHtml + '</div>');
+      closeModal();
+    };
   }
+
+  /* ---------- pinned clues ---------- */
+  var pins = [], openPinId = null;
+  function pinNote(title, html) {
+    var id = 'pin-' + Date.now() + '-' + pins.length;
+    pins.push({ id: id, title: title, html: html });
+    renderPins();
+    toast('Pinned 📌 — tap the chip anytime');
+  }
+  function unpin(id) {
+    pins = pins.filter(function (p) { return p.id !== id; });
+    if (openPinId === id) closePinCard();
+    renderPins();
+    Sfx.soft();
+  }
+  function clearPins() { pins = []; openPinId = null; renderPins(); closePinCard(); }
+  function renderPins() {
+    var dock = $('#pin-dock');
+    dock.hidden = pins.length === 0;
+    dock.innerHTML = '';
+    pins.forEach(function (p) {
+      var c = document.createElement('button');
+      c.className = 'pin-chip';
+      c.setAttribute('data-pin', p.id);
+      var em = document.createElement('span'); em.textContent = '📌';
+      var tx = document.createElement('span'); tx.textContent = p.title;
+      c.appendChild(em); c.appendChild(tx);
+      c.onclick = function (e) { e.stopPropagation(); Sfx.tap(); togglePinCard(p.id); };
+      dock.appendChild(c);
+    });
+  }
+  function togglePinCard(id) {
+    if (openPinId === id) { closePinCard(); Sfx.tap(); return; }
+    var p = null;
+    pins.forEach(function (x) { if (x.id === id) p = x; });
+    if (!p) return;
+    openPinId = id;
+    $('#pin-card-title').textContent = '📌 ' + p.title;
+    $('#pin-card-body').innerHTML = p.html;
+    $('#pin-card').classList.remove('hidden');
+    Sfx.flip();
+  }
+  function closePinCard() {
+    openPinId = null;
+    $('#pin-card').classList.add('hidden');
+  }
+  $('#pin-card-x').addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (openPinId) unpin(openPinId); else closePinCard();
+  });
+  /* swipe down on the pin card to unpin it */
+  (function () {
+    var card = $('#pin-card'), sy = 0;
+    card.addEventListener('touchstart', function (e) { sy = e.touches[0].clientY; }, { passive: true });
+    card.addEventListener('touchend', function (e) {
+      var dy = e.changedTouches[0].clientY - sy;
+      if (dy > 60 && openPinId) unpin(openPinId);
+    });
+  })();
 
   /* the api handed to room steps */
   var api = {
@@ -602,7 +714,16 @@
     has: hasItem,
     sel: function () { return G.selected; },
     code: codeModal, slide: slideModal, letters: lettersModal, verse: verseModal,
-    next: function () { Sfx.chime(); buzz(20); setTimeout(nextStep, 350); },
+    next: function () {
+      // mechanical solve flourish: the scene dips and settles, the mechanism
+      // lands with a soft settle under the chime. Reduced motion: instant.
+      Sfx.chime(); Sfx.mechSettle(); buzz(20);
+      if (!REDUCED) {
+        var sa = $('#stage-art');
+        sa.classList.remove('solving'); void sa.offsetWidth; sa.classList.add('solving');
+      }
+      setTimeout(nextStep, 380);
+    },
     say: say,
     show: function (sel) { var el = $(sel); if (el) el.setAttribute('opacity', '1'); },
     hide: function (sel) { var el = $(sel); if (el) el.setAttribute('opacity', '0'); },
@@ -652,7 +773,7 @@
     $('#diorama').classList.add('go');
     $('#unfold-title').classList.add('go');
     burst(46);
-    Sfx.unfold(); buzz([30, 60, 30]);
+    Sfx.thunk(); Sfx.unfold(); buzz([30, 60, 30]);
 
     // savor: layers settled — slow drift, golden settling sparkles
     setTimeout(function () {

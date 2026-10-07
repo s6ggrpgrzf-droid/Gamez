@@ -120,7 +120,8 @@
     faces: { front: lbFront, back: lbBack, left: lbSide, right: lbSide, bottom: lbBottom },
     lid: { top: lbLidTop, front: lbLidFront, back: lbLidBack, left: lbLidEdge, right: lbLidEdge },
     lining: function (w, h) { return svg(w, h, gingham(w, h, '#f3ead6', '#d94f3d')); },
-    extras: extrasLunchbox
+    extras: extrasLunchbox,
+    interact: interactLunchbox
   };
   function extrasLunchbox(M, P, cuboid, place) {
     // 3D handle bar riding on the lid top (moves with the lid). It lives in a
@@ -151,6 +152,105 @@
         [14, 26, 38, 50].map(function (y) { return '<line x1="12" y1="' + y + '" x2="80" y2="' + y + '" stroke="#8a7f6a" stroke-width="2" opacity=".7"/>'; }).join('') +
         '<circle cx="78" cy="12" r="5" fill="#d94f3d" opacity=".8"/>')));
     place(noteWrap, 62, -12, -18, M.bodyG);
+  }
+
+  /* ---------- lunchbox: the clickable keyhole ----------
+   * The escutcheon on the lid front face is a real hotspot wired to the live
+   * room: no key → rattle + "locked"; has key → brass key slides in, turns
+   * with a ratchet, and the REAL latch-step completion runs (take key, say,
+   * advance) — no duplicated puzzle logic. State syncs both ways because the
+   * bridge reads G.uses live and the completion advances the 2D step behind
+   * the layer. */
+  function keySvg() {
+    return '<svg viewBox="0 0 30 44"><circle cx="15" cy="9" r="7" fill="none" stroke="#f6d47c" stroke-width="4"/>' +
+      '<rect x="13" y="14" width="4" height="22" fill="#f6d47c"/>' +
+      '<rect x="17" y="25" width="7" height="4" rx="1" fill="#f6d47c"/>' +
+      '<rect x="17" y="31" width="5" height="4" rx="1" fill="#f6d47c"/></svg>';
+  }
+  function keyholeState(ix) {
+    var L = ix.ctx.latch;
+    if (!L) return 'none';
+    if (L.active()) return L.hasKey() ? 'ready' : 'locked';
+    return 'done';
+  }
+  function rattleModel() {
+    if (reduced) return;
+    var mEl = document.getElementById('inspect-model');
+    if (!mEl) return;
+    mEl.classList.remove('rattling'); void mEl.offsetWidth; mEl.classList.add('rattling');
+    setTimeout(function () { mEl.classList.remove('rattling'); }, 480);
+  }
+  function onKeyhole(h, ix, isDone) {
+    var st = isDone() ? 'done' : keyholeState(ix);
+    if (st === 'locked') {
+      ix.sfx('soft');
+      ix.say('Locked. It wants the little key.');
+      rattleModel();
+      return;
+    }
+    if (st !== 'ready') {
+      ix.sfx('tap');
+      if (st === 'done') ix.say('Already unlocked.');
+      return;
+    }
+    h.busy = true;
+    var keyEl = h.el.querySelector('.ins-key');
+    function finish() {
+      isDone(true); // local latch: the step advances ~1s later; don't rattle meanwhile
+      ix.setLid(true, true); // lid springs open in 3D (silent — the room brings the clunk)
+      ix.ctx.latch.use(); // the REAL room completion: take key, say, advance step
+      if (keyEl) keyEl.classList.add('gone');
+      h.el.classList.add('spent');
+      h.busy = false;
+    }
+    if (reduced) { finish(); return; }
+    if (keyEl) keyEl.classList.add('in'); // key slides up into the hole
+    ix.sfx('slide');
+    setTimeout(function () {
+      if (keyEl) keyEl.classList.add('turn'); // …and turns with a ratchet
+      ix.sfx('tick');
+      setTimeout(function () { ix.sfx('tick'); }, 130);
+      setTimeout(function () { ix.sfx('tick'); }, 260);
+    }, 300);
+    setTimeout(finish, 720);
+  }
+  /* ---------- hidden details (flavor only — never required) ----------
+   * One etched discovery per classic room, visible only from a specific
+   * orbit angle via the facing-gated hotspot engine. Tapping one records it
+   * persistently (the menu shows n/3) and plays a warm toast. */
+  function starSvg() {
+    return '<svg viewBox="0 0 26 26" class="ins-star"><path d="M13 2l2.6 6.9 7.4.4-5.7 4.7 1.8 7.2L13 17.4l-6.1 3.8 1.8-7.2L3 9.3l7.4-.4z" fill="none" stroke="#e8b34b" stroke-width="1.6"/></svg>';
+  }
+  function addDetail(ix, faceEl, u, v, cfg) {
+    // cfg: { id, label, lid, html, spin }
+    if (!faceEl || !ix.ctx.detail) return null;
+    var hs = ix.hotspot(faceEl, u, v, {
+      lid: !!cfg.lid, label: 'Hidden detail', cls: 'ins-detail',
+      html: cfg.html, spin: cfg.spin || null,
+      onTap: function (h) {
+        if (ix.ctx.detail(cfg.id, cfg.label)) h.el.classList.add('found');
+      }
+    });
+    if (ix.ctx.hasDetail && ix.ctx.hasDetail(cfg.id)) hs.el.classList.add('found');
+    return hs;
+  }
+
+  function interactLunchbox(ix) {
+    var f = ix.M.faceEls.lidFront;
+    if (!f) return;
+    var doneFlag = keyholeState(ix) === 'done';
+    function isDone(set) { if (set === true) doneFlag = true; return doneFlag; }
+    var hs = ix.hotspot(f, 0.5, 0.5, {
+      lid: true, label: 'Brass keyhole', html: '<span class="ins-key">' + keySvg() + '</span>',
+      onTap: function (h) { onKeyhole(h, ix, isDone); }
+    });
+    if (doneFlag) hs.el.classList.add('spent');
+    ix.setHint('Drag to look around · pinch to zoom · tap the brass keyhole');
+    // hidden detail: a tiny etched star under the lid lip — only visible
+    // with the lid open, from the front
+    addDetail(ix, ix.M.faceEls.lidLining, 0.5, 0.66, {
+      id: 'lb-star', label: 'a tiny etched star', lid: true, html: starSvg()
+    });
   }
 
   /* ================= TOOLBOX (320 x 170 x 160, lid 56) ================= */
@@ -220,8 +320,17 @@
     faces: { front: tbFront, back: tbBack, left: tbSide, right: tbSide, bottom: tbBottom },
     lid: { top: tbLidTop, front: tbLidFront, back: tbLidBack, left: tbLidEdge, right: tbLidEdge },
     lining: function (w, h) { return svg(w, h, felt(w, h, '#2e4038', 31)); },
-    extras: extrasToolbox
+    extras: extrasToolbox,
+    interact: interactToolbox
   };
+  function interactToolbox(ix) {
+    // hidden detail: serial number etched inside the tray edge
+    addDetail(ix, ix.M.trayFace, 0.8, 0.72, {
+      id: 'tb-serial', label: 'a serial number: № 04217',
+      html: '<span class="ins-plate">№ 04217</span>'
+    });
+    ix.setHint('Drag to look around · pinch to zoom · double-tap to open the lid');
+  }
   function extrasToolbox(M, P, cuboid, place) {
     var steel = { top: '#c3ccd3', front: '#9aa6ae', side: '#78838b' };
     var dark = { top: '#3a434b', front: '#2c353d', side: '#20262c' };
@@ -234,7 +343,9 @@
     M.lidG.appendChild(handleG);
     M.handleG = handleG;
     // top tray with tools, riding high like a real toolbox tray
-    place(cuboid(280, 22, 130, dark), 0, -40, 0, M.bodyG);
+    var trayEl = cuboid(280, 22, 130, dark);
+    place(trayEl, 0, -40, 0, M.bodyG);
+    M.trayFace = trayEl.children[4]; // top face: serial-number plate lives here
     var trayTop = -51;
     var wr = cuboid(96, 9, 18, steel); place(wr, -40, trayTop - 4.5, -12, M.bodyG);
     wr.style.transform += ' rotateY(10deg)';
@@ -308,8 +419,20 @@
     faces: { front: mbFront, back: mbBack, left: mbLeft, right: mbRight, bottom: mbBottom },
     lid: { top: mbLidTop, front: mbLidFront, back: mbLidEdge, left: mbLidEdge, right: mbLidEdge },
     lining: function (w, h) { return svg(w, h, felt(w, h, '#5e1f28', 71)); },
-    extras: extrasMusicbox
+    extras: extrasMusicbox,
+    interact: interactMusicbox
   };
+  function interactMusicbox(ix) {
+    // hidden detail: a miniature engraving on the gold drum. The drum spins
+    // while the lid is open, so the hotspot's facing test includes the live
+    // spin phase (spin-aware normal in updateShading).
+    addDetail(ix, ix.M.drumFace, 0.5, 0.5, {
+      id: 'mb-engrave', label: 'a miniature engraving',
+      html: '<span class="ins-engrave">✦ W · 1897</span>',
+      spin: { period: 2400, t0: function () { return crankT0 || performance.now(); } }
+    });
+    ix.setHint('Drag to look around · pinch to zoom · double-tap to open the lid');
+  }
   function extrasMusicbox(M, P, cuboid, place) {
     var gold = { top: '#ffe9a8', front: '#e8b34b', side: '#b98a2e' };
     var wood = { top: '#5a3d26', front: '#422b1a', side: '#2c1d10' };
@@ -324,6 +447,7 @@
     drum.classList.add('ins-drum');
     drumPos.appendChild(drum);
     M.bodyG.appendChild(drumPos);
+    M.drumFace = drum.children[0]; // front face: the miniature engraving lives here
     place(cuboid(10, 40, 10, wood), -62, -6, 0, M.bodyG);
     place(cuboid(10, 40, 10, wood), 62, -6, 0, M.bodyG);
     // winding crank on the right face (spins while the lid is open)
@@ -382,33 +506,82 @@
     shadeFaces.push({ sh: s, nx: f._nx, ny: f._ny, nz: f._nz, lid: !!isLid });
   }
 
+  /* ================= inspect hotspot engine =================
+   * hotspot(faceEl, u, v, opts): anchors an HTML button to a face at UV
+   * coords (0..1). The button is a child of the face div, so it inherits the
+   * 3D transform for free. Every frame updateShading() re-evaluates the
+   * face's world normal: when normal·view drops below 0.25 the hotspot fades
+   * out and loses pointer events, so you can never click through the box.
+   * Tap-vs-drag: the button captures its own pointer; <8px of movement with
+   * a quick release counts as a tap, anything more is ignored (the orbit drag
+   * never starts from a hotspot, so the two never fight).
+   * opts: { lid, label, html, onTap(hs) } — handlers get (hs) and close over
+   * the ix interaction context passed to the model's interact() hook. */
+  var hotspots = []; // rebuilt per model in open()
+  function faceWorld(nx, ny, nz, isLid, C) {
+    var qy = ny, qz = nz;
+    if (isLid) { qy = C.cl * ny - C.sl * nz; qz = C.sl * ny + C.cl * nz; }
+    var qx = C.cy * nx + C.sy * qz, qyy = qy, qzz = -C.sy * nx + C.cy * qz;
+    return [qx, C.cx * qyy - C.sx * qzz, C.sx * qyy + C.cx * qzz];
+  }
+  function hotspot(faceEl, u, v, opts) {
+    opts = opts || {};
+    var b = P('button', 'ins-hot' + (opts.cls ? ' ' + opts.cls : ''));
+    b.style.left = (u * 100).toFixed(2) + '%';
+    b.style.top = (v * 100).toFixed(2) + '%';
+    b.setAttribute('aria-label', opts.label || 'inspect hotspot');
+    b.innerHTML = '<span class="ins-ring"></span>' + (opts.html || '');
+    faceEl.appendChild(b);
+    var hs = {
+      el: b, nx: faceEl._nx, ny: faceEl._ny, nz: faceEl._nz,
+      lid: !!opts.lid, onTap: opts.onTap, busy: false, spin: opts.spin || null
+    };
+    var dx0 = 0, dy0 = 0, dt0 = 0;
+    b.addEventListener('pointerdown', function (e) {
+      e.stopPropagation();
+      try { b.setPointerCapture(e.pointerId); } catch (err) {}
+      dx0 = e.clientX; dy0 = e.clientY; dt0 = Date.now();
+    });
+    b.addEventListener('pointerup', function (e) {
+      e.stopPropagation();
+      var moved = Math.hypot(e.clientX - dx0, e.clientY - dy0);
+      if (moved < 8 && Date.now() - dt0 < 600 && !hs.busy && hs.onTap) hs.onTap(hs);
+    });
+    b.addEventListener('pointercancel', function (e) { e.stopPropagation(); });
+    hotspots.push(hs);
+    return hs;
+  }
+
   function buildModel(def) {
     var Dm = def.dims, W = Dm.W, H = Dm.H, D = Dm.D, lidH = Dm.lidH;
     var model = document.getElementById('inspect-model');
     model.innerHTML = '';
     shadeFaces = [];
     var bodyG = div('ins-body');
-    regShade(bodyG.appendChild(face(W, H, 0, 0, D / 2, 0, 0, def.faces.front())), false);
-    regShade(bodyG.appendChild(face(W, H, 0, 0, -D / 2, 0, 180, def.faces.back())), false);
-    regShade(bodyG.appendChild(face(D, H, W / 2, 0, 0, 0, 90, def.faces.right())), false);
-    regShade(bodyG.appendChild(face(D, H, -W / 2, 0, 0, 0, -90, def.faces.left())), false);
-    regShade(bodyG.appendChild(face(W, D, 0, H / 2, 0, -90, 0, def.faces.bottom())), false);
+    var lidG = div('ins-lid');
+    var FE = {}; // face elements by key, for the hotspot engine
+    function bf(key, f) { FE[key] = f; regShade(bodyG.appendChild(f), false); }
+    function lf(key, f) { FE[key] = f; regShade(lidG.appendChild(f), true); }
+    bf('front', face(W, H, 0, 0, D / 2, 0, 0, def.faces.front()));
+    bf('back', face(W, H, 0, 0, -D / 2, 0, 180, def.faces.back()));
+    bf('right', face(D, H, W / 2, 0, 0, 0, 90, def.faces.right()));
+    bf('left', face(D, H, -W / 2, 0, 0, 0, -90, def.faces.left()));
+    bf('bottom', face(W, D, 0, H / 2, 0, -90, 0, def.faces.bottom()));
     // interior tub (lining), slightly inset
-    regShade(bodyG.appendChild(face(W - 16, D - 16, 0, H / 2 - 10, 0, 90, 0, def.lining(W - 16, D - 16))), false);
-    regShade(bodyG.appendChild(face(W - 16, H - 16, 0, -1, D / 2 - 9, 0, 180, def.lining(W - 16, H - 16))), false);
-    regShade(bodyG.appendChild(face(W - 16, H - 16, 0, -1, -(D / 2 - 9), 0, 0, def.lining(W - 16, H - 16))), false);
-    regShade(bodyG.appendChild(face(D - 16, H - 16, W / 2 - 9, -1, 0, 0, -90, def.lining(D - 16, H - 16))), false);
-    regShade(bodyG.appendChild(face(D - 16, H - 16, -(W / 2 - 9), -1, 0, 0, 90, def.lining(D - 16, H - 16))), false);
+    bf('floor', face(W - 16, D - 16, 0, H / 2 - 10, 0, 90, 0, def.lining(W - 16, D - 16)));
+    bf('wallF', face(W - 16, H - 16, 0, -1, D / 2 - 9, 0, 180, def.lining(W - 16, H - 16)));
+    bf('wallB', face(W - 16, H - 16, 0, -1, -(D / 2 - 9), 0, 0, def.lining(W - 16, H - 16)));
+    bf('wallR', face(D - 16, H - 16, W / 2 - 9, -1, 0, 0, -90, def.lining(D - 16, H - 16)));
+    bf('wallL', face(D - 16, H - 16, -(W / 2 - 9), -1, 0, 0, 90, def.lining(D - 16, H - 16)));
     // lid on a hinge along the back top edge; faces sit 1px proud so the lid
     // reads as a lip and never z-fights the coplanar body faces
-    var lidG = div('ins-lid');
-    regShade(lidG.appendChild(face(W, D, 0, -lidH - 1, D / 2, 90, 0, def.lid.top())), true);
-    regShade(lidG.appendChild(face(W, lidH, 0, -lidH / 2, D + 1, 0, 0, def.lid.front())), true);
-    regShade(lidG.appendChild(face(W, lidH, 0, -lidH / 2, -1, 0, 180, def.lid.back())), true);
-    regShade(lidG.appendChild(face(D, lidH, -(W / 2 + 1), -lidH / 2, D / 2, 0, -90, def.lid.left())), true);
-    regShade(lidG.appendChild(face(D, lidH, W / 2 + 1, -lidH / 2, D / 2, 0, 90, def.lid.right())), true);
-    regShade(lidG.appendChild(face(W - 12, D - 12, 0, -3, D / 2, -90, 0, def.lining(W - 12, D - 12))), true);
-    var M = { bodyG: bodyG, lidG: lidG, face: face, def: def, handleG: null };
+    lf('lidTop', face(W, D, 0, -lidH - 1, D / 2, 90, 0, def.lid.top()));
+    lf('lidFront', face(W, lidH, 0, -lidH / 2, D + 1, 0, 0, def.lid.front()));
+    lf('lidBack', face(W, lidH, 0, -lidH / 2, -1, 0, 180, def.lid.back()));
+    lf('lidLeft', face(D, lidH, -(W / 2 + 1), -lidH / 2, D / 2, 0, -90, def.lid.left()));
+    lf('lidRight', face(D, lidH, W / 2 + 1, -lidH / 2, D / 2, 0, 90, def.lid.right()));
+    lf('lidLining', face(W - 12, D - 12, 0, -3, D / 2, -90, 0, def.lining(W - 12, D - 12)));
+    var M = { bodyG: bodyG, lidG: lidG, face: face, def: def, handleG: null, faceEls: FE };
     def.extras(M, P, cuboid, placeProp);
     model.appendChild(bodyG);
     model.appendChild(lidG);
@@ -417,10 +590,22 @@
 
   /* ---------- layer + orbit state ---------- */
   var layer = null, viewport = null, stageEl = null, orbitEl = null,
-      titleEl = null, lidBtn = null, shadowEl = null;
+      titleEl = null, lidBtn = null, shadowEl = null, sayEl = null, hintEl = null;
+  var sayTimer = 0;
+  var DEFAULT_HINT = 'Drag to look around · pinch to zoom · double-tap to open the lid';
+  // speech line inside the inspect layer (the room's #say sits under it)
+  function isay(text, ms) {
+    if (!sayEl) return;
+    sayEl.textContent = text;
+    sayEl.classList.remove('hidden');
+    if (sayTimer) clearTimeout(sayTimer);
+    sayTimer = setTimeout(function () { sayEl.classList.add('hidden'); }, ms || 3200);
+  }
+  function setHint(text) { if (hintEl) hintEl.textContent = text; }
   var isOpenFlag = false, modelId = null, M = null, lidOpen = false;
   var rx = -14, ry = 32, vx = 0, vy = 0, zoom = 1;
   var auto = true, dragging = false, raf = 0, running = false, lastT = 0, lidUntil = 0;
+  var crankT0 = 0; // when the music-box drum started its current spin
   var pts = new Map(), lastX = 0, lastY = 0, downX = 0, downY = 0, downT = 0, lastMoveT = 0;
   var pinchD0 = 0, zoom0 = 1, lastTapT = 0, lastTapX = 0, lastTapY = 0;
   // fixed studio key light, viewer space (+y down, +z toward viewer), normalized
@@ -439,7 +624,8 @@
       '<div class="inspect-top"><button id="inspect-close" aria-label="Close">✕</button>' +
       '<div id="inspect-title"></div><div class="inspect-spacer"></div></div>' +
       '<div class="inspect-foot"><button id="inspect-lid" class="btn small">Open the lid</button>' +
-      '<div class="inspect-hint">Drag to look around · pinch to zoom · double-tap to open the lid</div></div>';
+      '<div class="inspect-hint">Drag to look around · pinch to zoom · double-tap to open the lid</div></div>' +
+      '<div id="inspect-say" class="hidden"></div>';
     document.getElementById('app').appendChild(layer);
     viewport = document.getElementById('inspect-viewport');
     stageEl = document.getElementById('inspect-stage');
@@ -447,6 +633,8 @@
     titleEl = document.getElementById('inspect-title');
     lidBtn = document.getElementById('inspect-lid');
     shadowEl = document.getElementById('inspect-shadow');
+    sayEl = document.getElementById('inspect-say');
+    hintEl = layer.querySelector('.inspect-hint');
     document.getElementById('inspect-close').addEventListener('click', function (e) {
       e.stopPropagation(); close();
     });
@@ -555,18 +743,28 @@
     var rxr = rx * Math.PI / 180, ryr = ry * Math.PI / 180;
     var cx = Math.cos(rxr), sx = Math.sin(rxr), cy = Math.cos(ryr), sy = Math.sin(ryr);
     var la = lidAngle() * Math.PI / 180, cl = Math.cos(la), sl = Math.sin(la);
+    var C = { cx: cx, sx: sx, cy: cy, sy: sy, cl: cl, sl: sl };
     for (var i = 0; i < n; i++) {
-      var s = shadeFaces[i], nx = s.nx, ny = s.ny, nz = s.nz;
-      if (s.lid) { // hinge rotation first: Rx(lidA)
-        var hy = cl * ny - sl * nz, hz = sl * ny + cl * nz;
-        ny = hy; nz = hz;
-      }
-      // orbit R = Rx(rx)·Ry(ry): Ry first, then Rx
-      var qx = cy * nx + sy * nz, qy = ny, qz = -sy * nx + cy * nz;
-      var b = qx * LIGHT[0] + (cx * qy - sx * qz) * LIGHT[1] + (sx * qy + cx * qz) * LIGHT[2];
+      var s = shadeFaces[i];
+      var w = faceWorld(s.nx, s.ny, s.nz, s.lid, C);
+      var b = w[0] * LIGHT[0] + w[1] * LIGHT[1] + w[2] * LIGHT[2];
       var op = 0.26 * (1 - b);
       if (op < 0) op = 0; else if (op > 0.62) op = 0.62;
       s.sh.style.opacity = op.toFixed(3);
+    }
+    // hotspot visibility: fade out (and disarm) faces turned away from view
+    for (var h = 0; h < hotspots.length; h++) {
+      var H = hotspots[h];
+      var w2;
+      if (H.spin && !reduced) {
+        // extra model-space rotateX (e.g. the music-box drum) before orbit
+        var ph = ((performance.now() - H.spin.t0()) / H.spin.period) * Math.PI * 2;
+        var ca = Math.cos(ph), sa = Math.sin(ph);
+        w2 = faceWorld(H.nx, H.ny * ca - H.nz * sa, H.ny * sa + H.nz * ca, H.lid, C);
+      } else {
+        w2 = faceWorld(H.nx, H.ny, H.nz, H.lid, C);
+      }
+      H.el.classList.toggle('off', w2[2] < 0.25);
     }
   }
 
@@ -616,19 +814,34 @@
     kick();
     layer.classList.toggle('lid-open', openIt);
     layer.classList.toggle('cranking', openIt && modelId === 'musicbox');
+    if (openIt && modelId === 'musicbox' && !reduced) crankT0 = performance.now();
     lidBtn.textContent = openIt ? 'Close the lid' : 'Open the lid';
     if (!silent) sfx(openIt ? 'slide' : 'tap');
   }
   function toggleLid() { if (isOpenFlag) setLid(!lidOpen); }
 
   /* ---------- public ---------- */
-  function open(id) {
+  function open(id, ctx) {
     var def = MODELS[id];
     if (!def) return false;
     ensureLayer();
     modelId = id; lidOpen = false;
     rx = -14; ry = 32; vx = 0; vy = 0; zoom = 1; auto = !reduced;
     M = buildModel(def);
+    hotspots = [];
+    setHint(DEFAULT_HINT);
+    if (sayEl) sayEl.classList.add('hidden');
+    var toastEl = document.getElementById('toast');
+    if (toastEl) toastEl.classList.add('hidden'); // no stale toasts floating over the 3D view
+    // per-model interactions (hotspots wired to live room state via ctx)
+    if (def.interact) {
+      try {
+        def.interact({
+          M: M, ctx: ctx || {}, hotspot: hotspot, say: isay, setLid: setLid,
+          sfx: sfx, reduced: reduced, setHint: setHint
+        });
+      } catch (err) { /* a bad interact hook must never break the viewer */ }
+    }
     titleEl.textContent = def.title;
     layer.classList.remove('hidden', 'lid-open', 'cranking');
     var g = G(); if (g) g.paused = true;
@@ -654,7 +867,7 @@
 
   window.Inspect = {
     MODELS: MODELS,
-    open: open, close: close, toggleLid: toggleLid,
+    open: open, close: close, toggleLid: toggleLid, say: isay,
     isOpen: function () { return isOpenFlag; },
     setView: function (rx2, ry2) { rx = rx2; ry = ry2; vx = 0; vy = 0; auto = false; applyView(); updateShading(); kick(); },
     state: function () { return { open: isOpenFlag, id: modelId, rx: rx, ry: ry, zoom: zoom, lid: lidOpen }; }
