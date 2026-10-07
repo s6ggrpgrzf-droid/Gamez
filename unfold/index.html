@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#141216">
 <title>UNFOLD — tiny escape rooms</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <div id="app">
@@ -16,6 +16,7 @@
       <div class="wordmark">UNFOLD</div>
       <div class="tagline">tiny escape rooms</div>
       <div id="streak-pill" class="streak-pill" hidden>🔥 <b id="streak-n">0</b> day streak</div>
+      <div id="details-line" class="details-line" hidden>✦ <b id="details-n">0</b>/3 hidden details found</div>
     </div>
 
     <button id="daily-card" class="card daily-card" hidden>
@@ -53,6 +54,8 @@
       <div id="timer" class="timer">0:00</div>
       <button id="hint-btn" class="tbtn circle" title="Hint">💡</button>
     </div>
+    <div id="objective" class="objective" hidden></div>
+    <div id="pin-dock" class="pin-dock" hidden></div>
 
     <div id="stage">
       <div id="spot"></div>
@@ -79,6 +82,14 @@
       </div>
       <div id="say" class="say hidden"></div>
       <button id="inspect-btn" class="inspect-fab" hidden>🔍 <span id="inspect-label">Inspect</span></button>
+    </div>
+
+    <div id="pin-card" class="pin-card hidden">
+      <div class="pin-card-head">
+        <span class="pin-card-title" id="pin-card-title">📌 pinned</span>
+        <button id="pin-card-x" class="pin-card-x" title="Unpin">✕</button>
+      </div>
+      <div id="pin-card-body" class="pin-card-body"></div>
     </div>
 
     <div id="inventory" class="inventory" hidden></div>
@@ -120,9 +131,9 @@
 <div id="grain"></div>
 <div id="toast" class="toast hidden"></div>
 
-<script src="audio.js?v=1"></script>
-<script src="rooms.js?v=3"></script>
-<script src="inspect.js?v=2"></script>
-<script src="game.js?v=4"></script>
+<script src="audio.js?v=2"></script>
+<script src="rooms.js?v=4"></script>
+<script src="inspect.js?v=4"></script>
+<script src="game.js?v=6"></script>
 </body>
 </html>

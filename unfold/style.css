@@ -38,6 +38,7 @@ body{
 .tagline{color:var(--dim);font-size:13px;letter-spacing:.28em;text-transform:uppercase;margin-top:6px}
 .streak-pill{display:inline-block;margin-top:12px;padding:8px 16px;border-radius:999px;
   background:rgba(232,179,75,.12);border:1px solid rgba(232,179,75,.35);font-size:14px}
+.streak-pill[hidden]{display:none}
 .streak-pill b{color:var(--gold2)}
 .eyebrow{color:var(--faint);font-size:11px;letter-spacing:.3em;text-transform:uppercase;
   margin:22px 4px 10px}
@@ -107,6 +108,9 @@ body{
 #stage-art svg{width:100%;height:100%;display:block}
 #stage-art.swap{animation:sceneIn .55s var(--spring)}
 @keyframes sceneIn{from{opacity:0;transform:translateZ(26px) scale(.94) translateY(12px)}to{opacity:1;transform:translateZ(26px)}}
+/* mechanical solve flourish: the whole scene dips and settles like a mechanism */
+#stage-art.solving{animation:mechDip .5s var(--spring)}
+@keyframes mechDip{0%{transform:translateZ(26px)}30%{transform:translateZ(26px) translateY(7px) scale(.99)}100%{transform:translateZ(26px)}}
 #stage-sheen{position:absolute;inset:0;transform:translateZ(64px);pointer-events:none;
   background:radial-gradient(42% 32% at var(--lx,50%) var(--ly,38%), rgba(255,240,200,.12), transparent 70%)}
 #stage-fg{position:absolute;inset:-46px;transform:translateZ(135px);pointer-events:none;transform-style:preserve-3d}
@@ -161,14 +165,76 @@ body{
 .inv-item:active{transform:perspective(320px) scale(.9)}
 .inv-item.used{opacity:.35;pointer-events:none}
 
-/* hint panel */
+/* hint panel — Wright's notebook: a stitched paper margin-note */
 .hint-panel{position:absolute;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom));
-  background:rgba(16,13,16,.92);border:1px solid rgba(232,179,75,.35);border-radius:18px;
-  padding:16px;z-index:8;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  animation:panelUp .45s var(--spring)}
+  background:linear-gradient(175deg,#f7f0dd 0%,#ece0c4 100%);
+  color:#3a2f1d;border:1px solid #c9b384;border-radius:6px 18px 6px 18px;
+  outline:2px dashed rgba(122,90,40,.5);outline-offset:-8px;
+  padding:20px 20px 18px 34px;z-index:8;transform:rotate(-.4deg);
+  box-shadow:0 18px 50px rgba(0,0,0,.55);
+  animation:panelUpTilt .45s var(--spring)}
+@keyframes panelUpTilt{from{opacity:0;transform:translateY(24px) scale(.96) rotate(-.4deg)}to{opacity:1;transform:translateY(0) scale(1) rotate(-.4deg)}}
+.hint-panel::before{content:'';position:absolute;top:12px;bottom:12px;left:24px;width:2px;
+  background:rgba(200,90,80,.45);border-radius:1px}
+.hint-tier{font-size:11px;letter-spacing:.22em;color:#8a6a24;margin-bottom:6px;text-transform:uppercase;font-weight:700}
+.hint-text{font-size:15px;line-height:1.55;margin-bottom:12px;color:#3a2f1d}
+.hint-panel .btn{color:#3a2f1d;border-color:rgba(90,70,40,.45);background:rgba(255,255,255,.35)}
+.hint-panel .btn.ghost{background:none}
+
+/* objective line — one quiet always-visible goal under the header */
+.objective{padding:2px 16px 8px;text-align:center;font-size:12.5px;color:var(--dim);
+  letter-spacing:.02em;z-index:5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.objective b{color:var(--gold2);font-weight:600}
+
+/* pinned clues — chips docked under the header */
+.pin-dock{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 16px 6px;z-index:6}
+.pin-chip{display:inline-flex;align-items:center;gap:6px;max-width:44vw;
+  background:rgba(232,179,75,.14);border:1px solid rgba(232,179,75,.45);border-radius:999px;
+  color:var(--gold2);font-size:12.5px;font-weight:600;padding:7px 12px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit;
+  animation:chipIn .35s var(--spring)}
+@keyframes chipIn{from{opacity:0;transform:translateY(-8px) scale(.9)}to{opacity:1;transform:none}}
+.pin-chip:active{transform:scale(.93)}
+.pin-card{position:absolute;left:16px;right:16px;top:calc(118px + env(safe-area-inset-top));
+  max-height:38%;overflow-y:auto;z-index:15;
+  background:linear-gradient(175deg,#f7f0dd,#ece0c4);color:#3a2f1d;
+  border:1px solid #c9b384;border-radius:6px 16px 6px 16px;
+  outline:2px dashed rgba(122,90,40,.5);outline-offset:-8px;
+  padding:18px 18px 16px 32px;box-shadow:0 18px 50px rgba(0,0,0,.55);
+  animation:panelUpTilt .4s var(--spring)}
+.pin-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.pin-card-title{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#8a6a24;font-weight:700}
+.pin-card-x{border:1px solid rgba(90,70,40,.45);background:rgba(255,255,255,.35);color:#3a2f1d;
+  width:34px;height:34px;border-radius:50%;font-size:15px;cursor:pointer;font-family:inherit}
+.pin-card-body{font-size:14.5px;line-height:1.6;font-family:Georgia,serif;font-style:italic}
+.pin-card-body b{color:#8a6a24;font-style:normal}
+.pin-card-body .verse-lines{color:#3a2f1d}
+.pin-card-body .verse-lines b{color:#8a6a24}
+
+/* hidden-detail hotspots in inspect mode — etched, subtle, never required */
+.ins-hot.ins-detail .ins-ring{animation:none;opacity:.28;transform:translate(-50%,-50%) scale(.62)}
+.ins-hot.ins-detail.found .ins-ring{opacity:.12}
+.ins-plate{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-4deg);
+  background:linear-gradient(180deg,#d8c690,#b39a5e);color:#3a2a10;
+  font-size:9px;font-weight:700;letter-spacing:.08em;padding:3px 7px;border-radius:3px;
+  border:1px solid rgba(58,42,16,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.5);white-space:nowrap}
+.ins-star{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:26px;height:26px;opacity:.85;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+.ins-engrave{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-3deg);
+  color:#6b4d15;font-size:8px;font-weight:700;letter-spacing:.1em;white-space:nowrap;
+  text-shadow:0 1px 0 rgba(255,240,200,.7)}
+
+/* details count on the menu */
+.details-line{text-align:center;color:var(--faint);font-size:12.5px;margin-top:8px;letter-spacing:.04em}
+.details-line b{color:var(--gold2)}
+
+/* reduced motion: solves resolve instantly, no mechanical flourishes */
+@media (prefers-reduced-motion: reduce){
+  #stage-art.solving,.modal.solving,.tile.right,.xyb-win{animation:none!important}
+  .ins-hot .ins-ring{animation:none!important;opacity:.6}
+}
+
 @keyframes panelUp{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
-.hint-tier{font-size:11px;letter-spacing:.25em;color:var(--gold2);margin-bottom:6px;text-transform:uppercase}
-.hint-text{font-size:15px;line-height:1.55;margin-bottom:12px}
 
 /* buttons */
 .btn{display:inline-block;border:1px solid var(--line);border-radius:16px;padding:14px 22px;
@@ -191,6 +257,8 @@ body{
   animation:panelUp .5s var(--spring)}
 .modal h3{font-family:Georgia,serif;margin:0 0 4px;font-size:20px;font-weight:400;letter-spacing:.03em}
 .modal .sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+.verse-lines{text-align:left;font-family:Georgia,serif;font-style:italic;line-height:2;font-size:16px;color:#e8dfc8}
+.verse-lines b{color:var(--gold2);font-style:normal}
 .wheels{display:flex;gap:10px;justify-content:center;margin:6px 0 18px;perspective:500px}
 .wheel{width:58px;height:84px;border-radius:14px;border:1px solid var(--line);
   display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:700;
@@ -224,7 +292,9 @@ body{
 .tile:active{transform:translateZ(30px) scale(1.07);
   box-shadow:0 1px 0 rgba(255,255,255,.22), 0 20px 0 -7px #080607, 0 30px 34px rgba(0,0,0,.65)}
 .tile.empty{background:transparent;border-style:dashed;opacity:.4;cursor:default;transform:none;box-shadow:none}
-.tile.right{background:linear-gradient(160deg,rgba(87,199,178,.4),rgba(87,199,178,.14));border-color:var(--teal)}
+.tile.right{background:linear-gradient(160deg,rgba(87,199,178,.4),rgba(87,199,178,.14));border-color:var(--teal);
+  animation:tileSettle .5s var(--spring)}
+@keyframes tileSettle{0%{transform:translateZ(9px)}40%{transform:translateZ(9px) translateY(-6px)}100%{transform:translateZ(9px)}}
 
 /* toast */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(30px + env(safe-area-inset-bottom));
@@ -304,10 +374,12 @@ body{
 /* 3D xylophone bars */
 #mb-xylo .xyb{transform-box:fill-box;transform-origin:50% 0%;transition:transform .16s ease-out}
 #mb-xylo .xyb-hit{transform:translateY(9px)}
+#mb-xylo .xyb-win{animation:xybRipple .55s var(--spring)}
+@keyframes xybRipple{0%{transform:translateY(0)}35%{transform:translateY(10px)}100%{transform:translateY(0)}}
 
 /* modal solve pop */
-.modal.solving{animation:solvePop .65s var(--spring)}
-@keyframes solvePop{0%{transform:scale(1)}35%{transform:scale(1.07)}100%{transform:scale(1)}}
+.modal.solving{animation:solveLock .6s var(--spring)}
+@keyframes solveLock{0%{transform:scale(1)}30%{transform:scale(.965)}100%{transform:scale(1)}}
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01s!important;transition-duration:.01s!important}
@@ -337,6 +409,34 @@ body{
   backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .ins-face .pf{width:100%;height:100%}
 .ins-shade{position:absolute;left:0;top:0;right:0;bottom:0;background:#000;opacity:0;pointer-events:none}
+/* inspect hotspots: buttons glued to a face (inherit its 3D transform) */
+.ins-hot{position:absolute;width:64px;height:64px;transform:translate(-50%,-50%);
+  background:none;border:0;padding:0;margin:0;cursor:pointer;
+  transition:opacity .25s ease;-webkit-tap-highlight-color:transparent;touch-action:none}
+.ins-hot:focus{outline:none}
+.ins-hot.off{opacity:0;pointer-events:none}
+.ins-ring{position:absolute;left:50%;top:50%;width:34px;height:34px;pointer-events:none;
+  transform:translate(-50%,-50%);border:2px solid rgba(232,179,75,.85);border-radius:50%;
+  animation:ringPulse 2.6s ease-in-out infinite}
+@keyframes ringPulse{0%,100%{transform:translate(-50%,-50%) scale(.82);opacity:.5}
+  50%{transform:translate(-50%,-50%) scale(1.08);opacity:1}}
+.ins-hot.spent .ins-ring{animation:none;opacity:.32;transform:translate(-50%,-50%) scale(.8)}
+.ins-key{position:absolute;left:50%;top:50%;width:30px;height:44px;pointer-events:none;
+  opacity:0;transform:translate(-50%,24%) scale(.7);
+  transition:transform .28s ease-out,opacity .22s ease}
+.ins-key svg{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.ins-key.in{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.ins-key.turn{transform:translate(-50%,-50%) scale(1) rotate(90deg);
+  transition:transform .38s cubic-bezier(.3,.7,.3,1)}
+.ins-key.gone{opacity:0;transition:opacity .3s ease}
+@keyframes rattleX{0%,100%{transform:translateX(0) rotate(0deg)}
+  25%{transform:translateX(-7px) rotate(-2.5deg)}50%{transform:translateX(6px) rotate(2deg)}
+  75%{transform:translateX(-4px) rotate(-1deg)}}
+#inspect-model.rattling{animation:rattleX .42s ease}
+#inspect-say{position:absolute;top:calc(66px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  max-width:86%;background:rgba(10,8,10,.8);border:1px solid var(--line);border-radius:14px;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:6;
+  padding:10px 16px;font-size:14px;line-height:1.45;text-align:center;color:var(--ink)}
 .ins-prop{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d}
 .ins-handleg{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d;
   transition:transform .75s var(--spring)}
@@ -363,4 +463,6 @@ body{
   #inspect-layer.cranking .ins-crank,#inspect-layer.cranking .ins-drum{animation:none}
   .ins-lid{transition:none}
   .ins-handleg{transition:none}
+  .ins-ring{animation:none;opacity:.6}
+  #inspect-model.rattling{animation:none}
 }

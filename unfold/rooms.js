@@ -152,6 +152,7 @@
     var steps = [
       {
         id: 'find-key', kind: 'find', name: 'The Stuck Latch',
+        goal: 'Open the stuck latch',
         hints: ['The handle looks loose. Give it a tap.', 'Something small is taped under the handle — lift it first.', 'Tap the HANDLE, then tap the little key hiding underneath.'],
         scene: function () { return lunchboxArt(0, V); },
         setup: function (api) {
@@ -173,7 +174,7 @@
             api.say('A little brass key. The latch is begging for it.');
           });
           api.use('small-key', 'latch', function () {
-            Sfx.unlock();
+            Sfx.clunk(); Sfx.unlock();
             api.take('small-key');
             api.say('Click! The lid springs open.');
             setTimeout(function () { api.next(); }, 650);
@@ -185,6 +186,7 @@
       },
       {
         id: 'combo', kind: 'code', name: 'The Apple Code',
+        goal: 'Crack the apple code',
         hints: ['The sticker says "No." something. Locks love numbers.', 'Look at the apple sticker on the side: No. ' + V.code.join('') + '… interesting.', 'Set the wheels to ' + V.code.join('–') + '.'],
         scene: function () { return lunchboxArt(1, V); },
         setup: function (api) {
@@ -203,6 +205,7 @@
       },
       {
         id: 'slide', kind: 'slide', name: 'The Sliding Cover',
+        goal: 'Slide the tiles into order',
         hints: ['Tap a tile next to the empty space to slide it.', 'Work the tiles into order, 1 to 8.', 'Open the tile puzzle and slide them home.'],
         scene: function () { return lunchboxArt(2, V); },
         setup: function (api) {
@@ -220,6 +223,7 @@
       },
       {
         id: 'core', kind: 'find', name: 'The Heart of the Lunchbox',
+        goal: 'Find the heart of the lunchbox',
         hints: ['The brass key wants the little treasure box.', 'Select the brass key, then tap the ornate box.', 'Tap the BRASS KEY in your tray, then the treasure box.'],
         scene: function () { return lunchboxArt(3, V); },
         setup: function (api) {
@@ -234,6 +238,7 @@
       },
       {
         id: 'heart', kind: 'use', name: 'Unfold',
+        goal: 'Unlock the little treasure box',
         hints: [''],
         scene: function () { return lunchboxArt(4, V); },
         setup: function (api) {
@@ -417,6 +422,7 @@
     var steps = [
       {
         id: 'batteries', kind: 'combine', name: 'Dead Flashlight',
+        goal: 'Bring the dead flashlight back to life',
         hints: ['The flashlight is dead. Toolboxes have side pockets for a reason.', 'Tap the side pocket — something rattles in there.', 'Tap the SIDE POCKET for batteries, then use them on the flashlight.'],
         scene: function () { return toolboxArt(0, V); },
         setup: function (api) {
@@ -440,6 +446,7 @@
       },
       {
         id: 'uv', kind: 'reveal', name: 'Under the Tray',
+        goal: 'Look under the tray',
         hints: ['Tap the flashlight to switch it on, then lift the tray.', 'Something is written under the tray — but only light will show it.', 'Tap the FLASHLIGHT, then the TRAY, then the glowing spot underneath.'],
         scene: function () { return flashFixed(); },
         setup: function (api) {
@@ -472,6 +479,7 @@
       },
       {
         id: 'padlock', kind: 'code', name: 'The Inner Drawer',
+        goal: 'Crack the code on the inner drawer',
         hints: ['A 4-digit padlock. Those glowing digits were a code…', 'The UV writing under the tray: ' + V.code.join('') + '.', 'Tap the padlock and enter ' + V.code.join('–') + '.'],
         scene: function () { return toolboxArt(2, V); },
         setup: function (api) {
@@ -489,6 +497,7 @@
       },
       {
         id: 'screws', kind: 'choice', name: 'Only the Star',
+        goal: 'Choose the right screwdriver',
         hints: ['The note says only the star keeps it together.', 'Grab the screwdrivers, pick the star one.', 'Tap the DRIVERS, select the ⭐ driver, then tap the STAR screw.'],
         scene: function () { return toolboxArt(3, V); },
         setup: function (api) {
@@ -525,6 +534,7 @@
       },
       {
         id: 'finale', kind: 'use', name: 'Unfold',
+        goal: 'Open the old toolbox',
         hints: [''],
         scene: function () { return toolboxArt(4, V); },
         setup: function (api) {
@@ -708,6 +718,7 @@
     var steps = [
       {
         id: 'velvet', kind: 'find', name: 'The Lumpy Velvet',
+        goal: 'Search the lumpy velvet',
         hints: ['Something is hidden in the velvet drape.', 'Tap the velvet near the box — it lifts.', 'Tap the VELVET, then take the winding key.'],
         scene: function () { return musicboxArt(0, V); },
         setup: function (api) {
@@ -735,6 +746,7 @@
       },
       {
         id: 'melody', kind: 'pattern', name: 'The Waking Melody',
+        goal: 'Wake the sleeping melody',
         hints: [''],
         scene: function () { return musicboxArt(1, V); },
         setup: function (api) {
@@ -757,6 +769,7 @@
       },
       {
         id: 'xylo', kind: 'pattern', name: 'Play It Back',
+        goal: 'Play the melody back',
         hints: ['Tap the colored bars in the same order you heard.', 'Listen again with ⟳ replay if you need it.', 'The order was: ' + mel.map(function (n) { return NOTE_NAMES[n]; }).join(' – ') + '.'],
         scene: function () { return musicboxArt(2, V); },
         setup: function (api) {
@@ -777,6 +790,13 @@
                 pos++;
                 if (pos === mel.length) {
                   Sfx.chime();
+                  // bars ripple in sequence — the instrument settles, mechanical
+                  for (var b = 0; b < 5; b++) (function (bb) {
+                    setTimeout(function () {
+                      var bar2 = document.querySelector('#xyb-' + bb);
+                      if (bar2) bar2.classList.add('xyb-win');
+                    }, bb * 90);
+                  })(b);
                   api.say('The drawer sighs open…');
                   setTimeout(function () { api.next(); }, 900);
                 }
@@ -791,6 +811,7 @@
       },
       {
         id: 'cipher', kind: 'cipher', name: 'The Engraved Verse',
+        goal: 'Decode the engraved verse',
         hints: ['The first letters of each line spell the word.', 'Read the verse: ' + word.split('').join('-') + '…', 'Tap the wheels and set them to ' + word + '.'],
         scene: function () { return musicboxArt(3, V); },
         setup: function (api) {
@@ -812,6 +833,7 @@
       },
       {
         id: 'finale', kind: 'use', name: 'Unfold',
+        goal: 'Open the heart lock',
         hints: [''],
         scene: function () { return musicboxArt(4, V); },
         setup: function (api) {

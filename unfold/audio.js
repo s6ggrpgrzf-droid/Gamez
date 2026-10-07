@@ -85,6 +85,19 @@
       tone(261.63, 2.4, 'sine', 0.08, 0.1);
     },
     soft: function () { tone(220, 0.18, 'sine', 0.1, 0, 180); }, // gentle "nope"
+    clunk: function () { // heavy mechanical clunk — lands exactly on unlock
+      tone(140, 0.12, 'square', 0.16, 0, 70);
+      noise(0.08, 0.14, 2500);
+      tone(1200, 0.06, 'triangle', 0.08, 0.02);
+    },
+    thunk: function () { // soft wooden knock — the win handoff landing
+      tone(180, 0.16, 'sine', 0.2, 0, 90);
+      noise(0.05, 0.06, 800);
+    },
+    mechSettle: function () { // small mechanism settling under the solve chime
+      noise(0.1, 0.08, 1800, 0.05);
+      tone(520, 0.1, 'triangle', 0.1, 0.08);
+    },
     slide: function () { noise(0.09, 0.07, 900); },
     flip: function () { tone(300, 0.2, 'sine', 0.14, 0, 700); },
     tick: function () { tone(880, 0.05, 'square', 0.06); },
