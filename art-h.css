@@ -1,0 +1,114 @@
+/* UNFOLD hub key art — pure CSS composition.
+   A deep-red keepsake box on warm charcoal, golden light bursting
+   from its seams, side panels unfolding. No external images. */
+.art-unfold{
+  background:#141216;
+  overflow:hidden;
+}
+/* warm radial spotlight */
+.art-unfold::before{
+  content:"";position:absolute;inset:0;z-index:0;
+  background:
+    radial-gradient(120% 95% at 50% 84%, rgba(246,212,124,.30) 0%, rgba(178,120,52,.13) 36%, rgba(20,18,22,0) 70%);
+}
+/* ---- the box ---- */
+.art-unfold .ubox{
+  position:absolute;z-index:3;left:50%;bottom:24px;
+  width:148px;height:94px;transform:translateX(-50%);
+  border-radius:12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 26%),
+    linear-gradient(180deg,#a83440 0%,#7e1f2c 55%,#5e1220 100%);
+  box-shadow:
+    0 14px 30px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.25),
+    inset 0 -6px 12px rgba(0,0,0,.35);
+}
+/* lid line */
+.art-unfold .ubox::before{
+  content:"";position:absolute;left:8px;right:8px;top:30px;height:2px;
+  border-radius:2px;background:rgba(0,0,0,.45);
+  box-shadow:0 1px 0 rgba(255,255,255,.12);
+}
+/* golden seam glow bursting from the lid */
+.art-unfold .ubox::after{
+  content:"";position:absolute;left:6px;right:6px;top:29px;height:4px;
+  border-radius:4px;
+  background:linear-gradient(90deg, rgba(246,212,124,0) 0%, #ffe9b0 18%, #fff6dd 50%, #ffe9b0 82%, rgba(246,212,124,0) 100%);
+  filter:blur(1px);
+  box-shadow:0 0 18px 6px rgba(246,190,90,.75), 0 0 42px 14px rgba(246,170,70,.30);
+  animation:useam 2.6s ease-in-out infinite;
+}
+@keyframes useam{
+  0%,100%{opacity:.85} 50%{opacity:1}
+}
+/* ---- unfolding side panels (pseudo-3D) ---- */
+.art-unfold .uflap{
+  position:absolute;z-index:2;bottom:30px;
+  width:52px;height:82px;
+  background:linear-gradient(180deg,#8e2836 0%,#5e1220 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 10px 22px rgba(0,0,0,.5);
+}
+.art-unfold .uflap.l{
+  left:50%;margin-left:-126px;
+  border-radius:10px 2px 2px 10px;
+  transform-origin:right center;
+  transform:perspective(320px) rotateY(38deg);
+  border-right:2px solid rgba(246,212,124,.85);
+  box-shadow:6px 0 18px rgba(246,190,90,.45), 0 10px 22px rgba(0,0,0,.5);
+}
+.art-unfold .uflap.r{
+  left:50%;margin-left:74px;
+  border-radius:2px 10px 10px 2px;
+  transform-origin:left center;
+  transform:perspective(320px) rotateY(-38deg);
+  border-left:2px solid rgba(246,212,124,.85);
+  box-shadow:-6px 0 18px rgba(246,190,90,.45), 0 10px 22px rgba(0,0,0,.5);
+}
+/* ---- light rays fanning from the lid ---- */
+.art-unfold .urays{position:absolute;z-index:1;left:50%;bottom:112px;width:0;height:0;}
+.art-unfold .urays i{
+  position:absolute;bottom:0;left:-2px;width:4px;height:96px;
+  transform-origin:50% 100%;
+  background:linear-gradient(to top, rgba(255,232,170,.85), rgba(246,190,90,0));
+  filter:blur(1.5px);border-radius:4px;
+  animation:uray 3.2s ease-in-out infinite;
+}
+.art-unfold .urays i:nth-child(1){transform:rotate(-42deg);height:74px;animation-delay:0s}
+.art-unfold .urays i:nth-child(2){transform:rotate(-21deg);height:92px;animation-delay:.4s}
+.art-unfold .urays i:nth-child(3){transform:rotate(0deg);height:104px;animation-delay:.8s}
+.art-unfold .urays i:nth-child(4){transform:rotate(21deg);height:92px;animation-delay:.2s}
+.art-unfold .urays i:nth-child(5){transform:rotate(42deg);height:74px;animation-delay:.6s}
+@keyframes uray{
+  0%,100%{opacity:.55} 50%{opacity:1}
+}
+/* ---- golden reflection pool under the box ---- */
+.art-unfold .urefl{
+  position:absolute;z-index:1;left:50%;bottom:8px;
+  width:220px;height:30px;transform:translateX(-50%);
+  background:radial-gradient(50% 50% at 50% 50%, rgba(246,190,90,.35) 0%, rgba(246,190,90,0) 70%);
+  filter:blur(4px);
+}
+/* ---- floating golden dust ---- */
+.art-unfold .uspark{position:absolute;inset:0;z-index:4;pointer-events:none;}
+.art-unfold .uspark i{
+  position:absolute;width:4px;height:4px;border-radius:50%;
+  background:#ffe9b0;box-shadow:0 0 8px 2px rgba(246,190,90,.8);
+  animation:uspark 4s ease-in-out infinite;
+}
+.art-unfold .uspark i:nth-child(1){left:24%;bottom:38%;animation-delay:0s}
+.art-unfold .uspark i:nth-child(2){left:34%;bottom:62%;width:3px;height:3px;animation-delay:1.1s}
+.art-unfold .uspark i:nth-child(3){left:46%;bottom:74%;animation-delay:2s}
+.art-unfold .uspark i:nth-child(4){left:58%;bottom:58%;width:3px;height:3px;animation-delay:.6s}
+.art-unfold .uspark i:nth-child(5){left:68%;bottom:70%;animation-delay:1.6s}
+.art-unfold .uspark i:nth-child(6){left:76%;bottom:44%;width:3px;height:3px;animation-delay:2.6s}
+.art-unfold .uspark i:nth-child(7){left:20%;bottom:58%;width:3px;height:3px;animation-delay:3.1s}
+.art-unfold .uspark i:nth-child(8){left:52%;bottom:82%;animation-delay:.3s}
+@keyframes uspark{
+  0%,100%{transform:translateY(0);opacity:.4}
+  50%{transform:translateY(-14px);opacity:1}
+}
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .art-unfold .ubox::after,.art-unfold .urays i,.art-unfold .uspark i{animation:none}
+}
