@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f5f2ea">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a1e">
 <title>Pdawg Puzzles — Gamez Edition</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -62,7 +63,7 @@
 <!-- ============ GAME ============ -->
 <div id="game" style="display:none">
   <div class="topbar">
-    <button id="backBtn" class="tbtn" title="Save &amp; exit">←</button>
+    <button id="backBtn" class="tbtn" title="Save &amp; exit">‹</button>
     <div class="top-mid">
       <div id="puzzleTitle" class="ptitle">Puzzle</div>
       <div class="prow"><span id="timer" class="timer">0:00</span><span id="prog" class="prog"></span></div>
@@ -91,7 +92,10 @@
     <h3>Choose difficulty</h3>
     <div id="countBtns" class="count-btns"></div>
     <label class="rot-row"><input type="checkbox" id="rotToggle"> ↻ Rotation mode <small>(pieces start turned — double-tap a piece to rotate it!)</small></label>
-    <button id="countClose" class="btn">Cancel</button>
+    <div class="btn-col">
+      <button id="countStart" class="btn primary">Start puzzle</button>
+      <button id="countClose" class="btn">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -138,6 +142,6 @@
 <script src="gallery.js"></script>
 <script src="audio.js?v=2"></script>
 <script src="ai.js?v=2"></script>
-<script src="jigsaw.js?v=12"></script>
+<script src="jigsaw.js?v=13"></script>
 </body>
 </html>
