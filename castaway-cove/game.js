@@ -112,7 +112,7 @@ function sizeCanvas() {
   W = cv.clientWidth || window.innerWidth; H = cv.clientHeight || window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  waterTop = Math.round(H * 0.44);
+  waterTop = Math.round(H * 0.33);
   sizeLayers();
   layoutLanterns();
   seedUnder();
@@ -331,10 +331,17 @@ function updateHeron(dt) {
   }
 }
 function dockY() { return waterTop + 8; }
+/* foreground zoom-out: the dock cluster draws 15% smaller about the dock
+   anchor so the scene breathes; rod math is mapped through the same
+   transform so hands, rod tip, line and bobber stay glued together. */
+var FGK = 0.85;
+function fgA() { return { x: heronPerchX(), y: dockY() }; }
+function fgMap(x, y) { var a = fgA(); return { x: a.x + (x - a.x) * FGK, y: a.y + (y - a.y) * FGK }; }
 function drawHeron(g) {
   var h = heron;
   if (h.mode === 'away') return;
-  var x = h.x, y = dockY(), s = Math.min(1.15, W / 380);
+  var hm = fgMap(h.x, dockY());
+  var x = hm.x, y = hm.y, s = Math.min(1.15, W / 380) * FGK;
   var bobY = (h.mode === 'sleeping') ? Math.sin(h.bob * 1.4) * 2.5 : Math.sin(h.bob * 2.2) * 1;
   g.save();
   g.translate(x, y + bobY); g.scale(s, s);
@@ -843,6 +850,8 @@ function drawWater(g, pal, cat) {
 function drawDock(g) {
   var y = dockY();
   g.save();
+  var fa = fgA();
+  g.translate(fa.x, fa.y); g.scale(FGK, FGK); g.translate(-fa.x, -fa.y);
   g.fillStyle = 'rgba(20,40,60,0.25)';
   g.fillRect(0, y + 26, heronPerchX() + 40, 8); /* soft shadow on water */
   g.fillStyle = '#8a6844';
@@ -883,7 +892,10 @@ function rodGeom() {
   }
   else if (phase === 'reveal') { bend = 10; mid = 4; }
   tipY += bend;
-  return { bx: anglerX() + 30, by: dockY() - 54, cx: tipX - 20, cy: tipY + 40 + mid, tx: tipX, ty: tipY };
+  var bp = fgMap(anglerX() + 30, dockY() - 54),
+      cp = fgMap(tipX - 20, tipY + 40 + mid),
+      tp = fgMap(tipX, tipY);
+  return { bx: bp.x, by: bp.y, cx: cp.x, cy: cp.y, tx: tp.x, ty: tp.y };
 }
 function rodPoint(r, t) {
   var u = 1 - t;
@@ -891,13 +903,14 @@ function rodPoint(r, t) {
            y: u * u * r.by + 2 * u * t * r.cy + t * t * r.ty };
 }
 function drawAngler(g) {
-  var x = anglerX(), y = dockY();
+  var O = fgMap(anglerX(), dockY());
   var breathe = Math.sin(world.t * 1.4) * 1.6;
-  var y0 = y + breathe * 0.4;
+  var y0 = O.y + breathe * 0.4;
   g.save();
-  g.translate(x, y0);
+  g.translate(O.x, y0);
   if (phase === 'reveal') g.rotate(-0.09); /* leaning back with the catch held high */
   else if (phase === 'reeling') g.rotate(0.02 + 0.05 * (world.tension || 0)); /* leaning into the fight */
+  g.scale(FGK, FGK);
   /* boots planted on the planks */
   g.fillStyle = '#5a4632';
   g.beginPath(); g.ellipse(-9, -3.5, 10, 4.5, 0, 0, 6.283); g.fill();
@@ -922,7 +935,8 @@ function drawAngler(g) {
   /* hands grip the rod: placed on the rod's own curve so they never miss it */
   var r = rodGeom();
   var h1 = rodPoint(r, 0.18), h2 = rodPoint(r, 0.38);
-  var lx1 = h1.x - x, ly1 = h1.y - y0, lx2 = h2.x - x, ly2 = h2.y - y0;
+  var lx1 = (h1.x - O.x) / FGK, ly1 = (h1.y - y0) / FGK,
+      lx2 = (h2.x - O.x) / FGK, ly2 = (h2.y - y0) / FGK;
   g.strokeStyle = '#c96f4a'; g.lineWidth = 8;
   g.beginPath(); g.moveTo(0, -64); g.quadraticCurveTo(14, -62, lx1, ly1); g.stroke(); /* far arm */
   g.beginPath(); g.moveTo(8, -62); g.quadraticCurveTo(20, -62, lx2, ly2); g.stroke(); /* near arm */
@@ -940,12 +954,12 @@ function drawAngler(g) {
   g.restore();
 }
 function drawAnglerReflection(g) {
-  var x = anglerX(), y = dockY();
+  var O = fgMap(anglerX(), dockY());
   g.save();
   g.globalAlpha = 0.20;
-  g.translate(x + Math.sin(world.t * 1.2) * 3, waterTop + 4);
+  g.translate(O.x + Math.sin(world.t * 1.2) * 3, waterTop + 4);
   g.scale(1, -0.55);
-  g.translate(-x, -y);
+  g.translate(-O.x, -O.y);
   drawAngler(g);
   g.restore();
 }
@@ -962,6 +976,7 @@ function drawLanterns(g, cat) {
   for (var i = 0; i < world.lanterns.length; i++) {
     var L = world.lanterns[i];
     g.save();
+    if (L.dock) { var la = fgA(); g.translate(la.x, la.y); g.scale(FGK, FGK); g.translate(-la.x, -la.y); }
     /* post */
     g.fillStyle = shadeH(PAL.woodDeep, -12);
     g.fillRect(L.x - 3, L.y - L.h, 6, L.h);
@@ -1567,7 +1582,8 @@ function releaseCast() {
   castDepthV = CC.castDepth(holdMs, save.up.line);
   castTargetY = depthToY(castDepthV);
   castTargetX = Math.max(40, Math.min(W - 40, castTargetX));
-  world.bobX = heronPerchX() - 40; world.bobY = dockY() - 96;
+  var _rt = rodGeom(); /* fg-mapped: the bobber leaves from the drawn rod tip */
+  world.bobX = _rt.tx; world.bobY = _rt.ty;
   castFromX = world.bobX; castFromY = world.bobY;
   castT = 0;
   /* visible targeting: nearest silhouette within ~70px becomes the target */
