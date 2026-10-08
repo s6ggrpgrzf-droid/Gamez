@@ -1,8 +1,14 @@
-/* Tiny Fairway — pure arcade-golf simulation.
+/* Tiny Fairway — top-down arcade-golf simulation.
  *
- * Zero DOM, no Math.random (mulberry32 only). Fixed 1/60 s timestep with
- * internal sub-stepping for fast movers. Loads as a plain script and
- * exposes everything on the global TF object. */
+ * Pure planar (top-down) physics on a portrait hole: the whole green is
+ * visible at once. Zero DOM, no Math.random (mulberry32 only). Fixed 1/60 s
+ * timestep with internal sub-stepping for fast movers. Loads as a plain
+ * script and exposes everything on the global TF object.
+ *
+ * World: W=56 x H=96 units, y-up. Tee near the bottom, cup toward the top.
+ * Surfaces: green (fast), fairway (medium), rough (slow), sand (very slow),
+ * water (penalty). A seeded slope field makes putts break; trees are
+ * circle bumpers. */
 
 (function () {
   'use strict';
@@ -23,7 +29,7 @@
     };
   };
 
-  // FNV-1a 32-bit hash of a date string like '2026-10-04'. Same date
+  // FNV-1a 32-bit hash of a date string like '2026-10-08'. Same date
   // worldwide -> same seed -> same hole.
   TF.dailySeed = function (dateStr) {
     var h = 0x811c9dc5;
@@ -36,153 +42,264 @@
 
   /* ---------------- tuning constants (UI may read) ---------------- */
 
-  TF.GRAV = 40;       // world units / s^2
-  TF.REST = 0.45;     // restitution on bounce
-  TF.BALL_R = 1;      // ball radius
-  TF.CUP_R = 2.4;     // cup capture radius
-  TF.MAX_POWER = 60;  // max shot speed
-  TF.OVERDRIVE_MAX = 75; // super-shot cap (OK Golf-style overdrive)
+  TF.W = 56;
+  TF.H = 96;
+  TF.BALL_R = 0.9;    // ball radius
+  TF.CUP_R = 2.0;     // cup capture radius
+  TF.MAX_POWER = 46;  // max shot speed (full drag)
+  TF.OVERDRIVE_MAX = 58; // super-shot cap (OK Golf-style overdrive)
   TF.DT = 1 / 60;     // fixed physics step
-  TF.CAPTURE_V = 12;  // max speed for cup capture
-  TF.MAGNET_R = 2.0;  // cup magnet reach, × CUP_R (generous, Mini Touch Golf)
+  TF.CAPTURE_V = 9;   // max speed for cup capture
+  TF.MAGNET_R = 5.0;  // cup magnet reach (generous, Mini Touch Golf)
+  TF.REST_TREE = 0.5; // restitution off trees / walls
+
+  // Per-surface rolling resistance: linear decel (u/s^2) + exponential
+  // damping (/s). Tuned so a full-power drive carries ~55-65 units on
+  // fairway, dies in the rough, and putts feel crisp on the green.
+  TF.SURF = {
+    green:   { fr: 8,  damp: 0.30 },
+    fairway: { fr: 13.5, damp: 0.42 },
+    rough:   { fr: 30, damp: 1.10 },
+    sand:    { fr: 46, damp: 1.90 }
+  };
 
   var TAU = 6.283185307179586;
-  var MAX_SLOPE = 1.05; // worst-case |dh/dx| cap (< tan(50°) ~= 1.19)
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function dist2(x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1;
+    return dx * dx + dy * dy;
+  }
+  // Distance from point p to segment ab.
+  function segDist(px, py, ax, ay, bx, by) {
+    var dx = bx - ax, dy = by - ay;
+    var L2 = dx * dx + dy * dy;
+    var t = L2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / L2 : 0;
+    t = clamp(t, 0, 1);
+    var cx = ax + dx * t, cy = ay + dy * t;
+    return Math.sqrt(dist2(px, py, cx, cy));
+  }
+  // Point in rotated ellipse? e = {x, y, rx, ry, rot}.
+  function inEllipse(px, py, e) {
+    var dx = px - e.x, dy = py - e.y;
+    var c = Math.cos(e.rot || 0), s = Math.sin(e.rot || 0);
+    var lx = dx * c + dy * s, ly = -dx * s + dy * c;
+    return (lx * lx) / (e.rx * e.rx) + (ly * ly) / (e.ry * e.ry) <= 1;
+  }
 
   /* ---------------- hole generation ---------------- */
 
-  // Smooth analytic heightfield: sum of seeded sines. y-up positive.
-  // opts: {breather} softens a hole after a killer (MiniGolf MMO tutorial);
-  //       {twoRoute} biases water onto the direct line so the safe route and
-  //       the risky carry both exist (OK Golf / A Little Golf Journey).
-  // genHole(seed) with no opts is unchanged from the original generator.
+  // opts: {breather} softens a hole after a killer (fewer hazards, no water);
+  //       {twoRoute} puts water on the direct tee->cup line so the risky
+  //       carry and the safe dogleg both exist (OK Golf / A Little Golf Journey).
   TF.genHole = function (seed, opts) {
     opts = opts || {};
     var rng = TF.mulberry32(seed >>> 0);
-    var W = 100, H = 60;
+    var W = TF.W, H = TF.H;
 
-    var f1 = 1 + ((rng() * 2) | 0);  // 1..2 waves across the world
-    var f2 = 3 + ((rng() * 2) | 0);  // 3..4
-    var f3 = 6 + ((rng() * 3) | 0);  // 6..8
-    var a1 = 3.5 + rng() * 1.5;
-    var a2 = 1.8 + rng() * 1.2;
-    var a3 = 0.8 + rng() * 0.7;
-    var p1 = rng() * TAU, p2 = rng() * TAU, p3 = rng() * TAU;
-    var base = 20 + rng() * 6;
+    // Cup + green.
+    var cupX = 14 + rng() * 28;          // 14..42
+    var cupY = 74 + rng() * 14;          // 74..88
+    var green = {
+      x: cupX, y: cupY,
+      rx: 9 + rng() * 3, ry: 7 + rng() * 2.5,
+      rot: (rng() - 0.5) * 0.6
+    };
 
-    // Cap the worst-case slope so no cliffs steeper than ~50° can appear.
-    var worst = (a1 * TAU * f1 + a2 * TAU * f2 + a3 * TAU * f3) / W;
-    if (worst > MAX_SLOPE) {
-      var k = MAX_SLOPE / worst;
-      a1 *= k; a2 *= k; a3 *= k;
+    // Tee.
+    var teeX = 18 + rng() * 20;          // 18..38
+    var teeY = 7 + rng() * 4;            // 7..11
+
+    // Centerline tee -> cup with a possible dogleg. The fairway follows it,
+    // so a chain of sensible shots along it always solves the hole.
+    var pts = [{ x: teeX, y: teeY }];
+    var nMid = 2 + ((rng() * 2) | 0);    // 2..3 interior points
+    var dogleg = rng() < 0.45 || !!opts.twoRoute;
+    var bendDir = rng() < 0.5 ? -1 : 1;
+    var bendAmt = opts.twoRoute ? 14 + rng() * 8
+                : dogleg ? 10 + rng() * 8 : 4 + rng() * 5;
+    var dx0 = cupX - teeX, dy0 = cupY - teeY;
+    var dl0 = Math.hypot(dx0, dy0) || 1;
+    var pnx = -dy0 / dl0, pny = dx0 / dl0;  // unit perpendicular
+    var i, f, cx, cy;
+    for (i = 1; i <= nMid; i++) {
+      f = i / (nMid + 1);
+      cx = teeX + dx0 * f + pnx * Math.sin(f * Math.PI) * bendAmt * bendDir * (0.6 + rng() * 0.7);
+      cy = teeY + dy0 * f + pny * Math.sin(f * Math.PI) * bendAmt * bendDir * 0.2;
+      pts.push({ x: clamp(cx, 8, W - 8), y: clamp(cy, 14, H - 10) });
     }
-    if (opts.breather) { a1 *= 0.62; a2 *= 0.62; a3 *= 0.62; }
+    pts.push({ x: cupX, y: cupY });
 
-    var w1 = TAU * f1 / W, w2 = TAU * f2 / W, w3 = TAU * f3 / W;
-    function h(x) {
-      return base +
-        a1 * Math.sin(w1 * x + p1) +
-        a2 * Math.sin(w2 * x + p2) +
-        a3 * Math.sin(w3 * x + p3);
-    }
-    function slope(x) {
-      return a1 * w1 * Math.cos(w1 * x + p1) +
-             a2 * w2 * Math.cos(w2 * x + p2) +
-             a3 * w3 * Math.cos(w3 * x + p3);
+    var fwR = 7 + rng() * 2;             // fairway half-width
+    var fairway = [];
+    for (i = 0; i < pts.length - 1; i++) {
+      fairway.push({ x1: pts[i].x, y1: pts[i].y,
+                     x2: pts[i + 1].x, y2: pts[i + 1].y, r: fwR });
     }
 
-    // Tee on one third, cup on the other (side may flip).
-    var teeX = 8 + rng() * 20;   // 8..28
-    var cupX = 72 + rng() * 20;  // 72..92
-    var flip = rng() < 0.5;
-    if (flip) { teeX = W - teeX; cupX = W - cupX; }
-
-    // The cup gets a green: relocate to the flattest spot in its third so
-    // the ball can actually stay near it (no hilltop cups). Kept >= 10
-    // units from the walls so overshoots have run-out room.
-    var cupLo = flip ? 10 : 70, cupHi = flip ? 30 : 90;
-    var bestX = cupX, bestScore = Infinity;
-    for (var cx = cupLo; cx <= cupHi; cx += 0.75) {
-      var sc = Math.abs(slope(cx)) +
-               2 * Math.abs(slope(cx + 0.75) - slope(cx - 0.75));
-      if (sc < bestScore) { bestScore = sc; bestX = cx; }
-    }
-    cupX = bestX;
-
-    // Water: a narrow shallow dip in the middle band, always carryable.
-    // twoRoute: center the dip on the direct tee->cup line (risky carry),
-    // leaving the around-path as the safe route.
-    var water = [];
-    var waterLevel = -1000;
-    if (rng() < 0.6 || opts.twoRoute) {
-      var midX = (teeX + cupX) / 2;
-      var scanLo = opts.twoRoute ? Math.max(4, midX - 16) : W * 0.30;
-      var scanHi = opts.twoRoute ? Math.min(W - 4, midX + 16) : W * 0.70;
-      var dipX = -1, bestH = Infinity, x;
-      for (x = scanLo; x <= scanHi; x += 0.5) {
-        var hx = h(x);
-        if (hx < bestH) { bestH = hx; dipX = x; }
+    function distToFairway(x, y) {
+      var d = Infinity, j;
+      for (j = 0; j < fairway.length; j++) {
+        var s = fairway[j];
+        var dd = segDist(x, y, s.x1, s.y1, s.x2, s.y2) - s.r;
+        if (dd < d) d = dd;
       }
-      if (dipX > 0) {
-        var ww = 4 + rng() * 5;          // 4..9 wide
-        var wl = bestH + 0.6 + rng() * 0.9; // shallow
-        var x0 = dipX - ww / 2, x1 = dipX + ww / 2;
-        // Only keep it if the dip really sits below the water line, and the
-        // bowl is gentle (no steep hill right beside the water to ricochet
-        // approach shots back into it).
-        var gentle = h(x0) > wl && h(x1) > wl;
-        for (var gx = dipX - 7; gentle && gx <= dipX + 7; gx += 1) {
-          if (gx < 0 || gx > W) continue;
-          if (h(gx) > wl + 3.2) gentle = false;
-        }
-        if (gentle) {
-          water.push({ x0: x0, x1: x1 });
-          waterLevel = wl;
-        }
-      }
+      return d;  // <= 0 means on the fairway
     }
-    if (opts.breather) { water = []; waterLevel = -1000; }  // breathers stay dry
 
-    // Sand patches, kept clear of tee, cup, and water.
+    // Sand: 1..3 traps. Some guard the green, others dot the fairway edge.
     var sand = [];
-    var nSand = (rng() * 3) | 0; // 0..2
+    var nSand = 1 + ((rng() * 3) | 0);   // 1..3
     if (opts.breather && nSand > 1) nSand = 1;
-    for (var i = 0; i < nSand; i++) {
-      for (var tries = 0; tries < 12; tries++) {
-        var sx = 6 + rng() * (W - 12);
-        var sw = 4 + rng() * 6;
-        var mid = sx + sw / 2;
-        var ok = Math.abs(mid - teeX) > 6 && Math.abs(mid - cupX) > 6;
-        for (var j = 0; ok && j < water.length; j++) {
-          if (sx < water[j].x1 + 1 && sx + sw > water[j].x0 - 1) ok = false;
+    for (i = 0; i < nSand; i++) {
+      for (var tries = 0; tries < 14; tries++) {
+        var se;
+        if (rng() < 0.45) {
+          // green-side bunker: ring around the cup, clear of the green
+          var ba = rng() * TAU;
+          var bd = green.rx + 2.5 + rng() * 3.5;
+          se = { x: cupX + Math.cos(ba) * bd, y: cupY + Math.sin(ba) * bd * 0.8,
+                 rx: 2.6 + rng() * 2.2, ry: 2.0 + rng() * 1.8, rot: rng() * TAU };
+        } else {
+          // fairway-edge trap: near the centerline but off it
+          var fp = pts[(rng() * (pts.length - 1)) | 0];
+          var fa = rng() * TAU;
+          var fd = fwR + 1.5 + rng() * 4;
+          se = { x: fp.x + Math.cos(fa) * fd, y: fp.y + Math.sin(fa) * fd,
+                 rx: 2.8 + rng() * 2.6, ry: 2.1 + rng() * 2.0, rot: rng() * TAU };
         }
-        if (ok) { sand.push({ x0: sx, x1: sx + sw }); break; }
+        se.x = clamp(se.x, 5, W - 5);
+        se.y = clamp(se.y, 12, H - 6);
+        var sok = dist2(se.x, se.y, teeX, teeY) > 64 &&   // >= 8 from tee
+                  !inEllipse(cupX, cupY, se);              // never covers the cup
+        // keep traps off the centerline: the safe route stays clean
+        if (sok) {
+          var maj = Math.max(se.rx, se.ry);
+          for (var f0 = 0; sok && f0 < fairway.length; f0++) {
+            var fs = fairway[f0];
+            if (segDist(se.x, se.y, fs.x1, fs.y1, fs.x2, fs.y2) < maj + 1) sok = false;
+          }
+        }
+        for (var w0 = 0; sok && w0 < sand.length; w0++) {
+          if (dist2(se.x, se.y, sand[w0].x, sand[w0].y) <
+              Math.pow(se.rx + sand[w0].rx + 1.5, 2)) sok = false;
+        }
+        if (sok) { sand.push(se); break; }
       }
     }
 
-    // Par from distance, elevation change, and hazards.
-    var dist = Math.abs(cupX - teeX);
-    var elev = Math.abs(h(cupX) - h(teeX));
-    var hazards = sand.length + (water.length ? 1.5 : 0);
-    var par = Math.round(dist / 22 + elev / 14 + hazards * 0.6);
-    if (par < 2) par = 2;
-    if (par > 5) par = 5;
+    // Water: blobs. twoRoute centers one on the direct line (risky carry);
+    // the doglegged fairway is the safe route around it.
+    var water = [];
+    function clearOfHazards(e, margin) {
+      if (dist2(e.x, e.y, teeX, teeY) < 100) return false;
+      if (inEllipse(cupX, cupY, { x: e.x, y: e.y, rx: e.rx + 2, ry: e.ry + 2, rot: e.rot })) return false;
+      var j;
+      for (j = 0; j < sand.length; j++)
+        if (dist2(e.x, e.y, sand[j].x, sand[j].y) < Math.pow(e.rx + sand[j].rx + (margin || 1.5), 2)) return false;
+      for (j = 0; j < water.length; j++)
+        if (dist2(e.x, e.y, water[j].x, water[j].y) < Math.pow(e.rx + water[j].rx + (margin || 1.5), 2)) return false;
+      return true;
+    }
+    if (!opts.breather && (rng() < 0.55 || opts.twoRoute)) {
+      for (var wt = 0; wt < 14; wt++) {
+        var we;
+        if (opts.twoRoute && water.length === 0) {
+          // On the direct tee->cup line, midway.
+          var wf = 0.4 + rng() * 0.25;
+          we = { x: teeX + dx0 * wf, y: teeY + dy0 * wf,
+                 rx: 4 + rng() * 2.5, ry: 3 + rng() * 2, rot: rng() * TAU };
+        } else {
+          we = { x: 6 + rng() * (W - 12), y: 18 + rng() * (H - 30),
+                 rx: 3.5 + rng() * 3, ry: 2.5 + rng() * 2.5, rot: rng() * TAU };
+        }
+        // Must not touch the fairway: the safe route stays dry.
+        if (distToFairway(we.x, we.y) < we.rx + 2.5) continue;
+        if (!clearOfHazards(we)) continue;
+        water.push(we);
+        if (water.length >= (opts.twoRoute ? 1 : 2)) break;
+        if (!opts.twoRoute && rng() < 0.5) break;
+      }
+    }
+
+    // Trees: circle bumpers in the rough, clear of play lines.
+    var trees = [];
+    var nTrees = 4 + ((rng() * 6) | 0);  // 4..9
+    for (i = 0; i < nTrees; i++) {
+      for (var tt = 0; tt < 14; tt++) {
+        var tx = 4 + rng() * (W - 8), ty = 12 + rng() * (H - 18);
+        var tr = 1.6 + rng() * 1.0;
+        if (distToFairway(tx, ty) < tr + 3) continue;
+        if (inEllipse(tx, ty, { x: green.x, y: green.y, rx: green.rx + 3, ry: green.ry + 3, rot: green.rot })) continue;
+        if (dist2(tx, ty, teeX, teeY) < 49) continue;
+        var tok = true, j2;
+        for (j2 = 0; tok && j2 < water.length; j2++)
+          if (inEllipse(tx, ty, water[j2])) tok = false;
+        for (j2 = 0; tok && j2 < sand.length; j2++)
+          if (inEllipse(tx, ty, sand[j2])) tok = false;
+        for (j2 = 0; tok && j2 < trees.length; j2++)
+          if (dist2(tx, ty, trees[j2].x, trees[j2].y) < Math.pow(tr + trees[j2].r + 1.5, 2)) tok = false;
+        if (tok) { trees.push({ x: tx, y: ty, r: tr }); break; }
+      }
+    }
+
+    // Slope field: a gentle global tilt + a stronger break around the cup
+    // (the green-reading skill) + low smooth noise. Returns acceleration.
+    var tiltA = rng() * TAU, tiltM = 0.4 + rng() * 0.8;
+    var breakA = rng() * TAU, breakM = 1.2 + rng() * 1.6;
+    var n1p = rng() * TAU, n2p = rng() * TAU;
+    function slopeAt(x, y) {
+      var dxc = x - cupX, dyc = y - cupY;
+      var fall = Math.exp(-(dxc * dxc + dyc * dyc) / (2 * 14 * 14));
+      return {
+        x: Math.cos(tiltA) * tiltM + Math.cos(breakA) * breakM * fall +
+           0.5 * Math.sin(x * 0.35 + n1p) * Math.cos(y * 0.30 + n2p),
+        y: Math.sin(tiltA) * tiltM + Math.sin(breakA) * breakM * fall +
+           0.5 * Math.cos(x * 0.30 + n2p) * Math.sin(y * 0.35 + n1p)
+      };
+    }
+
+    // Path length along the centerline -> par.
+    var pathLen = 0;
+    for (i = 0; i < pts.length - 1; i++)
+      pathLen += Math.sqrt(dist2(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y));
+    var hazards = sand.length * 0.5 + water.length * 0.8 + trees.length * 0.1;
+    var par = Math.round(pathLen / 26 + hazards * 0.5);
+    par = clamp(par, 2, 5);
 
     var biome = (rng() * 4) | 0;
 
     return {
       seed: seed >>> 0,
-      W: W,
-      H: H,
-      terrain: { h: h, slope: slope },
-      sand: sand,
-      water: water,
-      waterLevel: waterLevel,
-      tee: { x: teeX, y: h(teeX) + TF.BALL_R },
-      cup: { x: cupX, y: h(cupX) },
+      W: W, H: H,
+      fairway: fairway,          // segments {x1,y1,x2,y2,r}
+      green: green,              // ellipse {x,y,rx,ry,rot} (cup at center)
+      sand: sand,                // ellipses
+      water: water,              // ellipses
+      trees: trees,              // circles {x,y,r}
+      slopeAt: slopeAt,
+      tee: { x: teeX, y: teeY },
+      cup: { x: cupX, y: cupY },
       par: par,
       biome: biome
     };
+  };
+
+  /* ---------------- surfaces ---------------- */
+
+  // 'water' | 'sand' | 'green' | 'fairway' | 'rough'
+  TF.surfaceAt = function (hole, x, y) {
+    var i;
+    for (i = 0; i < hole.water.length; i++)
+      if (inEllipse(x, y, hole.water[i])) return 'water';
+    for (i = 0; i < hole.sand.length; i++)
+      if (inEllipse(x, y, hole.sand[i])) return 'sand';
+    if (inEllipse(x, y, hole.green)) return 'green';
+    for (i = 0; i < hole.fairway.length; i++) {
+      var s = hole.fairway[i];
+      if (segDist(x, y, s.x1, s.y1, s.x2, s.y2) <= s.r) return 'fairway';
+    }
+    return 'rough';
   };
 
   /* ---------------- ball ---------------- */
@@ -192,13 +309,13 @@
       x: hole.tee.x, y: hole.tee.y,
       vx: 0, vy: 0,
       resting: true, inCup: false, inWater: false,
-      spin: 0,        // -1 (backspin) .. +1 (topspin), Golf on Mars style
-      impact: 0,      // normal impact speed of the last real bounce (for dust)
-      stillT: 0       // time spent nearly motionless (stuck-ball guard)
+      spin: 0,        // -1 (backspin, bites) .. +1 (topspin, runs on)
+      impact: 0,      // tree-bounce impact speed (for juice)
+      stillT: 0       // stuck-ball guard
     };
   };
 
-  // Sets velocity, clears resting. Speed is capped at MAX_POWER, or
+  // Sets velocity, clears resting. Speed capped at MAX_POWER, or
   // OVERDRIVE_MAX for overdrive shots. opts: {spin, overdrive}.
   TF.shoot = function (ball, vx, vy, opts) {
     var o = opts || {};
@@ -240,24 +357,8 @@
     return s / k;
   };
 
-  TF.inSand = function (hole, x) {
-    for (var i = 0; i < hole.sand.length; i++) {
-      var s = hole.sand[i];
-      if (x >= s.x0 && x <= s.x1) return true;
-    }
-    return false;
-  };
-
-  TF.inWater = function (hole, x) {
-    for (var i = 0; i < hole.water.length; i++) {
-      var w = hole.water[i];
-      if (x >= w.x0 && x <= w.x1) return true;
-    }
-    return false;
-  };
-
   // Advances EXACTLY 1/60 s of physics. Sub-steps internally when the
-  // ball is fast so no step moves more than half a ball radius (no tunneling).
+  // ball is fast so no step moves more than half a ball radius.
   TF.simStep = function (hole, ball) {
     if (ball.inCup || ball.inWater) return;
     var dt = TF.DT;
@@ -268,7 +369,7 @@
     var sdt = dt / n;
     for (var i = 0; i < n; i++) {
       TF._step(hole, ball, sdt);
-      if (ball.inCup || ball.inWater) break;
+      if (ball.inCup || ball.inWater || ball.resting) break;
     }
   };
 
@@ -276,88 +377,72 @@
   TF._step = function (hole, ball, dt) {
     var R = TF.BALL_R;
 
-    ball.vy -= TF.GRAV * dt;
+    var surf = TF.surfaceAt(hole, ball.x, ball.y);
+    if (surf === 'water') {
+      ball.inWater = true;
+      ball.vx = 0; ball.vy = 0;
+      ball.resting = false;
+      return;
+    }
+    var P = TF.SURF[surf] || TF.SURF.rough;
+
+    // Slope acceleration (the break).
+    var sl = hole.slopeAt(ball.x, ball.y);
+    var slMag = Math.hypot(sl.x, sl.y);
+
+    // Spin shapes effective friction: topspin runs on, backspin bites.
+    // (Golf on Mars' highest-leverage control, zero UI cost.)
+    var spn = ball.spin || 0;
+    var fr = P.fr * (1 - 0.45 * spn);
+    if (fr < 1) fr = 1;
+
+    ball.vx += sl.x * dt;
+    ball.vy += sl.y * dt;
+
+    // Rolling resistance: Coulomb decel + exponential damping.
+    var sp = Math.hypot(ball.vx, ball.vy);
+    if (sp > 0) {
+      var dec = fr * dt;
+      var nsp = sp - dec;
+      if (nsp < 0) nsp = 0;
+      nsp *= Math.exp(-P.damp * dt);
+      var kk = nsp / sp;
+      ball.vx *= kk; ball.vy *= kk;
+      sp = nsp;
+    }
+
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
 
-    // Side walls and ceiling.
-    if (ball.x < R) { ball.x = R; if (ball.vx < 0) ball.vx = -ball.vx * TF.REST; }
-    else if (ball.x > hole.W - R) {
-      ball.x = hole.W - R;
-      if (ball.vx > 0) ball.vx = -ball.vx * TF.REST;
-    }
-    if (ball.y > hole.H + 40) { ball.y = hole.H + 40; if (ball.vy > 0) ball.vy = 0; }
+    ball.spin = spn * Math.exp(-1.4 * dt);  // spin dies as the ball rolls
 
-    var g = hole.terrain.h(ball.x);
-    if (ball.y - R <= g) {
-      // ---- ground contact ----
-      ball.y = g + R;
-      var s = hole.terrain.slope(ball.x);
-      var inv = 1 / Math.sqrt(1 + s * s);
-      var nx = -s * inv, ny = inv;  // unit surface normal (up)
-      var tx = inv, ty = s * inv;   // unit tangent (+x)
-      var sand = TF.inSand(hole, ball.x);
-      var spn = ball.spin || 0;
-
-      var vn = ball.vx * nx + ball.vy * ny;
-      if (vn < -1.2) {
-        // Real bounce: reflect the normal component with restitution,
-        // scrub the tangential component on impact. Spin modifies the
-        // scrub: topspin keeps roll, backspin checks the ball up.
-        ball.impact = -vn;
-        var rvx = ball.vx - (1 + TF.REST) * vn * nx;
-        var rvy = ball.vy - (1 + TF.REST) * vn * ny;
-        var vn2 = rvx * nx + rvy * ny;
-        // Topspin drives through the bounce (keeps roll), backspin checks up.
-        var keep = (sand ? 0.4 : 0.6) * (1 + 0.35 * spn);
-        if (keep < 0.15) keep = 0.15;
-        if (keep > 0.95) keep = 0.95;
-        ball.vx = vn2 * nx + (rvx - vn2 * nx) * keep;
-        ball.vy = vn2 * ny + (rvy - vn2 * ny) * keep;
-        ball.spin = spn * 0.55;   // bounce eats a chunk of the spin
-      } else if (vn < 0) {
-        // Gentle contact: just kill the inward normal velocity (rolling).
-        ball.vx -= vn * nx;
-        ball.vy -= vn * ny;
-      } else {
-        ball.impact = 0;
+    // Trees: circle bumpers.
+    var i, t, tdx, tdy, td, minD, nx, ny, vn;
+    for (i = 0; i < hole.trees.length; i++) {
+      t = hole.trees[i];
+      tdx = ball.x - t.x; tdy = ball.y - t.y;
+      td = Math.sqrt(tdx * tdx + tdy * tdy);
+      minD = R + t.r;
+      if (td < minD && td > 0.0001) {
+        nx = tdx / td; ny = tdy / td;
+        ball.x = t.x + nx * minD;
+        ball.y = t.y + ny * minD;
+        vn = ball.vx * nx + ball.vy * ny;
+        if (vn < 0) {
+          ball.impact = -vn;
+          ball.vx -= (1 + TF.REST_TREE) * vn * nx;
+          ball.vy -= (1 + TF.REST_TREE) * vn * ny;
+          // scrub a little tangential speed on the bark
+          ball.vx *= 0.92; ball.vy *= 0.92;
+        }
       }
-
-      // Rolling: gravity accelerates downhill along the tangent,
-      // Coulomb rolling resistance opposes motion (stronger on sand).
-      // Spin pushes along the roll direction: topspin drives, backspin brakes.
-      var vt = ball.vx * tx + ball.vy * ty;
-      var aSlope = -TF.GRAV * s * inv;
-      var rr = sand ? 10.0 : 5.0;
-      vt += aSlope * dt;
-      if (vt !== 0 && spn !== 0) vt += spn * (vt > 0 ? 1 : -1) * 8.0 * dt;
-      var dec = rr * dt;
-      if (vt > 0) vt = Math.max(0, vt - dec);
-      else if (vt < 0) vt = Math.min(0, vt + dec);
-      vt *= Math.exp(-0.15 * dt);
-
-      var vn3 = ball.vx * nx + ball.vy * ny;
-      if (vn3 < 0) vn3 = 0;
-      ball.vx = vn3 * nx + vt * tx;
-      ball.vy = vn3 * ny + vt * ty;
-      ball.spin = (ball.spin || 0) * Math.exp(-1.6 * dt);  // spin dies on the ground
-
-      // Rest only when slow on a gentle slope; steep slopes keep sliding.
-      // Stuck-ball guard: a ball that stays nearly motionless for 2s (e.g.
-      // wedged against a wall on a steep slope) is forced to rest — a
-      // genuinely sliding ball re-accelerates past 1 u/s almost instantly.
-      var spdNow = Math.hypot(ball.vx, ball.vy);
-      if (spdNow < 1.0) ball.stillT = (ball.stillT || 0) + dt;
-      else ball.stillT = 0;
-      if ((spdNow < 0.7 && Math.abs(s) < 0.5) || (ball.stillT || 0) > 2.0) {
-        ball.vx = 0; ball.vy = 0; ball.resting = true; ball.stillT = 0;
-      } else {
-        ball.resting = false;
-      }
-    } else {
-      ball.resting = false;
-      ball.spin = (ball.spin || 0) * Math.exp(-0.25 * dt); // slow decay in the air
     }
+
+    // World walls.
+    if (ball.x < R) { ball.x = R; if (ball.vx < 0) { ball.impact = Math.max(ball.impact, -ball.vx); ball.vx = -ball.vx * TF.REST_TREE; } }
+    else if (ball.x > hole.W - R) { ball.x = hole.W - R; if (ball.vx > 0) { ball.impact = Math.max(ball.impact, ball.vx); ball.vx = -ball.vx * TF.REST_TREE; } }
+    if (ball.y < R) { ball.y = R; if (ball.vy < 0) { ball.impact = Math.max(ball.impact, -ball.vy); ball.vy = -ball.vy * TF.REST_TREE; } }
+    else if (ball.y > hole.H - R) { ball.y = hole.H - R; if (ball.vy > 0) { ball.impact = Math.max(ball.impact, ball.vy); ball.vy = -ball.vy * TF.REST_TREE; } }
 
     // ---- cup magnet: slow balls near the cup get a gentle pull ----
     // (Mini Touch Golf: holes attract more than real physics suggests.)
@@ -365,10 +450,8 @@
       var mdx = hole.cup.x - ball.x, mdy = hole.cup.y - ball.y;
       var md = Math.sqrt(mdx * mdx + mdy * mdy);
       var msp = Math.hypot(ball.vx, ball.vy);
-      var mR = TF.CUP_R * TF.MAGNET_R;
-      if (md < mR && md > 0.001 && msp < TF.CAPTURE_V * 1.6 &&
-          ball.y < hole.terrain.h(ball.x) + 4) {
-        var pull = (1 - md / mR) * 30;
+      if (md < TF.MAGNET_R && md > 0.001 && msp < TF.CAPTURE_V * 1.6) {
+        var pull = (1 - md / TF.MAGNET_R) * 24;
         ball.vx += (mdx / md) * pull * dt;
         ball.vy += (mdy / md) * pull * dt;
       }
@@ -382,16 +465,21 @@
         ball.inCup = true;
         ball.resting = true;
         ball.x = hole.cup.x;
-        ball.y = hole.cup.y + R * 0.4;
+        ball.y = hole.cup.y;
         ball.vx = 0; ball.vy = 0;
         return;
       }
     }
 
-    // ---- water ----
-    if (TF.inWater(hole, ball.x) && ball.y - R < hole.waterLevel) {
-      ball.inWater = true;
+    // ---- rest: slow enough that friction holds it against the slope ----
+    var spdNow = Math.hypot(ball.vx, ball.vy);
+    if (spdNow < 1.0) ball.stillT = (ball.stillT || 0) + dt;
+    else ball.stillT = 0;
+    if ((spdNow < 0.9 && slMag < fr) || (ball.stillT || 0) > 2.5) {
       ball.vx = 0; ball.vy = 0;
+      ball.resting = true;
+      ball.stillT = 0;
+    } else {
       ball.resting = false;
     }
   };

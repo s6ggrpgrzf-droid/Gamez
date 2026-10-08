@@ -1,75 +1,58 @@
-'use strict';
-/* =====================================================================
- * Tiny Fairway — canvas render + input + audio + meta (game #12)
+/* Tiny Fairway — top-down one-touch golf.
  *
- * Built against the TF sim contract (sim.js, plain script, global TF):
- *   TF.mulberry32(seed), TF.dailySeed('YYYY-MM-DD') -> uint32
- *   TF.GRAV, TF.REST, TF.BALL_R, TF.CUP_R, TF.MAX_POWER,
- *   TF.OVERDRIVE_MAX (=75), TF.MAGNET_R (=2.0, magnetic cup radius)
- *   TF.genHole(seed, opts) -> {seed,W,H, terrain:{h(x),slope(x)}, sand:[{x0,x1}],
- *                        water:[{x0,x1}], waterLevel, tee:{x,y}, cup:{x,y}, par, biome}
- *     opts: {breather} softens amplitudes / limits hazards;
- *           {twoRoute} centers the water dip on the tee->cup line (risky shortcut
- *           vs safe route). No opts = classic generator, byte-identical.
- *   TF.newBall(hole) -> ball (.spin, .impact, .stillT added by revamp)
- *   TF.shoot(ball,vx,vy,opts) — opts {spin:-1..1 (back/topspin), overdrive}
- *     overdrive raises the cap to OVERDRIVE_MAX (game adds the accuracy jitter)
- *   TF.simStep(hole,ball) = exactly 1/60s physics
- *   TF.starsFor(strokes,par); TF.inSand(hole,x); TF.inWater(hole,x)
- *   TF.snapBall(ball)/TF.restoreBall(ball,snap) — one-deep undo
- *   TF.skipStrokes(par) = par+3 — skip-hole banking
- *   TF.avgLast(arr,n) — rolling average helper
- *
- * Revamp (2026-10-04): spin input, overdrive zone, landing marker, undo,
- * skip-after-20, last-shot ghost, ball trail, bounce dust, power audio,
- * rolling-50 HUD, milestone toasts, breather/two-route holes, touch camera lift.
- *
- * Ball-shape note: game.js reads/writes ball.x/.y/.vx/.vy/.resting and treats
- * any of ball.inCup|ball.sunk|ball.holed|ball.potted as the holed flag, with a
- * geometric fallback (slow and resting inside the cup radius).
- * ===================================================================== */
+ * The whole hole is visible at once: read the slope arrows, drag back
+ * anywhere to aim (the dotted path bends with the break), release to shoot.
+ * Pure TF sim underneath; this file is input + render + meta only. */
 (function () {
+  'use strict';
   function $(id) { return document.getElementById(id); }
   function showErr(m) { var e = $('err'); e.hidden = false; e.textContent = m; }
-  if (typeof TF === 'undefined') { showErr('Tiny Fairway could not load its physics (sim.js).'); return; }
+  window.addEventListener('error', function (ev) { showErr('Error: ' + (ev.message || ev.type)); });
 
   /* ---------------- canvas / viewport ---------------- */
   var canvas = $('game'), ctx = canvas.getContext('2d');
-  var cw = 0, ch = 0, DPR = 1, skyGrad = null;
+  var cw = 0, ch = 0, dpr = 1;
   function resize() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
     cw = window.innerWidth; ch = window.innerHeight;
-    canvas.width = Math.round(cw * DPR); canvas.height = Math.round(ch * DPR);
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    skyGrad = null; fit();
+    canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+    canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fit();
   }
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', function () { setTimeout(resize, 120); });
 
-  /* ---------------- world -> screen ---------------- */
-  var vw = 100, vh = 60, sc = 1, ox = 0, oy = 0;
+  /* ---------------- world -> screen (whole hole always visible) ---------------- */
+  var sc = 6, ox = 0, oy = 0;
   function fit() {
-    vw = hole ? hole.W : 100; vh = hole ? hole.H : 60;
-    sc = Math.min(cw / vw, ch / vh);
-    ox = (cw - vw * sc) / 2; oy = (ch - vh * sc) / 2;
+    var topPad = 84;   // HUD lives here
+    sc = Math.min(cw / (TF.W + 5), (ch - topPad - 16) / (TF.H + 4));
+    ox = (cw - TF.W * sc) / 2;
+    oy = topPad + ((ch - topPad - 16) - TF.H * sc) / 2;
   }
   function X(x) { return ox + x * sc; }
-  function Y(y) { return oy + (vh - y) * sc - camLift; }   // camLift: touch aim occlusion shift
+  function Y(y) { return oy + (TF.H - y) * sc; }   // world y-up -> screen y-down
 
-  /* ---------------- biomes: 0 dawn meadow, 1 desert noon, 2 dusk, 3 moonlit snow */
+  /* ---------------- biomes: top-down grass palettes ----------------
+   * 0 dawn meadow, 1 desert noon, 2 dusk, 3 moonlit snow */
   var BIOMES = [
-    { skyTop: '#f7b267', skyBot: '#fdf3d8', sun: '#fff6d8', sunY: 0.72,
-      terrain: '#79b25a', terrainDark: '#57873f', sand: '#e6cf96', sandDot: '#c9af6b',
-      water: '#6fc3e8', waterTop: '#bfe9fa', flag: '#e0492f', wind: 520 },
-    { skyTop: '#2f9df0', skyBot: '#ffedbe', sun: '#fffbe9', sunY: 0.82,
-      terrain: '#d9a75f', terrainDark: '#a97c3a', sand: '#f2e0b0', sandDot: '#d9bd7f',
-      water: '#3fa9e0', waterTop: '#b5e6fa', flag: '#d63c2f', wind: 380 },
-    { skyTop: '#241543', skyBot: '#ff8c5a', sun: '#ffd27a', sunY: 0.34,
-      terrain: '#3e5a41', terrainDark: '#2a4030', sand: '#c9ad76', sandDot: '#a3804f',
-      water: '#5a7fd6', waterTop: '#a9c2f2', flag: '#ff5a4e', wind: 300 },
-    { skyTop: '#060d1f', skyBot: '#27406e', sun: '#f4f1de', sunY: 0.78,
-      terrain: '#dde8f6', terrainDark: '#a9bcd8', sand: '#cfd9e8', sandDot: '#a9b8d2',
-      water: '#3d6fb4', waterTop: '#9cc4ee', flag: '#e0492f', wind: 640 }
+    { wind: 520, rough: '#4a7c3f', fairA: '#63a04b', fairB: '#5a9443',
+      green: '#71b257', greenDark: '#548a41', sand: '#e0c98f', sandDot: '#c6a96f',
+      water: '#5fa8c9', waterTop: '#cfeaf7', tree: '#2e5b2a', treeDark: '#1f3d1c',
+      speck: 'rgba(30,60,25,', cup: '#20301c' },
+    { wind: 640, rough: '#b5975a', fairA: '#9fb45c', fairB: '#92a854',
+      green: '#adc46a', greenDark: '#82993f', sand: '#eed9a0', sandDot: '#d3b878',
+      water: '#4f9ec4', waterTop: '#c4e6f5', tree: '#4a6b2f', treeDark: '#33491f',
+      speck: 'rgba(120,90,40,', cup: '#3a2c14' },
+    { wind: 430, rough: '#5e4f6b', fairA: '#7d8a4d', fairB: '#718046',
+      green: '#8aa45c', greenDark: '#647c3e', sand: '#d9bd85', sandDot: '#b8985f',
+      water: '#4a6f9e', waterTop: '#b9d4ea', tree: '#37452e', treeDark: '#232d1d',
+      speck: 'rgba(30,25,45,', cup: '#241c2e' },
+    { wind: 700, rough: '#a9b9cf', fairA: '#ccd8e8', fairB: '#c0cde0',
+      green: '#d9e5f3', greenDark: '#aebfd6', sand: '#e6e0d0', sandDot: '#c9c2ae',
+      water: '#6f9ecf', waterTop: '#d8e9f8', tree: '#5c6e80', treeDark: '#3d4a57',
+      speck: 'rgba(90,110,140,', cup: '#2c3a4e' }
   ];
   function biome() { return BIOMES[curBiome]; }
 
@@ -164,13 +147,7 @@
     click: function () { this.blip(520, 480, 0.07, 0.10, 'triangle'); }
   };
 
-  /* ---------------- haptics: minimal vibration vocabulary ----------------
-   * Fits the "precise, calm, minimal" identity: exactly two pulses —
-   * light [20] on shoot, success [10,40,10] on hole-out. Nothing else.
-   * Feature-detected and fully guarded (never throws on iOS, where the
-   * Vibration API doesn't exist), honors prefers-reduced-motion, and is
-   * user-toggleable from the menu (persisted under tf_haptic; no other
-   * save data is touched). */
+  /* ---------------- haptics: minimal vibration vocabulary ---------------- */
   var RM = false;
   try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
   var HAP = {
@@ -180,7 +157,7 @@
       this.enabled = lsGet('tf_haptic', 'on') === 'on';
       var b = $('btn-haptic');
       if (!b) return;
-      if (!this.supported) { b.hidden = true; return; }   // iOS: no vibrate API — hide rather than show a dead toggle
+      if (!this.supported) { b.hidden = true; return; }
       this.paint();
     },
     ok: function () { return this.supported && this.enabled && !RM; },
@@ -216,7 +193,7 @@
   var holeNameStr = '';
   var particles = [];
   var turtle = null;
-  var speckles = [], nightStars = [];
+  var speckles = [];
   var aimPts = [];
   // revamp state
   var spinVal = 0, spinPointer = null, spinBase = 0, spinStartY = 0;  // Golf-on-Mars spin
@@ -227,7 +204,6 @@
   var prevKiller = false;           // previous hole was par+3 or worse -> breather next
   var maxHole = 1;                  // furthest hole reached (trail unlocks)
   var trailSel = 'Cloud';           // selected trail color name
-  var camLift = 0, camLiftT = 0;     // touch finger-occlusion camera shift (px)
   var toastTimer = 0;
   var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
@@ -276,8 +252,8 @@
     if (n > maxHole) { maxHole = n; lsSet('tf_maxhole', String(maxHole)); }
     lastRest = { x: ball.x, y: ball.y };
     particles = [];
-    fit(); skyGrad = null;
-    buildSpeckles(); buildNightStars(); initTurtle();
+    fit();
+    buildSpeckles(); initTurtle();
     holeNameStr = '';
     holeName(holeIndex, function (nm) {
       if (holeIndex !== n) return;
@@ -290,108 +266,165 @@
     milestoneCheck(n);
   }
 
+  // static decoration speckles: rough grass texture + sand dots (seeded per hole)
   function buildSpeckles() {
     speckles = [];
-    if (!hole.sand) return;
-    var rng = TF.mulberry32((seed ^ 0x51ab3) >>> 0);
-    hole.sand.forEach(function (p) {
-      var wdt = Math.max(0, p.x1 - p.x0), n = Math.round(wdt * 5), i, x;
-      for (i = 0; i < n; i++) {
-        x = p.x0 + rng() * wdt;
-        speckles.push({ x: x, y: hole.terrain.h(x) + 0.25 + rng() * 1.1, r: 0.14 + rng() * 0.3 });
+    var rng = TF.mulberry32((seed ^ 0x51ab) >>> 0), i;
+    for (i = 0; i < 130; i++) {
+      speckles.push({ x: rng() * TF.W, y: rng() * TF.H, r: 0.8 + rng() * 1.6,
+                      a: 0.05 + rng() * 0.08, k: 'g' });
+    }
+    for (i = 0; i < hole.sand.length; i++) {
+      var e = hole.sand[i];
+      for (var j = 0; j < 26; j++) {
+        var a = rng() * 6.2832, rr = Math.sqrt(rng());
+        speckles.push({ x: e.x + Math.cos(a) * rr * e.rx * 0.85,
+                        y: e.y + Math.sin(a) * rr * e.ry * 0.85,
+                        r: 0.5 + rng() * 0.9, a: 0.25 + rng() * 0.25, k: 's' });
       }
-    });
-  }
-  function buildNightStars() {
-    nightStars = [];
-    if (curBiome !== 3) return;
-    var rng = TF.mulberry32((seed ^ 0x77aa1) >>> 0), i;
-    for (i = 0; i < 70; i++)
-      nightStars.push({ x: rng() * cw, y: rng() * ch * 0.55, r: 0.6 + rng() * 1.4, tw: rng() * 6.28 });
+    }
   }
 
-  /* ---------------- the turtle (required creative touch) ---------------- */
+  /* ---------------- the turtle (required creative touch) ----------------
+   * Wanders the course, can never be hit (always ambles clear of the ball),
+   * and judges you with a slow blink after a bad hole. */
   function initTurtle() {
     turtle = null;
-    var rng = TF.mulberry32((seed ^ 0x9e3779b9) >>> 0);
+    var rng = TF.mulberry32((seed ^ 0x77aa) >>> 0);
     if (rng() >= 0.55) return;                       // not every hole gets a turtle
-    turtle = { x: 8 + rng() * (hole.W - 16), dir: rng() < 0.5 ? 1 : -1,
-               speed: 1.0 + rng() * 0.9, phase: rng() * 6.28,
-               judge: false, judgeT: 0, blinkT: rng() * 2 };
+    var p = turtleSpot(rng);
+    if (!p) return;
+    turtle = { x: p.x, y: p.y, ang: rng() * 6.2832, speed: 1.6 + rng() * 0.8,
+               tx: p.x, ty: p.y, pause: 0, judge: false, judgeT: 0,
+               blinkT: 2 + rng() * 3, blink: 0, rng: rng };
+  }
+  function turtleSpot(rng) {
+    for (var i = 0; i < 20; i++) {
+      var x = 6 + rng() * (TF.W - 12), y = 12 + rng() * (TF.H - 20);
+      var s = TF.surfaceAt(hole, x, y);
+      if (s !== 'fairway' && s !== 'green' && s !== 'rough') continue;
+      if (Math.hypot(x - hole.cup.x, y - hole.cup.y) < 8) continue;
+      if (Math.hypot(x - ball.x, y - ball.y) < 10) continue;
+      return { x: x, y: y };
+    }
+    return null;
   }
   function updateTurtle(dt) {
     if (!turtle) return;
     var t = turtle;
-    if (t.judge) { t.judgeT += dt; t.blinkT += dt; return; }
-    t.blinkT += dt;
-    var dx = t.x - ball.x, dy = hole.terrain.h(t.x) - ball.y;
-    var dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < 7 && dist > 0.001) {
-      // steer clear of the ball's path — the turtle can never be hit
-      t.x += (dx / dist) * 3.4 * dt;
-      t.dir = dx >= 0 ? 1 : -1;
-    } else {
-      t.x += t.dir * t.speed * dt;
+    if (t.judge) {
+      t.judgeT += dt;
+      if (t.judgeT > 6) { t.judge = false; }
     }
-    if (t.x < 3) { t.x = 3; t.dir = 1; }
-    if (t.x > hole.W - 3) { t.x = hole.W - 3; t.dir = -1; }
+    // blink cycle
+    t.blinkT -= dt;
+    if (t.blinkT <= 0) { t.blink = 0.22; t.blinkT = 2.5 + t.rng() * 4; }
+    if (t.blink > 0) t.blink -= dt;
+    // never under the ball: amble away when it gets close and is moving
+    var bd = Math.hypot(ball.x - t.x, ball.y - t.y);
+    var bSpd = Math.hypot(ball.vx, ball.vy);
+    var mvx = 0, mvy = 0, moving = false;
+    if (bd < 5 && bSpd > 2) {
+      mvx = (t.x - ball.x) / (bd || 1); mvy = (t.y - ball.y) / (bd || 1);
+      moving = true;
+      var nx = t.x + mvx * t.speed * 2.2 * dt, ny = t.y + mvy * t.speed * 2.2 * dt;
+      var ns = TF.surfaceAt(hole, nx, ny);
+      if (ns === 'fairway' || ns === 'green' || ns === 'rough') { t.x = nx; t.y = ny; }
+      t.ang = Math.atan2(mvy, mvx);
+    } else if (t.pause > 0) {
+      t.pause -= dt;
+    } else {
+      var dx = t.tx - t.x, dy = t.ty - t.y, d = Math.hypot(dx, dy);
+      if (d < 1) {
+        t.pause = 1 + t.rng() * 3;
+        var p = turtleSpot(t.rng);
+        if (p) { t.tx = p.x; t.ty = p.y; }
+      } else {
+        mvx = dx / d; mvy = dy / d; moving = true;
+        t.x += mvx * t.speed * dt; t.y += mvy * t.speed * dt;
+        t.ang = Math.atan2(mvy, mvx);
+      }
+    }
+    t.moving = moving;
+    t.phase = (t.phase || 0) + dt * (moving ? 9 : 2);
   }
   function turtleJudge() {
-    if (!turtle) turtle = { x: hole.cup.x - 6, dir: 1, speed: 1.2, phase: 1.1, judge: false, judgeT: 0, blinkT: 0 };
+    if (!turtle) {
+      turtle = { x: hole.cup.x - 8, y: hole.cup.y, ang: 0, speed: 1.6,
+                 tx: hole.cup.x - 8, ty: hole.cup.y, pause: 0, judge: false,
+                 judgeT: 0, blinkT: 2, blink: 0, phase: 0,
+                 rng: TF.mulberry32((seed ^ 0x77aa) >>> 0) };
+    }
     turtle.judge = true; turtle.judgeT = 0;
-    turtle.x = Math.max(3, Math.min(hole.W - 3, hole.cup.x - 6));
+    turtle.x = Math.max(4, Math.min(TF.W - 4, hole.cup.x - 8));
+    turtle.y = hole.cup.y;
   }
   function drawTurtle() {
     if (!turtle) return;
-    var t = turtle;
-    var gy = hole.terrain.h(t.x);
-    var px = X(t.x), py = Y(gy);
-    var s = Math.max(sc * 1.15, 7);                    // turtle ~2.3 world units wide
-    var shell = curBiome === 3 ? '#5a6b52' : '#4f7a3f';
-    var belly = curBiome === 3 ? '#8a9a80' : '#7ba05b';
+    var t = turtle, B = biome();
+    var px = X(t.x), py = Y(t.y);
+    var s = sc;  // world->px
     ctx.save();
     ctx.translate(px, py);
-    ctx.scale(t.dir, 1);
-    ctx.fillStyle = belly;                             // paddling feet
-    var pad = Math.sin(wtime * 8 + t.phase) * s * 0.08, i;
-    var feet = [[-0.62, pad], [-0.2, -pad], [0.25, pad], [0.62, -pad]];
-    for (i = 0; i < 4; i++) {
-      ctx.beginPath(); ctx.ellipse(feet[i][0] * s, -s * 0.06, s * 0.16, s * 0.1, 0, 0, 6.2832); ctx.fill();
+    ctx.rotate(-t.ang);  // screen y-down: negate
+    var shell = curBiome === 3 ? '#5a6b52' : '#4f7a3f';
+    var belly = curBiome === 3 ? '#8a9a80' : '#7ba05b';
+    // flippers
+    ctx.fillStyle = shell;
+    var fl = Math.sin(t.phase || 0) * 0.12;
+    [[0.7, 0.75], [0.7, -0.75], [-0.7, 0.75], [-0.7, -0.75]].forEach(function (f) {
+      ctx.beginPath();
+      ctx.ellipse(f[0] * s * (1 + fl), f[1] * s, 0.42 * s, 0.26 * s, f[1] * 0.5, 0, 6.2832);
+      ctx.fill();
+    });
+    // shell
+    ctx.fillStyle = shell;
+    ctx.beginPath(); ctx.ellipse(0, 0, 1.5 * s, 1.05 * s, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = belly;
+    ctx.beginPath(); ctx.ellipse(0, 0, 1.05 * s, 0.68 * s, 0, 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, 0, 1.05 * s, 0.68 * s, 0, 0, 6.2832); ctx.stroke();
+    // head
+    ctx.fillStyle = shell;
+    ctx.beginPath(); ctx.arc(1.85 * s, 0, 0.52 * s, 0, 6.2832); ctx.fill();
+    // eyes: slow blink (or judgmental stare)
+    ctx.fillStyle = '#1c2419';
+    if (t.blink > 0 && !t.judge) {
+      ctx.fillRect(1.7 * s, -0.42 * s, 0.5 * s, 0.12 * s);
+      ctx.fillRect(1.7 * s, 0.3 * s, 0.5 * s, 0.12 * s);
+    } else {
+      ctx.beginPath(); ctx.arc(1.95 * s, -0.22 * s, 0.11 * s, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(1.95 * s, 0.22 * s, 0.11 * s, 0, 6.2832); ctx.fill();
     }
-    ctx.beginPath(); ctx.arc(s * 0.95, -s * 0.28, s * 0.3, 0, 6.2832); ctx.fill();   // head
-    ctx.fillStyle = shell;                             // dome shell
-    ctx.beginPath(); ctx.arc(0, 0, s * 0.72, Math.PI, 0); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = Math.max(1, s * 0.05);
-    ctx.beginPath(); ctx.arc(0, 0, s * 0.72, Math.PI, 0); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, 0, s * 0.42, Math.PI, 0); ctx.stroke();
-    var open = t.judge ? (((t.blinkT % 2.6) < 0.55) ? 0.12 : 1)     // slow judgmental blink
-                       : (((t.blinkT % 4.2) < 0.18) ? 0.15 : 1);    // idle blink
-    ctx.fillStyle = '#1d2419';
-    ctx.beginPath(); ctx.ellipse(s * 1.02, -s * 0.32, s * 0.07, s * 0.07 * open, 0, 0, 6.2832); ctx.fill();
     ctx.restore();
+    if (t.judge) {
+      // annoyance marks
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2;
+      var jx = px + 2.6 * s, jy = py - 1.6 * s;
+      for (var i = 0; i < 3; i++) {
+        var a = -0.5 + i * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(jx, jy);
+        ctx.lineTo(jx + Math.cos(a) * 7, jy + Math.sin(a) * 7);
+        ctx.stroke();
+      }
+    }
   }
 
   /* ---------------- ball helpers ---------------- */
-  function clearHoled(b) { b.inCup = false; b.sunk = false; b.holed = false; b.potted = false; b.inWater = false; }
-  function ballHoled(b) {
-    if (b.inCup || b.sunk || b.holed || b.potted) return true;
-    var dx = b.x - hole.cup.x, dy = b.y - hole.cup.y;
-    var sp = Math.sqrt((b.vx || 0) * (b.vx || 0) + (b.vy || 0) * (b.vy || 0));
-    return b.resting && sp < 4 && (dx * dx + dy * dy) < TF.CUP_R * TF.CUP_R * 0.64;
-  }
-  function ballInWater(b) {
-    if (b.resting) return false;
-    return hole.water && hole.water.length && b.y < hole.waterLevel && TF.inWater(hole, b.x);
-  }
+  function clearHoled(b) { b.inCup = false; b.inWater = false; }
+  function ballHoled(b) { return b.inCup; }
+  function ballInWater(b) { return b.inWater; }
   function par() { return hole.par; }
 
   /* ---------------- toast + milestones + trail colors ---------------- */
   var TRAILS = [
-    { n: 'Cloud',  c: '255,255,255', at: 1 },
-    { n: 'Gold',   c: '255,217,74',  at: 50 },
-    { n: 'Ember',  c: '255,122,61',  at: 200 },
-    { n: 'Comet',  c: '122,205,255', at: 500 },
-    { n: 'Aurora', c: '150,255,178', at: 1000 }
+    { n: 'Cloud', c: '255,255,255', at: 1 },
+    { n: 'Mint', c: '150,255,190', at: 50 },
+    { n: 'Sky', c: '140,200,255', at: 100 },
+    { n: 'Gold', c: '255,215,130', at: 200 },
+    { n: 'Rose', c: '255,150,190', at: 500 },
+    { n: 'Comet', c: '200,170,255', at: 1000 }
   ];
   function trailDef() {
     for (var i = TRAILS.length - 1; i >= 0; i--)
@@ -427,9 +460,9 @@
   function stepPhysics() {
     var wasInFlight = inFlight;
     TF.simStep(hole, ball);
-    if (ball.impact > 0.5) { dustAt(ball.x, ball.y, ball.impact); ball.impact = 0; }
+    if (ball.impact > 1.2) { thudAt(ball.x, ball.y, ball.impact); ball.impact = 0; }
     if (ballHoled(ball)) { onHoled(); return; }
-    if (wasInFlight && (ball.inWater || ballInWater(ball))) { onWater(); return; }  // sim flags inWater; game owns the penalty+reset
+    if (wasInFlight && ballInWater(ball)) { onWater(); return; }  // sim flags inWater; game owns the penalty+reset
     if (ball.resting) {
       if (wasInFlight && state === 'play') ghost = { x: ball.x, y: ball.y };  // last-shot ghost
       lastRest.x = ball.x; lastRest.y = ball.y; inFlight = false;
@@ -439,7 +472,6 @@
 
   function onHoled() {
     state = 'holed'; inFlight = false; aiming = false; drag = null; aimPts = [];
-    camLiftT = 0;
     var stars = TF.starsFor(strokes, par());
     totalStars += stars;
     if (mode === 'endless') recordScore(strokes);
@@ -450,7 +482,7 @@
     refreshButtons();
     slowT = RM ? 0 : 0.85;                              // slow-mo on the drop (off for reduced motion)
     HAP.buzz([10, 40, 10]);                             // quiet success pulse on every hole-out
-    if (eagle && !RM) petalBurst(hole.cup.x, hole.terrain.h(hole.cup.x) + 3);
+    if (eagle && !RM) petalBurst(hole.cup.x, hole.cup.y);
     if (strokes > par() + 2) turtleJudge();
     saveRun(); saveBest();
     setTimeout(showStarsPop, 650);
@@ -508,7 +540,7 @@
 
   /* ---------------- shooting ---------------- */
   var MAX_DRAG_PX = 300;
-  // -> [vx, vy, powerFrac (1.0 = MAX_POWER, up to 1.25), overdrive] or null
+  // -> [vx, vy, powerFrac (1.0 = MAX_POWER, up to OVERDRIVE), overdrive] or null
   function dragVel() {
     if (!drag) return null;
     var dx = drag.x0 - drag.x1, dy = drag.y0 - drag.y1;   // screen px (y down)
@@ -519,6 +551,7 @@
     var od = ratio > 0.9;                                 // overdrive zone (OK Golf)
     var capped = Math.min(ratio, TF.OVERDRIVE_MAX / TF.MAX_POWER);
     var power = capped * TF.MAX_POWER;
+    // screen y-down -> world y-up: negate dy
     return [dx / len * power, -dy / len * power, capped, od];
   }
   function shootFromDrag() {
@@ -540,12 +573,13 @@
     inFlight = true;
     AU.thock(v[2] / 1.25);
     HAP.buzz(20);                                       // light pulse on every shot
-    rippleAt(ball.x, ball.y);
+    divotAt(ball.x, ball.y);
     updateHUD();
     saveRun();
   }
 
-  /* predicted aim arc: exact sim steps on a scratch ball — precise feel */
+  /* predicted aim path: exact sim steps on a scratch ball.
+   * This is the skill toy — the dotted path visibly bends with the break. */
   function predictAim(vx, vy) {
     aimPts = [];
     try {
@@ -554,16 +588,16 @@
       b.spin = spinVal;                                   // spin shapes the preview too
       clearHoled(b);
       var px = -9999, py = -9999, i;
-      for (i = 0; i < 60; i++) {                          // ~1s of flight
+      for (i = 0; i < 200; i++) {                         // ~3.3s of roll
         TF.simStep(hole, b);
-        if (b.inCup || b.sunk || b.holed || b.potted) { aimPts.push([b.x, b.y]); break; }
-        if (b.inWater) { aimPts.push([b.x, b.y]); break; }   // sim stops stepping here
+        if (b.inCup) { aimPts.push([b.x, b.y]); break; }
+        if (b.inWater) { aimPts.push([b.x, b.y]); break; }
         var dx = b.x - px, dy = b.y - py;                // teleport guard
         if (i > 0 && dx * dx + dy * dy > 900) break;
         px = b.x; py = b.y;
-        if (i % 3 === 0) aimPts.push([b.x, b.y]);
+        if (i % 4 === 0) aimPts.push([b.x, b.y]);
         if (b.resting) break;
-        if (b.x < -4 || b.x > hole.W + 4 || b.y < -10) break;
+        if (b.x < -4 || b.x > hole.W + 4 || b.y < -4 || b.y > hole.H + 4) break;
       }
     } catch (e) { aimPts = []; }
   }
@@ -594,7 +628,6 @@
     }
     drag = { pid: e.pointerId, x0: px, y0: py, x1: px, y1: py };
     aiming = true;
-    if (e.pointerType === 'touch') camLiftT = ch * 0.07;   // lift view so finger never covers the cup
     refreshSpinHint();
   });
   canvas.addEventListener('pointermove', function (e) {
@@ -617,7 +650,7 @@
     }
     if (e && drag && e.pointerId !== drag.pid) return;
     if (!aiming) return;
-    aiming = false; aimPts = []; camLiftT = 0;
+    aiming = false; aimPts = [];
     refreshSpinHint();
     if (drag && state === 'play' && ball && ball.resting) shootFromDrag();
     drag = null;
@@ -625,7 +658,7 @@
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', function (e) {
     if (e && spinPointer !== null && e.pointerId === spinPointer) { spinPointer = null; return; }
-    aiming = false; drag = null; aimPts = []; camLiftT = 0;
+    aiming = false; drag = null; aimPts = [];
     refreshSpinHint();
   });
   canvas.addEventListener('wheel', function (e) {          // desktop: wheel = spin while aiming
@@ -638,34 +671,40 @@
   document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
   document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
 
-  /* ---------------- particles ---------------- */
-  function rippleAt(x, y) {
-    for (var i = 0; i < 3; i++) particles.push({ k: 'r', x: x, y: y, t: -i * 0.09, life: 0.55 });
+  /* ---------------- particles (top-down) ---------------- */
+  function divotAt(x, y) {   // little turf kick on the strike
+    for (var i = 0; i < 5; i++) {
+      var a = Math.random() * 6.2832;
+      particles.push({ k: 'v', x: x, y: y, vx: Math.cos(a) * (1 + Math.random() * 3),
+        vy: Math.sin(a) * (1 + Math.random() * 3), t: 0, life: 0.5 + Math.random() * 0.3 });
+    }
+    particles.push({ k: 'r', x: x, y: y, t: 0, life: 0.5 });
   }
   function splashAt(x, y) {
     var i;
     for (i = 0; i < 14; i++) {
-      var a = Math.PI * (0.15 + 0.7 * Math.random());
-      particles.push({ k: 's', x: x, y: y, vx: Math.cos(a) * (3 + Math.random() * 7),
-        vy: Math.sin(a) * (6 + Math.random() * 8), t: 0, life: 0.7 + Math.random() * 0.3 });
+      var a = Math.random() * 6.2832;
+      particles.push({ k: 's', x: x, y: y, vx: Math.cos(a) * (2 + Math.random() * 6),
+        vy: Math.sin(a) * (2 + Math.random() * 6), t: 0, life: 0.7 + Math.random() * 0.3 });
     }
     particles.push({ k: 'r', x: x, y: y, t: 0, life: 0.7 });
   }
-  function dustAt(x, y, impact) {                          // bounce dust, scaled by impact
-    var n = Math.min(10, 2 + Math.round(impact * 0.6)), i;
+  function thudAt(x, y, impact) {                         // tree knock, scaled by impact
+    var n = Math.min(10, 2 + Math.round(impact * 0.5)), i;
     for (i = 0; i < n; i++) {
-      var a = Math.random() * Math.PI;                    // upward hemisphere
-      particles.push({ k: 'd', x: x + (Math.random() - 0.5) * 1.2, y: y,
-        vx: Math.cos(a) * (1 + Math.random() * 3) * (Math.random() < 0.5 ? -1 : 1),
-        vy: Math.sin(a) * (1 + Math.random() * 2.5),
+      var a = Math.random() * 6.2832;
+      particles.push({ k: 'd', x: x + (Math.random() - 0.5) * 1.2, y: y + (Math.random() - 0.5) * 1.2,
+        vx: Math.cos(a) * (1 + Math.random() * 2.5), vy: Math.sin(a) * (1 + Math.random() * 2.5),
         t: 0, life: 0.4 + Math.random() * 0.3, s: 0.5 + Math.random() * 0.9 });
     }
+    AU.noise(0.07, 0.12, 900, 300, 'lowpass');
   }
   function petalBurst(x, y) {
     var cols = ['#ffd1dc', '#fff6f8', '#f5b81e', '#ffb3c7', '#ffffff'];
     for (var i = 0; i < 26; i++) {
-      particles.push({ k: 'p', x: x + (Math.random() - 0.5) * 4, y: y + Math.random() * 2,
-        vx: (Math.random() - 0.5) * 6, vy: 2 + Math.random() * 5,
+      var a = Math.random() * 6.2832;
+      particles.push({ k: 'p', x: x + (Math.random() - 0.5) * 4, y: y + (Math.random() - 0.5) * 4,
+        vx: Math.cos(a) * (1 + Math.random() * 4), vy: Math.sin(a) * (1 + Math.random() * 4),
         t: 0, life: 2 + Math.random() * 1.2, c: cols[i % cols.length],
         s: 0.35 + Math.random() * 0.4, ph: Math.random() * 6.28 });
     }
@@ -676,29 +715,36 @@
       p.t += dt;
       if (p.t < 0) continue;
       if (p.t >= p.life) { particles.splice(i, 1); continue; }
-      if (p.k === 's') { p.vy -= 22 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
-      if (p.k === 'd') { p.vy -= 6 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= (1 - 2.2 * dt); }
-      if (p.k === 'p') { p.x += (p.vx + Math.sin(wtime * 3 + p.ph) * 1.6) * dt; p.y += p.vy * dt; p.vy = Math.min(p.vy + 1.2 * dt, 3.2); }
+      if (p.k === 's' || p.k === 'd' || p.k === 'v') {
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vx *= (1 - 2.4 * dt); p.vy *= (1 - 2.4 * dt);
+      }
+      if (p.k === 'p') {
+        p.x += (p.vx + Math.sin(wtime * 3 + p.ph) * 1.2) * dt;
+        p.y += (p.vy + Math.cos(wtime * 2.4 + p.ph) * 1.2) * dt;
+        p.vx *= (1 - 1.2 * dt); p.vy *= (1 - 1.2 * dt);
+      }
     }
   }
   function drawParticles() {
-    var i, p, a;
+    var i, p, a, f;
     for (i = 0; i < particles.length; i++) {
       p = particles[i];
       if (p.t < 0) continue;
-      var f = p.t / p.life;
+      f = p.t / p.life;
       if (p.k === 'r') {
         a = 0.55 * (1 - f);
         ctx.strokeStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
         ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(X(p.x), Y(p.y) + 2, (2 + f * 26), (1 + f * 8), 0, 0, 6.2832); ctx.stroke();
+        ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 2 + f * 22, 0, 6.2832); ctx.stroke();
       } else if (p.k === 's') {
         a = 0.9 * (1 - f);
         ctx.fillStyle = 'rgba(190,230,250,' + a.toFixed(3) + ')';
         ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 2.4 * (1 - f * 0.5), 0, 6.2832); ctx.fill();
-      } else if (p.k === 'd') {
+      } else if (p.k === 'd' || p.k === 'v') {
         a = 0.55 * (1 - f);
-        ctx.fillStyle = 'rgba(216,196,150,' + a.toFixed(3) + ')';
+        ctx.fillStyle = p.k === 'v' ? 'rgba(90,140,70,' + a.toFixed(3) + ')'
+                                    : 'rgba(216,196,150,' + a.toFixed(3) + ')';
         ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), p.s * sc * 0.5 * (0.6 + f), 0, 6.2832); ctx.fill();
       } else if (p.k === 'p') {
         a = Math.min(1, (1 - f) * 2);
@@ -714,115 +760,191 @@
     }
   }
 
-  /* ---------------- render ---------------- */
-  function render() {
-    var B = biome(), i, x;
-    // sky
-    if (!skyGrad) {
-      skyGrad = ctx.createLinearGradient(0, 0, 0, ch);
-      skyGrad.addColorStop(0, B.skyTop); skyGrad.addColorStop(1, B.skyBot);
-    }
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, cw, ch);
-    // night stars
-    if (curBiome === 3) {
-      for (i = 0; i < nightStars.length; i++) {
-        var st = nightStars[i];
-        ctx.fillStyle = 'rgba(255,255,255,' + (0.35 + 0.35 * Math.sin(wtime * 1.5 + st.tw)).toFixed(3) + ')';
-        ctx.fillRect(st.x, st.y, st.r, st.r);
-      }
-    }
-    // sun / moon
-    ctx.fillStyle = B.sun;
-    ctx.globalAlpha = curBiome === 3 ? 0.95 : 0.9;
-    ctx.beginPath(); ctx.arc(cw * 0.78, ch * (1 - B.sunY) * 0.9 + ch * 0.05, curBiome === 3 ? 26 : 34, 0, 6.2832); ctx.fill();
-    ctx.globalAlpha = 1;
-    if (curBiome === 3) {   // moon crater shading
-      ctx.fillStyle = 'rgba(180,195,220,.5)';
-      ctx.beginPath(); ctx.arc(cw * 0.78 - 8, ch * (1 - B.sunY) * 0.9 + ch * 0.05 - 4, 6, 0, 6.2832); ctx.fill();
-      ctx.beginPath(); ctx.arc(cw * 0.78 + 7, ch * (1 - B.sunY) * 0.9 + ch * 0.05 + 8, 4, 0, 6.2832); ctx.fill();
-    }
-    if (!hole) return;
-
-    // terrain silhouette
-    var N = 160;
+  /* ---------------- render: the whole hole, top-down ---------------- */
+  function ellipseW(e) {
     ctx.beginPath();
-    ctx.moveTo(X(0), Y(hole.terrain.h(0)));
-    for (i = 1; i <= N; i++) { x = hole.W * i / N; ctx.lineTo(X(x), Y(hole.terrain.h(x))); }
-    ctx.lineTo(X(hole.W), Y(-6)); ctx.lineTo(X(0), Y(-6)); ctx.closePath();
-    ctx.fillStyle = B.terrain; ctx.fill();
-    // clean darker top edge
-    ctx.beginPath();
-    ctx.moveTo(X(0), Y(hole.terrain.h(0)));
-    for (i = 1; i <= N; i++) { x = hole.W * i / N; ctx.lineTo(X(x), Y(hole.terrain.h(x))); }
-    ctx.strokeStyle = B.terrainDark; ctx.lineWidth = Math.max(2, sc * 0.35); ctx.stroke();
-
-    // sand patches: speckled overlay
-    if (hole.sand) {
-      for (var sIdx = 0; sIdx < hole.sand.length; sIdx++) {
-        var p = hole.sand[sIdx];
+    ctx.ellipse(X(e.x), Y(e.y), Math.max(1, e.rx * sc), Math.max(1, e.ry * sc),
+                -(e.rot || 0), 0, 6.2832);
+  }
+  function drawSlopeArrows() {
+    // green-reading: subtle white arrows showing the break
+    ctx.lineCap = 'round';
+    for (var gy = 4; gy < TF.H; gy += 6) {
+      for (var gx = 3; gx < TF.W; gx += 6) {
+        var surf = TF.surfaceAt(hole, gx, gy);
+        if (surf !== 'green' && surf !== 'fairway') continue;
+        var sl = hole.slopeAt(gx, gy);
+        var mag = Math.hypot(sl.x, sl.y);
+        if (mag < 0.45) continue;
+        var ang = Math.atan2(sl.y, sl.x);          // world y-up
+        var len = Math.min(3, 1.1 + mag * 0.8);    // world units
+        var pulse = Math.sin(wtime * 2.2 + gx * 0.8 + gy * 0.6) * 0.3;
+        var dx = Math.cos(ang), dy = Math.sin(ang);
+        var x0 = gx + dx * pulse, y0 = gy + dy * pulse;
+        var x1 = gx + dx * (len + pulse), y1 = gy + dy * (len + pulse);
+        var a = 0.10 + Math.min(0.16, mag * 0.05);
+        ctx.strokeStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+        ctx.lineWidth = Math.max(1.5, sc * 0.22);
         ctx.beginPath();
-        ctx.moveTo(X(p.x0), Y(hole.terrain.h(p.x0)));
-        for (i = 1; i <= 24; i++) { x = p.x0 + (p.x1 - p.x0) * i / 24; ctx.lineTo(X(x), Y(hole.terrain.h(x))); }
-        for (i = 24; i >= 0; i--) { x = p.x0 + (p.x1 - p.x0) * i / 24; ctx.lineTo(X(x), Y(hole.terrain.h(x) - 1.4)); }
-        ctx.closePath();
-        ctx.fillStyle = B.sand; ctx.globalAlpha = 0.92; ctx.fill(); ctx.globalAlpha = 1;
-      }
-      ctx.fillStyle = B.sandDot;
-      for (i = 0; i < speckles.length; i++) {
-        var sp2 = speckles[i];
-        ctx.beginPath(); ctx.arc(X(sp2.x), Y(sp2.y), sp2.r * sc * 0.5, 0, 6.2832); ctx.fill();
-      }
-    }
-
-    // water: animated in the dips
-    if (hole.water) {
-      for (var wIdx = 0; wIdx < hole.water.length; wIdx++) {
-        var wp = hole.water[wIdx];
+        ctx.moveTo(X(x0), Y(y0));
+        ctx.lineTo(X(x1), Y(y1));
+        ctx.stroke();
+        // head
+        var hx = X(x1), hy = Y(y1);
+        var ha = Math.atan2(-dy, dx);              // screen angle (y flipped)
         ctx.beginPath();
-        for (i = 0; i <= 24; i++) {
-          x = wp.x0 + (wp.x1 - wp.x0) * i / 24;
-          var wy = hole.waterLevel + Math.sin(wtime * 2.2 + x * 0.9) * 0.18;
-          if (i === 0) ctx.moveTo(X(x), Y(wy)); else ctx.lineTo(X(x), Y(wy));
-        }
-        for (i = 24; i >= 0; i--) {
-          x = wp.x0 + (wp.x1 - wp.x0) * i / 24;
-          ctx.lineTo(X(x), Y(Math.min(hole.terrain.h(x), hole.waterLevel) - 1.6));
-        }
-        ctx.closePath();
-        ctx.fillStyle = B.water; ctx.globalAlpha = 0.94; ctx.fill(); ctx.globalAlpha = 1;
-        ctx.strokeStyle = B.waterTop; ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (i = 0; i <= 24; i++) {
-          x = wp.x0 + (wp.x1 - wp.x0) * i / 24;
-          wy = hole.waterLevel + Math.sin(wtime * 2.2 + x * 0.9) * 0.18;
-          if (i === 0) ctx.moveTo(X(x), Y(wy)); else ctx.lineTo(X(x), Y(wy));
-        }
+        ctx.moveTo(hx, hy);
+        ctx.lineTo(hx - Math.cos(ha - 0.45) * 5, hy - Math.sin(ha - 0.45) * 5);
+        ctx.moveTo(hx, hy);
+        ctx.lineTo(hx - Math.cos(ha + 0.45) * 5, hy - Math.sin(ha + 0.45) * 5);
         ctx.stroke();
       }
     }
+  }
 
-    // cup + flag
-    var cupGY = hole.terrain.h(hole.cup.x);
-    var cupRX = TF.CUP_R * sc * 1.7;
-    ctx.fillStyle = 'rgba(20,16,12,.9)';
-    ctx.beginPath(); ctx.ellipse(X(hole.cup.x), Y(cupGY) + 1, cupRX, cupRX * 0.36, 0, 0, 6.2832); ctx.fill();
-    var poleH = 9 * sc;
-    ctx.strokeStyle = '#f5f2e8'; ctx.lineWidth = Math.max(2, sc * 0.28);
-    ctx.beginPath(); ctx.moveTo(X(hole.cup.x), Y(cupGY)); ctx.lineTo(X(hole.cup.x), Y(cupGY) - poleH); ctx.stroke();
-    var wave = Math.sin(wtime * 3.1) * sc * 0.55;
-    ctx.fillStyle = B.flag;
+  function render() {
+    var B = biome(), i;
+    // rough background
+    ctx.fillStyle = B.rough;
+    ctx.fillRect(0, 0, cw, ch);
+    if (!hole) return;
+
+    // grass texture speckles
+    for (i = 0; i < speckles.length; i++) {
+      var sp = speckles[i];
+      ctx.fillStyle = sp.k === 's' ? B.sandDot : B.speck + sp.a.toFixed(3) + ')';
+      if (sp.k === 's') ctx.globalAlpha = sp.a;
+      ctx.beginPath(); ctx.arc(X(sp.x), Y(sp.y), Math.max(0.6, sp.r * sc * 0.28), 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // water first (under everything else)
+    for (i = 0; i < hole.water.length; i++) {
+      var we = hole.water[i];
+      ellipseW(we);
+      ctx.fillStyle = B.water; ctx.globalAlpha = 0.94; ctx.fill(); ctx.globalAlpha = 1;
+      // shimmer
+      var shx = Math.sin(wtime * 1.8 + we.x) * we.rx * 0.18;
+      ctx.save();
+      ellipseW(we); ctx.clip();
+      ctx.fillStyle = B.waterTop; ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      ctx.ellipse(X(we.x) + shx, Y(we.y) - we.ry * sc * 0.25, we.rx * sc * 0.7, we.ry * sc * 0.22, 0, 0, 6.2832);
+      ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    // fairway: base color, then mow-stripe quads along each segment
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (i = 0; i < hole.fairway.length; i++) {
+      var fs = hole.fairway[i];
+      ctx.beginPath();
+      ctx.moveTo(X(fs.x1), Y(fs.y1)); ctx.lineTo(X(fs.x2), Y(fs.y2));
+      ctx.lineWidth = fs.r * 2 * sc;
+      ctx.strokeStyle = B.fairA;
+      ctx.stroke();
+    }
+
+    // mow stripes: walk each segment in 4-unit bands, alternating shades
+    for (i = 0; i < hole.fairway.length; i++) {
+      var sg = hole.fairway[i];
+      var segLen = Math.hypot(sg.x2 - sg.x1, sg.y2 - sg.y1);
+      var ux = (sg.x2 - sg.x1) / (segLen || 1), uy = (sg.y2 - sg.y1) / (segLen || 1);
+      var band = 0;
+      for (var d = 0; d < segLen; d += 4, band++) {
+        if (band % 2 === 0) continue;   // fairA is already the base
+        var bx0 = sg.x1 + ux * d, by0 = sg.y1 + uy * d;
+        var bl = Math.min(4, segLen - d);
+        var bx1 = bx0 + ux * bl, by1 = by0 + uy * bl;
+        // perpendicular half-width vector
+        var px = -uy * sg.r, py = ux * sg.r;
+        ctx.fillStyle = B.fairB;
+        ctx.beginPath();
+        ctx.moveTo(X(bx0 + px), Y(by0 + py));
+        ctx.lineTo(X(bx1 + px), Y(by1 + py));
+        ctx.lineTo(X(bx1 - px), Y(by1 - py));
+        ctx.lineTo(X(bx0 - px), Y(by0 - py));
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    // soft fairway edge
+    for (i = 0; i < hole.fairway.length; i++) {
+      var se = hole.fairway[i];
+      ctx.beginPath();
+      ctx.moveTo(X(se.x1), Y(se.y1)); ctx.lineTo(X(se.x2), Y(se.y2));
+      ctx.lineWidth = se.r * 2 * sc;
+      ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+      ctx.stroke();
+    }
+
+    // sand traps
+    for (i = 0; i < hole.sand.length; i++) {
+      var sa = hole.sand[i];
+      ellipseW(sa);
+      ctx.fillStyle = B.sand; ctx.fill();
+      ctx.strokeStyle = B.sandDot; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // green
+    ellipseW(hole.green);
+    ctx.fillStyle = B.green; ctx.fill();
+    ctx.strokeStyle = B.greenDark; ctx.lineWidth = 3; ctx.stroke();
+    ctx.save();
+    ellipseW(hole.green); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
     ctx.beginPath();
-    ctx.moveTo(X(hole.cup.x), Y(cupGY) - poleH);
-    ctx.lineTo(X(hole.cup.x) + sc * 3.4, Y(cupGY) - poleH + sc * 1.1 + wave * 0.4);
-    ctx.lineTo(X(hole.cup.x), Y(cupGY) - poleH + sc * 2.2);
+    ctx.ellipse(X(hole.green.x), Y(hole.green.y), hole.green.rx * sc * 0.55, hole.green.ry * sc * 0.55, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+
+    // slope arrows (the read)
+    drawSlopeArrows();
+
+    // trees: canopy blobs
+    for (i = 0; i < hole.trees.length; i++) {
+      var tr = hole.trees[i];
+      var tx = X(tr.x), ty = Y(tr.y), trr = tr.r * sc;
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.beginPath(); ctx.ellipse(tx + 2, ty + 3, trr, trr * 0.9, 0, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = B.treeDark;
+      ctx.beginPath(); ctx.arc(tx, ty, trr, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = B.tree;
+      ctx.beginPath(); ctx.arc(tx - trr * 0.18, ty - trr * 0.2, trr * 0.72, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.beginPath(); ctx.arc(tx - trr * 0.3, ty - trr * 0.34, trr * 0.28, 0, 6.2832); ctx.fill();
+    }
+
+    // tee marker
+    ctx.strokeStyle = 'rgba(255,255,255,.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(X(hole.tee.x), Y(hole.tee.y), 1.7 * sc, 0, 6.2832); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // cup + flag (the genre's universal target glyph)
+    var cupRX = TF.CUP_R * sc * 0.85;
+    ctx.fillStyle = B.cup;
+    ctx.beginPath(); ctx.arc(X(hole.cup.x), Y(hole.cup.y), cupRX, 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(X(hole.cup.x), Y(hole.cup.y), cupRX, 0, 6.2832); ctx.stroke();
+    var poleH = 8.5 * sc;
+    var pcx = X(hole.cup.x), pcy = Y(hole.cup.y);
+    ctx.strokeStyle = '#f5f2e8'; ctx.lineWidth = Math.max(2, sc * 0.28);
+    ctx.beginPath(); ctx.moveTo(pcx, pcy); ctx.lineTo(pcx, pcy - poleH); ctx.stroke();
+    var wave = Math.sin(wtime * 3.1) * sc * 0.5;
+    ctx.fillStyle = '#d94f4f';
+    ctx.beginPath();
+    ctx.moveTo(pcx, pcy - poleH);
+    ctx.lineTo(pcx + sc * 3.2, pcy - poleH + sc * 1.05 + wave * 0.4);
+    ctx.lineTo(pcx, pcy - poleH + sc * 2.1);
     ctx.closePath(); ctx.fill();
 
     drawTurtle();
 
     // last-shot ghost (faint dashed ring where the previous shot came to rest)
     if (ghost && state === 'play') {
-      var gbr = Math.max(3, TF.BALL_R * sc);
+      var gbr = Math.max(4, TF.BALL_R * sc);
       ctx.strokeStyle = 'rgba(255,255,255,.38)';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
@@ -846,40 +968,34 @@
       }
     }
 
-    // ball + soft shadow (no shadowBlur: plain alpha ellipse)
+    // ball + soft shadow
     if (ball && state !== 'menu') {
-      var gy = hole.terrain.h(Math.max(0, Math.min(hole.W, ball.x)));
-      var hgt = Math.max(0, ball.y - gy);
-      var shA = Math.max(0.04, 0.32 - hgt * 0.018);
-      ctx.fillStyle = 'rgba(20,20,20,' + shA.toFixed(3) + ')';
-      ctx.beginPath();
-      ctx.ellipse(X(ball.x), Y(gy) + 2, TF.BALL_R * sc * (1 + hgt * 0.02), TF.BALL_R * sc * 0.42, 0, 0, 6.2832);
-      ctx.fill();
-      var br = Math.max(3, TF.BALL_R * sc);
+      var br = Math.max(3.5, TF.BALL_R * sc);
+      var bx = X(ball.x), by = Y(ball.y);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(bx + 1.5, by + 2.5, br * 0.95, br * 0.8, 0, 0, 6.2832); ctx.fill();
       ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(X(ball.x), Y(ball.y), br, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, 6.2832); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(X(ball.x), Y(ball.y), br, 0, 6.2832); ctx.stroke();
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, 6.2832); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.9)';
-      ctx.beginPath(); ctx.arc(X(ball.x) - br * 0.3, Y(ball.y) - br * 0.3, br * 0.28, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx - br * 0.3, by - br * 0.3, br * 0.28, 0, 6.2832); ctx.fill();
     }
 
     drawParticles();
 
-    // aim: dotted predicted arc + power ring + landing marker + spin indicator
+    // aim: dotted predicted path (bends with the break) + landing marker + power ring
     if (aiming && drag && aimPts.length) {
       var v = dragVel();
       var odAim = !!(v && v[3]);
-      var dotCol = odAim ? '255,110,80' : '255,255,255';
       for (i = 0; i < aimPts.length; i++) {
         ctx.globalAlpha = 0.9 - (i / aimPts.length) * 0.65;
-        ctx.fillStyle = 'rgba(' + dotCol + ',0.95)';
+        ctx.fillStyle = odAim ? 'rgba(255,110,80,0.95)' : 'rgba(255,255,255,0.95)';
         var jx = 0, jy = 0;
         if (odAim) { jx = (Math.random() * 2 - 1) * 3.5; jy = (Math.random() * 2 - 1) * 3.5; }
         ctx.beginPath(); ctx.arc(X(aimPts[i][0]) + jx, Y(aimPts[i][1]) + jy, 2.4, 0, 6.2832); ctx.fill();
       }
       ctx.globalAlpha = 1;
-      // landing marker: ring at the predicted rest spot; wobbles past 85% power
       if (aimPts.length > 1) {
         var lm = aimPts[aimPts.length - 1];
         var wob = (v && v[2] > 0.85) ? Math.sin(wtime * 28) * 3 : 0;
@@ -889,21 +1005,21 @@
         ctx.fillStyle = odAim ? 'rgba(255,110,80,.9)' : 'rgba(255,255,255,.85)';
         ctx.beginPath(); ctx.arc(X(lm[0]) + wob, Y(lm[1]), 1.8, 0, 6.2832); ctx.fill();
       }
-      if (v) {
+      if (v && ball) {
         ctx.strokeStyle = odAim ? 'rgba(255,110,80,.85)' : 'rgba(255,255,255,.7)';
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(X(ball.x), Y(ball.y), br2(v[2]), 0, 6.2832); ctx.stroke();
       }
       // spin indicator: curved arrow around the ball while aiming
-      if (Math.abs(spinVal) > 0.05) {
-        var bx = X(ball.x), by = Y(ball.y), br = Math.max(3, TF.BALL_R * sc);
-        var rr = br * 2.3, dir = spinVal > 0 ? 1 : -1;
+      if (Math.abs(spinVal) > 0.05 && ball) {
+        var sx = X(ball.x), sy = Y(ball.y), sr = Math.max(3.5, TF.BALL_R * sc);
+        var rr = sr * 2.3, dir = spinVal > 0 ? 1 : -1;
         var sweep = 0.6 + Math.abs(spinVal) * 2.4;
         var a0 = -Math.PI / 2 - sweep / 2, a1 = -Math.PI / 2 + sweep / 2;
         ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.arc(bx, by, rr, a0, a1); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sx, sy, rr, a0, a1); ctx.stroke();
         var ae = dir > 0 ? a1 : a0;
-        var ex = bx + Math.cos(ae) * rr, ey = by + Math.sin(ae) * rr;
+        var ex = sx + Math.cos(ae) * rr, ey = sy + Math.sin(ae) * rr;
         var tang = ae + dir * Math.PI / 2;
         ctx.beginPath();
         ctx.moveTo(ex, ey);
@@ -924,8 +1040,6 @@
     last = ts;
     if (slowT > 0) { slowT -= dt; timeScale = 0.3; } else timeScale = 1;
     wtime += dt;
-    if (Math.abs(camLiftT - camLift) > 0.2) camLift += (camLiftT - camLift) * Math.min(1, dt * 6);
-    else if (camLiftT === 0 && camLift !== 0) camLift = 0;
     if (state === 'play' && hole && ball) {
       acc += dt * timeScale;
       var n = 0;
@@ -946,13 +1060,11 @@
     // roll bed follows ball speed; bandpass retunes for sand vs grass
     if (AU.ctx && AU.rollGain) {
       var spd = ball && !ball.resting ? Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) : 0;
-      var gy2 = ball ? hole.terrain.h(Math.max(0, Math.min(hole.W, ball.x))) : 0;
-      var near = ball && (ball.y - gy2) < TF.BALL_R * 3;
-      var target = (spd > 1.5 && near) ? Math.min(spd / 30, 1) * 0.10 : 0;
+      var target = (spd > 1.5) ? Math.min(spd / 30, 1) * 0.10 : 0;
       var g = AU.rollGain.gain;
       g.value += (target - g.value) * 0.25;
       if (AU.rollFilter && ball && hole) {
-        var sandF = TF.inSand(hole, ball.x) ? 380 : 780;
+        var sandF = TF.surfaceAt(hole, ball.x, ball.y) === 'sand' ? 380 : 780;
         var rf = AU.rollFilter.frequency;
         rf.value += (sandF - rf.value) * 0.2;
       }
@@ -1271,7 +1383,7 @@
   });
 
   /* ---------------- boot ---------------- */
-    resize();
+  resize();
   maxHole = parseInt(lsGet('tf_maxhole', '1'), 10) || 1;
   trailSel = lsGet('tf_trail', 'Cloud');
   HAP.init();
@@ -1283,7 +1395,7 @@
     hole = TF.genHole(1234567);
     curBiome = 0;
     ball = TF.newBall(hole); ball.resting = true;
-    fit(); buildSpeckles(); buildNightStars(); initTurtle();
+    fit(); buildSpeckles(); initTurtle();
     running = true; last = performance.now();
   } catch (e) {}
   requestAnimationFrame(loop);
