@@ -52,6 +52,10 @@
   TF.CAPTURE_V = 9;   // max speed for cup capture
   TF.MAGNET_R = 5.0;  // cup magnet reach (generous, Mini Touch Golf)
   TF.REST_TREE = 0.5; // restitution off trees / walls
+  TF.REST_WALL = 0.7; // restitution off banked mini-golf walls
+  TF.GRAV_Z = 55;     // vertical gravity for ramp jumps (u/s^2)
+  TF.WIND_K = 1.3;    // wind pressure accel rate (putts feel it, drives barely do)
+  TF.WIND_K_AIR = 1.6;// wind bites harder when airborne (real)
 
   // Per-surface rolling resistance: linear decel (u/s^2) + exponential
   // damping (/s). Tuned so a full-power drive carries ~55-65 units on
@@ -243,20 +247,145 @@
       }
     }
 
-    // Slope field: a gentle global tilt + a stronger break around the cup
-    // (the green-reading skill) + low smooth noise. Returns acceleration.
+    // Sand dunes: grassy mounds that deflect the ball (real heightfield —
+    // folded into slopeAt below). Kept off the centerline safe route.
+    var dunes = [];
+    var nDunes = 2 + ((rng() * 4) | 0);  // 2..5
+    for (i = 0; i < nDunes; i++) {
+      for (var dt2 = 0; dt2 < 14; dt2++) {
+        var dux = 5 + rng() * (W - 10), duy = 14 + rng() * (H - 24);
+        var dsig = 3.5 + rng() * 2.5;
+        var df = distToFairway(dux, duy);
+        if (df < 1.5 || df > 11) continue;            // near the fairway, never on it
+        if (inEllipse(dux, duy, { x: green.x, y: green.y, rx: green.rx + 3, ry: green.ry + 3, rot: green.rot })) continue;
+        if (dist2(dux, duy, teeX, teeY) < 64) continue;
+        var dok = true, j3;
+        for (j3 = 0; dok && j3 < water.length; j3++)
+          if (inEllipse(dux, duy, water[j3])) dok = false;
+        for (j3 = 0; dok && j3 < sand.length; j3++)
+          if (inEllipse(dux, duy, { x: sand[j3].x, y: sand[j3].y, rx: sand[j3].rx + 1, ry: sand[j3].ry + 1, rot: sand[j3].rot })) dok = false;
+        for (j3 = 0; dok && j3 < dunes.length; j3++)
+          if (dist2(dux, duy, dunes[j3].x, dunes[j3].y) < Math.pow(dsig + dunes[j3].sig + 2, 2)) dok = false;
+        if (dok) { dunes.push({ x: dux, y: duy, sig: dsig, push: 4 + rng() * 4 }); break; }
+      }
+    }
+
+    // Banked mini-golf walls: brick/wood rails flanking the fairway.
+    // Bank shots off them are a real skill (the preview shows the bounce).
+    var walls = [];
+    var nWalls = (rng() * 3) | 0;  // 0..2
+    for (i = 0; i < nWalls; i++) {
+      var wseg = fairway[(rng() * (fairway.length - 1)) | 0];
+      var wdx = wseg.x2 - wseg.x1, wdy = wseg.y2 - wseg.y1;
+      var wl = Math.hypot(wdx, wdy) || 1;
+      var wnx = -wdy / wl, wny = wdx / wl;
+      var side = rng() < 0.5 ? -1 : 1;
+      var woff = (wseg.r + 1.5 + rng() * 2) * side;
+      var wf = 0.25 + rng() * 0.5;
+      var wcx = wseg.x1 + wdx * wf + wnx * woff;
+      var wcy = wseg.y1 + wdy * wf + wny * woff;
+      var wlen = 8 + rng() * 6;
+      var wux = wdx / wl, wuy = wdy / wl;
+      var w1x = wcx - wux * wlen / 2, w1y = wcy - wuy * wlen / 2;
+      var w2x = wcx + wux * wlen / 2, w2y = wcy + wuy * wlen / 2;
+      // keep walls clear of the cup, tee, and hazards
+      if (dist2(wcx, wcy, cupX, cupY) < 144) continue;
+      if (dist2(wcx, wcy, teeX, teeY) < 64) continue;
+      var wok = true, j4;
+      for (j4 = 0; wok && j4 < water.length; j4++)
+        if (segDist(water[j4].x, water[j4].y, w1x, w1y, w2x, w2y) < water[j4].rx + 1) wok = false;
+      if (wok) walls.push({ x1: w1x, y1: w1y, x2: w2x, y2: w2y });
+    }
+
+    // Windmill: the iconic mini-golf obstacle. Blades sweep the fairway;
+    // time the gap or play around the hub.
+    var windmill = null;
+    if (!opts.breather && rng() < 0.38) {
+      for (var wm = 0; wm < 14; wm++) {
+        var wsi = 1 + ((rng() * (fairway.length - 1)) | 0);
+        var ws = fairway[wsi];
+        var wmx = (ws.x1 + ws.x2) / 2, wmy = (ws.y1 + ws.y2) / 2;
+        if (dist2(wmx, wmy, cupX, cupY) < 144) continue;
+        if (dist2(wmx, wmy, teeX, teeY) < 100) continue;
+        var wmok = true, j5;
+        for (j5 = 0; wmok && j5 < water.length; j5++)
+          if (Math.hypot(wmx - water[j5].x, wmy - water[j5].y) < water[j5].rx + 7) wmok = false;
+        for (j5 = 0; wmok && j5 < sand.length; j5++)
+          if (Math.hypot(wmx - sand[j5].x, wmy - sand[j5].y) < sand[j5].rx + 7) wmok = false;
+        if (wmok) {
+          windmill = { x: wmx, y: wmy, hubR: 1.7, bladeLen: 5.4, bladeW: 1.2,
+                       speed: (0.8 + rng() * 0.6) * (rng() < 0.5 ? -1 : 1),
+                       phase: rng() * TAU };
+          break;
+        }
+      }
+    }
+
+    // Bridges: decorative arches across the fairway; the ball rolls under.
+    var bridges = [];
+    if (rng() < 0.3) {
+      var bsi = (rng() * (fairway.length - 1)) | 0;
+      var bs = fairway[bsi];
+      var bdx = bs.x2 - bs.x1, bdy = bs.y2 - bs.y1;
+      var bl = Math.hypot(bdx, bdy) || 1;
+      bridges.push({ x: (bs.x1 + bs.x2) / 2, y: (bs.y1 + bs.y2) / 2,
+                     w: bs.r * 2 + 3, rot: Math.atan2(bdy, bdx) });
+    }
+
+    // Ramps: hit with speed and launch airborne over what's ahead.
+    var ramps = [];
+    if (!opts.breather && rng() < 0.32) {
+      for (var rp = 0; rp < 14; rp++) {
+        var rsi = (rng() * (fairway.length - 1)) | 0;
+        var rs = fairway[rsi];
+        var rdx = rs.x2 - rs.x1, rdy = rs.y2 - rs.y1;
+        var rl = Math.hypot(rdx, rdy) || 1;
+        var rpx = rs.x1 + rdx * 0.5, rpy = rs.y1 + rdy * 0.5;
+        if (dist2(rpx, rpy, cupX, cupY) < 100) continue;
+        if (dist2(rpx, rpy, teeX, teeY) < 64) continue;
+        if (windmill && Math.hypot(rpx - windmill.x, rpy - windmill.y) < 12) continue;
+        ramps.push({ x: rpx, y: rpy, w: 5, h: 6.5,
+                     dx: rdx / rl, dy: rdy / rl, minSpeed: 14 });
+        break;
+      }
+    }
+
+    // Wind: seeded direction + strength, with slow organic gusts.
+    // Some holes are calm; nobody likes a lottery.
+    var wind = {
+      ang: rng() * TAU,
+      base: rng() < 0.25 ? 0 : 1.5 + rng() * 5,
+      gustAmp: 0.3,
+      gustFreq: 0.25 + rng() * 0.3,
+      phase: rng() * TAU
+    };
+    // Slope field: gentle global tilt + stronger break around the cup
+    // (the green-reading skill) + dune mounds + low smooth noise.
+    // Returns acceleration.
     var tiltA = rng() * TAU, tiltM = 0.4 + rng() * 0.8;
     var breakA = rng() * TAU, breakM = 1.2 + rng() * 1.6;
     var n1p = rng() * TAU, n2p = rng() * TAU;
     function slopeAt(x, y) {
       var dxc = x - cupX, dyc = y - cupY;
       var fall = Math.exp(-(dxc * dxc + dyc * dyc) / (2 * 14 * 14));
-      return {
-        x: Math.cos(tiltA) * tiltM + Math.cos(breakA) * breakM * fall +
-           0.5 * Math.sin(x * 0.35 + n1p) * Math.cos(y * 0.30 + n2p),
-        y: Math.sin(tiltA) * tiltM + Math.sin(breakA) * breakM * fall +
-           0.5 * Math.cos(x * 0.30 + n2p) * Math.sin(y * 0.35 + n1p)
-      };
+      var ax = Math.cos(tiltA) * tiltM + Math.cos(breakA) * breakM * fall +
+               0.5 * Math.sin(x * 0.35 + n1p) * Math.cos(y * 0.30 + n2p);
+      var ay = Math.sin(tiltA) * tiltM + Math.sin(breakA) * breakM * fall +
+               0.5 * Math.cos(x * 0.30 + n2p) * Math.sin(y * 0.35 + n1p);
+      // dune mounds: Gaussian bumps push the ball downhill (away from crest)
+      for (var di = 0; di < dunes.length; di++) {
+        var du = dunes[di];
+        var ddx = x - du.x, ddy = y - du.y;
+        var d2 = ddx * ddx + ddy * ddy;
+        var sig2 = du.sig * du.sig;
+        if (d2 < sig2 * 9) {
+          var dd = Math.sqrt(d2) || 0.001;
+          var g = du.push * (dd / du.sig) * Math.exp(-d2 / (2 * sig2));
+          ax += (ddx / dd) * g;
+          ay += (ddy / dd) * g;
+        }
+      }
+      return { x: ax, y: ay };
     }
 
     // Path length along the centerline -> par.
@@ -264,7 +393,8 @@
     for (i = 0; i < pts.length - 1; i++)
       pathLen += Math.sqrt(dist2(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y));
     var hazards = sand.length * 0.5 + water.length * 0.8 + trees.length * 0.1;
-    var par = Math.round(pathLen / 26 + hazards * 0.5);
+    var obstacles = (windmill ? 1 : 0) + ramps.length * 0.5;
+    var par = Math.round(pathLen / 26 + hazards * 0.5 + obstacles * 0.5);
     par = clamp(par, 2, 5);
 
     var biome = (rng() * 4) | 0;
@@ -277,12 +407,35 @@
       sand: sand,                // ellipses
       water: water,              // ellipses
       trees: trees,              // circles {x,y,r}
+      dunes: dunes,              // mounds {x,y,sig,push} (in slopeAt)
+      walls: walls,              // banked segments {x1,y1,x2,y2}
+      windmill: windmill,        // {x,y,hubR,bladeLen,bladeW,speed,phase} or null
+      bridges: bridges,          // decorative arches {x,y,w,rot}
+      ramps: ramps,              // launch rects {x,y,w,h,dx,dy,minSpeed}
+      wind: wind,                // {ang,base,gustAmp,gustFreq,phase}
       slopeAt: slopeAt,
       tee: { x: teeX, y: teeY },
       cup: { x: cupX, y: cupY },
       par: par,
       biome: biome
     };
+  };
+
+  // Wind vector at sim-time t (seconds): base + slow organic gusts.
+  // Deterministic in t, so replays, previews, and daily holes agree.
+  TF.windAt = function (hole, t) {
+    var w = hole.wind;
+    if (!w || w.base <= 0) return { x: 0, y: 0 };
+    var g = 1 + w.gustAmp * Math.sin(w.gustFreq * t + w.phase) *
+                        Math.sin(w.gustFreq * 0.37 * t + w.phase * 1.7);
+    var m = w.base * g;
+    return { x: Math.cos(w.ang) * m, y: Math.sin(w.ang) * m };
+  };
+
+  // Windmill blade angle at sim-time t.
+  TF.bladeAngle = function (hole, t) {
+    if (!hole.windmill) return 0;
+    return hole.windmill.phase + hole.windmill.speed * t;
   };
 
   /* ---------------- surfaces ---------------- */
@@ -308,6 +461,7 @@
     return {
       x: hole.tee.x, y: hole.tee.y,
       vx: 0, vy: 0,
+      z: 0, vz: 0,    // height above the course (ramps); 0 = on the ground
       resting: true, inCup: false, inWater: false,
       spin: 0,        // -1 (backspin, bites) .. +1 (topspin, runs on)
       impact: 0,      // tree-bounce impact speed (for juice)
@@ -326,6 +480,7 @@
       vx *= k; vy *= k;
     }
     ball.vx = vx; ball.vy = vy;
+    ball.z = 0; ball.vz = 0;
     var sn = +o.spin || 0;
     ball.spin = sn > 1 ? 1 : (sn < -1 ? -1 : sn);
     ball.impact = 0;
@@ -343,6 +498,7 @@
   TF.restoreBall = function (ball, s) {
     ball.x = s.x; ball.y = s.y; ball.vx = s.vx; ball.vy = s.vy;
     ball.resting = s.resting; ball.spin = s.spin || 0; ball.stillT = 0;
+    ball.z = 0; ball.vz = 0;
     ball.inCup = false; ball.inWater = false; ball.impact = 0;
   };
 
@@ -359,8 +515,11 @@
 
   // Advances EXACTLY 1/60 s of physics. Sub-steps internally when the
   // ball is fast so no step moves more than half a ball radius.
-  TF.simStep = function (hole, ball) {
+  // t = absolute sim time in seconds (windmill blades, gusts). Deterministic.
+  TF.simStep = function (hole, ball, t) {
     if (ball.inCup || ball.inWater) return;
+    if (ball.resting) return;   // a resting ball stays put (no wind creep)
+    if (t == null) t = 0;
     var dt = TF.DT;
     var speed = Math.hypot(ball.vx, ball.vy);
     var n = Math.ceil(speed * dt / (TF.BALL_R * 0.5));
@@ -368,14 +527,71 @@
     if (n > 48) n = 48;
     var sdt = dt / n;
     for (var i = 0; i < n; i++) {
-      TF._step(hole, ball, sdt);
+      TF._step(hole, ball, sdt, t);
       if (ball.inCup || ball.inWater || ball.resting) break;
     }
   };
 
-  // One internal physics sub-step of length dt.
-  TF._step = function (hole, ball, dt) {
+  // Point in a rotated rect? rc = {x, y, w, h, dx, dy} (dx,dy = unit long axis).
+  function inRampRect(px, py, rc) {
+    var rx = px - rc.x, ry = py - rc.y;
+    var lu = rx * rc.dx + ry * rc.dy;
+    var lv = rx * (-rc.dy) + ry * rc.dx;
+    return Math.abs(lu) <= rc.h / 2 && Math.abs(lv) <= rc.w / 2;
+  }
+
+  // Bounce a ball off a segment (banked wall). Returns true on hit.
+  function bounceWall(ball, R, x1, y1, x2, y2, rest) {
+    var dx = x2 - x1, dy = y2 - y1;
+    var L2 = dx * dx + dy * dy;
+    var tt = L2 > 0 ? ((ball.x - x1) * dx + (ball.y - y1) * dy) / L2 : 0;
+    tt = clamp(tt, 0, 1);
+    var cx = x1 + dx * tt, cy = y1 + dy * tt;
+    var nx = ball.x - cx, ny = ball.y - cy;
+    var d = Math.sqrt(nx * nx + ny * ny);
+    var minD = R + 0.5;  // wall half-thickness
+    if (d >= minD || d < 0.0001) return false;
+    nx /= d; ny /= d;
+    ball.x = cx + nx * minD;
+    ball.y = cy + ny * minD;
+    var vn = ball.vx * nx + ball.vy * ny;
+    if (vn < 0) {
+      ball.impact = Math.max(ball.impact, -vn);
+      ball.vx -= (1 + rest) * vn * nx;
+      ball.vy -= (1 + rest) * vn * ny;
+    }
+    return true;
+  }
+
+  // One internal physics sub-step of length dt at sim-time t.
+  TF._step = function (hole, ball, dt, t) {
     var R = TF.BALL_R;
+    t = t || 0;
+
+    // ---- airborne (ramp jumps): ballistic z, wind bites harder ----
+    if (ball.z > 0 || ball.vz !== 0) {
+      var wndA = TF.windAt(hole, t);
+      ball.vx += wndA.x * TF.WIND_K_AIR * dt;
+      ball.vy += wndA.y * TF.WIND_K_AIR * dt;
+      ball.x += ball.vx * dt;
+      ball.y += ball.vy * dt;
+      ball.vz -= TF.GRAV_Z * dt;
+      ball.z += ball.vz * dt;
+      if (ball.z <= 0) {
+        ball.z = 0;
+        ball.impact = Math.max(ball.impact, -ball.vz * 0.5);  // landing thud
+        ball.vz = 0;
+        ball.vx *= 0.82; ball.vy *= 0.82;   // touchdown scrub
+        ball.spin = 0;
+      }
+      // world walls still apply mid-flight (can't leave the world)
+      if (ball.x < R) { ball.x = R; if (ball.vx < 0) ball.vx = 0; }
+      else if (ball.x > hole.W - R) { ball.x = hole.W - R; if (ball.vx > 0) ball.vx = 0; }
+      if (ball.y < R) { ball.y = R; if (ball.vy < 0) ball.vy = 0; }
+      else if (ball.y > hole.H - R) { ball.y = hole.H - R; if (ball.vy > 0) ball.vy = 0; }
+      ball.resting = false;
+      return;
+    }
 
     var surf = TF.surfaceAt(hole, ball.x, ball.y);
     if (surf === 'water') {
@@ -386,18 +602,22 @@
     }
     var P = TF.SURF[surf] || TF.SURF.rough;
 
-    // Slope acceleration (the break).
+    // Slope acceleration (the break + dunes).
     var sl = hole.slopeAt(ball.x, ball.y);
     var slMag = Math.hypot(sl.x, sl.y);
 
+    // Wind: a real pressure force on the ball (stronger relative effect
+    // on slow balls — putts feel it, drives barely do).
+    var wnd = TF.windAt(hole, t);
+    var windK = TF.WIND_K * (surf === 'sand' ? 0.3 : 1);
+
     // Spin shapes effective friction: topspin runs on, backspin bites.
-    // (Golf on Mars' highest-leverage control, zero UI cost.)
     var spn = ball.spin || 0;
     var fr = P.fr * (1 - 0.45 * spn);
     if (fr < 1) fr = 1;
 
-    ball.vx += sl.x * dt;
-    ball.vy += sl.y * dt;
+    ball.vx += (sl.x + wnd.x * windK) * dt;
+    ball.vy += (sl.y + wnd.y * windK) * dt;
 
     // Rolling resistance: Coulomb decel + exponential damping.
     var sp = Math.hypot(ball.vx, ball.vy);
@@ -416,24 +636,92 @@
 
     ball.spin = spn * Math.exp(-1.4 * dt);  // spin dies as the ball rolls
 
+    // Ramps: hit one with speed and you launch.
+    var ri, rp2;
+    for (ri = 0; ri < hole.ramps.length; ri++) {
+      rp2 = hole.ramps[ri];
+      if (sp > rp2.minSpeed && inRampRect(ball.x, ball.y, rp2)) {
+        ball.vz = 0.55 * sp;
+        ball.z = 0.1;
+        ball.impact = Math.max(ball.impact, 2);  // launch kick (for sound)
+        break;
+      }
+    }
+
     // Trees: circle bumpers.
-    var i, t, tdx, tdy, td, minD, nx, ny, vn;
+    var i, t2, tdx, tdy, td, minD, nx, ny, vn;
     for (i = 0; i < hole.trees.length; i++) {
-      t = hole.trees[i];
-      tdx = ball.x - t.x; tdy = ball.y - t.y;
+      t2 = hole.trees[i];
+      tdx = ball.x - t2.x; tdy = ball.y - t2.y;
       td = Math.sqrt(tdx * tdx + tdy * tdy);
-      minD = R + t.r;
+      minD = R + t2.r;
       if (td < minD && td > 0.0001) {
         nx = tdx / td; ny = tdy / td;
-        ball.x = t.x + nx * minD;
-        ball.y = t.y + ny * minD;
+        ball.x = t2.x + nx * minD;
+        ball.y = t2.y + ny * minD;
         vn = ball.vx * nx + ball.vy * ny;
         if (vn < 0) {
           ball.impact = -vn;
           ball.vx -= (1 + TF.REST_TREE) * vn * nx;
           ball.vy -= (1 + TF.REST_TREE) * vn * ny;
-          // scrub a little tangential speed on the bark
           ball.vx *= 0.92; ball.vy *= 0.92;
+        }
+      }
+    }
+
+    // Banked mini-golf walls.
+    for (i = 0; i < hole.walls.length; i++) {
+      var wl = hole.walls[i];
+      bounceWall(ball, R, wl.x1, wl.y1, wl.x2, wl.y2, TF.REST_WALL);
+    }
+
+    // Windmill: hub is a bumper; blades sweep and smack the ball.
+    var wml = hole.windmill;
+    if (wml) {
+      var hdx = ball.x - wml.x, hdy = ball.y - wml.y;
+      var hd = Math.sqrt(hdx * hdx + hdy * hdy);
+      if (hd < R + wml.hubR && hd > 0.0001) {
+        var hnx = hdx / hd, hny = hdy / hd;
+        ball.x = wml.x + hnx * (R + wml.hubR);
+        ball.y = wml.y + hny * (R + wml.hubR);
+        var hvn = ball.vx * hnx + ball.vy * hny;
+        if (hvn < 0) {
+          ball.impact = Math.max(ball.impact, -hvn);
+          ball.vx -= (1 + TF.REST_TREE) * hvn * hnx;
+          ball.vy -= (1 + TF.REST_TREE) * hvn * hny;
+        }
+      }
+      var ba = TF.bladeAngle(hole, t);
+      for (var b = 0; b < 4; b++) {
+        var bang = ba + b * Math.PI / 2;
+        var bux = Math.cos(bang), buy = Math.sin(bang);
+        var bcx = wml.x + bux * (wml.hubR + wml.bladeLen / 2);
+        var bcy = wml.y + buy * (wml.hubR + wml.bladeLen / 2);
+        // ball in blade local frame
+        var rx = ball.x - bcx, ry = ball.y - bcy;
+        var lu = rx * bux + ry * buy;          // along blade
+        var lv = rx * (-buy) + ry * bux;       // across blade
+        var hu = wml.bladeLen / 2 + R, hv = wml.bladeW / 2 + R;
+        if (Math.abs(lu) < hu && Math.abs(lv) < hv) {
+          // push out along the smallest penetration axis
+          var pu = hu - Math.abs(lu), pv = hv - Math.abs(lv);
+          var wnx2, wny2;
+          if (pu < pv) { wnx2 = (lu > 0 ? bux : -bux); wny2 = (lu > 0 ? buy : -buy); }
+          else { wnx2 = (lv > 0 ? -buy : buy); wny2 = (lv > 0 ? bux : -bux); }
+          var pen = Math.min(pu, pv);
+          ball.x += wnx2 * pen;
+          ball.y += wny2 * pen;
+          var bvn = ball.vx * wnx2 + ball.vy * wny2;
+          // blade surface velocity at the contact radius
+          var rContact = wml.hubR + wml.bladeLen / 2 + lu;
+          var bvx = -buy * wml.speed * rContact, bvy = bux * wml.speed * rContact;
+          if (bvn < 0) {
+            ball.impact = Math.max(ball.impact, -bvn + Math.abs(wml.speed) * 2);
+            ball.vx -= (1 + 0.55) * bvn * wnx2;
+            ball.vy -= (1 + 0.55) * bvn * wny2;
+          }
+          ball.vx += bvx * 0.45;   // the blade smacks the ball along
+          ball.vy += bvy * 0.45;
         }
       }
     }
@@ -444,7 +732,7 @@
     if (ball.y < R) { ball.y = R; if (ball.vy < 0) { ball.impact = Math.max(ball.impact, -ball.vy); ball.vy = -ball.vy * TF.REST_TREE; } }
     else if (ball.y > hole.H - R) { ball.y = hole.H - R; if (ball.vy > 0) { ball.impact = Math.max(ball.impact, ball.vy); ball.vy = -ball.vy * TF.REST_TREE; } }
 
-    // ---- cup magnet: slow balls near the cup get a gentle pull ----
+    // ---- cup magnet: slow grounded balls near the cup get a gentle pull ----
     // (Mini Touch Golf: holes attract more than real physics suggests.)
     if (!ball.inCup) {
       var mdx = hole.cup.x - ball.x, mdy = hole.cup.y - ball.y;
@@ -471,11 +759,11 @@
       }
     }
 
-    // ---- rest: slow enough that friction holds it against the slope ----
+    // ---- rest: slow enough that friction holds it against slope+wind ----
     var spdNow = Math.hypot(ball.vx, ball.vy);
     if (spdNow < 1.0) ball.stillT = (ball.stillT || 0) + dt;
     else ball.stillT = 0;
-    if ((spdNow < 0.9 && slMag < fr) || (ball.stillT || 0) > 2.5) {
+    if ((spdNow < 0.9 && slMag + Math.hypot(wnd.x, wnd.y) * windK < fr) || (ball.stillT || 0) > 2.5) {
       ball.vx = 0; ball.vy = 0;
       ball.resting = true;
       ball.stillT = 0;
@@ -483,7 +771,6 @@
       ball.resting = false;
     }
   };
-
   /* ---------------- scoring ---------------- */
 
   TF.starsFor = function (strokes, par) {
