@@ -590,11 +590,13 @@
 
   /* predicted aim path: exact sim steps on a scratch ball.
    * This is the skill toy — the dotted path visibly bends with the break. */
-  function predictAim(vx, vy) {
+  function predictAim(vx, vy, od) {
     aimPts = [];
     try {
       var b = TF.newBall(hole);
-      b.x = ball.x; b.y = ball.y; b.vx = vx; b.vy = vy; b.resting = false;
+      b.x = ball.x; b.y = ball.y;
+      TF.shoot(b, vx, vy, { overdrive: !!od });  // same launch as the real shot
+      b.x = ball.x; b.y = ball.y;
       b.spin = spinVal;                                   // spin shapes the preview too
       clearHoled(b);
       var px = -9999, py = -9999, i;
@@ -616,7 +618,7 @@
   function clampSpin(v) { return v > 1 ? 1 : (v < -1 ? -1 : v); }
   function repredict() {
     var v = dragVel();
-    if (v) predictAim(v[0], v[1]); else aimPts = [];
+    if (v) predictAim(v[0], v[1], v[3]); else aimPts = [];
   }
   function refreshSpinHint() {
     var h = $('spin-hint');

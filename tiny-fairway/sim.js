@@ -56,6 +56,8 @@
   TF.GRAV_Z = 55;     // vertical gravity for ramp jumps (u/s^2)
   TF.WIND_K = 1.3;    // wind pressure accel rate (putts feel it, drives barely do)
   TF.WIND_K_AIR = 1.6;// wind bites harder when airborne (real)
+  TF.LAUNCH_MIN = 26; // shots harder than this leave the ground
+  TF.LAUNCH_K = 0.6;  // launch velocity per unit of excess speed
 
   // Per-surface rolling resistance: linear decel (u/s^2) + exponential
   // damping (/s). Tuned so a full-power drive carries ~55-65 units on
@@ -305,6 +307,12 @@
         var wsi = 1 + ((rng() * (fairway.length - 1)) | 0);
         var ws = fairway[wsi];
         var wmx = (ws.x1 + ws.x2) / 2, wmy = (ws.y1 + ws.y2) / 2;
+        // offset from the centerline: blocks part of the fairway, leaves a lane
+        var wdx = ws.x2 - ws.x1, wdy = ws.y2 - ws.y1;
+        var wl = Math.hypot(wdx, wdy) || 1;
+        var woff = (rng() < 0.5 ? -1 : 1) * ws.r * 0.35;
+        wmx += (-wdy / wl) * woff;
+        wmy += (wdx / wl) * woff;
         if (dist2(wmx, wmy, cupX, cupY) < 144) continue;
         if (dist2(wmx, wmy, teeX, teeY) < 100) continue;
         var wmok = true, j5;
@@ -344,8 +352,8 @@
         if (dist2(rpx, rpy, cupX, cupY) < 100) continue;
         if (dist2(rpx, rpy, teeX, teeY) < 64) continue;
         if (windmill && Math.hypot(rpx - windmill.x, rpy - windmill.y) < 12) continue;
-        ramps.push({ x: rpx, y: rpy, w: 5, h: 6.5,
-                     dx: rdx / rl, dy: rdy / rl, minSpeed: 14 });
+        ramps.push({ x: rpx, y: rpy, w: 8, h: 6.5,
+                     dx: rdx / rl, dy: rdy / rl, minSpeed: 10 });
         break;
       }
     }
@@ -481,6 +489,13 @@
     }
     ball.vx = vx; ball.vy = vy;
     ball.z = 0; ball.vz = 0;
+    // hard shots leave the ground: the harder the hit, the higher the launch.
+    // (Monster drives soar, medium shots hop, putts stay down.)
+    var excess = sp - TF.LAUNCH_MIN;
+    if (excess > 0) {
+      ball.vz = excess * TF.LAUNCH_K;
+      ball.z = 0.1;
+    }
     var sn = +o.spin || 0;
     ball.spin = sn > 1 ? 1 : (sn < -1 ? -1 : sn);
     ball.impact = 0;
@@ -636,12 +651,12 @@
 
     ball.spin = spn * Math.exp(-1.4 * dt);  // spin dies as the ball rolls
 
-    // Ramps: hit one with speed and you launch.
+    // Ramps: hit one with speed and you launch (ski-jump air).
     var ri, rp2;
     for (ri = 0; ri < hole.ramps.length; ri++) {
       rp2 = hole.ramps[ri];
       if (sp > rp2.minSpeed && inRampRect(ball.x, ball.y, rp2)) {
-        ball.vz = 0.55 * sp;
+        ball.vz = 0.65 * sp;
         ball.z = 0.1;
         ball.impact = Math.max(ball.impact, 2);  // launch kick (for sound)
         break;
@@ -717,11 +732,11 @@
           var bvx = -buy * wml.speed * rContact, bvy = bux * wml.speed * rContact;
           if (bvn < 0) {
             ball.impact = Math.max(ball.impact, -bvn + Math.abs(wml.speed) * 2);
-            ball.vx -= (1 + 0.55) * bvn * wnx2;
-            ball.vy -= (1 + 0.55) * bvn * wny2;
+            ball.vx -= (1 + 0.7) * bvn * wnx2;
+            ball.vy -= (1 + 0.7) * bvn * wny2;
           }
-          ball.vx += bvx * 0.45;   // the blade smacks the ball along
-          ball.vy += bvy * 0.45;
+          ball.vx += bvx * 0.8;   // the blade flings the ball clear of the disc
+          ball.vy += bvy * 0.8;
         }
       }
     }
