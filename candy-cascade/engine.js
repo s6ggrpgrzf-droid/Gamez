@@ -6,6 +6,9 @@
    Board: st.board[r][c] with r=0 at the TOP.
    Cell: { t:'c', color:0..5|null, sp:null|'sh'|'sv'|'w'|'b' }
          { t:'f', hp:1..2 }                       (frosting blocker)
+         { t:'x', hp:1 }                          (chocolate blocker: spreads
+                                                  one cell per move unless
+                                                  damaged that turn)
          { t:'i' }                               (ingredient: falls, immune to
                                                   clears, collected at bottom)
          null                                    (empty, mid-resolution)
@@ -25,6 +28,10 @@
      {k:'hammer', ...round-shaped, hammerAt, collected}
      {k:'collect', items, gain, fall}
      {k:'shuffle', tiles:[{r,c,color,special}]}
+     {k:'sugar', spawns, clear, effects, jellyCleared, orders, frostHits,
+               frostBroken, gain, fall}   (Sugar Crush fireworks: leftover
+               moves become free striped candies, auto-detonated)
+     {k:'choc', grows}                    (chocolate spread to grows[])
      {k:'end', won, stars, score, bonus, best}
    hammer(st, r, c) smashes one cell for free (no move spent).
    hint(st) suggests a swap {a, b}, preferring special forges.
@@ -71,14 +78,17 @@ function newGame(def, seed) {
     ordersLeft: def.goal && def.goal.orders ? Object.assign({}, def.goal.orders) : null,
     over: false, won: false, stars: 0, endBonus: 0, cascadeBest: 0,
     ingredientsCollected: 0, ingredientsSpawned: 0, pendingIngredient: false, movesUsed: 0,
+    _chocDamaged: false, // set when chocolate takes a hit this move (blocks spread)
   };
   const frostGrid = gridFromStrings(def.frost, 9, 9);
+  const chocGrid = gridFromStrings(def.choc, 9, 9);
   // constructive fill: never create a match while placing (works for any
   // color count), then retry only if the board has no possible move at all
   let guard = 0;
   do {
     st.board = Array.from({ length: 9 }, () => Array(9).fill(null));
     for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+      if (chocGrid[r][c] > 0) { st.board[r][c] = { t: 'x', hp: 1 }; continue; }
       if (frostGrid[r][c] > 0) { st.board[r][c] = { t: 'f', hp: frostGrid[r][c] }; continue; }
       const banned = new Set();
       const l1 = st.board[r][c - 1], l2 = st.board[r][c - 2];
@@ -226,7 +236,11 @@ function hit(st, r, c, clear, queue, qset, frostHits) {
   if (r < 0 || r >= st.rows || c < 0 || c >= st.cols) return;
   const cell = st.board[r][c];
   if (!cell) return;
-  if (cell.t === 'f') { cell.hp--; frostHits.push({ r, c, hp: cell.hp }); return; }
+  if (cell.t === 'f') { cell.hp--; frostHits.push({ r, c, hp: cell.hp, t: 'f' }); return; }
+  if (cell.t === 'x') {
+    cell.hp--; st._chocDamaged = true;
+    frostHits.push({ r, c, hp: cell.hp, t: 'x' }); return;
+  }
   if (cell.t !== 'c') return;
   const k = key(r, c);
   if (!clear.has(k)) {
@@ -282,13 +296,16 @@ function applyRoundTail(st, steps, stepKind, clear, effects, frostHits, round, e
       if (cell.color != null) orders[cell.color] = (orders[cell.color] || 0) + 1;
     }
   }
-  // matches adjacent to frosting crack it
+  // matches adjacent to frosting/chocolate crack it
   for (const { r, c } of clear.values()) {
     for (const [dr, dc] of DIRS) {
       const nr = r + dr, nc = c + dc;
       if (nr < 0 || nr >= st.rows || nc < 0 || nc >= st.cols) continue;
       const n = st.board[nr][nc];
-      if (n && n.t === 'f') { n.hp--; frostHits.push({ r: nr, c: nc, hp: n.hp }); }
+      if (n && (n.t === 'f' || n.t === 'x')) {
+        n.hp--; if (n.t === 'x') st._chocDamaged = true;
+        frostHits.push({ r: nr, c: nc, hp: n.hp, t: n.t });
+      }
     }
   }
   const createBonus = (extra.creations || []).reduce(
@@ -305,7 +322,10 @@ function applyRoundTail(st, steps, stepKind, clear, effects, frostHits, round, e
   const frostBroken = [];
   for (const h of frostHits) {
     const cell = st.board[h.r] && st.board[h.r][h.c];
-    if (h.hp <= 0 && cell && cell.t === 'f') { st.board[h.r][h.c] = null; frostBroken.push({ r: h.r, c: h.c }); }
+    if (h.hp <= 0 && cell && (cell.t === 'f' || cell.t === 'x')) {
+      st.board[h.r][h.c] = null;
+      frostBroken.push({ r: h.r, c: h.c, t: cell.t });
+    }
   }
   const fall = applyGravity(st);
   const step = Object.assign({ k: stepKind, round, clear: [...clear.values()], effects,
@@ -338,11 +358,11 @@ function applyGravity(st) {
     let r = st.rows - 1;
     while (r >= 0) {
       const cell = st.board[r][c];
-      if (cell && cell.t === 'f') { r--; continue; }
+      if (cell && (cell.t === 'f' || cell.t === 'x')) { r--; continue; }
       let segBot = r, segTop = r;
       while (segTop - 1 >= 0) {
         const up = st.board[segTop - 1][c];
-        if (up && up.t === 'f') break;
+        if (up && (up.t === 'f' || up.t === 'x')) break;
         segTop--;
       }
       const candies = [];
@@ -434,7 +454,10 @@ function doCombo(st, a, b, sa, sb, steps) {
       const cell = st.board[r][c];
       if (!cell) continue;
       if (cell.t === 'c') hit(st, r, c, clear, queue, qset, frostHits);
-      else if (cell.t === 'f') { cell.hp--; frostHits.push({ r, c, hp: cell.hp }); }
+      else if (cell.t === 'f' || cell.t === 'x') {
+        cell.hp--; if (cell.t === 'x') st._chocDamaged = true;
+        frostHits.push({ r, c, hp: cell.hp, t: cell.t });
+      }
     }
   } else if (isB(sa) || isB(sb)) {
     const other = isB(sa) ? OB : OA;
@@ -486,6 +509,7 @@ const swappable = x => x && (x.t === 'c' || x.t === 'i');
 function trySwap(st, a, b, swipeDir) {
   const steps = [];
   if (st.over) return { ok: false, steps };
+  st._chocDamaged = false; // fresh move: chocolate spreads unless damaged
   if (!inB(st, a) || !inB(st, b) || !adjacent(a, b))
     return { ok: false, steps: [{ k: 'invalid', a, b }] };
   const A = st.board[a.r][a.c], B = st.board[b.r][b.c];
@@ -518,13 +542,17 @@ function trySwap(st, a, b, swipeDir) {
 function hammer(st, r, c) {
   const steps = [];
   if (st.over) return { ok: false, steps };
+  st._chocDamaged = false;
   const p = { r, c };
   if (!inB(st, p)) return { ok: false, steps: [{ k: 'invalid', a: p, b: p }] };
   const cell = st.board[r][c];
   if (!cell) return { ok: false, steps: [{ k: 'invalid', a: p, b: p }] };
   const clear = new Map(), effects = [], queue = [], qset = new Set(), frostHits = [];
   let wasIngredient = false;
-  if (cell.t === 'f') { cell.hp--; frostHits.push({ r, c, hp: cell.hp }); }
+  if (cell.t === 'f' || cell.t === 'x') {
+    cell.hp--; if (cell.t === 'x') st._chocDamaged = true;
+    frostHits.push({ r, c, hp: cell.hp, t: cell.t });
+  }
   else { cell.sp = null; wasIngredient = cell.t === 'i'; addClear(clear, r, c); }
   applyRoundTail(st, steps, 'hammer', clear, effects, frostHits, 1, {
     public: { hammerAt: { r, c } },
@@ -699,16 +727,103 @@ function checkWin(st) {
   return false;
 }
 
+/* Pick a random plain candy cell, preferring cells with jelly underneath
+   (so Sugar Crush fireworks help jelly levels most). */
+function randomCandyCell(st) {
+  const jelly = [], plain = [];
+  for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
+    const cell = st.board[r][c];
+    if (cell && cell.t === 'c' && !cell.sp) {
+      (st.jelly[r][c] > 0 ? jelly : plain).push({ r, c });
+    }
+  }
+  const pool = jelly.length ? jelly : plain;
+  if (!pool.length) return null;
+  return pool[(st.rng() * pool.length) | 0];
+}
+
+/* Sugar Crush fireworks: every leftover move becomes a free striped candy
+   that auto-detonates, after all pre-existing board specials fire in
+   reading order. Pure celebration — no moves spent, cascades resolve. */
+function sugarCrush(st, steps) {
+  let first = true; // the very first sugar step carries the banner
+  // 1. pre-existing specials fire in reading order
+  for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
+    const cell = st.board[r][c];
+    if (!cell || cell.t !== 'c' || !cell.sp) continue;
+    const clear = new Map(), effects = [], queue = [], qset = new Set(), frostHits = [];
+    queue.push({ r, c }); qset.add(key(r, c));
+    drainQueue(st, clear, effects, queue, qset, frostHits);
+    applyRoundTail(st, steps, 'sugar', clear, effects, frostHits, 1,
+      { public: { first } });
+    first = false;
+    doCascades(st, steps, null, null);
+  }
+  const moves = st.movesLeft;
+  if (moves <= 0) return;
+  // 2. leftover moves spawn striped candy, batched into <= 8 visual beats
+  const nSteps = Math.min(moves, 8);
+  const per = Math.ceil(moves / nSteps);
+  let remaining = moves;
+  for (let s = 0; s < nSteps && remaining > 0; s++) {
+    const n = Math.min(per, remaining);
+    remaining -= n;
+    const spawns = [];
+    for (let i = 0; i < n; i++) {
+      const p = randomCandyCell(st);
+      if (!p) break;
+      const cell = st.board[p.r][p.c];
+      cell.sp = st.rng() < 0.5 ? 'sh' : 'sv';
+      spawns.push({ r: p.r, c: p.c, special: cell.sp, color: cell.color });
+    }
+    if (!spawns.length) break;
+    const clear = new Map(), effects = [], queue = [], qset = new Set(), frostHits = [];
+    for (const sp of spawns) { queue.push({ r: sp.r, c: sp.c }); qset.add(key(sp.r, sp.c)); }
+    drainQueue(st, clear, effects, queue, qset, frostHits);
+    applyRoundTail(st, steps, 'sugar', clear, effects, frostHits, 1,
+      { public: { spawns, first } });
+    first = false;
+    doCascades(st, steps, null, null);
+  }
+}
+
+/* Chocolate: spreads to one adjacent plain candy per move, unless any
+   chocolate was damaged that turn. */
+function spreadChocolate(st, steps) {
+  if (st._chocDamaged) return;
+  const choc = [];
+  for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
+    const cell = st.board[r][c];
+    if (cell && cell.t === 'x') choc.push({ r, c });
+  }
+  if (!choc.length) return;
+  const src = choc[(st.rng() * choc.length) | 0];
+  const opts = [];
+  for (const [dr, dc] of DIRS) {
+    const nr = src.r + dr, nc = src.c + dc;
+    if (nr < 0 || nr >= st.rows || nc < 0 || nc >= st.cols) continue;
+    const cell = st.board[nr][nc];
+    if (cell && cell.t === 'c' && !cell.sp) opts.push({ r: nr, c: nc });
+  }
+  if (!opts.length) return;
+  const p = opts[(st.rng() * opts.length) | 0];
+  st.board[p.r][p.c] = { t: 'x', hp: 1 };
+  steps.push({ k: 'choc', grows: [{ r: p.r, c: p.c }] });
+}
+
 function finishMove(st, steps) {
   if (checkWin(st)) {
     st.won = true; st.over = true;
+    sugarCrush(st, steps);
     st.endBonus = st.movesLeft * 250;
     st.score += st.endBonus;
     const s = st.def.stars || [0, 0, 0];
-    st.stars = st.score >= s[2] ? 3 : st.score >= s[1] ? 2 : 1;
+    const s3 = s[3] != null ? s[3] : Math.round(s[2] * 1.6); // Sugar Star: far above 3-star
+    st.stars = st.score >= s3 ? 4 : st.score >= s[2] ? 3 : st.score >= s[1] ? 2 : 1;
     steps.push({ k: 'end', won: true, stars: st.stars, score: st.score, bonus: st.endBonus, best: st.cascadeBest });
     return;
   }
+  spreadChocolate(st, steps);
   // ingredient dispenser cadence
   if (st.def.type === 'ingredients') {
     st.movesUsed++;

@@ -163,45 +163,51 @@ body{
 .tile{position:absolute; left:0; top:0; transition:transform .30s cubic-bezier(.3,.9,.35,1.05); will-change:transform;}
 .tile .pad{position:absolute; inset:9%;}
 .candy{position:relative; width:100%; height:100%; transition:transform .18s;}
-.tile.sel .candy{transform:scale(1.14); filter:brightness(1.25) drop-shadow(0 0 10px #fff8);}
+.tile.sel .candy{transform:scale(1.14); filter:brightness(1.25);}
+.tile.sel .pad{filter:drop-shadow(0 4px 6px rgba(0,0,0,.4)) drop-shadow(0 0 10px rgba(255,255,255,.5));}
 .candy::after{ /* gloss */
   content:""; position:absolute; left:16%; top:9%; width:38%; height:26%; border-radius:50%;
   background:radial-gradient(ellipse at center, rgba(255,255,255,.85), transparent 70%);
   transform:rotate(-18deg); pointer-events:none;
 }
-/* six candy personalities — layered 3D: top light + main radial + rim depth */
-.c0{border-radius:26%;
+/* six candy silhouettes — a shape for every color (readable without hue) */
+.tile .pad{filter:drop-shadow(0 4px 6px rgba(0,0,0,.4));} /* outer depth lives on .pad: .candy's clip-path would clip it */
+.c0{ /* red bean */
+  clip-path:url(#cc-bean);
   background:
     radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.6), transparent 70%),
     radial-gradient(circle at 35% 30%, var(--c0-hi) 0%, var(--c0-mid) 52%, var(--c0-deep) 80%, var(--c0-rim) 100%);
-  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(90,0,18,.55), 0 4px 8px rgba(0,0,0,.4);}
-.c1{border-radius:50%/46%;
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(90,0,18,.55);}
+.c1{ /* orange lozenge */
+  clip-path:url(#cc-lozenge);
   background:
     radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.6), transparent 70%),
     radial-gradient(circle at 35% 30%, var(--c1-hi) 0%, var(--c1-mid) 52%, var(--c1-deep) 80%, var(--c1-rim) 100%);
-  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(90,30,0,.55), 0 4px 8px rgba(0,0,0,.4);}
-.c2{border-radius:50% 50% 50% 8%;
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(90,30,0,.55);}
+.c2{ /* yellow drop */
+  clip-path:url(#cc-drop);
   background:
     radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.65), transparent 70%),
     radial-gradient(circle at 35% 30%, var(--c2-hi) 0%, var(--c2-mid) 52%, var(--c2-deep) 80%, var(--c2-rim) 100%);
-  box-shadow:inset 0 3px 6px rgba(255,255,255,.4), inset 0 -7px 10px rgba(90,55,0,.55), 0 4px 8px rgba(0,0,0,.4);}
-.c3{border-radius:22%;
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.4), inset 0 -7px 10px rgba(90,55,0,.55);}
+.c3{ /* green square */
+  border-radius:20%;
   background:
     radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.6), transparent 70%),
     radial-gradient(circle at 35% 30%, var(--c3-hi) 0%, var(--c3-mid) 52%, var(--c3-deep) 80%, var(--c3-rim) 100%);
-  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(0,70,25,.55), 0 4px 8px rgba(0,0,0,.4);}
-.c4{border-radius:50%;
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(0,70,25,.55);}
+.c4{ /* blue disc */
+  border-radius:50%;
   background:
     radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.65), transparent 70%),
     radial-gradient(circle at 35% 30%, var(--c4-hi) 0%, var(--c4-mid) 52%, var(--c4-deep) 80%, var(--c4-rim) 100%);
-  box-shadow:inset 0 3px 6px rgba(255,255,255,.4), inset 0 -7px 10px rgba(0,45,85,.6), 0 4px 8px rgba(0,0,0,.4);}
-.c5{border-radius:0;
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.4), inset 0 -7px 10px rgba(0,45,85,.6);}
+.c5{ /* purple cluster */
+  clip-path:url(#cc-cluster);
   background:
     radial-gradient(ellipse 52% 32% at 50% 8%, rgba(255,255,255,.55), transparent 70%),
     radial-gradient(circle at 35% 30%, var(--c5-hi) 0%, var(--c5-mid) 52%, var(--c5-deep) 80%, var(--c5-rim) 100%);
-  clip-path:polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
-  filter:drop-shadow(0 4px 6px rgba(0,0,0,.4));}
-.c5::after{left:30%;} /* gloss nudge for hexagon */
+  box-shadow:inset 0 3px 6px rgba(255,255,255,.35), inset 0 -7px 10px rgba(40,0,70,.55);}
 /* specials */
 .tile.sp-sh .candy::before, .tile.sp-sv .candy::before{
   content:""; position:absolute; inset:6%; border-radius:inherit; pointer-events:none;
@@ -209,7 +215,8 @@ body{
   mix-blend-mode:screen;
 }
 .tile.sp-sv .candy::before{background:repeating-linear-gradient(90deg, rgba(255,255,255,.85) 0 18%, transparent 18% 38%);}
-.tile.sp-sh .candy, .tile.sp-sv .candy{filter:saturate(1.3); box-shadow:0 0 14px rgba(255,255,255,.55);}
+.tile.sp-sh .candy, .tile.sp-sv .candy{filter:saturate(1.3);}
+.tile.sp-sh .pad, .tile.sp-sv .pad{filter:drop-shadow(0 4px 6px rgba(0,0,0,.4)) drop-shadow(0 0 14px rgba(255,255,255,.55));}
 /* striped sheen: a light sweep glides across the candy */
 .tile.sp-sh .candy::after, .tile.sp-sv .candy::after{
   left:0; top:0; width:100%; height:100%; transform:none; border-radius:inherit;
@@ -219,13 +226,15 @@ body{
 }
 @keyframes sheenSweep{0%{background-position:130% 0;}100%{background-position:-130% 0;}}
 .tile.sp-w .candy{animation:wrapGlow 1.2s ease-in-out infinite;
-  box-shadow:0 0 20px rgba(255,255,255,.7), inset 0 -5px 8px rgba(0,0,0,.3);}
+  box-shadow:inset 0 -5px 8px rgba(0,0,0,.3);}
+.tile.sp-w .pad{filter:drop-shadow(0 4px 6px rgba(0,0,0,.4)) drop-shadow(0 0 20px rgba(255,255,255,.7));}
 @keyframes wrapGlow{0%,100%{filter:brightness(1) drop-shadow(0 0 4px #fff);}50%{filter:brightness(1.35) drop-shadow(0 0 14px #fff);}}
 .tile.sp-w .candy::before{content:""; position:absolute; inset:-7%; border-radius:30%;
   border:3px dashed rgba(255,255,255,.9); animation:spin 6s linear infinite; pointer-events:none;}
 @keyframes spin{to{transform:rotate(360deg);}}
 /* color bomb: dark sphere + rotating prismatic sheen + candy dots */
-.tile.sp-b .candy{background:
+.tile.sp-b .candy{clip-path:none;
+  background:
     radial-gradient(circle at 30% 25%, #6b4a36, #3a2418 60%, #1c100a);
   border-radius:50%; box-shadow:0 0 18px rgba(255,211,77,.6), inset 0 -5px 10px #000;}
 .tile.sp-b .candy::before{content:""; position:absolute; inset:12%; border-radius:50%; pointer-events:none;
@@ -430,3 +439,36 @@ body{
 
 /* confetti easter egg */
 .confetti{position:absolute; top:0; width:10px; height:14px; border-radius:2px; z-index:50; pointer-events:none;}
+
+/* chocolate blocker: glossy chocolate square with drizzle */
+.choc{position:absolute; left:0; top:0; border-radius:22%; pointer-events:none; z-index:3;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,235,200,.13) 0 3px, transparent 3px 9px),
+    linear-gradient(145deg, #7a4a26 0%, #5a3319 55%, #3a2110 100%);
+  border:2px solid rgba(46,26,12,.9);
+  box-shadow:inset 0 2px 4px rgba(255,220,170,.35), inset 0 -4px 7px rgba(0,0,0,.5), 0 2px 5px rgba(0,0,0,.4);}
+/* sugar star: 4th prestige tier */
+.nstars .sstar{color:#ffd34d; text-shadow:0 0 7px #ff9d00, 0 1px 4px #000;}
+.nstars .sstar.off{color:rgba(255,255,255,.22); text-shadow:none;}
+.intro-stars .sstar{color:#ffd34d;}
+#modal-stars .sstar{color:#c9b18a;}
+#modal-stars .sstar.earned{color:#ffd34d; text-shadow:0 0 12px #ff9d00;}
+/* daily spin wheel */
+.spin-wrap{display:flex; flex-direction:column; align-items:center; gap:8px; padding:4px 0 2px;}
+.spin-pointer{font-size:24px; line-height:1; color:#ff5fa2; margin-bottom:-16px; z-index:2;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));}
+.spin-wheel{position:relative; width:216px; height:216px; border-radius:50%; flex:none;
+  background:conic-gradient(#ff5fa2 0 45deg, #ffb84d 45deg 90deg, #4de3ff 90deg 135deg,
+    #4ade80 135deg 180deg, #a855f7 180deg 225deg, #ff8fb3 225deg 270deg,
+    #ffd34d 270deg 315deg, #7dd3fc 315deg 360deg);
+  border:6px solid rgba(255,255,255,.85);
+  box-shadow:0 8px 26px rgba(0,0,0,.5), inset 0 0 0 4px rgba(255,255,255,.22);
+  transition:transform 3.6s cubic-bezier(.12,.8,.24,1);}
+.spin-wheel::after{content:''; position:absolute; left:50%; top:50%; width:36px; height:36px;
+  margin:-18px 0 0 -18px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #fff, #ffd34d 60%, #c98a00);
+  box-shadow:0 2px 6px rgba(0,0,0,.45);}
+.spin-label{position:absolute; left:calc(50% - 17px); top:calc(50% - 17px); width:34px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:800; color:#3a1c00; text-shadow:0 1px 0 rgba(255,255,255,.55);}
+.spin-msg{min-height:22px; font-weight:700; text-align:center;}
