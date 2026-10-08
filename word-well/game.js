@@ -16,12 +16,12 @@ function pad2(n) { return (n < 10 ? '0' : '') + n; }
 function dateStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 function todayStr() { return dateStr(new Date()); }
 var toastTimer = null;
-function toast(msg, ms) {
+function toast(msg, ms, cls) {
   var t = $('toast');
   t.textContent = msg;
-  t.classList.add('show');
+  t.className = 'toast show' + (cls ? ' ' + cls : '');
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(function () { t.classList.remove('show'); }, ms || 2200);
+  toastTimer = setTimeout(function () { t.className = 'toast'; }, ms || 2200);
 }
 function lsGet(k, dflt) {
   try { var v = localStorage.getItem(k); return v == null ? dflt : v; } catch (e) { return dflt; }
@@ -31,7 +31,7 @@ function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 /* ---------------- constants ---------------- */
 var ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
 var GAME_KEY = 'word-well';
-var BUILD_TAG = 'build 20261008a';
+var BUILD_TAG = 'build 20261008b';
 var WARDEN_NAME = 'Well Warden';
 
 var WARDEN_THINKING = [
@@ -141,7 +141,7 @@ function renderMenuBoard() {
   var el = $('menu-board');
   arcadeFetch('/scores?game=' + GAME_KEY + '&board=daily-' + todayStr(), null, function (err, data) {
     if (err || !data || !data.top || !data.top.length) {
-      el.innerHTML = '<div class="lb-empty">no scores yet today — be the first</div>';
+      el.innerHTML = '<div class="lb-empty">the well is quiet today — be the first to cast a score</div>';
       return;
     }
     el.innerHTML = data.top.slice(0, 5).map(function (e, i) {
@@ -167,7 +167,7 @@ function boot() {
 }
 function bindMenu() {
   $('btn-solo').onclick = function () { WWAU.ensure(); WWAU.tap(); show('scr-diff'); };
-  $('btn-pass').onclick = function () { WWAU.ensure(); WWAU.tap(); startPass(); };
+  $('btn-passplay').onclick = function () { WWAU.ensure(); WWAU.tap(); startPass(); };
   $('btn-daily').onclick = function () { WWAU.ensure(); WWAU.tap(); startDaily(); };
   $('btn-how').onclick = function () { WWAU.tap(); $('ov-how').classList.remove('hidden'); };
   $('ov-how-close').onclick = function () { WWAU.tap(); $('ov-how').classList.add('hidden'); };
@@ -328,12 +328,21 @@ function renderAll() {
 }
 function setTurnBanner() {
   var st = G.st, el = $('turn-banner');
-  if (st.over) { el.textContent = 'the well is still'; return; }
+  if (st.over) { el.textContent = 'the well is still'; el.classList.remove('thinking'); return; }
   if (G.mode === 'solo' || G.mode === 'daily') {
-    el.textContent = st.turn === 0 ? 'your turn — cast your stones' : 'the Well Warden is thinking…';
+    var warden = st.turn === 1;
+    el.textContent = warden ? 'the Well Warden is thinking' : 'your turn — cast your stones';
+    el.classList.toggle('thinking', warden);
   } else {
     el.textContent = G.names[st.turn] + ' — cast your stones';
+    el.classList.remove('thinking');
   }
+}
+function popPreview() {
+  var pv = $('preview');
+  pv.classList.remove('pop');
+  void pv.offsetWidth;
+  pv.classList.add('pop');
 }
 
 /* ---------------- tentative placement ---------------- */
@@ -520,8 +529,9 @@ function onPlay() {
   if (!v.ok) { WWAU.error(); toast(friendlyError(v)); return; }
   G.hindsightArmed = false;
   G.tent = []; G.sel = null;
-  if (v.bingo) { WWAU.bingo(); toast('BINGO! +35'); }
+  if (v.bingo) { WWAU.bingo(); toast('BINGO! +35', 2600, 'big'); }
   else WWAU.play();
+  popPreview();
   afterHumanMove(player, v, hindBest);
 }
 function afterHumanMove(player, v, hindBest) {
@@ -619,6 +629,7 @@ function botPlay() {
         if (v.score >= 30 || v.bingo) toast(pick(WARDEN_GOOD) + ' (' + v.score + ')');
         else WWAU.play();
         if (v.bingo) WWAU.bingo();
+        popPreview();
       }
     } else if (mv.type === 'swap') {
       WWF.swapTiles(st, 1, mv.idxs);
@@ -681,7 +692,7 @@ function onTilePile() {
   letters.forEach(function (L) {
     html += '<div class="pile-cell"><b>' + L + '</b><span>' + (counts[L] || 0) + '</span></div>';
   });
-  html += '<div class="pile-cell"><b>␣</b><span>' + (counts.blank || 0) + '</span></div></div>';
+  html += '<div class="pile-cell"><b title="blank stone">·</b><span>' + (counts.blank || 0) + '</span></div></div>';
   html += '<div class="pile-note">' + G.st.bag.length + ' stones remain in the well</div>';
   $('ov-pile-body').innerHTML = html;
   $('ov-pile').classList.remove('hidden');

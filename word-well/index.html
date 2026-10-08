@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=IM+Fell+English:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <div class="app">
@@ -32,12 +32,29 @@
   <!-- MENU -->
   <section id="scr-menu" class="screen hidden" aria-label="Menu">
     <div class="menu-wrap">
+      <svg class="well-mark" viewBox="0 0 120 92" width="104" height="80" aria-hidden="true">
+        <ellipse cx="60" cy="66" rx="40" ry="15" fill="#2c2114"/>
+        <ellipse cx="60" cy="61" rx="40" ry="15" fill="none" stroke="#8a6d15" stroke-width="5"/>
+        <ellipse cx="60" cy="61" rx="31" ry="10.5" fill="#100b06"/>
+        <ellipse cx="60" cy="61" rx="31" ry="10.5" fill="none" stroke="#c9a227" stroke-width="1.5" opacity=".6"/>
+        <g font-family="Georgia,serif" font-weight="bold" text-anchor="middle">
+          <g transform="rotate(-9 38 30)">
+            <rect x="27" y="18" width="22" height="24" rx="4" fill="#4c4232" stroke="#241c11" stroke-width="2"/>
+            <text x="38" y="36" font-size="16" fill="#f3e8cf">W</text>
+          </g>
+          <g transform="rotate(7 82 26)">
+            <rect x="71" y="14" width="22" height="24" rx="4" fill="#5a4c38" stroke="#241c11" stroke-width="2"/>
+            <text x="82" y="32" font-size="16" fill="#f3e8cf">W</text>
+          </g>
+        </g>
+        <path d="M52 61 q4 3 8 0 q4 -3 8 0" stroke="#c9a227" stroke-width="1.5" fill="none" opacity=".55"/>
+      </svg>
       <h1 class="game-title">Word Well</h1>
       <p class="tagline">cast your stones into the deep</p>
       <p class="streak-line" id="menu-streak"></p>
       <div class="menu-btns">
         <button class="btn primary" id="btn-solo" type="button">Solo vs the Well Warden</button>
-        <button class="btn" id="btn-pass" type="button">Pass &amp; Play</button>
+        <button class="btn" id="btn-passplay" type="button">Pass &amp; Play</button>
         <button class="btn" id="btn-daily" type="button">Daily Well</button>
         <button class="btn ghost" id="btn-how" type="button">How to play</button>
         <button class="btn ghost" id="btn-mute" type="button">sound on</button>
@@ -80,7 +97,7 @@
         <button class="cbtn primary" id="btn-play" type="button">play</button>
         <button class="cbtn" id="btn-swap" type="button">swap</button>
         <button class="cbtn" id="btn-pass" type="button">pass</button>
-        <button class="cbtn" id="btn-flip" type="button">⇄</button>
+        <button class="cbtn" id="btn-flip" type="button" title="flip word direction">flip</button>
         <button class="cbtn" id="btn-recall" type="button">recall</button>
         <button class="cbtn" id="btn-shuffle" type="button">shuffle</button>
         <button class="cbtn ghost" id="btn-menu2" type="button">‹ menu</button>
@@ -157,7 +174,7 @@
 <script src="dict-6.js?v=9"></script>
 <script src="wwf.js?v=9"></script>
 <script src="audio.js?v=9"></script>
-<script src="game.js?v=9"></script>
+<script src="game.js?v=10"></script>
 <script>
   document.getElementById('btn-again').onclick = function () { location.reload(); };
   document.getElementById('btn-over-menu').onclick = function () { location.reload(); };
