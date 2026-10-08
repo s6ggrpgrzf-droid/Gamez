@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Tiny Fairway — one-touch golf</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body data-biome="0">
 <canvas id="game"></canvas>
@@ -18,10 +18,11 @@
   <div id="hud-meta">PAR 3</div>
 </header>
 
-<!-- corner buttons during play: undo / skip / trail / sound -->
+<!-- corner buttons during play: undo / skip / trail / sound / power-up -->
 <div id="corner-btns" aria-label="Shot tools">
   <button id="btn-undo" class="corner-btn" type="button" hidden title="Take back last shot">↩</button>
   <button id="btn-skip" class="corner-btn textual" type="button" hidden title="Skip this hole">⏭ SKIP</button>
+  <button id="btn-pow" class="corner-btn textual" type="button" hidden title="Power-up">◼ 2</button>
   <button id="btn-trail" class="corner-btn" type="button" hidden title="Ball trail color">🎨</button>
   <button id="btn-mute" class="corner-btn" type="button" hidden title="Sound">🔊</button>
 </div>
@@ -37,10 +38,12 @@
   <div class="menu-inner">
     <div class="logo" id="menu-logo">⛳</div>
     <h1>Tiny Fairway</h1>
-    <p class="tagline">One finger. Infinite holes.</p>
+    <p class="tagline">One finger. Twenty holes.</p>
     <div class="menu-btns">
-      <button class="btn primary" id="btn-endless" type="button">Endless<span class="btn-sub" id="endless-sub"></span></button>
+      <button class="btn primary" id="btn-endless" type="button">Tour<span class="btn-sub" id="endless-sub"></span></button>
       <button class="btn" id="btn-daily" type="button">Daily Hole<span class="btn-sub" id="daily-sub">same hole, worldwide</span></button>
+      <button class="btn" id="btn-race" type="button">Race<span class="btn-sub">you vs 3 rivals, live</span></button>
+      <button class="btn ghost" id="btn-map" type="button">World Map<span class="btn-sub">stars color the lands</span></button>
       <button class="btn ghost" id="btn-newrun" type="button" hidden>↺ new run</button>
       <button class="btn ghost" id="btn-how" type="button">How to play</button>
       <button class="btn ghost" id="btn-haptic" type="button" aria-pressed="true">Haptics: <span id="haptic-state">On</span></button>
@@ -49,7 +52,8 @@
       <p><b>Drag back anywhere</b> on the screen to aim — a dotted path shows where the ball will roll, bending with the slope. <b>Release</b> to shoot. Longer drag, longer shot.</p>
       <p><b>Read the wind</b> — the flag streams with it, streaks drift across the hole, and the gauge (top-right) shows direction and strength. Wind pushes putts around. Bank shots off the brick walls, time the windmill's blades, and hit ramps with speed to fly over trouble.</p>
       <p><b>Read the break:</b> the drifting white arrows show which way putts will curve — aim into the slope and let it feed the ball to the cup.</p>
-      <p><b>Spin:</b> while aiming, drag a second finger up/down (or the mouse wheel) — topspin runs on, backspin bites. <b>Overdrive:</b> drag past 90% for a super shot; the shaking red line means it might go anywhere.</p>
+      <p><b>Spin:</b> while aiming, drag a second finger up/down (or the mouse wheel) — topspin runs on, backspin bites. <b>Curve:</b> after release, drag sideways to bend the ball mid-flight. <b>Overdrive:</b> drag past 90% for a super shot; the shaking red line means it might go anywhere.</p>
+      <p><b>Power-ups:</b> earn one per hole. ◼ air-brake kills the ball's speed mid-flight (tap PWR while it's moving), ◉ sticky stops the next landing dead, ↺ mulligan rewinds the whole hole. <b>Race:</b> you and 3 rivals putt at once — first in wins. Bump a gem-carrier to spill a gem. <b>Relics:</b> one rainbow shard hides on every hole, off the fast line.</p>
       <p>Sink it in as few strokes as you can: match par for ★★★. Water costs a stroke. Sand is slow. ↩ takes back your last shot; after 20 strokes you can skip the hole. The turtle is harmless, but it <i>will</i> judge a bad hole.</p>
     </div>
     <p class="best" id="menu-best"></p>
@@ -68,6 +72,16 @@
   <div id="stars-pop-label">Par</div>
 </div>
 
+<!-- WORLD MAP -->
+<section id="map" class="screen" aria-label="World Map">
+  <div class="card map-card">
+    <h2>World Map</h2>
+    <p class="map-sub" id="map-total"></p>
+    <div id="map-islands"></div>
+    <button class="btn primary" id="btn-map-back" type="button">Back</button>
+  </div>
+</section>
+
 <!-- RESULT (daily) -->
 <section id="result" class="screen" aria-label="Result">
   <div class="card">
@@ -81,7 +95,7 @@
 
 <div id="err" hidden></div>
 
-<script src="sim.js?v=4"></script>
-<script src="game.js?v=4"></script>
+<script src="sim.js?v=5"></script>
+<script src="game.js?v=5"></script>
 </body>
 </html>

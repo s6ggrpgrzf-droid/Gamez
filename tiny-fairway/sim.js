@@ -407,6 +407,86 @@
 
     var biome = (rng() * 4) | 0;
 
+    // ---- mechanic tags + 3-stage intro grammar (What the Golf?) ----
+    // opts.intro: 'new' (first sight: gentle, guaranteed, hinted),
+    // 'challenge' (normal), 'twist' (focus mechanic + a second one nearby).
+    function forceWindmill() {
+      var fsi = 1 + ((rng() * (fairway.length - 1)) | 0);
+      var fs = fairway[fsi];
+      var fdx = fs.x2 - fs.x1, fdy = fs.y2 - fs.y1;
+      var fl = Math.hypot(fdx, fdy) || 1;
+      var fx = (fs.x1 + fs.x2) / 2 + (-fdy / fl) * fs.r * 0.35;
+      var fy = (fs.y1 + fs.y2) / 2 + (fdx / fl) * fs.r * 0.35;
+      return { x: fx, y: fy, hubR: 1.7, bladeLen: 5.4, bladeW: 1.2,
+               speed: (0.8 + rng() * 0.6) * (rng() < 0.5 ? -1 : 1),
+               phase: rng() * TAU };
+    }
+    function forceRamp() {
+      var rsi = (rng() * (fairway.length - 1)) | 0;
+      var rs = fairway[rsi];
+      var rdx = rs.x2 - rs.x1, rdy = rs.y2 - rs.y1;
+      var rl = Math.hypot(rdx, rdy) || 1;
+      return { x: rs.x1 + rdx * 0.5, y: rs.y1 + rdy * 0.5, w: 8, h: 6.5,
+               dx: rdx / rl, dy: rdy / rl, minSpeed: 10 };
+    }
+    var intro = opts.intro || 'challenge';
+    var focusMech = opts.focusMech || null;
+    if (intro === 'new' && focusMech === 'windmill' && !windmill) windmill = forceWindmill();
+    if (intro === 'new' && focusMech === 'ramp' && !ramps.length) ramps.push(forceRamp());
+    if (intro === 'twist' && focusMech) {
+      if (focusMech === 'windmill' && !windmill) windmill = forceWindmill();
+      if (focusMech === 'ramp' && !ramps.length) ramps.push(forceRamp());
+      // a twist pairs the focus mechanic with a second obstacle
+      if (!windmill) windmill = forceWindmill();
+      else if (!ramps.length) ramps.push(forceRamp());
+    }
+    if (intro === 'new') {
+      if (windmill) windmill.speed *= 0.55;   // gentle first meeting
+      if (sand.length > 1) sand.length = 1;   // fewer traps while learning
+    }
+    var mechanics = [];
+    if (windmill) mechanics.push('windmill');
+    if (ramps.length) mechanics.push('ramp');
+    if (water.length) mechanics.push('water');
+    if (dunes.length) mechanics.push('dunes');
+    if (walls.length) mechanics.push('walls');
+
+    // ---- hidden relic: one per hole, off the racing line (Walkabout) ----
+    function inHazards(x, y) {
+      var q;
+      for (q = 0; q < water.length; q++) if (inEllipse(x, y, water[q])) return true;
+      for (q = 0; q < sand.length; q++) if (inEllipse(x, y, sand[q])) return true;
+      return false;
+    }
+    var relic = null;
+    for (var rlt = 0; rlt < 24 && !relic; rlt++) {
+      var rlx = 6 + rng() * (W - 12), rly = 14 + rng() * (H - 20);
+      var rld = distToFairway(rlx, rly);
+      if (rld < 5 || rld > 24) continue;                 // off the line, still reachable
+      if (dist2(rlx, rly, teeX, teeY) < 49) continue;
+      if (dist2(rlx, rly, cupX, cupY) < 49) continue;
+      if (inHazards(rlx, rly)) continue;
+      relic = { x: rlx, y: rly, taken: false };
+    }
+
+    // ---- gems: risk/reward detours near but off the fast line (Mini Golf King) ----
+    var gems = [];
+    for (var gmi = 0; gmi < 4; gmi++) {
+      for (var gmt = 0; gmt < 18; gmt++) {
+        var gmx = 5 + rng() * (W - 10), gmy = 12 + rng() * (H - 18);
+        var gmd = distToFairway(gmx, gmy);
+        if (gmd < 2.5 || gmd > 11) continue;            // beside the fairway, not on it
+        if (dist2(gmx, gmy, teeX, teeY) < 36) continue;
+        if (dist2(gmx, gmy, cupX, cupY) < 36) continue;
+        if (inHazards(gmx, gmy)) continue;
+        var gok = true, go2;
+        for (go2 = 0; gok && go2 < gems.length; go2++)
+          if (dist2(gmx, gmy, gems[go2].x, gems[go2].y) < 64) gok = false;
+        if (relic && dist2(gmx, gmy, relic.x, relic.y) < 64) gok = false;
+        if (gok) { gems.push({ x: gmx, y: gmy, taken: false }); break; }
+      }
+    }
+
     return {
       seed: seed >>> 0,
       W: W, H: H,
@@ -425,12 +505,259 @@
       tee: { x: teeX, y: teeY },
       cup: { x: cupX, y: cupY },
       par: par,
-      biome: biome
+      biome: biome,
+      mechanics: mechanics,      // tags present this hole
+      intro: intro,              // 'new' | 'challenge' | 'twist'
+      focusMech: focusMech,      // mechanic being introduced (or null)
+      relic: relic,              // {x,y,taken} or null
+      gems: gems                 // [{x,y,taken}]
     };
   };
 
-  // Wind vector at sim-time t (seconds): base + slow organic gusts.
+  /* ---------------- the designed tour: 20 hand-built holes ----------------
+   * Jimmy asked for a real course instead of endless procedural generation.
+   * Spec format (compact arrays):
+   *   fw: [x1,y1,x2,y2,r] fairway segments (the intended route; the bot
+   *       follows their midpoints, so the route must always be playable)
+   *   green/sand/water: [x,y,rx,ry(,rot)] ellipses
+   *   trees: [x,y,r]   dunes: [x,y,sig,push] (push>0 mound, push<0 dip)
+   *   walls: [x1,y1,x2,y2]   mill: [x,y,speed]   bridges: [x,y,w,rot]
+   *   ramps: [x,y,dx,dy] (unit dir)   wind/tilt/brk: [ang rad, mag]
+   * Water crossings on the route are ALWAYS paired with a ramp: the race
+   * bot plays for the ramp when the direct line is wet. */
+  TF.HOLES = [
+    { par: 2, biome: 0, tee: [28, 8], cup: [28, 76],
+      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
+      tilt: [0, 0.3], brk: [0, 0],
+      hint: 'Drag back anywhere and release — that\u2019s the whole game.' },
+    { par: 2, biome: 0, tee: [38, 8], cup: [20, 76],
+      fw: [[38, 8, 20, 45, 8], [20, 45, 20, 76, 8]], green: [20, 76, 9, 7],
+      tilt: [3.1, 0.5], brk: [2.6, 1.3],
+      hint: 'White arrows show the break — aim into the slope and let it feed the ball in.' },
+    { par: 3, biome: 0, tee: [28, 8], cup: [28, 76],
+      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
+      dunes: [[35, 40, 5, 3], [21, 58, 6, -3]],
+      tilt: [1.2, 0.4], brk: [0, 0],
+      hint: 'Mounds shove the ball away — dips gather it in. Use them.' },
+    { par: 3, biome: 0, tee: [28, 8], cup: [28, 76],
+      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
+      mill: [31.5, 48, 0.55], bridges: [[28, 30, 19, 1.57]],
+      tilt: [0, 0.3], brk: [1.1, 0.9],
+      hint: 'The windmill! Time the blades — or take the open lane around the hub.' },
+    { par: 3, biome: 1, tee: [28, 8], cup: [28, 76],
+      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
+      sand: [[37, 68, 4.5, 3.5]],
+      tilt: [0.4, 0.4], brk: [2.2, 1.2],
+      hint: 'Sand grabs the ball — carry the trap or play short of it.' },
+    { par: 3, biome: 1, tee: [28, 8], cup: [28, 76],
+      fw: [[28, 8, 28, 40, 8], [28, 40, 28, 76, 8]], green: [28, 76, 9, 7],
+      water: [[28, 47, 17, 3.5, 0]], ramps: [[28, 37, 0, 1]],
+      tilt: [0, 0.3], brk: [0, 0],
+      hint: 'Hit the ramp with speed and FLY the water.' },
+    { par: 3, biome: 1, tee: [28, 8], cup: [30, 76],
+      fw: [[28, 8, 46, 36, 8], [46, 36, 30, 76, 8]], green: [30, 76, 9, 7],
+      water: [[24, 48, 8, 6, 0]],
+      tilt: [5.8, 0.4], brk: [1.4, 1.0],
+      hint: 'Carry the lake if you dare — or ride the safe dogleg around it.' },
+    { par: 3, biome: 2, tee: [14, 10], cup: [42, 56],
+      fw: [[14, 10, 14, 52, 7], [14, 52, 42, 52, 7]], green: [42, 56, 9, 7],
+      walls: [[8, 61, 48, 61]],
+      tilt: [0, 0.2], brk: [4.7, 1.1],
+      hint: 'Bank it! The brick wall turns the corner for you.' },
+    { par: 4, biome: 2, tee: [28, 8], cup: [28, 80],
+      fw: [[28, 8, 28, 80, 9]], green: [28, 80, 9, 7],
+      wind: [0, 3], trees: [[16, 40, 2], [40, 62, 2]],
+      tilt: [0, 0.3], brk: [3.14, 0.8],
+      hint: 'Crosswind — aim upwind and let it drift you home.' },
+    { par: 4, biome: 2, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 28, 78, 9]], green: [28, 78, 9, 7],
+      mill: [31.5, 38, 0.8], water: [[28, 62, 15, 3, 0]], ramps: [[28, 53, 0, 1]],
+      tilt: [0.2, 0.3], brk: [2.0, 1.0],
+      hint: 'Mill, then water. Thread the blades, then take the sky road.' },
+    { par: 3, biome: 3, tee: [28, 8], cup: [28, 76],
+      fw: [[28, 8, 28, 68, 9]], green: [28, 76, 8, 6],
+      water: [[28, 86, 15, 4, 0], [16, 76, 4, 9, 0], [40, 76, 4, 9, 0]],
+      tilt: [0, 0.2], brk: [1.57, 1.4],
+      hint: 'Peninsula green — water on three sides. The front door is open.' },
+    { par: 4, biome: 3, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 40, 44, 8], [40, 44, 28, 78, 8]], green: [28, 78, 9, 7],
+      dunes: [[28, 45, 9, -4.5], [44, 62, 5, 2.5]],
+      tilt: [0.9, 0.4], brk: [0, 0],
+      hint: 'The valley gathers everything to its heart — play the funnel.' },
+    { par: 4, biome: 0, tee: [44, 8], cup: [14, 78],
+      fw: [[44, 8, 44, 40, 8], [44, 40, 14, 58, 8], [14, 58, 14, 78, 7]],
+      green: [14, 78, 9, 7], trees: [[34, 48, 2], [30, 54, 2], [24, 46, 1.8]],
+      bridges: [[44, 24, 19, 1.57]],
+      tilt: [2.8, 0.5], brk: [0.6, 1.2],
+      hint: 'A proper dogleg — the trees guard the shortcut.' },
+    { par: 4, biome: 1, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 28, 60, 9], [28, 60, 28, 78, 8]], green: [28, 78, 9, 7],
+      mill: [31.5, 44, 1.0], water: [[28, 66, 12, 3, 0]], ramps: [[28, 58, 0, 1]],
+      tilt: [0, 0.3], brk: [2.4, 1.1],
+      hint: 'Faster mill, wet finish. The ramp is your bridge.' },
+    { par: 4, biome: 1, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 28, 78, 9]], green: [28, 78, 9, 7],
+      sand: [[28, 52, 16, 6]], ramps: [[28, 42, 0, 1]],
+      tilt: [0.1, 0.4], brk: [0, 0],
+      hint: 'A waste of sand — or a runway. Your call.' },
+    { par: 4, biome: 2, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 28, 78, 5]], green: [28, 78, 8, 6],
+      trees: [[18, 25, 2], [38, 35, 2], [18, 50, 2], [38, 60, 2], [20, 70, 1.8]],
+      tilt: [0, 0.3], brk: [1.9, 1.3],
+      hint: 'The gauntlet — thread the trees, stay on the ribbon.' },
+    { par: 4, biome: 3, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 28, 78, 9]], green: [28, 78, 9, 7],
+      wind: [1.57, 4], dunes: [[20, 40, 5, 2.5], [36, 60, 5, 2.5]],
+      tilt: [1.0, 0.5], brk: [0, 0],
+      hint: 'Gust front — the air itself is a hazard now.' },
+    { par: 4, biome: 3, tee: [28, 8], cup: [28, 77],
+      fw: [[28, 8, 28, 70, 9]], green: [28, 77, 8, 6],
+      mill: [24.5, 55, 1.1],
+      water: [[28, 87, 13, 3.5, 0], [17, 77, 3.5, 8, 0], [39, 77, 3.5, 8, 0]],
+      tilt: [0.3, 0.3], brk: [4.4, 1.2],
+      hint: 'Mill and moat. Nothing about this one is free.' },
+    { par: 5, biome: 0, tee: [28, 6], cup: [28, 86],
+      fw: [[28, 6, 20, 45, 9], [20, 45, 28, 86, 9]], green: [28, 86, 9, 7],
+      dunes: [[36, 30, 6, 3], [18, 62, 7, -3]], trees: [[40, 55, 2], [14, 28, 2]],
+      wind: [0.5, 1.5],
+      tilt: [0.7, 0.4], brk: [2.9, 1.0],
+      hint: 'The long haul — five is a good score. Breathe.' },
+    { par: 5, biome: 2, tee: [28, 8], cup: [28, 80],
+      fw: [[28, 8, 28, 80, 9]], green: [28, 80, 9, 7],
+      mill: [31.5, 35, 1.0], water: [[28, 63, 14, 3, 0]], ramps: [[28, 55, 0, 1]],
+      dunes: [[20, 45, 5, 3], [36, 70, 6, -3]], sand: [[38, 74, 4, 3]],
+      trees: [[16, 28, 2], [40, 48, 2]], bridges: [[28, 20, 21, 1.57]],
+      wind: [0.8, 2.5],
+      tilt: [0.4, 0.4], brk: [1.2, 1.3],
+      hint: 'Everything you\u2019ve learned, one last time. Make it count.' }
+  ];
+  TF.TOUR_PAR = TF.HOLES.reduce(function (s, h) { return s + h.par; }, 0);
+
+  // Builds a runtime hole from a tour spec. idx = 0-based hole index (seeds phases).
+  TF.makeHole = function (spec, idx) {
+    var seed = (0x70ac + idx * 101) >>> 0;
+    var rng = TF.mulberry32(seed);
+    function ell(a) { return { x: a[0], y: a[1], rx: a[2], ry: a[3], rot: a[4] || 0 }; }
+    var fairway = spec.fw.map(function (s) {
+      return { x1: s[0], y1: s[1], x2: s[2], y2: s[3], r: s[4] };
+    });
+    var dunes = (spec.dunes || []).map(function (d) {
+      return { x: d[0], y: d[1], sig: d[2], push: d[3] };
+    });
+    var wspec = spec.wind || [0, 0];
+    var wind = { ang: wspec[0], base: wspec[1], gustAmp: 0.35,
+                 gustFreq: 0.28 + (idx % 5) * 0.06, phase: idx * 1.7 };
+    var tilt = spec.tilt || [0, 0], brk = spec.brk || [0, 0];
+    var cupX = spec.cup[0], cupY = spec.cup[1];
+    function slopeAt(x, y) {
+      var dxc = x - cupX, dyc = y - cupY;
+      var fall = Math.exp(-(dxc * dxc + dyc * dyc) / (2 * 14 * 14));
+      var ax = Math.cos(tilt[0]) * tilt[1] + Math.cos(brk[0]) * brk[1] * fall;
+      var ay = Math.sin(tilt[0]) * tilt[1] + Math.sin(brk[0]) * brk[1] * fall;
+      for (var di = 0; di < dunes.length; di++) {
+        var du = dunes[di];
+        var ddx = x - du.x, ddy = y - du.y;
+        var d2 = ddx * ddx + ddy * ddy;
+        var sig2 = du.sig * du.sig;
+        if (d2 < sig2 * 9) {
+          var dd = Math.sqrt(d2) || 0.001;
+          var g = du.push * (dd / du.sig) * Math.exp(-d2 / (2 * sig2));
+          ax += (ddx / dd) * g;
+          ay += (ddy / dd) * g;
+        }
+      }
+      return { x: ax, y: ay };
+    }
+    var mill = spec.mill ? {
+      x: spec.mill[0], y: spec.mill[1], hubR: 1.7, bladeLen: 5.4, bladeW: 1.2,
+      speed: spec.mill[2], phase: idx * 2.1
+    } : null;
+    var ramps = (spec.ramps || []).map(function (rp) {
+      var l = Math.hypot(rp[2], rp[3]) || 1;
+      return { x: rp[0], y: rp[1], w: 8, h: 6.5,
+               dx: rp[2] / l, dy: rp[3] / l, minSpeed: 10 };
+    });
+    function distToFairway(x, y) {
+      var d = Infinity, j;
+      for (j = 0; j < fairway.length; j++) {
+        var s = fairway[j];
+        d = Math.min(d, segDist(x, y, s.x1, s.y1, s.x2, s.y2) - s.r);
+      }
+      return d;
+    }
+    function inHaz(x, y) {
+      var q;
+      var wl = (spec.water || []), sl = (spec.sand || []);
+      for (q = 0; q < wl.length; q++) if (inEllipse(x, y, ell(wl[q]))) return true;
+      for (q = 0; q < sl.length; q++) if (inEllipse(x, y, ell(sl[q]))) return true;
+      return false;
+    }
+    // relic + gems: sampled off the racing line, never in hazards (deterministic)
+    var relic = null;
+    for (var rlt = 0; rlt < 40 && !relic; rlt++) {
+      var rlx = 6 + rng() * (TF.W - 12), rly = 14 + rng() * (TF.H - 20);
+      var rld = distToFairway(rlx, rly);
+      if (rld < 5 || rld > 24) continue;
+      if (dist2(rlx, rly, spec.tee[0], spec.tee[1]) < 49) continue;
+      if (dist2(rlx, rly, cupX, cupY) < 49) continue;
+      if (inHaz(rlx, rly)) continue;
+      relic = { x: rlx, y: rly, taken: false };
+    }
+    var gems = [];
+    for (var gmi = 0; gmi < 4; gmi++) {
+      for (var gmt = 0; gmt < 30; gmt++) {
+        var gmx = 5 + rng() * (TF.W - 10), gmy = 12 + rng() * (TF.H - 18);
+        var gmd = distToFairway(gmx, gmy);
+        if (gmd < 2.5 || gmd > 11) continue;
+        if (dist2(gmx, gmy, spec.tee[0], spec.tee[1]) < 36) continue;
+        if (dist2(gmx, gmy, cupX, cupY) < 36) continue;
+        if (inHaz(gmx, gmy)) continue;
+        var gok = true, go2;
+        for (go2 = 0; gok && go2 < gems.length; go2++)
+          if (dist2(gmx, gmy, gems[go2].x, gems[go2].y) < 64) gok = false;
+        if (relic && dist2(gmx, gmy, relic.x, relic.y) < 64) gok = false;
+        if (gok) { gems.push({ x: gmx, y: gmy, taken: false }); break; }
+      }
+    }
+    var mechanics = [];
+    if (mill) mechanics.push('windmill');
+    if (ramps.length) mechanics.push('ramp');
+    if ((spec.water || []).length) mechanics.push('water');
+    if (dunes.length) mechanics.push('dunes');
+    if ((spec.walls || []).length) mechanics.push('walls');
+    return {
+      seed: seed,
+      W: TF.W, H: TF.H,
+      fairway: fairway,
+      green: ell(spec.green),
+      sand: (spec.sand || []).map(ell),
+      water: (spec.water || []).map(ell),
+      trees: (spec.trees || []).map(function (t) { return { x: t[0], y: t[1], r: t[2] }; }),
+      dunes: dunes,
+      walls: (spec.walls || []).map(function (w) {
+        return { x1: w[0], y1: w[1], x2: w[2], y2: w[3] };
+      }),
+      windmill: mill,
+      bridges: (spec.bridges || []).map(function (b) {
+        return { x: b[0], y: b[1], w: b[2], rot: b[3] };
+      }),
+      ramps: ramps,
+      wind: wind,
+      slopeAt: slopeAt,
+      tee: { x: spec.tee[0], y: spec.tee[1] },
+      cup: { x: cupX, y: cupY },
+      par: spec.par,
+      biome: spec.biome,
+      mechanics: mechanics,
+      intro: 'designed',
+      focusMech: null,
+      hint: spec.hint || null,
+      relic: relic,
+      gems: gems
+    };
+  };
   // Deterministic in t, so replays, previews, and daily holes agree.
+  // Wind vector at sim-time t (seconds): base + slow organic gusts.
   TF.windAt = function (hole, t) {
     var w = hole.wind;
     if (!w || w.base <= 0) return { x: 0, y: 0 };
@@ -472,6 +799,12 @@
       z: 0, vz: 0,    // height above the course (ramps); 0 = on the ground
       resting: true, inCup: false, inWater: false,
       spin: 0,        // -1 (backspin, bites) .. +1 (topspin, runs on)
+      curve: 0,       // post-shot curve: lateral Magnus accel, set live by the player
+      sticky: false,  // power-up: next landing stops dead
+      gems: 0,        // gems collected this hole (race: stealable)
+      gotRelic: false,// hidden collectible found this hole
+      pickup: null,   // transient juice flag: 'gem' | 'relic' (game reads & clears)
+      braked: false,  // air-brake used this shot
       impact: 0,      // tree-bounce impact speed (for juice)
       stillT: 0       // stuck-ball guard
     };
@@ -498,6 +831,10 @@
     }
     var sn = +o.spin || 0;
     ball.spin = sn > 1 ? 1 : (sn < -1 ? -1 : sn);
+    ball.curve = 0;      // post-shot curve is live input, never carried over
+    ball.braked = false;
+    ball.pickup = null;
+    // NOTE: ball.sticky is preserved — the sticky power-up is armed pre-shot.
     ball.impact = 0;
     ball.stillT = 0;
     ball.resting = false;
@@ -506,14 +843,24 @@
   };
 
   // Snapshot / restore for penalty-free undo (Golf Peaks).
-  TF.snapBall = function (ball) {
+  TF.snapBall = function (hole, ball) {
     return { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy,
-             resting: ball.resting, spin: ball.spin || 0, stillT: 0 };
+             resting: ball.resting, spin: ball.spin || 0, stillT: 0,
+             curve: 0, sticky: !!ball.sticky,
+             gems: ball.gems | 0, gotRelic: !!ball.gotRelic,
+             gemTaken: (hole.gems || []).map(function (g) { return g.taken; }),
+             relicTaken: hole.relic ? hole.relic.taken : false };
   };
-  TF.restoreBall = function (ball, s) {
+  TF.restoreBall = function (hole, ball, s) {
     ball.x = s.x; ball.y = s.y; ball.vx = s.vx; ball.vy = s.vy;
     ball.resting = s.resting; ball.spin = s.spin || 0; ball.stillT = 0;
     ball.z = 0; ball.vz = 0;
+    ball.curve = 0; ball.sticky = !!s.sticky;
+    ball.gems = s.gems | 0; ball.gotRelic = !!s.gotRelic;
+    ball.pickup = null; ball.braked = false;
+    if (hole.gems) for (var gi = 0; gi < hole.gems.length && gi < s.gemTaken.length; gi++)
+      hole.gems[gi].taken = s.gemTaken[gi];
+    if (hole.relic) hole.relic.taken = !!s.relicTaken;
     ball.inCup = false; ball.inWater = false; ball.impact = 0;
   };
 
@@ -578,6 +925,48 @@
     return true;
   }
 
+  // Post-shot curve (Super Stickman Golf 3): lateral Magnus-style accel,
+  // perpendicular to travel. Positive curve bends left of motion (y-up).
+  // Scales with speed so it bites on drives and barely nudges putts.
+  function applyCurve(ball, dt) {
+    var cv = ball.curve || 0;
+    if (cv === 0) return;
+    var sp = Math.hypot(ball.vx, ball.vy);
+    if (sp > 4) {
+      var k = cv * TF.CURVE_K * Math.min(sp / 30, 1) / sp;
+      ball.vx += -ball.vy * k * dt;
+      ball.vy += ball.vx * k * dt;
+    }
+    ball.curve = cv * Math.exp(-0.9 * dt);   // the bend dies out over ~1s
+  }
+
+  // Gem + relic pickups. Works mid-flight too — flying over one collects it.
+  function pickups(hole, ball) {
+    var i, g, dx, dy;
+    if (hole.relic && !hole.relic.taken && !ball.gotRelic) {
+      dx = ball.x - hole.relic.x; dy = ball.y - hole.relic.y;
+      if (dx * dx + dy * dy < 1.7 * 1.7) {
+        hole.relic.taken = true;
+        ball.gotRelic = true;
+        ball.pickup = 'relic';
+        ball.impact = Math.max(ball.impact, 1.5);
+      }
+    }
+    if (hole.gems) {
+      for (i = 0; i < hole.gems.length; i++) {
+        g = hole.gems[i];
+        if (g.taken) continue;
+        dx = ball.x - g.x; dy = ball.y - g.y;
+        if (dx * dx + dy * dy < 1.6 * 1.6) {
+          g.taken = true;
+          ball.gems = (ball.gems | 0) + 1;
+          ball.pickup = 'gem';
+          ball.impact = Math.max(ball.impact, 1.2);
+        }
+      }
+    }
+  }
+
   // One internal physics sub-step of length dt at sim-time t.
   TF._step = function (hole, ball, dt, t) {
     var R = TF.BALL_R;
@@ -588,15 +977,37 @@
       var wndA = TF.windAt(hole, t);
       ball.vx += wndA.x * TF.WIND_K_AIR * dt;
       ball.vy += wndA.y * TF.WIND_K_AIR * dt;
+      applyCurve(ball, dt);
       ball.x += ball.vx * dt;
       ball.y += ball.vy * dt;
       ball.vz -= TF.GRAV_Z * dt;
       ball.z += ball.vz * dt;
+      pickups(hole, ball);
+      // ramps kick in near ground level too (ski-jump lip) — not just on the roll
+      if (ball.z < 2 && ball.z > 0) {
+        var rsp = Math.hypot(ball.vx, ball.vy);
+        for (var rri = 0; rri < hole.ramps.length; rri++) {
+          var rrq = hole.ramps[rri];
+          if (rsp > rrq.minSpeed && inRampRect(ball.x, ball.y, rrq) && ball.vz < 0.65 * rsp) {
+            ball.vz = 0.65 * rsp;
+            ball.impact = Math.max(ball.impact, 2);
+            break;
+          }
+        }
+      }
       if (ball.z <= 0) {
         ball.z = 0;
         ball.impact = Math.max(ball.impact, -ball.vz * 0.5);  // landing thud
         ball.vz = 0;
-        ball.vx *= 0.82; ball.vy *= 0.82;   // touchdown scrub
+        if (ball.sticky) {
+          // sticky power-up: the landing stops dead (consumed)
+          ball.vx = 0; ball.vy = 0;
+          ball.sticky = false;
+          ball.resting = true;
+          ball.stillT = 0;
+        } else {
+          ball.vx *= 0.82; ball.vy *= 0.82;   // touchdown scrub
+        }
         ball.spin = 0;
       }
       // world walls still apply mid-flight (can't leave the world)
@@ -633,6 +1044,7 @@
 
     ball.vx += (sl.x + wnd.x * windK) * dt;
     ball.vy += (sl.y + wnd.y * windK) * dt;
+    applyCurve(ball, dt);
 
     // Rolling resistance: Coulomb decel + exponential damping.
     var sp = Math.hypot(ball.vx, ball.vy);
@@ -641,6 +1053,7 @@
       var nsp = sp - dec;
       if (nsp < 0) nsp = 0;
       nsp *= Math.exp(-P.damp * dt);
+      if (ball.sticky) nsp *= Math.exp(-5 * dt);  // sticky grabs the turf too
       var kk = nsp / sp;
       ball.vx *= kk; ball.vy *= kk;
       sp = nsp;
@@ -648,6 +1061,7 @@
 
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
+    pickups(hole, ball);
 
     ball.spin = spn * Math.exp(-1.4 * dt);  // spin dies as the ball rolls
 
@@ -782,9 +1196,156 @@
       ball.vx = 0; ball.vy = 0;
       ball.resting = true;
       ball.stillT = 0;
+      ball.sticky = false;   // sticky is consumed when the ball settles
     } else {
       ball.resting = false;
     }
+  };
+
+  /* ---------------- post-shot curve, power-ups, race ---------------- */
+
+  TF.CURVE_K = 16;   // lateral accel per unit curve at full bite
+
+  // Live curve input (drag after release). Only while the ball is moving.
+  TF.setCurve = function (ball, v) {
+    if (!ball || ball.resting || ball.inCup || ball.inWater) return;
+    ball.curve = clamp(v, -1, 1);
+  };
+
+  // Air-brake power-up: kills most of the ball's speed right now.
+  TF.applyBrake = function (ball) {
+    if (!ball || ball.resting || ball.inCup || ball.inWater) return false;
+    ball.vx *= 0.25; ball.vy *= 0.25; ball.vz *= 0.5;
+    ball.curve = 0;
+    ball.braked = true;
+    return true;
+  };
+
+  // Arm the sticky power-up for the next shot.
+  TF.armSticky = function (ball) {
+    if (!ball || !ball.resting) return false;
+    ball.sticky = true;
+    return true;
+  };
+
+  // Ball-ball collision (race mode, Mini Golf King clashing). Equal mass,
+  // bouncy. In race mode a hard bump steals one gem from the slower ball.
+  TF.collideBalls = function (balls, race) {
+    var i, j;
+    for (i = 0; i < balls.length; i++) {
+      for (j = i + 1; j < balls.length; j++) {
+        var a = balls[i], b = balls[j];
+        if (a.inCup || a.inWater || b.inCup || b.inWater) continue;
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var minD = TF.BALL_R * 2;
+        var d2 = dx * dx + dy * dy;
+        if (d2 >= minD * minD || d2 < 1e-6) continue;
+        var d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+        var overlap = (minD - d) / 2;
+        a.x -= nx * overlap; a.y -= ny * overlap;
+        b.x += nx * overlap; b.y += ny * overlap;
+        var avn = a.vx * nx + a.vy * ny, bvn = b.vx * nx + b.vy * ny;
+        var rel = avn - bvn;
+        if (rel > 0) {
+          // the bumped ball is the slower one BEFORE the impulse (judged now,
+          // because the exchange flips who is faster)
+          var slowIsA = Math.hypot(a.vx, a.vy) < Math.hypot(b.vx, b.vy);
+          var imp = (1 + 0.92) * rel / 2;
+          a.vx -= imp * nx; a.vy -= imp * ny;
+          b.vx += imp * nx; b.vy += imp * ny;
+          a.resting = false; b.resting = false;
+          a.impact = Math.max(a.impact, rel / 2);
+          b.impact = Math.max(b.impact, rel / 2);
+          if (race && rel > 10) {
+            var victim = slowIsA ? a : b;
+            var taker = victim === a ? b : a;
+            if ((victim.gems | 0) > 0) {
+              victim.gems--;
+              taker.gems = (taker.gems | 0) + 1;
+              taker.pickup = 'gem';
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // Steps every ball in a race, then resolves clashes.
+  TF.raceStep = function (hole, balls, t) {
+    var i;
+    for (i = 0; i < balls.length; i++) TF.simStep(hole, balls[i], t);
+    TF.collideBalls(balls, true);
+  };
+
+  // Race bot brain (compact port of the headless greedy bot). bs = {ball,
+  // wps, wi, lastRest}. Returns [vx,vy] for one shot, or null if the ball
+  // is still moving.
+  TF.botState = function (hole) {
+    var wps = hole.fairway.map(function (s) {
+      return { x: (s.x1 + s.x2) / 2, y: (s.y1 + s.y2) / 2 };
+    });
+    wps.push({ x: hole.cup.x, y: hole.cup.y });
+    return { ball: null, wps: wps, wi: 0,
+             lastRest: { x: hole.tee.x, y: hole.tee.y } };
+  };
+  TF.botShot = function (hole, bs) {
+    var ball = bs.ball;
+    if (!ball || !ball.resting || ball.inCup || ball.inWater) return null;
+    var wps = bs.wps;
+    while (bs.wi < wps.length - 1 &&
+           Math.hypot(ball.x - wps[bs.wi].x, ball.y - wps[bs.wi].y) < 6) bs.wi++;
+    var tgt = wps[bs.wi];
+    var dx = tgt.x - ball.x, dy = tgt.y - ball.y;
+    var dist = Math.hypot(dx, dy) || 0.001;
+    // windmill: route around the hub instead of through the blade disc
+    var wml = hole.windmill;
+    if (wml) {
+      var segLen = dist;
+      var tt = ((wml.x - ball.x) * dx + (wml.y - ball.y) * dy) / (segLen * segLen);
+      tt = Math.max(0, Math.min(1, tt));
+      var cxp = ball.x + dx * tt, cyp = ball.y + dy * tt;
+      var clear = wml.bladeLen + wml.hubR + 2.5;
+      if (Math.hypot(tgt.x - wml.x, tgt.y - wml.y) < clear ||
+          (Math.hypot(wml.x - cxp, wml.y - cyp) < clear && tt < 0.95)) {
+        var pxn = -dy / segLen, pyn = dx / segLen;
+        var s1x = wml.x + pxn * (clear + 2), s1y = wml.y + pyn * (clear + 2);
+        var s2x = wml.x - pxn * (clear + 2), s2y = wml.y - pyn * (clear + 2);
+        var d1 = Math.hypot(ball.x - s1x, ball.y - s1y);
+        var d2 = Math.hypot(ball.x - s2x, ball.y - s2y);
+        tgt = d1 < d2 ? { x: s1x, y: s1y } : { x: s2x, y: s2y };
+        dx = tgt.x - ball.x; dy = tgt.y - ball.y;
+        dist = Math.hypot(dx, dy) || 0.001;
+      }
+    }
+    var power = Math.min(Math.max(dist * 1.12, 7), TF.MAX_POWER * 0.85);
+    // near a windmill, stay grounded: the blades punish flyers
+    if (hole.windmill && Math.hypot(ball.x - hole.windmill.x, ball.y - hole.windmill.y) < 30) {
+      power = Math.min(power, TF.LAUNCH_MIN - 1);
+    }
+    // avoid water: if the straight line crosses water, take the next waypoint
+    var blocked = false, k, f;
+    for (k = 0; k < hole.water.length && !blocked; k++) {
+      var we = hole.water[k];
+      for (f = 0.1; f < 1; f += 0.1) {
+        var qx = ball.x + dx * f, qy = ball.y + dy * f;
+        var ex = (qx - we.x) / (we.rx + 1), ey = (qy - we.y) / (we.ry + 1);
+        if (ex * ex + ey * ey < 1) { blocked = true; break; }
+      }
+    }
+    if (blocked && bs.wi + 1 < wps.length) {
+      tgt = wps[bs.wi + 1];
+      dx = tgt.x - ball.x; dy = tgt.y - ball.y;
+      dist = Math.hypot(dx, dy) || 0.001;
+      power = Math.min(Math.max(dist * 1.12, 7), TF.MAX_POWER * 0.85);
+    } else if (blocked && hole.ramps.length) {
+      // nowhere safe ahead: play for the ramp — designed water crossings
+      // always pair with one. Enough speed to trigger the launch.
+      var rp0 = hole.ramps[0];
+      dx = rp0.x - ball.x; dy = rp0.y - ball.y;
+      dist = Math.hypot(dx, dy) || 0.001;
+      power = Math.min(Math.max(dist * 1.5 + 12, 15), 38);
+    }
+    return [dx / dist * power, dy / dist * power];
   };
   /* ---------------- scoring ---------------- */
 
