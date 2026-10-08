@@ -8,6 +8,8 @@
 
 /* ============================== helpers ============================== */
 function $(id) { return document.getElementById(id); }
+/* hand-drawn icon markup — the UI uses zero emojis */
+function ic(id, cls) { return '<svg class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><use href="#' + id + '"></use></svg>'; }
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 function dateStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 function todayStr() { return dateStr(new Date()); }
@@ -1900,8 +1902,13 @@ document.addEventListener('visibilitychange', function () {
 });
 
 /* ============================== HUD ============================== */
-var SKY_ICON = { dawn: '🌅', day: '☀️', dusk: '🌇', night: '🌙' };
-var WX_ICON = { clear: '', rain: '🌧️', fog: '🌫️' };
+/* the sky button shows one hand-drawn icon: weather wins over time of day */
+function timeIcon() { return timeCat() === 'night' ? ic('i-moon') : ic('i-sun'); }
+function skyIcon() {
+  if (world.weather === 'rain') return ic('i-rain');
+  if (world.weather === 'fog') return ic('i-fog');
+  return timeIcon();
+}
 /* soft coin ticker: a patient easeOut count, a gentle pill pop, and a rising
  * "+N" wisp like a bubble — the watery answer to number pops */
 var shownCoins = null, coinTickId = 0;
@@ -1918,7 +1925,7 @@ function updateHud() {
   var target = save.coins, el = $('hud-coins');
   if (shownCoins === null || shownCoins === target) {
     shownCoins = target;
-    el.textContent = '🪙 ' + target.toLocaleString();
+    el.innerHTML = ic('i-coin') + ' ' + target.toLocaleString();
   } else {
     var from = shownCoins;
     if (target > from) spawnCoinWisp('+' + (target - from).toLocaleString());
@@ -1928,21 +1935,21 @@ function updateHud() {
     (function tick(t) {
       var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
       shownCoins = Math.round(from + (target - from) * e);
-      el.textContent = '🪙 ' + shownCoins.toLocaleString();
+      el.innerHTML = ic('i-coin') + ' ' + shownCoins.toLocaleString();
       if (k < 1) coinTickId = requestAnimationFrame(tick);
-      else { shownCoins = target; el.textContent = '🪙 ' + target.toLocaleString(); coinTickId = 0; }
+      else { shownCoins = target; el.innerHTML = ic('i-coin') + ' ' + target.toLocaleString(); coinTickId = 0; }
     })(t0);
   }
   $('hud-spot').textContent = spotById(save.spot).name;
 }
 function updateSkyHud() {
-  var el = $('hud-sky'), s = SKY_ICON[timeCat()] + WX_ICON[world.weather];
-  if (el.textContent !== s) el.textContent = s;
+  var el = $('hud-sky'), k = timeCat() + '|' + world.weather;
+  if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = skyIcon(); }
 }
 function updateMenu() {
   var st = save.streak;
   $('menu-streak').textContent = st.count > 0
-    ? '🔥 ' + st.count + '-day catch streak' + (st.last === todayStr() ? ' · fished today!' : '')
+    ? st.count + '-day catch streak' + (st.last === todayStr() ? ' · fished today!' : '')
     : 'The heron is waiting. The water is calm.';
   var caught = Object.keys(save.journal).length;
   $('menu-whisper').textContent = caught > 0
@@ -2017,15 +2024,15 @@ function renderSpotCards() {
       btn.textContent = 'Fish here';
       btn.addEventListener('click', function () {
         save.spot = sp.id; persist(); pickWeather(); updateMenu(); updateHud();
-        toast('🎣 ' + sp.name + ' — good choice.');
+        toast(sp.name + ' — good choice.');
       });
     } else {
-      btn.textContent = '🪙' + sp.license + ' license';
+      btn.innerHTML = ic('i-coin') + ' ' + sp.license + ' license';
       btn.addEventListener('click', function () {
         var r = CC.buyLicense(save, sp.id);
         if (r.ok) {
           persist(); AU.chime(); updateHud(); renderSpotCards();
-          toast('📜 License stamped! ' + sp.name + ' is yours.');
+          toast('License stamped! ' + sp.name + ' is yours.');
         } else if (r.reason === 'broke') {
           toast('Not enough coins yet — keep fishing.');
         }
@@ -2060,7 +2067,7 @@ function renderAquarium() {
   c.id = 'aqua-canvas'; c.width = 320; c.height = 120;
   tank.appendChild(c);
   $('aqua-rate').textContent = r.tank.length
-    ? r.tank.length + '/' + CC.AQUA_MAX + ' fish · earning ~' + r.perHour + ' 🪙/hour (up to 8h)'
+    ? r.tank.length + '/' + CC.AQUA_MAX + ' fish · earning ~' + r.perHour + ' coins/hour (up to 8h)'
     : 'A kept fish earns coins while you rest. Tiny Fishing had the right idea.';
   paintAquariumFrame();
 }
@@ -2138,7 +2145,7 @@ function collectAquarium() {
   save.coins += coins;
   persist();
   updateHud(); renderAquarium();
-  if (coins > 0) { AU.chime(); HAP.success(); toast('+' + coins + ' 🪙 from your aquarium'); }
+  if (coins > 0) { AU.chime(); HAP.success(); toast('+' + coins + ' coins from your aquarium'); }
   else toast('The tank is still saving up…');
 }
 
@@ -2274,9 +2281,9 @@ function showFishDetail(f) {
     '<div class="jbadges">' +
     '<span class="pill r-' + f.rarity + '">' + f.rarity + '</span>' +
     '<span class="pill">' + CC.ZONES[f.zone] + '</span>' +
-    '<span class="pill">🪙 ' + f.coins + '</span>' +
+    '<span class="pill">' + ic('i-coin') + ' ' + f.coins + '</span>' +
     (caught ? '<span class="pill">×' + save.journal[f.id].count + ' caught</span>' : '') +
-    (caught && save.journal[f.id].biggest ? '<span class="pill">best ' + save.journal[f.id].biggest + '🪙</span>' : '') +
+    (caught && save.journal[f.id].biggest ? '<span class="pill">best ' + save.journal[f.id].biggest + ' ' + ic('i-coin') + '</span>' : '') +
     (caught && save.journal[f.id].record ? '<span class="pill">record ' + save.journal[f.id].record + ' cm</span>' : '') +
     '</div>' +
     (caught
@@ -2392,7 +2399,7 @@ function drawMarlow(g, mood) {
   g.beginPath(); g.arc(48, 36, 25, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
   g.restore();
 }
-var SHOP_ICON = { rod: '🎣', line: '🧵', lure: '🪱' };
+var SHOP_ICON = { rod: 'i-hook', line: 'i-spool', lure: 'i-lure' };
 var UNLOCK_DESC = {
   rod: 'Land bigger fish — a steadier rod keeps the bite window open longer.',
   line: 'Reach the deep water — every level sinks your bobber deeper.',
@@ -2421,14 +2428,14 @@ function renderShop() {
     var pips = '';
     for (var i = 1; i <= CC.maxLevel(); i++) pips += '<i class="' + (i <= lvl ? 'on' : '') + '"></i>';
     row.innerHTML =
-      '<div class="shop-icon">' + SHOP_ICON[kind] + '</div>' +
+      '<div class="shop-icon">' + ic(SHOP_ICON[kind]) + '</div>' +
       '<div class="shop-info"><b>' + meta.name + ' <span style="color:#a5814f">Lv ' + lvl + '</span></b>' +
       '<p>' + esc(UNLOCK_DESC[kind]) + '</p><div class="pips">' + pips + '</div></div>';
     var btn = document.createElement('button');
     btn.className = 'buy-btn'; btn.type = 'button';
     if (cost == null) { btn.textContent = 'MAX'; btn.disabled = true; }
     else {
-      btn.textContent = '🪙 ' + cost;
+      btn.innerHTML = ic('i-coin') + ' ' + cost;
       btn.disabled = save.coins < cost;
       btn.addEventListener('click', function () {
         var c2 = CC.upgradeCost(kind, save.up[kind]);
@@ -2452,17 +2459,17 @@ function renderShop() {
     var owned = CC.canAccess(sp.id, save);
     var row = document.createElement('div');
     row.className = 'shop-row';
-    row.innerHTML = '<div class="shop-icon">📜</div><div class="shop-info"><b>' + esc(sp.name) +
+    row.innerHTML = '<div class="shop-icon">' + ic('i-scroll') + '</div><div class="shop-info"><b>' + esc(sp.name) +
       '</b><p>' + esc(sp.tagline) + '</p></div>';
     var btn = document.createElement('button');
     btn.className = 'buy-btn' + (owned ? ' owned' : ''); btn.type = 'button';
     if (owned) { btn.textContent = 'Owned'; btn.disabled = true; }
     else {
-      btn.textContent = '🪙 ' + sp.license;
+      btn.innerHTML = ic('i-coin') + ' ' + sp.license;
       btn.disabled = save.coins < sp.license;
       btn.addEventListener('click', function () {
         var r = CC.buyLicense(save, sp.id);
-        if (r.ok) { persist(); AU.chime(); HAP.success(); toast('📜 ' + sp.name + ' — all yours!'); updateHud(); renderShop(); renderSpotCards(); }
+        if (r.ok) { persist(); AU.chime(); HAP.success(); toast(sp.name + ' — all yours!'); updateHud(); renderShop(); renderSpotCards(); }
         else toast('Not enough coins yet — keep fishing.');
       });
     }
@@ -2490,7 +2497,7 @@ function renderShop() {
     if (owned >= list.length) { btn.textContent = 'All heard'; btn.disabled = true; }
     else {
       var cost = list[owned].cost;
-      btn.textContent = '🪙 ' + cost + ' — hear more';
+      btn.innerHTML = ic('i-coin') + ' ' + cost + ' — hear more';
       btn.disabled = save.coins < cost;
       btn.addEventListener('click', function () {
         var r = CC.buyRumor(save, legId);
@@ -2516,13 +2523,13 @@ function openDaily() {
     '<div class="daily-hero"><canvas id="daily-fish" width="220" height="128"></canvas>' +
     '<div><h3>' + (caught ? esc(f.name) : '???') + '</h3>' +
     '<p>One special fish visits these waters today —<br>same for everyone, worldwide.</p>' +
-    '<p>🪙 <b>' + d.value + '</b> to whoever lands it.</p>' +
+    '<p>' + ic('i-coin') + ' <b>' + d.value + '</b> to whoever lands it.</p>' +
     '<p class="sheet-note" style="margin:4px 0">Hint: ' + CC.ZONES[f.zone] + ' water · likes ' +
     f.time.join('/') + ' · ' + f.weather.join('/') + ' skies.</p>' +
     (caught ? '<span class="daily-stamp">✓ CAUGHT TODAY</span>' : '') +
     '</div></div>' +
-    '<p class="sheet-sub">🔥 streak: <b>' + save.streak.count + '</b> day' + (save.streak.count === 1 ? '' : 's') +
-    ' · 📖 journal: <b>' + Object.keys(save.journal).length + '/' + CC.FISH.length + '</b></p>';
+    '<p class="sheet-sub">' + ic('i-fire') + ' streak: <b>' + save.streak.count + '</b> day' + (save.streak.count === 1 ? '' : 's') +
+    ' · ' + ic('i-book') + ' journal: <b>' + Object.keys(save.journal).length + '/' + CC.FISH.length + '</b></p>';
   var g = $('daily-fish').getContext('2d');
   drawSpecies(g, 110, 64, 1.7, f, { silhouette: !caught, slim: f.behavior === 'darter' });
   renderDailyBoard(d);
@@ -2531,19 +2538,18 @@ function renderDailyBoard(d) {
   var box = $('arc-lb');
   var name = '';
   try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
-  box.innerHTML = '<div class="arc-lb-title">🏆 Today\'s biggest catches</div>' +
+  box.innerHTML = '<div class="arc-lb-title">' + ic('i-trophy') + ' Today\'s biggest catches</div>' +
     '<div class="arc-lb-empty">casting the net…</div>';
   arcadeFetch('/scores?game=castaway-cove&board=' + encodeURIComponent('daily-' + d.date), null, function (err, res) {
     var top = res && res.top ? res.top : [];
-    var html = '<div class="arc-lb-title">🏆 Today\'s biggest catches</div>';
+    var html = '<div class="arc-lb-title">' + ic('i-trophy') + ' Today\'s biggest catches</div>';
     if (!top.length) {
       html += '<div class="arc-lb-empty">No catches yet — be the first!' +
         (name ? '' : '<br><span style="font-size:12px">Set your arcade name on the hub to join the board.</span>') + '</div>';
     } else {
-      var medals = ['🥇', '🥈', '🥉'];
       html += top.slice(0, 5).map(function (e, i) {
         return '<div class="arc-lb-row' + (e.name === name ? ' me' : '') + '"><span>' +
-          (medals[i] || (i + 1) + '.') + ' ' + esc(e.name) + '</span><b>🪙' + (+e.score).toLocaleString() + '</b></div>';
+          '<span class="rank r' + (i + 1) + '">' + (i + 1) + '</span> ' + esc(e.name) + '</span><b>' + ic('i-coin') + (+e.score).toLocaleString() + '</b></div>';
       }).join('');
     }
     box.innerHTML = html;
@@ -2611,15 +2617,14 @@ function showCatchCard(f, coins, quality, isNew, isRecord, caughtDaily, sizeCm) 
   $('catch-pun').textContent = '“' + f.pun + '”';
   $('catch-name').textContent = f.name;
   var stars = '★'.repeat(quality) + '☆'.repeat(3 - quality);
-  var SKY_I = { dawn: '🌅', day: '☀️', dusk: '🌇', night: '🌙' };
-  $('catch-meta').innerHTML = esc(String(sizeCm)) + ' cm · <span class="stars">' + stars + '</span>' +
-    '<span class="catch-where">' + SKY_I[timeCat()] + ' ' + esc(spotById(save.spot).name) + '</span>';
+    $('catch-meta').innerHTML = esc(String(sizeCm)) + ' cm · <span class="stars">' + stars + '</span>' +
+    '<span class="catch-where">' + timeIcon() + ' ' + esc(spotById(save.spot).name) + '</span>';
   $('catch-badges').innerHTML =
     '<span class="pill r-' + f.rarity + '">' + f.rarity + '</span>' +
     '<span class="pill">' + CC.ZONES[f.zone] + '</span>' +
     (caughtDaily ? '<span class="pill daily">daily big catch</span>' : '');
   $('catch-lore').textContent = '“' + (save.lore[f.id] || f.lore) + '”';
-  $('catch-coins').textContent = '+' + coins.toLocaleString() + ' 🪙';
+  $('catch-coins').innerHTML = '+' + coins.toLocaleString() + ' ' + ic('i-coin');
   var sn = $('catch-stamp-new'), sr = $('catch-stamp-rec');
   sn.hidden = !isNew; sr.hidden = !isRecord;
   sn.classList.remove('pop'); sr.classList.remove('pop');
@@ -2754,7 +2759,7 @@ function bindUi() {
     var f = curCatch && curCatch.fish;
     if (f) {
       var r = CC.aquariumAdd(save, f.id);
-      if (r.ok) { HAP.light(); toast('🐠 ' + f.name + ' is swimming in your tank!'); }
+      if (r.ok) { HAP.light(); toast(f.name + ' is swimming in your tank!'); }
       else if (r.reason === 'full') toast('Tank is full (6) — the heron approves of restraint.');
       else if (r.reason === 'duplicate') toast('One of those is already in the tank.');
       persist();
