@@ -800,8 +800,10 @@ async function playClearStep(step, silentPop) {
         else if (cr.special === 'w') CCAudio.wrappedCreated();
         else CCAudio.stripedCreated();
         await wait(120);
-        const cell = st.board[cr.r][cr.c];
-        if (cell && cell.t === 'c') refreshTileVisual(el, cell);
+        // NB: st.board is already post-gravity at this point, but tiles[][]
+        // is still pre-gravity — so refresh from the step's creation data,
+        // not from st.board (which would paint the wrong candy).
+        refreshTileVisual(el, { t: 'c', color: cr.color, sp: cr.special });
         el.animate([
           { transform: pos(cr.r, cr.c) + ' scale(.4) rotate(-30deg)' },
           { transform: pos(cr.r, cr.c) + ' scale(1.25) rotate(8deg)', offset: 0.6 },
