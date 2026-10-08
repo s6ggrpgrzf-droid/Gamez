@@ -181,7 +181,7 @@
   /* ---------------- state ---------------- */
   var STEP = 1 / 60;
   var state = 'menu';           // menu | play | holed | result
-  var mode = 'endless';         // endless | daily
+  var mode = 'tour';             // tour | daily
   var holeIndex = 1, runSeed = 0, seed = 1;
   var hole = null, ball = null, curBiome = 0;
   var strokes = 0, totalStrokes = 0, totalStars = 0;
@@ -208,17 +208,60 @@
   var toastTimer = 0;
   var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
+  /* ---- new systems: curve, sway, power-ups, race, map, morph ---- */
+  var curveDrag = null;        // {pid, x0} post-shot curve drag (SSG3)
+  var dragStillT = 0;          // seconds the aim drag has been held still
+  var swayAmp = 0;             // 0 = focused (no sway), 1 = full sway
+  var aimLand = null;          // predicted landing spot {x,y,air} from predictAim
+  var POW = { brake: 2, sticky: 2, mulligan: 2 };
+  var armedPow = 'brake';
+  var POW_ICON = { brake: '◼', sticky: '◉', mulligan: '↺' };
+  var POW_NAME = { brake: 'Air-brake', sticky: 'Sticky ball', mulligan: 'Mulligan' };
+  var holeStartTotal = 0;      // totalStrokes at hole start (mulligan rewind)
+  var seenMechs = {};          // mechanic -> times seen (intro grammar, endless only)
+  var biomeStars = { 0: 0, 1: 0, 2: 0, 3: 0 };
+  var relicCount = 0;
+  var morphT = 0, morphNext = null;   // hole-to-hole morph transition (Wonderputt)
+  var race = null;             // race state or null
+  var BIOME_NAMES = ['Meadow', 'Savanna', 'Duskwood', 'Frost'];
+  var MECH_HINTS = {
+    windmill: 'Windmill ahead — thread the blades, or play around the hub.',
+    ramp: 'Ramp ahead — hit it with speed to launch over trouble.',
+    water: 'Water ahead — carry it or take the safe route around.',
+    dunes: 'Dunes ahead — slopes feed the ball downhill. Read the arrows.',
+    walls: 'Banked walls ahead — bounce your shot around the corner.'
+  };
+  function loadPow() {
+    try {
+      var p = JSON.parse(lsGet('tf_pow', 'null'));
+      if (p) POW = { brake: p.brake | 0, sticky: p.sticky | 0, mulligan: p.mulligan | 0 };
+      seenMechs = JSON.parse(lsGet('tf_mechs', '{}')) || {};
+      var bs = JSON.parse(lsGet('tf_biomestars', 'null'));
+      if (bs) biomeStars = bs;
+      relicCount = parseInt(lsGet('tf_relics_n', '0'), 10) || 0;
+      var ap = lsGet('tf_armed', 'brake');
+      if (POW_ICON[ap]) armedPow = ap;
+    } catch (e) {}
+  }
+  function savePow() {
+    lsSet('tf_pow', JSON.stringify(POW));
+    lsSet('tf_mechs', JSON.stringify(seenMechs));
+    lsSet('tf_biomestars', JSON.stringify(biomeStars));
+    lsSet('tf_relics_n', String(relicCount));
+    lsSet('tf_armed', armedPow);
+  }
+
   /* ---------------- storage ---------------- */
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function saveRun() {
-    if (mode !== 'endless') return;
-    lsSet('tf_run', JSON.stringify({ runSeed: runSeed, holeIndex: holeIndex, totalStrokes: totalStrokes,
-      totalStars: totalStars, holeScores: holeScores.slice(-50), prevKiller: prevKiller }));
+    if (mode !== 'tour') return;
+    lsSet('tf_run', JSON.stringify({ mode: 'tour', holeIndex: holeIndex, totalStrokes: totalStrokes,
+      totalStars: totalStars, holeScores: holeScores.slice(-50) }));
   }
   function loadRun() { try { return JSON.parse(lsGet('tf_run', 'null')); } catch (e) { return null; } }
   function saveBest() {
-    if (mode !== 'endless') return;
+    if (mode !== 'tour') return;
     try {
       var b = JSON.parse(lsGet('tf_best', 'null'));
       if (!b || holeIndex > b.holes || (holeIndex === b.holes && totalStrokes < b.strokes))
@@ -226,24 +269,26 @@
     } catch (e) {}
   }
 
-  /* generator opts for an endless hole: breather after killers, two-route bias */
-  function holeOptsFor(holeSeed, wasKiller) {
-    var o = {};
-    if (wasKiller) o.breather = true;
-    if (TF.mulberry32((holeSeed ^ 0x7f3a9e2) >>> 0)() < 0.5) o.twoRoute = true;
-    return o;
-  }
   function recordScore(s) {
     holeScores.push(s);
     if (holeScores.length > 60) holeScores.splice(0, holeScores.length - 60);
   }
 
   /* ---------------- hole setup ---------------- */
+  var seenHint = {};
   function loadHole(n, s, opts) {
-    holeIndex = n; seed = s >>> 0;
-    hole = TF.genHole(seed, opts);
+    holeIndex = n; seed = (s || 0) >>> 0;
+    if (mode === 'tour') {
+      // the designed tour: 20 hand-built holes, same for everyone
+      var spec = TF.HOLES[(n - 1) % TF.HOLES.length];
+      hole = TF.makeHole(spec, n - 1);
+      seed = hole.seed;
+      curBiome = hole.biome;
+    } else {
+      hole = TF.genHole(seed, opts);
+      curBiome = Math.floor((holeIndex - 1) / 8) % 4;
+    }
     simTime = 0;   // blades + gusts restart deterministically per hole
-    curBiome = Math.floor((holeIndex - 1) / 8) % 4;
     document.body.setAttribute('data-biome', String(curBiome));
     AU.setBiome(curBiome);
     ball = TF.newBall(hole);
@@ -254,6 +299,17 @@
     if (n > maxHole) { maxHole = n; lsSet('tf_maxhole', String(maxHole)); }
     lastRest = { x: ball.x, y: ball.y };
     particles = [];
+    holeStartTotal = totalStrokes;
+    curveDrag = null; aimLand = null; dragStillT = 0; swayAmp = 0;
+    // designed-tour hints: each hole teaches its own lesson, once per run
+    if (mode === 'tour' && hole.hint && !seenHint[n]) {
+      seenHint[n] = 1;
+      (function (h, hn) {
+        setTimeout(function () { if (holeIndex === hn) toast(h, 3600); }, 900);
+      })(hole.hint, n);
+    }
+    if (mode === 'tour' && n === 10) setTimeout(function () { toast('Halfway home — 10 down, 10 to go.'); }, 3600);
+    if (mode === 'tour' && n === 20) setTimeout(function () { toast('The final hole. Make it count.'); }, 3600);
     fit();
     buildSpeckles(); initTurtle();
     holeNameStr = '';
@@ -424,11 +480,11 @@
   /* ---------------- toast + milestones + trail colors ---------------- */
   var TRAILS = [
     { n: 'Cloud', c: '255,255,255', at: 1 },
-    { n: 'Mint', c: '150,255,190', at: 50 },
-    { n: 'Sky', c: '140,200,255', at: 100 },
-    { n: 'Gold', c: '255,215,130', at: 200 },
-    { n: 'Rose', c: '255,150,190', at: 500 },
-    { n: 'Comet', c: '200,170,255', at: 1000 }
+    { n: 'Mint', c: '150,255,190', at: 4 },
+    { n: 'Sky', c: '140,200,255', at: 8 },
+    { n: 'Gold', c: '255,215,130', at: 12 },
+    { n: 'Rose', c: '255,150,190', at: 16 },
+    { n: 'Comet', c: '200,170,255', at: 20 }
   ];
   function trailDef() {
     for (var i = TRAILS.length - 1; i >= 0; i--)
@@ -446,13 +502,14 @@
   }
   var MILESTONES = {
     50: 'Hole 50 — the fairway salutes you',
-    100: 'Hole 100 — century club',
-    200: 'Hole 200 — unstoppable',
-    500: 'Hole 500 — legend of the fairway',
-    1000: 'Hole 1000 — beyond the horizon'
+    4: 'Hole 4 — warming up',
+    8: 'Hole 8 — finding the groove',
+    12: 'Hole 12 — the back stretch',
+    16: 'Hole 16 — the home straight',
+    20: 'Hole 20 — the final exam'
   };
   function milestoneCheck(n) {
-    if (!MILESTONES[n] || mode !== 'endless') return;
+    if (!MILESTONES[n] || mode !== 'tour') return;
     var msg = '⛳ ' + MILESTONES[n];
     for (var i = 0; i < TRAILS.length; i++)
       if (TRAILS[i].at === n) msg += ' · new trail: ' + TRAILS[i].n + ' 🎨';
@@ -471,6 +528,7 @@
       HAP.buzz(30);
     }
     if (ball.impact > 1.2) { thudAt(ball.x, ball.y, ball.impact); ball.impact = 0; }
+    if (ball.pickup) { pickupJuice(ball.pickup); ball.pickup = null; }
     if (ballHoled(ball)) { onHoled(); return; }
     if (wasInFlight && ballInWater(ball)) { onWater(); return; }  // sim flags inWater; game owns the penalty+reset
     if (ball.resting) {
@@ -480,11 +538,33 @@
     }
   }
 
+  /* pickups: gems + the hidden relic (Walkabout / Mini Golf King) */
+  function pickupJuice(kind) {
+    if (kind === 'relic') {
+      relicCount++;
+      try {
+        var rk = JSON.parse(lsGet('tf_relics', '{}'));
+        rk[seed] = 1;
+        lsSet('tf_relics', JSON.stringify(rk));
+      } catch (e) {}
+      savePow();
+      AU.chime(true);
+      HAP.buzz([20, 60, 20]);
+      petalBurst(ball.x, ball.y);
+      toast('✦ Relic found! (' + relicCount + ' total)');
+      updateHUD();
+    } else if (kind === 'gem') {
+      AU.blip(1320, 1760, 0.12, 0.08, 'triangle');
+      HAP.buzz(10);
+      updateHUD();
+    }
+  }
+
   function onHoled() {
     state = 'holed'; inFlight = false; aiming = false; drag = null; aimPts = [];
     var stars = TF.starsFor(strokes, par());
     totalStars += stars;
-    if (mode === 'endless') recordScore(strokes);
+    if (mode === 'tour') recordScore(strokes);
     prevKiller = strokes >= par() + 3;      // breather hole next if this was a killer
     var eagle = strokes <= par() - 2;
     AU.chime(eagle);
@@ -495,15 +575,57 @@
     if (eagle && !RM) petalBurst(hole.cup.x, hole.cup.y);
     if (strokes > par() + 2) turtleJudge();
     saveRun(); saveBest();
+    // power-up drip: one random power-up per hole-out (cap 5 each)
+    var pk = ['brake', 'sticky', 'mulligan'][(Math.random() * 3) | 0];
+    if (POW[pk] < 5) { POW[pk]++; savePow(); updatePowBtn(); }
+    // world-map progression: stars color in the biome (ALGJ)
+    if (mode === 'tour') {
+      biomeStars[curBiome] = (biomeStars[curBiome] || 0) + stars;
+      savePow();
+    }
     setTimeout(showStarsPop, 650);
     setTimeout(function () {
       hideStarsPop();
       if (mode === 'daily') showDailyResult(stars);
+      else if (holeIndex >= TF.HOLES.length) showTourResult();
       else {
-        var ns = (runSeed + holeIndex + 1) >>> 0;
-        goToHole(holeIndex + 1, ns, holeOptsFor(ns, prevKiller));
+        // Wonderputt beat: the old hole melts away before the next arrives
+        startMorph(function () { goToHole(holeIndex + 1); });
       }
     }, 2300);
+  }
+
+  /* tour complete: 20 holes down, final tally */
+  function showTourResult() {
+    state = 'result';
+    try {
+      var tb = JSON.parse(lsGet('tf_tourbest', 'null'));
+      if (!tb || totalStrokes < tb.strokes)
+        lsSet('tf_tourbest', JSON.stringify({ strokes: totalStrokes, stars: totalStars }));
+      tb = JSON.parse(lsGet('tf_tourbest', 'null'));
+      localStorage.removeItem('tf_run');
+    } catch (e) { tb = null; }
+    var tp = TF.TOUR_PAR;
+    var diff = totalStrokes - tp;
+    var title = diff <= -6 ? 'Championship golf!' : (diff <= 0 ? 'Under par!' : (diff <= 6 ? 'Tour complete!' : 'Tour survived!'));
+    $('result-stars').textContent = '★★★';
+    $('result-title').textContent = title;
+    $('result-sub').innerHTML = '20 holes · <b>' + totalStrokes + '</b> strokes (par ' + tp + ')<br>' +
+      totalStars + ' ★ earned' + (tb ? ' · all-time best ' + tb.strokes : '');
+    $('result').classList.add('on');
+    $('hud').hidden = true;
+    refreshButtons();
+    AU.chime(true);
+  }
+
+  /* hole-to-hole morph: the course squashes and melts (Wonderputt) */
+  function startMorph(next) {
+    if (RM) { next(); return; }   // reduced motion: cut straight through
+    state = 'morph';
+    morphT = 1.1;
+    morphNext = next;
+    petalBurst(hole.cup.x, hole.cup.y);
+    AU.noise(0.5, 0.10, 400, 2400, 'bandpass');
   }
 
   function onWater() {
@@ -528,16 +650,97 @@
     undoSnap = null;
     AU.click();
     toast('Hole skipped · +' + bank + ' banked');
-    saveRun(); saveBest();
-    var ns = (runSeed + holeIndex + 1) >>> 0;
-    goToHole(holeIndex + 1, ns, holeOptsFor(ns, true));
+    saveRun();
+    if (mode === 'tour' && holeIndex >= TF.HOLES.length) showTourResult();
+    else goToHole(holeIndex + 1);
+  }
+
+  /* ---------------- power-ups (SSG3 / Cursed to Golf) ----------------
+   * One consumable per hole, earned by holing out. Tap the PWR button:
+   * it fires the armed power-up when usable, otherwise cycles the arm. */
+  function updatePowBtn() {
+    var b = $('btn-pow');
+    if (!b) return;
+    var show = state === 'play' || state === 'race';
+    b.hidden = !show;
+    if (show) {
+      var n = POW[armedPow] | 0;
+      b.textContent = POW_ICON[armedPow] + ' ' + n;
+      b.classList.toggle('empty', n <= 0);
+      b.title = POW_NAME[armedPow] + ' (' + n + ') — tap to use, cycles when idle';
+    }
+  }
+  function cyclePow() {
+    var order = ['brake', 'sticky', 'mulligan'];
+    var i = order.indexOf(armedPow);
+    for (var k = 1; k <= 3; k++) {
+      var cand = order[(i + k) % 3];
+      if ((POW[cand] | 0) > 0) { armedPow = cand; break; }
+    }
+    savePow(); updatePowBtn();
+    AU.click();
+  }
+  function useMulligan() {
+    // full hole rewind: back to the tee, this hole's strokes refunded
+    POW.mulligan--; savePow();
+    totalStrokes = holeStartTotal;
+    strokes = 0;
+    undoSnap = null; ghost = null;
+    var nb = TF.newBall(hole);
+    ball.x = nb.x; ball.y = nb.y; ball.vx = 0; ball.vy = 0;
+    ball.z = 0; ball.vz = 0; ball.resting = true; ball.sticky = false;
+    ball.gems = 0; ball.gotRelic = false; ball.curve = 0;
+    clearHoled(ball);
+    hole.gems.forEach(function (g) { g.taken = false; });
+    if (hole.relic) hole.relic.taken = false;
+    lastRest = { x: ball.x, y: ball.y };
+    inFlight = false; aiming = false; drag = null; aimPts = [];
+    AU.chime(false);
+    toast('Mulligan! Back to the tee.');
+    updatePowBtn(); updateHUD(); saveRun();
+  }
+  function powTap() {
+    AU.init();
+    var canAct = (state === 'play' || state === 'race') && ball;
+    if (!canAct) return;
+    // air-brake: fires mid-flight
+    if (!ball.resting && !ball.inCup && armedPow === 'brake') {
+      if ((POW.brake | 0) <= 0) { toast('No air-brakes left — hole out to earn more'); return; }
+      if (TF.applyBrake(ball)) {
+        POW.brake--; savePow(); updatePowBtn();
+        AU.noise(0.3, 0.18, 2000, 300, 'lowpass');
+        HAP.buzz(40);
+        toast('Air-brake!');
+      }
+      return;
+    }
+    if (!ball.resting || ball.inCup) return;
+    // sticky: arms for the next shot
+    if (armedPow === 'sticky') {
+      if ((POW.sticky | 0) <= 0) { toast('No sticky balls left'); return; }
+      if (ball.sticky) { toast('Sticky already armed'); return; }
+      TF.armSticky(ball);
+      POW.sticky--; savePow(); updatePowBtn();
+      AU.click();
+      toast('Sticky armed — the next landing stops dead');
+      return;
+    }
+    // mulligan: full hole rewind (not in races)
+    if (armedPow === 'mulligan') {
+      if (state === 'race') { toast('No mulligans in a race!'); return; }
+      if ((POW.mulligan | 0) <= 0) { toast('No mulligans left'); return; }
+      if (strokes <= 0) { toast('Nothing to rewind yet'); return; }
+      useMulligan();
+      return;
+    }
+    cyclePow();
   }
 
   /* undo last shot (Golf Peaks): penalty-free, one deep, not after holing */
   function undoShot() {
     if (!(undoSnap && ball && ball.resting && !inFlight && state === 'play')) return;
     AU.click();
-    TF.restoreBall(ball, undoSnap.snap);
+    TF.restoreBall(hole, ball, undoSnap.snap);
     strokes = undoSnap.strokes;
     totalStrokes = undoSnap.totalStrokes;
     ghost = undoSnap.ghost;
@@ -551,6 +754,10 @@
   /* ---------------- shooting ---------------- */
   var MAX_DRAG_PX = 300;
   // -> [vx, vy, powerFrac (1.0 = MAX_POWER, up to OVERDRIVE), overdrive] or null
+  /* sway-unless-focused (A Little Golf Journey): the aim sways gently until
+   * you hold the drag still for ~0.7s — then it locks. Pure timing skill,
+   * zero buttons. Applied to both the preview and the real shot. */
+  function swayAngle() { return Math.sin(wtime * 2.4) * 0.030 * swayAmp; }
   function dragVel() {
     if (!drag) return null;
     var dx = drag.x0 - drag.x1, dy = drag.y0 - drag.y1;   // screen px (y down)
@@ -561,14 +768,24 @@
     var od = ratio > 0.9;                                 // overdrive zone (OK Golf)
     var capped = Math.min(ratio, TF.OVERDRIVE_MAX / TF.MAX_POWER);
     var power = capped * TF.MAX_POWER;
-    // screen y-down -> world y-up: negate dy
-    return [dx / len * power, -dy / len * power, capped, od];
+    // screen y-down -> world y-up: negate dy; then rotate by the sway angle
+    var vx = dx / len * power, vy = -dy / len * power;
+    var sa = swayAngle();
+    if (sa !== 0) {
+      var c = Math.cos(sa), s = Math.sin(sa);
+      var rx = vx * c - vy * s, ry = vx * s + vy * c;
+      vx = rx; vy = ry;
+    }
+    return [vx, vy, capped, od];
   }
   function shootFromDrag() {
     var v = dragVel();
     if (!v) return;
-    undoSnap = { snap: TF.snapBall(ball), strokes: strokes, totalStrokes: totalStrokes,
-                 ghost: ghost ? { x: ghost.x, y: ghost.y } : null };
+    var inRace = state === 'race';
+    if (!inRace) {
+      undoSnap = { snap: TF.snapBall(hole, ball), strokes: strokes, totalStrokes: totalStrokes,
+                   ghost: ghost ? { x: ghost.x, y: ghost.y } : null };
+    }
     var vx = v[0], vy = v[1], od = v[3];
     if (od) {                                             // super shot, visibly less accurate
       var j = (Math.random() * 2 - 1) * 3 * Math.PI / 180; // ±3° jitter
@@ -578,20 +795,21 @@
     }
     var spin = spinVal; spinVal = 0;                      // spin is per-shot
     TF.shoot(ball, vx, vy, { spin: spin, overdrive: od });
-    strokes++;
-    totalStrokes++;
+    if (!inRace) { strokes++; totalStrokes++; }
     inFlight = true;
+    aimLand = null;
     AU.thock(v[2] / 1.25);
     HAP.buzz(20);                                       // light pulse on every shot
     divotAt(ball.x, ball.y);
     updateHUD();
-    saveRun();
+    if (!inRace) saveRun();
   }
 
   /* predicted aim path: exact sim steps on a scratch ball.
    * This is the skill toy — the dotted path visibly bends with the break. */
   function predictAim(vx, vy, od) {
     aimPts = [];
+    aimLand = null;
     try {
       var b = TF.newBall(hole);
       b.x = ball.x; b.y = ball.y;
@@ -600,8 +818,15 @@
       b.spin = spinVal;                                   // spin shapes the preview too
       clearHoled(b);
       var px = -9999, py = -9999, i;
+      var pWasAir = false, pLanded = false;
       for (i = 0; i < 200; i++) {                         // ~3.3s of roll
         TF.simStep(hole, b, simTime);   // blades/gusts at cast time
+        if (b.z > 0) pWasAir = true;
+        // first touchdown after flight = the landing spot (ALGJ)
+        if (pWasAir && !pLanded && b.z === 0 && !b.inCup && !b.inWater) {
+          aimLand = { x: b.x, y: b.y, air: true };
+          pLanded = true;
+        }
         if (b.inCup) { aimPts.push([b.x, b.y]); break; }
         if (b.inWater) { aimPts.push([b.x, b.y]); break; }
         var dx = b.x - px, dy = b.y - py;                // teleport guard
@@ -611,7 +836,12 @@
         if (b.resting) break;
         if (b.x < -4 || b.x > hole.W + 4 || b.y < -4 || b.y > hole.H + 4) break;
       }
-    } catch (e) { aimPts = []; }
+      // no flight? the landing spot is where the ball stops
+      if (!aimLand && aimPts.length) {
+        var lp = aimPts[aimPts.length - 1];
+        aimLand = { x: lp[0], y: lp[1], air: false };
+      }
+    } catch (e) { aimPts = []; aimLand = null; }
   }
 
   /* ---------------- input: drag-back slingshot anywhere on screen ---------------- */
@@ -629,7 +859,15 @@
   }
   canvas.addEventListener('pointerdown', function (e) {
     AU.init(); AU.resume();
-    if (state !== 'play' || !ball || !ball.resting) return;
+    if ((state !== 'play' && state !== 'race') || !ball) return;
+    // post-shot curve: drag while the ball is moving bends it mid-flight (SSG3)
+    if (!ball.resting && !ball.inCup && !aiming && !curveDrag) {
+      e.preventDefault();
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      curveDrag = { pid: e.pointerId, x0: e.clientX };
+      return;
+    }
+    if (!ball.resting) return;
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
     var r = canvas.getBoundingClientRect();
@@ -639,10 +877,16 @@
       return;
     }
     drag = { pid: e.pointerId, x0: px, y0: py, x1: px, y1: py };
+    dragStillT = 0;
     aiming = true;
     refreshSpinHint();
   });
   canvas.addEventListener('pointermove', function (e) {
+    if (curveDrag && e.pointerId === curveDrag.pid) {      // live curve input
+      e.preventDefault();
+      if (ball && !ball.resting) TF.setCurve(ball, (e.clientX - curveDrag.x0) / 130);
+      return;
+    }
     if (!aiming || !drag) return;
     e.preventDefault();
     if (e.pointerId === spinPointer) {                    // spin finger: vertical drag
@@ -653,9 +897,11 @@
     if (e.pointerId !== drag.pid) return;
     var r = canvas.getBoundingClientRect();
     drag.x1 = e.clientX - r.left; drag.y1 = e.clientY - r.top;
+    dragStillT = 0;                                       // moved -> sway returns
     repredict();
   });
   function endDrag(e) {
+    if (e && curveDrag && e.pointerId === curveDrag.pid) { curveDrag = null; return; }
     if (e && spinPointer !== null && e.pointerId === spinPointer) {
       spinPointer = null;                                 // spin value stays for the shot
       return;
@@ -664,11 +910,12 @@
     if (!aiming) return;
     aiming = false; aimPts = [];
     refreshSpinHint();
-    if (drag && state === 'play' && ball && ball.resting) shootFromDrag();
+    if (drag && (state === 'play' || state === 'race') && ball && ball.resting) shootFromDrag();
     drag = null;
   }
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', function (e) {
+    if (e && curveDrag && e.pointerId === curveDrag.pid) { curveDrag = null; return; }
     if (e && spinPointer !== null && e.pointerId === spinPointer) { spinPointer = null; return; }
     aiming = false; drag = null; aimPts = [];
     refreshSpinHint();
@@ -1123,21 +1370,78 @@
       }
     }
 
-    // ball + soft shadow (shadow stays on the ground, grows when airborne)
-    if (ball && state !== 'menu') {
-      var bz = ball.z || 0;
+    // gems + the hidden relic (risk/reward detours + exploration)
+    if (hole && state !== 'menu' && state !== 'map') {
+      var gi2;
+      for (gi2 = 0; gi2 < hole.gems.length; gi2++) {
+        var gm = hole.gems[gi2];
+        if (gm.taken) continue;
+        var ggx = X(gm.x), ggy = Y(gm.y) + Math.sin(wtime * 3 + gi2 * 1.7) * 3;
+        var gs = Math.max(4, 1.1 * sc);
+        var tw = 0.6 + 0.4 * Math.sin(wtime * 5 + gi2 * 2.3);
+        ctx.save(); ctx.translate(ggx, ggy); ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = 'rgba(127,231,245,' + (0.55 + 0.35 * tw).toFixed(2) + ')';
+        ctx.fillRect(-gs / 2, -gs / 2, gs, gs);
+        ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.2;
+        ctx.strokeRect(-gs / 2, -gs / 2, gs, gs);
+        ctx.restore();
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.5 + 0.5 * tw).toFixed(2) + ')';
+        ctx.beginPath(); ctx.arc(ggx - gs * 0.2, ggy - gs * 0.25, 1.4, 0, 6.2832); ctx.fill();
+      }
+      if (hole.relic && !hole.relic.taken) {
+        var elx = X(hole.relic.x), ely = Y(hole.relic.y) + Math.sin(wtime * 2.2) * 4;
+        var els = Math.max(7, 1.8 * sc);
+        var hue = (wtime * 90) % 360;
+        ctx.save();
+        ctx.shadowColor = 'hsla(' + hue + ',90%,65%,.9)';
+        ctx.shadowBlur = 14;
+        ctx.translate(elx, ely); ctx.rotate(Math.PI / 4 + Math.sin(wtime * 1.5) * 0.2);
+        ctx.fillStyle = 'hsla(' + hue + ',90%,68%,.95)';
+        ctx.fillRect(-els / 2, -els / 2, els, els);
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1.6;
+        ctx.strokeRect(-els / 2, -els / 2, els, els);
+        ctx.restore();
+      }
+    }
+
+    // balls + soft shadows (one in play, four in a race)
+    var drawBalls = (state === 'race' && race) ? race.balls : (ball ? [ball] : []);
+    for (var bi = 0; bi < drawBalls.length && state !== 'menu'; bi++) {
+      var db = drawBalls[bi];
+      if (db.inWater) continue;
+      var bz = db.z || 0;
       var br = Math.max(3.5, TF.BALL_R * sc) * (1 + bz * 0.05);
-      var bx = X(ball.x), by = Y(ball.y);
+      var bx = X(db.x), by = Y(db.y);
       var shR = br * (1 + bz * 0.22);
       ctx.fillStyle = 'rgba(0,0,0,' + Math.max(0.08, 0.25 - bz * 0.02).toFixed(3) + ')';
       ctx.beginPath(); ctx.ellipse(bx + 1.5, by + 2.5, shR * 0.95, shR * 0.8, 0, 0, 6.2832); ctx.fill();
       var airY = by - bz * sc;   // the ball lifts off the ground plane
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = db.color || '#ffffff';
       ctx.beginPath(); ctx.arc(bx, airY, br, 0, 6.2832); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(bx, airY, br, 0, 6.2832); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.9)';
       ctx.beginPath(); ctx.arc(bx - br * 0.3, airY - br * 0.3, br * 0.28, 0, 6.2832); ctx.fill();
+      // sticky armed: amber ring
+      if (db.sticky) {
+        ctx.strokeStyle = 'rgba(232,176,75,.95)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(bx, airY, br + 4, 0, 6.2832); ctx.stroke();
+      }
+    }
+
+    // post-shot curve indicator: bent arrow while bending (SSG3)
+    if (ball && (curveDrag || Math.abs(ball.curve || 0) > 0.05) && state !== 'menu') {
+      var cv = curveDrag ? (ball.curve || 0) : ball.curve;
+      if (Math.abs(cv) > 0.03) {
+        var cx0 = X(ball.x), cy0 = Y(ball.y) - 14;
+        var cdir = cv > 0 ? 1 : -1;
+        ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(cx0 - cdir * 26, cy0, 26, cdir > 0 ? -0.9 : Math.PI - 0.9, cdir > 0 ? 0.9 : Math.PI + 0.9, cdir < 0);
+        ctx.stroke();
+        ctx.lineCap = 'butt';
+      }
     }
 
     // windmill blades sweep ABOVE the ball
@@ -1243,6 +1547,19 @@
         ctx.fillStyle = odAim ? 'rgba(255,110,80,.9)' : 'rgba(255,255,255,.85)';
         ctx.beginPath(); ctx.arc(X(lm[0]) + wob, Y(lm[1]), 1.8, 0, 6.2832); ctx.fill();
       }
+      // landing-spot indicator (A Little Golf Journey): where the ball touches down
+      if (aimLand) {
+        var alx = X(aimLand.x), aly = Y(aimLand.y);
+        var alc = aimLand.air ? 'rgba(140,230,150,' : 'rgba(255,255,255,';
+        ctx.strokeStyle = alc + '.9)'; ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc(alx, aly, 9, 0, 6.2832); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(alx - 5, aly - 5); ctx.lineTo(alx + 5, aly + 5);
+        ctx.moveTo(alx + 5, aly - 5); ctx.lineTo(alx - 5, aly + 5);
+        ctx.stroke();
+      }
       if (v && ball) {
         ctx.strokeStyle = odAim ? 'rgba(255,110,80,.85)' : 'rgba(255,255,255,.7)';
         ctx.lineWidth = 2;
@@ -1300,6 +1617,29 @@
         ctx.beginPath(); ctx.arc(gx - 12 + pp * 12, gy + 32, 3.5, 0, 6.2832); ctx.fill();
       }
     }
+
+    // race countdown: 3…2…1…GO
+    if (state === 'race' && race && race.countT > 0) {
+      var cd = Math.ceil(race.countT);
+      ctx.fillStyle = 'rgba(10,25,15,0.45)';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.fillStyle = '#fff';
+      ctx.font = '700 ' + Math.round(cw * 0.22) + 'px system-ui';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(cd > 0 ? String(cd) : 'GO!', cw / 2, ch / 2);
+      ctx.font = '600 ' + Math.round(cw * 0.05) + 'px system-ui';
+      ctx.fillText('First ball in the cup wins', cw / 2, ch / 2 + cw * 0.16);
+    }
+
+    // hole morph melt (Wonderputt): squash + white bloom as the hole melts away
+    if (state === 'morph') {
+      var mk = 1 - Math.max(0, morphT) / 1.1;
+      canvas.style.transform = 'scaleY(' + (1 - 0.30 * mk).toFixed(3) + ')';
+      ctx.fillStyle = 'rgba(255,255,255,' + (mk * 0.75).toFixed(3) + ')';
+      ctx.fillRect(0, 0, cw, ch);
+    } else if (canvas.style.transform) {
+      canvas.style.transform = '';
+    }
   }
   function br2(frac) { return Math.max(6, TF.BALL_R * sc) + Math.min(frac, 1.25) * 26; }
 
@@ -1311,6 +1651,25 @@
     last = ts;
     if (slowT > 0) { slowT -= dt; timeScale = 0.3; } else timeScale = 1;
     wtime += dt;
+    if (state === 'race' && hole && ball && race) stepRace(dt * timeScale);
+    // hole morph: melt timer, then the queued transition
+    if (state === 'morph') {
+      morphT -= dt;
+      if (Math.random() < 0.6 && hole && ball) {
+        particles.push({ x: ball.x + (Math.random() * 2 - 1) * 20,
+                         y: ball.y + (Math.random() * 2 - 1) * 20,
+                         vx: 0, vy: 6 + Math.random() * 6, t: 0, life: 0.9,
+                         c: '255,255,255', r: 1.5 + Math.random() * 2 });
+      }
+      if (morphT <= 0 && morphNext) { var mn = morphNext; morphNext = null; mn(); }
+    }
+    // sway-unless-focused: holding the drag still focuses the aim
+    if (aiming && drag) {
+      dragStillT += dt;
+      var swTarget = dragStillT > 0.7 ? 0 : 1;
+      swayAmp += (swTarget - swayAmp) * Math.min(1, dt * 6);
+      if (swayAmp > 0.02) repredict();   // the dotted path visibly sways until focused
+    } else if (!aiming) swayAmp = 0;
     if (state === 'play' && hole && ball) {
       acc += dt * timeScale;
       var n = 0;
@@ -1350,16 +1709,34 @@
     $('btn-skip').hidden = !(canAct && strokes >= 20);
     $('btn-trail').hidden = state !== 'play';
     $('btn-mute').hidden = state !== 'play';
+    updatePowBtn();
   }
   function updateHUD() {
     if (!hole) return;
+    if (state === 'race' && race) {
+      var t = Math.floor(race.t);
+      var order = race.balls.slice().sort(function (p, q) {
+        if (p.finished && q.finished) return p.finishT - q.finishT;
+        if (p.finished) return -1;
+        if (q.finished) return 1;
+        return Math.hypot(p.x - hole.cup.x, p.y - hole.cup.y) -
+               Math.hypot(q.x - hole.cup.x, q.y - hole.cup.y);
+      });
+      var place = order.indexOf(ball) + 1;
+      $('hud-hole').textContent = race.countT > 0 ? 'READY…' : 'RACE · P' + place + '/4 · 0:' + (t < 10 ? '0' : '') + t;
+      $('hud-meta').textContent = 'First ball in the cup wins' + ((ball.gems | 0) ? ' · ◆' + ball.gems : '') +
+        (ball.sticky ? ' · ◉ sticky' : '');
+      refreshButtons();
+      return;
+    }
     var avg = holeScores.length ? TF.avgLast(holeScores, 50) : 0;
     var hn = 'Hole ' + holeIndex + (holeNameStr ? ' · ' + holeNameStr : '') +
              (avg ? ' · avg ' + avg.toFixed(1) : '');
     $('hud-hole').textContent = hn;
     var m = 'PAR ' + par() + ' · ' + strokes + (strokes === 1 ? ' STROKE' : ' STROKES');
-    if (mode === 'endless') m += ' · Σ ' + totalStrokes + ' · ★ ' + totalStars;
+    if (mode === 'tour') m += ' · Σ ' + totalStrokes + ' · ★ ' + totalStars;
     else m += ' · ★ ' + totalStars;
+    if (ball && (ball.gems | 0)) m += ' · ◆' + ball.gems;
     $('hud-meta').textContent = m;
     refreshButtons();
   }
@@ -1471,6 +1848,178 @@
     sub.textContent = dailyInfo.date + ' · same hole worldwide' + best;
   }
 
+  /* ---------------- world map (ALGJ): stars color in the biomes ----------------
+   * No fail state, no gating — the map itself is the visual reward. */
+  function showMap() {
+    AU.init(); AU.click();
+    state = 'map';
+    running = true;
+    $('menu').classList.remove('on');
+    $('result').classList.remove('on');
+    $('hud').hidden = true;
+    var h = '', total = 0, i;
+    for (i = 0; i < 4; i++) {
+      var st = biomeStars[i] || 0;
+      total += st;
+      var sat = Math.min(1, st / 15);   // full color at 15 stars
+      h += '<div class="map-isle">' +
+           '<div class="map-disc" style="background:' + BIOMES[i].fairA +
+           ';filter:saturate(' + sat.toFixed(2) + ') brightness(' + (0.5 + 0.5 * sat).toFixed(2) + ')"></div>' +
+           '<div class="map-name">' + BIOME_NAMES[i] + '</div>' +
+           '<div class="map-stars">' + st + ' ★</div></div>';
+    }
+    $('map-islands').innerHTML = h;
+    $('map-total').textContent = total + ' ★ earned · ' + relicCount + ' ✦ relics found';
+    $('map').classList.add('on');
+    refreshButtons();
+  }
+
+  /* ---------------- race mode (SSG3 Race / Golf Blitz) ----------------
+   * Everyone putts at once — you against 3 bots, first ball in the cup wins.
+   * One hole, ~60 seconds. Bumping a gem-carrier spills a gem your way. */
+  var RACE_BOT_COLORS = ['#ff6b6b', '#4ecdc4', '#ffd93d'];
+  var RACE_BOT_NAMES = ['Birdie', 'Bogey', 'Albatross'];
+  function startRace() {
+    AU.init(); AU.click();
+    var ridx = (Math.random() * TF.HOLES.length) | 0;
+    hole = TF.makeHole(TF.HOLES[ridx], ridx);
+    seed = hole.seed;
+    simTime = 0;
+    curBiome = (Math.random() * 4) | 0;
+    document.body.setAttribute('data-biome', String(curBiome));
+    AU.setBiome(curBiome);
+    race = { balls: [], bots: [], t: 0, countT: 3.0, over: false };
+    for (var i = 0; i < 4; i++) {
+      var b = TF.newBall(hole);
+      b.x = hole.tee.x + (i - 1.5) * 3;
+      b.color = i === 0 ? '#ffffff' : RACE_BOT_COLORS[i - 1];
+      b.rname = i === 0 ? 'You' : RACE_BOT_NAMES[i - 1];
+      race.balls.push(b);
+      if (i > 0) {
+        var bs = TF.botState(hole);
+        bs.ball = b;
+        bs.think = 0.6 + Math.random() * 1.2 + i * 0.3;
+        bs.lastRest = { x: b.x, y: b.y };
+        race.bots.push(bs);
+      }
+    }
+    ball = race.balls[0];
+    strokes = 0; inFlight = false; aiming = false; drag = null; aimPts = [];
+    spinVal = 0; spinPointer = null; ghost = null; undoSnap = null; trail = [];
+    curveDrag = null; aimLand = null;
+    particles = [];
+    lastRest = { x: ball.x, y: ball.y };
+    fit(); buildSpeckles(); initTurtle();
+    state = 'race';
+    running = true;
+    last = performance.now();
+    $('menu').classList.remove('on');
+    $('result').classList.remove('on');
+    $('hud').hidden = false;
+    updateHUD(); updatePowBtn();
+    toast('Race! First ball in the cup wins.', 2600);
+  }
+  function raceWater(b, bs) {
+    splashAt(b.x, b.y);
+    AU.splash();
+    var lr = bs ? bs.lastRest : lastRest;
+    b.x = lr.x; b.y = lr.y;
+    b.vx = 0; b.vy = 0; b.vz = 0; b.z = 0; b.resting = true;
+    b.inWater = false; b.curve = 0;
+    if (b === ball) { inFlight = false; toast('Splash! Time lost.'); }
+  }
+  function stepRace(dt) {
+    race.t += dt;
+    var i, bs, b;
+    if (race.countT > 0) {
+      race.countT -= dt;   // countdown: balls held at the tee
+      return;
+    }
+    // bots think, then shoot when settled
+    for (i = 0; i < race.bots.length; i++) {
+      bs = race.bots[i]; b = bs.ball;
+      if (b.inCup) continue;
+      if (b.inWater) { raceWater(b, bs); continue; }
+      if (b.resting) {
+        bs.lastRest = { x: b.x, y: b.y };
+        bs.think -= dt;
+        if (bs.think <= 0) {
+          var v = TF.botShot(hole, bs);
+          if (v) { TF.shoot(b, v[0], v[1], {}); bs.think = 0.8 + Math.random() * 1.2; }
+          else bs.think = 0.3;
+        }
+      }
+    }
+    if (ball.inWater) raceWater(ball, null);
+    // physics substeps
+    var steps = Math.max(1, Math.min(4, Math.round(dt / STEP)));
+    for (var s = 0; s < steps; s++) {
+      TF.raceStep(hole, race.balls, simTime);
+      simTime += STEP;
+    }
+    // juice + finish detection
+    for (i = 0; i < race.balls.length; i++) {
+      b = race.balls[i];
+      if (b.impact > 1.2) { thudAt(b.x, b.y, b.impact); b.impact = 0; }
+      if (b.pickup) {
+        if (b === ball) pickupJuice(b.pickup);
+        b.pickup = null;
+      }
+      if (b.inCup && !b.finished) {
+        b.finished = true; b.finishT = race.t;
+        if (b === ball) { AU.chime(true); AU.clunk(); HAP.buzz([10, 40, 10]); }
+        else toast(b.rname + ' holed out!');
+      }
+    }
+    if (ball.resting && inFlight) { inFlight = false; lastRest = { x: ball.x, y: ball.y }; }
+    // HUD: refresh place + clock about once a second
+    if (((race.t | 0) !== (race._hudT | 0)) || race.countT > 0 !== race._wasCount) {
+      race._hudT = race.t; race._wasCount = race.countT > 0;
+      updateHUD();
+    }
+    if (trail && ball && !ball.resting) {
+      trail.push({ x: ball.x, y: ball.y, t: 0 });
+      if (trail.length > 48) trail.shift();
+    }
+    if (!race.over && (ball.finished || race.t > 90)) endRace();
+  }
+  function endRace() {
+    race.over = true;
+    state = 'result';
+    // places: finished by time, then unfinished by distance to cup
+    var order = race.balls.slice().sort(function (p, q) {
+      if (p.finished && q.finished) return p.finishT - q.finishT;
+      if (p.finished) return -1;
+      if (q.finished) return 1;
+      var pd = Math.hypot(p.x - hole.cup.x, p.y - hole.cup.y);
+      var qd = Math.hypot(q.x - hole.cup.x, q.y - hole.cup.y);
+      return pd - qd;
+    });
+    var place = order.indexOf(ball) + 1;
+    var award = place === 1 ? 3 : (place === 2 ? 2 : 1);
+    var pk = ['brake', 'sticky', 'mulligan'];
+    for (var i = 0; i < award; i++) {
+      var k = pk[(Math.random() * 3) | 0];
+      if (POW[k] < 5) POW[k]++;
+    }
+    savePow(); updatePowBtn();
+    var medals = ['🥇', '🥈', '🥉', '4th'];
+    var lines = order.map(function (rb, i) {
+      var g = rb.gems | 0;
+      return (i + 1) + '. ' + rb.rname + (rb.finished ? ' · holed' : ' · ' + Math.round(Math.hypot(rb.x - hole.cup.x, rb.y - hole.cup.y)) + 'u out') +
+             (g ? ' · ◆' + g : '');
+    });
+    $('result-stars').textContent = medals[place - 1] || (place + 'th');
+    $('result-title').textContent = place === 1 ? 'You win the race!' : 'Race over';
+    $('result-sub').innerHTML = 'You finished <b>' + place + ordinal(place) + '</b> of 4<br>' +
+      lines.join('<br>') + '<br><br>+' + award + ' power-up' + (award > 1 ? 's' : '') + ' earned';
+    $('result').classList.add('on');
+    $('hud').hidden = true;
+    race = null;
+    AU.click();
+  }
+  function ordinal(n) { return n === 1 ? 'st' : (n === 2 ? 'nd' : (n === 3 ? 'rd' : 'th')); }
+
   /* ---------------- arcade: daily leaderboard (fails silently) ---------------- */
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -1548,24 +2097,20 @@
     running = true;
     last = performance.now();
   }
-  function startEndless() {
+  function startTour() {
     AU.init(); AU.click();
-    mode = 'endless';
+    mode = 'tour';
+    seenHint = {};
     var save = loadRun();
-    if (save && save.runSeed != null) {
-      runSeed = save.runSeed >>> 0;
+    if (save && save.mode === 'tour' && save.holeIndex >= 1 && save.holeIndex <= TF.HOLES.length) {
       totalStrokes = save.totalStrokes || 0;
       totalStars = save.totalStars || 0;
       holeScores = save.holeScores || [];
-      prevKiller = !!save.prevKiller;
-      var hn = save.holeIndex || 1;
-      var hs = (runSeed + hn) >>> 0;
-      loadHole(hn, hs, holeOptsFor(hs, prevKiller));
+      prevKiller = false;
+      loadHole(save.holeIndex || 1);
     } else {
-      runSeed = (Math.random() * 4294967296) >>> 0;
       totalStrokes = 0; totalStars = 0; holeScores = []; prevKiller = false;
-      var s0 = (runSeed + 1) >>> 0;
-      loadHole(1, s0, holeOptsFor(s0, false));
+      loadHole(1);
     }
     startPlay();
   }
@@ -1584,13 +2129,15 @@
   }
   function refreshMenu() {
     var save = loadRun();
-    $('endless-sub').textContent = save ? ('resume hole ' + (save.holeIndex || 1) + ' · Σ ' + (save.totalStrokes || 0)) : 'fresh fairway, infinite holes';
-    $('btn-newrun').hidden = !save;
+    var resumable = save && save.mode === 'tour' && save.holeIndex >= 1 && save.holeIndex <= TF.HOLES.length;
+    $('endless-sub').textContent = resumable ?
+      ('resume hole ' + save.holeIndex + ' of 20 · Σ ' + (save.totalStrokes || 0)) : '20 designed holes · par 71';
+    $('btn-newrun').hidden = !resumable;
     var best = null;
-    try { best = JSON.parse(lsGet('tf_best', 'null')); } catch (e) {}
+    try { best = JSON.parse(lsGet('tf_tourbest', 'null')); } catch (e) {}
     $('menu-best').textContent = best ?
-      ('Best run: ' + best.holes + ' holes · ' + best.strokes + ' strokes · ' + (best.stars || 0) + ' ★') :
-      'No runs yet — the fairway awaits.';
+      ('Best tour: ' + best.strokes + ' strokes · ' + (best.stars || 0) + ' ★') :
+      'No tours yet — the fairway awaits.';
     updateDailySub();
   }
 
@@ -1618,7 +2165,17 @@
     toast(muteState === 0 ? 'Sound on' : (muteState === 1 ? 'Wind bed off' : 'All sound off'));
   });
 
-  $('btn-endless').addEventListener('click', startEndless);
+  $('btn-pow').addEventListener('click', function (e) { e.stopPropagation(); powTap(); });
+  $('btn-race').addEventListener('click', startRace);
+  $('btn-map').addEventListener('click', showMap);
+  $('btn-map-back').addEventListener('click', function () {
+    AU.click();
+    $('map').classList.remove('on');
+    $('menu').classList.add('on');
+    state = 'menu';
+    refreshButtons();
+  });
+  $('btn-endless').addEventListener('click', startTour);
   $('btn-daily').addEventListener('click', startDaily);
   $('btn-newrun').addEventListener('click', function () {
     AU.click();
@@ -1657,6 +2214,7 @@
   resize();
   maxHole = parseInt(lsGet('tf_maxhole', '1'), 10) || 1;
   trailSel = lsGet('tf_trail', 'Cloud');
+  loadPow();
   HAP.init();
   refreshMenu();
   refreshButtons();
