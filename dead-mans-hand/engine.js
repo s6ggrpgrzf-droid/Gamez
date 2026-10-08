@@ -1,10 +1,11 @@
-/* Dead Man's Hand — pure game logic. Zero DOM, zero canvas, zero audio.
- * Runs headless in node (tests) and in the browser (game.js renders it).
- * Seeded PRNG (mulberry32) everywhere: same seed -> same run.
+/* Dead Man's Hand — Klondike solitaire engine. Pure logic: zero DOM,
+ * zero canvas, zero audio. Runs headless in node (tests/) and in the
+ * browser (game.js renders it). Seeded PRNG (mulberry32): same seed ->
+ * same deal. Undo is snapshot-based; history capped at 300.
  */
 'use strict';
 
-var DMH = (function () {
+var SOL = (function () {
 
   /* ---------------- PRNG ---------------- */
 
@@ -19,7 +20,7 @@ var DMH = (function () {
     };
   }
 
-  // FNV-1a 32-bit hash of 'YYYY-MM-DD'. Same date worldwide -> same seed.
+  // FNV-1a 32-bit hash of 'YYYY-MM-DD'. Same date worldwide -> same deal.
   function dailySeed(dateStr) {
     var h = 0x811c9dc5;
     for (var i = 0; i < dateStr.length; i++) {
@@ -31,15 +32,18 @@ var DMH = (function () {
 
   /* ---------------- cards ---------------- */
 
-  // card: {r: 2..14 (11=J 12=Q 13=K 14=A), s: 0..3}
-  var SUITS = ['\u2660', '\u2665', '\u2666', '\u2663']; // spade heart diamond club
+  // card: {r: 1..13 (1=A, 11=J, 12=Q, 13=K), s: 0..3 (spade heart diamond club), up: bool}
+  var SUITS = ['\u2660', '\u2665', '\u2666', '\u2663'];
   var SUIT_NAMES = ['spades', 'hearts', 'diamonds', 'clubs'];
 
   function isRed(s) { return s === 1 || s === 2; }
+  function rankLabel(r) {
+    return r === 1 ? 'A' : r === 11 ? 'J' : r === 12 ? 'Q' : r === 13 ? 'K' : String(r);
+  }
 
   function makeDeck() {
     var d = [], r, s;
-    for (s = 0; s < 4; s++) for (r = 2; r <= 14; r++) d.push({ r: r, s: s });
+    for (s = 0; s < 4; s++) for (r = 1; r <= 13; r++) d.push({ r: r, s: s, up: false });
     return d;
   }
 
@@ -51,422 +55,329 @@ var DMH = (function () {
     return deck;
   }
 
-  function rankLabel(r) {
-    if (r === 14) return 'A';
-    if (r === 13) return 'K';
-    if (r === 12) return 'Q';
-    if (r === 11) return 'J';
-    return String(r);
-  }
+  function top(pile) { return pile.length ? pile[pile.length - 1] : null; }
 
-  function rankWord(r) {
-    if (r === 14) return 'Aces';
-    if (r === 13) return 'Kings';
-    if (r === 12) return 'Queens';
-    if (r === 11) return 'Jacks';
-    return rankLabel(r) + 's';
-  }
+  /* ---------------- game state ---------------- */
 
-  function rankWord1(r) {
-    if (r === 14) return 'Ace';
-    if (r === 13) return 'King';
-    if (r === 12) return 'Queen';
-    if (r === 11) return 'Jack';
-    return rankLabel(r);
-  }
-
-  /* ---------------- poker evaluation (exactly 5 cards) ---------------- */
-
-  // ranks: 0 high card, 1 pair, 2 two pair, 3 trips, 4 straight, 5 flush,
-  //        6 full house, 7 quads, 8 straight flush, 9 royal flush
-  var RANK_NAMES = [
-    'High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush',
-    'Full House', 'Four of a Kind', 'Straight Flush', 'Royal Flush'
-  ];
-  var RANK_BASE = [5, 12, 25, 40, 50, 55, 75, 120, 180, 250];
-
-  function evaluate5(cards) {
-    if (!cards || cards.length !== 5) throw new Error('evaluate5 needs exactly 5 cards');
-    var vals = cards.map(function (c) { return c.r; }).sort(function (a, b) { return b - a; });
-    var flush = cards.every(function (c) { return c.s === cards[0].s; });
-
-    // counts, sorted by (count desc, rank desc)
-    var counts = {};
-    vals.forEach(function (v) { counts[v] = (counts[v] || 0) + 1; });
-    var groups = Object.keys(counts).map(function (k) {
-      return { r: +k, n: counts[k] };
-    }).sort(function (a, b) { return (b.n - a.n) || (b.r - a.r); });
-
-    // straight? (wheel A-2-3-4-5 handled: vals [14,5,4,3,2])
-    var uniq = [];
-    vals.forEach(function (v) { if (uniq.indexOf(v) < 0) uniq.push(v); });
-    var straight = false, straightHigh = 0;
-    if (uniq.length === 5) {
-      if (uniq[0] - uniq[4] === 4) { straight = true; straightHigh = uniq[0]; }
-      else if (uniq[0] === 14 && uniq[1] === 5) { straight = true; straightHigh = 5; }
+  function newGame(seed, drawCount) {
+    var rng = mulberry32(seed >>> 0);
+    var deck = shuffle(makeDeck(), rng);
+    var tableau = [[], [], [], [], [], [], []];
+    var i, j;
+    for (i = 0; i < 7; i++) {
+      for (j = 0; j <= i; j++) tableau[i].push(deck.pop());
+      top(tableau[i]).up = true;
     }
+    var stock = deck; // 24 cards, face down
+    for (i = 0; i < stock.length; i++) stock[i].up = false;
+    return {
+      seed: seed >>> 0,
+      draw: drawCount === 3 ? 3 : 1,
+      tableau: tableau,
+      foundations: [[], [], [], []], // index = suit
+      stock: stock,
+      waste: [],
+      score: 0,
+      moves: 0,
+      passes: 0,
+      history: [],
+      startT: 0,
+      won: false,
+      over: false
+    };
+  }
 
-    var rank, tb;
-    if (straight && flush) {
-      rank = (straightHigh === 14) ? 9 : 8;
-      tb = [straightHigh];
-    } else if (groups[0].n === 4) {
-      rank = 7; tb = [groups[0].r, groups[1].r];
-    } else if (groups[0].n === 3 && groups[1].n === 2) {
-      rank = 6; tb = [groups[0].r, groups[1].r];
-    } else if (flush) {
-      rank = 5; tb = vals.slice();
-    } else if (straight) {
-      rank = 4; tb = [straightHigh];
-    } else if (groups[0].n === 3) {
-      rank = 3; tb = [groups[0].r].concat(groups.slice(1).map(function (g) { return g.r; }).sort(function (a, b) { return b - a; }));
-    } else if (groups[0].n === 2 && groups[1].n === 2) {
-      rank = 2;
-      var pairs = [groups[0].r, groups[1].r].sort(function (a, b) { return b - a; });
-      tb = pairs.concat([groups[2].r]);
-    } else if (groups[0].n === 2) {
-      rank = 1;
-      tb = [groups[0].r].concat(groups.slice(1).map(function (g) { return g.r; }).sort(function (a, b) { return b - a; }));
-    } else {
-      rank = 0; tb = vals.slice();
+  function snapshot(st) {
+    return {
+      tableau: JSON.parse(JSON.stringify(st.tableau)),
+      foundations: JSON.parse(JSON.stringify(st.foundations)),
+      stock: JSON.parse(JSON.stringify(st.stock)),
+      waste: JSON.parse(JSON.stringify(st.waste)),
+      score: st.score, moves: st.moves, passes: st.passes
+    };
+  }
+
+  function restore(st, snap) {
+    st.tableau = snap.tableau; st.foundations = snap.foundations;
+    st.stock = snap.stock; st.waste = snap.waste;
+    st.score = snap.score; st.moves = snap.moves; st.passes = snap.passes;
+    st.won = false; st.over = false;
+  }
+
+  function checkpoint(st) {
+    st.history.push(snapshot(st));
+    if (st.history.length > 300) st.history.shift();
+  }
+
+  function undo(st) {
+    if (!st.history.length) return false;
+    restore(st, st.history.pop());
+    return true;
+  }
+
+  function addScore(st, n) {
+    st.score = Math.max(0, st.score + n);
+  }
+
+  /* ---------------- move legality ---------------- */
+
+  // Can `card` land on tableau pile `pile`? (top card or empty slot)
+  function canTableau(card, pile) {
+    var t = top(pile);
+    if (!t) return card.r === 13; // empty column takes only a King
+    return t.up && isRed(t.s) !== isRed(card.s) && t.r === card.r + 1;
+  }
+
+  // Can `card` land on foundation `f` (array)?
+  function canFoundation(card, f) {
+    var t = top(f);
+    if (!t) return card.r === 1; // empty foundation takes only an Ace
+    return card.s === t.s && card.r === t.r + 1;
+  }
+
+  // A stack tableau[i][k..] is movable iff every card from k up is face-up
+  // and forms a valid descending alternating sequence.
+  function movableStack(pile, k) {
+    for (var i = k; i < pile.length; i++) {
+      if (!pile[i].up) return false;
+      if (i > k) {
+        var a = pile[i - 1], b = pile[i];
+        if (!(isRed(a.s) !== isRed(b.s) && a.r === b.r + 1)) return false;
+      }
     }
-
-    return { rank: rank, name: RANK_NAMES[rank], tb: tb, base: RANK_BASE[rank] };
+    return true;
   }
 
-  function handTitle(ev) {
-    var t = ev.tb;
-    switch (ev.rank) {
-      case 0: return rankWord1(t[0]) + ' High';
-      case 1: return 'Pair of ' + rankWord(t[0]);
-      case 2: return 'Two Pair, ' + rankWord(t[0]) + ' & ' + rankWord(t[1]);
-      case 3: return 'Three ' + rankWord(t[0]);
-      case 4: return 'Straight, ' + rankWord1(t[0]) + ' high';
-      case 5: return 'Flush, ' + rankWord1(t[0]) + ' high';
-      case 6: return 'Full House, ' + rankWord(t[0]) + ' over ' + rankWord(t[1]);
-      case 7: return 'Four ' + rankWord(t[0]);
-      case 8: return 'Straight Flush, ' + rankWord1(t[0]) + ' high';
-      case 9: return 'ROYAL FLUSH';
+  // first face-up index in a tableau pile (-1 if none)
+  function firstUp(pile) {
+    for (var i = 0; i < pile.length; i++) if (pile[i].up) return i;
+    return -1;
+  }
+
+  /* ---------------- mutations (all checkpoint first) ---------------- */
+
+  function flipExposed(st, i) {
+    var t = top(st.tableau[i]);
+    if (t && !t.up) { t.up = true; addScore(st, 5); return true; }
+    return false;
+  }
+
+  // draw from stock -> waste, or redeal waste -> stock
+  function draw(st) {
+    if (st.won) return { ok: false };
+    checkpoint(st);
+    if (!st.stock.length) {
+      if (!st.waste.length) { st.history.pop(); return { ok: false }; }
+      // redeal: waste flips back over, order preserved
+      while (st.waste.length) {
+        var c = st.waste.pop();
+        c.up = false;
+        st.stock.push(c);
+      }
+      st.passes++;
+      addScore(st, st.draw === 1 ? -100 : -20);
+      st.moves++;
+      return { ok: true, kind: 'redeal' };
     }
-    return ev.name;
+    var n = Math.min(st.draw, st.stock.length);
+    for (var k = 0; k < n; k++) {
+      var d = st.stock.pop();
+      d.up = true;
+      st.waste.push(d);
+    }
+    st.moves++;
+    return { ok: true, kind: 'draw', n: n };
   }
 
-  // The Dead Man's Hand: aces and eights, two pair. +50, special banner.
-  function isDeadMansHand(cards) {
-    if (!cards || cards.length !== 5) return false;
-    var ev;
-    try { ev = evaluate5(cards); } catch (e) { return false; }
-    if (ev.rank !== 2) return false;
-    var p = ev.tb.slice(0, 2).sort(function (a, b) { return a - b; });
-    return p[0] === 8 && p[1] === 14;
+  // move waste top -> tableau i
+  function wasteToTableau(st, i) {
+    var c = top(st.waste);
+    if (!c || !canTableau(c, st.tableau[i])) return { ok: false };
+    checkpoint(st);
+    st.tableau[i].push(st.waste.pop());
+    addScore(st, 5);
+    st.moves++;
+    return { ok: true };
   }
 
-  /* ---------------- monsters ---------------- */
+  // move waste top -> its foundation
+  function wasteToFoundation(st) {
+    var c = top(st.waste);
+    if (!c || !canFoundation(c, st.foundations[c.s])) return { ok: false };
+    checkpoint(st);
+    st.foundations[c.s].push(st.waste.pop());
+    addScore(st, 10);
+    st.moves++;
+    checkWin(st);
+    return { ok: true };
+  }
 
-  var MONSTERS = [
-    { id: 'skeleton', name: 'Rattling Bones', epithet: 'the pile that walks' },
-    { id: 'bat', name: 'Duskwing', epithet: 'the hunger with wings' },
-    { id: 'keeper', name: 'The Crypt Keeper', epithet: 'tender of the locked dark' },
-    { id: 'ghoul', name: 'Grave Ghoul', epithet: 'the dinner guest' },
-    { id: 'wraith', name: 'Pale Wraith', epithet: 'the draft under the door' },
-    { id: 'demon', name: 'Old Scratch', epithet: 'the house always wins' }
-  ];
+  // move tableau stack pile[i][k..] -> tableau j
+  function tableauToTableau(st, i, j, k) {
+    if (i === j) return { ok: false };
+    var pile = st.tableau[i];
+    if (k < 0 || k >= pile.length || !movableStack(pile, k)) return { ok: false };
+    if (!canTableau(pile[k], st.tableau[j])) return { ok: false };
+    checkpoint(st);
+    var stack = pile.splice(k);
+    for (var q = 0; q < stack.length; q++) st.tableau[j].push(stack[q]);
+    flipExposed(st, i);
+    st.moves++;
+    return { ok: true, n: stack.length };
+  }
 
-  // room index 0..4 -> candidate monster ids
-  var ROOM_MONSTERS = [
-    ['skeleton', 'ghoul'],
-    ['bat', 'keeper'],
-    ['ghoul', 'wraith'],
-    ['keeper', 'wraith'],
-    ['demon']
-  ];
+  // move tableau i top -> its foundation
+  function tableauToFoundation(st, i) {
+    var pile = st.tableau[i], c = top(pile);
+    if (!c || !c.up || !canFoundation(c, st.foundations[c.s])) return { ok: false };
+    checkpoint(st);
+    st.foundations[c.s].push(pile.pop());
+    addScore(st, 10);
+    flipExposed(st, i);
+    st.moves++;
+    checkWin(st);
+    return { ok: true };
+  }
 
-  // Tuned via headless sims (greedy best-5-of-8 play, optimal discards):
-  // bot wins ~72%, human-ish model ~61% -> a decent human lands just over 50%.
-  var ROOM_HP = [55, 110, 175, 255, 360];
+  // move foundation top back to tableau i (costs 15)
+  function foundationToTableau(st, f, i) {
+    var pile = st.foundations[f], c = top(pile);
+    if (!c || !canTableau(c, st.tableau[i])) return { ok: false };
+    checkpoint(st);
+    st.tableau[i].push(pile.pop());
+    addScore(st, -15);
+    st.moves++;
+    return { ok: true };
+  }
 
-  var TAUNT_FALLBACKS = [
-    'Another soul at my table. How… brief.',
-    'I have eaten better gamblers than you.',
-    'Your pulse is showing, mortal.',
-    'The cards love me. They fear you.',
-    'Shall I deal your last hand?',
-    'Even the dark is placing bets on me.',
-    'I never lose. Ask the last hundred.',
-    'Sit. Stay. Bleed a little.'
-  ];
+  // one auto-complete step: move a "safe" card to foundation
+  function autoStep(st) {
+    var mv = findSafeFoundationMove(st);
+    if (!mv) return { ok: false };
+    var r;
+    if (mv.from === 'waste') r = wasteToFoundation(st);
+    else r = tableauToFoundation(st, mv.i);
+    return r;
+  }
 
-  var KILL_LINES = [
-    'The dark takes its own.',
-    'Folded. Permanently.',
-    'The house collects.',
-    'Ashes to ashes, dust to chips.'
-  ];
+  function checkWin(st) {
+    for (var s = 0; s < 4; s++) if (st.foundations[s].length !== 13) return;
+    st.won = true; st.over = true;
+  }
 
-  /* ---------------- boons ---------------- */
+  /* ---------------- hints & auto-complete ---------------- */
 
-  var BOONS = [
-    { id: 'extra-hand', name: 'Second Wind', desc: '+1 hand every room' },
-    { id: 'extra-discard', name: 'Fresh Blood', desc: '+1 discard every room' },
-    { id: 'pair-plus', name: 'Snake Eyes', desc: 'Pairs deal +12' },
-    { id: 'twopair-plus', name: 'Double Down', desc: 'Two Pair deals +15' },
-    { id: 'flush-plus', name: 'Blood Flush', desc: 'Flushes deal +20' },
-    { id: 'straight-plus', name: 'Grave Run', desc: 'Straights deal +20' },
-    { id: 'fullhouse-plus', name: 'House Rules', desc: 'Full Houses deal +25' },
-    { id: 'all-dmg', name: 'Hexed Deck', desc: 'All damage +15%' },
-    { id: 'first-hand', name: 'Quick Draw', desc: 'First hand each room +25' },
-    { id: 'deal-10', name: 'Stacked Deck', desc: 'Dealt 10 cards, play 5' }
-  ];
+  // A foundation move is "safe" (can't strand a needed card) when the card
+  // is an Ace/Two, or both opposite-color foundations are at least rank-1.
+  function safeForFoundation(card, st) {
+    if (card.r <= 2) return true;
+    var need = card.r - 1;
+    for (var s = 0; s < 4; s++) {
+      if (isRed(s) !== isRed(card.s)) {
+        var t = top(st.foundations[s]);
+        if (!t || t.r < need) return false;
+      }
+    }
+    return true;
+  }
 
-  function boonById(id) {
-    for (var i = 0; i < BOONS.length; i++) if (BOONS[i].id === id) return BOONS[i];
+  function findSafeFoundationMove(st) {
+    var i, c;
+    var w = top(st.waste);
+    if (w && canFoundation(w, st.foundations[w.s]) && safeForFoundation(w, st))
+      return { from: 'waste' };
+    for (i = 0; i < 7; i++) {
+      c = top(st.tableau[i]);
+      if (c && c.up && canFoundation(c, st.foundations[c.s]) && safeForFoundation(c, st))
+        return { from: 'tableau', i: i };
+    }
     return null;
   }
 
-  function hasBoon(state, id) { return state.boons.indexOf(id) >= 0; }
-
-  function handsPerRoom(state) { return 4 + (hasBoon(state, 'extra-hand') ? 1 : 0); }
-  function discardsPerRoom(state) { return 3 + (hasBoon(state, 'extra-discard') ? 1 : 0); }
-  function dealSize(state) { return hasBoon(state, 'deal-10') ? 10 : 8; }
-
-  /* ---------------- damage ---------------- */
-
-  function calcDamage(ev, cards, state, isFirstHand) {
-    var dmg = ev.base;
-    for (var i = 0; i < cards.length; i++) dmg += cards[i].r;
-    if (hasBoon(state, 'pair-plus') && ev.rank === 1) dmg += 12;
-    if (hasBoon(state, 'twopair-plus') && ev.rank === 2) dmg += 15;
-    if (hasBoon(state, 'flush-plus') && ev.rank === 5) dmg += 20;
-    if (hasBoon(state, 'straight-plus') && ev.rank === 4) dmg += 20;
-    if (hasBoon(state, 'fullhouse-plus') && ev.rank === 6) dmg += 25;
-    if (isFirstHand && hasBoon(state, 'first-hand')) dmg += 25;
-    if (hasBoon(state, 'all-dmg')) dmg = Math.round(dmg * 1.15);
-    if (isDeadMansHand(cards)) dmg += 50;
-    return dmg;
-  }
-
-  /* ---------------- run state machine ---------------- */
-
-  var TUTORIAL_SEED = 20261003;
-
-  function newRun(seed, opts) {
-    opts = opts || {};
-    var state = {
-      seed: seed >>> 0,
-      mode: opts.mode || 'quick',
-      tutorial: !!opts.tutorial,
-      room: 0,               // 1..5 once started
-      phase: 'room',         // 'room' | 'boon' | 'over'
-      monster: null,
-      hp: 0, maxHp: 0,
-      deck: [], spent: [],
-      hand: [],              // dealt cards (8 or 10)
-      selected: [],          // indices into hand
-      handsLeft: 0, discardsLeft: 0,
-      handsPlayedThisRoom: 0,
-      boons: [],
-      boonOffer: null,       // [boon, boon, boon] when phase==='boon'
-      totalDamage: 0,
-      roomsCleared: 0,
-      score: 0,
-      won: false,
-      over: false,
-      log: []
-    };
-    state.rng = mulberry32(state.seed);
-    startRoom(state);
-    return state;
-  }
-
-  function monsterFor(roomIdx, rng) {
-    var cands = ROOM_MONSTERS[roomIdx];
-    var id = cands[Math.floor(rng() * cands.length)];
-    for (var i = 0; i < MONSTERS.length; i++) if (MONSTERS[i].id === id) return MONSTERS[i];
-    return MONSTERS[0];
-  }
-
-  function drawCards(state, n) {
-    for (var i = 0; i < n; i++) {
-      if (state.deck.length === 0) {
-        if (state.spent.length === 0) break;
-        state.deck = shuffle(state.spent, state.rng);
-        state.spent = [];
-      }
-      state.hand.push(state.deck.pop());
+  // ordered hint list; first entry is the suggested move
+  function findMoves(st) {
+    var hints = [], i, k, c, pile;
+    // 1. safe foundation moves
+    var w = top(st.waste);
+    if (w && canFoundation(w, st.foundations[w.s])) {
+      hints.push({ kind: safeForFoundation(w, st) ? 'w2f-safe' : 'w2f', label: 'Waste ' + rankLabel(w.r) + SUITS[w.s] + ' → foundation' });
     }
-  }
-
-  function startRoom(state) {
-    state.room += 1;
-    var idx = state.room - 1;
-    state.monster = monsterFor(idx, state.rng);
-    state.maxHp = ROOM_HP[idx];
-    state.hp = state.maxHp;
-    state.deck = shuffle(makeDeck(), state.rng);
-    state.spent = [];
-    state.hand = [];
-    state.selected = [];
-    state.handsLeft = handsPerRoom(state);
-    state.discardsLeft = discardsPerRoom(state);
-    state.handsPlayedThisRoom = 0;
-    state.phase = 'room';
-    drawCards(state, dealSize(state));
-    state.log.push('room ' + state.room + ' vs ' + state.monster.name);
-  }
-
-  function selectedCards(state) {
-    return state.selected.map(function (i) { return state.hand[i]; });
-  }
-
-  function select(state, handIndex) {
-    if (state.phase !== 'room' || state.over) return { ok: false, reason: 'not-playing' };
-    if (handIndex < 0 || handIndex >= state.hand.length) return { ok: false, reason: 'bad-index' };
-    var at = state.selected.indexOf(handIndex);
-    if (at >= 0) { state.selected.splice(at, 1); return { ok: true, selected: false }; }
-    if (state.selected.length >= 5) return { ok: false, reason: 'max-5' };
-    state.selected.push(handIndex);
-    state.selected.sort(function (a, b) { return a - b; });
-    return { ok: true, selected: true };
-  }
-
-  function canPlay(state) {
-    return state.phase === 'room' && !state.over && state.selected.length === 5;
-  }
-
-  function preview(state) {
-    if (!canPlay(state)) return null;
-    var cards = selectedCards(state);
-    var ev = evaluate5(cards);
-    var isFirst = state.handsPlayedThisRoom === 0;
-    return { ev: ev, title: handTitle(ev), dmg: calcDamage(ev, cards, state, isFirst) };
-  }
-
-  function play(state) {
-    if (!canPlay(state)) return { ok: false, reason: 'need-5' };
-    var cards = selectedCards(state);
-    var ev = evaluate5(cards);
-    var isFirst = state.handsPlayedThisRoom === 0;
-    var dmg = calcDamage(ev, cards, state, isFirst);
-    var dmh = isDeadMansHand(cards);
-
-    // move played cards to spent
-    var selSet = {};
-    state.selected.forEach(function (i) { selSet[i] = true; });
-    var newHand = [];
-    for (var i = 0; i < state.hand.length; i++) {
-      if (selSet[i]) state.spent.push(state.hand[i]);
-      else newHand.push(state.hand[i]);
-    }
-    state.hand = newHand;
-    state.selected = [];
-
-    state.hp = Math.max(0, state.hp - dmg);
-    state.totalDamage += dmg;
-    state.handsLeft -= 1;
-    state.handsPlayedThisRoom += 1;
-
-    var res = { ok: true, ev: ev, title: handTitle(ev), dmg: dmg, hpLeft: state.hp, deadMans: dmh };
-
-    if (state.hp <= 0) {
-      state.roomsCleared += 1;
-      state.score = state.totalDamage + 100 * state.roomsCleared;
-      if (state.room >= 5) {
-        state.won = true; state.over = true; state.phase = 'over';
-        state.log.push('run won');
-      } else {
-        state.phase = 'boon';
-        state.boonOffer = offerBoons(state);
-        state.log.push('room cleared, boon offered');
-      }
-      res.killed = true;
-    } else {
-      drawCards(state, 5); // refill to deal size
-      if (state.handsLeft <= 0) {
-        state.over = true; state.phase = 'over'; state.won = false;
-        state.score = state.totalDamage + 100 * state.roomsCleared;
-        state.log.push('run lost');
-        res.runOver = true;
+    for (i = 0; i < 7; i++) {
+      c = top(st.tableau[i]);
+      if (c && c.up && canFoundation(c, st.foundations[c.s])) {
+        hints.push({ kind: 't2f', i: i, safe: safeForFoundation(c, st),
+          label: rankLabel(c.r) + SUITS[c.s] + ' → foundation' });
       }
     }
-    return res;
-  }
-
-  function discard(state) {
-    if (state.phase !== 'room' || state.over) return { ok: false, reason: 'not-playing' };
-    if (state.discardsLeft <= 0) return { ok: false, reason: 'no-discards' };
-    if (state.selected.length === 0) return { ok: false, reason: 'select-first' };
-    var selSet = {};
-    state.selected.forEach(function (i) { selSet[i] = true; });
-    var newHand = [];
-    for (var i = 0; i < state.hand.length; i++) {
-      if (selSet[i]) state.spent.push(state.hand[i]);
-      else newHand.push(state.hand[i]);
+    // 2. waste -> tableau
+    if (w) for (i = 0; i < 7; i++) {
+      if (canTableau(w, st.tableau[i]))
+        hints.push({ kind: 'w2t', i: i, label: 'Waste ' + rankLabel(w.r) + SUITS[w.s] + ' → column ' + (i + 1) });
     }
-    state.hand = newHand;
-    state.selected = [];
-    state.discardsLeft -= 1;
-    drawCards(state, dealSize(state) - state.hand.length);
-    return { ok: true, discardsLeft: state.discardsLeft };
-  }
-
-  function offerBoons(state) {
-    // 3 distinct boons not already owned, seeded
-    var avail = BOONS.filter(function (b) { return state.boons.indexOf(b.id) < 0; });
-    var offer = [];
-    var pool = avail.slice();
-    while (offer.length < 3 && pool.length > 0) {
-      var i = Math.floor(state.rng() * pool.length);
-      offer.push(pool.splice(i, 1)[0]);
+    // 3. tableau -> tableau (only if it flips a card or moves a King to empty)
+    for (i = 0; i < 7; i++) {
+      pile = st.tableau[i];
+      var fu = firstUp(pile);
+      if (fu < 0) continue;
+      for (k = fu; k < pile.length; k++) {
+        for (var j = 0; j < 7; j++) {
+          if (i === j || !canTableau(pile[k], st.tableau[j])) continue;
+          var flips = (k > 0 && !pile[k - 1].up);
+          var kingToEmpty = (pile[k].r === 13 && !st.tableau[j].length);
+          if (flips || kingToEmpty || k === fu)
+            hints.push({ kind: 't2t', i: i, j: j, k: k,
+              label: rankLabel(pile[k].r) + SUITS[pile[k].s] + ' → column ' + (j + 1) });
+        }
+      }
     }
-    return offer;
+    // 4. draw
+    if (st.stock.length || st.waste.length)
+      hints.push({ kind: 'draw', label: st.stock.length ? 'Draw from stock' : 'Redeal the waste' });
+    return hints;
   }
 
-  function chooseBoon(state, idx) {
-    if (state.phase !== 'boon' || !state.boonOffer) return { ok: false, reason: 'no-offer' };
-    if (idx < 0 || idx >= state.boonOffer.length) return { ok: false, reason: 'bad-index' };
-    var b = state.boonOffer[idx];
-    state.boons.push(b.id);
-    state.boonOffer = null;
-    state.log.push('boon: ' + b.id);
-    startRoom(state);
-    return { ok: true, boon: b };
+  function canAutoComplete(st) {
+    if (st.stock.length || st.waste.length || st.won) return false;
+    for (var i = 0; i < 7; i++)
+      for (var k = 0; k < st.tableau[i].length; k++)
+        if (!st.tableau[i][k].up) return false;
+    return !!findSafeFoundationMove(st);
   }
+
+  /* ---------------- scoring ---------------- */
+
+  function winBonus(st, seconds) {
+    var timeBonus = Math.max(0, (st.draw === 1 ? 700 : 500) - Math.floor(seconds));
+    return (st.draw === 1 ? 700 : 500) + timeBonus;
+  }
+
+  /* ---------------- public API ---------------- */
 
   return {
-    mulberry32: mulberry32,
+    newGame: newGame,
     dailySeed: dailySeed,
-    makeDeck: makeDeck,
-    shuffle: shuffle,
-    evaluate5: evaluate5,
-    handTitle: handTitle,
-    isDeadMansHand: isDeadMansHand,
-    RANK_NAMES: RANK_NAMES,
-    RANK_BASE: RANK_BASE,
-    SUITS: SUITS,
-    SUIT_NAMES: SUIT_NAMES,
+    draw: draw,
+    wasteToTableau: wasteToTableau,
+    wasteToFoundation: wasteToFoundation,
+    tableauToTableau: tableauToTableau,
+    tableauToFoundation: tableauToFoundation,
+    foundationToTableau: foundationToTableau,
+    autoStep: autoStep,
+    undo: undo,
+    findMoves: findMoves,
+    findSafeFoundationMove: findSafeFoundationMove,
+    canAutoComplete: canAutoComplete,
+    winBonus: winBonus,
+    canTableau: canTableau,
+    canFoundation: canFoundation,
+    movableStack: movableStack,
+    firstUp: firstUp,
+    top: top,
     isRed: isRed,
     rankLabel: rankLabel,
-    MONSTERS: MONSTERS,
-    ROOM_HP: ROOM_HP,
-    BOONS: BOONS,
-    boonById: boonById,
-    hasBoon: hasBoon,
-    handsPerRoom: handsPerRoom,
-    discardsPerRoom: discardsPerRoom,
-    dealSize: dealSize,
-    calcDamage: calcDamage,
-    newRun: newRun,
-    select: select,
-    canPlay: canPlay,
-    preview: preview,
-    play: play,
-    discard: discard,
-    offerBoons: offerBoons,
-    chooseBoon: chooseBoon,
-    TUTORIAL_SEED: TUTORIAL_SEED,
-    TAUNT_FALLBACKS: TAUNT_FALLBACKS,
-    KILL_LINES: KILL_LINES
+    SUITS: SUITS,
+    SUIT_NAMES: SUIT_NAMES
   };
 })();
 
-if (typeof module !== 'undefined' && module.exports) module.exports = DMH;
+if (typeof module !== 'undefined' && module.exports) module.exports = SOL;

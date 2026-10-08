@@ -1,25 +1,35 @@
-/* Dead Man's Hand — rendering + input. Reads DMH engine state, never mutates
- * it except through engine calls. DOM cards, canvas monster portraits.
+/* Dead Man's Hand — Klondike solitaire rendering + input.
+ * Reads SOL engine state; mutates only through engine calls. DOM cards,
+ * pointer drag + tap-to-move + double-tap-to-foundation. All network
+ * fail-silent.
  */
 (function () {
 'use strict';
 
 /* ---------------- helpers ---------------- */
-function $(id) { return document.getElementById(id); }
-function readJSON(k) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
-function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-var REDUCED = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+function $(id) { return document.getElementById(id); }
+function readJSON(k) {
+  try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; }
+}
+function writeJSON(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+}
 function todayStr() {
-  var d = new Date(), p = function (x) { return (x < 10 ? '0' : '') + x; };
-  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function fmtTime(sec) {
+  sec = Math.floor(sec);
+  return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+}
+function vibrate(p) {
+  try { if (SET.haptic && navigator.vibrate) navigator.vibrate(p); } catch (e) {}
 }
 
-/* ---------------- network (all fail-silent) ---------------- */
-var ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
-var AI_URL = 'https://gamez-ai.chaoticutopia84.workers.dev/g';
+/* ---------------- network (fail-silent) ---------------- */
 
+var ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
 function arcadeFetch(path, body, cb, timeoutMs) {
   var done = false;
   var timer = setTimeout(function () { fin(new Error('timeout')); }, timeoutMs || 10000);
@@ -33,659 +43,720 @@ function arcadeFetch(path, body, cb, timeoutMs) {
   } catch (e) { fin(e); }
 }
 
-function aiPost(body, cb) {
-  var done = false;
-  var timer = setTimeout(function () { fin(null); }, 7000);
-  function fin(t) { if (done) return; done = true; clearTimeout(timer); cb(t); }
-  try {
-    fetch(AI_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json(); })
-      .then(function (d) { fin(d && d.text ? String(d.text).slice(0, 90) : null); })
-      .catch(function () { fin(null); });
-  } catch (e) { fin(null); }
+/* ---------------- settings & stats ---------------- */
+
+var SET = Object.assign({ draw: 1, haptic: true }, readJSON('dmh_sol_set') || {});
+function saveSet() { writeJSON('dmh_sol_set', { draw: SET.draw, haptic: SET.haptic }); }
+function getStats() {
+  return Object.assign({ played: 0, won: 0, bestScore: 0, bestTime: 0, bestStreak: 0 }, readJSON('dmh_sol_stats') || {});
 }
+function saveStats(s) { writeJSON('dmh_sol_stats', s); }
+function getDaily() { return readJSON('dmh_sol_daily') || { last: null, streak: 0 }; }
+function saveDaily(d) { writeJSON('dmh_sol_daily', d); }
 
 /* ---------------- game state ---------------- */
+
 var G = {
-  st: null,           // DMH engine state
-  mode: 'quick',      // 'quick' | 'daily'
-  counted: true,      // daily first attempt counts; practice replays don't
-  date: null, seed: 0,
-  dailyInfo: null,
-  tutorial: false,
-  coachStep: 0, coachShown: {},
-  busy: false         // input lock during animations
+  st: null,
+  mode: 'deal',       // 'deal' | 'daily'
+  date: null,
+  counted: true,
+  sel: null,          // {kind:'waste'} | {kind:'tab', i, k} | {kind:'found', f}
+  busy: false,
+  elapsed: 0,
+  timerId: null,
+  autoId: null,
+  lastTap: 0,
+  lastTapKey: ''
 };
-window.__dmh = G;
+
+/* ---------------- card DOM ---------------- */
+
+function cardEl(c, opts) {
+  var d = document.createElement('div');
+  d.className = 'card' + (c.up ? '' : ' down') + (SOL.isRed(c.s) ? ' red' : ' black');
+  if (c.up) {
+    d.innerHTML = '<div class="corner tl"><b>' + SOL.rankLabel(c.r) + '</b><span>' + SOL.SUITS[c.s] + '</span></div>' +
+      '<div class="pip">' + SOL.SUITS[c.s] + '</div>' +
+      '<div class="corner br"><b>' + SOL.rankLabel(c.r) + '</b><span>' + SOL.SUITS[c.s] + '</span></div>';
+  }
+  d.dataset.r = c.r; d.dataset.s = c.s;
+  if (opts && opts.key) d.dataset.key = opts.key;
+  return d;
+}
+
+function slotEl(cls, inner) {
+  var d = document.createElement('div');
+  d.className = 'slot ' + cls;
+  d.innerHTML = inner || '';
+  return d;
+}
+
+/* ---------------- render ---------------- */
+
+var DOWN_OFF = 0.22, UP_OFF = 0.34; // fractions of card width
+
+function render() {
+  if (!G.st) return;
+  renderTop();
+  renderTableau();
+  renderHud();
+}
+
+function renderHud() {
+  $('pill-score').textContent = G.st.score;
+  $('pill-moves').textContent = G.st.moves;
+  $('pill-time').textContent = fmtTime(G.elapsed);
+  $('btn-undo').disabled = !G.st.history.length;
+  var ac = !$('btn-auto').classList.contains('hidden');
+  var can = SOL.canAutoComplete(G.st);
+  if (can && !ac) { $('btn-auto').classList.remove('hidden'); }
+  else if (!can && ac) { $('btn-auto').classList.add('hidden'); }
+}
+
+function renderTop() {
+  var st = G.st;
+  var row = $('toprow');
+  row.innerHTML = '';
+
+  // stock
+  var stock = slotEl('stock', st.stock.length ? '<div class="card down deck"></div>' : '<div class="slot-empty">↻</div>');
+  if (st.stock.length) stock.innerHTML += '<span class="count">' + st.stock.length + '</span>';
+  stock.dataset.pile = 'stock';
+  row.appendChild(stock);
+
+  // waste: fan last 3
+  var waste = slotEl('waste');
+  var w = st.waste.slice(-3);
+  w.forEach(function (c, idx) {
+    var ce = cardEl(c, { key: 'w' });
+    ce.style.left = (idx * 22) + '%';
+    ce.classList.add('fan');
+    if (idx === w.length - 1) ce.dataset.top = '1';
+    waste.appendChild(ce);
+  });
+  if (!w.length) waste.innerHTML = '<div class="slot-empty"></div>';
+  waste.dataset.pile = 'waste';
+  row.appendChild(waste);
+
+  row.appendChild(slotEl('gap'));
+
+  // foundations
+  for (var s = 0; s < 4; s++) {
+    var f = slotEl('found');
+    var t = SOL.top(st.foundations[s]);
+    if (t) f.appendChild(cardEl(t, { key: 'f' + s }));
+    else f.innerHTML = '<div class="slot-empty suit">' + SOL.SUITS[s] + '</div>';
+    f.dataset.pile = 'found';
+    f.dataset.f = s;
+    row.appendChild(f);
+  }
+}
+
+function renderTableau() {
+  var st = G.st;
+  var tab = $('tableau');
+  tab.innerHTML = '';
+  // measure a column width for offsets
+  var probe = document.createElement('div');
+  probe.className = 'tcol';
+  tab.appendChild(probe);
+  var cw = probe.clientWidth || tab.clientWidth / 7;
+  probe.remove();
+  var downPx = cw * DOWN_OFF, upPx = cw * UP_OFF;
+
+  for (var i = 0; i < 7; i++) {
+    (function (i) {
+      var col = document.createElement('div');
+      col.className = 'tcol';
+      col.dataset.pile = 'tab';
+      col.dataset.i = i;
+      var pile = st.tableau[i];
+      var y = 0;
+      pile.forEach(function (c, k) {
+        var ce = cardEl(c, { key: 't' + i + '_' + k });
+        ce.style.top = y + 'px';
+        if (isSel({ kind: 'tab', i: i, k: k })) ce.classList.add('sel');
+        col.appendChild(ce);
+        y += c.up ? upPx : downPx;
+      });
+      if (!pile.length) {
+        var ph = document.createElement('div');
+        ph.className = 'slot-empty col-empty';
+        ph.textContent = 'K';
+        col.appendChild(ph);
+      }
+      // size the column so later columns don't overlap
+      col.style.minHeight = (y + cw * 1.4) + 'px';
+      tab.appendChild(col);
+    })(i);
+  }
+  // waste selection highlight
+  if (isSel({ kind: 'waste' })) {
+    var wt = document.querySelector('#toprow .waste .card[data-top="1"]');
+    if (wt) wt.classList.add('sel');
+  }
+  if (G.sel && G.sel.kind === 'found') {
+    var fc = document.querySelector('#toprow .found[data-f="' + G.sel.f + '"] .card');
+    if (fc) fc.classList.add('sel');
+  }
+}
+
+function isSel(s) {
+  var g = G.sel;
+  if (!g || g.kind !== s.kind) return false;
+  if (s.kind === 'tab') return g.i === s.i && g.k === s.k;
+  if (s.kind === 'found') return g.f === s.f;
+  return true;
+}
+
+function toast(msg, ms) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(t._h);
+  t._h = setTimeout(function () { t.classList.add('hidden'); }, ms || 2400);
+}
+
+/* ---------------- selection & moves ---------------- */
+
+function clearSel() { G.sel = null; }
+
+function movableFromTab(i, k) {
+  var pile = G.st.tableau[i];
+  return k >= 0 && k < pile.length && pile[k].up && SOL.movableStack(pile, k);
+}
+
+// describe the currently selected single card (for foundation attempts)
+function selSingleCard() {
+  var g = G.sel, st = G.st;
+  if (!g) return null;
+  if (g.kind === 'waste') { var w = SOL.top(st.waste); return w ? { card: w, from: g } : null; }
+  if (g.kind === 'tab') {
+    var pile = st.tableau[g.i];
+    if (g.k === pile.length - 1 && pile[g.k].up) return { card: pile[g.k], from: g };
+    return null;
+  }
+  if (g.kind === 'found') {
+    var f = SOL.top(st.foundations[g.f]);
+    return f ? { card: f, from: g } : null;
+  }
+  return null;
+}
+
+function tryMoveSelToTableau(j) {
+  var g = G.sel, st = G.st;
+  if (!g) return false;
+  var r;
+  if (g.kind === 'waste') r = SOL.wasteToTableau(st, j);
+  else if (g.kind === 'tab') r = SOL.tableauToTableau(st, g.i, j, g.k);
+  else if (g.kind === 'found') r = SOL.foundationToTableau(st, g.f, j);
+  else return false;
+  if (r.ok) { afterMove('snap'); return true; }
+  deny();
+  return false;
+}
+
+function tryMoveSelToFoundation() {
+  var sc = selSingleCard();
+  if (!sc) return false;
+  var st = G.st, r;
+  if (sc.from.kind === 'waste') r = SOL.wasteToFoundation(st);
+  else if (sc.from.kind === 'tab') r = SOL.tableauToFoundation(st, sc.from.i);
+  else return false;
+  if (r.ok) { afterMove('chime'); return true; }
+  deny();
+  return false;
+}
+
+function deny() {
+  AU.untick();
+  vibrate(30);
+}
+
+function afterMove(sound) {
+  clearSel();
+  if (sound === 'snap') AU.snap();
+  else if (sound === 'chime') AU.chime();
+  vibrate(12);
+  render();
+  checkWinSoon();
+}
+
+function checkWinSoon() {
+  if (G.st.won) setTimeout(onWin, 450);
+  else if (SOL.canAutoComplete(G.st)) toast('Tap FINISH to auto-complete');
+}
+
+/* ---------------- stock ---------------- */
+
+function doDraw() {
+  if (G.busy || G.st.won) return;
+  AU.init();
+  var r = SOL.draw(G.st);
+  if (!r.ok) { deny(); return; }
+  AU.whoosh();
+  vibrate(10);
+  clearSel();
+  startTimer();
+  render();
+}
+
+/* ---------------- undo / hint / auto ---------------- */
+
+function doUndo() {
+  if (G.busy) return;
+  if (SOL.undo(G.st)) { AU.tick(); clearSel(); stopAuto(); render(); }
+  else deny();
+}
+
+function doHint() {
+  if (G.busy || G.st.won) return;
+  AU.init();
+  var hints = SOL.findMoves(G.st);
+  if (!hints.length) { toast('No moves — start a new deal'); return; }
+  var h = hints[0];
+  AU.click();
+  toast(h.label);
+  // highlight
+  document.querySelectorAll('.hint-src,.hint-dst').forEach(function (e) { e.classList.remove('hint-src', 'hint-dst'); });
+  var src = null, dst = null;
+  if (h.kind === 'w2f' || h.kind === 'w2f-safe') {
+    src = document.querySelector('#toprow .waste .card[data-top="1"]');
+    dst = document.querySelector('#toprow .found[data-f="' + SOL.top(G.st.waste).s + '"]');
+  } else if (h.kind === 't2f') {
+    src = document.querySelector('.tcol[data-i="' + h.i + '"] .card:last-of-type');
+    dst = document.querySelector('#toprow .found[data-f="' + SOL.top(G.st.tableau[h.i]).s + '"]');
+  } else if (h.kind === 'w2t') {
+    src = document.querySelector('#toprow .waste .card[data-top="1"]');
+    dst = document.querySelector('.tcol[data-i="' + h.i + '"]');
+  } else if (h.kind === 't2t') {
+    src = document.querySelector('.tcol[data-i="' + h.i + '"] .card[data-key="t' + h.i + '_' + h.k + '"]');
+    dst = document.querySelector('.tcol[data-i="' + h.j + '"]');
+  } else if (h.kind === 'draw') {
+    dst = document.querySelector('#toprow .stock');
+  }
+  if (src) src.classList.add('hint-src');
+  if (dst) dst.classList.add('hint-dst');
+  setTimeout(function () {
+    document.querySelectorAll('.hint-src,.hint-dst').forEach(function (e) { e.classList.remove('hint-src', 'hint-dst'); });
+  }, 2600);
+}
+
+function doAuto() {
+  if (G.busy || G.st.won || !SOL.canAutoComplete(G.st)) return;
+  G.busy = true;
+  clearSel();
+  toast('Auto-finishing…');
+  G.autoId = setInterval(function () {
+    var r = SOL.autoStep(G.st);
+    if (r.ok) { AU.tick(); render(); }
+    if (!r.ok || G.st.won) { stopAuto(); G.busy = false; render(); checkWinSoon(); }
+  }, 150);
+}
+
+function stopAuto() {
+  if (G.autoId) { clearInterval(G.autoId); G.autoId = null; }
+}
+
+/* ---------------- timer ---------------- */
+
+function startTimer() {
+  if (G.timerId || G.st.won) return;
+  G.st.startT = G.st.startT || Date.now();
+  G.timerId = setInterval(function () {
+    G.elapsed = Math.floor((Date.now() - G.st.startT) / 1000);
+    $('pill-time').textContent = fmtTime(G.elapsed);
+  }, 1000);
+}
+function stopTimer() {
+  if (G.timerId) { clearInterval(G.timerId); G.timerId = null; }
+}
+
+/* ---------------- win ---------------- */
+
+function onWin() {
+  stopTimer(); stopAuto();
+  var st = G.st;
+  var bonus = SOL.winBonus(st, G.elapsed);
+  st.score += bonus;
+  var stats = getStats();
+  stats.played++;
+  stats.won++;
+  stats.bestScore = Math.max(stats.bestScore, st.score);
+  if (!stats.bestTime || G.elapsed < stats.bestTime) stats.bestTime = G.elapsed;
+  saveStats(stats);
+  // daily streak
+  if (G.mode === 'daily' && G.counted) {
+    var d = getDaily(), ds = G.date;
+    var y = new Date(); y.setDate(y.getDate() - 1);
+    var ys = y.getFullYear() + '-' + String(y.getMonth() + 1).padStart(2, '0') + '-' + String(y.getDate()).padStart(2, '0');
+    d.streak = (d.last === ys) ? d.streak + 1 : 1;
+    d.last = ds;
+    saveDaily(d);
+    stats.bestStreak = Math.max(stats.bestStreak, d.streak);
+    saveStats(stats);
+    G.counted = false;
+  }
+  AU.fanfare();
+  vibrate([40, 60, 40]);
+  render();
+  waterfall();
+  // sheet
+  $('win-score').textContent = st.score.toLocaleString();
+  $('win-sub').textContent = fmtTime(G.elapsed) + ' · ' + st.moves + ' moves · draw-' + st.draw +
+    ' · bonus +' + bonus;
+  var lb = $('arc-lb');
+  lb.innerHTML = '';
+  if (G.mode === 'daily') submitDailyScore(st.score, lb);
+  showOverlay('over-overlay');
+}
+
+function submitDailyScore(score, lb) {
+  var board = 'daily-' + G.date;
+  var name = '';
+  try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+  var sc = Math.max(1, Math.min(score, 999999));
+  var go = function (n) {
+    lb.innerHTML = '<div class="arc-lb-empty">sending…</div>';
+    arcadeFetch('/score', { game: 'dead-mans-hand', board: board, name: n, score: sc }, function (err, res) {
+      if (res && res.top) renderBoard(res.top, res.rank, n, lb);
+      else arcadeFetch('/scores?game=dead-mans-hand&board=' + encodeURIComponent(board), null, function (e2, d2) {
+        renderBoard(d2 && d2.top, 0, n, lb);
+      });
+    }, 12000);
+  };
+  if (name) go(name);
+  else {
+    lb.innerHTML = '<div class="arc-lb-title">DAILY BOARD</div><div class="arc-lb-form">' +
+      '<input id="arc-lb-name" maxlength="12" placeholder="YOUR NAME" autocomplete="off">' +
+      '<button id="arc-lb-go" class="btn" type="button">SAVE</button></div>';
+    $('arc-lb-go').addEventListener('click', function () {
+      var v = $('arc-lb-name').value.trim().slice(0, 12);
+      if (!v) return;
+      try { localStorage.setItem('arcade_name', v); } catch (e) {}
+      go(v);
+    });
+  }
+}
+
+function renderBoard(top, rank, name, lb) {
+  if (!top || !top.length) { lb.innerHTML = '<div class="arc-lb-empty">no scores yet — yours is first</div>'; return; }
+  var h = '<div class="arc-lb-title">DAILY BOARD' + (rank ? ' · YOU #' + rank : '') + '</div><ol class="arc-lb-list">';
+  top.slice(0, 8).forEach(function (e, i) {
+    h += '<li class="' + (e.name === name ? 'me' : '') + '"><span>#' + (i + 1) + ' ' +
+      String(e.name).replace(/[<>&]/g, '') + '</span><b>' + Number(e.score).toLocaleString() + '</b></li>';
+  });
+  lb.innerHTML = h + '</ol>';
+}
+
+// classic cascading-cards win animation
+function waterfall() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var layer = $('fx-layer');
+  var suits = ['\u2660', '\u2665', '\u2666', '\u2663'];
+  for (var i = 0; i < 52; i++) {
+    (function (i) {
+      setTimeout(function () {
+        var c = document.createElement('div');
+        c.className = 'card down fall' + (i % 2 ? ' red2' : '');
+        c.textContent = suits[i % 4];
+        c.style.left = (8 + Math.random() * 84) + 'vw';
+        layer.appendChild(c);
+        var dx = (Math.random() - 0.5) * 220;
+        c.animate([
+          { transform: 'translate(0,-12vh) rotate(0deg)', opacity: 1 },
+          { transform: 'translate(' + dx + 'px,108vh) rotate(' + (Math.random() * 720 - 360) + 'deg)', opacity: 1 }
+        ], { duration: 2600 + Math.random() * 1800, easing: 'cubic-bezier(.3,.6,.6,1)' }).onfinish = function () { c.remove(); };
+      }, i * 90);
+    })(i);
+  }
+}
+
+/* ---------------- new game ---------------- */
+
+function newDeal(mode) {
+  stopTimer(); stopAuto();
+  G.busy = false; G.elapsed = 0;
+  clearSel();
+  G.mode = mode;
+  G.counted = true;
+  var seed;
+  if (mode === 'daily') {
+    G.date = todayStr();
+    seed = SOL.dailySeed(G.date);
+  } else {
+    G.date = null;
+    seed = (Math.random() * 0xffffffff) >>> 0;
+  }
+  G.st = SOL.newGame(seed, SET.draw);
+  var stats = getStats();
+  stats.played++;
+  saveStats(stats);
+  hideOverlays();
+  show('screen-game');
+  $('daily-tag').textContent = mode === 'daily' ? 'DAILY · ' + G.date : 'DRAW-' + SET.draw;
+  render();
+  toast(mode === 'daily' ? 'Daily deal — good luck!' : 'New deal. Make it count.');
+}
+
+/* ---------------- menu ---------------- */
+
+function refreshMenu() {
+  var stats = getStats();
+  var d = getDaily();
+  $('menu-stats').textContent = stats.played ?
+    stats.won + '/' + stats.played + ' won · best ' + stats.bestScore.toLocaleString() +
+    (stats.bestTime ? ' · fastest ' + fmtTime(stats.bestTime) : '') : 'No deals yet. The saloon waits.';
+  var ds = todayStr();
+  if (d.last === ds) {
+    $('btn-daily').textContent = 'REPLAY DAILY (PRACTICE)';
+    $('daily-sub').textContent = ds + ' · streak ' + d.streak + ' · replay won\'t extend it';
+  } else {
+    $('btn-daily').textContent = 'DAILY DEAL';
+    $('daily-sub').textContent = ds + ' · one deal, worldwide' + (d.streak ? ' · streak ' + d.streak : '');
+  }
+  $('btn-draw').textContent = 'DRAW ' + SET.draw;
+  $('btn-mute').textContent = AU.isMuted() ? '🔇' : '🔊';
+  $('btn-haptic').textContent = SET.haptic ? '📳 ON' : '📳 OFF';
+  $('btn-haptic').setAttribute('aria-pressed', SET.haptic ? 'true' : 'false');
+}
 
 function show(id) {
   ['screen-menu', 'screen-game'].forEach(function (s) { $(s).classList.toggle('hidden', s !== id); });
 }
-
-/* ---------------- menu ---------------- */
-function refreshMenu() {
-  var best = readJSON('dmh_best_v1');
-  $('menu-best').textContent = best ? ('BEST ' + best.score.toLocaleString() + ' · ' + best.rooms + '/5 ROOMS') : 'No descents yet. The crypt waits.';
-  var att = G.dailyInfo ? readJSON('dmh_daily_ATTEMPT_' + G.dailyInfo.date) : null;
-  if (att) {
-    $('btn-daily').textContent = 'REPLAY CRYPT (PRACTICE)';
-    $('daily-sub').textContent = G.dailyInfo.date + ' · scored ' + att.score + ' · practice won\'t count';
-  } else {
-    $('btn-daily').textContent = 'DAILY CRYPT';
-    $('daily-sub').textContent = (G.dailyInfo ? G.dailyInfo.date : todayStr()) + ' · one crypt, worldwide';
-  }
-  $('btn-mute').textContent = AU.isMuted() ? '🔇' : '🔊';
-  $('btn-haptic').textContent = HAPT.on ? '📳 ON' : '📳 OFF';
-  $('btn-haptic').setAttribute('aria-pressed', HAPT.on ? 'true' : 'false');
+function showOverlay(id) {
+  ['over-overlay', 'help-sheet'].forEach(function (s) { $(s).classList.toggle('hidden', s !== id); });
+}
+function hideOverlays() {
+  ['over-overlay', 'help-sheet'].forEach(function (s) { $(s).classList.add('hidden'); });
 }
 
-function fetchDaily(cb) {
-  arcadeFetch('/daily?game=dead-mans-hand', null, function (err, d) {
-    var ds = todayStr();
-    var s = (d && d.seed != null) ? (d.seed >>> 0) : DMH.dailySeed(ds);
-    G.dailyInfo = { date: (d && d.date) || ds, seed: s };
-    refreshMenu();
-    if (cb) cb();
-  }, 9000);
+/* ---------------- pointer input: drag, tap, double-tap ---------------- */
+
+var drag = null; // {els:[], from, dx, dy, moved}
+var suppressClick = false;
+
+function pileFromEvent(e) {
+  var t = document.elementFromPoint(e.clientX, e.clientY);
+  if (!t) return null;
+  var p = t.closest('[data-pile]');
+  return p;
 }
 
-/* ---------------- run lifecycle ---------------- */
-function startRun(mode) {
-  var tutorial = false, seed;
-  if (mode === 'daily') {
-    seed = G.dailyInfo ? G.dailyInfo.seed : DMH.dailySeed(todayStr());
-    var att = readJSON('dmh_daily_ATTEMPT_' + (G.dailyInfo ? G.dailyInfo.date : todayStr()));
-    G.counted = !att;
-  } else {
-    var seen = readJSON('dmh_seen_v1');
-    if (!seen) { tutorial = true; seed = DMH.TUTORIAL_SEED; }
-    else seed = (Math.random() * 4294967296) >>> 0;
-    G.counted = false;
-  }
-  G.mode = mode; G.tutorial = tutorial; G.coachStep = 0; G.coachShown = {}; G.busy = false;
-  G.st = DMH.newRun(seed, { mode: mode === 'daily' ? 'daily' : 'quick', tutorial: tutorial });
-  show('screen-game');
-  $('boon-overlay').classList.add('hidden');
-  $('over-overlay').classList.add('hidden');
-  startRoomUI(true);
-  if (tutorial) coach(0);
-}
-
-function startRoomUI(withTransition) {
-  var st = G.st;
-  renderTop(); renderHand(true); renderPreview();
-  drawMonster(st.monster.id, false);
-  tauntFor(st.monster, st.room);
-  // eased room transition: fade-slide through darkness
-  if (withTransition && !REDUCED) {
-    var arena = $('arena');
-    arena.classList.remove('room-in'); void arena.offsetWidth; arena.classList.add('room-in');
-    setTimeout(function () { arena.classList.remove('room-in'); }, 500);
-  }
-}
-
-function tauntFor(monster, room) {
-  var el = $('taunt');
-  var fb = DMH.TAUNT_FALLBACKS[Math.floor(Math.random() * DMH.TAUNT_FALLBACKS.length)];
-  el.textContent = '\u201C' + fb + '\u201D';
-  // silent flavor: worker kind may not exist yet — fallback stands
-  aiPost({ kind: 'crypt', game: 'dead-mans-hand', ctx: { monster: monster.name, room: room } }, function (t) {
-    if (t && !G.st.over) el.textContent = '\u201C' + t + '\u201D';
-  });
-}
-
-/* ---------------- rendering ---------------- */
-function renderTop() {
-  var st = G.st;
-  $('room-label').textContent = 'ROOM ' + st.room + '/5' + (G.mode === 'daily' ? ' · DAILY' : '');
-  $('mon-name').textContent = st.monster.name;
-  var frac = Math.max(0, st.hp / st.maxHp);
-  $('hpbar').firstElementChild.style.width = (frac * 100).toFixed(1) + '%';
-  $('hp-num').textContent = st.hp + ' / ' + st.maxHp;
-  $('pill-hands').textContent = st.handsLeft + ' HANDS';
-  $('pill-disc').textContent = st.discardsLeft + ' DISC';
-  $('pill-score').textContent = st.score;
-}
-
-function cardHTML(c) {
-  var r = DMH.rankLabel(c.r), s = DMH.SUITS[c.s], red = DMH.isRed(c.s) ? ' red' : '';
-  return '<div class="rk">' + r + '</div><div class="st">' + s + '</div>' +
-    '<div class="pip">' + s + '</div><div class="br">' + r + '</div>';
-}
-
-function renderHand(dealAnim) {
-  var st = G.st, box = $('hand');
-  box.innerHTML = '';
-  var n = st.hand.length, mid = (n - 1) / 2;
-  st.hand.forEach(function (c, i) {
-    var d = document.createElement('div');
-    d.className = 'card' + (DMH.isRed(c.s) ? ' red' : '') + (st.selected.indexOf(i) >= 0 ? ' sel' : '') + (dealAnim ? ' deal-in' : '');
-    d.innerHTML = cardHTML(c);
-    var rot = (i - mid) * 3.5, lift = Math.abs(i - mid) * 3;
-    d.style.transform = 'rotate(' + rot.toFixed(1) + 'deg) translateY(' + lift.toFixed(1) + 'px)';
-    if (dealAnim) d.style.animationDelay = (i * 35) + 'ms';
-    d.setAttribute('role', 'button');
-    d.setAttribute('aria-label', DMH.rankLabel(c.r) + ' of ' + DMH.SUIT_NAMES[c.s]);
-    (function (idx) { d.addEventListener('click', function () { onCardTap(idx); }); })(i);
-    box.appendChild(d);
-  });
-  var disBtn = $('btn-discard');
-  disBtn.textContent = 'DISCARD (' + st.discardsLeft + ')';
-  disBtn.disabled = st.discardsLeft <= 0;
-}
-
-function renderPreview() {
-  var st = G.st, el = $('preview'), btn = $('btn-play');
-  var pv = DMH.preview(st);
-  if (pv) {
-    el.classList.remove('dim');
-    var dmh = isDMHSelected(st);
-    el.innerHTML = esc(pv.title) + ' — <span class="dmg">' + pv.dmg + ' dmg</span>' +
-      (dmh ? ' <span class="dmg">🃏 DEAD MAN\'S HAND</span>' : '');
-    btn.disabled = false;
-    if (G.tutorial && !G.coachShown.tip2) { G.coachShown.tip2 = 1; coach(1); }
-  } else {
-    el.classList.add('dim');
-    var n = st.selected.length;
-    el.textContent = n === 0 ? 'Tap 5 cards' : 'Select ' + (5 - n) + ' more card' + (5 - n === 1 ? '' : 's');
-    btn.disabled = true;
-  }
-}
-
-function isDMHSelected(st) {
-  if (st.selected.length !== 5) return false;
-  return DMH.isDeadMansHand(st.selected.map(function (i) { return st.hand[i]; }));
-}
-
-/* ---------------- input ---------------- */
-function onCardTap(i) {
-  if (G.busy || !G.st || G.st.phase !== 'room' || G.st.over) return;
+function onPointerDown(e) {
+  if (G.busy || !G.st || G.st.won) return;
   AU.init();
-  var r = DMH.select(G.st, i);
-  if (!r.ok) return;
-  if (r.selected) { AU.snap(); vibrate(HAPT.select); } else { AU.untick(); }
-  renderHand(false); renderPreview();
-  // tutorial tip 3: weak preview + discards available
-  if (G.tutorial && !G.coachShown.tip3 && G.st.discardsLeft > 0 && G.st.handsLeft > 1) {
-    var pv = DMH.preview(G.st);
-    if (pv && pv.dmg < 40) { G.coachShown.tip3 = 1; coach(2); }
+  var card = e.target.closest('.card');
+  if (!card || card.classList.contains('down')) return;
+  // identify source
+  var from = null;
+  if (card.dataset.key === 'w' && card.dataset.top === '1') from = { kind: 'waste' };
+  else if (card.dataset.key && card.dataset.key[0] === 't') {
+    var parts = card.dataset.key.slice(1).split('_');
+    var i = +parts[0], k = +parts[1];
+    if (!movableFromTab(i, k)) return;
+    from = { kind: 'tab', i: i, k: k };
+  } else if (card.dataset.key && card.dataset.key[0] === 'f') {
+    from = { kind: 'found', f: +card.dataset.key.slice(1) };
   }
-}
-
-function coach(n) {
-  var tips = [
-    'Tap 5 cards to build a poker hand.',
-    'Pairs beat high cards — press PLAY HAND.',
-    'Weak hand? Select cards, hit DISCARD to redraw.'
-  ];
-  var el = $('coach');
-  el.textContent = tips[n];
-  el.classList.remove('hidden');
-  clearTimeout(coach._t);
-  coach._t = setTimeout(function () { el.classList.add('hidden'); }, 4200);
-}
-
-function vibrate(pat) {
-  try {
-    if (!HAPT.on || REDUCED || !navigator.vibrate) return;
-    navigator.vibrate(pat);
-  } catch (e) {}
-}
-
-/* haptics vocabulary: light on select, medium on play, success on clear,
- * error on run end. Settings toggle (menu), persisted; never throws on iOS. */
-var HAPT = (function () {
-  var on = true;
-  try { var v = localStorage.getItem('dmh_haptics'); on = (v === null) ? true : (v === '1'); } catch (e) {}
-  return {
-    get on() { return on; },
-    select: 20, play: 30, success: [10, 40, 10], error: [40, 80, 40, 40, 80, 40],
-    set: function (v) {
-      on = !!v;
-      try { localStorage.setItem('dmh_haptics', on ? '1' : '0'); } catch (e) {}
-      var b = document.getElementById('btn-haptic');
-      if (b) { b.textContent = on ? '📳 ON' : '📳 OFF'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
-    }
+  if (!from) return;
+  // collect the stack elements (tab: k..end)
+  var els = [card];
+  if (from.kind === 'tab') {
+    var col = card.closest('.tcol');
+    var all = Array.prototype.slice.call(col.querySelectorAll('.card'));
+    els = all.slice(all.indexOf(card));
+  }
+  var r = card.getBoundingClientRect();
+  drag = {
+    from: from, els: els, moved: false,
+    dx: e.clientX - r.left, dy: e.clientY - r.top,
+    ghost: null, startX: e.clientX, startY: e.clientY
   };
-})();
-
-/* smoky ember/ash burst from the monster on damage. pooled-ish: few short-lived divs. */
-function spawnEmbers(n) {
-  if (REDUCED) return;
-  var layer = $('dmg-layer');
-  var mon = $('monster').getBoundingClientRect();
-  var box = $('arena').getBoundingClientRect();
-  for (var i = 0; i < n; i++) {
-    (function () {
-      var d = document.createElement('div');
-      var ashy = Math.random() < 0.35; // some cinders fall grey as ash
-      d.className = 'ember' + (ashy ? ' ash' : '');
-      var mx = mon.left - box.left + mon.width * (0.2 + Math.random() * 0.6);
-      var my = mon.top - box.top + mon.height * (0.2 + Math.random() * 0.6);
-      var dx = (Math.random() - 0.5) * 90;
-      var dy = ashy ? (20 + Math.random() * 50) : (-50 - Math.random() * 70); // embers rise, ash sinks
-      d.style.left = mx + 'px'; d.style.top = my + 'px';
-      d.style.setProperty('--ex', dx.toFixed(0) + 'px');
-      d.style.setProperty('--ey', dy.toFixed(0) + 'px');
-      d.style.animationDelay = (Math.random() * 120).toFixed(0) + 'ms';
-      layer.appendChild(d);
-      setTimeout(function () { d.remove(); }, 1450);
-    })();
-  }
+  e.preventDefault();
 }
 
-function monsterFlinch() {
-  var m = $('monster');
-  if (REDUCED) return;
-  m.classList.remove('hit-flinch'); void m.offsetWidth; m.classList.add('hit-flinch');
-}
-
-function dmgFloat(dmg, big) {
-  var layer = $('dmg-layer');
-  var d = document.createElement('div');
-  d.className = 'dmg-float' + (big ? ' big' : '');
-  d.textContent = '-' + dmg;
-  d.style.left = (30 + Math.random() * 40) + '%';
-  d.style.top = '30%';
-  layer.appendChild(d);
-  setTimeout(function () { d.remove(); }, 1100);
-}
-
-function banner(text) {
-  var b = $('banner');
-  b.textContent = text;
-  b.classList.remove('hidden');
-  // restart animation
-  b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
-  clearTimeout(banner._t);
-  banner._t = setTimeout(function () { b.classList.add('hidden'); }, 1700);
-}
-
-function onPlay() {
-  var st = G.st;
-  if (G.busy || !DMH.canPlay(st)) return;
-  AU.init();
-  G.busy = true;
-  vibrate(HAPT.play);
-  AU.snap(); // weighty snap on play
-  var pv = DMH.preview(st);
-  var selIdx = st.selected.slice();
-  var cardEls = Array.prototype.slice.call($('hand').children);
-  var flying = selIdx.map(function (i) { return cardEls[i]; }).filter(Boolean);
-  var settled = false;
-
-  // dramatic pause: hand title swells like a held breath before the damage lands
-  function pauseThenResolve() {
-    if (settled) return; settled = true;
-    renderHand(false);
-    var pvel = $('preview');
-    pvel.classList.add('reveal');
-    pvel.innerHTML = esc(pv.title) + ' <span class="dmg">&hellip;</span>';
-    AU.riser();
-    setTimeout(resolve, REDUCED ? 60 : 580);
-  }
-
-  function resolve() {
-    $('preview').classList.remove('reveal');
-    var res = DMH.play(st);
-    AU.thud(res.dmg);
-    var big = res.ev.rank >= 7 || res.dmg >= 120;
-    if (res.deadMans) {
-      banner("DEAD MAN'S HAND · +50");
-      AU.deadBell();
-      vibrate([60, 60, 60]);
-    }
-    dmgFloat(res.dmg, big);
-    spawnEmbers(big ? 16 : 8);
-    monsterFlinch();
-    drawMonster(st.monster.id, true);
-    if (big && !REDUCED) {
-      var app = $('app');
-      app.classList.remove('shake'); void app.offsetWidth; app.classList.add('shake');
-    }
-    renderTop();
-    setTimeout(function () {
-      if (res.killed) onKill(res);
-      else if (res.runOver) onRunOver(false);
-      else { renderHand(false); renderPreview(); G.busy = false; }
-    }, REDUCED ? 60 : 450);
-  }
-
-  if (!REDUCED && flying.length) {
-    var arena = $('arena').getBoundingClientRect();
-    var done = 0;
-    flying.forEach(function (elc, k) {
-      var r = elc.getBoundingClientRect();
-      var dx = arena.left + arena.width / 2 - (r.left + r.width / 2);
-      var dy = arena.top + arena.height / 2 - (r.top + r.height / 2);
-      var an = elc.animate([
-        { transform: elc.style.transform, opacity: 1 },
-        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.4) rotate(20deg)', opacity: 0.2 }
-      ], { duration: 320 + k * 40, easing: 'ease-in', fill: 'forwards' });
-      an.onfinish = function () { if (++done === flying.length) { pauseThenResolve(); } };
+function onPointerMove(e) {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 9) return;
+  if (!drag.moved) {
+    drag.moved = true;
+    var gh = document.createElement('div');
+    gh.className = 'drag-ghost';
+    drag.els.forEach(function (c, idx) {
+      var cl = c.cloneNode(true);
+      cl.style.top = (idx * 26) + 'px';
+      gh.appendChild(cl);
     });
-    setTimeout(function () { if (G.busy && !settled) { pauseThenResolve(); } }, 1600); // safety
-  } else {
-    pauseThenResolve();
+    var r0 = drag.els[0].getBoundingClientRect();
+    gh.style.width = r0.width + 'px';
+    gh.style.height = (r0.height + (drag.els.length - 1) * 26) + 'px';
+    document.body.appendChild(gh);
+    drag.ghost = gh;
+    drag.els.forEach(function (c) { c.classList.add('lifting'); });
   }
+  drag.ghost.style.left = (e.clientX - drag.dx) + 'px';
+  drag.ghost.style.top = (e.clientY - drag.dy) + 'px';
 }
 
-function onDiscard() {
-  var st = G.st;
-  if (G.busy || !st || st.phase !== 'room' || st.over) return;
-  AU.init();
-  var r = DMH.discard(st);
-  if (!r.ok) { if (r.reason === 'select-first') coachHint('Select cards first, then DISCARD.'); return; }
-  AU.whoosh();
-  renderHand(true); renderPreview(); renderTop();
-}
+function onPointerUp(e) {
+  if (!drag) return;
+  var d = drag;
+  drag = null;
+  if (d.ghost) d.ghost.remove();
+  d.els.forEach(function (c) { c.classList.remove('lifting'); });
 
-var _hintT = null;
-function coachHint(t) {
-  var el = $('coach');
-  el.textContent = t; el.classList.remove('hidden');
-  clearTimeout(_hintT); _hintT = setTimeout(function () { el.classList.add('hidden'); }, 2500);
-}
+  if (!d.moved) { handleTap(e, d.from); return; }
+  suppressClick = true;
+  setTimeout(function () { suppressClick = false; }, 50);
 
-function onKill(res) {
-  var st = G.st;
-  vibrate(HAPT.success); // room clear
-  var kl = DMH.KILL_LINES[Math.floor(Math.random() * DMH.KILL_LINES.length)];
-  $('taunt').textContent = '\u201C' + kl + '\u201D';
-  renderTop();
-  if (st.phase === 'over' && st.won) { onRunOver(true); return; }
-  // boon picker
-  var box = $('boon-choices');
-  box.innerHTML = '';
-  st.boonOffer.forEach(function (b, i) {
-    var d = document.createElement('div');
-    d.className = 'boon'; d.setAttribute('role', 'button'); d.setAttribute('tabindex', '0');
-    d.innerHTML = '<b>' + esc(b.name.toUpperCase()) + '</b><span>' + esc(b.desc) + '</span>';
-    (function (idx) {
-      d.addEventListener('click', function () {
-        AU.init(); AU.chime();
-        var r = DMH.chooseBoon(st, idx);
-        if (r.ok) {
-          $('boon-overlay').classList.add('hidden');
-          if (!REDUCED) {
-            // slide the old room into darkness, then ease the new one in
-            var arena = $('arena');
-            arena.classList.add('room-out');
-            setTimeout(function () {
-              arena.classList.remove('room-out');
-              startRoomUI(true);
-            }, 230);
-          } else {
-            startRoomUI(false);
-          }
-        }
-        G.busy = false;
-      });
-    })(i);
-    box.appendChild(d);
-  });
-  $('boon-overlay').classList.remove('hidden');
-  G.busy = false;
-}
-
-function onRunOver(won) {
-  var st = G.st;
-  G.busy = false;
-  if (won) { AU.fanfare(); winCascade(); vibrate(HAPT.success); }
-  else { AU.sting(); vibrate(HAPT.error); }
-  var best = readJSON('dmh_best_v1');
-  if (!best || st.score > best.score) {
-    best = { score: st.score, rooms: st.roomsCleared };
-    writeJSON('dmh_best_v1', best);
+  // drop: find target pile under pointer
+  var p = pileFromEvent(e);
+  if (!p) { render(); return; }
+  var kind = p.dataset.pile;
+  var moved = false;
+  if (kind === 'tab') {
+    var j = +p.dataset.i;
+    moved = dropStackOnTableau(d.from, j);
+  } else if (kind === 'found') {
+    moved = dropSingleOnFoundation(d.from, +p.dataset.f);
   }
-  writeJSON('dmh_progress_v1', { best: best.score, rooms: Math.max(best.rooms, st.roomsCleared) });
-  if (!readJSON('dmh_seen_v1')) writeJSON('dmh_seen_v1', { v: 1 });
+  if (!moved) { AU.untick(); render(); }
+}
 
-  $('over-title').textContent = won ? 'THE CRYPT IS YOURS' : 'THE HOUSE COLLECTS';
-  $('over-sub').textContent = won ?
-    'Five rooms cleared. Old Scratch sends his regards.' :
-    ('Fell in room ' + st.room + ' to ' + st.monster.name + '. The dark keeps your chips.');
-  $('over-score').textContent = st.score.toLocaleString();
-  $('over-best').textContent = 'BEST ' + best.score.toLocaleString();
-  show('screen-game');
-  $('over-overlay').classList.remove('hidden');
+function dropStackOnTableau(from, j) {
+  var st = G.st, r;
+  if (from.kind === 'waste') r = SOL.wasteToTableau(st, j);
+  else if (from.kind === 'tab') r = SOL.tableauToTableau(st, from.i, j, from.k);
+  else if (from.kind === 'found') r = SOL.foundationToTableau(st, from.f, j);
+  if (r && r.ok) { afterMove('snap'); return true; }
+  return false;
+}
 
-  var lb = $('arc-lb');
-  lb.innerHTML = '';
-  if (G.mode === 'daily' && G.counted && G.dailyInfo) {
-    var date = G.dailyInfo.date, board = 'daily-' + date;
-    var name = '';
-    try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
-    writeJSON('dmh_daily_ATTEMPT_' + date, { score: st.score });
-    G.counted = false;
-    var score = Math.max(1, Math.min(st.score, 99999));
-    var go = function (n) {
-      lb.innerHTML = '<div class="arc-lb-empty">sending…</div>';
-      arcadeFetch('/score', { game: 'dead-mans-hand', board: board, name: n, score: score }, function (err, res) {
-        if (res && res.top) renderBoard(res.top, res.rank, n);
-        else arcadeFetch('/scores?game=dead-mans-hand&board=' + encodeURIComponent(board), null, function (e2, d2) {
-          renderBoard(d2 && d2.top, 0, n);
-        });
-      }, 12000);
-    };
-    if (name) go(name);
-    else {
-      lb.innerHTML = '<div class="arc-lb-title">DAILY CRYPT BOARD</div><div class="arc-lb-form">' +
-        '<input id="arc-lb-name" maxlength="12" placeholder="YOUR NAME" autocomplete="off">' +
-        '<button id="arc-lb-go" class="btn" type="button" style="flex:0 0 auto">SAVE</button></div>';
-      $('arc-lb-go').addEventListener('click', function () {
-        var v = $('arc-lb-name').value.trim().slice(0, 12);
-        if (!v) return;
-        try { localStorage.setItem('arcade_name', v); } catch (e) {}
-        go(v);
-      });
+function dropSingleOnFoundation(from, f) {
+  var st = G.st, sc = null;
+  if (from.kind === 'waste') sc = SOL.top(st.waste);
+  else if (from.kind === 'tab') {
+    var pile = st.tableau[from.i];
+    if (from.k === pile.length - 1) sc = pile[from.k];
+  } else return false;
+  if (!sc || sc.s !== f) return false;
+  var r = from.kind === 'waste' ? SOL.wasteToFoundation(st) : SOL.tableauToFoundation(st, from.i);
+  if (r.ok) { afterMove('chime'); return true; }
+  return false;
+}
+
+function sameSel(a, b) {
+  if (!a || !b || a.kind !== b.kind) return false;
+  if (a.kind === 'tab') return a.i === b.i && a.k === b.k;
+  if (a.kind === 'found') return a.f === b.f;
+  return true;
+}
+
+function handleTap(e, from) {
+  var now = Date.now();
+  var key = from.kind + (from.i !== undefined ? from.i : '') + (from.k !== undefined ? '_' + from.k : '') + (from.f !== undefined ? 'f' + from.f : '');
+  var isDouble = (now - G.lastTap < 350 && G.lastTapKey === key);
+  G.lastTap = now; G.lastTapKey = key;
+
+  // double-tap: send single card to foundation
+  if (isDouble) {
+    G.sel = from;
+    if (tryMoveSelToFoundation()) return;
+  }
+
+  // tapping the selected card again deselects
+  if (sameSel(G.sel, from)) { clearSel(); render(); return; }
+
+  // if something is selected and we tapped a destination, try the move
+  if (G.sel) {
+    var col = e.target.closest('.tcol');
+    if (col) {
+      if (tryMoveSelToTableau(+col.dataset.i)) return;
+      // miss: fall through and reselect the tapped card
+    } else {
+      var found = e.target.closest('.found');
+      if (found && tryMoveSelToFoundation()) return;
     }
   }
+  // otherwise select the tapped card
+  G.sel = from;
+  AU.click();
+  render();
 }
 
-function renderBoard(top, rank, me) {
-  var lb = $('arc-lb'), h = '';
-  if (rank > 0) h += '<div class="arc-lb-rank">GLOBAL #' + rank + '!</div>';
-  h += '<div class="arc-lb-title">DAILY CRYPT — TOP 5</div>';
-  if (top && top.length) {
-    var medals = ['🥇', '🥈', '🥉'];
-    h += top.slice(0, 5).map(function (e, i) {
-      return '<div class="arc-lb-row' + (e.name === me ? ' me' : '') + '"><span>' +
-        (medals[i] || (i + 1) + '.') + ' ' + esc(e.name) + '</span><b>' + Number(e.score).toLocaleString() + '</b></div>';
-    }).join('');
-  } else {
-    h += '<div class="arc-lb-empty">Leaderboard offline — the crypt remembers anyway.</div>';
-  }
-  lb.innerHTML = h;
-}
-
-function winCascade() {
-  if (REDUCED) return;
-  var layer = $('dmg-layer');
-  var suits = ['♠', '♥', '♦', '♣'];
-  for (var i = 0; i < 24; i++) {
-    (function (k) {
-      setTimeout(function () {
-        var d = document.createElement('div');
-        d.className = 'dmg-float';
-        d.style.fontSize = '26px';
-        d.style.color = k % 2 ? '#c9a227' : '#f2ecdd';
-        d.textContent = suits[k % 4];
-        d.style.left = (5 + Math.random() * 85) + '%';
-        d.style.top = (10 + Math.random() * 30) + '%';
-        layer.appendChild(d);
-        setTimeout(function () { d.remove(); }, 1100);
-      }, k * 70);
-    })(i);
-  }
-}
-
-/* ---------------- monster portraits (canvas, bold shapes) ---------------- */
-var MON = $('monster');
-function setupCanvas() {
-  var dpr = Math.min(2, window.devicePixelRatio || 1);
-  MON.width = 240 * dpr; MON.height = 240 * dpr;
-  MON.style.aspectRatio = '1';
-}
-
-function drawMonster(id, hitFlash) {
-  var dpr = Math.min(2, window.devicePixelRatio || 1);
-  var x = MON.getContext('2d');
-  x.setTransform(dpr, 0, 0, dpr, 0, 0);
-  x.clearRect(0, 0, 240, 240);
-  // backdrop glow (soft vignette, not a solid box)
-  var g = x.createRadialGradient(120, 118, 8, 120, 118, 105);
-  g.addColorStop(0, 'rgba(164,22,26,0.20)');
-  g.addColorStop(0.7, 'rgba(164,22,26,0.08)');
-  g.addColorStop(1, 'rgba(164,22,26,0)');
-  x.fillStyle = g;
-  x.fillRect(0, 0, 240, 240);
-  // stone arch
-  x.strokeStyle = '#2c352a'; x.lineWidth = 10;
-  x.beginPath(); x.arc(120, 128, 96, Math.PI, 0); x.stroke();
-  x.beginPath(); x.moveTo(24, 128); x.lineTo(24, 220); x.moveTo(216, 128); x.lineTo(216, 220); x.stroke();
-
-  var D = DRAW[id] || DRAW.skeleton;
-  D(x);
-
-  if (hitFlash && !REDUCED) {
-    x.fillStyle = 'rgba(230,57,70,0.28)';
-    x.fillRect(0, 0, 240, 240);
-  }
-}
-
-var DRAW = {
-  skeleton: function (x) {
-    x.fillStyle = '#e8e0cc';
-    x.beginPath(); x.arc(120, 105, 52, 0, 7); x.fill();           // cranium
-    x.fillRect(88, 130, 64, 34);                                  // jaw block
-    x.fillStyle = '#0a0d08';
-    x.beginPath(); x.arc(100, 100, 13, 0, 7); x.fill();           // eyes
-    x.beginPath(); x.arc(140, 100, 13, 0, 7); x.fill();
-    x.beginPath(); x.moveTo(120, 116); x.lineTo(112, 132); x.lineTo(128, 132); x.fill(); // nose
-    x.fillRect(94, 148, 8, 14); x.fillRect(108, 148, 8, 14); x.fillRect(122, 148, 8, 14); x.fillRect(136, 148, 8, 14); // teeth gaps
-    x.strokeStyle = '#b9ac8d'; x.lineWidth = 3;
-    x.beginPath(); x.moveTo(84, 78); x.lineTo(104, 92); x.stroke(); // crack
-  },
-  bat: function (x) {
-    x.fillStyle = '#1c1026';
-    x.beginPath(); x.moveTo(120, 110); x.quadraticCurveTo(60, 60, 18, 120); x.quadraticCurveTo(60, 105, 78, 140); x.quadraticCurveTo(95, 120, 120, 135); x.fill(); // left wing
-    x.beginPath(); x.moveTo(120, 110); x.quadraticCurveTo(180, 60, 222, 120); x.quadraticCurveTo(180, 105, 162, 140); x.quadraticCurveTo(145, 120, 120, 135); x.fill(); // right wing
-    x.fillStyle = '#2b1a3d';
-    x.beginPath(); x.ellipse(120, 140, 26, 34, 0, 0, 7); x.fill(); // body
-    x.beginPath(); x.moveTo(102, 118); x.lineTo(96, 92); x.lineTo(112, 108); x.fill(); // ears
-    x.beginPath(); x.moveTo(138, 118); x.lineTo(144, 92); x.lineTo(128, 108); x.fill();
-    x.fillStyle = '#e63946';
-    x.beginPath(); x.arc(110, 132, 6, 0, 7); x.fill();            // eyes
-    x.beginPath(); x.arc(130, 132, 6, 0, 7); x.fill();
-    x.fillStyle = '#e8e0cc';
-    x.beginPath(); x.moveTo(110, 152); x.lineTo(114, 164); x.lineTo(118, 152); x.fill(); // fangs
-    x.beginPath(); x.moveTo(122, 152); x.lineTo(126, 164); x.lineTo(130, 152); x.fill();
-  },
-  keeper: function (x) {
-    x.fillStyle = '#14100c';
-    x.beginPath(); x.moveTo(120, 40); x.quadraticCurveTo(190, 60, 185, 200); x.lineTo(55, 200); x.quadraticCurveTo(50, 60, 120, 40); x.fill(); // cloak
-    x.fillStyle = '#050403';
-    x.beginPath(); x.ellipse(120, 108, 40, 46, 0, 0, 7); x.fill(); // hood shadow
-    x.fillStyle = '#ffd166';
-    x.beginPath(); x.arc(104, 104, 7, 0, 7); x.fill();             // eyes
-    x.beginPath(); x.arc(136, 104, 7, 0, 7); x.fill();
-    x.strokeStyle = '#c9a227'; x.lineWidth = 3;                   // lantern glow
-    x.beginPath(); x.arc(120, 176, 14, 0, 7); x.stroke();
-    x.fillStyle = 'rgba(201,162,39,0.5)';
-    x.beginPath(); x.arc(120, 176, 8, 0, 7); x.fill();
-  },
-  ghoul: function (x) {
-    x.fillStyle = '#7d8f5a';
-    x.beginPath(); x.ellipse(120, 120, 54, 62, 0, 0, 7); x.fill(); // face
-    x.fillStyle = '#2e3a1c';
-    x.beginPath(); x.ellipse(100, 108, 12, 16, -0.2, 0, 7); x.fill(); // eyes
-    x.beginPath(); x.ellipse(140, 108, 12, 16, 0.2, 0, 7); x.fill();
-    x.fillStyle = '#101408';
-    x.beginPath(); x.ellipse(120, 152, 26, 18, 0, 0, 7); x.fill(); // maw
-    x.fillStyle = '#e8e0cc';
-    for (var i = 0; i < 5; i++) { x.fillRect(100 + i * 9, 140, 6, 10); x.fillRect(100 + i * 9, 156, 6, 10); } // teeth
-    x.strokeStyle = '#5c6b42'; x.lineWidth = 6;                   // claws
-    x.beginPath(); x.moveTo(52, 170); x.lineTo(30, 200); x.moveTo(60, 180); x.lineTo(42, 214); x.stroke();
-    x.beginPath(); x.moveTo(188, 170); x.lineTo(210, 200); x.moveTo(180, 180); x.lineTo(198, 214); x.stroke();
-  },
-  wraith: function (x) {
-    x.strokeStyle = 'rgba(200,210,220,0.55)'; x.lineWidth = 9; x.lineCap = 'round';
-    for (var i = 0; i < 4; i++) {                                 // wisps
-      x.beginPath();
-      x.moveTo(120, 200);
-      x.bezierCurveTo(80 + i * 26, 160, 160 - i * 26, 120, 120, 60);
-      x.stroke();
+function onBoardTap(e) {
+  if (suppressClick) return;
+  if (G.busy || !G.st || G.st.won) return;
+  var p = e.target.closest('[data-pile]');
+  if (!p) { if (G.sel) { clearSel(); render(); } return; }
+  var kind = p.dataset.pile;
+  if (kind === 'stock') { doDraw(); return; }
+  if (kind === 'tab' && !e.target.closest('.card')) {
+    // tapped empty column area
+    if (G.sel) {
+      if (tryMoveSelToTableau(+p.dataset.i)) return;
+      clearSel(); render();
     }
-    x.fillStyle = 'rgba(226,232,238,0.92)';
-    x.beginPath(); x.ellipse(120, 105, 38, 48, 0, 0, 7); x.fill(); // pale face
-    x.fillStyle = '#0a0d12';
-    x.beginPath(); x.ellipse(105, 100, 9, 14, 0, 0, 7); x.fill();  // hollow eyes
-    x.beginPath(); x.ellipse(135, 100, 9, 14, 0, 0, 7); x.fill();
-    x.beginPath(); x.ellipse(120, 138, 10, 14, 0, 0, 7); x.fill(); // wail mouth
-  },
-  demon: function (x) {
-    x.fillStyle = '#7d1015';
-    x.beginPath(); x.moveTo(78, 70); x.lineTo(52, 18); x.lineTo(100, 52); x.fill(); // horns
-    x.beginPath(); x.moveTo(162, 70); x.lineTo(188, 18); x.lineTo(140, 52); x.fill();
-    x.beginPath(); x.ellipse(120, 125, 56, 60, 0, 0, 7); x.fill(); // face
-    x.fillStyle = '#ffd166';
-    x.beginPath(); x.moveTo(88, 112); x.lineTo(108, 118); x.lineTo(88, 126); x.fill(); // slanted eyes
-    x.beginPath(); x.moveTo(152, 112); x.lineTo(132, 118); x.lineTo(152, 126); x.fill();
-    x.fillStyle = '#2b0508';
-    x.beginPath(); x.moveTo(84, 158); x.quadraticCurveTo(120, 186, 156, 158); x.quadraticCurveTo(120, 168, 84, 158); x.fill(); // grin
-    x.fillStyle = '#e8e0cc';
-    x.beginPath(); x.moveTo(100, 162); x.lineTo(106, 176); x.lineTo(112, 163); x.fill(); // fangs
-    x.beginPath(); x.moveTo(128, 163); x.lineTo(134, 176); x.lineTo(140, 162); x.fill();
+    return;
   }
-};
-
-/* ---------------- rankings sheet ---------------- */
-function buildRankList() {
-  var ol = $('rank-list');
-  ol.innerHTML = '';
-  var order = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
-  order.forEach(function (r) {
-    var li = document.createElement('li');
-    li.innerHTML = '<b>' + DMH.RANK_NAMES[r] + '</b> — base ' + DMH.RANK_BASE[r];
-    ol.appendChild(li);
-  });
+  if (kind === 'found' && !e.target.closest('.card')) {
+    if (G.sel && tryMoveSelToFoundation()) return;
+    if (G.sel) { clearSel(); render(); }
+    return;
+  }
+  if (kind === 'waste' && !e.target.closest('.card')) {
+    if (G.sel) { clearSel(); render(); }
+  }
 }
 
 /* ---------------- wiring ---------------- */
-function wire() {
-  $('btn-quick').addEventListener('click', function () { AU.init(); AU.click(); startRun('quick'); });
-  $('btn-daily').addEventListener('click', function () { AU.init(); AU.click(); startRun('daily'); });
-  $('btn-help').addEventListener('click', function () { AU.init(); AU.click(); $('help-sheet').classList.remove('hidden'); });
-  $('btn-close-help').addEventListener('click', function () { AU.click(); $('help-sheet').classList.add('hidden'); });
+
+function bind() {
+  var board = $('board');
+  board.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', function () {
+    if (drag) { if (drag.ghost) drag.ghost.remove(); drag.els.forEach(function (c) { c.classList.remove('lifting'); }); drag = null; render(); }
+  });
+  board.addEventListener('click', onBoardTap);
+
+  $('btn-undo').addEventListener('click', function () { AU.init(); doUndo(); });
+  $('btn-hint').addEventListener('click', function () { AU.init(); doHint(); });
+  $('btn-auto').addEventListener('click', function () { AU.init(); doAuto(); });
+  $('btn-new').addEventListener('click', function () { AU.init(); newDeal('deal'); });
+  $('btn-menu2').addEventListener('click', function () { stopTimer(); stopAuto(); show('screen-menu'); refreshMenu(); });
+
+  $('btn-deal').addEventListener('click', function () { AU.init(); newDeal('deal'); });
+  $('btn-daily').addEventListener('click', function () { AU.init(); newDeal('daily'); });
+  $('btn-draw').addEventListener('click', function () {
+    SET.draw = SET.draw === 1 ? 3 : 1; saveSet(); AU.click(); refreshMenu();
+  });
+  $('btn-help').addEventListener('click', function () { AU.click(); showOverlay('help-sheet'); });
+  $('btn-close-help').addEventListener('click', function () { AU.click(); hideOverlays(); });
   $('btn-mute').addEventListener('click', function () {
-    AU.init(); AU.setMuted(!AU.isMuted());
-    $('btn-mute').textContent = AU.isMuted() ? '🔇' : '🔊';
+    AU.init(); AU.setMuted(!AU.isMuted()); refreshMenu();
   });
   $('btn-haptic').addEventListener('click', function () {
-    AU.click();
-    HAPT.set(!HAPT.on);
-    if (HAPT.on) vibrate(HAPT.select); // confirm the new setting with a tap
+    SET.haptic = !SET.haptic; saveSet(); vibrate(20); refreshMenu();
   });
-  $('btn-play').addEventListener('click', onPlay);
-  $('btn-discard').addEventListener('click', onDiscard);
-  $('btn-rank').addEventListener('click', function () { AU.click(); $('help-sheet').classList.remove('hidden'); });
-  $('btn-again').addEventListener('click', function () { AU.click(); startRun(G.mode); });
-  $('btn-menu').addEventListener('click', function () { AU.click(); show('screen-menu'); refreshMenu(); });
+  $('btn-again').addEventListener('click', function () { AU.init(); newDeal(G.mode); });
+  $('btn-menu').addEventListener('click', function () { show('screen-menu'); refreshMenu(); });
 
-  // audio unlock on first gesture anywhere
-  var unlock = function () { AU.init(); };
-  document.addEventListener('pointerdown', unlock, { once: true });
-
-  buildRankList();
-  setupCanvas();
-  window.addEventListener('resize', setupCanvas);
-  show('screen-menu');
-  refreshMenu();
-  fetchDaily();
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stopTimer(); else if (G.st && !G.st.won && G.st.moves) startTimer(); });
+  window.addEventListener('resize', function () { if (G.st) render(); });
+  // block page scroll/zoom gestures on the board
+  board.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
-else wire();
+/* ---------------- boot ---------------- */
+
+// scripts load at end of body: DOM is ready.
+bind();
+refreshMenu();
+show('screen-menu');
+window.__sol = G;
 
 })();
