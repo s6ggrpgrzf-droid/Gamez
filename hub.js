@@ -197,9 +197,9 @@
         return null;
       }
       if (id === 'word-well') {
-        var w = readJSON('ww_streak_v1');
-        if (!w || !w.count) return null;
-        return { label: '🔥 ' + w.count + '-day streak', frac: Math.min(1, w.count / 30) };
+        var w = readJSON('wwf_daily');
+        if (!w || !w.streak) return null;
+        return { label: '🔥 ' + w.streak + '-day streak', frac: Math.min(1, w.streak / 30) };
       }
       if (id === 'blood-moon') {
         var bm = readJSON('bm_meta');
