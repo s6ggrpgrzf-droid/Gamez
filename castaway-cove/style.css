@@ -34,8 +34,16 @@ body{
 @keyframes drift{to{transform:translateX(170vw)}}
 .menu-sea{position:absolute;left:0;right:0;top:52%;bottom:0;opacity:.5;
   background:repeating-linear-gradient(178deg,rgba(255,255,255,.35) 0 6px,transparent 6px 26px)}
-.menu-heron{position:absolute;top:35%;right:9%;font-size:44px;filter:grayscale(.35) sepia(.25);
+/* hand-drawn icon set — replaces every emoji in the UI */
+.ic{width:1.2em;height:1.2em;vertical-align:-0.22em;fill:none;stroke:currentColor;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.btn .ic{width:22px;height:22px}
+.sheet-head h2 .ic{width:24px;height:24px}
+.aqua-widget h3 .ic{width:22px;height:22px;color:#2f6a8f}
+.marlow .sheet-sub .ic{width:18px;height:18px;color:#b07a1e}
+.menu-heron{position:absolute;top:1.5%;right:4%;z-index:2;
   animation:bob 4s ease-in-out infinite}
+.menu-heron .ic{width:56px;height:56px;color:#5a6a7a}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .menu-wrap{position:relative;z-index:1;width:100%;padding:18px 22px calc(30px + env(safe-area-inset-bottom));
   background:linear-gradient(180deg,rgba(255,248,235,0) 0%,rgba(255,248,235,.94) 18%,#fff8eb 55%)}
@@ -115,24 +123,31 @@ body{
 .aqua-widget .btn{font-size:16px;min-height:50px;padding:10px 18px}
 
 /* ---------- play ---------- */
-#scene{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.hud{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:6px;
-  padding:calc(10px + env(safe-area-inset-top)) 10px 8px;
-  background:linear-gradient(180deg,rgba(255,248,235,.85),rgba(255,248,235,0));
+#scene{position:relative;flex:1 1 auto;min-height:0;width:100%;height:auto;display:block;touch-action:none}
+/* the HUD is a real bar now, not an overlay — the scene shrinks to make room */
+.hud{position:relative;z-index:5;display:flex;flex-direction:column;gap:8px;
+  padding:calc(8px + env(safe-area-inset-top)) 12px 10px;
+  background:linear-gradient(180deg,#fffdf6 0%,#f8eedb 100%);
+  border-bottom:3px solid #b89b6d;
   transition:opacity .6s}
+.hud-row{display:flex;align-items:center;gap:8px}
+.hud-row.tools{justify-content:space-between;padding:0 6px}
 .icon-btn{
   font-family:var(--font-ui);font-size:20px;width:46px;height:46px;border-radius:14px 40px 14px 40px/40px 14px 40px 14px;
   cursor:pointer;background:rgba(255,253,247,.92);border:2px solid #d9c39a;color:#5a4632;
   display:flex;align-items:center;justify-content:center;flex:0 0 auto;
 }
+.icon-btn .ic{width:24px;height:24px}
 .icon-btn:active{transform:scale(.93)}
 .icon-btn.off{opacity:.45;filter:grayscale(.7)}
 .hud-coins{font-size:18px;font-weight:700;background:rgba(255,253,247,.92);border:2px solid #d9c39a;
-  border-radius:14px;padding:10px 12px;white-space:nowrap;transform-origin:left center}
+  border-radius:14px;padding:10px 12px;white-space:nowrap;transform-origin:left center;
+  display:flex;align-items:center;gap:6px}
+.hud-coins .ic{width:20px;height:20px;color:#b07a1e}
 .hud-coins.coinpop{animation:coinpop .9s ease-out}
 @keyframes coinpop{0%{transform:scale(1)}25%{transform:scale(1.14)}100%{transform:scale(1)}}
 /* rising "+N" wisp, like a bubble escaping the coin purse */
-.coin-wisp{position:absolute;left:64px;top:calc(54px + env(safe-area-inset-top));z-index:6;pointer-events:none;
+.coin-wisp{position:absolute;left:64px;top:calc(112px + env(safe-area-inset-top));z-index:6;pointer-events:none;
   font-family:var(--font-ui);font-weight:800;font-size:17px;color:#b07a1e;
   text-shadow:0 1px 0 rgba(255,255,255,.75);animation:wispup 1.5s ease-out forwards}
 @keyframes wispup{0%{transform:translateY(8px) scale(.85);opacity:0}20%{opacity:1;transform:translateY(0) scale(1)}
@@ -142,7 +157,8 @@ body{
   text-overflow:ellipsis;max-width:120px}
 .hud-sky{font-size:22px;margin-left:auto;background:rgba(255,253,247,.92);border:2px solid #d9c39a;
   border-radius:50%;width:46px;height:46px;display:flex;align-items:center;justify-content:center;
-  box-shadow:inset 0 0 0 3px rgba(217,154,30,.25);cursor:pointer;padding:0}
+  box-shadow:inset 0 0 0 3px rgba(217,154,30,.25);cursor:pointer;padding:0;color:#b07a1e}
+.hud-sky .ic{width:26px;height:26px}
 body.quiet .hud,body.quiet .cast-btn{opacity:.15;pointer-events:none}
 .hud,.cast-btn{transition:opacity .6s}
 /* depth gauge: wooden ruler */
@@ -270,7 +286,8 @@ body.quiet .cast-btn:disabled{opacity:.15}
   content:"SOLD";position:absolute;right:14px;top:8px;font-weight:800;font-size:15px;letter-spacing:2px;
   color:#c0392b;border:3px double #c0392b;border-radius:8px;padding:2px 10px;transform:rotate(-8deg);
   opacity:.85;animation:stampin .3s cubic-bezier(.2,2.2,.4,1)}
-.shop-icon{font-size:34px}
+.shop-icon{color:#7a5c3e}
+.shop-icon .ic{width:34px;height:34px}
 .shop-info{flex:1}
 .shop-info b{font-size:17px}
 .shop-info p{margin:2px 0 6px;font-size:13px;color:#8a6f52}
@@ -305,6 +322,21 @@ body.quiet .cast-btn:disabled{opacity:.15}
 .arc-lb-row.me{font-weight:700;color:#5a3d1c}
 .arc-lb-empty{font-family:var(--font-hand);font-size:18px;color:#a5814f}
 .arc-lb-rank{font-weight:700;color:#c98f3d;margin-bottom:6px}
+.rank{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex:0 0 auto;
+  border-radius:50%;font-size:13px;font-weight:800;color:#fff8eb;background:#b89b6d;margin-right:2px}
+.rank.r1{background:linear-gradient(180deg,#ffd98f,#d99a1e)}
+.rank.r2{background:linear-gradient(180deg,#d9dee2,#9aa2a8)}
+.rank.r3{background:linear-gradient(180deg,#e8b96e,#a5703a)}
+/* icons sitting inside text blocks */
+.pill .ic{width:14px;height:14px;color:#b07a1e}
+.catch-coins .ic{width:24px;height:24px;color:#b07a1e}
+.catch-where .ic{width:16px;height:16px;color:#b07a1e}
+.arc-lb-title .ic{width:18px;height:18px;color:#c98f3d}
+.arc-lb-row .ic{width:15px;height:15px;color:#b07a1e}
+.daily-hero .ic{width:18px;height:18px;color:#b07a1e}
+.sheet-sub .ic{width:17px;height:17px;color:#b07a1e}
+.buy-btn .ic{width:18px;height:18px}
+.spot-btn .ic{width:16px;height:16px}
 
 /* catch card: rarity frames, also-biting row, stamp pop */
 #ov-catch{align-items:center;background:rgba(50,35,20,.55)}

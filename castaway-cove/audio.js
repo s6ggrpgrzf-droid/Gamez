@@ -28,7 +28,8 @@ var AU = {
   setMuted: function (m) {
     AUENV.save.muted = m; AUENV.persist();
     if (this.master) this.master.gain.value = m ? 0 : 0.9;
-    AUENV.el('btn-mute').textContent = m ? '🔇' : '🔊';
+    var mb = AUENV.el('btn-mute');
+    if (mb) mb.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#' + (m ? 'i-mute' : 'i-sound') + '"></use></svg>';
   },
   setUnderwater: function (on) {
     /* the underwater strip gets the muffled world: 18kHz -> ~700Hz */
