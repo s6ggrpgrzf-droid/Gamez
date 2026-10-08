@@ -132,10 +132,13 @@ function feelForStep(step) {
 
 /* ---------------- state ---------------- */
 let st = null, levelDef = null;
-let tiles = [], jellyEls = [], frostEls = [];
+let tiles = [], jellyEls = [], frostEls = [], chocEls = [];
 let ts = 40, inputLocked = false, selected = null, swipeStart = null;
 let shownScore = 0, boardEl = null, fxEl = null;
 let hammerArmed = false, hintEls = [], idleTimer = null;
+// sugar crush replay state
+let sugarSkip = false, sugarPitch = 0, sugarBannerShown = false, inSugar = false;
+const HAMMER_CAP = 8;
 
 /* ---------------- helpers ---------------- */
 const inBounds = p => p.r >= 0 && p.r < st.rows && p.c >= 0 && p.c < st.cols;
@@ -150,18 +153,24 @@ function showScreen(which) {
 function renderMap() {
   const path = $('map-path');
   path.innerHTML = '';
-  // daily treat: +1 lollipop hammer (cap 5)
+  // daily spin wheel (one spin per day; replaces the old flat +1 treat)
   const today = new Date().toISOString().slice(0, 10);
   const dt = $('daily-toast');
-  if (progress.lastDaily !== today) {
-    progress.lastDaily = today;
-    progress.hammers = Math.min(5, (progress.hammers || 0) + 1);
-    saveProgress();
-    dt.innerHTML = '🍭 Daily treat! +1 Lollipop Hammer <span class="dim">— tap 🍭 under the board to smash any candy</span>';
-    dt.classList.remove('hidden');
-    clearTimeout(renderMap._dt);
-    renderMap._dt = setTimeout(() => dt.classList.add('hidden'), 7000);
-  } else dt.classList.add('hidden');
+  dt.classList.add('hidden');
+  if (progress.lastSpin !== today) {
+    clearTimeout(renderMap._spinT);
+    const trySpin = (tries) => {
+      if (progress.lastSpin !== today &&
+          !$('screen-map').classList.contains('hidden') &&
+          $('modal').classList.contains('hidden')) {
+        showSpinWheel();
+      } else if (tries > 0) {
+        clearTimeout(renderMap._spinT);
+        renderMap._spinT = setTimeout(() => trySpin(tries - 1), 3000);
+      }
+    };
+    renderMap._spinT = setTimeout(() => trySpin(5), 800);
+  }
   // win streak flame
   const sf = $('streak-flame');
   if ((progress.streak || 0) >= 2) {
@@ -186,7 +195,8 @@ function renderMap() {
       const s = document.createElement('div');
       s.className = 'nstars';
       s.innerHTML = [1, 2, 3].map(i =>
-        `<span class="${i <= stars ? '' : 'off'}">★</span>`).join('');
+        `<span class="${i <= stars ? '' : 'off'}">★</span>`).join('') +
+        `<span class="sstar ${stars >= 4 ? '' : 'off'}">✦</span>`; // Sugar Star: 4th prestige tier
       btn.appendChild(s);
       btn.addEventListener('click', () => { CCAudio.unlock(); CCAudio.click(); showIntro(n); });
     }
@@ -199,6 +209,57 @@ function renderMap() {
       const scroller = $('map-scroll');
       scroller.scrollTop = cur.offsetTop - scroller.clientHeight / 2;
     }
+  });
+}
+
+/* ---------------- daily spin wheel ---------------- */
+const WHEEL_PRIZES = [1, 1, 2, 1, 2, 1, 3, 5]; // hammers per segment, 8 segments
+function showSpinWheel() {
+  const today = new Date().toISOString().slice(0, 10);
+  const segs = WHEEL_PRIZES.length;
+  const labels = WHEEL_PRIZES.map((p, i) =>
+    `<span class="spin-label" style="transform: rotate(${i * 45 + 22.5}deg) translateY(-72px)">🍭${p > 1 ? '×' + p : ''}</span>`
+  ).join('');
+  showModal({
+    title: '🎡 Daily Spin!',
+    sub: `<div class="spin-wrap">
+        <div class="spin-pointer">▼</div>
+        <div class="spin-wheel" id="spin-wheel">${labels}</div>
+        <div class="spin-msg" id="spin-msg">One free spin every day — good luck!</div>
+      </div>`,
+    buttons: [{ label: 'SPIN', onClick: () => {} }],
+  });
+  const spinBtn = $('modal-btns').querySelector('.btn');
+  const wheel = $('spin-wheel'), msg = $('spin-msg');
+  let phase = 'ready'; // ready -> spinning -> landed
+  spinBtn.addEventListener('click', () => {
+    if (phase === 'landed') { hideModal(); return; }
+    if (phase !== 'ready') return;
+    phase = 'spinning';
+    spinBtn.disabled = true;
+    spinBtn.textContent = '···';
+    const idx = (Math.random() * segs) | 0;
+    const prize = WHEEL_PRIZES[idx];
+    const jitter = Math.random() * 16 - 8;
+    // segment idx center sits at idx*45+22.5 deg clockwise from top; rotate so it lands on the pointer
+    wheel.style.transform = `rotate(${360 * 6 - (idx * 45 + 22.5) + jitter}deg)`;
+    const tick = setInterval(() => CCAudio.spinTick(), 95);
+    const land = () => {
+      clearInterval(tick);
+      if (phase !== 'spinning') return;
+      phase = 'landed';
+      progress.hammers = Math.min(HAMMER_CAP, (progress.hammers || 0) + prize);
+      progress.lastSpin = today;
+      saveProgress();
+      updateBoosterBar();
+      msg.textContent = prize >= 5 ? `JACKPOT! +${prize} 🍭 hammers!`
+                                   : `+${prize} 🍭 hammer${prize > 1 ? 's' : ''}!`;
+      CCAudio.special();
+      spinBtn.textContent = 'COLLECT';
+      spinBtn.disabled = false;
+    };
+    wheel.addEventListener('transitionend', land, { once: true });
+    setTimeout(land, 4200); // fallback if transitionend never fires
   });
 }
 
@@ -226,6 +287,11 @@ function introGoalHtml(d) {
   return '';
 }
 
+function sugarLine(d) {
+  const s = d.stars || [0, 0, 0];
+  return s[3] != null ? s[3] : Math.round(s[2] * 1.6);
+}
+
 function showIntro(n) {
   const d = LEVELS[n - 1];
   const s = d.stars;
@@ -233,7 +299,7 @@ function showIntro(n) {
     title: `Level ${n}`,
     sub: `<div class="intro-goal">${introGoalHtml(d)}</div>` +
       `<div class="intro-moves">in <b>${d.moves}</b> moves</div>` +
-      `<div class="intro-stars"><span>★ ${s[0].toLocaleString()}</span><span>★★ ${s[1].toLocaleString()}</span><span>★★★ ${s[2].toLocaleString()}</span></div>` +
+      `<div class="intro-stars"><span>★ ${s[0].toLocaleString()}</span><span>★★ ${s[1].toLocaleString()}</span><span>★★★ ${s[2].toLocaleString()}</span><span class="sstar">✦ ${sugarLine(d).toLocaleString()}</span></div>` +
       (d.tip ? `<div class="intro-tip">💡 ${d.tip}</div>` : '') +
       `<div class="intro-hammers">🍭 Lollipop Hammers: <b>${progress.hammers || 0}</b> <span class="dim">— smash any one candy, free</span></div>`,
     buttons: [
@@ -293,9 +359,9 @@ function buildBoard() {
   boardEl.innerHTML = '<div id="fx"></div>'; // fx lives inside #board; rebuild it
   fxEl = $('fx');
   sparkInit(); // rebuild the pooled sparkle layer inside the fresh #fx
-  tiles = []; jellyEls = []; frostEls = [];
+  tiles = []; jellyEls = []; frostEls = []; chocEls = [];
   for (let r = 0; r < st.rows; r++) {
-    tiles.push([]); jellyEls.push([]); frostEls.push([]);
+    tiles.push([]); jellyEls.push([]); frostEls.push([]); chocEls.push([]);
     for (let c = 0; c < st.cols; c++) {
       // jelly underlay
       const j = st.jelly[r][c];
@@ -328,8 +394,29 @@ function buildBoard() {
         boardEl.appendChild(fEl);
       }
       frostEls[r].push(fEl);
+      // chocolate overlay
+      let xEl = null;
+      if (cell && cell.t === 'x') {
+        xEl = document.createElement('div');
+        xEl.className = 'choc';
+        xEl.style.width = xEl.style.height = ts + 'px';
+        xEl.style.transform = pos(r, c);
+        boardEl.appendChild(xEl);
+      }
+      chocEls[r].push(xEl);
     }
   }
+}
+
+/* Add a chocolate overlay mid-game (spread). */
+function addChocEl(r, c) {
+  if (!chocEls[r] || chocEls[r][c]) return;
+  const el = document.createElement('div');
+  el.className = 'choc';
+  el.style.width = el.style.height = ts + 'px';
+  el.style.transform = pos(r, c);
+  boardEl.appendChild(el);
+  chocEls[r][c] = el;
 }
 
 function layout() {
@@ -347,6 +434,8 @@ function layout() {
     if (j) { j.style.width = j.style.height = ts + 'px'; j.style.transform = pos(r, c); }
     const f = frostEls[r][c];
     if (f) { f.style.width = f.style.height = ts + 'px'; f.style.transform = pos(r, c); }
+    const x = chocEls[r][c];
+    if (x) { x.style.width = x.style.height = ts + 'px'; x.style.transform = pos(r, c); }
   }
 }
 
@@ -579,6 +668,61 @@ async function playInvalid(step) {
   await Promise.all(jobs);
 }
 
+/* Sugar Crush fireworks replay: spawned striped candies pop in with their
+   own stinger, then detonate. Rising pop pitch through the sequence. */
+async function playSugarStep(step) {
+  if (sugarSkip) return;
+  if (step.first && !sugarBannerShown) {
+    sugarBannerShown = true;
+    showBanner('Sugar Crush!', true);
+    CCAudio.sugar();
+  }
+  sugarPitch = Math.min(8, sugarPitch + 1);
+  for (const sp of step.spawns || []) {
+    if (sugarSkip) return;
+    const el = tiles[sp.r] && tiles[sp.r][sp.c];
+    if (el) {
+      sparkle(sp.r, sp.c, sp.color, FEEL.sparkPerBig);
+      refreshTileVisual(el, { t: 'c', color: sp.color, sp: sp.special });
+      el.animate([
+        { transform: pos(sp.r, sp.c) + ' scale(.3) rotate(-40deg)' },
+        { transform: pos(sp.r, sp.c) + ' scale(1.3) rotate(6deg)', offset: 0.6 },
+        { transform: pos(sp.r, sp.c) + ' scale(1)' }
+      ], { duration: 340, easing: FEEL.spring });
+      if (sp.special === 'b') CCAudio.colorBombCreated();
+      else if (sp.special === 'w') CCAudio.wrappedCreated();
+      else CCAudio.stripedCreated();
+    }
+    await wait(220);
+  }
+  if (sugarSkip) return;
+  CCAudio.pop(sugarPitch);
+  emitFeel('blast', { gain: step.gain });
+  await playClearStep(step, true); // silentPop: we played our own rising pop
+  if (sugarSkip) return;
+  await wait(200);
+}
+
+/* Chocolate spread replay: the new cell oozes in. */
+async function playChocStep(step) {
+  if (sugarSkip) return;
+  for (const g of step.grows || []) {
+    addChocEl(g.r, g.c);
+    const el = chocEls[g.r] && chocEls[g.r][g.c];
+    if (el) {
+      sparkle(g.r, g.c, null, 5);
+      el.animate([
+        { transform: pos(g.r, g.c) + ' scale(.3)', opacity: 0 },
+        { transform: pos(g.r, g.c) + ' scale(1.18)', opacity: 1, offset: 0.65 },
+        { transform: pos(g.r, g.c) + ' scale(1)', opacity: 1 }
+      ], { duration: 480, easing: FEEL.spring });
+    }
+    CCAudio.chocGrow();
+    floater(g.r, g.c, '🍫');
+    await wait(480);
+  }
+}
+
 async function playSwap(step) {
   const { a, b } = step;
   const elA = tiles[a.r][a.c], elB = tiles[b.r][b.c];
@@ -643,15 +787,18 @@ async function playCollect(step) {
   await applyFallVisual(step.fall);
 }
 
-async function playClearStep(step) {
+async function playClearStep(step, silentPop) {
+  if (inSugar && sugarSkip) return; // fast-forwarded sugar fireworks
   const isCombo = step.k === 'combo';
-  // 1. special creations sparkle
+  // 1. special creations sparkle — each with its own stinger
   if (!isCombo && step.creations) {
     for (const cr of step.creations) {
       const el = tiles[cr.r] && tiles[cr.r][cr.c];
       if (el) {
         sparkle(cr.r, cr.c, cr.color, FEEL.sparkPerBig);
-        CCAudio.special();
+        if (cr.special === 'b') CCAudio.colorBombCreated();
+        else if (cr.special === 'w') CCAudio.wrappedCreated();
+        else CCAudio.stripedCreated();
         await wait(120);
         const cell = st.board[cr.r][cr.c];
         if (cell && cell.t === 'c') refreshTileVisual(el, cell);
@@ -677,7 +824,7 @@ async function playClearStep(step) {
       tiles[r][c] = null;
     }
   }
-  CCAudio.pop(step.round || 1); // pitch already rises with round (combo feel)
+  if (!silentPop) CCAudio.pop(step.round || 1); // pitch already rises with round (combo feel)
   emitFeel(feelForStep(step), { gain: step.gain, round: step.round });
   if (step.clear.length) {
     const n = step.clear.length;
@@ -690,8 +837,9 @@ async function playClearStep(step) {
   // 3. effect beams / blasts
   for (const e of step.effects || []) beamFx(e);
   await Promise.all(pops);
-  // 4. frosting damage
+  // 4. frosting / chocolate damage
   for (const h of step.frostHits || []) {
+    if (h.t === 'x') continue; // chocolate is 1hp: always breaks outright (below)
     const f = frostEls[h.r] && frostEls[h.r][h.c];
     if (f && h.hp > 0) {
       f.classList.remove('hp2'); f.classList.add('hp1', 'crack');
@@ -710,6 +858,17 @@ async function playClearStep(step) {
       ], { duration: 300, easing: 'ease-in' }).finished.catch(() => {});
       f.remove();
       frostEls[br.r][br.c] = null;
+    }
+    const xc = chocEls[br.r] && chocEls[br.r][br.c];
+    if (xc) {
+      sparkle(br.r, br.c, null, FEEL.sparkPerPop);
+      CCAudio.chocGone();
+      xc.animate([
+        { transform: pos(br.r, br.c) + ' scale(1)', opacity: 1 },
+        { transform: pos(br.r, br.c) + ' scale(1.6)', opacity: 0 }
+      ], { duration: 300, easing: 'ease-in' }).finished.catch(() => {});
+      setTimeout(() => xc.remove(), 320);
+      chocEls[br.r][br.c] = null;
     }
   }
   // 5. jelly
@@ -757,13 +916,23 @@ async function playShuffle(step) {
 }
 
 async function playSteps(steps) {
-  for (const step of steps) {
-    if (step.k === 'invalid') await playInvalid(step);
-    else if (step.k === 'swap') await playSwap(step);
-    else if (step.k === 'round' || step.k === 'combo' || step.k === 'hammer') await playClearStep(step);
-    else if (step.k === 'collect') await playCollect(step);
-    else if (step.k === 'shuffle') await playShuffle(step);
-    else if (step.k === 'end') await playEnd(step);
+  sugarSkip = false; sugarPitch = 0; sugarBannerShown = false; inSugar = false;
+  const skip = () => { sugarSkip = true; }; // tap anywhere fast-forwards celebrations
+  const wrap = $('board-wrap');
+  wrap.addEventListener('pointerdown', skip);
+  try {
+    for (const step of steps) {
+      if (step.k === 'invalid') await playInvalid(step);
+      else if (step.k === 'swap') await playSwap(step);
+      else if (step.k === 'round' || step.k === 'combo' || step.k === 'hammer') await playClearStep(step);
+      else if (step.k === 'collect') await playCollect(step);
+      else if (step.k === 'shuffle') await playShuffle(step);
+      else if (step.k === 'sugar') { inSugar = true; await playSugarStep(step); }
+      else if (step.k === 'choc') await playChocStep(step);
+      else if (step.k === 'end') { inSugar = false; await playEnd(step); }
+    }
+  } finally {
+    wrap.removeEventListener('pointerdown', skip);
   }
   updateHUD(false);
 }
@@ -824,7 +993,8 @@ async function useHammer(r, c) {
   if (!(progress.hammers > 0)) { showBanner('No hammers! Come back tomorrow 🍭'); return; }
   const el = tiles[r] && tiles[r][c];
   const frost = frostEls[r] && frostEls[r][c];
-  if (!el && !frost) return;
+  const choc = chocEls[r] && chocEls[r][c];
+  if (!el && !frost && !choc) return;
   inputLocked = true;
   clearIdle();
   try {
@@ -969,49 +1139,20 @@ async function playEnd(step) {
     // win streak: every 3rd consecutive win earns a hammer
     progress.streak = (progress.streak || 0) + 1;
     let streakNote = '';
-    if (progress.streak % 3 === 0 && (progress.hammers || 0) < 5) {
+    if (progress.streak % 3 === 0 && (progress.hammers || 0) < HAMMER_CAP) {
       progress.hammers = (progress.hammers || 0) + 1;
       streakNote = `<br>🔥 ${progress.streak}-win streak! +1 🍭 hammer`;
     }
     saveProgress();
     updateBoosterBar();
-    // Sugar Crush: burn leftover moves into bonus points, tap to skip.
-    // slow-mo micro-dip: the first ~300ms count at 0.35x, then accelerate.
-    if (step.bonus > 0) {
+    // Sugar Crush fireworks already played as 'sugar' steps (banner + sound there).
+    // If none ran (no moves left, no specials), celebrate briefly here instead.
+    if (!sugarBannerShown) {
       showBanner('Sugar Crush!', true);
       CCAudio.sugar();
-      scorePop();
-      const from = step.score - step.bonus, to = step.score;
-      const mv = Math.round(step.bonus / 250);
-      const s = levelDef.stars, max = s[2];
-      const t0 = performance.now(), dur = Math.min(2000, 500 + mv * 130);
-      let skipped = false, lastMvTxt = null;
-      const skip = () => { skipped = true; };
-      const wrap = $('board-wrap');
-      wrap.addEventListener('pointerdown', skip, { once: true });
-      wrap.classList.add('sugar-slow');
-      $('moves').textContent = mv;
-      await new Promise(res => {
-        const done = () => {
-          wrap.removeEventListener('pointerdown', skip);
-          wrap.classList.remove('sugar-slow');
-          updateHUD(true);
-          res();
-        };
-        (function tick(now) {
-          const p = Math.min(1, (now - t0) / dur);
-          if (skipped || p >= 1) { done(); return; }
-          // dip: first 30% of time advances only ~10% of the score (0.35x), then catches up
-          const dp = p < 0.3 ? p * 0.35 : 0.105 + (p - 0.3) * 1.279;
-          const v = from + (to - from) * dp;
-          setScoreText(v);
-          const mt = String(Math.ceil(mv * (1 - p)));
-          if (mt !== lastMvTxt) { lastMvTxt = mt; $('moves').textContent = mt; }
-          $('starfill').style.width = Math.min(100, (v / max) * 100) + '%';
-          requestAnimationFrame(tick);
-        })(t0);
-      });
-      await wait(250);
+      await wait(900);
+    } else {
+      await wait(500);
     }
     const earned = step.stars;
     if ((progress.stars[n] || 0) < earned) progress.stars[n] = earned;
@@ -1035,7 +1176,8 @@ async function playEnd(step) {
     });
     fillQuip(n, earned);
     $('modal-card').classList.add('win-fx'); // celebration rays behind the card
-    if (earned === 3 && !reducedMotion()) confetti(); // 3 stars rain confetti
+    if (earned === 4 && !reducedMotion()) showBanner('Sugar Star! ✦', true);
+    if (earned >= 3 && !reducedMotion()) confetti(earned === 4 ? 130 : 60); // 3+ stars rain confetti
   } else {
     CCAudio.lose();
     emitFeel('lose');
@@ -1062,11 +1204,12 @@ function goalTextPlain() {
 }
 
 /* ---------------- confetti easter egg (tap the logo 5×) ---------------- */
-function confetti() {
+function confetti(n) {
+  n = n || 60;
   CCAudio.special();
   const app = $('app');
   const colors = ['#ff5fa2', '#4de3ff', '#ffd34d', '#4ade80', '#a855f7'];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < n; i++) {
     const p = document.createElement('div');
     p.className = 'confetti';
     p.style.left = (Math.random() * 100) + '%';

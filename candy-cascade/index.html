@@ -5,9 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1b1035">
 <title>Candy Cascade</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
+<!-- candy silhouettes: a shape for every color (objectBoundingBox clips scale to any tile size) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <clipPath id="cc-bean" clipPathUnits="objectBoundingBox">
+      <path d="M0.64 0.05 C0.84 0.10 0.94 0.28 0.92 0.48 C0.90 0.70 0.74 0.88 0.52 0.92 C0.30 0.96 0.10 0.83 0.07 0.62 C0.05 0.49 0.10 0.39 0.19 0.34 C0.28 0.29 0.32 0.20 0.39 0.14 C0.45 0.08 0.55 0.03 0.64 0.05 Z"/>
+    </clipPath>
+    <clipPath id="cc-lozenge" clipPathUnits="objectBoundingBox">
+      <path d="M0.50 0.02 L0.96 0.50 L0.50 0.98 L0.04 0.50 Z"/>
+    </clipPath>
+    <clipPath id="cc-drop" clipPathUnits="objectBoundingBox">
+      <path d="M0.50 0.02 C0.50 0.02 0.88 0.38 0.88 0.62 A0.38 0.38 0 1 1 0.12 0.62 C0.12 0.38 0.50 0.02 0.50 0.02 Z"/>
+    </clipPath>
+    <clipPath id="cc-cluster" clipPathUnits="objectBoundingBox">
+      <path d="M0.50 0.02 C0.61 0.02 0.69 0.09 0.69 0.19 C0.79 0.19 0.88 0.28 0.88 0.40 C0.88 0.52 0.80 0.61 0.69 0.63 C0.69 0.73 0.60 0.82 0.50 0.83 C0.40 0.84 0.31 0.75 0.31 0.65 C0.20 0.63 0.12 0.54 0.12 0.42 C0.12 0.30 0.20 0.21 0.31 0.21 C0.31 0.11 0.39 0.02 0.50 0.02 Z"/>
+    </clipPath>
+  </defs>
+</svg>
 <div id="bg-blobs" aria-hidden="true">
   <span class="blob b1"></span><span class="blob b2"></span>
   <span class="blob b3"></span><span class="blob b4"></span>
@@ -56,16 +73,16 @@
 <!-- ============ MODAL ============ -->
 <div id="modal" class="hidden">
   <div id="modal-card">
-    <div id="modal-stars" class="hidden"><span>★</span><span>★</span><span>★</span></div>
+    <div id="modal-stars" class="hidden"><span>★</span><span>★</span><span>★</span><span class="sstar">★</span></div>
     <h2 id="modal-title"></h2>
     <p id="modal-sub"></p>
     <div id="modal-btns"></div>
   </div>
 </div>
 
-<script src="engine.js?v=4"></script>
-<script src="levels.js?v=4"></script>
-<script src="audio.js?v=4"></script>
-<script src="ui.js?v=4"></script>
+<script src="engine.js?v=5"></script>
+<script src="levels.js?v=5"></script>
+<script src="audio.js?v=5"></script>
+<script src="ui.js?v=5"></script>
 </body>
 </html>
