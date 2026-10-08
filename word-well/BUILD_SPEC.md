@@ -1,78 +1,43 @@
-# Word Well — Build Spec (2026-10-03)
+# Word Well — Build Spec (2026-10-08 rebuild)
 
-Jimmy picked option 3: a daily word puzzle for the Gamez arcade. Ninth game.
+2026-10-08: Jimmy asked for Words With Friends instead of the word ladder.
+Rebuilt as a WWF-style crossword tile game. Same name, same ink-and-parchment
+well identity. Old ladder files (ladder.js, words.js, tests/test-ladder.js)
+were deleted.
 
-## The game
+## Rules (WWF ruleset)
+- 15x15 board, WWF premium layout: TW 8, DW 17 (incl. center star), TL 12, DL 24.
+- 104-tile bag (A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1, 2 blanks).
+- Values: 1:AEIORST 2:DLNU 3:GHY 4:BCFMPW 5:KV 8:X 10:JQZ, blank 0.
+- 7-tile rack; first word must cover the center star; premiums apply to newly
+  placed tiles only; +35 bingo for all 7 tiles in one turn.
+- Turn options: play, swap (needs 7+ tiles in bag, loses turn), pass.
+- Game ends on empty rack + empty bag (leftover values subtracted from the
+  holder, added to the finisher) or 6 consecutive scoreless turns.
 
-**Word Well**: a daily word ladder (Lewis Carroll's "Doublets", 1877). Each day the whole
-world gets the same puzzle: climb from START to END, changing exactly one letter per rung,
-every rung a real word. You have a limited length of **rope** — run out before reaching
-the bottom and you fall.
+## Dictionary
+- ENABLE2K (public domain), 172,705 words of length 2-15, uppercase.
+- Shipped as dict-1.js..dict-6.js: gzip+base64 chunks (~100KB each, pushed solo).
+- At load: concat, atob, DecompressionStream('gzip'), build a flattened trie
+  (~6.6MB, ~376k nodes). Graceful message if DecompressionStream is missing.
 
-### Ingredients (Jimmy's synthesis method)
-- **Word ladder** (Carroll 1877, "word golf" per Nabokov): the core mechanic.
-- **Wordle**: one puzzle per day worldwide, streaks, shareable results.
-- **Waffle**: efficiency star ratings — the perfect-score chase.
-- **Golf**: par scoring. Par = shortest ladder; beat it for 3 stars.
+## Modes
+- Solo vs the Well Warden: easy / medium / hard bot (Solo-Challenge style).
+- Pass & Play: 2 humans, one phone.
+- Daily Well: date-seeded bag, human vs medium bot, score posts to the
+  gamez-arcade "word-well" daily board (cap 100) + localStorage streak.
 
-### Rules
-- 4-letter words only. Daily puzzle: START → END with par 4–7 (seeded by date, same worldwide).
-- **Rope** = par + 3. Each new rung costs 1 rope.
-- A guess must: be in the word list, differ by exactly ONE letter from the previous rung,
-  not be a repeat of an earlier rung.
-- Changed letter is highlighted gold on the new rung.
-- **Win**: reach END. Stars: steps == par → ★★★, par+1 → ★★☆, else ★☆☆.
-- **Lose**: rope hits 0 before reaching END ("The rope ran out").
-- **Hint** ("Drop a pebble"): reveals a correct next rung (one step on a shortest path from
-  the current word), costs 1 rope.
-- Practice mode: random ladder, same rules, no streak, unlimited.
-- Streaks: consecutive daily solves, localStorage. Daily state persists per date.
+## Boosts (earned by playing, localStorage)
+- Radar: highlights the best legal placement. Hindsight: after your move,
+  shows the best move you missed. Swap+: swap without losing your turn.
+  Tile pile: remaining tile counts.
 
-### Daily generation (deterministic, worldwide)
-- Seed = YYYY-MM-DD → mulberry32.
-- Pick START from WW_GIANT (seeded), BFS, collect words at distance 4–7, seeded pick END.
-- Par = BFS distance. Guaranteed solvable. Verify: same date → same puzzle across runs.
+## Files
+- wwf.js — pure engine (seeded mulberry32, no DOM). node-testable.
+- game.js — UI/controller. audio.js — WebAudio sfx (tile clacks).
+- dict-*.js — dictionary chunks. index.html / style.css / sw.js (word-well-v2).
+- tests/test-wwf.js — 78 headless assertions.
 
-### Meta / retention
-- Streak counter + longest streak.
-- Share text: `🪢 Word Well 2026-10-04 — COLD → WARM · 5 rungs (par 4) ★★☆ · 🔥 streak 3`
-  (clipboard copy, no emoji-grid needed).
-- Arcade backend: post `100 - steps` to the daily board `daily-YYYY-MM-DD` (higher = better,
-  mirrors maze-trace's inverted-time trick). Game id: `word-well`.
-- AI (invisible, via gamez-ai worker): new kind `well` — "Write a playful one-line theme
-  for a word ladder from {start} to {end} (max 12 words)". Shown on the daily intro card.
-  Silent local fallback ("Today's descent: {start} → {end}"). **No AI branding anywhere.**
-  (Worker update needed: add `well` kind to gamez-ai prompts.)
-
-### Look & feel — "ink & parchment"
-- Warm parchment background, ink-brown serif type (Carroll 1877, not neon).
-- The well: rungs are stone ledges descending down a well shaft; new rungs drop in with
-  animation. Rope meter hangs at the side, visibly shortening.
-- On-screen QWERTY keyboard (Wordle-style, big touch targets) + physical keyboard support.
-- WebAudio: soft thunk per rung, splash on fail, chime on win. AudioContext on gesture.
-- Unrequested creative touch (required): the well has **water at the bottom** — winning
-  drops your final word in with a ripple and a random "deep thought" fortune
-  (e.g. "The well says: …"). Fortunes are hand-written, wry, Pip-flavored.
-
-### Architecture
-- `ladder.js` — PURE logic, no DOM: graph build, BFS, `dailyPuzzle(dateStr)`,
-  `validateGuess(word, prevRung, usedSet)`, `hintPath(from, to)`, scoring. Testable in node.
-- `words.js` — already written (WW_ANSWERS 1100, WW_GUESSES 7254, WW_GIANT 874).
-- `game.js` — UI/controller. `index.html`, `style.css`.
-- Seeded PRNG mulberry32 (copy the pattern from other games). No Math.random in logic.
-- Mobile-first; keyboard must not break on iPhone (use input-less custom keyboard,
-  no focus stealing).
-
-### Tests (headless, must pass before push)
-- BFS: known pairs (CAT→DOG = 3: CAT COT DOT DOG) correct distance.
-- Daily determinism: same date → identical puzzle, 20 sampled dates all solvable, par in 4–7.
-- Validation: rejects non-words, 2-letter changes, repeats; accepts valid 1-letter changes.
-- Rope/scoring: stars correct at par/par+1/par+2; loss at rope 0.
-- Hint: returns a word 1 step closer to END along a shortest path.
-
-### Verification
-- Real-Chromium play: menu → daily card → type a full ladder → win screen with stars →
-  share copies text → streak increments → practice mode → hint → lose path (spend rope).
-- No console errors. Push to s6ggrpgrzf-droid/Gamez `word-well/`, verify live on Pages.
-- Add `word-well` to the hub index (check how other games are listed).
-- Bump gamez-ai worker with the `well` kind (dashboard), verify endpoint live.
+## Workflow notes
+- Push via github push_files; ?v= cache-bust on every JS/CSS push.
+- Hub card lives in ~/workspace/gamez/index.html + hub.js ("word-well").
