@@ -1853,19 +1853,23 @@
     Object.keys(saved).forEach(function (k) { total += saved[k]; });
     $('title-stars').textContent = total;
     $('title-streak').textContent = streakRec().streak;
-    // floating bubbles drift behind the logo
+    // bubble arc: a wand-trail rising from Stella's wand across the moon —
+    // composition, not scatter. [left%, top%, sizePx]
     var box = $('title-bubbles');
     box.innerHTML = '';
     var cols = ['R', 'B', 'G', 'Y', 'P'];
-    for (var i = 0; i < 8; i++) {
+    var arc = [
+      [31, 52, 30], [37, 45, 38], [44, 38, 44], [52, 31, 42],
+      [60, 25, 38], [68, 20, 34], [76, 16, 30], [84, 13, 26]
+    ];
+    for (var i = 0; i < arc.length; i++) {
       var img = document.createElement('img');
       img.src = Art.bubbleImg(cols[i % cols.length]);
       img.alt = '';
-      var sz = 28 + (i * 37) % 44;
-      img.style.width = sz + 'px'; img.style.height = sz + 'px';
-      img.style.left = (4 + (i * 41) % 84) + '%';
-      img.style.top = (3 + (i * 29) % 26) + '%';
-      img.style.animationDelay = (i * 0.55) + 's';
+      img.style.width = arc[i][2] + 'px'; img.style.height = arc[i][2] + 'px';
+      img.style.left = arc[i][0] + '%';
+      img.style.top = arc[i][1] + '%';
+      img.style.animationDelay = (i * 0.45) + 's';
       box.appendChild(img);
     }
   }
