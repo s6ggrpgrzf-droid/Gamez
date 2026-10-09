@@ -780,110 +780,248 @@
    * Water crossings on the route are ALWAYS paired with a ramp: the race
    * bot plays for the ramp when the direct line is wet. */
   TF.HOLES = [
-    { par: 2, biome: 0, tee: [28, 8], cup: [28, 76],
-      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
+    { par: 2, biome: 0, tee: [28, 8], cup: [28, 70],
+      fw: [[28, 8, 28, 70, 9]], green: [28, 70, 9, 7],
       tilt: [0, 0.3], brk: [0, 0],
-      hint: 'Drag back anywhere and release — that\u2019s the whole game.' },
-    { par: 2, biome: 0, tee: [38, 8], cup: [20, 76],
-      fw: [[38, 8, 20, 45, 8], [20, 45, 20, 76, 8]], green: [20, 76, 9, 7],
-      tilt: [3.1, 0.5], brk: [2.6, 1.3],
-      hint: 'White arrows show the break — aim into the slope and let it feed the ball in.' },
-    { par: 3, biome: 0, tee: [28, 8], cup: [28, 76],
-      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
-      dunes: [[35, 40, 5, 3], [21, 58, 6, -3]],
-      tilt: [1.2, 0.4], brk: [0, 0],
-      hint: 'Mounds shove the ball away — dips gather it in. Use them.' },
-    { par: 3, biome: 0, tee: [28, 8], cup: [28, 76],
-      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
-      mill: [31.5, 48, 0.55], bridges: [[28, 30, 19, 1.57]],
-      tilt: [0, 0.3], brk: [1.1, 0.9],
-      hint: 'The windmill! Time the blades — or take the open lane around the hub.' },
-    { par: 3, biome: 1, tee: [28, 8], cup: [28, 76],
-      fw: [[28, 8, 28, 76, 9]], green: [28, 76, 9, 7],
-      sand: [[37, 68, 4.5, 3.5]],
-      tilt: [0.4, 0.4], brk: [2.2, 1.2],
-      hint: 'Sand grabs the ball — carry the trap or play short of it.' },
-    { par: 3, biome: 1, tee: [28, 8], cup: [28, 76],
-      fw: [[28, 8, 28, 40, 8], [28, 40, 28, 76, 8]], green: [28, 76, 9, 7],
-      water: [[28, 47, 17, 3.5, 0]], ramps: [[28, 37, 0, 1]],
+      tp: { portals: [], pads: [{x:28,y:45,r:3,dx:0,dy:1,boost:8}], cannons: [],
+            tubes: [], belts: [], fans: [], wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'A dash pad is a free shove \u2014 roll onto it and hold on.' },
+    { par: 2, biome: 0, tee: [28, 8], cup: [36, 72],
+      fw: [[28, 8, 28, 44, 8], [28, 44, 36, 72, 8]], green: [36, 72, 9, 7],
       tilt: [0, 0.3], brk: [0, 0],
-      hint: 'Hit the ramp with speed and FLY the water.' },
-    { par: 3, biome: 1, tee: [28, 8], cup: [30, 76],
-      fw: [[28, 8, 46, 36, 8], [46, 36, 30, 76, 8]], green: [30, 76, 9, 7],
-      water: [[24, 48, 8, 6, 0]],
-      tilt: [5.8, 0.4], brk: [1.4, 1.0],
-      hint: 'Carry the lake if you dare — or ride the safe dogleg around it.' },
-    { par: 3, biome: 2, tee: [14, 10], cup: [42, 56],
-      fw: [[14, 10, 14, 52, 7], [14, 52, 42, 52, 7]], green: [42, 56, 9, 7],
-      walls: [[8, 61, 48, 61]],
-      tilt: [0, 0.2], brk: [4.7, 1.1],
-      hint: 'Bank it! The brick wall turns the corner for you.' },
+      tp: { portals: [{x1:28,y1:44,x2:36,y2:64,r:3.2,redirect:1,ex:0.27,ey:0.96}],
+            pads: [], cannons: [], tubes: [], belts: [], fans: [], wells: [],
+            loops: [], tables: [], lifts: [] },
+      hint: 'Blue rings fling you forward. The exit is kind \u2014 the cup is not close.' },
+    { par: 3, biome: 0, tee: [28, 8], cup: [28, 74],
+      fw: [[28, 8, 28, 74, 9]], green: [28, 74, 9, 7],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [],
+            belts: [{x:28,y:44,w:10,h:14,dx:0,dy:1,speed:6}], fans: [], wells: [],
+            loops: [], tables: [], lifts: [] },
+      hint: 'Ride the conveyor. It never gets tired \u2014 plan around it.' },
+    { par: 3, biome: 0, tee: [40, 8], cup: [16, 74],
+      fw: [[40, 8, 40, 46, 8], [40, 46, 16, 74, 8]], green: [16, 74, 9, 7],
+      sand: [[22, 62, 5, 4]],
+      tilt: [0.8, 0.4], brk: [0, 0],
+      tp: { portals: [], pads: [{x:40,y:38,r:3,dx:0,dy:1,boost:8}], cannons: [],
+            tubes: [], belts: [], fans: [], wells: [{x:26,y:58,r:8,strength:12}],
+            loops: [], tables: [], lifts: [] },
+      hint: 'Pads shove, wells tug \u2014 chain them and the corner disappears.' },
+    { par: 3, biome: 0, tee: [16, 8], cup: [40, 74],
+      fw: [[16, 8, 16, 44, 8], [16, 44, 40, 44, 7], [40, 44, 40, 74, 7]],
+      green: [40, 74, 9, 7],
+      trees: [[24, 52, 2], [32, 36, 2]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [{x:40,y:58,r:3,dx:0,dy:1,boost:8}], cannons: [],
+            tubes: [], belts: [], fans: [{x:28,y:36,dx:0,dy:1,range:10,strength:9}],
+            wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'Fans push the ball along \u2014 aim with the wind at your back.' },
+    { par: 3, biome: 1, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 28, 44, 9], [28, 60, 28, 78, 9]], green: [28, 78, 9, 7],
+      water: [[28, 52, 16, 4, 0]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [{path:[[28,34],[28,52],[28,64]],speed:16}],
+            belts: [], fans: [], wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'The tube skips the whole wet part. Dive in.' },
+    { par: 4, biome: 1, tee: [28, 8], cup: [28, 84],
+      fw: [[28, 8, 28, 84, 10]], green: [28, 84, 9, 7],
+      sand: [[20, 72, 4, 3], [36, 72, 4, 3]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [{x:28,y:40,angle:1.5708,angleCycle:0,power:32}],
+            tubes: [], belts: [], fans: [], wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'Feed the cannon a rolling ball and light the fuse.' },
+    { par: 3, biome: 1, tee: [28, 8], cup: [40, 74],
+      fw: [[28, 8, 28, 46, 8], [28, 46, 40, 74, 8]], green: [40, 74, 9, 7],
+      sand: [[28, 58, 10, 5]],
+      tilt: [0.5, 0.4], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [], belts: [], fans: [],
+            wells: [{x:38,y:62,r:7,strength:12}], loops: [], tables: [], lifts: [] },
+      hint: 'The well gathers stray balls. Use the tug \u2014 don\u2019t fight it.' },
+    { par: 4, biome: 1, tee: [28, 8], cup: [28, 80],
+      fw: [[28, 8, 28, 52, 9], [28, 62, 28, 80, 9]], green: [28, 80, 9, 7],
+      water: [[28, 58, 18, 3, 0]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [], belts: [], fans: [],
+            wells: [], loops: [], tables: [],
+            lifts: [{x1:28,y1:48,x2:28,y2:66,duration:2}] },
+      hint: 'Board the lift at the glow \u2014 it ferries you over the moat.' },
+    { par: 4, biome: 1, tee: [28, 8], cup: [28, 78],
+      fw: [[28, 8, 28, 78, 9]], green: [28, 78, 9, 7],
+      sand: [[18, 48, 4, 3], [38, 48, 4, 3]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [{x:28,y:32,r:3,dx:0,dy:1,boost:9}], cannons: [],
+            tubes: [], belts: [], fans: [], wells: [],
+            loops: [{x:28,y:48,r:6,minSpeed:10}], tables: [], lifts: [] },
+      hint: 'Hit the pad with pace \u2014 the loop only opens for fast balls.' },
+    { par: 3, biome: 2, tee: [36, 8], cup: [18, 74],
+      fw: [[36, 8, 36, 44, 8], [36, 44, 18, 74, 7]], green: [18, 74, 9, 7],
+      trees: [[26, 52, 2], [22, 60, 2]],
+      tilt: [2.9, 0.4], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [], belts: [], fans: [],
+            wells: [], loops: [], tables: [{x:36,y:44,r:5,omega:1.2}], lifts: [] },
+      hint: 'The turntable spins you around the corner. Let it work.' },
     { par: 4, biome: 2, tee: [28, 8], cup: [28, 80],
       fw: [[28, 8, 28, 80, 9]], green: [28, 80, 9, 7],
-      wind: [0, 3], trees: [[16, 40, 2], [40, 62, 2]],
-      tilt: [0, 0.3], brk: [3.14, 0.8],
-      hint: 'Crosswind — aim upwind and let it drift you home.' },
-    { par: 4, biome: 2, tee: [28, 8], cup: [28, 78],
-      fw: [[28, 8, 28, 78, 9]], green: [28, 78, 9, 7],
-      mill: [31.5, 38, 0.8], water: [[28, 62, 15, 3, 0]], ramps: [[28, 53, 0, 1]],
-      tilt: [0.2, 0.3], brk: [2.0, 1.0],
-      hint: 'Mill, then water. Thread the blades, then take the sky road.' },
-    { par: 3, biome: 3, tee: [28, 8], cup: [28, 76],
-      fw: [[28, 8, 28, 68, 9]], green: [28, 76, 8, 6],
-      water: [[28, 86, 15, 4, 0], [16, 76, 4, 9, 0], [40, 76, 4, 9, 0]],
-      tilt: [0, 0.2], brk: [1.57, 1.4],
-      hint: 'Peninsula green — water on three sides. The front door is open.' },
-    { par: 4, biome: 3, tee: [28, 8], cup: [28, 78],
-      fw: [[28, 8, 40, 44, 8], [40, 44, 28, 78, 8]], green: [28, 78, 9, 7],
-      dunes: [[28, 45, 9, -4.5], [44, 62, 5, 2.5]],
+      trees: [[44, 40, 2], [12, 58, 2]],
+      wind: [0.4, 2],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [],
+            belts: [{x:28,y:40,w:16,h:8,dx:1,dy:0,speed:5}],
+            fans: [{x:28,y:58,dx:0,dy:1,range:12,strength:9}],
+            wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'Ride the wind uphill \u2014 and fight the belt sideways.' },
+    { par: 4, biome: 2, tee: [28, 8], cup: [28, 82],
+      fw: [[28, 8, 28, 82, 9]], green: [28, 82, 9, 7],
+      walls: [[8, 30, 24, 30], [32, 30, 48, 30]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [],
+            cannons: [{x:28,y:18,angle:1.5708,angleCycle:0.7,power:34}],
+            tubes: [], belts: [], fans: [], wells: [{x:28,y:58,r:7,strength:10}],
+            loops: [], tables: [], lifts: [] },
+      hint: 'Time the barrel through the wall gap \u2014 the well gathers survivors.' },
+    { par: 3, biome: 2, tee: [14, 8], cup: [42, 76],
+      fw: [[14, 8, 14, 48, 8], [14, 48, 42, 76, 8]], green: [42, 76, 9, 7],
+      trees: [[24, 60, 2], [30, 68, 2]],
+      tilt: [0.7, 0.4], brk: [0, 0],
+      tp: { portals: [{x1:14,y1:48,x2:34,y2:64,r:3.2,redirect:1,ex:0.555,ey:0.832}],
+            pads: [], cannons: [], tubes: [], belts: [], fans: [], wells: [],
+            loops: [], tables: [], lifts: [] },
+      hint: 'Blue again, through the forest. Step in.' },
+    { par: 4, biome: 2, tee: [28, 8], cup: [28, 80],
+      fw: [[28, 8, 28, 44, 9], [28, 64, 28, 80, 9],
+           [28, 44, 12, 52, 7], [12, 52, 12, 68, 7], [12, 68, 28, 74, 7]],
+      green: [28, 80, 9, 7],
+      water: [[28, 54, 16, 4, 0]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [],
+            tubes: [{path:[[28,34],[28,54],[28,66]],speed:18}],
+            belts: [], fans: [], wells: [], loops: [], tables: [],
+            lifts: [{x1:12,y1:52,x2:12,y2:66,duration:2}] },
+      hint: 'Tube for the brave, lift for the patient. Both cross the water.' },
+    { par: 4, biome: 3, tee: [28, 8], cup: [28, 82],
+      fw: [[28, 8, 28, 82, 9]], green: [28, 82, 9, 7],
+      sand: [[36, 74, 4, 3]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [],
+            pads: [], cannons: [], tubes: [],
+            belts: [{x:28,y:66,w:12,h:10,dx:0,dy:1,speed:7}],
+            fans: [], wells: [], loops: [], tables: [{x:28,y:74,r:4,omega:1.4}], lifts: [] },
+      hint: 'Conveyor, turntable \u2014 juggle both and you\u2019re home.' },
+    { par: 4, biome: 3, tee: [28, 8], cup: [44, 80],
+      fw: [[28, 8, 28, 50, 9], [28, 50, 44, 80, 8]], green: [44, 80, 9, 7],
+      dunes: [[16, 50, 6, -4]],
+      wind: [0.5, 2.5],
+      tilt: [0.6, 0.4], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [{x:28,y:30,angle:1.26,angleCycle:0,power:36}],
+            tubes: [], belts: [], fans: [], wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'One great cannon shot clears the ridge \u2014 or grind around it.' },
+    { par: 5, biome: 3, tee: [28, 6], cup: [28, 88],
+      fw: [[28, 6, 12, 40, 9], [12, 40, 44, 60, 9], [44, 60, 28, 88, 9]],
+      green: [28, 88, 9, 7],
+      sand: [[28, 70, 6, 4]], water: [[18, 86, 6, 2.5, 0]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [], belts: [], fans: [],
+            wells: [], loops: [{x:28,y:50,r:6.5,minSpeed:12}], tables: [], lifts: [] },
+      hint: 'The exam begins. The loop demands commitment \u2014 hit it like you mean it.' },
+    { par: 5, biome: 3, tee: [44, 8], cup: [12, 82],
+      fw: [[44, 8, 44, 50, 9], [44, 50, 12, 82, 8]], green: [12, 82, 9, 7],
+      mill: [40, 30, 0.9], sand: [[30, 60, 5, 4], [20, 74, 4, 3]], trees: [[36, 66, 2]],
       tilt: [0.9, 0.4], brk: [0, 0],
-      hint: 'The valley gathers everything to its heart — play the funnel.' },
-    { par: 4, biome: 0, tee: [44, 8], cup: [14, 78],
-      fw: [[44, 8, 44, 40, 8], [44, 40, 14, 58, 8], [14, 58, 14, 78, 7]],
-      green: [14, 78, 9, 7], trees: [[34, 48, 2], [30, 54, 2], [24, 46, 1.8]],
-      bridges: [[44, 24, 19, 1.57]],
-      tilt: [2.8, 0.5], brk: [0.6, 1.2],
-      hint: 'A proper dogleg — the trees guard the shortcut.' },
-    { par: 4, biome: 1, tee: [28, 8], cup: [28, 78],
-      fw: [[28, 8, 28, 60, 9], [28, 60, 28, 78, 8]], green: [28, 78, 9, 7],
-      mill: [31.5, 44, 1.0], water: [[28, 66, 12, 3, 0]], ramps: [[28, 58, 0, 1]],
-      tilt: [0, 0.3], brk: [2.4, 1.1],
-      hint: 'Faster mill, wet finish. The ramp is your bridge.' },
-    { par: 4, biome: 1, tee: [28, 8], cup: [28, 78],
-      fw: [[28, 8, 28, 78, 9]], green: [28, 78, 9, 7],
-      sand: [[28, 52, 16, 6]], ramps: [[28, 42, 0, 1]],
-      tilt: [0.1, 0.4], brk: [0, 0],
-      hint: 'A waste of sand — or a runway. Your call.' },
-    { par: 4, biome: 2, tee: [28, 8], cup: [28, 78],
-      fw: [[28, 8, 28, 78, 5]], green: [28, 78, 8, 6],
-      trees: [[18, 25, 2], [38, 35, 2], [18, 50, 2], [38, 60, 2], [20, 70, 1.8]],
-      tilt: [0, 0.3], brk: [1.9, 1.3],
-      hint: 'The gauntlet — thread the trees, stay on the ribbon.' },
-    { par: 4, biome: 3, tee: [28, 8], cup: [28, 78],
-      fw: [[28, 8, 28, 78, 9]], green: [28, 78, 9, 7],
-      wind: [1.57, 4], dunes: [[20, 40, 5, 2.5], [36, 60, 5, 2.5]],
-      tilt: [1.0, 0.5], brk: [0, 0],
-      hint: 'Gust front — the air itself is a hazard now.' },
-    { par: 4, biome: 3, tee: [28, 8], cup: [28, 77],
-      fw: [[28, 8, 28, 70, 9]], green: [28, 77, 8, 6],
-      mill: [24.5, 55, 1.1],
-      water: [[28, 87, 13, 3.5, 0], [17, 77, 3.5, 8, 0], [39, 77, 3.5, 8, 0]],
-      tilt: [0.3, 0.3], brk: [4.4, 1.2],
-      hint: 'Mill and moat. Nothing about this one is free.' },
-    { par: 5, biome: 0, tee: [28, 6], cup: [28, 86],
-      fw: [[28, 6, 20, 45, 9], [20, 45, 28, 86, 9]], green: [28, 86, 9, 7],
-      dunes: [[36, 30, 6, 3], [18, 62, 7, -3]], trees: [[40, 55, 2], [14, 28, 2]],
-      wind: [0.5, 1.5],
-      tilt: [0.7, 0.4], brk: [2.9, 1.0],
-      hint: 'The long haul — five is a good score. Breathe.' },
-    { par: 5, biome: 2, tee: [28, 8], cup: [28, 80],
+      tp: { portals: [{x1:44,y1:50,x2:18,y2:70,r:3.5,redirect:1,ex:-0.447,ey:0.894}],
+            pads: [], cannons: [], tubes: [], belts: [], fans: [], wells: [],
+            loops: [], tables: [], lifts: [] },
+      hint: 'The long shortcut: blue skips the mill, but the green still bites.' },
+    { par: 4, biome: 3, tee: [28, 8], cup: [28, 80],
       fw: [[28, 8, 28, 80, 9]], green: [28, 80, 9, 7],
-      mill: [31.5, 35, 1.0], water: [[28, 63, 14, 3, 0]], ramps: [[28, 55, 0, 1]],
-      dunes: [[20, 45, 5, 3], [36, 70, 6, -3]], sand: [[38, 74, 4, 3]],
-      trees: [[16, 28, 2], [40, 48, 2]], bridges: [[28, 20, 21, 1.57]],
-      wind: [0.8, 2.5],
+      mill: [31.5, 40, 1.0], water: [[28, 62, 14, 3, 0]], ramps: [[28, 54, 0, 1]],
+      dunes: [[20, 44, 5, 3], [36, 70, 6, -3]], sand: [[38, 74, 4, 3]],
+      trees: [[16, 28, 2], [40, 48, 2]], wind: [0.8, 2.5],
       tilt: [0.4, 0.4], brk: [1.2, 1.3],
-      hint: 'Everything you\u2019ve learned, one last time. Make it count.' }
+      tp: { portals: [], pads: [], cannons: [], tubes: [], belts: [], fans: [],
+            wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'No toys, no shortcuts. Just you, the wind, and eighteen holes of lessons.' }
+  ];
+  TF.WONDERS = [
+    { par: 5, biome: 0, tee: [14, 8], cup: [42, 86],
+      wonder: { n: 1, name: 'Great Wall of China', flavor: 'Stone that outlived empires.' },
+      fw: [[14, 8, 14, 60, 8], [14, 60, 42, 60, 8], [42, 60, 42, 86, 8]],
+      green: [42, 86, 9, 7],
+      walls: [[4, 4, 4, 56], [18, 70, 38, 70], [52, 64, 52, 90]],
+      sand: [[28, 70, 6, 4]], trees: [[26, 44, 2], [24, 52, 2]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [],
+            pads: [{x:14,y:30,r:3,dx:0,dy:1,boost:8},{x:28,y:60,r:3,dx:1,dy:0,boost:8},
+                   {x:42,y:72,r:3,dx:0,dy:1,boost:8}],
+            beacons: [{x:14,y:20,r:3,dx:0,dy:1,boost:32},
+                      {x:14,y:44,r:3,dx:0.25,dy:0.97,boost:32},
+                      {x:17,y:58,r:3.5,dx:1,dy:0,boost:32},
+                      {x:40,y:60,r:3.5,dx:0.3,dy:0.95,boost:32},
+                      {x:42.5,y:81,r:3.5,dx:-0.08,dy:0.997,boost:14,exact:1}],
+            cannons: [], tubes: [], belts: [], fans: [], wells: [], loops: [],
+            tables: [], lifts: [] },
+      hint: 'Light the watchtower braziers in order \u2014 the golden path ends at the cup.' },
+    { par: 4, biome: 1, tee: [28, 8], cup: [28, 86],
+      wonder: { n: 2, name: 'Petra', flavor: 'Carved by hands, kept by the desert.' },
+      fw: [[28, 8, 28, 86, 7]], green: [28, 86, 9, 7],
+      walls: [[21, 8, 21, 52], [35, 8, 35, 52], [24, 52, 24, 86], [32, 52, 32, 86]],
+      sand: [[30, 76, 3, 2.5]],
+      tilt: [0, 0.2], brk: [2.2, 1.0],
+      tp: { portals: [{x1:28,y1:36,x2:28,y2:62,r:3.2,redirect:1,ex:0,ey:1}],
+            pads: [], cannons: [], tubes: [], belts: [], fans: [], wells: [],
+            loops: [], tables: [], lifts: [] },
+      hint: 'The rock hides a shortcut. Take it, then thread the narrows.' },
+    { par: 3, biome: 2, tee: [28, 8], cup: [28, 80],
+      wonder: { n: 3, name: 'Christ the Redeemer', flavor: 'Arms open over the whole course.' },
+      fw: [[28, 8, 28, 80, 10]], green: [28, 80, 9, 7],
+      dunes: [[16, 44, 6, 3], [40, 52, 6, 3]],
+      sand: [[22, 70, 5, 2.5], [38, 70, 5, 2.5]], trees: [[14, 64, 2], [42, 64, 2]],
+      tilt: [0, 0.4], brk: [0, 0],
+      tp: { portals: [], pads: [],
+            cannons: [{x:28,y:18,angle:1.5708,angleCycle:0.5,power:38}],
+            tubes: [], belts: [], fans: [], wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'Ride the cannon down the mountain \u2014 then land it soft.' },
+    { par: 4, biome: 2, tee: [28, 8], cup: [28, 84],
+      wonder: { n: 4, name: 'Machu Picchu', flavor: 'Clouds keep the score up here.' },
+      fw: [[28, 8, 28, 46, 9], [28, 58, 28, 84, 9]], green: [28, 84, 9, 7],
+      dunes: [[20, 26, 7, 4], [36, 26, 7, 4], [20, 70, 6, 4], [36, 76, 6, -4]],
+      sand: [[28, 80, 6, 3]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [], belts: [], fans: [],
+            wells: [], loops: [], tables: [],
+            lifts: [{x1:28,y1:44,x2:28,y2:60,duration:2.5}] },
+      hint: 'Climb the terraces by lift. The mountain rewards the patient.' },
+    { par: 4, biome: 3, tee: [28, 8], cup: [28, 82],
+      wonder: { n: 5, name: 'Chichen Itza', flavor: 'The serpent descends in stone and shadow.' },
+      fw: [[28, 8, 28, 82, 8]], green: [28, 82, 9, 7],
+      walls: [[36, 48, 44, 48], [44, 48, 44, 58], [44, 58, 36, 58], [36, 58, 36, 48],
+              [38, 50, 42, 50], [42, 50, 42, 56], [42, 56, 38, 56], [38, 56, 38, 50]],
+      dunes: [[20, 72, 5, 3], [36, 72, 5, 3]], sand: [[36, 78, 4, 3]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [{x:28,y:34,r:3,dx:0,dy:1,boost:10}], cannons: [],
+            tubes: [], belts: [], fans: [], wells: [],
+            loops: [{x:28,y:52,r:6.5,minSpeed:11}], tables: [], lifts: [] },
+      hint: 'Circle the pyramid \u2014 enter the loop hot, or bounce off.' },
+    { par: 3, biome: 3, tee: [28, 8], cup: [28, 70],
+      wonder: { n: 6, name: 'Colosseum', flavor: 'The crowd is stone, but it still roars.' },
+      fw: [[28, 8, 28, 70, 9]], green: [28, 70, 9, 7],
+      walls: [[16, 40, 22, 40], [34, 40, 40, 40], [40, 40, 48, 54], [48, 54, 40, 70],
+              [40, 70, 16, 70], [16, 70, 8, 54], [8, 54, 16, 40]],
+      sand: [[20, 60, 3, 2.5]], trees: [[18, 64, 2], [38, 64, 2]],
+      tilt: [0, 0.2], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [], tubes: [], belts: [], fans: [],
+            wells: [{x:28,y:56,r:9,strength:14}], loops: [], tables: [], lifts: [] },
+      hint: 'The well drags every ball to center court \u2014 aim off it and bend home.' },
+    { par: 4, biome: 1, tee: [28, 8], cup: [28, 84],
+      wonder: { n: 7, name: 'Taj Mahal', flavor: 'Marble remembers every ripple.' },
+      fw: [[28, 8, 28, 36, 9], [28, 52, 28, 84, 9]], green: [28, 84, 9, 7],
+      water: [[28, 44, 7, 9, 0], [15, 44, 6, 9, 0], [41, 44, 6, 9, 0]],
+      dunes: [[16, 66, 5, 2], [40, 66, 5, 2]], sand: [[28, 76, 7, 3]],
+      tilt: [0, 0.3], brk: [0, 0],
+      tp: { portals: [], pads: [], cannons: [],
+            tubes: [{path:[[28,30],[28,44],[28,58]],speed:18}],
+            belts: [], fans: [], wells: [], loops: [], tables: [], lifts: [] },
+      hint: 'The pools are mirrors \u2014 cross through the tube, not over them.' }
   ];
   TF.TOUR_PAR = TF.HOLES.reduce(function (s, h) { return s + h.par; }, 0);
 
@@ -1009,15 +1147,45 @@
       intro: 'designed',
       focusMech: null,
       hint: spec.hint || null,
-      // transport objects: the designed tour never places them (par integrity)
+      // designer-placed transports: wonders / tour-2.0 specs carry spec.tp
       portals: [], pads: [], cannons: [], tubes: [], belts: [],
       fans: [], wells: [], loops: [], tables: [], lifts: [],
+      beacons: [],            // ordered flame-gate chain (wonder set-pieces)
+      _beacon: null,          // chain state {next, lit[], n, finalT} (fresh per hole attempt)
+      wonder: spec.wonder || null,
       relic: relic,
       gems: gems
     };
+    // designer transports land on the hole verbatim (shallow copies), tagged like the rest
+    if (spec.tp) {
+      for (var tpD0 = 0; tpD0 < TF.TRANSPORT_MECHS.length; tpD0++) {
+        var tpT0 = TF.TRANSPORT_MECHS[tpD0], tpA0 = spec.tp[tpT0 + 's'];
+        if (tpA0 && tpA0.length) {
+          hole[tpT0 + 's'] = tpA0.map(function (o) {
+            var c = {}, k;
+            for (k in o) c[k] = o[k];
+            return c;
+          });
+          mechanics.push(tpT0);
+        }
+      }
+    }
+    // beacon chains (wonder set-pieces): copied verbatim, directions normalized.
+    // Chain state is fresh per makeHole call = reset per hole attempt.
+    if (spec.tp && spec.tp.beacons && spec.tp.beacons.length) {
+      hole.beacons = spec.tp.beacons.map(function (o) {
+        var bl = Math.hypot(o.dx, o.dy) || 1;
+        return { x: o.x, y: o.y, r: o.r || 3,
+                 dx: o.dx / bl, dy: o.dy / bl, boost: o.boost || 10,
+                 exact: o.exact ? 1 : 0 };
+      });
+      var bcLit = [];
+      for (var bcBi = 0; bcBi < hole.beacons.length; bcBi++) bcLit.push(false);
+      hole._beacon = { next: 0, lit: bcLit, n: hole.beacons.length, finalT: -1 };
+      mechanics.push('beacon');
+    }
     // race mode reuses tour specs but gets procedural transports (tour pars untouched)
-    if (opts && opts.transports) {
-      TF.placeTransports(hole, rng, { intro: 'challenge', focus: null, guarantee: true });
+    if (opts && opts.transports) {      TF.placeTransports(hole, rng, { intro: 'challenge', focus: null, guarantee: true });
       for (var tpTi2 = 0; tpTi2 < TF.TRANSPORT_MECHS.length; tpTi2++) {
         var tpTk2 = TF.TRANSPORT_MECHS[tpTi2];
         if (hole[tpTk2 + 's'] && hole[tpTk2 + 's'].length) mechanics.push(tpTk2);
@@ -1078,7 +1246,8 @@
       stillT: 0,      // stuck-ball guard
       carry: null,    // transport capture state {kind,t,dur,...} (transport-sim.js)
       tevent: null,   // transient transport event {k} (render reads & clears)
-      _tpZone: null   // zone object currently applying (entry-edge detection)
+      _tpZone: null,  // zone object currently applying (entry-edge detection)
+      _bcZone: -1     // beacon index currently inside (-1 = none; entry-edge detection)
     };
   };
 
@@ -1133,7 +1302,7 @@
     ball.curve = 0; ball.sticky = !!s.sticky;
     ball.gems = s.gems | 0; ball.gotRelic = !!s.gotRelic;
     ball.pickup = null; ball.braked = false;
-    ball.carry = null; ball.tevent = null; ball._tpZone = null;
+    ball.carry = null; ball.tevent = null; ball._tpZone = null; ball._bcZone = -1;
     if (hole.gems) for (var gi = 0; gi < hole.gems.length && gi < s.gemTaken.length; gi++)
       hole.gems[gi].taken = s.gemTaken[gi];
     if (hole.relic) hole.relic.taken = !!s.relicTaken;
@@ -1350,6 +1519,7 @@
     // (grounded only; a ball flying over a portal mouth is not captured)
     if (typeof TPS !== 'undefined') {
       TPS.zoneStep(hole, ball, dt, t);
+      if (TPS.beaconStep) TPS.beaconStep(hole, ball, t);
       var tpEnter = TPS.tryEnter(hole, ball, t);
       if (tpEnter) {
         ball.carry = tpEnter;
@@ -1579,7 +1749,7 @@
     function consider(ex, ey, need) {
       var dx = ex - bx, dy = ey - by;
       var d = Math.hypot(dx, dy);
-      if (d > 30 || d < 3) return;                        // too far, or on top of it
+      if (d > 30 || d < 1.0) return;                       // too far, or truly on top of it
       var vx = tx - bx, vy = ty - by;
       var L2 = vx * vx + vy * vy;
       var tt = L2 > 0 ? (dx * vx + dy * vy) / L2 : 0;
@@ -1605,8 +1775,10 @@
       o = hole.portals[ti2]; consider(o.x1, o.y1, 8);
     }
     if (bestD === Infinity) return null;
+    // stay grounded: entries capture rolling balls only; a launched ball
+    // would fly straight over the mouth
     return { x: bestX, y: bestY,
-             power: Math.min(Math.max(bestD * 1.35, bestNeed), TF.MAX_POWER * 0.9) };
+             power: Math.min(Math.max(bestD * 1.35, bestNeed), TF.LAUNCH_MIN - 1) };
   };
 
   // Race bot brain (compact port of the headless greedy bot). bs = {ball,
@@ -1624,8 +1796,13 @@
     var ball = bs.ball;
     if (!ball || !ball.resting || ball.inCup || ball.inWater) return null;
     var wps = bs.wps;
-    while (bs.wi < wps.length - 1 &&
-           Math.hypot(ball.x - wps[bs.wi].x, ball.y - wps[bs.wi].y) < 6) bs.wi++;
+    // jump to the furthest waypoint we're already near — transports can
+    // shortcut the ball far ahead (tube/portal/lift/cannon rides)
+    var wj2;
+    for (wj2 = wps.length - 1; wj2 >= bs.wi; wj2--) {
+      if (Math.hypot(ball.x - wps[wj2].x, ball.y - wps[wj2].y) < 6) break;
+    }
+    bs.wi = Math.min(wj2 + 1, wps.length - 1);
     var tgt = wps[bs.wi];
     var dx = tgt.x - ball.x, dy = tgt.y - ball.y;
     var dist = Math.hypot(dx, dy) || 0.001;
@@ -1663,6 +1840,8 @@
       power = Math.min(power, TF.LAUNCH_MIN - 1);
     }
     // avoid water: if the straight line crosses water, take the next waypoint
+    // (but never when committed to a transport entry — the transport IS the
+    // crossing solution, e.g. a lift over a moat)
     var blocked = false, k, f;
     for (k = 0; k < hole.water.length && !blocked; k++) {
       var we = hole.water[k];
@@ -1672,7 +1851,7 @@
         if (ex * ex + ey * ey < 1) { blocked = true; break; }
       }
     }
-    if (blocked && bs.wi + 1 < wps.length) {
+    if (blocked && !tpAim && bs.wi + 1 < wps.length) {
       tgt = wps[bs.wi + 1];
       dx = tgt.x - ball.x; dy = tgt.y - ball.y;
       dist = Math.hypot(dx, dy) || 0.001;
