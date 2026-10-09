@@ -12,6 +12,11 @@
   ND.DT = 1 / 60;
   var TAU = Math.PI * 2;
 
+  // Physics revision: bump whenever turn/grip/accel behavior changes so old
+  // ghost pose samples (recorded under a different feel) are never replayed
+  // as wrong lines. Ghost records carry this rev; loaders ignore older revs.
+  ND.PHYS_REV = 2;
+
   /* ---------------- seeded RNG ---------------- */
 
   ND.mulberry32 = function (seed) {
@@ -197,13 +202,15 @@
   /* ---------------- cars ---------------- */
 
   // Base car archetypes: distinct feel, not just stats.
+  // Car archetypes. turn = base yaw rate (rad/s at full lock); raised in
+  // phys rev 2 (was 2.7/2.9/3.1) so steering answers instead of feeling sluggish.
   ND.CARS = [
-    { id: 'grip',     name: 'Aegis',      top: 47, turn: 2.7, grip: 9.0, dlat: 1.4, yaw: 1.45, chg: 0.90,
+    { id: 'grip',     name: 'Aegis',      top: 47, turn: 3.3, grip: 9.0, dlat: 1.4, yaw: 1.45, chg: 0.90,
       blurb: 'Glues itself to the road. Forgiving, not flashy.' },
     { id: 'balanced', name: 'Vector',
-      top: 49, turn: 2.9, grip: 6.5, dlat: 1.0, yaw: 1.65, chg: 1.05,
+      top: 49, turn: 3.5, grip: 6.5, dlat: 1.0, yaw: 1.65, chg: 1.05,
       blurb: 'The all-rounder. Quick if you dare to drift it.' },
-    { id: 'drift',    name: 'Sidewinder', top: 48, turn: 3.1, grip: 5.0, dlat: 0.7, yaw: 1.90, chg: 1.30,
+    { id: 'drift',    name: 'Sidewinder', top: 48, turn: 3.7, grip: 5.0, dlat: 0.7, yaw: 1.90, chg: 1.30,
       blurb: 'Lives sideways. Huge boosts, demands commitment.' }
   ];
 
@@ -302,7 +309,9 @@
     }
 
     // --- steering / yaw ---
-    var spdF = clamp(sf / 14, 0.32, 1);
+    // spdF: low-speed falloff eased in phys rev 2 (was sf/14, floor 0.32) so
+    // the car still answers in slow hairpins instead of going numb.
+    var spdF = clamp(sf / 11, 0.45, 1);
     if (sf > spec.top * 1.04) spdF *= 0.72; // twitchy at insane speed
     var yawRate = steer * spec.turn * (wantDrift ? spec.yaw : 1) * spdF;
     car.th = wrapAngle(car.th + yawRate * dt);
@@ -463,12 +472,14 @@
     var drift = false;
     if (worst > 0.022 && skill > 0.86 && sf > vTarget * 1.02) {
       // commit to the slide like a brave idiot
+      // (boosts eased in phys rev 2: base turn is stronger now, so the AI
+      // needs less of its own help to hit the same effective yaw)
       drift = true;
-      steer = clamp(steer * 1.6, -1, 1);
-      if (Math.abs(steer) < 0.7) steer = steer < 0 ? -0.85 : 0.85;
+      steer = clamp(steer * 1.2, -1, 1);
+      if (Math.abs(steer) < 0.7) steer = steer < 0 ? -0.75 : 0.75;
     } else if (sf > vTarget * 1.12) {
       // scrub speed by steering harder (same tool the player has)
-      steer = clamp(steer * 1.35, -1, 1);
+      steer = clamp(steer * 1.15, -1, 1);
     }
     return { steer: steer, drift: drift };
   };

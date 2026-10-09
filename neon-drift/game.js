@@ -694,7 +694,9 @@ function openPrerace(mode, cup, race) {
   if (mode !== 'tt') {
     ND.RIVALS.forEach(function (r) { row(r.color, r.name, '“' + r.taunt + '”', false); });
   } else {
-    row('#8b93b8', 'GHOST', S.ghosts[trackKey(cup, race)] ? 'your best lap' : 'dev driver “Pip” · beat ' + fmtMs(devGhostMs(cup, race)), false);
+    // a ghost counts only if it matches the current physics rev
+    var gh = S.ghosts[trackKey(cup, race)];
+    row('#8b93b8', 'GHOST', ghostIsCurrent(gh) ? 'your best lap' : 'dev driver “Pip” · beat ' + fmtMs(devGhostMs(cup, race)), false);
   }
   document.querySelectorAll('#diff-row .diff').forEach(function (b) {
     b.classList.toggle('on', +b.getAttribute('data-d') === S.difficulty);
@@ -756,6 +758,11 @@ function buildDrivers(mode, cup) {
   return d;
 }
 
+// a saved ghost is usable only if recorded under the current physics rev
+function ghostIsCurrent(gh) {
+  return !!(gh && gh.s && gh.s.length > 50 && (gh.rev || 0) >= ND.PHYS_REV);
+}
+
 function startRace(mode, cup, raceIdx) {
   var track = getTrack(cup, raceIdx);
   var drivers = buildDrivers(mode, cup);
@@ -775,7 +782,10 @@ function startRace(mode, cup, raceIdx) {
   G.ghost = null; G.ghostDev = false;
   if (mode === 'tt') {
     var key = trackKey(cup, raceIdx);
-    if (S.ghosts[key] && S.ghosts[key].s && S.ghosts[key].s.length > 50) { G.ghost = S.ghosts[key]; }
+    // personal-best ghost, but only if it was recorded under the current
+    // physics rev — old-feel pose samples would draw the wrong line
+    var saved = S.ghosts[key];
+    if (ghostIsCurrent(saved)) { G.ghost = saved; }
     else {
       var dg = devGhostTape(cup, raceIdx);
       G.ghost = { s: dg.samples, ms: dg.ms }; G.ghostDev = true;
@@ -814,6 +824,19 @@ var steerPtr = null; // {id, anchorX} — drag scheme
 var tapPtrs = {};    // pointerId -> -1 | 1 — tap scheme (most recent finger wins)
 var keyL = false, keyR = false, keyD = false;
 
+// Drag-steering feel (tunables): full lock at 60px of thumb travel so the car
+// answers quickly; a 6px deadzone keeps the center from feeling twitchy; the
+// progressive curve is gentle near center and bites fully at the edges.
+var STEER_FULL_PX = 60, STEER_DEAD_PX = 6;
+function steerFromDrag(dx) {
+  var adx = dx < 0 ? -dx : dx;
+  if (adx < STEER_DEAD_PX) return 0;
+  var t = (adx - STEER_DEAD_PX) / (STEER_FULL_PX - STEER_DEAD_PX);
+  if (t > 1) t = 1;
+  var mag = t * t * 0.35 + t * 0.65; // progressive: soft center, full bite at edges
+  return dx < 0 ? -mag : mag;
+}
+
 function tapSide(x) { return x < window.innerWidth / 2 ? -1 : 1; }
 function tapRecompute() {
   var ids = Object.keys(tapPtrs);
@@ -835,7 +858,7 @@ cv.addEventListener('pointerdown', function (e) {
 });
 cv.addEventListener('pointermove', function (e) {
   if (steerPtr && e.pointerId === steerPtr.id) {
-    IN.steer = clamp((e.clientX - steerPtr.anchorX) / 90, -1, 1);
+    IN.steer = steerFromDrag(e.clientX - steerPtr.anchorX);
   } else if (tapPtrs[e.pointerId] !== undefined) {
     tapPtrs[e.pointerId] = tapSide(e.clientX);
     tapRecompute();
@@ -1305,7 +1328,8 @@ function showResults() {
     }
     if (bestSeg && G.rec.length > 60) {
       var s0 = Math.floor(bestSeg.a / 4), s1 = Math.ceil(bestSeg.b / 4);
-      S.ghosts[key] = { s: G.rec.slice(s0, s1), ms: Math.round((bestSeg.b - bestSeg.a) * 1000 / 60) };
+      S.ghosts[key] = { s: G.rec.slice(s0, s1), ms: Math.round((bestSeg.b - bestSeg.a) * 1000 / 60),
+        rev: ND.PHYS_REV }; // physics rev: old-feel pose samples are never replayed
     }
   }
 
@@ -1649,6 +1673,25 @@ function selftest() {
       pe('pointerup', 190, 103);
       if (IN.steer !== 0) throw new Error('drag release should reset steer');
       S.controls = keepC; G.screen = keepS; IN.steer = 0;
+    });
+    step('drag steering curve: deadzone, full lock, progressive', function () {
+      if (steerFromDrag(0) !== 0) throw new Error('center must be 0');
+      if (steerFromDrag(5) !== 0 || steerFromDrag(-5) !== 0) throw new Error('6px deadzone');
+      if (steerFromDrag(60) !== 1 || steerFromDrag(-60) !== -1) throw new Error('full lock at 60px');
+      if (steerFromDrag(200) !== 1 || steerFromDrag(-200) !== -1) throw new Error('must cap at full lock');
+      var mid = steerFromDrag(33);
+      if (!(mid > 0.2 && mid < 0.5)) throw new Error('mid-drag should be gentle, got ' + mid);
+      if (steerFromDrag(33) >= 33 / 60) throw new Error('curve must be sub-linear near center');
+      if (!(steerFromDrag(50) > steerFromDrag(33))) throw new Error('must be monotonic');
+    });
+    step('ghost rev: stale physics ghosts are rejected', function () {
+      var mk = function (rev) { return { s: new Array(60), ms: 1000, rev: rev }; };
+      if (!ghostIsCurrent(mk(ND.PHYS_REV))) throw new Error('current rev ghost must load');
+      if (ghostIsCurrent(mk(1))) throw new Error('old rev ghost must be rejected');
+      if (ghostIsCurrent({ s: new Array(60), ms: 1000 })) throw new Error('rev-less ghost must be rejected');
+      if (ghostIsCurrent({ s: new Array(10), ms: 1000, rev: ND.PHYS_REV })) throw new Error('short ghost must be rejected');
+      if (ghostIsCurrent(null)) throw new Error('missing ghost must be rejected');
+      if (ND.PHYS_REV !== 2) throw new Error('PHYS_REV should be 2, got ' + ND.PHYS_REV);
     });
     step('full race completes to results', function () {
       // AI drives the player slot; run the real tickSim loop
