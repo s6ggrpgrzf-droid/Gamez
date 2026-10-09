@@ -1,5 +1,11 @@
 /* Gamez arcade hub — neon arcade at midnight */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --font-display:"Bricolage Grotesque",ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --gold:#d4a94e;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+::selection{background:var(--gold);color:#0b0614}
 html,body{height:100%}
 body{
   margin:0;color:#fff;
@@ -9,7 +15,7 @@ body{
   overflow-x:hidden;user-select:none;-webkit-user-select:none;
 }
 /* ---------- hero ---------- */
-.hero{position:relative;width:100%;overflow:hidden;text-align:center;
+.hero{position:relative;width:100%;overflow:hidden;text-align:center;flex-shrink:0;
   padding:calc(30px + env(safe-area-inset-top)) 20px 26px;
   background:radial-gradient(130% 100% at 50% -10%, #2b1055 0%, #140a28 55%, #0b0614 100%);}
 #sky{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
@@ -19,30 +25,61 @@ body{
 .bulbs i{width:8px;height:8px;border-radius:50%;background:#ffd34d;
   box-shadow:0 0 8px 2px rgba(255,211,77,.8);animation:chase 1.6s infinite}
 @keyframes chase{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1.15)}}
-h1{
-  margin:6px 0 2px;font-size:clamp(48px,11vw,84px);font-weight:900;letter-spacing:10px;
+h1.masthead{
+  margin:6px 0 2px;font-family:var(--font-display);font-weight:800;
+  font-size:clamp(52px,12vw,92px);letter-spacing:.06em;
   background:linear-gradient(100deg,#ffd34d 10%,#ff5fa2 45%,#4de3ff 90%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 4px 22px rgba(255,95,162,.35));
 }
-.tag{color:rgba(255,255,255,.65);font-size:15px;margin:0 0 14px}
+.tag{color:rgba(255,255,255,.65);font-size:15px;margin:0 0 12px}
+.greet{color:rgba(255,255,255,.78);font-size:15px;margin:0 0 18px}
 .namepill{
   position:relative;display:inline-flex;align-items:center;gap:8px;
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+  border-top-color:rgba(255,255,255,.28);
   color:#fff;border-radius:999px;padding:9px 18px;font-size:14px;cursor:pointer;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  box-shadow:0 8px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.18);
   transition:transform .15s, background .15s;
 }
 .namepill:active{transform:scale(.96)}
 .namepill b{color:#ffd34d}
 .namepill input{background:transparent;border:none;outline:none;color:#ffd34d;
   font:inherit;font-weight:800;width:110px;text-align:center}
+/* ---------- spotlight ---------- */
+.spotlight{
+  display:block;max-width:520px;margin:0 auto;text-decoration:none;color:#fff;
+  border:1px solid transparent;border-radius:18px;overflow:hidden;text-align:left;
+  background:linear-gradient(rgba(22,13,38,.94),rgba(13,8,25,.96)) padding-box,
+    linear-gradient(135deg,rgba(212,169,78,.55),rgba(212,169,78,.08) 55%,rgba(255,255,255,.14)) border-box;
+  box-shadow:0 14px 38px rgba(0,0,0,.5),0 0 22px rgba(212,169,78,.1);
+  transition:transform .15s;
+}
+.spotlight:active{transform:scale(.97)}
+.spotlight .kicker{margin:12px 16px 0}
+.sp-main{display:flex;align-items:center;gap:14px;padding:10px 16px 14px}
+.sp-art{flex:0 0 76px;width:76px;height:76px;border-radius:14px;position:relative;overflow:hidden;
+  background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.sp-art::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(10,6,24,.12),rgba(10,6,24,.12))}
+.sp-art .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:40px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}
+.sp-body{flex:1;min-width:0}
+.sp-body b{display:block;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:-.01em}
+.sp-body i{display:block;font-style:normal;font-size:12.5px;color:rgba(255,255,255,.6);margin-top:3px;
+  line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sp-go{font-size:22px;color:var(--gold);flex:0 0 auto}
 /* ---------- sections ---------- */
-section{width:100%;max-width:1100px;padding:10px 20px 0;position:relative;z-index:1}
-h2{font-size:19px;font-weight:900;letter-spacing:1px;margin:18px 2px 12px;
-  display:flex;align-items:center;gap:10px}
-h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.22),transparent)}
-h2 .dot{width:9px;height:9px;border-radius:50%;background:#ff5fa2;box-shadow:0 0 10px #ff5fa2;animation:chase 2s infinite}
+section{width:100%;max-width:1100px;padding:30px 20px 0;position:relative;z-index:1}
+.collection{width:100%;max-width:1100px;position:relative;z-index:1}
+.kicker{display:block;font-size:10px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:7px}
+.shead{margin:6px 2px 20px}
+.shead h2{margin:0;font-family:var(--font-display);font-weight:700;
+  font-size:clamp(24px,5.4vw,32px);letter-spacing:-.01em}
+.shead::after{content:"";display:block;height:1px;margin-top:14px;
+  background:linear-gradient(90deg,rgba(212,169,78,.45),rgba(212,169,78,.06) 60%,transparent)}
 /* ---------- continue rail ---------- */
 #continue{display:none}
 .rail{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 14px;
@@ -70,38 +107,52 @@ h2 .dot{width:9px;height:9px;border-radius:50%;background:#ff5fa2;box-shadow:0 0
 .daily .cal{font-size:26px}
 .daily b{font-size:14px;display:block}
 .daily span{font-size:12px;color:rgba(255,255,255,.6)}
-/* ---------- game cards ---------- */
+/* ---------- game cards: one locked chrome ---------- */
 .games{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-  gap:20px;padding:6px 20px 34px;max-width:1100px;width:100%;position:relative;z-index:1}
+  gap:22px;padding:2px 20px 40px;max-width:1100px;width:100%;position:relative;z-index:1}
 .card{
-  position:relative;border-radius:22px;overflow:hidden;text-decoration:none;color:#fff;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  box-shadow:0 16px 44px rgba(0,0,0,.5);
-  transition:transform .18s, box-shadow .18s;display:flex;flex-direction:column;
+  position:relative;border-radius:20px;overflow:hidden;text-decoration:none;color:#fff;
+  border:1px solid transparent;
+  background:linear-gradient(rgba(21,13,36,.94),rgba(13,8,25,.96)) padding-box,
+    linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.05) 42%,rgba(212,169,78,.16)) border-box;
+  box-shadow:0 18px 44px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.4);
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease);display:flex;flex-direction:column;
 }
-.card:hover{transform:translateY(-6px)}
-.card:active{transform:scale(.98)}
-.card .art{height:168px;position:relative;overflow:hidden;background-color:#160c28}
-.card .art img{width:100%;height:100%;object-fit:cover;display:block;
-  transition:transform .5s ease}
-.card:hover .art img{transform:scale(1.06)}
-.card .art::after{content:"";position:absolute;inset:0;
-  background:linear-gradient(180deg,transparent 55%,rgba(8,4,16,.55))}
+.card:hover{transform:translateY(-6px);box-shadow:0 24px 54px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4)}
+.card:active{transform:scale(.97)}
+.card.featured{grid-column:span 2;
+  border:1px solid transparent;
+  background:linear-gradient(rgba(24,15,40,.95),rgba(14,8,26,.96)) padding-box,
+    linear-gradient(135deg,rgba(212,175,55,.7),rgba(212,175,55,.12) 58%,rgba(255,255,255,.2)) border-box;
+  box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 28px rgba(212,175,55,.12);
+}
+.card .art{aspect-ratio:16/10;position:relative;overflow:hidden;background-color:#160c28}
+.card .art img{width:100%;height:100%;object-fit:cover;display:block}
+/* shared grade: midnight wash + bottom scrim, every card */
+.card .art::after{content:"";position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(10,6,24,.15),rgba(10,6,24,.15)),
+    linear-gradient(180deg,transparent 50%,rgba(8,4,16,.66));}
+.card .shine{position:absolute;top:-25%;bottom:-25%;left:0;width:42%;z-index:3;pointer-events:none;
+  transform:rotate(18deg) translateX(-320%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent);}
+.js .card .shine{animation:shineSweep 7.5s ease-in-out infinite;animation-delay:var(--sd,0s)}
+@keyframes shineSweep{0%,74%{transform:rotate(18deg) translateX(-320%)}94%,100%{transform:rotate(18deg) translateX(620%)}}
 .badge{
-  position:absolute;top:10px;left:10px;z-index:2;font-size:11px;font-weight:900;letter-spacing:1.5px;
-  padding:6px 11px;border-radius:999px;color:#0b0614;background:var(--glow,#ffd34d);
-  box-shadow:0 0 14px var(--glow,#ffd34d);
+  position:absolute;top:10px;left:10px;z-index:4;font-size:10px;font-weight:800;letter-spacing:2px;
+  padding:6px 11px;border-radius:999px;color:var(--glow,#ffd34d);
+  background:rgba(8,5,16,.74);border:1px solid color-mix(in srgb,var(--glow,#ffd34d) 60%,transparent);
+  box-shadow:0 4px 14px rgba(0,0,0,.5);
 }
-.card .art .pbar{position:absolute;left:0;right:0;bottom:0;height:5px;z-index:2;
+.card .art .pbar{position:absolute;left:0;right:0;bottom:0;height:5px;z-index:4;
   background:rgba(255,255,255,.15)}
 .card .art .pbar i{display:block;height:100%;width:0;
   background:linear-gradient(90deg,var(--glow,#ffd34d),#fff);border-radius:0 3px 3px 0;
   box-shadow:0 0 8px var(--glow,#ffd34d)}
 .card .body{padding:16px 18px 18px;flex:1;display:flex;flex-direction:column}
-.card .body h3{margin:0 0 6px;font-size:21px;font-weight:900}
+.card .body h3{margin:0 0 6px;font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
 .card .body p{margin:0;color:rgba(255,255,255,.62);font-size:13.5px;line-height:1.5;flex:1}
 .card .meta{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+@media (max-width:640px){.card.featured{grid-column:span 1}}
 .play{
   display:inline-block;padding:10px 24px;border-radius:999px;font-weight:800;font-size:15px;color:#0b0614;
   background:var(--glow,#ffd34d);box-shadow:0 6px 20px color-mix(in srgb,var(--glow,#ffd34d) 55%,transparent);
@@ -120,10 +171,40 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
   animation:wd-shimmer 7s linear infinite}
 @keyframes wd-shimmer{to{background-position:200% center}}
 .studio-footer .tagline{display:block;margin-top:10px;font-size:12.5px;letter-spacing:.18em;color:rgba(255,255,255,.38)}
-@media (max-width:380px){.games{grid-template-columns:1fr}.card .art{height:180px}}
+@media (max-width:380px){.games{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){
-  .bulbs i,.card .art img,h2 .dot,.studio-footer .wordmark{animation:none;transition:none}
+  .bulbs i,.card .art img,.studio-footer .wordmark{animation:none;transition:none}
+  .js .rv{opacity:1 !important;transform:none !important;transition:none}
+  .js .masthead,.js .tag,.js .greet,.js .spotlight{opacity:1 !important;animation:none !important;filter:none !important}
+  .js .card .shine{animation:none;opacity:.3;transform:rotate(18deg) translateX(120%)}
 }
+@media (prefers-reduced-transparency:reduce){
+  .namepill{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(22,13,38,.96)}
+}
+
+/* ---------- motion: choreographed load + reveal-once ---------- */
+/* base (no-JS): everything visible. .js gates all hidden states. */
+.js .masthead{opacity:0;animation:heroRise 1s var(--ease) .05s forwards}
+.js .tag{opacity:0;animation:heroRise .9s var(--ease) .22s forwards}
+.js .greet{opacity:0;animation:heroRise .9s var(--ease) .36s forwards}
+.js .spotlight{opacity:0;animation:heroRise .9s var(--ease) .5s forwards}
+@keyframes heroRise{
+  from{opacity:0;transform:translateY(20px);filter:blur(10px)}
+  to{opacity:1;transform:none;filter:blur(0)}
+}
+.js .rv{opacity:0;transform:translateY(26px);
+  transition:opacity .55s ease-out,transform .65s var(--ease);
+  transition-delay:var(--rd,0s)}
+.js .rv.in{opacity:1;transform:none}
+
+/* ---------- footer sound toggle ---------- */
+.sndbtn{
+  display:block;margin:14px auto 0;background:none;border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;color:rgba(255,255,255,.55);font-size:14px;padding:6px 12px;cursor:pointer;
+  transition:transform .15s,color .15s;
+}
+.sndbtn:active{transform:scale(.94)}
+.sndbtn.off{color:rgba(255,255,255,.28)}
 
 /* Word Well key art: pure CSS, ink & parchment (no image file) */
 .art-word-well{background:radial-gradient(circle at 50% 28%,#f8f0dc 0%,#ead9b6 52%,#c8ab7d 100%)}
@@ -142,12 +223,14 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
 /* Neon Drift key art: pure CSS, night asphalt with neon light trails (no image file) */
 .art-neon-drift{background:linear-gradient(160deg,#070a16 0%,#10162e 55%,#1c1240 100%)}
 .art-neon-drift::before{content:"\1F3CE";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 18px rgba(77,216,255,.8))}
-.art-neon-drift::after{content:"";position:absolute;left:-25%;right:-25%;top:64%;height:16px;transform:rotate(-16deg);background:linear-gradient(90deg,transparent,#4dd8ff 30%,#ff4dd8 70%,transparent);filter:blur(3px);opacity:.85;z-index:0}
+.card .art-neon-drift{box-shadow:inset 0 -70px 50px -30px rgba(8,4,16,.66),inset 0 0 120px rgba(10,6,24,.18)}
+.card .art-neon-drift::after{content:"";position:absolute;left:-25%;right:-25%;top:64%;height:16px;transform:rotate(-16deg);background:linear-gradient(90deg,transparent,#4dd8ff 30%,#ff4dd8 70%,transparent);filter:blur(3px);opacity:.85;z-index:0}
 
 /* Dead Man's Hand key art: pure CSS, black-green felt with blood slash (no image file) */
 .art-dead-mans-hand{background:radial-gradient(circle at 50% 30%,#1c2b18 0%,#0c110a 55%,#050604 100%)}
 .art-dead-mans-hand::before{content:"\1F0CF";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 16px rgba(201,162,39,.55))}
-.art-dead-mans-hand::after{content:"";position:absolute;left:-25%;right:-25%;top:58%;height:12px;transform:rotate(18deg);background:linear-gradient(90deg,transparent,#a4161a 35%,#e63946 65%,transparent);filter:blur(4px);opacity:.9;z-index:0}
+.card .art-dead-mans-hand{box-shadow:inset 0 -70px 50px -30px rgba(8,4,16,.66),inset 0 0 120px rgba(10,6,24,.18)}
+.card .art-dead-mans-hand::after{content:"";position:absolute;left:-25%;right:-25%;top:58%;height:12px;transform:rotate(18deg);background:linear-gradient(90deg,transparent,#a4161a 35%,#e63946 65%,transparent);filter:blur(4px);opacity:.9;z-index:0}
 
 
 /* Moss & Stone key art: in-game screenshot, baked as data URI */

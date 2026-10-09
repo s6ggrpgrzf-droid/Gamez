@@ -6,7 +6,10 @@
 <meta name="theme-color" content="#0b0614">
 <meta name="description" content="Gamez — a little arcade of handmade games: match-3, tycoon, shooters, puzzles and more.">
 <title>Gamez — arcade</title>
-<link rel="stylesheet" href="./hub.css?v=6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./hub.css?v=7">
 <link rel="stylesheet" href="./art-a.css?v=1">
 <link rel="stylesheet" href="./art-b.css?v=1">
 <link rel="stylesheet" href="./art-c.css?v=1">
@@ -21,20 +24,28 @@
   <canvas id="sky"></canvas>
   <div class="marquee">
     <div class="bulbs top"></div>
-    <h1>GAMEZ</h1>
+    <h1 class="masthead">GAMEZ</h1>
     <div class="bulbs bot"></div>
   </div>
-  <p class="tag">Eighteen little worlds. One arcade.</p>
-  <button class="namepill" id="namepill" aria-label="Set your arcade name"></button>
+  <p class="tag"><span id="worldcount">Seventeen</span> little worlds. One arcade.</p>
+  <p class="greet">What are you playing today, <button class="namepill" id="namepill" aria-label="Set your arcade name"></button></p>
+  <a class="spotlight" id="spotlight" href="./unfold/">
+    <span class="kicker">Spotlight</span>
+    <span class="sp-main">
+      <span class="sp-art art-unfold" id="spArt" aria-hidden="true"></span>
+      <span class="sp-body"><b id="spName">Unfold</b><i id="spBlurb">Cozy five-minute escape rooms.</i></span>
+      <span class="sp-go" aria-hidden="true">&rarr;</span>
+    </span>
+  </a>
 </header>
 
 <section id="continue" aria-label="Continue playing">
-  <h2><span class="dot"></span>Continue playing</h2>
+  <div class="shead rvx"><span class="kicker">01 &middot; Continue</span><h2>Continue playing</h2></div>
   <div class="rail" id="rail"></div>
 </section>
 
 <section aria-label="Today's daily challenges">
-  <h2><span class="dot"></span>Today's dailies</h2>
+  <div class="shead rvx"><span class="kicker">02 &middot; Daily</span><h2>Today's dailies</h2></div>
   <div class="dgrid">
     <a class="daily" href="./bubble-hex/"><span class="cal">🔮</span><span><b>Daily Hex</b><span>same board, worldwide</span></span></a>
     <a class="daily" href="./bloom-defense/"><span class="cal">🌸</span><span><b>Daily Bloom</b><span>seeded waves</span></span></a>
@@ -49,7 +60,9 @@
   </div>
 </section>
 
-<main class="games">
+<main class="collection">
+  <div class="shead rvx"><span class="kicker">03 &middot; Collection</span><h2>The collection</h2></div>
+  <div class="games" id="games">
   <a class="card" data-game="candy-cascade" href="./candy-cascade/" style="--glow:#ff5fa2">
     <div class="art art-candy-cascade" role="img" aria-label="Candy Cascade key art"><span class="badge">25 LEVELS</span><div class="pbar"><i></i></div></div>
     <div class="body">
@@ -122,7 +135,7 @@
       <div class="meta"><span class="play">Play</span><span class="prog"></span></div>
     </div>
   </a>
-  <a class="card" data-game="tiny-fairway" href="./tiny-fairway/" style="--glow:#7fd08a">
+  <a class="card featured" data-game="tiny-fairway" href="./tiny-fairway/" style="--glow:#7fd08a">
     <div class="art art-tiny-fairway" role="img" aria-label="Tiny Fairway key art"><span class="badge">NEW · DAILY</span><div class="pbar"><i></i></div></div>
     <div class="body">
       <h3>⛳ Tiny Fairway</h3>
@@ -130,7 +143,7 @@
       <div class="meta"><span class="play">Play</span><span class="prog"></span></div>
     </div>
   </a>
-  <a class="card" data-game="castaway-cove" href="./castaway-cove/" style="--glow:#7fd4c1">
+  <a class="card featured" data-game="castaway-cove" href="./castaway-cove/" style="--glow:#7fd4c1">
     <div class="art art-castaway-cove" role="img" aria-label="Castaway Cove key art"><span class="badge">NEW · DAILY</span><div class="pbar"><i></i></div></div>
     <div class="body">
       <h3>🎣 Castaway Cove</h3>
@@ -193,7 +206,7 @@
     </div>
   </a>
 </main>
-<footer class="studio-footer"><span class="made-by">Made by</span><span class="wordmark">Workman Designs</span><span class="tagline">more games coming</span></footer>
-<script src="./hub.js?v=9"></script>
+<footer class="studio-footer"><span class="made-by">Made by</span><span class="wordmark">Workman Designs</span><span class="tagline">more games coming</span><button id="sndbtn" class="sndbtn" aria-label="Toggle hub sounds">&#x1F50A;</button></footer>
+<script src="./hub.js?v=10"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 /* Gamez hub: hero canvas, player name, continue-playing rail. */
 'use strict';
 (function () {
+  document.documentElement.classList.add('js');
   /* ---------- hero canvas: drifting dust + shooting star ---------- */
   var cv = document.getElementById('sky'), ctx = cv.getContext('2d');
   var W = 0, H = 0, parts = [], DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -78,7 +79,7 @@
   }
   function renderName() {
     var n = getName();
-    pill.innerHTML = '🎟️ Playing as <b>' + (n ? escapeHtml(n) : 'Guest') + '</b> ✎';
+    pill.innerHTML = '<b>' + (n ? escapeHtml(n) : 'Guest') + '</b> &#9998;';
   }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -257,4 +258,109 @@
     var lab = card.querySelector('.prog');
     if (lab) lab.textContent = pr.label;
   });
+  /* ---------- premium layer: spotlight, count, shine, reveals, tick ---------- */
+  var WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
+  var cardEls = document.querySelectorAll('.card');
+  var wcEl = document.getElementById('worldcount');
+  if (wcEl) wcEl.textContent = WORDS[cardEls.length] || String(cardEls.length);
+
+  /* spotlight: driven by the live card grid — change SPOTLIGHT_ID to swap */
+  var SPOTLIGHT_ID = 'unfold';
+  (function () {
+    var sc = document.querySelector('.card[data-game="' + SPOTLIGHT_ID + '"]');
+    var sp = document.getElementById('spotlight');
+    if (!sc || !sp) return;
+    sp.href = './' + SPOTLIGHT_ID + '/';
+    var sart = sc.querySelector('.art'), acls = '';
+    if (sart) sart.className.split(/\s+/).forEach(function (k) {
+      if (k.indexOf('art-') === 0) acls = k;
+    });
+    var spArt = document.getElementById('spArt');
+    if (spArt && acls) spArt.className = 'sp-art ' + acls;
+    /* clone the card's art scene (glyph, CSS scene, or key art) minus chrome */
+    var artSrc = sc.querySelector('.art');
+    if (spArt && artSrc) {
+      var ac = artSrc.cloneNode(true);
+      ac.querySelectorAll('.badge,.pbar,.shine').forEach(function (x) { x.remove(); });
+      ac.removeAttribute('id');
+      while (ac.firstChild) spArt.appendChild(ac.firstChild);
+    }
+    var sh3 = sc.querySelector('h3');
+    if (sh3) document.getElementById('spName').textContent = sh3.textContent.replace(/^\S+\s+/, '');
+    var spp = sc.querySelector('.body p');
+    if (spp) document.getElementById('spBlurb').textContent = spp.textContent.trim();
+  })();
+
+  /* shine sweep element per card art */
+  cardEls.forEach(function (card, ci) {
+    var cart = card.querySelector('.art');
+    if (!cart) return;
+    var shn = document.createElement('span');
+    shn.className = 'shine'; shn.setAttribute('aria-hidden', 'true');
+    cart.appendChild(shn);
+    card.style.setProperty('--sd', ((ci * 0.9) % 7.5).toFixed(2) + 's');
+  });
+
+  /* reveal-once: cards wave, section heads follow */
+  function revealInit() {
+    var targets = [];
+    cardEls.forEach(function (card, ci) {
+      card.classList.add('rv');
+      card.style.setProperty('--rd', ((ci % 6) * 0.07).toFixed(2) + 's');
+      targets.push(card);
+    });
+    document.querySelectorAll('.rvx').forEach(function (el, ei) {
+      el.style.setProperty('--rd', (ei * 0.08).toFixed(2) + 's');
+      targets.push(el);
+    });
+    if (!('IntersectionObserver' in window)) {
+      targets.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var rio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('in'); rio.unobserve(en.target); }
+      });
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0 });
+    targets.forEach(function (el) { rio.observe(el); });
+  }
+  revealInit();
+
+  /* tap tick + sound toggle (subtle; stored preference) */
+  var hubSnd = true;
+  try { hubSnd = localStorage.getItem('hub_sound') !== 'off'; } catch (e) {}
+  var tickAC = null;
+  function tick() {
+    if (!hubSnd) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!tickAC) tickAC = new AC();
+      if (tickAC.state === 'suspended') tickAC.resume();
+      var to = tickAC.createOscillator(), tg = tickAC.createGain();
+      to.type = 'sine'; to.frequency.value = 1320;
+      tg.gain.setValueAtTime(0.0001, tickAC.currentTime);
+      tg.gain.exponentialRampToValueAtTime(0.07, tickAC.currentTime + 0.008);
+      tg.gain.exponentialRampToValueAtTime(0.0001, tickAC.currentTime + 0.06);
+      to.connect(tg); tg.connect(tickAC.destination);
+      to.start(); to.stop(tickAC.currentTime + 0.07);
+    } catch (e) {}
+  }
+  document.querySelectorAll('.card,.daily,.chip,.spotlight,.namepill').forEach(function (el) {
+    el.addEventListener('pointerdown', tick);
+  });
+  var sndbtn = document.getElementById('sndbtn');
+  function renderSnd() {
+    if (!sndbtn) return;
+    sndbtn.innerHTML = hubSnd ? '&#x1F50A;' : '&#x1F507;';
+    sndbtn.classList.toggle('off', !hubSnd);
+  }
+  if (sndbtn) sndbtn.addEventListener('click', function () {
+    hubSnd = !hubSnd;
+    try { localStorage.setItem('hub_sound', hubSnd ? 'on' : 'off'); } catch (e) {}
+    renderSnd();
+    tick();
+  });
+  renderSnd();
 })();
