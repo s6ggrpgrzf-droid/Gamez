@@ -229,7 +229,17 @@
     ramp: 'Ramp ahead — hit it with speed to launch over trouble.',
     water: 'Water ahead — carry it or take the safe route around.',
     dunes: 'Dunes ahead — slopes feed the ball downhill. Read the arrows.',
-    walls: 'Banked walls ahead — bounce your shot around the corner.'
+    walls: 'Banked walls ahead — bounce your shot around the corner.',
+    portal: 'Warp portal — roll in and pop out the other side.',
+    pad: 'Dash pad — the chevrons kick the ball faster. Mind the overshoot.',
+    cannon: 'Cannon ahead — roll into the mouth and enjoy the flight.',
+    tube: 'Transport tube — dive in, ride the pipe, pop out the exit.',
+    belt: 'Conveyor belt — it carries the ball. Time your arrival.',
+    fan: 'Wind fan — a local gust shoves everything in its cone.',
+    well: 'Gravity well — it bends shots around it. Slingshot the edge.',
+    loop: 'Loop-the-loop — bring speed or you\u2019ll roll back out.',
+    table: 'Turntable — ride the disc, mind where it flings you.',
+    lift: 'Ball elevator — ride it up and over to the far side.'
   };
   function loadPow() {
     try {
@@ -529,6 +539,7 @@
     }
     if (ball.impact > 1.2) { thudAt(ball.x, ball.y, ball.impact); ball.impact = 0; }
     if (ball.pickup) { pickupJuice(ball.pickup); ball.pickup = null; }
+    if (ball.tevent && typeof TPR !== 'undefined') { TPR.event(ball.tevent); ball.tevent = null; }
     if (ballHoled(ball)) { onHoled(); return; }
     if (wasInFlight && ballInWater(ball)) { onWater(); return; }  // sim flags inWater; game owns the penalty+reset
     if (ball.resting) {
@@ -635,6 +646,7 @@
     AU.splash();
     ball.x = lastRest.x; ball.y = lastRest.y;          // back to previous rest
     ball.vx = 0; ball.vy = 0; ball.resting = true;
+    ball.carry = null; ball.tevent = null; ball._tpZone = null;  // never stuck in a transport
     clearHoled(ball);
     inFlight = false;
     updateHUD();
@@ -1317,6 +1329,13 @@
       ctx.beginPath(); ctx.arc(wmx, wmy, whr * 0.55, 0, 6.2832); ctx.fill();
     }
 
+    // transport objects (portals, cannon, tube, ...): own module, own layer
+    var tpV = null;
+    if (typeof TPR !== 'undefined') {
+      tpV = { X: X, Y: Y, sc: sc, wtime: wtime, simTime: simTime, RM: RM };
+      TPR.draw(ctx, tpV, hole, ball);
+    }
+
     // cup + flag (the genre's universal target glyph)
     var cupRX = TF.CUP_R * sc * 0.85;
     ctx.fillStyle = B.cup;
@@ -1410,6 +1429,8 @@
     for (var bi = 0; bi < drawBalls.length && state !== 'menu'; bi++) {
       var db = drawBalls[bi];
       if (db.inWater) continue;
+      // ball riding a transport object: the transport module draws it
+      if (db.carry && tpV && TPR.drawCarried(ctx, tpV, hole, db)) continue;
       var bz = db.z || 0;
       var br = Math.max(3.5, TF.BALL_R * sc) * (1 + bz * 0.05);
       var bx = X(db.x), by = Y(db.y);
@@ -1687,6 +1708,7 @@
     }
     updateTurtle(dt);
     updateParticles(dt * timeScale);
+    if (typeof TPR !== 'undefined') TPR.tick(dt);   // transport particle pool
     // roll bed follows ball speed; bandpass retunes for sand vs grass
     if (AU.ctx && AU.rollGain) {
       var spd = ball && !ball.resting ? Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) : 0;
@@ -1882,7 +1904,7 @@
   function startRace() {
     AU.init(); AU.click();
     var ridx = (Math.random() * TF.HOLES.length) | 0;
-    hole = TF.makeHole(TF.HOLES[ridx], ridx);
+    hole = TF.makeHole(TF.HOLES[ridx], ridx, { transports: true });  // tour layout + transport toys
     seed = hole.seed;
     simTime = 0;
     curBiome = (Math.random() * 4) | 0;
@@ -1965,6 +1987,7 @@
         if (b === ball) pickupJuice(b.pickup);
         b.pickup = null;
       }
+      if (b.tevent && typeof TPR !== 'undefined') { TPR.event(b.tevent); b.tevent = null; }
       if (b.inCup && !b.finished) {
         b.finished = true; b.finishT = race.t;
         if (b === ball) { AU.chime(true); AU.clunk(); HAP.buzz([10, 40, 10]); }
@@ -2119,7 +2142,18 @@
     function go() {
       mode = 'daily';
       totalStrokes = 0; totalStars = 0;
-      loadHole(1, dailyInfo.seed);
+      // intro grammar: the least-seen transport mechanic gets the spotlight
+      var tmD = TF.TRANSPORT_MECHS, dpickD = tmD[0], dbestD = Infinity, dmiD;
+      for (dmiD = 0; dmiD < tmD.length; dmiD++) {
+        var dcD = seenMechs[tmD[dmiD]] | 0;
+        if (dcD < dbestD) { dbestD = dcD; dpickD = tmD[dmiD]; }
+      }
+      var dintroD = dbestD === 0 ? 'new' : (Math.random() < 0.25 ? 'twist' : 'challenge');
+      loadHole(1, dailyInfo.seed, { intro: dintroD, focusMech: dpickD });
+      for (dmiD = 0; dmiD < hole.mechanics.length; dmiD++)
+        seenMechs[hole.mechanics[dmiD]] = (seenMechs[hole.mechanics[dmiD]] | 0) + 1;
+      savePow();
+      if (dintroD === 'new' && MECH_HINTS[dpickD]) toast(MECH_HINTS[dpickD], 2600);
       startPlay();
     }
     if (!dailyInfo) {
@@ -2216,6 +2250,7 @@
   trailSel = lsGet('tf_trail', 'Cloud');
   loadPow();
   HAP.init();
+  if (typeof TPR !== 'undefined') TPR.attachAudio(AU);   // transport SFX
   refreshMenu();
   refreshButtons();
   fetchDaily();                       // prefetch today's hole in the background
@@ -2228,5 +2263,11 @@
     running = true; last = performance.now();
   } catch (e) {}
   requestAnimationFrame(loop);
-  window.TF_DEBUG = { loadHole: loadHole, getState: function () { return { state: state, strokes: strokes, totalStrokes: totalStrokes, holeIndex: holeIndex, inFlight: inFlight, aiming: aiming, ball: ball, ghost: ghost, spinVal: spinVal }; } };
+  window.TF_DEBUG = { loadHole: loadHole, hole: function () { return hole; },
+    debugShot: function (vx, vy) {   // test/screenshot driver: real shot path, no drag
+      if (state !== 'play' || inFlight || !ball.resting) return false;
+      TF.shoot(ball, vx, vy, {}); strokes++; totalStrokes++; inFlight = true; updateHUD();
+      return true;
+    },
+    getState: function () { return { state: state, strokes: strokes, totalStrokes: totalStrokes, holeIndex: holeIndex, inFlight: inFlight, aiming: aiming, ball: ball, ghost: ghost, spinVal: spinVal }; } };
 })();
