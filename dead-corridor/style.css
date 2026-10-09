@@ -106,3 +106,7 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0a0512;
 .over-best{margin:10px 0 18px;font-size:13px;letter-spacing:2px;color:#ffffff88}
 .over-best span{color:var(--cyan);font-weight:800}
 .over-card .btn{min-width:220px}
+
+/* MATRON voice: cold cyan PA, distinct from red system banners */
+#banner.matron{color:#cfeaff;letter-spacing:5px;
+  text-shadow:0 0 14px rgba(120,200,255,.85),0 3px 0 #000}

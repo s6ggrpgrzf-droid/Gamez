@@ -108,9 +108,59 @@
   var canvas, ctx, cw, ch;
   var G = null;          // run state
 
+  /* ================= MATRON — facility AI voice (additive flavor) =================
+   * Today's content pack is fetched from the dead-corridor-matron worker.
+   * Everything here degrades to MATRON_FALLBACK when offline — the game
+   * never waits on, and never needs, the network to be playable. */
+  var MATRON_URL = 'https://dead-corridor-matron.chaoticutopia84.workers.dev';
+  var Mpack = null;
+  var MATRON_FALLBACK = {
+    fallback: true,
+    sectors: [
+      { name: 'SECTOR 1 \u2014 INTAKE', intro: 'Intake is open. Leave your courage at the door.', clear: 'Intake sterilized. You may proceed.' },
+      { name: 'SECTOR 2 \u2014 WARDS', intro: 'The wards are restless tonight. Mind the patients.', clear: 'Wards quiet. For now.' },
+      { name: 'SECTOR 3 \u2014 THE HEART', intro: 'You have reached the heart. It has been waiting.', clear: 'The heart is still. Remarkable.' }
+    ],
+    barks: {
+      streak: ['Matron notes your efficiency. Do not let it go to your head.', 'Such precision. The facility approves.'],
+      hurt: ['That looked painful. Shall I call someone?', 'Bleeding is discouraged in the corridors.'],
+      novaReady: ['NOVA charge complete. Do try not to miss.'],
+      nova: ['NOVA discharged. The walls felt that.'],
+      lowAmmo: ['Your magazine is empty. Reload, quickly.'],
+      brute: ['Attention: large patient loose in Sector 3.']
+    },
+    mutator: null,
+    logs: []
+  };
+  function matronPack() { return Mpack || MATRON_FALLBACK; }
+  function mpick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function fetchMatronPack() {
+    try {
+      var d = new Date();
+      var ds = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+      var ctl = new AbortController();
+      var to = setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 3500);
+      fetch(MATRON_URL + '/daily?date=' + ds, { signal: ctl.signal })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (p) { clearTimeout(to); if (p && p.sectors && p.barks) Mpack = p; })
+        .catch(function () { clearTimeout(to); });
+    } catch (e) {}
+  }
+  // MATRON-voiced banner: cold cyan PA voice, visually distinct from system banners
+  function matronSay(txt) {
+    var b = $('banner');
+    b.textContent = txt;
+    b.classList.remove('hidden');
+    b.classList.remove('show');
+    b.classList.add('matron');
+    void b.offsetWidth; b.classList.add('show');
+    clearTimeout(b._t);
+    b._t = setTimeout(function () { b.classList.add('hidden'); b.classList.remove('matron'); }, 2600);
+  }
+
   function newRun(dailySeed) {
     var rng = dailySeed != null ? mulberry32(dailySeed) : Math.random;
-    return {
+    var run = {
       rng: rng, daily: dailySeed != null, dailySeed: dailySeed || null,
       railI: 0, railT: 0, moving: true, dwell: null, spawnQueue: [], spawnT: 0,
       trickleT: 4,
@@ -119,6 +169,8 @@
       foes: [], bolts: [], orbs: [], parts: [], decals: [],
       hp: 100, maxHp: 100,
       ammo: 8, magSize: 8, reloading: 0,
+      foeSpeedMul: 1, scoreMul: 1, boltBonus: 0,
+      barkFlags: {}, mutator: null, pendingBruteBark: 0, dwellT0: 0,
       fireCd: 0, flash: 0, recoil: 0, recoilV: 0, smoothYaw: 0, smoothPitch: 0,
       charge: 0, novaReady: false,
       score: 0, kills: 0, shots: 0, hits: 0, combo: 0, maxCombo: 0,
@@ -127,6 +179,20 @@
       time: 0, over: false, win: false,
       hurtT: 0
     };
+    // MATRON daily mutator (additive; unknown ids/params are ignored)
+    try {
+      var mp = matronPack().mutator;
+      if (mp && mp.params && typeof mp.params === 'object') {
+        var pr = mp.params;
+        if (typeof pr.foeSpeedMul === 'number') run.foeSpeedMul = pr.foeSpeedMul;
+        if (typeof pr.scoreMul === 'number') run.scoreMul = pr.scoreMul;
+        if (typeof pr.boltBonus === 'number') run.boltBonus = pr.boltBonus;
+        if (typeof pr.magSize === 'number') { run.magSize = pr.magSize; run.ammo = pr.magSize; }
+        if (typeof pr.hp === 'number') { run.hp = pr.hp; run.maxHp = pr.hp; }
+        run.mutator = mp;
+      }
+    } catch (e) {}
+    return run;
   }
 
   /* ================= spawning ================= */
@@ -158,6 +224,10 @@
     });
     // spawn reveal: ember burst where it claws through
     burstFx(x, y, '#ff5a22', 8);
+    if (type === 'brute' && !G.barkFlags.brute) {
+      G.barkFlags.brute = 1;
+      G.pendingBruteBark = G.time + 4;
+    }
   }
   function startDwell(dwell) {
     G.dwell = dwell;
@@ -168,7 +238,11 @@
       for (var i = 0; i < c[1]; i++) G.spawnQueue.push({ type: c[0], at: c[2] + i * 1.6 });
     });
     G.spawnT = 0;
-    banner(w.name);
+    G.dwellT0 = G.time;
+    var si = dwell === 'w1' ? 0 : dwell === 'w2' ? 1 : 2;
+    var sec = matronPack().sectors[si] || matronPack().sectors[0];
+    G.waveName = sec.name;
+    matronSay(sec.intro);
   }
 
   /* ================= combat ================= */
@@ -223,6 +297,10 @@
       G.hits++;
       G.combo++;
       if (G.combo > G.maxCombo) G.maxCombo = G.combo;
+      if ((G.combo === 10 || G.combo === 20 || G.combo === 30) && !G.barkFlags['streak' + G.combo]) {
+        G.barkFlags['streak' + G.combo] = 1;
+        matronSay(mpick(matronPack().barks.streak));
+      }
       if (best.kind === 'bolt') {
         best.ref.dead = true;
         addScore(25, best.ref.x, best.ref.y);
@@ -252,7 +330,7 @@
 
   /* combo-scaled scoring, with a floating combat-text pop */
   function addScore(base, wx, wy) {
-    var pts = Math.round(base * (1 + G.combo * 0.1));
+    var pts = Math.round(base * (1 + G.combo * 0.1) * (G.scoreMul || 1));
     G.score += pts;
     if (wx != null) {
       var dx = wx - G.px, dy = wy - G.py;
@@ -289,7 +367,8 @@
     if (!alive && G.spawnQueue.length === 0) {
       G.score += 500;
       G.hp = Math.min(G.maxHp, G.hp + 30);   // catch your breath
-      banner(G.waveName + ' — CLEARED  +500');
+      var ci = G.dwell === 'w1' ? 0 : G.dwell === 'w2' ? 1 : 2;
+      matronSay((matronPack().sectors[ci] || matronPack().sectors[0]).clear + '  +500');
       G.waveClearT = 1.6;
       G.dwell = null;
       // resume the rail after a beat
@@ -309,11 +388,19 @@
     G.hitStop = Math.max(G.hitStop, 0.06);
     G.hurtT = G.time;
     DCSfx.hurt();
+    if (G.time - (G.barkFlags.hurtT || -99) > 8) {
+      G.barkFlags.hurtT = G.time;
+      matronSay(mpick(matronPack().barks.hurt));
+    }
     if (G.hp <= 0) { G.hp = 0; gameOver(false); }
   }
 
   function startReload() {
     if (G.reloading > 0 || G.ammo >= G.magSize) return;
+    if (G.ammo === 0 && !G.barkFlags.lowAmmo) {
+      G.barkFlags.lowAmmo = 1;
+      matronSay(mpick(matronPack().barks.lowAmmo));
+    }
     G.reloading = 1.3;
     DCSfx.reload();
   }
@@ -328,7 +415,7 @@
     });
     G.bolts.forEach(function (b) { b.dead = true; });
     G.parts.push({ ring: true, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 0.55 });
-    banner('NOVA BLAST');
+    matronSay(mpick(matronPack().barks.nova));
   }
 
   /* ================= fx (screen space) ================= */
@@ -355,6 +442,7 @@
   function banner(txt) {
     var b = $('banner');
     b.textContent = txt;
+    b.classList.remove('matron');
     b.classList.remove('hidden');
     b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
     clearTimeout(b._t);
@@ -482,6 +570,7 @@
           f.atkT = 0;
           var ang = Math.atan2(fdy, fdx);
           G.bolts.push({ x: f.x, y: f.y, vx: Math.cos(ang) * 4.2, vy: Math.sin(ang) * 4.2, life: 4, dead: false });
+          if (G.boltBonus) G.bolts.push({ x: f.x, y: f.y, vx: Math.cos(ang + 0.18) * 4.2, vy: Math.sin(ang + 0.18) * 4.2, life: 4, dead: false });
           DCSfx.spit();
         }
       } else if (fdist < 1.25) {
@@ -497,7 +586,7 @@
       } else {
         f.state = 'walk';
         // steer toward player, slide on walls (non-rushers shamble)
-        var sp = F.speed * spMul * dt;
+        var sp = F.speed * spMul * (G.foeSpeedMul || 1) * dt;
         var nx = f.x + fdx / fdist * sp, ny = f.y + fdy / fdist * sp;
         if (!solidAt(nx, f.y)) f.x = nx;
         if (!solidAt(f.x, ny)) f.y = ny;
@@ -527,7 +616,11 @@
       if (Math.hypot(o.x - G.px, o.y - G.py) < 0.5 || o.t > 1.2) {
         G.orbs.splice(i, 1);
         G.charge = Math.min(100, G.charge + 20);   // ~5 kills to a full nova
-        if (G.charge >= 100 && !G.novaReady) { G.novaReady = true; banner('NOVA READY — tap ✦'); DCSfx.ready(); }
+        if (G.pendingBruteBark && G.time >= G.pendingBruteBark) {
+          G.pendingBruteBark = 0;
+          matronSay(mpick(matronPack().barks.brute));
+        }
+        if (G.charge >= 100 && !G.novaReady) { G.novaReady = true; matronSay(mpick(matronPack().barks.novaReady)); DCSfx.ready(); }
       }
     }
 
@@ -878,6 +971,12 @@
     showScreen('screen-game');
     updateHUD();
     banner('FIND THE HEART. KILL EVERYTHING.');
+    if (G.mutator) {
+      var gg = G;
+      setTimeout(function () {
+        if (G === gg && !G.over) matronSay(G.mutator.title + ' \u2014 ' + G.mutator.flavor);
+      }, 2400);
+    }
     DCSfx.start();
   }
 
@@ -912,6 +1011,7 @@
     resize();
     window.addEventListener('resize', resize);
     bindInput();
+    fetchMatronPack();
     $('btn-play').addEventListener('click', function () { DCSfx.init(); startRide(null); });
     $('btn-how').addEventListener('click', function () { $('howto').classList.toggle('hidden'); });
     $('btn-daily').addEventListener('click', function () {
