@@ -2167,11 +2167,11 @@ var UI = {
       art.appendChild(ring);
     }
     wrap.appendChild(art);
-    wrap.appendChild(el('div', 'card-tag', '✨ DAILY PUZZLE · SAME FOR EVERYONE'));
+    wrap.appendChild(el('div', 'card-tag', '<svg class="ic"><use href="#i-spark"/></svg> DAILY PUZZLE · SAME FOR EVERYONE'));
     wrap.appendChild(el('div', 'card-title', 'Today\'s AI painting'));
     var subBits = [levelForCount(spec.count).name + ' · ' + spec.count + ' pieces'];
     if (done) subBits.push('done in ' + fmtTime(done.ms));
-    else if (st.streak > 1) subBits.push('🔥 ' + st.streak + '-day streak');
+    else if (st.streak > 1) subBits.push('<svg class="ic"><use href="#i-flame"/></svg> ' + st.streak + '-day streak');
     wrap.appendChild(el('div', 'card-sub', subBits.join(' &nbsp;·&nbsp; ')));
     var btn = el('button', 'btn primary big', done ? 'Play again' : (inProgress ? 'Continue' : 'Play today'));
     wrap.appendChild(btn);
@@ -2208,8 +2208,8 @@ var UI = {
     if (!wrap || wrap.children.length || !window.PDAWG_AI) return;
     var self = this;
     window.PDAWG_AI.THEMES.forEach(function (t, i) {
-      var b = el('button', 'ai-theme', t);
-      b.onclick = function () { self.generateAI(window.PDAWG_AI.themePrompt(i), t.replace(/^\S+\s/, '')); };
+      var b = el('button', 'ai-theme', '<svg class="ic"><use href="#i-spark"/></svg>' + escHtml(t));
+      b.onclick = function () { self.generateAI(window.PDAWG_AI.themePrompt(i), t); };
       wrap.appendChild(b);
     });
   },
@@ -2292,13 +2292,13 @@ var UI = {
     if (!strip) return;
     var st = statsRead();
     strip.innerHTML = '';
-    function stat(emoji, val, label) {
-      var d = el('div', 'stat', emoji + ' <b>' + val + '</b> ' + label);
+    function stat(icon, val, label) {
+      var d = el('div', 'stat', '<svg class="ic"><use href="#' + icon + '"/></svg> <b>' + val + '</b> ' + label);
       strip.appendChild(d);
     }
-    stat('🧩', st.solved, 'solved');
-    stat('🧷', st.pieces.toLocaleString(), 'pieces placed');
-    if (st.streak > 1) stat('🔥', st.streak, 'day streak');
+    stat('i-trophy', st.solved, 'solved');
+    stat('i-piece', st.pieces.toLocaleString(), 'pieces placed');
+    if (st.streak > 1) stat('i-flame', st.streak, 'day streak');
   },
 
   renderShelf: function () {
@@ -2332,11 +2332,20 @@ var UI = {
     var grid = $('#galleryGrid');
     if (grid.children.length) return;
     var self = this;
+    var doneMap = {};
+    try {
+      var bk = bests.read();
+      for (var bkey in bk) {
+        var m = /^g(\d+):/.exec(bkey);
+        if (m) doneMap[+m[1]] = true;
+      }
+    } catch (e) {}
     window.PDAWG_GALLERY.GALLERY.forEach(function (g, i) {
       var card = el('div', 'gal-card');
       var th = self.galleryThumbs[i];
       if (th) card.appendChild(canvasCopy(th));
       else if (window.PDAWG_GALLERY.isPhoto(i)) card.appendChild(el('div', 'gal-thumb-loading'));
+      if (doneMap[i]) card.appendChild(el('div', 'gal-done', '<svg class="ic"><use href="#i-check"/></svg>'));
       card.appendChild(el('div', 'gal-title', g.title));
       card.onclick = function () { UI.openCountChooser({ imageKind: 'gallery', galleryIdx: i, title: g.title }); };
       grid.appendChild(card);
@@ -2427,7 +2436,7 @@ var UI = {
     var realTitle = G.GALLERY[idx].title;
     this.openCountChooser({
       imageKind: 'gallery', galleryIdx: idx,
-      title: '🎲 Mystery Puzzle',
+      title: 'Mystery Puzzle',
       mystery: true, mysteryTitle: realTitle
     });
     toast('Shh… no peeking! 🎲');
