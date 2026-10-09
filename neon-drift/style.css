@@ -27,7 +27,7 @@ html, body {
   pointer-events: none; z-index: 5;
 }
 #hud[hidden], #hud-speed[hidden], #minimap[hidden], #btn-drift[hidden],
-#btn-gas[hidden], #btn-brake[hidden], #countdown[hidden], #toast[hidden] { display: none !important; }
+#countdown[hidden], #toast[hidden] { display: none !important; }
 #hud-left { line-height: 1.05; }
 #hud-pos {
   font-size: 30px; font-weight: 800; letter-spacing: 1px;
@@ -72,39 +72,13 @@ html, body {
   width: 104px; height: 104px; z-index: 5; pointer-events: none;
   background: rgba(10,13,26,.55); border: 1px solid #2c3a5e; border-radius: 12px;
 }
-/* pedals: brake left, gas right (real-car convention), drift above gas */
-#btn-brake, #btn-gas, #btn-drift {
+/* drift button: big bottom-right thumb target (gas is automatic) */
+#btn-drift {
   position: fixed; z-index: 6; border-radius: 50%;
   font-weight: 800; letter-spacing: 1px; touch-action: none;
   transition: transform .06s ease-out;
-}
-#btn-brake {
-  left: 18px; bottom: calc(18px + env(safe-area-inset-bottom));
-  width: 108px; height: 108px; font-size: 16px;
-  background: radial-gradient(circle at 35% 30%, #6e2a3c, #2e141a 70%);
-  border: 3px solid #ff5f6d; color: #ffd9de;
-  box-shadow: 0 0 18px rgba(255,95,109,.35);
-}
-#btn-brake.held {
-  transform: scale(.92);
-  background: radial-gradient(circle at 35% 30%, #ff5f6d, #5e1420 70%);
-  box-shadow: 0 0 30px rgba(255,95,109,.8); color: #fff;
-}
-#btn-gas {
   right: 18px; bottom: calc(18px + env(safe-area-inset-bottom));
-  width: 118px; height: 118px; font-size: 18px;
-  background: radial-gradient(circle at 35% 30%, #2a6e4c, #142e1e 70%);
-  border: 3px solid var(--good); color: #dcffdc;
-  box-shadow: 0 0 18px rgba(125,255,110,.35);
-}
-#btn-gas.held {
-  transform: scale(.92);
-  background: radial-gradient(circle at 35% 30%, #7dff6e, #1e5e2a 70%);
-  box-shadow: 0 0 30px rgba(125,255,110,.8); color: #fff;
-}
-#btn-drift {
-  right: 18px; bottom: calc(18px + env(safe-area-inset-bottom));
-  width: 108px; height: 108px; font-size: 17px;
+  width: 120px; height: 120px; font-size: 18px;
   background: radial-gradient(circle at 35% 30%, #2a3c6e, #141a2e 70%);
   border: 3px solid var(--neon); color: var(--ink);
   box-shadow: 0 0 18px rgba(77,216,255,.35);
@@ -113,11 +87,6 @@ html, body {
   transform: scale(.92);
   background: radial-gradient(circle at 35% 30%, #ff4dd8, #5e1448 70%);
   border-color: var(--pink); box-shadow: 0 0 30px rgba(255,77,216,.8);
-}
-/* pedals mode: drift shrinks and docks above the gas pedal */
-body.pedals #btn-drift {
-  width: 84px; height: 84px; font-size: 14px;
-  right: 30px; bottom: calc(150px + env(safe-area-inset-bottom));
 }
 #countdown {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;

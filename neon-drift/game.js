@@ -20,14 +20,15 @@ function defSave() {
     upg: { engine: 0, tires: 0, drift: 0 },
     best: {}, ghosts: {},
     assist: false, mute: false, difficulty: 1, haptic: true,
-    controls: 'pedals', // 'pedals' (gas+brake) or 'auto' (auto-accel cruise)
+    controls: 'drag', // 'drag' (drag steering) or 'tap' (tap left/right halves); gas is always on
     cupWins: []
   };
 }
+function normControls(c) { return (c === 'drag' || c === 'tap') ? c : 'drag'; }
 function loadSave() {
   try {
     var s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (s && typeof s === 'object') { var d = defSave(); for (var k in d) if (s[k] !== undefined) d[k] = s[k]; return d; }
+    if (s && typeof s === 'object') { var d = defSave(); for (var k in d) if (s[k] !== undefined) d[k] = s[k]; d.controls = normControls(d.controls); return d; }
   } catch (e) {}
   return defSave();
 }
@@ -412,14 +413,10 @@ function show(id) {
   });
   G.screen = id;
   var racing = (id === null);
-  var pedals = S.controls === 'pedals';
   $('hud').hidden = !racing;
   $('hud-speed').hidden = !racing;
   $('minimap').hidden = !racing;
   $('btn-drift').hidden = !racing;
-  $('btn-brake').hidden = !racing;
-  $('btn-gas').hidden = !racing || !pedals;
-  document.body.classList.toggle('pedals', racing && pedals);
   if (!racing) { $('countdown').hidden = true; }
 }
 
@@ -554,7 +551,7 @@ function refreshMenu() {
     'No races yet — the neon awaits.';
   $('btn-assist').textContent = 'steer assist: ' + (S.assist ? 'on' : 'off');
   $('btn-assist').classList.toggle('on', S.assist);
-  $('btn-controls').textContent = S.controls === 'pedals' ? '🎮 pedals' : '🛟 auto cruise';
+  $('btn-controls').textContent = S.controls === 'drag' ? '🖐 drag steer' : '👆 tap steer';
   $('btn-haptic').textContent = 'haptics: ' + (S.haptic ? 'on' : 'off');
   $('btn-haptic').classList.toggle('on', !!S.haptic);
   raceHype('menu', 'menu', $('menu-hype'));
@@ -812,32 +809,48 @@ function devGhostTape(cup, race) {
 
 /* ---------------- input ---------------- */
 
-var IN = { steer: 0, drift: false, gas: false, brake: false };
-var steerPtr = null; // {id, anchorX}
-var keyL = false, keyR = false, keyD = false, keyG = false, keyB = false;
+var IN = { steer: 0, drift: false };
+var steerPtr = null; // {id, anchorX} — drag scheme
+var tapPtrs = {};    // pointerId -> -1 | 1 — tap scheme (most recent finger wins)
+var keyL = false, keyR = false, keyD = false;
+
+function tapSide(x) { return x < window.innerWidth / 2 ? -1 : 1; }
+function tapRecompute() {
+  var ids = Object.keys(tapPtrs);
+  IN.steer = ids.length ? tapPtrs[ids[ids.length - 1]] : 0;
+}
 
 cv.addEventListener('pointerdown', function (e) {
   AU.init();
   if (G.screen !== null || G.paused) return;
-  if (steerPtr) return;
-  steerPtr = { id: e.pointerId, anchorX: e.clientX };
-  cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
+  if (S.controls === 'tap') {
+    tapPtrs[e.pointerId] = tapSide(e.clientX);
+    tapRecompute();
+  } else {
+    if (steerPtr) return;
+    steerPtr = { id: e.pointerId, anchorX: e.clientX };
+  }
+  if (cv.setPointerCapture) { try { cv.setPointerCapture(e.pointerId); } catch (err) {} }
   e.preventDefault();
 });
 cv.addEventListener('pointermove', function (e) {
   if (steerPtr && e.pointerId === steerPtr.id) {
     IN.steer = clamp((e.clientX - steerPtr.anchorX) / 90, -1, 1);
+  } else if (tapPtrs[e.pointerId] !== undefined) {
+    tapPtrs[e.pointerId] = tapSide(e.clientX);
+    tapRecompute();
   }
 });
 function endSteer(e) {
   if (steerPtr && e.pointerId === steerPtr.id) { steerPtr = null; IN.steer = 0; }
+  if (tapPtrs[e.pointerId] !== undefined) { delete tapPtrs[e.pointerId]; tapRecompute(); }
 }
 cv.addEventListener('pointerup', endSteer);
 cv.addEventListener('pointercancel', endSteer);
 
-// Pedal / drift buttons: per-pointer tracking so a held pedal is never
-// cancelled by the steering finger (Pointer Events + capture). Neon press
-// state + haptic tick on every press (research: instant acknowledgment).
+// Drift button: per-pointer tracking so a held drift is never cancelled by
+// the steering finger (Pointer Events + capture). Neon press state + haptic
+// tick on every press (research: instant acknowledgment).
 function holdButton(id, key) {
   var b = $(id), pid = null;
   b.addEventListener('pointerdown', function (e) {
@@ -856,29 +869,23 @@ function holdButton(id, key) {
   });
 }
 holdButton('btn-drift', 'drift');
-holdButton('btn-gas', 'gas');
-holdButton('btn-brake', 'brake');
 
 window.addEventListener('keydown', function (e) {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') keyL = true;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') keyR = true;
-  if (e.code === 'ArrowUp' || e.code === 'KeyW') keyG = true;
-  if (e.code === 'ArrowDown' || e.code === 'KeyS') keyB = true;
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'Space') { keyD = true; e.preventDefault(); }
   if (e.code === 'Escape' && G.screen === null) togglePause();
 });
 window.addEventListener('keyup', function (e) {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') keyL = false;
   if (e.code === 'ArrowRight' || e.code === 'KeyD') keyR = false;
-  if (e.code === 'ArrowUp' || e.code === 'KeyW') keyG = false;
-  if (e.code === 'ArrowDown' || e.code === 'KeyS') keyB = false;
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'Space') keyD = false;
 });
 window.addEventListener('blur', function () {
-  keyL = keyR = keyD = keyG = keyB = false;
-  IN.steer = 0; IN.drift = false; IN.gas = false; IN.brake = false;
-  steerPtr = null;
-  ['btn-drift', 'btn-gas', 'btn-brake'].forEach(function (id) { $(id).classList.remove('held'); });
+  keyL = keyR = keyD = false;
+  IN.steer = 0; IN.drift = false;
+  steerPtr = null; tapPtrs = {};
+  $('btn-drift').classList.remove('held');
 });
 document.addEventListener('visibilitychange', function () {
   if (document.hidden && G.screen === null && !G.paused) togglePause();
@@ -888,14 +895,7 @@ function playerInput() {
   var steer = IN.steer, drift = IN.drift;
   if (keyL) steer = -1; if (keyR) steer = 1;
   if (keyD) drift = true;
-  var gas, brake;
-  if (S.controls === 'auto') {
-    gas = 1; // cruise: the car accelerates itself
-    brake = (IN.brake || keyB) ? 1 : 0;
-  } else {
-    gas = (IN.gas || keyG) ? 1 : 0;
-    brake = (IN.brake || keyB) ? 1 : 0;
-  }
+  var gas = 1, brake = 0; // gas is always on; drift scrubs speed
   if (S.assist && G.race) {
     var ai = ND.aiInput(G.track, G.race.cars[0], 0.95);
     steer = steer * 0.45 + ai.steer * 0.55;
@@ -1444,11 +1444,11 @@ function wire() {
   $('btn-mute').onclick = function () { AU.init(); AU.setMute(!S.mute); };
   $('btn-controls').onclick = function () {
     AU.init();
-    S.controls = S.controls === 'pedals' ? 'auto' : 'pedals';
+    S.controls = S.controls === 'drag' ? 'tap' : 'drag';
     save(); refreshMenu(); HZ.play(HZ.select);
-    toast(S.controls === 'pedals' ?
-      '🎮 Pedals: hold GAS to launch, BRAKE late, DRIFT the corners.' :
-      '🛟 Auto cruise: the car accelerates itself — steer, brake, drift.');
+    toast(S.controls === 'drag' ?
+      '🖐 Drag steer: drag anywhere to steer, hold DRIFT through corners — gas is automatic.' :
+      '👆 Tap steer: hold the left / right half of the screen to steer, hold DRIFT — gas is automatic.');
   };
   $('btn-assist').onclick = function () {
     S.assist = !S.assist; save(); refreshMenu();
@@ -1589,25 +1589,75 @@ function selftest() {
     });
     step('control schemes shape input', function () {
       var keep = S.controls;
-      S.controls = 'auto'; IN.brake = true; IN.gas = false;
+      S.controls = 'drag'; IN.steer = 0.5; IN.drift = true;
       var a = playerInput();
-      if (a.gas !== 1) throw new Error('auto: gas should be 1, got ' + a.gas);
-      if (a.brake !== 1) throw new Error('auto: brake should follow pedal');
-      S.controls = 'pedals'; IN.brake = false;
-      if (playerInput().gas !== 0) throw new Error('pedals: gas 0 when released');
-      IN.gas = true;
-      if (playerInput().gas !== 1) throw new Error('pedals: gas 1 when held');
-      IN.gas = false; IN.brake = false; S.controls = keep;
+      if (a.gas !== 1) throw new Error('drag: gas must always be 1, got ' + a.gas);
+      if (a.brake !== 0) throw new Error('drag: brake must always be 0, got ' + a.brake);
+      if (a.drift !== true) throw new Error('drag: drift should follow the button');
+      if (a.steer !== 0.5) throw new Error('drag: steer should follow drag');
+      S.controls = 'tap'; IN.drift = false; keyD = true; keyL = true;
+      var b = playerInput();
+      if (b.gas !== 1 || b.brake !== 0) throw new Error('tap: gas/brake must be 1/0');
+      if (b.drift !== true) throw new Error('tap: keyboard drift should work');
+      if (b.steer !== -1) throw new Error('tap: keyboard steer should work');
+      keyD = false; keyL = false; IN.steer = 0; IN.drift = false;
+      S.controls = keep;
+    });
+    step('legacy control saves migrate to drag', function () {
+      if (normControls('pedals') !== 'drag') throw new Error('pedals should migrate to drag');
+      if (normControls('auto') !== 'drag') throw new Error('auto should migrate to drag');
+      if (normControls('drag') !== 'drag') throw new Error('drag should stay drag');
+      if (normControls('tap') !== 'tap') throw new Error('tap should stay tap');
+      if (normControls('bogus') !== 'drag') throw new Error('unknown should become drag');
+    });
+    step('tap steering tracks fingers', function () {
+      var keep = S.controls;
+      S.controls = 'tap';
+      tapPtrs[11] = -1; tapRecompute();
+      if (IN.steer !== -1) throw new Error('single left finger should steer -1');
+      tapPtrs[22] = 1; tapRecompute();
+      if (IN.steer !== 1) throw new Error('most recent finger should win');
+      delete tapPtrs[22]; tapRecompute();
+      if (IN.steer !== -1) throw new Error('after lift, remaining finger should steer');
+      delete tapPtrs[11]; tapRecompute();
+      if (IN.steer !== 0) throw new Error('no fingers should steer 0');
+      if (tapSide(10) !== -1 || tapSide(100000) !== 1) throw new Error('tapSide halves wrong');
+      tapPtrs = {}; S.controls = keep;
+    });
+    step('tap scheme canvas steering', function () {
+      var keepC = S.controls, keepS = G.screen;
+      S.controls = 'tap'; G.screen = null; G.paused = false;
+      var r = cv.getBoundingClientRect();
+      function pe(type, x, pid) {
+        cv.dispatchEvent(new PointerEvent(type, { pointerId: pid, clientX: x,
+          clientY: r.top + 100, bubbles: true, cancelable: true }));
+      }
+      pe('pointerdown', 10, 101);
+      if (IN.steer !== -1) throw new Error('left-half touch should steer -1, got ' + IN.steer);
+      pe('pointerdown', r.width - 10, 102);
+      if (IN.steer !== 1) throw new Error('newest finger should win');
+      pe('pointermove', r.width - 10, 102);
+      if (IN.steer !== 1) throw new Error('move should keep side');
+      pe('pointerup', r.width - 10, 102);
+      if (IN.steer !== -1) throw new Error('after lift should return to -1');
+      pe('pointerup', 10, 101);
+      if (IN.steer !== 0) throw new Error('no fingers should steer 0');
+      S.controls = 'drag';
+      pe('pointerdown', 100, 103);
+      pe('pointermove', 190, 103);
+      if (Math.abs(IN.steer - 1) > 0.01) throw new Error('drag should steer ~1, got ' + IN.steer);
+      pe('pointerup', 190, 103);
+      if (IN.steer !== 0) throw new Error('drag release should reset steer');
+      S.controls = keepC; G.screen = keepS; IN.steer = 0;
     });
     step('full race completes to results', function () {
       // AI drives the player slot; run the real tickSim loop
       playerInput = function () { return ND.aiInput(G.track, G.race.cars[0], 0.9); };
       $('btn-go').click();
       if (G.screen !== null) throw new Error('race screen did not start');
-      if ($('btn-gas').hidden) throw new Error('gas pedal not shown in pedals mode');
-      if ($('btn-brake').hidden) throw new Error('brake pedal not shown');
       if ($('btn-drift').hidden) throw new Error('drift button not shown');
-      if (!document.body.classList.contains('pedals')) throw new Error('body.pedals class missing');
+      if ($('btn-gas') || $('btn-brake')) throw new Error('pedal buttons should be gone');
+      if (document.body.classList.contains('pedals')) throw new Error('body.pedals class should be gone');
       if ($('spd-num') == null || $('drift-fill') == null) throw new Error('speed/drift HUD missing');
       var n = 0;
       while (G.race.state !== 'done' && n < 40000) { tickSim(); n++; }
