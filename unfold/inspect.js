@@ -323,13 +323,75 @@
     extras: extrasToolbox,
     interact: interactToolbox
   };
+  /* ---------- toolbox: the two clickable latches ----------
+   * Both brass hasps on the lid front are real hotspots wired to the live
+   * room's finale: no key -> rattle + "locked"; has key -> each tap flips
+   * its hasp up with a weighted clunk. When both are up the lid springs
+   * open in 3D and the REAL api.use('latch-key','mainlatch') path runs, so
+   * the flat room and the 3D box share one puzzle state. */
+  function latchState(ix) {
+    var T = ix.ctx.toolbox;
+    if (!T) return 'none';
+    if (T.active()) return T.hasKey() ? 'ready' : 'locked';
+    return 'done';
+  }
+  function onLatch(h, ix, side, shared) {
+    var st = shared.done ? 'done' : latchState(ix);
+    if (st === 'locked') {
+      ix.sfx('soft');
+      ix.say('Locked. The hidden panel had a key…');
+      rattleModel();
+      return;
+    }
+    if (st !== 'ready' || shared[side]) {
+      ix.sfx('tap');
+      if (shared.done || st === 'done') ix.say('Already open.');
+      return;
+    }
+    shared[side] = true;
+    h.el.classList.add('unlatched');
+    h.busy = true;
+    function checkBoth() {
+      h.busy = false;
+      if (shared.left && shared.right && !shared.done) {
+        shared.done = true;
+        ix.say('Both latches snap open.');
+        if (ix.reduced) { close(); ix.ctx.toolbox.use(); return; }
+        setTimeout(function () {
+          ix.setLid(true, true); // lid springs in 3D (silent — the room brings the win)
+          ix.sfx('clunk');
+        }, 380);
+        setTimeout(function () {
+          close(); // the win cinematic must not play under the 3D layer
+          ix.ctx.toolbox.use(); // the REAL finale: take key, done
+        }, 1500);
+      }
+    }
+    if (ix.reduced) { checkBoth(); return; }
+    ix.sfx('tick');
+    setTimeout(function () { ix.sfx('clunk'); }, 130);
+    setTimeout(checkBoth, 640);
+  }
   function interactToolbox(ix) {
+    var f = ix.M.faceEls.lidFront;
+    var shared = { left: false, right: false, done: latchState(ix) === 'done' };
+    if (f) {
+      [['left', 0.3], ['right', 0.7]].forEach(function (cfg) {
+        var hs = ix.hotspot(f, cfg[1], 0.5, {
+          lid: true, label: 'Toolbox latch',
+          html: '<span class="ins-latch"><span class="ins-latch-plate"></span>' +
+            '<span class="ins-latch-clasp"></span></span>',
+          onTap: function (h) { onLatch(h, ix, cfg[0], shared); }
+        });
+        if (shared.done) hs.el.classList.add('unlatched', 'spent');
+      });
+    }
     // hidden detail: serial number etched inside the tray edge
     addDetail(ix, ix.M.trayFace, 0.8, 0.72, {
       id: 'tb-serial', label: 'a serial number: № 04217',
       html: '<span class="ins-plate">№ 04217</span>'
     });
-    ix.setHint('Drag to look around · pinch to zoom · double-tap to open the lid');
+    ix.setHint('Drag to look around · pinch to zoom · tap the brass latches');
   }
   function extrasToolbox(M, P, cuboid, place) {
     var steel = { top: '#c3ccd3', front: '#9aa6ae', side: '#78838b' };
@@ -422,7 +484,144 @@
     extras: extrasMusicbox,
     interact: interactMusicbox
   };
+  /* ---------- music box: the turnable winding key ----------
+   * The little keyhole on the front face is a real hotspot wired to the live
+   * room's first step: no key -> rattle + hint; has key -> the key slides in,
+   * then the player winds it by dragging in circles (ratchet ticks, the side
+   * crank turns in sync). Two full turns — or a tap for an auto-wind — and
+   * the lid springs open while the REAL api.use('wind-key','keyhole') path
+   * runs, so the waking melody plays in sync with the open, spinning box. */
+  var WIND_NEED = 720; // two full clockwise turns to wake the box
+  function windKeyHtml() {
+    return '<span class="ins-windkey"><span class="ins-windkey-rot">' +
+      '<svg viewBox="0 0 40 56"><rect x="5" y="1" width="30" height="13" rx="6.5" fill="#e8b34b" stroke="#8a6a24" stroke-width="2"/>' +
+      '<rect x="17.5" y="12" width="5" height="30" fill="#e8b34b" stroke="#8a6a24" stroke-width="1.4"/>' +
+      '<rect x="22.5" y="29" width="8" height="5" rx="1.5" fill="#e8b34b" stroke="#8a6a24" stroke-width="1"/>' +
+      '<rect x="22.5" y="37" width="6" height="5" rx="1.5" fill="#e8b34b" stroke="#8a6a24" stroke-width="1"/></svg>' +
+      '</span></span>';
+  }
+  function windState(ix) {
+    var Mc = ix.ctx.musicbox;
+    if (!Mc) return 'none';
+    if (Mc.active()) return Mc.hasKey() ? 'ready' : 'locked';
+    return 'done';
+  }
+  function paintSpin(h, W) {
+    var rot = h.el.querySelector('.ins-windkey-rot');
+    if (rot) rot.style.transform = 'rotate(' + W.spin.toFixed(1) + 'deg)';
+    if (W.crankEl) W.crankEl.style.transform = 'rotateX(' + W.spin.toFixed(1) + 'deg)';
+  }
+  function addWind(h, ix, W, deg) {
+    if (W.done || W.auto) return;
+    var before = Math.floor(W.progress / 90);
+    W.progress += deg;
+    var after = Math.floor(W.progress / 90);
+    if (after > before) ix.sfx('tick'); // ratchet
+    if (W.progress >= WIND_NEED) finishWind(h, ix, W);
+  }
+  function autoWind(h, ix, W) {
+    if (W.auto || W.done) return;
+    W.auto = true; h.busy = true;
+    var t0 = performance.now(), dur = 1500, from = W.progress;
+    W.lastTick = Math.floor(from / 90);
+    (function fr(t) {
+      var k = Math.min(1, (t - t0) / dur);
+      var e = 1 - Math.pow(1 - k, 2);
+      W.progress = from + (WIND_NEED - from) * e;
+      W.spin = W.progress;
+      paintSpin(h, W);
+      var q = Math.floor(W.progress / 90);
+      if (q !== W.lastTick) { W.lastTick = q; ix.sfx('tick'); }
+      if (k < 1 && !W.done) requestAnimationFrame(fr);
+      else { W.auto = false; h.busy = false; finishWind(h, ix, W); }
+    })(t0);
+  }
+  function finishWind(h, ix, W) {
+    if (W.done) return;
+    W.done = true;
+    h.busy = true;
+    function go() {
+      if (W.crankEl) W.crankEl.style.transform = ''; // CSS takes the spin from here
+      ix.setLid(true, true); // lid springs; crank + drum spin, melody lands on it
+      ix.ctx.musicbox.use(); // the REAL step: unlock, say, advance to the melody
+      var keyEl = h.el.querySelector('.ins-windkey');
+      if (keyEl) keyEl.classList.add('gone');
+      h.el.classList.add('spent');
+      h.busy = false;
+    }
+    if (ix.reduced) { go(); return; }
+    ix.sfx('tick');
+    setTimeout(go, 200);
+  }
+  function watchWindDrag(h, ix, W) {
+    var el = h.el, cx = 0, cy = 0, lastA = 0, tracking = false;
+    el.addEventListener('pointerdown', function (e) {
+      if (!W.inserted || W.done || W.auto) return;
+      var k = el.querySelector('.ins-windkey');
+      if (!k) return;
+      var r = k.getBoundingClientRect();
+      cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+      lastA = Math.atan2(e.clientY - cy, e.clientX - cx);
+      tracking = true;
+    });
+    el.addEventListener('pointermove', function (e) {
+      if (!tracking || !W.inserted || W.done || W.auto) return;
+      var a = Math.atan2(e.clientY - cy, e.clientX - cx);
+      var d = a - lastA;
+      if (d > Math.PI) d -= 2 * Math.PI;
+      if (d < -Math.PI) d += 2 * Math.PI;
+      lastA = a;
+      var deg = d * 180 / Math.PI;
+      W.spin += deg; // the key follows the finger either way…
+      paintSpin(h, W);
+      if (deg > 0) addWind(h, ix, W, deg); // …but the ratchet only bites clockwise
+    });
+    function end() { tracking = false; }
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  }
+  function onWindKey(h, ix, W) {
+    var st = W.done ? 'done' : windState(ix);
+    if (st === 'locked') {
+      ix.sfx('soft');
+      ix.say('A tiny keyhole. The key is hiding nearby.');
+      rattleModel();
+      return;
+    }
+    if (st === 'done' || st === 'none') {
+      ix.sfx('tap');
+      if (st === 'done') ix.say('The box is already awake.');
+      return;
+    }
+    if (!W.inserted) {
+      W.inserted = true;
+      h.busy = true;
+      var keyEl = h.el.querySelector('.ins-windkey');
+      function armed() {
+        h.busy = false;
+        ix.say('Now wind it — drag in slow circles, or tap again.');
+      }
+      if (ix.reduced) { if (keyEl) keyEl.classList.add('in'); finishWind(h, ix, W); return; }
+      if (keyEl) keyEl.classList.add('in'); // key slides up into the hole
+      ix.sfx('slide');
+      setTimeout(function () { ix.sfx('tick'); armed(); }, 380);
+      return;
+    }
+    // tap on the seated key: wind it for them
+    autoWind(h, ix, W);
+  }
   function interactMusicbox(ix) {
+    var f = ix.M.faceEls.front; // the keyhole medallion lives on the front face
+    var W = { inserted: false, done: windState(ix) === 'done', auto: false,
+              progress: 0, spin: 0, lastTick: 0, crankEl: null };
+    if (f && !W.done) {
+      var hs = ix.hotspot(f, 0.5, 86 / 150, {
+        label: 'Winding keyhole', html: windKeyHtml(),
+        onTap: function (h) { onWindKey(h, ix, W); }
+      });
+      W.crankEl = document.querySelector('#inspect-layer .ins-crank');
+      watchWindDrag(hs, ix, W);
+    }
     // hidden detail: a miniature engraving on the gold drum. The drum spins
     // while the lid is open, so the hotspot's facing test includes the live
     // spin phase (spin-aware normal in updateShading).
@@ -431,7 +630,7 @@
       html: '<span class="ins-engrave">✦ W · 1897</span>',
       spin: { period: 2400, t0: function () { return crankT0 || performance.now(); } }
     });
-    ix.setHint('Drag to look around · pinch to zoom · double-tap to open the lid');
+    ix.setHint('Drag to look around · pinch to zoom · tap the little keyhole');
   }
   function extrasMusicbox(M, P, cuboid, place) {
     var gold = { top: '#ffe9a8', front: '#e8b34b', side: '#b98a2e' };

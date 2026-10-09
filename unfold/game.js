@@ -489,6 +489,30 @@
           if (u && hasItem(u.item)) { selectItem(u.item); u.fn(); return true; }
           return false;
         }
+      },
+      /* Toolbox latches: the flat finale registers api.use('latch-key',
+       * 'mainlatch'). The 3D latches play the same handler — take key, done —
+       * so both scenes stay in one puzzle state. */
+      toolbox: {
+        active: function () { return !!G.uses['mainlatch']; },
+        hasKey: function () { return hasItem('latch-key'); },
+        use: function () {
+          var u = G.uses['mainlatch'];
+          if (u && hasItem(u.item)) { selectItem(u.item); u.fn(); return true; }
+          return false;
+        }
+      },
+      /* Music-box winding key: the flat first step registers
+       * api.use('wind-key', 'keyhole'). The 3D key winds, then plays the
+       * same handler — unlock, say, advance to the melody. */
+      musicbox: {
+        active: function () { return !!G.uses['keyhole']; },
+        hasKey: function () { return hasItem('wind-key'); },
+        use: function () {
+          var u = G.uses['keyhole'];
+          if (u && hasItem(u.item)) { selectItem(u.item); u.fn(); return true; }
+          return false;
+        }
       }
     };
   }
