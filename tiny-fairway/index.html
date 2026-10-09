@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Tiny Fairway — one-touch golf</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body data-biome="0">
 <canvas id="game"></canvas>
@@ -41,9 +41,11 @@
     <p class="tagline">One finger. Twenty holes.</p>
     <div class="menu-btns">
       <button class="btn primary" id="btn-endless" type="button">Tour<span class="btn-sub" id="endless-sub"></span></button>
+      <button class="btn" id="btn-wonders" type="button">Wonders of the World<span class="btn-sub" id="wonders-sub">7 wonders · passport</span></button>
       <button class="btn" id="btn-daily" type="button">Daily Hole<span class="btn-sub" id="daily-sub">same hole, worldwide</span></button>
       <button class="btn" id="btn-race" type="button">Race<span class="btn-sub">you vs 3 rivals, live</span></button>
       <button class="btn ghost" id="btn-map" type="button">World Map<span class="btn-sub">stars color the lands</span></button>
+      <button class="btn ghost" id="btn-passport" type="button">Passport<span class="btn-sub" id="passport-sub">your wonder stamps</span></button>
       <button class="btn ghost" id="btn-newrun" type="button" hidden>↺ new run</button>
       <button class="btn ghost" id="btn-how" type="button">How to play</button>
       <button class="btn ghost" id="btn-haptic" type="button" aria-pressed="true">Haptics: <span id="haptic-state">On</span></button>
@@ -57,8 +59,19 @@
       <p>Sink it in as few strokes as you can: match par for ★★★. Water costs a stroke. Sand is slow. ↩ takes back your last shot; after 20 strokes you can skip the hole. The turtle is harmless, but it <i>will</i> judge a bad hole.</p>
     </div>
     <p class="best" id="menu-best"></p>
+    <p class="traveler" id="menu-traveler" hidden>✦ World Traveler — golden ball trail unlocked</p>
   </div>
 </section>
+
+<!-- WONDER INTRO -->
+<div id="wonder-intro" aria-hidden="true">
+  <div class="wi-card">
+    <div id="wi-kicker">Wonder 1 of 7</div>
+    <div id="wi-name">Great Wall</div>
+    <div id="wi-flavor"></div>
+    <div class="wi-hint">tap to continue</div>
+  </div>
+</div>
 
 <!-- HOLE TRANSITION -->
 <div id="transit" aria-hidden="true">
@@ -82,6 +95,16 @@
   </div>
 </section>
 
+<!-- PASSPORT -->
+<section id="passport" class="screen" aria-label="Passport">
+  <div class="card passport-card">
+    <h2>Passport</h2>
+    <p class="map-sub" id="passport-progress"></p>
+    <div id="stamp-grid"></div>
+    <button class="btn primary" id="btn-passport-back" type="button">Back</button>
+  </div>
+</section>
+
 <!-- RESULT (daily) -->
 <section id="result" class="screen" aria-label="Result">
   <div class="card">
@@ -95,9 +118,10 @@
 
 <div id="err" hidden></div>
 
-<script src="sim.js?v=7"></script>
-<script src="transport-sim.js?v=6"></script>
-<script src="game.js?v=8"></script>
-<script src="transport.js?v=6"></script>
+<script src="sim.js?v=9"></script>
+<script src="transport-sim.js?v=7"></script>
+<script src="game.js?v=9"></script>
+<script src="transport.js?v=7"></script>
+<script src="wonders-art.js?v=2"></script>
 </body>
 </html>

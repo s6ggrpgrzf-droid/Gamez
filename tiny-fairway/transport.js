@@ -938,6 +938,21 @@ TPR.event = function (te) {
     burst(ex, ey, 4, 2, 5, 0.3, 0.24, '#ffe9c4', 4);
   } else if (k === 'belt' || k === 'fan') {
     burst(ex, ey, 3, 1, 3, 0.3, 0.22, '#e8f2ff', 2);
+  } else if (k === 'beacon') {
+    // watchtower brazier lights: pitch climbs with the chain index
+    var bi = (typeof te.i === 'number') ? te.i : 0;
+    sBlip(520 + bi * 140, 780 + bi * 140, 0.16, 0.20, 'triangle');
+    burst(ex, ey, 10, 2, 8, 0.5, 0.30, '#ffb347', -3);   // embers rise
+    burst(ex, ey, 4, 1, 4, 0.4, 0.42, '#fff3c4', -2);
+    spawnRing(ex, ey, 0.5, 0.5, 5, 'rgba(255,179,71,0.85)', 3);
+  } else if (k === 'beacon-final') {
+    // golden-path payoff: ascending cascade chord + ember fountain
+    sBlip(660, 990, 0.30, 0.22, 'triangle');
+    sBlip(880, 1320, 0.45, 0.18, 'sine');
+    sBlip(1174, 1568, 0.60, 0.14, 'sine');
+    burst(ex, ey, 16, 3, 10, 0.7, 0.34, '#ffd166', -3);
+    burst(ex, ey, 8, 1, 5, 0.9, 0.5, '#fff3c4', -2);
+    spawnRing(ex, ey, 0.8, 0.5, 8, 'rgba(255,209,102,0.9)', 4);
   }
 };
 

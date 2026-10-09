@@ -427,5 +427,45 @@
     }
   };
 
+  /* ---------------- beacons: ordered flame-gate chain (wonder set-pieces) ----
+   * Trigger-only: on entry-edge the ball is re-aimed along the beacon's
+   * golden-line direction (portal-redirect style), keeping the faster of its
+   * current speed and bc.boost. No physics of their own: no forces, no capture.
+   * Chain state lives on hole._beacon {next, lit[], n, finalT}, initialized in
+   * TF.makeHole (fresh per hole attempt). Out-of-order or re-entry: the
+   * redirect still applies, but the chain does not advance (stays silent).
+   * Deterministic: pure function of hole + ball + t, no RNG. */
+  TPS.beaconStep = function (hole, ball, t) {
+    var beacons = hole.beacons, st = hole._beacon, i, bc, inside = -1;
+    if (!beacons || !st || !beacons.length) return;
+    for (i = 0; i < beacons.length; i++) {
+      bc = beacons[i];
+      var bx = ball.x - bc.x, by = ball.y - bc.y;
+      if (bx * bx + by * by < bc.r * bc.r) { inside = i; break; }
+    }
+    if (inside === ball._bcZone) return;
+    ball._bcZone = inside;
+    if (inside < 0) return;                    // left all beacons: silent
+    var b = beacons[inside];
+    var sp = Math.hypot(ball.vx, ball.vy);
+    if (sp < 1.0) return;                     // resting in a brazier: no phantom kick
+    // flame-gate throw: re-aim along the golden line. Normally the throw keeps
+    // the faster of current speed and boost; exact:1 sets speed = boost (the
+    // finale, tuned to die at the cup).
+    var out = b.exact ? b.boost : (sp > b.boost ? sp : b.boost);
+    ball.vx = b.dx * out;
+    ball.vy = b.dy * out;
+    if (inside === st.next) {
+      st.lit[inside] = true;
+      st.next = inside + 1;
+      if (inside === beacons.length - 1) {
+        st.finalT = t;
+        ball.tevent = { k: 'beacon-final', x: b.x, y: b.y, i: inside };
+      } else {
+        ball.tevent = { k: 'beacon', x: b.x, y: b.y, i: inside };
+      }
+    }
+  };
+
   if (typeof globalThis !== 'undefined') globalThis.TPS = TPS;
 })();
