@@ -125,7 +125,7 @@ function validPack(p) {
   if (!cleanStr(m.title, 48) || !cleanStr(m.flavor, 160)) return false;
   if (!Array.isArray(p.logs) || p.logs.length !== 4) return false;
   for (var l = 0; l < 4; l++) {
-    if (!p.logs[l] || [1, 2, 3].indexOf(p.logs[l].sector) < 0 || !cleanStr(p.logs[l].text, 180)) return false;
+    if (!p.logs[l] || [1, 2, 3].indexOf(Number(p.logs[l].sector)) < 0 || !cleanStr(p.logs[l].text, 180)) return false;
   }
   return true;
 }
@@ -147,7 +147,7 @@ function sanitizePack(p, date) {
     params: MUTATORS[p.mutator.id]   // params ALWAYS from our allowlist, never the AI
   };
   for (var l = 0; l < 4; l++)
-    out.logs.push({ sector: p.logs[l].sector, text: cleanStr(p.logs[l].text, 180) });
+    out.logs.push({ sector: Number(p.logs[l].sector), text: cleanStr(p.logs[l].text, 180) });
   return out;
 }
 
@@ -192,7 +192,7 @@ async function runAi(env, messages, maxTokens) {
       if (MODELS[i].indexOf('mistral') < 0)
         params.response_format = { type: 'json_object' };
       var r = await env.ai.run(MODELS[i], params);
-      var txt = r && typeof r.response === 'string' ? r.response : '';
+      var txt = normText(r);
       if (txt) return txt;
       lastErr = 'empty response from ' + MODELS[i];
     } catch (e) {
@@ -200,6 +200,15 @@ async function runAi(env, messages, maxTokens) {
     }
   }
   throw new Error(lastErr);
+}
+
+function normText(r) {
+  var x = r && r.response;
+  if (typeof x === 'string') return x;
+  if (x && typeof x === 'object') {
+    try { return JSON.stringify(x); } catch (e) { return ''; }
+  }
+  return '';
 }
 
 function extractJson(txt) {
@@ -250,6 +259,7 @@ export default {
         ctx.waitUntil(env.MATRON_KV.put(key, JSON.stringify(pack), { expirationTtl: 86400 }).catch(function () {}));
         return json(pack, 200, { 'x-matron-cache': 'MISS' });
       } catch (e) {
+        console.error('[matron] generation failed:', String((e && e.message) || e).slice(0, 300));
         return json(fallbackPack(date), 200, { 'x-matron-cache': 'FALLBACK' });
       }
     }
