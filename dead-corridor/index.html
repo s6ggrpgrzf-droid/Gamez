@@ -5,25 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0512">
 <title>Dead Man's Corridor</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <div id="app">
   <!-- TITLE -->
   <section id="screen-title" class="screen">
-    <div class="title-fog" aria-hidden="true"></div>
+    <canvas id="title-bg" aria-hidden="true"></canvas>
+    <div class="title-vignette" aria-hidden="true"></div>
     <div class="title-content">
       <div class="title-kicker">A HAUNTED-FACILITY RAIL SHOOTER</div>
       <h1 class="title-logo">DEAD MAN'S<br><span>CORRIDOR</span></h1>
       <p class="title-sub">Drag to look. The gun fires itself.<br>Don't let them touch you.</p>
+      <div id="matron-daily" class="matron-daily hidden" aria-live="polite">
+        <div class="md-head">◈ MATRON — DAILY BRIEFING</div>
+        <div id="md-line" class="md-line"></div>
+        <div id="md-mutator" class="md-mutator"><b id="md-mut-title"></b><span id="md-mut-flavor"></span></div>
+      </div>
       <button id="btn-play" class="btn primary" type="button">▶ Ride the Corridor</button>
       <button id="btn-daily" class="btn" type="button">Daily Descent<span class="btn-sub">same horrors, worldwide</span></button>
       <div class="title-best">BEST&nbsp; <span id="title-best">0</span></div>
       <button id="btn-how" class="btn ghost" type="button">How to survive</button>
       <div id="howto" class="hidden">
-        <p><b>Drag</b> anywhere to look around. <b>Tap</b> to fire manually — but the gun auto-fires when your crosshair sits on a target.</p>
-        <p>Watch 8 shots: the gun reloads itself. Green <b>spit</b> can be shot down. Grab the cyan <b>charge</b>, fill the meter, tap <b>✦</b> for the NOVA.</p>
-        <p>Red flash + shake = something touched you. Clear all three sectors to survive.</p>
+        <div class="howto-head">◈ MATRON ORIENTATION</div>
+        <p><b>LOOK</b> — drag anywhere to turn your head. The rail moves your body; your eyes are your own.</p>
+        <p><b>FIRE</b> — tap to shoot, or hold your crosshair on a target and the gun fires itself. 8 shots, then it reloads.</p>
+        <p><b>SURVIVE</b> — green spit can be shot down. Fill the charge meter, tap <b>NOVA</b> when it burns cyan. Red flash means something touched you. Clear all three sectors.</p>
       </div>
     </div>
   </section>
@@ -35,11 +42,16 @@
       <div id="hud-hp"><div id="hud-hp-fill"></div><span>HP</span></div>
       <div id="hud-score">0</div>
     </header>
-    <div id="hud-ammo" aria-label="ammo"></div>
-    <div id="hud-charge"><div id="hud-charge-fill"></div><span>✦</span></div>
+    <div id="hud-ammo" aria-label="ammo"><span id="ammo-num">8</span><div id="ammo-pips"></div></div>
+    <div id="hud-charge"><div id="hud-charge-fill"></div><span>NOVA</span></div>
     <button id="btn-reload" class="hbtn" type="button" aria-label="Reload">⟳</button>
-    <button id="btn-nova" class="hbtn" type="button" aria-label="Nova blast">✦</button>
+    <button id="btn-nova" class="hbtn nova" type="button" aria-label="Nova blast"><span class="nova-glyph">✦</span><span class="nova-label">NOVA</span></button>
     <div id="banner" class="hidden"></div>
+    <div id="sector-card" class="hidden" aria-hidden="true">
+      <div class="sc-bar top"></div>
+      <div class="sc-inner"><div id="sc-name" class="sc-name"></div><div id="sc-intro" class="sc-intro"></div></div>
+      <div class="sc-bar bot"></div>
+    </div>
   </section>
 
   <!-- GAME OVER -->
@@ -58,6 +70,6 @@
 <script src="engine.js?v=2"></script>
 <script src="art.js?v=2"></script>
 <script src="audio.js?v=1"></script>
-<script src="game.js?v=3"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

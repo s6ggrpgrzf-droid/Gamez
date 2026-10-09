@@ -129,11 +129,43 @@
       lowAmmo: ['Your magazine is empty. Reload, quickly.'],
       brute: ['Attention: large patient loose in Sector 3.']
     },
-    mutator: null,
+    mutator: {
+      id: 'frenzy', title: 'HEIGHTENED AGITATION',
+      flavor: 'Sedatives wearing off. The patients are quicker today.',
+      params: { foeSpeedMul: 1.15, scoreMul: 1.1 }
+    },
     logs: []
   };
   function matronPack() { return Mpack || MATRON_FALLBACK; }
   function mpick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function mutatorHint(mp) {
+    if (!mp || !mp.params) return '';
+    var pr = mp.params, bits = [];
+    if (pr.foeSpeedMul > 1) bits.push('foes ' + Math.round((pr.foeSpeedMul - 1) * 100) + '% faster');
+    if (pr.magSize < 8) bits.push(pr.magSize + '-round mag');
+    if (pr.hp < 100) bits.push(pr.hp + ' HP');
+    if (pr.boltBonus > 0) bits.push('spitters +' + pr.boltBonus + ' bolt');
+    if (pr.scoreMul > 1) bits.push('+' + Math.round((pr.scoreMul - 1) * 100) + '% score');
+    return bits.join(' \u00B7 ');
+  }
+  /* title-screen daily briefing card */
+  function fillMatronDaily() {
+    try {
+      var p = matronPack();
+      var sec = (p.sectors && p.sectors[0]) || {};
+      if (sec.intro) $('md-line').textContent = '\u201C' + sec.intro + '\u201D';
+      var mp = p.mutator;
+      if (mp) {
+        $('md-mut-title').textContent = 'FACILITY CONDITION \u2014 ' + String(mp.title || mp.id).toUpperCase();
+        var hint = mutatorHint(mp);
+        $('md-mut-flavor').textContent = (mp.flavor || '') + (hint ? '   \u00B7   ' + hint : '');
+        $('md-mutator').style.display = '';
+      } else {
+        $('md-mutator').style.display = 'none';
+      }
+      $('matron-daily').classList.remove('hidden');
+    } catch (e) {}
+  }
   function fetchMatronPack() {
     try {
       var d = new Date();
@@ -142,7 +174,7 @@
       var to = setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 3500);
       fetch(MATRON_URL + '/daily?date=' + ds, { signal: ctl.signal })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (p) { clearTimeout(to); if (p && p.sectors && p.barks) Mpack = p; })
+        .then(function (p) { clearTimeout(to); if (p && p.sectors && p.barks) { Mpack = p; fillMatronDaily(); } })
         .catch(function () { clearTimeout(to); });
     } catch (e) {}
   }
@@ -156,6 +188,23 @@
     void b.offsetWidth; b.classList.add('show');
     clearTimeout(b._t);
     b._t = setTimeout(function () { b.classList.add('hidden'); b.classList.remove('matron'); }, 2600);
+  }
+  /* sector intro card: letterboxed title card with MATRON's line */
+  function sectorCard(name, intro) {
+    try {
+      var c = $('sector-card');
+      $('sc-name').textContent = name;
+      $('sc-intro').textContent = '\u201C' + intro + '\u201D';
+      c.classList.remove('hidden'); c.classList.remove('hide');
+      void c.offsetWidth; c.classList.add('show');
+      clearTimeout(c._t);
+      c._t = setTimeout(function () {
+        c.classList.add('hide');
+        setTimeout(function () {
+          c.classList.remove('show'); c.classList.add('hidden'); c.classList.remove('hide');
+        }, 420);
+      }, 2500);
+    } catch (e) {}
   }
 
   function newRun(dailySeed) {
@@ -173,7 +222,7 @@
       barkFlags: {}, mutator: null, pendingBruteBark: 0, dwellT0: 0,
       fireCd: 0, flash: 0, recoil: 0, recoilV: 0, smoothYaw: 0, smoothPitch: 0,
       charge: 0, novaReady: false,
-      score: 0, kills: 0, shots: 0, hits: 0, combo: 0, maxCombo: 0,
+      score: 0, kills: 0, shots: 0, hits: 0, combo: 0, maxCombo: 0, comboPop: 0,
       dmgFlash: 0, shake: 0, hitStop: 0, slowmo: 0,
       waveName: '', waveClearT: 0,
       time: 0, over: false, win: false,
@@ -242,7 +291,7 @@
     var si = dwell === 'w1' ? 0 : dwell === 'w2' ? 1 : 2;
     var sec = matronPack().sectors[si] || matronPack().sectors[0];
     G.waveName = sec.name;
-    matronSay(sec.intro);
+    sectorCard(sec.name, sec.intro);
   }
 
   /* ================= combat ================= */
@@ -296,6 +345,7 @@
     if (best) {
       G.hits++;
       G.combo++;
+      G.comboPop = 1;
       if (G.combo > G.maxCombo) G.maxCombo = G.combo;
       if ((G.combo === 10 || G.combo === 20 || G.combo === 30) && !G.barkFlags['streak' + G.combo]) {
         G.barkFlags['streak' + G.combo] = 1;
@@ -384,6 +434,10 @@
     if (src) { G.dmgBy = G.dmgBy || {}; G.dmgBy[src] = (G.dmgBy[src] || 0) + dmg; }
     G.combo = 0;   // taking a hit breaks the combo
     G.dmgFlash = 1;
+    try {
+      var hpb = $('hud-hp');
+      hpb.classList.remove('dmg'); void hpb.offsetWidth; hpb.classList.add('dmg');
+    } catch (e) {}
     G.shake = Math.max(G.shake, 9);
     G.hitStop = Math.max(G.hitStop, 0.06);
     G.hurtT = G.time;
@@ -481,6 +535,7 @@
     G.smoothPitch += (G.lookPitch - G.smoothPitch) * sk;
     G.fireCd = Math.max(0, G.fireCd - dt);
     G.dmgFlash = Math.max(0, G.dmgFlash - dt * 2.2);
+    G.comboPop = Math.max(0, G.comboPop - dt * 3.2);
     G.shake = Math.max(0, G.shake - dt * 26);
     G.hitStop = Math.max(0, G.hitStop - dt);
     if (G.reloading > 0) {
@@ -806,11 +861,17 @@
         c2.font = '700 13px system-ui'; c2.textAlign = 'center';
         c2.fillText('RELOADING…', chx, chy + 34);
       }
-      // combo meter under the crosshair
+      // combo meter under the crosshair: pops on each kill, heats up with tier
       if (G.combo >= 3) {
-        c2.fillStyle = G.combo >= 10 ? '#ffe14d' : 'rgba(255,255,255,.85)';
-        c2.font = '800 15px system-ui'; c2.textAlign = 'center';
-        c2.fillText('×' + G.combo + ' COMBO', chx, chy + 52);
+        var ccol = G.combo >= 30 ? '#cfeaff' : G.combo >= 20 ? '#ff7a3c' : G.combo >= 10 ? '#ffe14d' : 'rgba(255,255,255,.85)';
+        var cpop = 1 + 0.55 * G.comboPop;
+        c2.save();
+        c2.translate(chx, chy + 52);
+        c2.scale(cpop, cpop);
+        c2.fillStyle = ccol;
+        c2.font = '800 15px system-ui'; c2.textAlign = 'center'; c2.textBaseline = 'middle';
+        c2.fillText('×' + G.combo + ' COMBO', 0, 0);
+        c2.restore();
       }
 
       // off-screen enemy indicators: look toward the threat
@@ -876,7 +937,8 @@
     $('hud-score').textContent = G.score;
     $('hud-charge-fill').style.width = G.charge + '%';
     $('btn-nova').classList.toggle('ready', G.novaReady);
-    var ap = $('hud-ammo');
+    $('ammo-num').textContent = G.ammo;
+    var ap = $('ammo-pips');
     var s = '';
     for (var i = 0; i < G.magSize; i++)
       s += '<i class="' + (i < G.ammo ? 'on' : '') + (G.reloading > 0 ? ' rel' : '') + '"></i>';
@@ -994,6 +1056,74 @@
     }
   }
 
+  /* ================= title backdrop ================= */
+  var titleT = 0, titleLast = 0;
+  function sizeTitleBg() {
+    try {
+      var cv = $('title-bg');
+      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      cv.width = Math.round(cv.clientWidth * dpr);
+      cv.height = Math.round(cv.clientHeight * dpr);
+    } catch (e) {}
+  }
+  function titleBg(ts) {
+    requestAnimationFrame(titleBg);
+    if (state !== 'title') { titleLast = 0; return; }
+    var cv = $('title-bg');
+    if (!cv || !cv.width) return;
+    if (!titleLast) titleLast = ts;
+    var dt = Math.min(0.05, (ts - titleLast) / 1000);
+    titleLast = ts;
+    titleT += dt;
+    var w = cv.width, h = cv.height, c = cv.getContext('2d');
+    var vpx = w / 2, vpy = h * 0.44;
+    var g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#0b0616'); g.addColorStop(0.55, '#150a2a'); g.addColorStop(1, '#05030a');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    /* fluorescent flicker with the occasional brownout */
+    var fl = 0.82 + 0.18 * Math.sin(titleT * 13) * Math.sin(titleT * 7.3);
+    if (Math.sin(titleT * 0.63) > 0.986) fl *= 0.35;
+    /* converging corridor lines */
+    c.lineWidth = Math.max(1.5, w / 200);
+    var i, k;
+    for (i = -4; i <= 4; i++) {
+      c.strokeStyle = 'rgba(170,84,104,' + (0.5 * fl).toFixed(3) + ')';
+      c.beginPath();
+      c.moveTo(vpx + i * w * 0.028, vpy);
+      c.lineTo(vpx + i * w * 0.24, h);
+      c.stroke();
+    }
+    /* ceiling light strip, narrow at the vanishing point */
+    var lg = c.createLinearGradient(0, vpy, 0, h);
+    lg.addColorStop(0, 'rgba(255,216,172,' + (0.6 * fl).toFixed(3) + ')');
+    lg.addColorStop(1, 'rgba(255,216,172,0)');
+    c.fillStyle = lg;
+    c.beginPath();
+    c.moveTo(vpx - 3, vpy); c.lineTo(vpx + 3, vpy);
+    c.lineTo(vpx + w * 0.085, h); c.lineTo(vpx - w * 0.085, h);
+    c.closePath(); c.fill();
+    /* door frames rushing toward the viewer */
+    for (k = 0; k < 4; k++) {
+      var z = (titleT * 0.32 + k * 0.25) % 1;
+      var sc2 = Math.pow(z, 2.4);
+      var fw = w * (0.05 + 0.52 * sc2), fh = h * (0.045 + 0.44 * sc2);
+      c.strokeStyle = 'rgba(210,96,108,' + (0.16 + 0.5 * sc2 * fl).toFixed(3) + ')';
+      c.lineWidth = 1.5 + 5 * sc2;
+      c.strokeRect(vpx - fw / 2, vpy - fh / 2, fw, fh);
+    }
+    /* drifting fog */
+    for (var f = 0; f < 2; f++) {
+      var fx = w * (0.3 + 0.4 * f) + Math.sin(titleT * 0.4 + f * 2.4) * w * 0.08;
+      var fy = h * (0.62 + 0.1 * f) + Math.cos(titleT * 0.3 + f * 1.7) * h * 0.05;
+      var fr = w * 0.36;
+      var fg = c.createRadialGradient(fx, fy, 0, fx, fy, fr);
+      fg.addColorStop(0, 'rgba(150,120,200,0.10)');
+      fg.addColorStop(1, 'rgba(150,120,200,0)');
+      c.fillStyle = fg;
+      c.fillRect(fx - fr, fy - fr, fr * 2, fr * 2);
+    }
+  }
+
   /* ================= boot ================= */
   function resize() {
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1012,6 +1142,10 @@
     window.addEventListener('resize', resize);
     bindInput();
     fetchMatronPack();
+    sizeTitleBg();
+    window.addEventListener('resize', sizeTitleBg);
+    fillMatronDaily();
+    requestAnimationFrame(titleBg);
     $('btn-play').addEventListener('click', function () { DCSfx.init(); startRide(null); });
     $('btn-how').addEventListener('click', function () { $('howto').classList.toggle('hidden'); });
     $('btn-daily').addEventListener('click', function () {
