@@ -140,9 +140,11 @@ function boardColors(board) {
   return out.length ? out : COLORS.slice();
 }
 
-/* Geometry: cell center in pixels */
+/* Geometry: cell center in pixels. GRID_DX centers the grid horizontally
+   (set by the UI after R is known); defaults to 0 so engine tests are unaffected. */
+var GRID_DX = 0;
 function cellXY(r, c, R) {
-  var x = R + c * 2 * R + (r % 2 ? R : 0);
+  var x = GRID_DX + R + c * 2 * R + (r % 2 ? R : 0);
   var y = R + r * R * 1.732;
   return [x, y];
 }
@@ -178,7 +180,7 @@ if (typeof module !== 'undefined') {
     neighbors: neighbors, findCluster: findCluster, findAnchored: findAnchored,
     resolveBoard: resolveBoard, boardColors: boardColors,
     cellXY: cellXY, nearestEmptyCell: nearestEmptyCell, isAttachable: isAttachable,
-    key: key
+    key: key, setGridDX: function (dx) { GRID_DX = dx; }, gridDX: function () { return GRID_DX; }
   };
 }
 if (typeof window !== 'undefined') {
@@ -188,6 +190,6 @@ if (typeof window !== 'undefined') {
     neighbors: neighbors, findCluster: findCluster, findAnchored: findAnchored,
     resolveBoard: resolveBoard, boardColors: boardColors,
     cellXY: cellXY, nearestEmptyCell: nearestEmptyCell, isAttachable: isAttachable,
-    key: key
+    key: key, setGridDX: function (dx) { GRID_DX = dx; }, gridDX: function () { return GRID_DX; }
   };
 }

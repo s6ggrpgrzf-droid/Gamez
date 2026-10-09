@@ -17,6 +17,7 @@
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
 
   var W = 0, H = 0, R = 18;          // css px
+  var gridDX = 0;                    // horizontal centering offset for the grid
   var BOARD_TOP = 64;                // below HUD branch area
   var SHOOT_Y = 0;                   // set in resize
   var STELLA_W = 120, STELLA_H = 132;
@@ -200,14 +201,17 @@
   function resize() {
     var wrap = canvas.parentElement;
     W = Math.min(wrap.clientWidth || 400, 520);
-    H = Math.max(420, Math.min(window.innerHeight * 0.66, 680));
+    H = Math.max(480, Math.min(window.innerHeight * 0.80, 780));
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    R = Math.max(15, Math.min(21, W / (E.COLS * 2.25)));
+    R = Math.max(13, Math.min(18, W / (E.COLS * 2.6)));
     SHOOT_Y = H - 78;
+    // center the (now smaller) grid horizontally: it spans 23R, canvas is W
+    gridDX = Math.max(0, (W - 23 * R) / 2);
+    E.setGridDX(gridDX);
     Art.background(W, H);
     seedAmbient();
   }
@@ -406,6 +410,7 @@
   canvas.addEventListener('pointerdown', function (e) {
     if (!state || state.over || state.flying || state.castT > 0 || view !== 'game') return;
     var p = canvasPos(e);
+    downX = p[0]; downY = p[1]; downT = performance.now();
     // Nero tap → discard current bubble to the cat
     var nx = W / 2 + R * 3.4, ny = SHOOT_Y + 34;
     var dx = p[0] - nx, dy = p[1] - ny;
@@ -421,10 +426,23 @@
     if (!state || !state.aiming) return;
     updateAim(canvasPos(e));
   });
+  var downX = 0, downY = 0, downT = 0; // for tap-vs-aim disambiguation
   function endAimFire(e) {
     if (!state || !state.aiming) return;
+    var p = canvasPos(e);
     state.aiming = false;
     state.stellaPose = 'idle';
+    // tap (not drag) on the loaded bubble → swap current/next, Bubble Witch style
+    var wt = wandTip(), sr = R * 1.32 + 12;
+    var quick = performance.now() - downT < 350;
+    var still = Math.hypot(p[0] - downX, p[1] - downY) < 14;
+    var onBubble = Math.hypot(p[0] - wt[0], p[1] - wt[1]) < sr;
+    if (quick && still && onBubble && !state.over && !state.flying) {
+      var t = state.current; state.current = state.next; state.next = t;
+      HexAudio.click();
+      updateHUD();
+      return;
+    }
     fire();
   }
   canvas.addEventListener('pointerup', endAimFire);
@@ -532,7 +550,7 @@
 
   function landBubble(f, topRow, cell) {
     var r, c;
-    if (topRow) { r = 0; c = Math.max(0, Math.min(E.COLS - 1, Math.round((f.x - R) / (2 * R)))); }
+    if (topRow) { r = 0; c = Math.max(0, Math.min(E.COLS - 1, Math.round((f.x - gridDX - R) / (2 * R)))); }
     else { r = cell[0]; c = cell[1]; }
     E.set(state.board, r, c, f.bub);
     HexAudio.stick();
@@ -1654,6 +1672,7 @@
   function introTip(L) {
     var tips = [
       'Tip: bank shots off the walls to reach tricky spots.',
+      'Tip: tap your loaded bubble to swap it with the next one.',
       'Tip: feed bubbles you don’t need to Nero — 4 treats earn a rainbow.',
       'Tip: dropping a whole branch scores exponentially. Aim for the roots!',
       'Tip: charge the spell orb, then fire for the HEX BLAST.',
