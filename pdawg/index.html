@@ -6,15 +6,77 @@
 <meta name="theme-color" content="#f5f2ea">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a1e">
 <title>Pdawg Puzzles — Gamez Edition</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
+
+<!-- hand-drawn icon set: zero emojis on the home screen -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="pd-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2a007"/><stop offset="1" stop-color="#6d5ef0"/>
+    </linearGradient>
+    <symbol id="i-piece" viewBox="0 0 24 24">
+      <path d="M7 2h4c0 0 .5 2.6 2.6 2.6S16.2 2 16.2 2H21v5c0 0-2.6.5-2.6 2.6S21 12.2 21 12.2v8.8h-8.8c0 0-.5-2.6-2.6-2.6S6.9 21 6.9 21H2v-8.8c0 0 2.6-.5 2.6-2.6S2 7 2 7V2h5z"/>
+    </symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24">
+      <path d="M12 2c.9 5.8 4.2 9.1 10 10-5.8.9-9.1 4.2-10 10-.9-5.8-4.2-9.1-10-10 5.8-.9 9.1-4.2 10-10z"/>
+      <path d="M19 2c.4 2.6 1.9 4.1 4.5 4.5-2.6.4-4.1 1.9-4.5 4.5-.4-2.6-1.9-4.1-4.5-4.5 2.6-.4 4.1-1.9 4.5-4.5z"/>
+    </symbol>
+    <symbol id="i-dice" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="3" width="18" height="18" rx="4.5"/>
+        <circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/>
+        <circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/>
+        <circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/>
+        <circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2.5" y="7" width="19" height="13" rx="3.5"/>
+        <circle cx="12" cy="13.5" r="3.6"/>
+        <path d="M8.5 7L10 4h4l1.5 3"/>
+      </g>
+    </symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 4h10v4.5a5 5 0 0 1-10 0V4z"/>
+        <path d="M7 5.5H3.8A2.8 2.8 0 0 0 6.6 11M17 5.5h3.2a2.8 2.8 0 0 1-2.8 5.5M12 13.5V17M8.5 21h7M10 17h4"/>
+      </g>
+    </symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24">
+      <path d="M12 22c4.4 0 7.5-3.2 7.5-7.4 0-4.3-4-8-7.5-10.6C8.5 6.6 4.5 10.3 4.5 14.6 4.5 18.8 7.6 22 12 22zm0-4.2c-1.9 0-3.2-1.4-3.2-3.1 0-1.9 1.7-3.4 3.2-4.7 1.5 1.3 3.2 2.8 3.2 4.7 0 1.7-1.3 3.1-3.2 3.1z"/>
+    </symbol>
+    <symbol id="i-pad" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7.5" width="20" height="10.5" rx="5.25"/>
+        <path d="M7.5 11v3.5M5.75 12.75h3.5"/>
+        <circle cx="15.5" cy="12" r=".9" fill="currentColor" stroke="none"/>
+        <circle cx="18" cy="14.2" r=".9" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="M4 12.5l5.2 5.2L20 6.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-image" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="3"/>
+        <circle cx="9" cy="10" r="1.6"/>
+        <path d="M3.5 17.5l4.8-4.8 3.7 3.7 3-3 5.5 5.5"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
 
 <!-- ============ HOME ============ -->
 <div id="home">
   <header class="home-head">
-    <div class="logo-row"><span class="logo">🧩</span></div>
-    <h1>Pdawg Puzzles</h1>
+    <div class="logo-row"><svg class="logo-mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-piece" fill="url(#pd-grad)"/></svg></div>
+    <h1>Pdawg <span>Puzzles</span></h1>
     <p class="tagline">Hand-cut feeling pieces, a real puzzle table.<br>No ads, no accounts — progress saves itself.</p>
     <div id="statsStrip" class="stats-strip" aria-label="Your stats"></div>
   </header>
@@ -22,20 +84,20 @@
   <section id="dailyCard" class="card daily" aria-label="Daily puzzle"></section>
 
   <section class="card mystery" aria-label="Mystery puzzle">
-    <div class="card-tag">🎲 MYSTERY MODE</div>
+    <div class="card-tag"><svg class="ic"><use href="#i-dice"/></svg> MYSTERY MODE</div>
     <div class="card-title">Solve it blind</div>
     <p class="card-sub">A random gallery picture — hidden until you finish. No preview, no ghost. Brave?</p>
-    <button id="mysteryBtn" class="btn primary big">🎲 Start a mystery</button>
+    <button id="mysteryBtn" class="btn primary big"><svg class="ic"><use href="#i-dice"/></svg> Start a mystery</button>
   </section>
 
   <section class="card ai-studio" aria-label="AI puzzle studio">
-    <div class="card-tag">✨ AI STUDIO</div>
+    <div class="card-tag"><svg class="ic"><use href="#i-spark"/></svg> AI STUDIO</div>
     <div class="card-title">Dream up a puzzle</div>
     <p class="card-sub">Describe any picture — our AI paints it, then we cut it into pieces.</p>
     <div id="aiThemes" class="ai-themes"></div>
     <div class="ai-row">
       <input id="aiPrompt" type="text" maxlength="120" placeholder="…or type your own idea" autocomplete="off">
-      <button id="aiGenBtn" class="btn primary">🎨 Make it</button>
+      <button id="aiGenBtn" class="btn primary"><svg class="ic"><use href="#i-spark"/></svg> Make it</button>
     </div>
     <div id="aiStatus" class="ai-status" style="display:none"></div>
   </section>
@@ -47,17 +109,17 @@
 
   <section class="upload-sec">
     <div class="eyebrow" style="text-align:center">Make your own</div>
-    <button id="uploadBtn" class="btn primary big">📷 Make a puzzle from your photo</button>
+    <button id="uploadBtn" class="btn primary big"><svg class="ic"><use href="#i-cam"/></svg> Make a puzzle from your photo</button>
     <p class="hint">…or drag &amp; drop an image here, or paste one from your clipboard</p>
     <input type="file" id="fileInput" accept="image/*" hidden>
   </section>
 
   <section class="gal-sec">
-    <div class="eyebrow">Gallery <span class="count" id="galCount"></span></div>
+    <div class="eyebrow"><svg class="ic"><use href="#i-image"/></svg> Gallery <span class="count" id="galCount"></span></div>
     <div class="gal-box"><div id="galleryGrid" class="gal-grid"></div></div>
   </section>
 
-  <footer class="home-foot">part of the <a href="../">Gamez arcade</a> 🕹️</footer>
+  <footer class="home-foot">part of the <a href="../">Gamez arcade</a> <svg class="ic"><use href="#i-pad"/></svg><br>made by <b>Workman Designs</b></footer>
 </div>
 
 <!-- ============ GAME ============ -->
@@ -141,7 +203,7 @@
 
 <script src="gallery.js"></script>
 <script src="audio.js?v=2"></script>
-<script src="ai.js?v=2"></script>
-<script src="jigsaw.js?v=13"></script>
+<script src="ai.js?v=3"></script>
+<script src="jigsaw.js?v=14"></script>
 </body>
 </html>
