@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0512">
+<title>Dead Man's Corridor</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <!-- TITLE -->
+  <section id="screen-title" class="screen">
+    <div class="title-fog" aria-hidden="true"></div>
+    <div class="title-content">
+      <div class="title-kicker">A HAUNTED-FACILITY RAIL SHOOTER</div>
+      <h1 class="title-logo">DEAD MAN'S<br><span>CORRIDOR</span></h1>
+      <p class="title-sub">Drag to look. The gun fires itself.<br>Don't let them touch you.</p>
+      <button id="btn-play" class="btn primary" type="button">▶ Ride the Corridor</button>
+      <button id="btn-daily" class="btn" type="button">Daily Descent<span class="btn-sub">same horrors, worldwide</span></button>
+      <div class="title-best">BEST&nbsp; <span id="title-best">0</span></div>
+      <button id="btn-how" class="btn ghost" type="button">How to survive</button>
+      <div id="howto" class="hidden">
+        <p><b>Drag</b> anywhere to look around. <b>Tap</b> to fire manually — but the gun auto-fires when your crosshair sits on a target.</p>
+        <p>Watch 8 shots: the gun reloads itself. Green <b>spit</b> can be shot down. Grab the cyan <b>charge</b>, fill the meter, tap <b>✦</b> for the NOVA.</p>
+        <p>Red flash + shake = something touched you. Clear all three sectors to survive.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="screen-game" class="screen hidden">
+    <canvas id="game"></canvas>
+    <header id="hud">
+      <div id="hud-hp"><div id="hud-hp-fill"></div><span>HP</span></div>
+      <div id="hud-score">0</div>
+    </header>
+    <div id="hud-ammo" aria-label="ammo"></div>
+    <div id="hud-charge"><div id="hud-charge-fill"></div><span>✦</span></div>
+    <button id="btn-reload" class="hbtn" type="button" aria-label="Reload">⟳</button>
+    <button id="btn-nova" class="hbtn" type="button" aria-label="Nova blast">✦</button>
+    <div id="banner" class="hidden"></div>
+  </section>
+
+  <!-- GAME OVER -->
+  <section id="screen-over" class="screen hidden">
+    <div class="over-card">
+      <h2 id="over-title">YOU DIED</h2>
+      <div id="over-rank" class="rank rC">C</div>
+      <div class="over-score"><span id="over-score">0</span><label>SCORE</label></div>
+      <div id="over-stats" class="over-stats"></div>
+      <div class="over-best">BEST&nbsp; <span id="over-best">0</span></div>
+      <button id="btn-again" class="btn primary" type="button">Ride again</button>
+      <button id="btn-title" class="btn ghost" type="button">Title</button>
+    </div>
+  </section>
+</div>
+<script src="engine.js?v=1"></script>
+<script src="art.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
