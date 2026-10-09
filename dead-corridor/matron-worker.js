@@ -33,8 +33,9 @@
 
 'use strict';
 
+/* Model order matches the proven unfold-roomwright worker: fp8 first, no
+ * response_format (plain text + JSON extraction). */
 var MODELS = [
-  '@cf/meta/llama-3.1-8b-instruct',
   '@cf/meta/llama-3.1-8b-instruct-fp8',
   '@cf/mistral/mistral-7b-instruct-v0.2'
 ];
@@ -189,8 +190,6 @@ async function runAi(env, messages, maxTokens) {
   for (var i = 0; i < MODELS.length; i++) {
     try {
       var params = { messages: messages, max_tokens: maxTokens, temperature: 0.9 };
-      if (MODELS[i].indexOf('mistral') < 0)
-        params.response_format = { type: 'json_object' };
       var r = await env.ai.run(MODELS[i], params);
       var txt = normText(r);
       if (txt) return txt;
