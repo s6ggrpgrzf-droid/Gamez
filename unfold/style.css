@@ -433,6 +433,24 @@ body{
   25%{transform:translateX(-7px) rotate(-2.5deg)}50%{transform:translateX(6px) rotate(2deg)}
   75%{transform:translateX(-4px) rotate(-1deg)}}
 #inspect-model.rattling{animation:rattleX .42s ease}
+/* ---------- toolbox latches (3D hotspots) ---------- */
+.ins-latch{position:absolute;left:50%;top:50%;width:52px;height:48px;transform:translate(-50%,-50%);pointer-events:none}
+.ins-latch-plate{position:absolute;left:4px;bottom:2px;width:44px;height:30px;border-radius:7px;
+  background:linear-gradient(#f2c65e,#cf9c33);border:2px solid #8a6a24;box-shadow:0 2px 5px rgba(0,0,0,.55)}
+.ins-latch-plate:after{content:'';position:absolute;left:50%;top:50%;width:13px;height:13px;
+  transform:translate(-50%,-50%);border-radius:3px;background:#2c353d;box-shadow:inset 0 1px 2px #000}
+.ins-latch-clasp{position:absolute;left:15px;top:-2px;width:22px;height:26px;border-radius:6px 6px 4px 4px;
+  background:linear-gradient(#ffe08a,#d8a83c);border:2px solid #8a6a24;
+  transform-origin:50% 0;transition:transform .55s cubic-bezier(.2,1.35,.35,1)}
+.unlatched .ins-latch-clasp{transform:rotateX(-106deg)}
+.ins-hot.spent .ins-latch{opacity:.9}
+/* ---------- music-box winding key (3D hotspot) ---------- */
+.ins-windkey{position:absolute;left:50%;top:50%;width:40px;height:56px;pointer-events:none;
+  opacity:0;transform:translate(-50%,30%) scale(.6);transition:transform .3s ease-out,opacity .25s ease}
+.ins-windkey.in{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.ins-windkey-rot{display:block;width:100%;height:100%}
+.ins-windkey svg{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.ins-windkey.gone{opacity:0;transition:opacity .3s ease}
 #inspect-say{position:absolute;top:calc(66px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
   max-width:86%;background:rgba(10,8,10,.8);border:1px solid var(--line);border-radius:14px;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:6;
@@ -461,8 +479,12 @@ body{
 .inspect-hint{color:var(--faint);font-size:12px;letter-spacing:.03em;text-align:center}
 @media (prefers-reduced-motion:reduce){
   #inspect-layer.cranking .ins-crank,#inspect-layer.cranking .ins-drum{animation:none}
+  .ins-latch-clasp,.ins-windkey{transition:none}
   .ins-lid{transition:none}
   .ins-handleg{transition:none}
   .ins-ring{animation:none;opacity:.6}
   #inspect-model.rattling{animation:none}
 }
+
+/* visible build tag (menu footer) */
+.build-tag{opacity:.45;font-size:11px;margin-top:8px;letter-spacing:.08em;text-align:center}
