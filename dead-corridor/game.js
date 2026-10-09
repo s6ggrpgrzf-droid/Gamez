@@ -57,8 +57,13 @@
     grid[15 * MW + 11] = 4; grid[15 * MW + 16] = 4;
     grid[29 * MW + 11] = 4; grid[29 * MW + 16] = 4;
     grid[10 * MW + 11] = 4; grid[10 * MW + 16] = 4;
+    // animated accent walls: warning strips in corridors, monitors in the wards
+    grid[14 * MW + 11] = 5; grid[12 * MW + 16] = 5;
+    grid[28 * MW + 11] = 5; grid[26 * MW + 16] = 5;
+    grid[20 * MW + 7] = 6; grid[20 * MW + 21] = 6;
+    grid[6 * MW + 7] = 5; grid[6 * MW + 21] = 5;
   }
-  var TEX_FOR = { 1: 'concrete', 2: 'rust', 3: 'flesh', 4: 'door' };
+  var TEX_FOR = { 1: 'concrete', 2: 'rust', 3: 'flesh', 4: 'door', 5: 'warn', 6: 'monitor' };
   var mapDef = null;
   function getMap() {
     if (!mapDef) mapDef = {
@@ -106,7 +111,7 @@
   function newRun(dailySeed) {
     var rng = dailySeed != null ? mulberry32(dailySeed) : Math.random;
     return {
-      rng: rng, daily: dailySeed != null,
+      rng: rng, daily: dailySeed != null, dailySeed: dailySeed || null,
       railI: 0, railT: 0, moving: true, dwell: null, spawnQueue: [], spawnT: 0,
       trickleT: 4,
       px: RAIL[0].x, py: RAIL[0].y, baseA: NORTH,
@@ -114,7 +119,7 @@
       foes: [], bolts: [], orbs: [], parts: [], decals: [],
       hp: 100, maxHp: 100,
       ammo: 8, magSize: 8, reloading: 0,
-      fireCd: 0, flash: 0, recoil: 0,
+      fireCd: 0, flash: 0, recoil: 0, recoilV: 0, smoothYaw: 0, smoothPitch: 0,
       charge: 0, novaReady: false,
       score: 0, kills: 0, shots: 0, hits: 0, combo: 0, maxCombo: 0,
       dmgFlash: 0, shake: 0, hitStop: 0, slowmo: 0,
@@ -148,9 +153,11 @@
     G.foes.push({
       type: type, x: x, y: y,
       hp: F.hp, maxHp: F.hp,
-      state: 'walk', t: G.rng() * 10, atkT: 0,
+      state: 'spawn', spawnT: 0, t: G.rng() * 10, atkT: 0,
       hitFlash: 0, deadT: 0, vy: 0
     });
+    // spawn reveal: ember burst where it claws through
+    burstFx(x, y, '#ff5a22', 8);
   }
   function startDwell(dwell) {
     G.dwell = dwell;
@@ -194,9 +201,14 @@
     if (G.fireCd > 0) return;
     G.fireCd = 0.24;
     G.ammo--; G.shots++;
-    G.flash = 1; G.recoil = 1;
+    G.flash = 1.5; G.recoilV = 9;
     G.shake = Math.max(G.shake, 3);
     DCSfx.shoot();
+    // ejecting shell casings (screen space, from the gun)
+    var b2 = E.bufSize();
+    for (var ci = 0; ci < 2; ci++)
+      G.parts.push({ x: b2.w * 0.56, y: b2.h * 0.78, vx: 50 + Math.random() * 60, vy: -50 - Math.random() * 40,
+        life: 0.8, t: -ci * 0.05, col: '#d8a832', sz: 2 });
     var bs = E.bufSize(), cx = bs.w / 2;
     var best = null, bestScore = 1e9;
     targets().forEach(function (t) {
@@ -222,7 +234,9 @@
       G.combo = 0;   // clean miss breaks the combo
       // wall impact puff at crosshair ray
       var r = E.castRay(getMap().grid, MW, G.px, G.py, G.baseA + G.lookYaw);
-      burstFx(r.hx, r.hy, '#8a8a92', 4);
+      burstFx(r.hx, r.hy, '#ffd9a0', 3);
+      burstFx(r.hx, r.hy, '#ff8a3a', 4);
+      burstFx(r.hx, r.hy, '#8a8a92', 2);
     }
     if (G.ammo <= 0) startReload();
   }
@@ -313,14 +327,17 @@
       if (t.kind === 'foe' && t.ref.state !== 'dead') damageFoe(t.ref, 6);
     });
     G.bolts.forEach(function (b) { b.dead = true; });
+    G.parts.push({ ring: true, x: 0, y: 0, vx: 0, vy: 0, t: 0, life: 0.55 });
     banner('NOVA BLAST');
   }
 
   /* ================= fx (screen space) ================= */
   function bloodFx(sx, sy, n) {
+    var bsb = E.bufSize();
+    var dir = sx < bsb.w / 2 ? -1 : 1;   // spray away from the shooter's line
     for (var i = 0; i < n; i++)
-      G.parts.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 130, vy: -Math.random() * 120,
-        life: 0.5 + Math.random() * 0.3, t: 0, col: '#a01822', sz: 2 + Math.random() * 3 });
+      G.parts.push({ x: sx, y: sy, vx: dir * (50 + Math.random() * 130), vy: -40 - Math.random() * 130,
+        life: 0.5 + Math.random() * 0.3, t: 0, col: Math.random() < 0.3 ? '#d02832' : '#a01822', sz: 2 + Math.random() * 3 });
   }
   function burstFx(wx, wy, col, n) {
     // world -> screen for wall impacts
@@ -348,13 +365,17 @@
   var lights = [];
   function buildLights() {
     lights = [];
-    function L(x, y, r, i, fl) { lights.push({ x: x, y: y, radius: r, intensity: i, baseFl: 1, fl: fl || 0, ph: Math.random() * 7 }); }
-    // corridor fluorescents (flickery)
-    for (var y = 40; y >= 4; y -= 6) { L(13.5, y, 6, 0.85, 1); }
+    function L(x, y, r, i, fl, cr, cg, cb) { lights.push({ x: x, y: y, radius: r, intensity: i, baseFl: 1, fl: fl || 0, ph: Math.random() * 7, cr: cr, cg: cg, cb: cb }); }
+    var BLUE = [0.55, 0.75, 1.0], WHITE = [1, 1, 1], GREEN = [0.7, 1.0, 0.65], RED = [1.0, 0.22, 0.16];
+    // corridor fluorescents (flickery), tinted by sector
+    for (var y = 40; y >= 4; y -= 6) {
+      var tn = y > 29 ? BLUE : (y > 23 ? WHITE : (y > 15 ? GREEN : (y > 9 ? WHITE : RED)));
+      L(13.5, y, 6, 0.85, 1, tn[0], tn[1], tn[2]);
+    }
     // arena lights
-    L(13.5, 34.5, 9, 1.0, 1);
-    L(13.5, 20.5, 9, 1.0, 1);
-    L(13.5, 6.5, 9, 1.1, 0);   // heart: steady red-ish handled by tint
+    L(13.5, 34.5, 9, 1.0, 1, BLUE[0], BLUE[1], BLUE[2]);
+    L(13.5, 20.5, 9, 1.0, 1, GREEN[0], GREEN[1], GREEN[2]);
+    L(13.5, 6.5, 9, 1.1, 0, RED[0], RED[1], RED[2]);   // the heart: steady blood-red
     return lights;
   }
 
@@ -362,7 +383,14 @@
     G.time += dt;
     // decay
     G.flash = Math.max(0, G.flash - dt * 6);
-    G.recoil = Math.max(0, G.recoil - dt * 5);
+    // spring recoil: kicks up, settles with a whisper of overshoot
+    G.recoilV += (-G.recoil * 130 - G.recoilV * 13) * dt;
+    G.recoil += G.recoilV * dt;
+    if (G.recoil < -0.18) { G.recoil = -0.18; G.recoilV = 0; }
+    // smoothed look: buttery, no input-lag feel
+    var sk = Math.min(1, dt * 16);
+    G.smoothYaw += angDiff(G.lookYaw, G.smoothYaw) * sk;
+    G.smoothPitch += (G.lookPitch - G.smoothPitch) * sk;
     G.fireCd = Math.max(0, G.fireCd - dt);
     G.dmgFlash = Math.max(0, G.dmgFlash - dt * 2.2);
     G.shake = Math.max(0, G.shake - dt * 26);
@@ -435,6 +463,12 @@
       if (f.state === 'dead') {
         f.deadT += dt;
         if (f.deadT > 1.4) G.foes.splice(i, 1);
+        continue;
+      }
+      if (f.state === 'spawn') {
+        // clawing through: brief reveal, then it hunts
+        f.spawnT += dt;
+        if (f.spawnT > 0.6) f.state = 'walk';
         continue;
       }
       var fdx = G.px - f.x, fdy = G.py - f.y;
@@ -541,17 +575,21 @@
 
   function foeSprite(f) {
     var set = A.sprites[f.type];
-    if (f.state === 'dead') return set[3];
-    if (f.state === 'attack') return set[2];
-    return set[Math.floor(f.t * 6) % 2];
+    var wset = f.hitFlash > 0 ? set.white : set;   // white hit-flash silhouette
+    if (f.state === 'dead') return wset.dead[f.deadT > 0.45 ? 1 : 0];   // crumple, then flatten
+    if (f.state === 'spawn') return wset.walk[0];
+    if (f.state === 'attack') return wset.attack;
+    return wset.walk[Math.floor(f.t * 7) % 4];   // 4-frame walk cycle
   }
 
   function render() {
+    var bobA = G.moving ? 3 : 1.2, bobF = G.moving ? 7 : 2.6;
     var view = {
       x: G.px, y: G.py,
-      ang: G.baseA + G.lookYaw,
-      pitch: G.lookPitch,
-      flash: G.flash
+      ang: G.baseA + G.smoothYaw,
+      pitch: G.smoothPitch + Math.sin(G.time * bobF) * bobA,
+      flash: G.flash,
+      time: G.time
     };
     // camera shake
     if (G.shake > 0.2) {
@@ -563,17 +601,38 @@
       var F = FOE[f.type];
       var fade = f.state === 'dead' ? Math.max(0, 1 - f.deadT / 1.4) : 1;
       if (fade <= 0) return;
+      var sc = F.scale * (f.state === 'dead' ? 0.8 : 1);
+      var alpha = fade;
+      if (f.state === 'spawn') {
+        // scale-pop reveal
+        var k = clamp(f.spawnT / 0.6, 0, 1);
+        sc *= 0.3 + 0.7 * k;
+        alpha = Math.min(1, k * 2.5);
+      }
+      if (f.state === 'attack') {
+        // telegraph glow: pulsing red halo under the attacker
+        sprites.push({
+          x: f.x, y: f.y, tex: A.glowTex, scale: F.scale * 1.7,
+          vMove: f.type === 'crawler' ? 60 : 0,
+          alpha: 0.45 + 0.4 * Math.sin(G.time * 16)
+        });
+      }
       sprites.push({
-        x: f.x, y: f.y, tex: foeSprite(f), scale: F.scale * (f.state === 'dead' ? 0.8 : 1),
+        x: f.x, y: f.y, tex: foeSprite(f), scale: sc,
         vMove: f.type === 'crawler' ? 60 : 0,
-        yOff: 0, alpha: fade, hitFlash: f.hitFlash
+        yOff: 0, alpha: alpha, hitFlash: f.hitFlash
       });
     });
     G.bolts.forEach(function (b) {
-      if (!b.dead) sprites.push({ x: b.x, y: b.y, tex: A.boltTex, scale: 0.35, vMove: 0 });
+      if (b.dead) return;
+      sprites.push({ x: b.x, y: b.y, tex: A.boltTex, scale: 0.35, vMove: 0 });
+      // comet trail
+      sprites.push({ x: b.x - b.vx * 0.045, y: b.y - b.vy * 0.045, tex: A.boltTex, scale: 0.24, alpha: 0.5 });
+      sprites.push({ x: b.x - b.vx * 0.09, y: b.y - b.vy * 0.09, tex: A.boltTex, scale: 0.16, alpha: 0.25 });
     });
     G.orbs.forEach(function (o) {
-      sprites.push({ x: o.x, y: o.y, tex: A.chargeTex, scale: 0.3, vMove: -40 });
+      sprites.push({ x: o.x, y: o.y, tex: A.chargeTex,
+        scale: 0.3 + 0.05 * Math.sin(G.time * 10 + o.t * 20), vMove: -40 });
     });
     // blood decals: flat on the floor where foes fell
     G.decals.forEach(function (d) {
@@ -597,8 +656,17 @@
 
     // screen-space particles (blood, sparks) + floating combat text
     G.parts.forEach(function (p) {
-      var a = 1 - p.t / p.life;
-      if (p.text) {
+      var a = clamp(1 - p.t / p.life, 0, 1);
+      if (p.ring) {
+        // nova shockwave: expanding ring
+        var rk = clamp(p.t / p.life, 0, 1);
+        bctx.globalAlpha = 1 - rk;
+        bctx.strokeStyle = '#bfe8ff';
+        bctx.lineWidth = 3;
+        bctx.beginPath();
+        bctx.arc(bs.w / 2, bs.h * 0.44, 8 + rk * bs.w * 0.45, 0, 7);
+        bctx.stroke();
+      } else if (p.text) {
         bctx.globalAlpha = Math.min(1, a * 1.6);
         bctx.fillStyle = p.col;
         bctx.font = '700 13px system-ui';
@@ -614,13 +682,19 @@
 
     E.present(ctx, cw, ch, function (c2, w, h) {
       var i;
-      // gun viewmodel
-      var gun = A.gun[G.recoil > 0.66 ? 3 : (G.recoil > 0.33 ? 2 : (G.recoil > 0.05 ? 1 : 0))];
+      // gun viewmodel: idle sway, spring recoil, reload tilt
+      var rkk = clamp(G.recoil, 0, 1);
+      var gun = A.gun[rkk > 0.66 ? 3 : (rkk > 0.33 ? 2 : (rkk > 0.05 ? 1 : 0))];
       var gw = Math.min(w * 0.52, 300), gh = gw * 0.75;
-      var gx = w / 2 - gw / 2;
-      var gy = h - gh * 0.92 + G.recoil * 14;
-      if (G.reloading > 0) gy += Math.sin(G.time * 30) * 6;   // reload dip
-      c2.drawImage(gun, gx, gy, gw, gh);
+      var gx = w / 2 - gw / 2 + Math.sin(G.time * 1.7) * 4;
+      var gy = h - gh * 0.92 + clamp(G.recoil, -0.18, 1.2) * 16 + Math.cos(G.time * 2.3) * 3;
+      var tilt = 0;
+      if (G.reloading > 0) { gy += Math.sin(G.time * 30) * 6; tilt = -0.16; }
+      c2.save();
+      c2.translate(gx + gw / 2, gy + gh);
+      c2.rotate(tilt);
+      c2.drawImage(gun, -gw / 2, -gh, gw, gh);
+      c2.restore();
 
       // crosshair (dynamic)
       var chx = w / 2, chy = h * 0.44;
@@ -839,13 +913,14 @@
     window.addEventListener('resize', resize);
     bindInput();
     $('btn-play').addEventListener('click', function () { DCSfx.init(); startRide(null); });
+    $('btn-how').addEventListener('click', function () { $('howto').classList.toggle('hidden'); });
     $('btn-daily').addEventListener('click', function () {
       DCSfx.init();
       var d = new Date();
       var seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
       startRide(seed);
     });
-    $('btn-again').addEventListener('click', function () { startRide(G && G.daily ? 1 : null); });
+    $('btn-again').addEventListener('click', function () { startRide(G && G.daily ? G.dailySeed : null); });
     $('btn-title').addEventListener('click', function () { state = 'title'; showScreen('screen-title'); });
     document.addEventListener('visibilitychange', function () {
       if (document.hidden && state === 'ride') banner('PAUSED');

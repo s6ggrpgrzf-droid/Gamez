@@ -61,11 +61,14 @@
   }
   E.castRay = castRay;
 
-  /* Light level 0..1 at a world point: base falloff + dynamic lights.
-   * lights: [{x,y,radius,intensity,flick}] ; flash: 0..1 muzzle flash boost */
+  /* Light level 0..1.6 at a world point: base falloff + dynamic lights.
+   * lights: [{x,y,radius,intensity,flick, cr,cg,cb}] ; flash: 0..1 muzzle flash boost
+   * Also records the weighted light COLOR in _tint (for colored-light shadows). */
+  var _tint = { r: 1, g: 1, b: 1, w: 0 };
   function lightAt(lights, flash, x, y, dist) {
     var l = Math.max(0, 1 - dist / 15);          // base distance falloff
     l = 0.38 + 0.62 * l * l;
+    var wr = 0, wg = 0, wb = 0, wsum = 0;
     for (var i = 0; i < lights.length; i++) {
       var L = lights[i];
       var dx = x - L.x, dy = y - L.y;
@@ -73,11 +76,30 @@
       var r = L.radius;
       if (d2 < r * r) {
         var f = 1 - Math.sqrt(d2) / r;
-        l += f * f * L.intensity * (L.flick || 1);
+        var c = f * f * L.intensity * (L.flick || 1);
+        l += c;
+        wr += c * (L.cr == null ? 1 : L.cr);
+        wg += c * (L.cg == null ? 1 : L.cg);
+        wb += c * (L.cb == null ? 1 : L.cb);
+        wsum += c;
       }
     }
-    l += flash * Math.max(0, 1 - dist / 9) * 1.6;
+    var fl = flash * Math.max(0, 1 - dist / 9) * 1.6;
+    l += fl;                                     // muzzle flash is white
+    wr += fl; wg += fl; wb += fl; wsum += fl;
+    if (wsum > 0.0001) { _tint.r = wr / wsum; _tint.g = wg / wsum; _tint.b = wb / wsum; }
+    else { _tint.r = 1; _tint.g = 1; _tint.b = 1; }
+    _tint.w = Math.min(1, wsum * 0.5);
     return l > 1.6 ? 1.6 : l;
+  }
+
+  /* Shadow overlay color: near-black, leaning toward the light tint where
+   * strongly colored light dominates (red emergency glow, cold blue labs). */
+  function shadeStr(dark) {
+    var col = Math.max(Math.abs(_tint.r - _tint.g), Math.abs(_tint.g - _tint.b), Math.abs(_tint.r - _tint.b));
+    var amt = Math.min(1, col * 2.4) * _tint.w;
+    var r = 2 + _tint.r * 70 * amt, g = 1 + _tint.g * 62 * amt, b = 6 + _tint.b * 78 * amt;
+    return 'rgba(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ',' + dark.toFixed(2) + ')';
   }
 
   /* Render the scene.
@@ -110,6 +132,8 @@
       var y0 = horizon - lineH / 2;
       var tname = map.texFor ? map.texFor(r.cell) : map.wallTex;
       var t = E.textures[tname] || E.textures._flat;
+      // animated (2-frame) textures swap on the engine clock
+      if (t.length) t = t[Math.floor((view.time || 0) * 2.4) % t.length];
       var sx = Math.floor(r.texX * TEX);
       // unmirror on y-sides for variety
       if (r.side === 1) sx = TEX - 1 - sx;
@@ -119,7 +143,7 @@
       var dark = 1 - Math.min(1, li);
       if (r.side === 1) dark = Math.min(1, dark + 0.12);
       if (dark > 0.02) {
-        bctx.fillStyle = 'rgba(2,1,6,' + dark.toFixed(2) + ')';
+        bctx.fillStyle = shadeStr(dark);
         bctx.fillRect(x, y0, 1, lineH);
       }
       // subtle red shift very close (claustrophobia)
@@ -134,7 +158,7 @@
         bctx.drawImage(ctex, fsx, 0, 1, TEX, x, 0, 1, cy0);
         var cdark = Math.min(1, dark + 0.25);   // ceilings run darker
         if (cdark > 0.02) {
-          bctx.fillStyle = 'rgba(2,1,6,' + cdark.toFixed(2) + ')';
+          bctx.fillStyle = shadeStr(cdark);
           bctx.fillRect(x, 0, 1, cy0);
         }
       }
@@ -145,7 +169,7 @@
         if (fb < horizon + 1) fb = horizon + 1;
         bctx.drawImage(ftex, fsx, 0, 1, TEX, x, fb, 1, BH - fb);
         if (dark > 0.02) {
-          bctx.fillStyle = 'rgba(2,1,6,' + dark.toFixed(2) + ')';
+          bctx.fillStyle = shadeStr(dark);
           bctx.fillRect(x, fb, 1, BH - fb);
         }
       }
@@ -190,7 +214,7 @@
       var sw = tex.width;
       bctx.drawImage(tex, Math.floor(tx * sw), 0, 1, tex.height, x, yTop, 1, size);
       if (dark > 0.03) {
-        bctx.fillStyle = 'rgba(2,1,6,' + dark.toFixed(2) + ')';
+        bctx.fillStyle = shadeStr(dark);
         bctx.fillRect(x, yTop, 1, size);
       }
     }

@@ -175,15 +175,38 @@
     function x0(v) { return v; }
   }
 
-  function paintHusk(frame) {
+  /* ---------- enemy sprites ----------
+   * Frame scheme per type: { walk:[4], attack, dead:[2] }.
+   * mode 0 = walk (ph 0..3), mode 1 = attack, mode 2 = dead (ph 0..1). */
+  function paintHusk(mode, ph) {
     // shambling humanoid
     var c = cv(96, 128), x = c[1];
     var cx = 48, hipY = 78, shY = 46;
-    var step = frame === 1 ? 1 : (frame === 0 ? -1 : 0);
-    var body = '#1a1418', dark = '#0d0a0d';
+    var body = '#1a1418';
+    if (mode === 2) {
+      // dead: crumple then flatten
+      var flat = ph === 0 ? 0 : 1;
+      x.save();
+      x.translate(0, flat ? 26 : 12);
+      x.scale(1, flat ? 0.42 : 0.7);
+      x.globalAlpha = flat ? 0.85 : 1;
+      x.drawImage(paintHusk(0, 0), 0, flat ? -30 : -14);
+      x.restore();
+      // pooling blood under the body
+      x.fillStyle = 'rgba(120,10,16,.75)';
+      x.beginPath(); x.ellipse(cx, 116, flat ? 30 : 18, 8, 0, 0, 7); x.fill();
+      return c[0];
+    }
+    // walk cycle: legs swing through 4 phases, torso sways, head bobs
+    var swing = [1, 0.35, -1, -0.35][ph || 0];
+    var bob = [0, -2, 0, -2][ph || 0];
+    var sway = [2, 0, -2, 0][ph || 0];
+    var attacking = mode === 1;
+    x.save();
+    x.translate(sway, bob);
     // legs
-    limb(x, cx - 6, hipY, cx - 10 + step * 7, 122, 9, body);
-    limb(x, cx + 6, hipY, cx + 10 - step * 7, 122, 9, body);
+    limb(x, cx - 6, hipY, cx - 10 + swing * 8, 122, 9, body);
+    limb(x, cx + 6, hipY, cx + 10 - swing * 8, 122, 9, body);
     // torso (hunched)
     x.fillStyle = body;
     x.beginPath();
@@ -193,128 +216,172 @@
     for (var r = 0; r < 3; r++) {
       x.beginPath(); x.ellipse(cx + 3, 56 + r * 8, 12, 4, 0.1, 0.3, Math.PI - 0.3); x.stroke();
     }
-    // arms: reaching forward (toward camera = down/out)
-    var reach = frame === 3 ? 14 : 6;
+    // arms: reach further on attack
+    var reach = attacking ? 16 : 6 + Math.abs(swing) * 3;
     limb(x, cx - 10, shY + 4, cx - 22, shY + 26 + reach, 7, body);
     limb(x, cx + 14, shY + 4, cx + 24, shY + 24 + reach, 7, body);
     // claws
     x.fillStyle = '#c8b89a';
     x.fillRect(cx - 26, shY + 28 + reach, 8, 3);
     x.fillRect(cx + 20, shY + 26 + reach, 8, 3);
-    // head: gaunt, jaw open
+    // head: gaunt, jaw open (wider on attack)
     x.fillStyle = '#241a1e';
     x.beginPath(); x.ellipse(cx + 5, 30, 11, 13, 0.1, 0, 7); x.fill();
     x.fillStyle = '#0a0608';
-    x.beginPath(); x.ellipse(cx + 8, 38, 5, 7, 0, 0, 7); x.fill();  // open jaw
-    // ember eyes
-    x.save(); x.shadowColor = '#ff5a22'; x.shadowBlur = 10; x.fillStyle = '#ffb066';
-    x.beginPath(); x.arc(cx + 1, 27, 2.6, 0, 7); x.fill();
-    x.beginPath(); x.arc(cx + 10, 27, 2.6, 0, 7); x.fill();
+    x.beginPath(); x.ellipse(cx + 8, 38, 5, attacking ? 9 : 7, 0, 0, 7); x.fill();
+    // ember eyes (brighter when attacking = telegraph)
+    var eg = attacking ? 14 : 9;
+    x.save(); x.shadowColor = '#ff5a22'; x.shadowBlur = eg; x.fillStyle = '#ffb066';
+    x.beginPath(); x.arc(cx + 1, 27, attacking ? 3.2 : 2.6, 0, 7); x.fill();
+    x.beginPath(); x.arc(cx + 10, 27, attacking ? 3.2 : 2.6, 0, 7); x.fill();
     x.restore();
     // rim light (key from upper-left)
     rimLight(x, [[cx - 8, 20], [cx - 12, 40], [cx - 14, 62], [cx - 16, 84]], 'rgba(255,120,80,.55)');
     rimLight(x, [[cx - 12, 80], [cx - 16, 100], [cx - 18, 120]], 'rgba(255,120,80,.35)');
-    if (frame >= 4) { // dead: crumple — draw flattened
-      var d = cv(96, 128), dx = d[1];
-      dx.drawImage(c[0], 0, 40, 96, 88, 0, 78, 96, 50);
-      dx.globalAlpha = 0.85; dx.drawImage(c[0], 0, 0, 96, 128);
-      return d[0];
-    }
+    x.restore();
     return c[0];
   }
 
-  function paintCrawler(frame) {
+  function paintCrawler(mode, ph) {
     // low fast quadruped
     var c = cv(96, 96), x = c[1];
     var cx = 48, by = 58;
     var body = '#171216';
+    if (mode === 2) {
+      var flat = ph === 0 ? 0 : 1;
+      x.save();
+      x.translate(0, flat ? 22 : 10);
+      x.scale(1, flat ? 0.4 : 0.68);
+      x.globalAlpha = flat ? 0.8 : 1;
+      x.drawImage(paintCrawler(0, 0), 0, flat ? -26 : -12);
+      x.restore();
+      x.fillStyle = 'rgba(120,10,16,.7)';
+      x.beginPath(); x.ellipse(cx, 88, flat ? 26 : 15, 6, 0, 0, 7); x.fill();
+      return c[0];
+    }
+    // scuttle: legs alternate in 4 phases, body weaves
+    var s = [1, 0.4, -1, -0.4][ph || 0];
+    var weave = [-3, 0, 3, 0][ph || 0];
+    var attacking = mode === 1;
+    x.save();
+    x.translate(weave, attacking ? 4 : 0);
     x.fillStyle = body;
-    x.beginPath(); x.ellipse(cx, by, 24, 13, 0, 0, 7); x.fill();
-    var s = frame === 1 ? 6 : -6;
-    limb(x, cx - 14, by + 6, cx - 20 + s, 88, 6, body);
-    limb(x, cx + 14, by + 6, cx + 20 - s, 88, 6, body);
-    limb(x, cx - 14, by - 6, cx - 22 - s, 30, 6, body);
-    limb(x, cx + 14, by - 6, cx + 22 + s, 30, 6, body);
-    // head low + jaw
+    x.beginPath(); x.ellipse(cx, by, 24, 13, s * 0.06, 0, 7); x.fill();
+    limb(x, cx - 14, by + 6, cx - 20 + s * 7, 88, 6, body);
+    limb(x, cx + 14, by + 6, cx + 20 - s * 7, 88, 6, body);
+    limb(x, cx - 14, by - 6, cx - 22 - s * 7, 30, 6, body);
+    limb(x, cx + 14, by - 6, cx + 22 + s * 7, 30, 6, body);
+    // head low + jaw (snaps open on attack)
     x.fillStyle = '#201418';
     x.beginPath(); x.ellipse(cx + 24, by + 2, 10, 8, 0.3, 0, 7); x.fill();
     x.fillStyle = '#0a0608';
-    x.beginPath(); x.ellipse(cx + 28, by + 8, 6, 3, 0.3, 0, 7); x.fill();
+    x.beginPath(); x.ellipse(cx + 28, by + 8, 6, attacking ? 5 : 3, 0.3, 0, 7); x.fill();
     // teeth
     x.fillStyle = '#c8b89a';
     for (var t = 0; t < 4; t++) x.fillRect(cx + 23 + t * 3, by + 7, 1.6, 3);
     // eyes
-    x.save(); x.shadowColor = '#ff3a1a'; x.shadowBlur = 9; x.fillStyle = '#ff8a5a';
+    x.save(); x.shadowColor = '#ff3a1a'; x.shadowBlur = attacking ? 12 : 8; x.fillStyle = '#ff8a5a';
     x.beginPath(); x.arc(cx + 22, by - 2, 2.4, 0, 7); x.fill();
     x.beginPath(); x.arc(cx + 29, by - 3, 2.4, 0, 7); x.fill();
     x.restore();
-    // spine ridges
+    // spine ridges (bristle on attack)
     x.fillStyle = '#2c1e24';
     for (var sp = 0; sp < 5; sp++) {
+      var hgt = attacking ? 12 : 9;
       x.beginPath();
-      x.moveTo(cx - 18 + sp * 9, by - 11); x.lineTo(cx - 14 + sp * 9, by - 20); x.lineTo(cx - 10 + sp * 9, by - 11);
+      x.moveTo(cx - 18 + sp * 9, by - 11); x.lineTo(cx - 14 + sp * 9, by - 11 - hgt); x.lineTo(cx - 10 + sp * 9, by - 11);
       x.closePath(); x.fill();
     }
     rimLight(x, [[cx - 20, by - 12], [cx - 24, by], [cx - 22, by + 10]], 'rgba(255,110,70,.5)');
-    if (frame === 4) {
-      var d = cv(96, 96), dx = d[1];
-      dx.drawImage(c[0], 0, 20, 96, 76, 0, 60, 96, 36);
-      return d[0];
-    }
+    x.restore();
     return c[0];
   }
 
-  function paintBrute(frame) {
+  function paintBrute(mode, ph) {
     // big tanky mass
     var c = cv(128, 144), x = c[1];
     var cx = 64;
     var body = '#141014', hi = '#241a20';
+    if (mode === 2) {
+      var flat = ph === 0 ? 0 : 1;
+      x.save();
+      x.translate(0, flat ? 34 : 16);
+      x.scale(1, flat ? 0.42 : 0.7);
+      x.globalAlpha = flat ? 0.8 : 1;
+      x.drawImage(paintBrute(0, 0), 0, flat ? -40 : -18);
+      x.restore();
+      x.fillStyle = 'rgba(120,10,16,.8)';
+      x.beginPath(); x.ellipse(cx, 132, flat ? 44 : 26, 9, 0, 0, 7); x.fill();
+      return c[0];
+    }
+    // ponderous 4-phase stomp: mass shifts side to side, arms swing
+    var sw = [6, 2, -6, -2][ph || 0];
+    var lift = [0, -5, 0, -5][ph || 0];
+    var attacking = mode === 1;
+    var slam = attacking ? 12 : 0;
+    x.save();
+    x.translate(sw * 0.6, lift * 0.4);
     x.fillStyle = body;
-    x.beginPath(); x.ellipse(cx, 88, 34, 44, 0, 0, 7); x.fill();
+    x.beginPath(); x.ellipse(cx, 88, 34, 44, sw * 0.004, 0, 7); x.fill();
     x.fillStyle = hi;
     x.beginPath(); x.ellipse(cx - 8, 78, 20, 30, -0.2, 0, 7); x.fill();
-    // massive arms
-    var sw = frame === 3 ? 10 : 0;
-    limb(x, cx - 28, 70, cx - 44, 118 + sw, 16, body);
-    limb(x, cx + 28, 70, cx + 44, 118 + sw, 16, body);
+    // massive arms (raised to slam on attack)
+    var armY = attacking ? -18 : sw * 0.5;
+    limb(x, cx - 28, 70, cx - 44, 118 + slam + armY, 16, body);
+    limb(x, cx + 28, 70, cx + 44, 118 + slam - armY, 16, body);
     // fists
     x.fillStyle = '#1e1418';
-    x.beginPath(); x.arc(cx - 44, 120 + sw, 11, 0, 7); x.fill();
-    x.beginPath(); x.arc(cx + 44, 120 + sw, 11, 0, 7); x.fill();
+    x.beginPath(); x.arc(cx - 44, 120 + slam + armY, 11, 0, 7); x.fill();
+    x.beginPath(); x.arc(cx + 44, 120 + slam - armY, 11, 0, 7); x.fill();
     // small head sunk in shoulders
     x.fillStyle = '#1c1216';
     x.beginPath(); x.ellipse(cx, 40, 14, 12, 0, 0, 7); x.fill();
-    // triple eyes
-    x.save(); x.shadowColor = '#ff2a1a'; x.shadowBlur = 12; x.fillStyle = '#ff7a4a';
-    [-6, 0, 6].forEach(function (o) { x.beginPath(); x.arc(cx + o, 38, 2.8, 0, 7); x.fill(); });
+    // triple eyes (flare on attack)
+    x.save(); x.shadowColor = '#ff2a1a'; x.shadowBlur = attacking ? 18 : 11; x.fillStyle = '#ff7a4a';
+    [-6, 0, 6].forEach(function (o) { x.beginPath(); x.arc(cx + o, 38, attacking ? 3.6 : 2.8, 0, 7); x.fill(); });
     x.restore();
-    // cracks with ember glow
-    x.strokeStyle = 'rgba(255,80,30,.5)'; x.lineWidth = 2;
+    // cracks with ember glow (pulse on attack)
+    x.strokeStyle = 'rgba(255,80,30,' + (attacking ? 0.85 : 0.5) + ')'; x.lineWidth = 2;
     x.beginPath(); x.moveTo(cx - 10, 60); x.lineTo(cx - 4, 90); x.lineTo(cx - 12, 110); x.stroke();
     rimLight(x, [[cx - 32, 50], [cx - 36, 90], [cx - 34, 120]], 'rgba(255,120,80,.4)');
-    if (frame === 4) {
-      var d = cv(128, 144), dx = d[1];
-      dx.drawImage(c[0], 0, 40, 128, 104, 0, 92, 128, 52);
-      return d[0];
-    }
+    x.restore();
     return c[0];
   }
 
-  function paintSpitter(frame) {
+  function paintSpitter(mode, ph) {
     // bloated ranged enemy, glowing sac
     var c = cv(96, 128), x = c[1];
     var cx = 48;
     var body = '#18121a';
+    if (mode === 2) {
+      var flat = ph === 0 ? 0 : 1;
+      x.save();
+      x.translate(0, flat ? 26 : 12);
+      x.scale(1, flat ? 0.42 : 0.7);
+      x.globalAlpha = flat ? 0.8 : 1;
+      x.drawImage(paintSpitter(0, 0), 0, flat ? -30 : -14);
+      x.restore();
+      // sac bursts: green splatter
+      x.fillStyle = 'rgba(110,160,40,.7)';
+      x.beginPath(); x.ellipse(cx, 114, flat ? 28 : 16, 8, 0, 0, 7); x.fill();
+      return c[0];
+    }
+    // breathing 4-phase: sac swells and subsides
+    var breathe = [0, 0.5, 1, 0.5][ph || 0];
+    var attacking = mode === 1;
+    var charge = attacking ? 1 : 0.35 + breathe * 0.3;
+    x.save();
+    x.translate(0, breathe * -2);
     x.fillStyle = body;
     x.beginPath(); x.ellipse(cx, 84, 22, 30, 0, 0, 7); x.fill();
-    // legs stubby
-    limb(x, cx - 10, 104, cx - 12, 124, 9, body);
-    limb(x, cx + 10, 104, cx + 12, 124, 9, body);
+    // legs stubby (slight shift)
+    var sh = [-2, 0, 2, 0][ph || 0];
+    limb(x, cx - 10, 104, cx - 12 + sh, 124, 9, body);
+    limb(x, cx + 10, 104, cx + 12 - sh, 124, 9, body);
     // head
     x.fillStyle = '#1e161c';
     x.beginPath(); x.ellipse(cx, 44, 13, 12, 0, 0, 7); x.fill();
     // glowing throat sac (charges before spitting)
-    var charge = frame === 3 ? 1 : 0.45;
     var sg = x.createRadialGradient(cx, 66, 2, cx, 66, 16);
     sg.addColorStop(0, 'rgba(180,255,120,' + (0.9 * charge + 0.1) + ')');
     sg.addColorStop(0.6, 'rgba(120,220,80,.45)');
@@ -324,18 +391,93 @@
     x.fillStyle = 'rgba(200,255,150,.9)';
     x.beginPath(); x.arc(cx, 66, 6 * charge + 2, 0, 7); x.fill();
     // eyes
-    x.save(); x.shadowColor = '#aaff55'; x.shadowBlur = 8; x.fillStyle = '#d6ff9a';
+    x.save(); x.shadowColor = '#aaff55'; x.shadowBlur = attacking ? 12 : 7; x.fillStyle = '#d6ff9a';
     x.beginPath(); x.arc(cx - 5, 42, 2.4, 0, 7); x.fill();
     x.beginPath(); x.arc(cx + 5, 42, 2.4, 0, 7); x.fill();
     x.restore();
     rimLight(x, [[cx - 20, 60], [cx - 23, 90], [cx - 21, 110]], 'rgba(160,255,120,.4)');
-    if (frame === 4) {
-      var d = cv(96, 128), dx = d[1];
-      dx.drawImage(c[0], 0, 50, 96, 78, 0, 88, 96, 40);
-      return d[0];
-    }
+    x.restore();
     return c[0];
   }
+
+  /* white silhouette variants for hit-flash (baked at boot) */
+  function whiteOut(src) {
+    var c = cv(src.width, src.height), x = c[1];
+    x.drawImage(src, 0, 0);
+    x.globalCompositeOperation = 'source-in';
+    x.fillStyle = '#fff';
+    x.fillRect(0, 0, src.width, src.height);
+    return c[0];
+  }
+
+  /* telegraph glow: pulsing red halo drawn under an attacking foe */
+  function paintGlow() {
+    var c = cv(64, 64), x = c[1];
+    var g = x.createRadialGradient(32, 32, 4, 32, 32, 30);
+    g.addColorStop(0, 'rgba(255,60,30,.55)');
+    g.addColorStop(0.6, 'rgba(255,40,20,.22)');
+    g.addColorStop(1, 'rgba(255,40,20,0)');
+    x.fillStyle = g;
+    x.beginPath(); x.arc(32, 32, 30, 0, 7); x.fill();
+    return c[0];
+  }
+
+  /* animated wall textures: 2-frame variants, swapped by engine clock */
+  function texWarn() {
+    // concrete panel with emergency light strip (off / blazing)
+    function frame(on) {
+      var c = cv(T, T), x = c[1];
+      x.fillStyle = '#33333a'; x.fillRect(0, 0, T, T);
+      x.strokeStyle = 'rgba(0,0,0,.55)'; x.lineWidth = 2;
+      x.strokeRect(1, 1, T - 2, T - 2);
+      speckle(x, 150, ['#3a3a42', '#2c2c32'], 1, 3);
+      // light housing
+      x.fillStyle = '#141416';
+      x.fillRect(8, 8, T - 16, 14);
+      if (on) {
+        x.save();
+        x.shadowColor = '#ff3a22'; x.shadowBlur = 12;
+        x.fillStyle = '#ff6a3a';
+        x.fillRect(10, 10, T - 20, 10);
+        x.restore();
+        x.fillStyle = 'rgba(255,80,40,.25)';
+        x.fillRect(0, 0, T, T);
+      } else {
+        x.fillStyle = '#3a1a12';
+        x.fillRect(10, 10, T - 20, 10);
+      }
+      grime(x, 5, 0.3);
+      return c[0];
+    }
+    return [frame(false), frame(true)];
+  }
+  function texMonitor() {
+    // dark wall with a flickering monitor (static / alert)
+    function frame(alert) {
+      var c = cv(T, T), x = c[1];
+      x.fillStyle = '#2a2a30'; x.fillRect(0, 0, T, T);
+      speckle(x, 140, ['#323238', '#222226'], 1, 3);
+      x.fillStyle = '#0c0e14';
+      x.fillRect(10, 14, T - 20, 26);
+      x.strokeStyle = '#111'; x.lineWidth = 3;
+      x.strokeRect(10, 14, T - 20, 26);
+      if (alert) {
+        x.fillStyle = 'rgba(255,50,40,.8)';
+        x.font = '700 9px monospace'; x.textAlign = 'center';
+        x.fillText('!!', T / 2, 32);
+      } else {
+        x.strokeStyle = 'rgba(120,220,160,.5)'; x.lineWidth = 1;
+        for (var i = 0; i < 4; i++) {
+          x.beginPath(); x.moveTo(14, 22 + i * 5);
+          x.lineTo(14 + ((i * 37) % 30) + 6, 22 + i * 5); x.stroke();
+        }
+      }
+      grime(x, 5, 0.32);
+      return c[0];
+    }
+    return [frame(false), frame(true)];
+  }
+
 
   /* ---------- gun viewmodel ---------- */
   function paintGun(recoil) {
@@ -481,18 +623,37 @@
     DC_ENGINE.tex('floor', texFloor());
     DC_ENGINE.tex('ceil', texCeil());
     DC_ENGINE.tex('_flat', texFlat());
+    // animated (2-frame) wall textures — engine swaps by clock
+    DC_ENGINE.tex('warn', texWarn());
+    DC_ENGINE.tex('monitor', texMonitor());
     cache.done = true;
     return cache;
   }
 
   A.reg = reg;
+  function buildSet(painter) {
+    var walk = [0, 1, 2, 3].map(function (p) { return painter(0, p); });
+    var set = {
+      walk: walk,
+      attack: painter(1, 0),
+      dead: [painter(2, 0), painter(2, 1)]
+    };
+    // baked white silhouettes for hit-flash
+    set.white = {
+      walk: walk.map(whiteOut),
+      attack: whiteOut(set.attack),
+      dead: set.dead.map(whiteOut)
+    };
+    return set;
+  }
   A.sprites = {
-    husk: [0, 1, 3, 4].map(paintHusk),
-    crawler: [0, 1, 3, 4].map(paintCrawler),
-    brute: [0, 1, 3, 4].map(paintBrute),
-    spitter: [0, 1, 3, 4].map(paintSpitter)
+    husk: buildSet(paintHusk),
+    crawler: buildSet(paintCrawler),
+    brute: buildSet(paintBrute),
+    spitter: buildSet(paintSpitter)
   };
-  // frame roles: 0 walk-a, 1 walk-b, 2 attack, 3 dead
+  A.glowTex = paintGlow();
+  // frame roles: walk[0..3] cycle, attack, dead[0..1] staged
   A.gun = [0, 0.35, 0.7, 1].map(paintGun);
   A.chargeTex = paintCharge();
   A.boltTex = paintBolt();
