@@ -487,7 +487,7 @@
       }
     }
 
-    return {
+    var hole = {
       seed: seed >>> 0,
       W: W, H: H,
       fairway: fairway,          // segments {x1,y1,x2,y2,r}
@@ -509,9 +509,224 @@
       mechanics: mechanics,      // tags present this hole
       intro: intro,              // 'new' | 'challenge' | 'twist'
       focusMech: focusMech,      // mechanic being introduced (or null)
+      // ---- transport objects (transport-sim.js). Empty unless the
+      // ---- generator places them (Phase D); the tour never uses them.
+      portals: [],  // {x1,y1,x2,y2,r,redirect,ex,ey}
+      pads: [],     // {x,y,r,dx,dy,boost}
+      cannons: [],  // {x,y,angle,angleCycle,power}
+      tubes: [],    // {path:[[x,y]..],speed}
+      belts: [],    // {x,y,w,h,dx,dy,speed}
+      fans: [],     // {x,y,dx,dy,range,strength}
+      wells: [],    // {x,y,r,strength}
+      loops: [],    // {x,y,r,minSpeed}
+      tables: [],   // {x,y,r,omega}
+      lifts: [],    // {x1,y1,x2,y2,duration}
       relic: relic,              // {x,y,taken} or null
       gems: gems                 // [{x,y,taken}]
     };
+    // transport objects need the full hole (surfaceAt) — placed here, then tagged
+    TF.placeTransports(hole, rng, { intro: intro, focus: focusMech,
+                                    breather: !!opts.breather });
+    for (var tpTi = 0; tpTi < TF.TRANSPORT_MECHS.length; tpTi++) {
+      var tpTk = TF.TRANSPORT_MECHS[tpTi];
+      if (hole[tpTk + 's'] && hole[tpTk + 's'].length) hole.mechanics.push(tpTk);
+    }
+    return hole;
+  };
+
+  // Transport mechanic tags (for the introduce->par->twist grammar).
+  TF.TRANSPORT_MECHS = ['portal', 'pad', 'cannon', 'tube', 'belt',
+                        'fan', 'well', 'loop', 'table', 'lift'];
+
+  // Places transport objects onto a built hole (procedural + daily + race).
+  // Works purely from hole.fairway/tee/cup + TF.surfaceAt, so both genHole
+  // and makeHole can use it. Seeded via rng — deterministic per hole.
+  // opts: {intro:'new'|'challenge'|'twist', focus:mech|null, breather:bool}
+  TF.placeTransports = function (hole, rng, opts) {
+    opts = opts || {};
+    if (opts.breather) return;
+    var intro = opts.intro || 'challenge';
+    var focus = opts.focus || null;
+    var W = hole.W, H = hole.H;
+    var teeX = hole.tee.x, teeY = hole.tee.y;
+    var cupX = hole.cup.x, cupY = hole.cup.y;
+    var placedPts = [];
+    function clearOf(x, y, d) {
+      if (dist2(x, y, teeX, teeY) < 64) return false;   // 8 from the tee
+      for (var k = 0; k < placedPts.length; k++)
+        if (dist2(x, y, placedPts[k].x, placedPts[k].y) < d * d) return false;
+      return true;
+    }
+    function groundOK(x, y) {
+      if (x < 4 || x > W - 4 || y < 10 || y > H - 5) return false;
+      var s = TF.surfaceAt(hole, x, y);
+      return s === 'fairway' || s === 'green' || s === 'rough';
+    }
+    function dfw(x, y) {
+      var d = Infinity;
+      for (var j = 0; j < hole.fairway.length; j++) {
+        var s = hole.fairway[j];
+        d = Math.min(d, segDist(x, y, s.x1, s.y1, s.x2, s.y2) - s.r);
+      }
+      return d;
+    }
+    function routeDir(x, y) {
+      var dx = cupX - x, dy = cupY - y, l = Math.hypot(dx, dy) || 1;
+      return { x: dx / l, y: dy / l };
+    }
+    // random point with fairway-distance in [lo,hi], on good ground,
+    // clear of the tee, other transports, windmill and ramps
+    function fairSpot(lo, hi) {
+      for (var t = 0; t < 24; t++) {
+        var x = 5 + rng() * (W - 10), y = 12 + rng() * (H - 20);
+        var d = dfw(x, y);
+        if (d < lo || d > hi) continue;
+        if (!groundOK(x, y) || !clearOf(x, y, 7)) continue;
+        if (hole.windmill && dist2(x, y, hole.windmill.x, hole.windmill.y) < 100) continue;
+        var rok = true;
+        for (var ri = 0; ri < hole.ramps.length && rok; ri++) {
+          var rp = hole.ramps[ri];
+          var rdx = x - rp.x, rdy = y - rp.y;
+          var lu = rdx * rp.dx + rdy * rp.dy, lv = rdx * (-rp.dy) + rdy * rp.dx;
+          if (Math.abs(lu) < rp.h / 2 + 3 && Math.abs(lv) < rp.w / 2 + 3) rok = false;
+        }
+        if (!rok) continue;
+        return { x: x, y: y };
+      }
+      return null;
+    }
+    function addPortal(gentle) {
+      var e = fairSpot(-1, 5); if (!e) return false;
+      var rd = routeDir(e.x, e.y);
+      for (var t = 0; t < 12; t++) {
+        var dist = 16 + rng() * 14;
+        var jx = (rng() - 0.5) * 10;
+        var x2 = clamp(e.x + rd.x * dist - rd.y * jx, 5, W - 5);
+        var y2 = clamp(e.y + rd.y * dist + rd.x * jx, 12, H - 6);
+        if (!groundOK(x2, y2) || !clearOf(x2, y2, 7)) continue;
+        if (dist2(x2, y2, cupX, cupY) < 36) continue;   // never a free hole-in-one
+        var ex = x2 - e.x, ey = y2 - e.y, el = Math.hypot(ex, ey) || 1;
+        hole.portals.push({ x1: e.x, y1: e.y, x2: x2, y2: y2, r: 2.2,
+                            redirect: gentle ? 0 : (rng() < 0.5 ? 0 : 1),
+                            ex: ex / el, ey: ey / el });
+        placedPts.push(e); placedPts.push({ x: x2, y: y2 });
+        return true;
+      }
+      return false;
+    }
+    function addPad(gentle) {
+      var e = fairSpot(-3, 2); if (!e) return false;
+      var rd = routeDir(e.x, e.y);
+      hole.pads.push({ x: e.x, y: e.y, r: 2.5, dx: rd.x, dy: rd.y,
+                       boost: gentle ? 6 : 7 + rng() * 4 });
+      placedPts.push(e);
+      return true;
+    }
+    function addCannon(gentle) {
+      var e = fairSpot(-1, 5); if (!e) return false;
+      var rd = routeDir(e.x, e.y);
+      var ja = (rng() - 0.5) * 0.5;
+      var ca = Math.cos(ja), sa = Math.sin(ja);
+      var ax = rd.x * ca - rd.y * sa, ay = rd.x * sa + rd.y * ca;
+      hole.cannons.push({ x: e.x, y: e.y, angle: Math.atan2(ay, ax),
+                          angleCycle: gentle ? 0 : (rng() < 0.4 ? 0.7 : 0),
+                          power: 30 + rng() * 8 });
+      placedPts.push(e);
+      return true;
+    }
+    function addTube(gentle) {
+      var e = fairSpot(-1, 5); if (!e) return false;
+      var rd = routeDir(e.x, e.y);
+      var len = 18 + rng() * 10;
+      var bend = (rng() < 0.5 ? -1 : 1) * (5 + rng() * 6);
+      var mx = e.x + rd.x * len * 0.5 - rd.y * bend;
+      var my = e.y + rd.y * len * 0.5 + rd.x * bend;
+      var x2 = clamp(e.x + rd.x * len, 5, W - 5);
+      var y2 = clamp(e.y + rd.y * len, 12, H - 6);
+      if (!groundOK(x2, y2) || !clearOf(x2, y2, 7)) return false;
+      hole.tubes.push({ path: [[e.x, e.y], [mx, my], [x2, y2]],
+                        speed: gentle ? 14 : 16 + rng() * 6 });
+      placedPts.push(e); placedPts.push({ x: x2, y: y2 });
+      return true;
+    }
+    function addBelt(gentle) {
+      var e = fairSpot(-3, 2); if (!e) return false;
+      var rd = routeDir(e.x, e.y);
+      hole.belts.push({ x: e.x, y: e.y, w: 6, h: 12, dx: rd.x, dy: rd.y,
+                        speed: gentle ? 6 : 7 + rng() * 3 });
+      placedPts.push(e);
+      return true;
+    }
+    function addFan(gentle) {
+      var e = fairSpot(3, 8); if (!e) return false;   // beside the fairway
+      var rd = routeDir(e.x, e.y);
+      var tx = e.x + rd.x * 10, ty = e.y + rd.y * 10;
+      var dx = tx - e.x, dy = ty - e.y, l = Math.hypot(dx, dy) || 1;
+      hole.fans.push({ x: e.x, y: e.y, dx: dx / l, dy: dy / l,
+                       range: 11 + rng() * 3, strength: gentle ? 12 : 16 + rng() * 8 });
+      placedPts.push(e);
+      return true;
+    }
+    function addWell(gentle) {
+      var e = fairSpot(4, 10); if (!e) return false;
+      hole.wells.push({ x: e.x, y: e.y, r: 5 + rng() * 2,
+                        strength: gentle ? 7 : 10 + rng() * 6 });
+      placedPts.push(e);
+      return true;
+    }
+    function addLoop(gentle) {
+      var e = fairSpot(-2, 2); if (!e) return false;   // on the fairway
+      hole.loops.push({ x: e.x, y: e.y, r: 3, minSpeed: gentle ? 9 : 11 + rng() * 2 });
+      placedPts.push(e);
+      return true;
+    }
+    function addTable(gentle) {
+      var e = fairSpot(-3, 3); if (!e) return false;
+      var om = (0.7 + rng() * 0.8) * (rng() < 0.5 ? -1 : 1);
+      hole.tables.push({ x: e.x, y: e.y, r: 4.5 + rng() * 1.5,
+                         omega: gentle ? om * 0.6 : om });
+      placedPts.push(e);
+      return true;
+    }
+    function addLift(gentle) {
+      var e = fairSpot(-1, 5); if (!e) return false;
+      var rd = routeDir(e.x, e.y);
+      var dist = 20 + rng() * 12;
+      var x2 = clamp(e.x + rd.x * dist, 5, W - 5);
+      var y2 = clamp(e.y + rd.y * dist, 12, H - 6);
+      if (!groundOK(x2, y2) || !clearOf(x2, y2, 7)) return false;
+      if (dist2(x2, y2, cupX, cupY) < 36) return false;
+      hole.lifts.push({ x1: e.x, y1: e.y, x2: x2, y2: y2, duration: 1.5 });
+      placedPts.push(e); placedPts.push({ x: x2, y: y2 });
+      return true;
+    }
+    var adders = { portal: addPortal, pad: addPad, cannon: addCannon,
+                   tube: addTube, belt: addBelt, fan: addFan, well: addWell,
+                   loop: addLoop, table: addTable, lift: addLift };
+    function addRandom(except) {
+      var keys = TF.TRANSPORT_MECHS.filter(function (k) { return k !== except; });
+      var kk = keys[(rng() * keys.length) | 0];
+      return adders[kk](false);
+    }
+    if (focus && adders[focus]) {
+      adders[focus](intro === 'new');
+      if (intro === 'twist') addRandom(focus);
+    } else if (intro === 'challenge') {
+      var roll = rng();
+      if (roll < 0.45) addRandom(null);
+      else if (roll < 0.65) { addRandom(null); addRandom(null); }
+    }
+    // race holes always get at least one toy
+    if (opts.guarantee) {
+      for (var gt = 0; gt < 4; gt++) {
+        var any = hole.portals.length + hole.pads.length + hole.cannons.length +
+                  hole.tubes.length + hole.belts.length + hole.fans.length +
+                  hole.wells.length + hole.loops.length + hole.tables.length +
+                  hole.lifts.length;
+        if (any > 0) break;
+        addRandom(null);
+      }
+    }
   };
 
   /* ---------------- the designed tour: 20 hand-built holes ----------------
@@ -634,7 +849,7 @@
   TF.TOUR_PAR = TF.HOLES.reduce(function (s, h) { return s + h.par; }, 0);
 
   // Builds a runtime hole from a tour spec. idx = 0-based hole index (seeds phases).
-  TF.makeHole = function (spec, idx) {
+  TF.makeHole = function (spec, idx, opts) {
     var seed = (0x70ac + idx * 101) >>> 0;
     var rng = TF.mulberry32(seed);
     function ell(a) { return { x: a[0], y: a[1], rx: a[2], ry: a[3], rot: a[4] || 0 }; }
@@ -725,7 +940,7 @@
     if ((spec.water || []).length) mechanics.push('water');
     if (dunes.length) mechanics.push('dunes');
     if ((spec.walls || []).length) mechanics.push('walls');
-    return {
+    var hole = {
       seed: seed,
       W: TF.W, H: TF.H,
       fairway: fairway,
@@ -752,9 +967,21 @@
       intro: 'designed',
       focusMech: null,
       hint: spec.hint || null,
+      // transport objects: the designed tour never places them (par integrity)
+      portals: [], pads: [], cannons: [], tubes: [], belts: [],
+      fans: [], wells: [], loops: [], tables: [], lifts: [],
       relic: relic,
       gems: gems
     };
+    // race mode reuses tour specs but gets procedural transports (tour pars untouched)
+    if (opts && opts.transports) {
+      TF.placeTransports(hole, rng, { intro: 'challenge', focus: null, guarantee: true });
+      for (var tpTi2 = 0; tpTi2 < TF.TRANSPORT_MECHS.length; tpTi2++) {
+        var tpTk2 = TF.TRANSPORT_MECHS[tpTi2];
+        if (hole[tpTk2 + 's'] && hole[tpTk2 + 's'].length) mechanics.push(tpTk2);
+      }
+    }
+    return hole;
   };
   // Deterministic in t, so replays, previews, and daily holes agree.
   // Wind vector at sim-time t (seconds): base + slow organic gusts.
@@ -806,7 +1033,10 @@
       pickup: null,   // transient juice flag: 'gem' | 'relic' (game reads & clears)
       braked: false,  // air-brake used this shot
       impact: 0,      // tree-bounce impact speed (for juice)
-      stillT: 0       // stuck-ball guard
+      stillT: 0,      // stuck-ball guard
+      carry: null,    // transport capture state {kind,t,dur,...} (transport-sim.js)
+      tevent: null,   // transient transport event {k} (render reads & clears)
+      _tpZone: null   // zone object currently applying (entry-edge detection)
     };
   };
 
@@ -834,6 +1064,9 @@
     ball.curve = 0;      // post-shot curve is live input, never carried over
     ball.braked = false;
     ball.pickup = null;
+    ball.carry = null;   // a new shot never starts inside a transport
+    ball.tevent = null;
+    ball._tpZone = null;
     // NOTE: ball.sticky is preserved — the sticky power-up is armed pre-shot.
     ball.impact = 0;
     ball.stillT = 0;
@@ -858,6 +1091,7 @@
     ball.curve = 0; ball.sticky = !!s.sticky;
     ball.gems = s.gems | 0; ball.gotRelic = !!s.gotRelic;
     ball.pickup = null; ball.braked = false;
+    ball.carry = null; ball.tevent = null; ball._tpZone = null;
     if (hole.gems) for (var gi = 0; gi < hole.gems.length && gi < s.gemTaken.length; gi++)
       hole.gems[gi].taken = s.gemTaken[gi];
     if (hole.relic) hole.relic.taken = !!s.relicTaken;
@@ -972,6 +1206,13 @@
     var R = TF.BALL_R;
     t = t || 0;
 
+    // ---- transport capture: the ball is riding an object; normal physics
+    // ---- is suspended while the carry update runs (transport-sim.js). ----
+    if (typeof TPS !== 'undefined' && ball.carry) {
+      TPS.carryStep(hole, ball, dt, t);
+      return;
+    }
+
     // ---- airborne (ramp jumps): ballistic z, wind bites harder ----
     if (ball.z > 0 || ball.vz !== 0) {
       var wndA = TF.windAt(hole, t);
@@ -1062,6 +1303,17 @@
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
     pickups(hole, ball);
+
+    // ---- transport objects: force zones first, then capture entries ----
+    // (grounded only; a ball flying over a portal mouth is not captured)
+    if (typeof TPS !== 'undefined') {
+      TPS.zoneStep(hole, ball, dt, t);
+      var tpEnter = TPS.tryEnter(hole, ball, t);
+      if (tpEnter) {
+        ball.carry = tpEnter;
+        ball.tevent = { k: tpEnter.kind + '-enter', x: ball.x, y: ball.y };
+      }
+    }
 
     ball.spin = spn * Math.exp(-1.4 * dt);  // spin dies as the ball rolls
 
@@ -1277,6 +1529,44 @@
     TF.collideBalls(balls, true);
   };
 
+  // Transports: if a capture entry lies near the ball's line to its target,
+  // aim into the entry instead of the waypoint. Returns {x,y,power} or null.
+  TF.transportAim = function (hole, ball, tx, ty) {
+    var bx = ball.x, by = ball.y;
+    var bestX = 0, bestY = 0, bestNeed = 0, bestD = Infinity;
+    function consider(ex, ey, need) {
+      var dx = ex - bx, dy = ey - by;
+      var d = Math.hypot(dx, dy);
+      if (d > 30 || d < 3) return;                        // too far, or on top of it
+      var vx = tx - bx, vy = ty - by;
+      var L2 = vx * vx + vy * vy;
+      var tt = L2 > 0 ? (dx * vx + dy * vy) / L2 : 0;
+      if (tt < 0.05 || tt > 1.1) return;                  // not toward the target
+      var px = bx + vx * tt, py = by + vy * tt;
+      if (Math.hypot(ex - px, ey - py) > 14) return;      // too far off the line
+      if (d < bestD) { bestD = d; bestX = ex; bestY = ey; bestNeed = need; }
+    }
+    var ti2, o;
+    if (hole.cannons) for (ti2 = 0; ti2 < hole.cannons.length; ti2++) {
+      o = hole.cannons[ti2]; consider(o.x, o.y, 12);
+    }
+    if (hole.lifts) for (ti2 = 0; ti2 < hole.lifts.length; ti2++) {
+      o = hole.lifts[ti2]; consider(o.x1, o.y1, 10);
+    }
+    if (hole.tubes) for (ti2 = 0; ti2 < hole.tubes.length; ti2++) {
+      o = hole.tubes[ti2]; consider(o.path[0][0], o.path[0][1], 10);
+    }
+    if (hole.loops) for (ti2 = 0; ti2 < hole.loops.length; ti2++) {
+      o = hole.loops[ti2]; consider(o.x, o.y - o.r, o.minSpeed + 6);
+    }
+    if (hole.portals) for (ti2 = 0; ti2 < hole.portals.length; ti2++) {
+      o = hole.portals[ti2]; consider(o.x1, o.y1, 8);
+    }
+    if (bestD === Infinity) return null;
+    return { x: bestX, y: bestY,
+             power: Math.min(Math.max(bestD * 1.35, bestNeed), TF.MAX_POWER * 0.9) };
+  };
+
   // Race bot brain (compact port of the headless greedy bot). bs = {ball,
   // wps, wi, lastRest}. Returns [vx,vy] for one shot, or null if the ball
   // is still moving.
@@ -1318,8 +1608,16 @@
       }
     }
     var power = Math.min(Math.max(dist * 1.12, 7), TF.MAX_POWER * 0.85);
+    // transports: play into a nearby capture entry instead of the waypoint
+    var tpAim = TF.transportAim(hole, ball, tgt.x, tgt.y);
+    if (tpAim) {
+      tgt = { x: tpAim.x, y: tpAim.y };
+      dx = tgt.x - ball.x; dy = tgt.y - ball.y;
+      dist = Math.hypot(dx, dy) || 0.001;
+      power = tpAim.power;
+    }
     // near a windmill, stay grounded: the blades punish flyers
-    if (hole.windmill && Math.hypot(ball.x - hole.windmill.x, ball.y - hole.windmill.y) < 30) {
+    if (!tpAim && hole.windmill && Math.hypot(ball.x - hole.windmill.x, ball.y - hole.windmill.y) < 30) {
       power = Math.min(power, TF.LAUNCH_MIN - 1);
     }
     // avoid water: if the straight line crosses water, take the next waypoint
