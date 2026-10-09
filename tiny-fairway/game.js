@@ -1037,6 +1037,23 @@
     ctx.ellipse(X(e.x), Y(e.y), Math.max(1, e.rx * sc), Math.max(1, e.ry * sc),
                 -(e.rot || 0), 0, 6.2832);
   }
+  // Pond shoreline path: samples TF.blobR around the ring so the drawn pond
+  // matches the sim's point-in-pond test exactly. Falls back to the ellipse.
+  function blobPath(e, scale) {
+    if (!e.blob || !TF.blobR) { ellipseW(e); return; }
+    scale = scale || 1;
+    var S = 44, k, th, r, lx, ly;
+    var cr = Math.cos(e.rot || 0), sr = Math.sin(e.rot || 0);
+    ctx.beginPath();
+    for (k = 0; k <= S; k++) {
+      th = k / S * 6.2832;
+      r = TF.blobR(e, th) * scale;
+      lx = r * Math.cos(th); ly = r * Math.sin(th);
+      var px = X(e.x + lx * cr - ly * sr), py = Y(e.y + lx * sr + ly * cr);
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
   function rrPath(x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -1103,14 +1120,13 @@
     // water: layered and alive (deep base, drifting light, ripple rings, foam rim)
     for (i = 0; i < hole.water.length; i++) {
       var we = hole.water[i];
-      ellipseW(we);
+      blobPath(we, 1);
       ctx.fillStyle = B.water; ctx.globalAlpha = 0.96; ctx.fill(); ctx.globalAlpha = 1;
       ctx.save();
-      ellipseW(we); ctx.clip();
+      blobPath(we, 1); ctx.clip();
       // deep center
       ctx.fillStyle = 'rgba(0,30,60,0.28)';
-      ctx.beginPath();
-      ctx.ellipse(X(we.x), Y(we.y), we.rx * sc * 0.55, we.ry * sc * 0.55, 0, 0, 6.2832);
+      blobPath(we, 0.55);
       ctx.fill();
       // drifting light bands
       ctx.fillStyle = B.waterTop; ctx.globalAlpha = 0.22;
@@ -1127,16 +1143,13 @@
       for (var rp = 0; rp < 2; rp++) {
         var rph = ((wtime * 0.35 + we.x * 0.37 + rp * 0.5) % 1);
         ctx.globalAlpha = 0.35 * (1 - rph);
-        ctx.beginPath();
-        ctx.ellipse(X(we.x), Y(we.y),
-                    we.rx * sc * (0.25 + rph * 0.7), we.ry * sc * (0.25 + rph * 0.7),
-                    0, 0, 6.2832);
+        blobPath(we, 0.25 + rph * 0.7);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
       ctx.restore();
       // foam rim
-      ellipseW(we);
+      blobPath(we, 1);
       ctx.strokeStyle = B.waterTop; ctx.globalAlpha = 0.55; ctx.lineWidth = 2; ctx.stroke();
       ctx.globalAlpha = 1;
     }
