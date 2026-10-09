@@ -109,9 +109,20 @@ h2 .dot{width:9px;height:9px;border-radius:50%;background:#ff5fa2;box-shadow:0 0
 .prog{font-size:12px;color:rgba(255,255,255,.55);font-weight:700}
 footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
   padding:6px 20px calc(26px + env(safe-area-inset-bottom));text-align:center}
+.studio-footer{padding-top:28px}
+.studio-footer::before{content:"";display:block;width:min(420px,72%);height:1px;margin:0 auto 20px;
+  background:linear-gradient(90deg,transparent,#d4a94e,transparent);box-shadow:0 0 12px rgba(212,169,78,.5)}
+.studio-footer .made-by{display:block;font-size:11px;letter-spacing:.42em;text-indent:.42em;
+  text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:8px}
+.studio-footer .wordmark{display:block;font-size:clamp(22px,5.5vw,32px);font-weight:800;letter-spacing:.14em;
+  text-indent:.14em;background:linear-gradient(100deg,#8a6a2a 0%,#f6d67c 25%,#fff6d8 50%,#f6d67c 75%,#8a6a2a 100%);
+  background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:wd-shimmer 7s linear infinite}
+@keyframes wd-shimmer{to{background-position:200% center}}
+.studio-footer .tagline{display:block;margin-top:10px;font-size:12.5px;letter-spacing:.18em;color:rgba(255,255,255,.38)}
 @media (max-width:380px){.games{grid-template-columns:1fr}.card .art{height:180px}}
 @media (prefers-reduced-motion:reduce){
-  .bulbs i,.card .art img,h2 .dot{animation:none;transition:none}
+  .bulbs i,.card .art img,h2 .dot,.studio-footer .wordmark{animation:none;transition:none}
 }
 
 /* Word Well key art: pure CSS, ink & parchment (no image file) */
