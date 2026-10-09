@@ -5,10 +5,10 @@
 var AI_BASE = 'https://jigsaw-ai.chaoticutopia84.workers.dev';
 
 var THEMES = [
-  '🐉 Dragon\'s hoard', '🦉 Owl & aurora', '🏝️ Coral reef',
-  '🎈 Balloon fields', '🏰 Castle', '🦊 Arctic fox',
-  '🍬 Candy village', '🚂 Mountain train', '🦕 Safari sunset',
-  '🐾 Dane meadow', '🎃 Pumpkin patch', '🚀 Space station'
+  'Dragon\'s hoard', 'Owl & aurora', 'Coral reef',
+  'Balloon fields', 'Castle', 'Arctic fox',
+  'Candy village', 'Mountain train', 'Safari sunset',
+  'Dane meadow', 'Pumpkin patch', 'Space station'
 ];
 var THEME_PROMPTS = [
   'dragon curled around a treasure hoard in a crystal cavern',
