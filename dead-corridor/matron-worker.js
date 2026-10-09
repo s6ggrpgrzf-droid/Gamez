@@ -111,58 +111,47 @@ function fallbackPack(date) {
   };
 }
 
-/* ---------- pack validation (server-side, strict) ---------- */
-function validPack(p) {
-  if (!p || typeof p !== 'object') return 'not an object';
-  if (!Array.isArray(p.sectors) || p.sectors.length !== 3) return 'sectors != 3';
+/* ---------- pack healing: every AI field is cleaned; any bad/missing field
+ * falls back to the static line for THAT field only. The pack is valid by
+ * construction, so one flaky line can never nuke the whole AI pack. ---------- */
+function healPack(p, date) {
+  var fb = fallbackPack(date);
+  var out = { date: date, fallback: false, sectors: [], barks: {}, mutator: null, logs: [] };
+  var ps = (p && Array.isArray(p.sectors)) ? p.sectors : [];
   for (var i = 0; i < 3; i++) {
-    var s = p.sectors[i];
-    if (!s || typeof s !== 'object') return 'sector ' + i + ' not object';
-    if (!cleanStr(s.name, 48)) return 'sector ' + i + ' bad name';
-    if (!cleanStr(s.intro, 160)) return 'sector ' + i + ' bad intro';
-    if (!cleanStr(s.clear, 120)) return 'sector ' + i + ' bad clear';
+    var sec = ps[i] || {};
+    out.sectors.push({
+      name: cleanStr(sec.name, 48) || fb.sectors[i].name,
+      intro: cleanStr(sec.intro, 160) || fb.sectors[i].intro,
+      clear: cleanStr(sec.clear, 120) || fb.sectors[i].clear
+    });
   }
-  var b = p.barks;
-  if (!b || typeof b !== 'object') return 'barks not object';
+  var pb = (p && p.barks && typeof p.barks === 'object') ? p.barks : {};
   var keys = ['streak', 'hurt', 'novaReady', 'nova', 'lowAmmo', 'brute'];
   for (var k = 0; k < keys.length; k++) {
-    var arr = barkArr(b[keys[k]]);
-    if (!arr || arr.length < 1) return 'barks.' + keys[k] + ' not array';
-    for (var j = 0; j < arr.length; j++)
-      if (!cleanStr(arr[j], 140)) return 'barks.' + keys[k] + '[' + j + '] empty';
+    var arr = barkArr(pb[keys[k]]) || [], cleaned = [];
+    for (var j = 0; j < arr.length; j++) {
+      var t = cleanStr(arr[j], 140);
+      if (t) cleaned.push(t);
+    }
+    out.barks[keys[k]] = cleaned.length ? cleaned : fb.barks[keys[k]];
   }
-  var m = p.mutator;
-  if (!m || typeof m !== 'object') return 'mutator not object';
-  if (MUTATOR_IDS.indexOf(m.id) < 0) return 'mutator bad id: ' + String(m.id).slice(0, 20);
-  if (!cleanStr(m.title, 48)) return 'mutator bad title';
-  if (!cleanStr(m.flavor, 160)) return 'mutator bad flavor';
-  if (!Array.isArray(p.logs) || p.logs.length < 4) return 'logs < 4';
-  for (var l = 0; l < Math.min(p.logs.length, 6); l++) {
-    if (!p.logs[l] || [1, 2, 3].indexOf(Number(p.logs[l].sector)) < 0) return 'logs[' + l + '] bad sector';
-    if (!cleanStr(p.logs[l].text, 180)) return 'logs[' + l + '] bad text';
-  }
-  return true;
-}
-
-function sanitizePack(p, date) {
-  var out = { date: date, fallback: false, sectors: [], barks: {}, mutator: null, logs: [] };
-  for (var i = 0; i < 3; i++) out.sectors.push({
-    name: cleanStr(p.sectors[i].name, 48),
-    intro: cleanStr(p.sectors[i].intro, 160),
-    clear: cleanStr(p.sectors[i].clear, 120)
-  });
-  var keys = ['streak', 'hurt', 'novaReady', 'nova', 'lowAmmo', 'brute'];
-  for (var k = 0; k < keys.length; k++)
-    out.barks[keys[k]] = barkArr(p.barks[keys[k]]).map(function (t) { return cleanStr(t, 140); });
+  var pm = (p && p.mutator && typeof p.mutator === 'object') ? p.mutator : {};
+  var mid = MUTATOR_IDS.indexOf(pm.id) >= 0 ? pm.id : fb.mutator.id;
   out.mutator = {
-    id: p.mutator.id,
-    title: cleanStr(p.mutator.title, 48),
-    flavor: cleanStr(p.mutator.flavor, 160),
-    params: MUTATORS[p.mutator.id]   // params ALWAYS from our allowlist, never the AI
+    id: mid,
+    title: cleanStr(pm.title, 48) || MUTATORS[mid].title,
+    flavor: cleanStr(pm.flavor, 160) || MUTATORS[mid].flavor,
+    params: MUTATORS[mid]   /* params ALWAYS from our allowlist, never the AI */
   };
-  for (var l = 0; l < 4; l++)
-    out.logs.push({ sector: Number(p.logs[l].sector), text: cleanStr(p.logs[l].text, 180) });
-  /* NOTE: validPack guarantees >= 4 logs, so indices 0..3 exist */
+  var pl = (p && Array.isArray(p.logs)) ? p.logs : [];
+  for (var l = 0; l < 4; l++) {
+    var lg = pl[l] || {}, sn = Number(lg.sector);
+    out.logs.push({
+      sector: (sn === 1 || sn === 2 || sn === 3) ? sn : fb.logs[l].sector,
+      text: cleanStr(lg.text, 180) || fb.logs[l].text
+    });
+  }
   return out;
 }
 
@@ -242,18 +231,13 @@ async function generatePack(env, date) {
   ];
   var txt = await runAi(env, msgs, MAX_TOKENS);
   var p = extractJson(txt);
-  var v = p ? validPack(p) : 'no JSON found';
-  if (v !== true) {
-    /* one corrective retry: tell the model exactly what was wrong */
-    txt = await runAi(env, msgs.concat([
-      { role: 'assistant', content: txt.slice(0, 4000) },
-      { role: 'user', content: 'That output was rejected (' + v + '). Return the FULL pack again as strict JSON with that fixed. JSON only.' }
-    ]), MAX_TOKENS);
+  if (!p) {
+    /* one retry when the model returned no JSON at all; healPack handles the rest */
+    txt = await runAi(env, msgs, MAX_TOKENS);
     p = extractJson(txt);
-    v = p ? validPack(p) : 'no JSON found';
   }
-  if (v !== true) throw new Error('pack failed validation: ' + v);
-  return sanitizePack(p, date);
+  if (!p) throw new Error('no JSON from model');
+  return healPack(p, date);
 }
 
 /* ---------- router ---------- */
@@ -273,7 +257,7 @@ export default {
       var key = 'matron:daily:' + date;
       try {
         var cached = await env.MATRON_KV.get(key, 'json');
-        if (cached && validPack(cached) === true)
+        if (cached && Array.isArray(cached.sectors) && cached.sectors.length === 3 && cached.mutator && MUTATOR_IDS.indexOf(cached.mutator.id) >= 0)
           return json(cached, 200, { 'x-matron-cache': 'HIT' });
       } catch (e) { /* KV hiccup: fall through to generation */ }
 
