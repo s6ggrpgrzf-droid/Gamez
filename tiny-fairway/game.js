@@ -294,6 +294,13 @@
       hole = TF.makeHole(spec, n - 1);
       seed = hole.seed;
       curBiome = hole.biome;
+    } else if (mode === 'wonders') {
+      // the seven wonders: designer specs with bespoke transport set-pieces
+      var wspec = (TF.WONDERS || [])[(n - 1) % 7] || TF.HOLES[(n - 1) % TF.HOLES.length];
+      hole = TF.makeHole(wspec, 100 + (n - 1));
+      seed = hole.seed;
+      curBiome = hole.biome;
+      showWonderIntro(n);
     } else {
       hole = TF.genHole(seed, opts);
       curBiome = Math.floor((holeIndex - 1) / 8) % 4;
@@ -328,7 +335,7 @@
       holeNameStr = nm;
       if (state === 'play' || state === 'holed') updateHUD();
       var tr = $('transit');
-      if (tr && tr.classList.contains('in')) $('transit-name').textContent = nm;
+      if (tr && tr.classList.contains('in') && mode !== 'wonders') $('transit-name').textContent = nm;
     });
     updateHUD();
     milestoneCheck(n);
@@ -494,14 +501,15 @@
     { n: 'Sky', c: '140,200,255', at: 8 },
     { n: 'Gold', c: '255,215,130', at: 12 },
     { n: 'Rose', c: '255,150,190', at: 16 },
-    { n: 'Comet', c: '200,170,255', at: 20 }
+    { n: 'Comet', c: '200,170,255', at: 20 },
+    { n: 'gold', c: '255,215,130', at: 9999 }   // passport reward: stamp all 7 wonders
   ];
   function trailDef() {
     for (var i = TRAILS.length - 1; i >= 0; i--)
-      if (TRAILS[i].n === trailSel && maxHole >= TRAILS[i].at) return TRAILS[i];
+      if (TRAILS[i].n === trailSel && (maxHole >= TRAILS[i].at || (TRAILS[i].n === 'gold' && passportComplete()))) return TRAILS[i];
     return TRAILS[0];
   }
-  function unlockedTrails() { return TRAILS.filter(function (t) { return maxHole >= t.at; }); }
+  function unlockedTrails() { return TRAILS.filter(function (t) { return maxHole >= t.at || (t.n === 'gold' && passportComplete()); }); }
   function toast(msg, ms) {
     var t = $('toast');
     if (!t) return;
@@ -586,6 +594,7 @@
     if (eagle && !RM) petalBurst(hole.cup.x, hole.cup.y);
     if (strokes > par() + 2) turtleJudge();
     saveRun(); saveBest();
+    if (mode === 'wonders') { saveWonders(); stampWonder(holeIndex, stars, strokes); }
     // power-up drip: one random power-up per hole-out (cap 5 each)
     var pk = ['brake', 'sticky', 'mulligan'][(Math.random() * 3) | 0];
     if (POW[pk] < 5) { POW[pk]++; savePow(); updatePowBtn(); }
@@ -598,6 +607,7 @@
     setTimeout(function () {
       hideStarsPop();
       if (mode === 'daily') showDailyResult(stars);
+      else if (mode === 'wonders' && holeIndex >= 7) showWondersResult();
       else if (holeIndex >= TF.HOLES.length) showTourResult();
       else {
         // Wonderputt beat: the old hole melts away before the next arrives
@@ -663,7 +673,8 @@
     AU.click();
     toast('Hole skipped · +' + bank + ' banked');
     saveRun();
-    if (mode === 'tour' && holeIndex >= TF.HOLES.length) showTourResult();
+    if (mode === 'wonders' && holeIndex >= 7) showWondersResult();
+    else if (mode === 'tour' && holeIndex >= TF.HOLES.length) showTourResult();
     else goToHole(holeIndex + 1);
   }
 
@@ -1107,6 +1118,9 @@
     ctx.fillStyle = B.rough;
     ctx.fillRect(0, 0, cw, ch);
     if (!hole) return;
+    // wonder backdrop: bespoke scene layer behind the course (wonders-art.js; silent elsewhere)
+    if (hole.wonder && typeof TFW !== 'undefined' && TFW.back)
+      TFW.back(ctx, { X: X, Y: Y, sc: sc, wtime: wtime, simTime: simTime, RM: RM }, hole);
 
     // grass texture speckles
     for (i = 0; i < speckles.length; i++) {
@@ -1348,6 +1362,8 @@
       tpV = { X: X, Y: Y, sc: sc, wtime: wtime, simTime: simTime, RM: RM };
       TPR.draw(ctx, tpV, hole, ball);
     }
+    // wonder foreground: above transports, below cup/flag (wonders-art.js; silent elsewhere)
+    if (hole.wonder && typeof TFW !== 'undefined' && TFW.front && tpV) TFW.front(ctx, tpV, hole);
 
     // cup + flag (the genre's universal target glyph)
     var cupRX = TF.CUP_R * sc * 0.85;
@@ -1722,6 +1738,7 @@
     updateTurtle(dt);
     updateParticles(dt * timeScale);
     if (typeof TPR !== 'undefined') TPR.tick(dt);   // transport particle pool
+    if (typeof TFW !== 'undefined' && TFW.tick) TFW.tick(dt, hole);   // wonder ambient animation
     // roll bed follows ball speed; bandpass retunes for sand vs grass
     if (AU.ctx && AU.rollGain) {
       var spd = ball && !ball.resting ? Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) : 0;
@@ -1765,11 +1782,16 @@
       return;
     }
     var avg = holeScores.length ? TF.avgLast(holeScores, 50) : 0;
-    var hn = 'Hole ' + holeIndex + (holeNameStr ? ' · ' + holeNameStr : '') +
-             (avg ? ' · avg ' + avg.toFixed(1) : '');
+    var hn;
+    if (mode === 'wonders') {
+      hn = 'Wonder ' + holeIndex + ' of 7' + (hole.wonder ? ' · ' + hole.wonder.name : '');
+    } else {
+      hn = 'Hole ' + holeIndex + (holeNameStr ? ' · ' + holeNameStr : '') +
+           (avg ? ' · avg ' + avg.toFixed(1) : '');
+    }
     $('hud-hole').textContent = hn;
     var m = 'PAR ' + par() + ' · ' + strokes + (strokes === 1 ? ' STROKE' : ' STROKES');
-    if (mode === 'tour') m += ' · Σ ' + totalStrokes + ' · ★ ' + totalStars;
+    if (mode === 'tour' || mode === 'wonders') m += ' · Σ ' + totalStrokes + ' · ★ ' + totalStars;
     else m += ' · ★ ' + totalStars;
     if (ball && (ball.gems | 0)) m += ' · ◆' + ball.gems;
     $('hud-meta').textContent = m;
@@ -1795,14 +1817,18 @@
 
   function goToHole(n, s, opts) {
     var tr = $('transit');
-    $('transit-hole').textContent = 'HOLE ' + n;
-    $('transit-name').textContent = '';
+    $('transit-hole').textContent = mode === 'wonders' ? ('WONDER ' + n + ' OF 7') : ('HOLE ' + n);
+    if (mode === 'wonders') {
+      var wn = TF.WONDERS && TF.WONDERS[(n - 1) % 7] && TF.WONDERS[(n - 1) % 7].wonder;
+      $('transit-name').textContent = wn ? wn.name : '';
+    } else $('transit-name').textContent = '';
     tr.classList.remove('out');
     tr.classList.add('in');
     setTimeout(function () {
       loadHole(n, s, opts);
       state = 'play';
       saveRun();                                       // persist the new hole so reload resumes here
+      if (mode === 'wonders') saveWonders();
       tr.classList.remove('in');
       tr.classList.add('out');
       setTimeout(function () {
@@ -2150,6 +2176,114 @@
     }
     startPlay();
   }
+
+  /* ---------------- wonders of the world ----------------
+   * 7 designer holes, each a transport set-piece. Own save key (tf_wonders),
+   * passport stamps in tf_passport, golden ball trail at 7/7. */
+  function loadWonders() { try { return JSON.parse(lsGet('tf_wonders', 'null')); } catch (e) { return null; } }
+  function saveWonders() {
+    lsSet('tf_wonders', JSON.stringify({ mode: 'wonders', holeIndex: holeIndex,
+      totalStrokes: totalStrokes, totalStars: totalStars }));
+  }
+  function startWonders() {
+    if (!TF.WONDERS || !TF.WONDERS.length) { toast('The wonders are still being charted — check back soon.'); return; }
+    AU.init(); AU.click();
+    mode = 'wonders';
+    seenHint = {};
+    var wsave = loadWonders();
+    if (wsave && wsave.holeIndex >= 1 && wsave.holeIndex <= 7) {
+      totalStrokes = wsave.totalStrokes || 0;
+      totalStars = wsave.totalStars || 0;
+      prevKiller = false;
+      loadHole(wsave.holeIndex || 1);
+    } else {
+      totalStrokes = 0; totalStars = 0; prevKiller = false;
+      loadHole(1);
+    }
+    startPlay();
+  }
+
+  /* wonder intro card: cinematic name reveal, once per hole per session */
+  var seenWonderIntro = {}, wonderIntroTimer = null;
+  function showWonderIntro(n) {
+    var el = $('wonder-intro');
+    if (!el || seenWonderIntro[n]) return;
+    seenWonderIntro[n] = 1;
+    var w = (hole && hole.wonder) || {};
+    $('wi-kicker').textContent = 'Wonder ' + n + ' of 7';
+    $('wi-name').textContent = w.name || ('Wonder ' + n);
+    $('wi-flavor').textContent = w.flavor || '';
+    el.classList.add('show');
+    clearTimeout(wonderIntroTimer);
+    wonderIntroTimer = setTimeout(hideWonderIntro, 2800);
+  }
+  function hideWonderIntro() {
+    clearTimeout(wonderIntroTimer);
+    var el = $('wonder-intro');
+    if (el) el.classList.remove('show');
+  }
+
+  /* passport: one stamp per wonder, golden trail when the book is full */
+  function loadPassport() {
+    try { var p = JSON.parse(lsGet('tf_passport', 'null')); if (p && p.stamps) return p; } catch (e) {}
+    return { stamps: {} };
+  }
+  function savePassport(p) { lsSet('tf_passport', JSON.stringify(p)); }
+  function passportCount() { var p = loadPassport(), c = 0, k; for (k in p.stamps) c++; return c; }
+  function passportComplete() { return passportCount() >= 7; }
+  function stampWonder(n, stars, strokes) {
+    var p = loadPassport();
+    if (!p.stamps[n] || stars > p.stamps[n].stars) p.stamps[n] = { stars: stars, strokes: strokes };
+    savePassport(p);
+    if (passportComplete() && trailSel !== 'gold') {
+      trailSel = 'gold'; lsSet('tf_trail', 'gold');
+      toast('✦ World Traveler! Golden ball trail unlocked.');
+    }
+  }
+  function starsRow(s) { var h = '', i; for (i = 0; i < 3; i++) h += i < s ? '★' : '☆'; return h; }
+  function showPassport() {
+    AU.init(); AU.click();
+    state = 'passport';
+    running = true;
+    $('menu').classList.remove('on');
+    $('result').classList.remove('on');
+    $('hud').hidden = true;
+    var p = loadPassport(), h = '', n;
+    for (n = 1; n <= 7; n++) {
+      var st = p.stamps[n] || null;
+      if (typeof TFW !== 'undefined' && TFW.stampHTML) h += TFW.stampHTML(n, !!st);
+      else h += passportStampFallback(n, st);
+    }
+    $('stamp-grid').innerHTML = h;
+    var c = passportCount();
+    $('passport-progress').textContent = c + ' of 7 wonders stamped' +
+      (passportComplete() ? ' · World Traveler ✦' : '');
+    $('passport').classList.add('on');
+    refreshButtons();
+  }
+  function passportStampFallback(n, st) {
+    var nm = (TF.WONDERS && TF.WONDERS[n - 1] && TF.WONDERS[n - 1].wonder) ?
+             TF.WONDERS[n - 1].wonder.name : ('Wonder ' + n);
+    return '<div class="stamp' + (st ? ' stamped' : '') + '"><div class="stamp-n">' + n +
+      '</div><div class="stamp-name">' + nm + '</div><div class="stamp-stars">' +
+      (st ? starsRow(st.stars) : '···') + '</div></div>';
+  }
+  /* wonders complete: all 7 played, final tally */
+  function showWondersResult() {
+    state = 'result';
+    try { localStorage.removeItem('tf_wonders'); } catch (e) {}
+    var c = passportCount();
+    $('result-stars').textContent = passportComplete() ? '✦' : '★★★';
+    $('result-title').textContent = 'Wonders complete!';
+    $('result-sub').innerHTML = '7 wonders · <b>' + totalStrokes + '</b> strokes<br>' +
+      totalStars + ' ★ earned · ' + c + ' of 7 stamped';
+    $('result').classList.add('on');
+    $('hud').hidden = true;
+    refreshButtons();
+    refreshMenu();
+    AU.chime(true);
+  }
+
   function startDaily() {
     AU.init(); AU.click();
     function go() {
@@ -2185,6 +2319,10 @@
     $('menu-best').textContent = best ?
       ('Best tour: ' + best.strokes + ' strokes · ' + (best.stars || 0) + ' ★') :
       'No tours yet — the fairway awaits.';
+    var pwc = passportCount(), pcomplete = passportComplete();
+    $('wonders-sub').textContent = pcomplete ? 'World Traveler ✦ · replay the tour' : (pwc + ' of 7 stamped');
+    $('passport-sub').textContent = pwc ? (pwc + ' of 7 stamped') : 'your wonder stamps';
+    $('menu-traveler').hidden = !pcomplete;
     updateDailySub();
   }
 
@@ -2223,6 +2361,17 @@
     refreshButtons();
   });
   $('btn-endless').addEventListener('click', startTour);
+  $('btn-wonders').addEventListener('click', startWonders);
+  $('btn-passport').addEventListener('click', showPassport);
+  $('btn-passport-back').addEventListener('click', function () {
+    AU.click();
+    $('passport').classList.remove('on');
+    $('menu').classList.add('on');
+    state = 'menu';
+    refreshButtons();
+    refreshMenu();
+  });
+  $('wonder-intro').addEventListener('click', hideWonderIntro);
   $('btn-daily').addEventListener('click', startDaily);
   $('btn-newrun').addEventListener('click', function () {
     AU.click();
