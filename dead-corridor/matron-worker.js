@@ -73,6 +73,12 @@ function rateLimited(ip, limitPerMin) {
   if (buckets.size > 5000) buckets.clear();
   return b.count > limitPerMin;
 }
+/* bark values may arrive as a string or an array; normalize to an array */
+function barkArr(v) {
+  if (Array.isArray(v)) return v.slice(0, 3);
+  if (typeof v === 'string' && v.trim()) return [v];
+  return null;
+}
 function cleanStr(v, max) {
   if (typeof v !== 'string') return '';
   return v.replace(/[<>&"']/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -120,9 +126,9 @@ function validPack(p) {
   if (!b || typeof b !== 'object') return 'barks not object';
   var keys = ['streak', 'hurt', 'novaReady', 'nova', 'lowAmmo', 'brute'];
   for (var k = 0; k < keys.length; k++) {
-    var arr = b[keys[k]];
-    if (!Array.isArray(arr) || arr.length < 1) return 'barks.' + keys[k] + ' not array';
-    for (var j = 0; j < Math.min(arr.length, 6); j++)
+    var arr = barkArr(b[keys[k]]);
+    if (!arr || arr.length < 1) return 'barks.' + keys[k] + ' not array';
+    for (var j = 0; j < arr.length; j++)
       if (!cleanStr(arr[j], 140)) return 'barks.' + keys[k] + '[' + j + '] empty';
   }
   var m = p.mutator;
@@ -147,7 +153,7 @@ function sanitizePack(p, date) {
   });
   var keys = ['streak', 'hurt', 'novaReady', 'nova', 'lowAmmo', 'brute'];
   for (var k = 0; k < keys.length; k++)
-    out.barks[keys[k]] = p.barks[keys[k]].slice(0, 3).map(function (t) { return cleanStr(t, 140); });
+    out.barks[keys[k]] = barkArr(p.barks[keys[k]]).map(function (t) { return cleanStr(t, 140); });
   out.mutator = {
     id: p.mutator.id,
     title: cleanStr(p.mutator.title, 48),
