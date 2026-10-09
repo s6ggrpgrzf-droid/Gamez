@@ -93,6 +93,44 @@
     return (lx * lx) / (e.rx * e.rx) + (ly * ly) / (e.ry * e.ry) <= 1;
   }
 
+  // Pond shorelines: every water blob carries BLOB_N seeded radius multipliers
+  // (0.78..1.18), so ponds render as organic blobs instead of perfect ellipses.
+  // The blob is derived from the pond's own coordinates, never the hole rng
+  // stream, so existing seeds generate identical layouts.
+  var BLOB_N = 12;
+  function hashXY(x, y) {
+    var h = (Math.round(x * 64) * 374761393 + Math.round(y * 64) * 668265263) | 0;
+    h = (h ^ (h >>> 13)) * 1274126177;
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+  TF.waterBlob = function (e) {
+    var r = TF.mulberry32(hashXY(e.x + e.rx * 0.37, e.y + e.ry * 0.73));
+    var b = [], i;
+    for (i = 0; i < BLOB_N; i++) b.push(0.78 + r() * 0.40);
+    return b;
+  };
+  function smoothBlob(b, t) { // t in [0,1) around the ring; cosine interpolation
+    var x = t * BLOB_N, fl = Math.floor(x);
+    var i0 = fl % BLOB_N, i1 = (fl + 1) % BLOB_N, f = x - fl;
+    var s = (1 - Math.cos(f * Math.PI)) / 2;
+    return b[i0] * (1 - s) + b[i1] * s;
+  }
+  // Shoreline radius of pond e at local angle th (radians).
+  TF.blobR = function (e, th) {
+    var c = Math.cos(th), s = Math.sin(th);
+    var re = (e.rx * e.ry) / Math.sqrt(e.ry * e.ry * c * c + e.rx * e.rx * s * s + 1e-9);
+    var t = th / TAU; t = t - Math.floor(t);
+    return re * smoothBlob(e.blob, t);
+  };
+  // Point-in-pond test; matches the rendered shoreline exactly.
+  TF.inWater = function (px, py, e) {
+    if (!e.blob) return inEllipse(px, py, e); // legacy data without a shoreline
+    var dx = px - e.x, dy = py - e.y;
+    var cr = Math.cos(e.rot || 0), sr = Math.sin(e.rot || 0);
+    var lx = dx * cr + dy * sr, ly = -dx * sr + dy * cr;
+    return Math.hypot(lx, ly) <= TF.blobR(e, Math.atan2(ly, lx));
+  };
+
   /* ---------------- hole generation ---------------- */
 
   // opts: {breather} softens a hole after a killer (fewer hazards, no water);
@@ -222,6 +260,7 @@
         // Must not touch the fairway: the safe route stays dry.
         if (distToFairway(we.x, we.y) < we.rx + 2.5) continue;
         if (!clearOfHazards(we)) continue;
+        we.blob = TF.waterBlob(we);
         water.push(we);
         if (water.length >= (opts.twoRoute ? 1 : 2)) break;
         if (!opts.twoRoute && rng() < 0.5) break;
@@ -454,7 +493,7 @@
     // ---- hidden relic: one per hole, off the racing line (Walkabout) ----
     function inHazards(x, y) {
       var q;
-      for (q = 0; q < water.length; q++) if (inEllipse(x, y, water[q])) return true;
+      for (q = 0; q < water.length; q++) if (TF.inWater(x, y, water[q])) return true;
       for (q = 0; q < sand.length; q++) if (inEllipse(x, y, sand[q])) return true;
       return false;
     }
@@ -853,6 +892,9 @@
     var seed = (0x70ac + idx * 101) >>> 0;
     var rng = TF.mulberry32(seed);
     function ell(a) { return { x: a[0], y: a[1], rx: a[2], ry: a[3], rot: a[4] || 0 }; }
+    var waterList = (spec.water || []).map(function (w) {
+      var e = ell(w); e.blob = TF.waterBlob(e); return e;
+    });
     var fairway = spec.fw.map(function (s) {
       return { x1: s[0], y1: s[1], x2: s[2], y2: s[3], r: s[4] };
     });
@@ -902,8 +944,8 @@
     }
     function inHaz(x, y) {
       var q;
-      var wl = (spec.water || []), sl = (spec.sand || []);
-      for (q = 0; q < wl.length; q++) if (inEllipse(x, y, ell(wl[q]))) return true;
+      var sl = (spec.sand || []);
+      for (q = 0; q < waterList.length; q++) if (TF.inWater(x, y, waterList[q])) return true;
       for (q = 0; q < sl.length; q++) if (inEllipse(x, y, ell(sl[q]))) return true;
       return false;
     }
@@ -946,7 +988,7 @@
       fairway: fairway,
       green: ell(spec.green),
       sand: (spec.sand || []).map(ell),
-      water: (spec.water || []).map(ell),
+      water: waterList,
       trees: (spec.trees || []).map(function (t) { return { x: t[0], y: t[1], r: t[2] }; }),
       dunes: dunes,
       walls: (spec.walls || []).map(function (w) {
@@ -1006,7 +1048,7 @@
   TF.surfaceAt = function (hole, x, y) {
     var i;
     for (i = 0; i < hole.water.length; i++)
-      if (inEllipse(x, y, hole.water[i])) return 'water';
+      if (TF.inWater(x, y, hole.water[i])) return 'water';
     for (i = 0; i < hole.sand.length; i++)
       if (inEllipse(x, y, hole.sand[i])) return 'sand';
     if (inEllipse(x, y, hole.green)) return 'green';
