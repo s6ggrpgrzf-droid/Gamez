@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=IM+Fell+English:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <div class="app">
@@ -56,12 +56,49 @@
         <button class="btn primary" id="btn-solo" type="button">Solo vs the Well Warden</button>
         <button class="btn" id="btn-passplay" type="button">Pass &amp; Play</button>
         <button class="btn" id="btn-daily" type="button">Daily Well</button>
+        <button class="btn" id="btn-online" type="button">Play a friend<span class="btn-sub">take turns over days, like words with friends</span></button>
         <button class="btn ghost" id="btn-how" type="button">How to play</button>
         <button class="btn ghost" id="btn-mute" type="button">sound on</button>
       </div>
       <h2 class="lb-title">today&rsquo;s well — top descents</h2>
       <div id="menu-board" class="lb"></div>
       <p class="build-tag" id="build-tag"></p>
+    </div>
+  </section>
+
+  <!-- ONLINE LOBBY -->
+  <section id="scr-online" class="screen hidden" aria-label="Play a friend">
+    <div class="menu-wrap">
+      <h1 class="game-title small">Play a friend</h1>
+      <p class="tagline">take turns, no rush — the well waits</p>
+      <p class="streak-line" id="ol-who"></p>
+      <div class="menu-btns">
+        <button class="btn primary" id="btn-ol-new" type="button">Start a new game</button>
+      </div>
+      <div id="ol-waiting" class="hidden">
+        <p class="tagline">give this code to your friend</p>
+        <div id="ol-code" class="ol-code"></div>
+        <div class="menu-btns">
+          <button class="btn" id="btn-ol-share" type="button">share the code</button>
+        </div>
+        <p class="streak-line" id="ol-waitmsg">waiting for your friend…</p>
+        <div class="menu-btns">
+          <button class="btn ghost" id="btn-ol-cancel" type="button">back to the lobby</button>
+        </div>
+      </div>
+      <div id="ol-joinbox">
+        <h2 class="lb-title">join with a code</h2>
+        <div id="ol-slots" class="ol-slots" aria-label="game code"></div>
+        <div id="ol-pad" class="blank-grid ol-pad"></div>
+        <div class="menu-btns">
+          <button class="btn primary" id="btn-ol-join" type="button">join the game</button>
+        </div>
+      </div>
+      <h2 class="lb-title">my games</h2>
+      <div id="ol-games" class="lb"></div>
+      <div class="menu-btns">
+        <button class="btn ghost" id="ol-back" type="button">back</button>
+      </div>
     </div>
   </section>
 
@@ -172,9 +209,9 @@
 <script src="dict-4.js?v=9"></script>
 <script src="dict-5.js?v=9"></script>
 <script src="dict-6.js?v=9"></script>
-<script src="wwf.js?v=9"></script>
+<script src="wwf.js?v=10"></script>
 <script src="audio.js?v=9"></script>
-<script src="game.js?v=10"></script>
+<script src="game.js?v=12"></script>
 <script>
   document.getElementById('btn-again').onclick = function () { location.reload(); };
   document.getElementById('btn-over-menu').onclick = function () { location.reload(); };

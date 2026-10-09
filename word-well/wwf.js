@@ -312,7 +312,7 @@ function applyMove(st, placements, dir) {
   var player = st.turn, rack = st.racks[player], i;
   for (i = 0; i < placements.length; i++) {
     var p = placements[i];
-    st.board[p.r][p.c] = { ch: p.tile.blank ? p.blankCh : p.tile.ch, v: p.tile.v, blank: p.tile.blank };
+    st.board[p.r][p.c] = { ch: p.tile.blank ? p.blankCh : p.tile.ch, v: p.tile.v, blank: p.tile.blank, own: player };
     removeTile(rack, p.tile);
   }
   st.scores[player] += v.score;

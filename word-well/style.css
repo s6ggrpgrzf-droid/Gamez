@@ -108,6 +108,12 @@ body::before{
 .cell.star{background:radial-gradient(circle,#ffe9a8 0%,var(--dw) 55%,#caa06a 100%)}
 .cell.star .plab{font-size:clamp(10px,3vw,16px);color:#7a5b12}
 .cell.filled,.cell.tent{background:linear-gradient(180deg,#4c4232,#33291b);border-color:#221a10}
+/* opponent tiles: rose-washed stone, WWF-style side colors */
+.cell.filled.opp{background:linear-gradient(180deg,#7c4a55,#4a2830);border-color:#382026}
+.cell.filled.opp .tlet{color:#f6dfe2}
+.cell.filled.opp .tval{color:#d9a7ae}
+/* last-move highlight */
+.cell.lastmv{box-shadow:inset 0 0 0 2px var(--gold-hi)}
 .cell .tlet{
   display:none;font-family:var(--font-display),Georgia,serif;font-weight:700;
   font-size:clamp(11px,3.4vw,20px);color:#f3e8cf;pointer-events:none;line-height:1;
@@ -201,6 +207,31 @@ body::before{
 .pile-cell b{display:block;font-size:17px}
 .pile-cell span{font-size:13px;color:var(--ink-soft)}
 .pile-note{font-style:italic;color:var(--ink-soft);margin-bottom:10px}
+
+/* ---------- online lobby ---------- */
+.ol-code{
+  font-family:var(--font-display),Georgia,serif;font-size:40px;font-weight:700;
+  letter-spacing:6px;text-indent:6px;text-align:center;color:var(--ink);
+  white-space:nowrap;
+  background:rgba(255,255,255,.4);border:2px dashed var(--edge);border-radius:12px;
+  padding:10px 0;margin:6px auto;max-width:340px;
+}
+.ol-slots{display:flex;gap:8px;justify-content:center;margin:10px 0 12px}
+.ol-slot{
+  width:clamp(40px,12vw,52px);aspect-ratio:5/5.6;
+  background:linear-gradient(180deg,#6b5b43,#3d3222);
+  border:2px solid #241c11;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display),Georgia,serif;font-size:24px;font-weight:700;color:#f7ecd4;
+}
+.ol-slot.fill{border-color:var(--gold);box-shadow:0 0 8px rgba(201,162,39,.5)}
+.ol-pad{max-width:340px;margin:0 auto 4px}
+.ol-pad .bkey{font-size:17px}
+.ol-game{cursor:pointer}
+.ol-game:active{background:rgba(201,162,39,.25)}
+.ol-code-sm{font-size:13px;color:var(--ink-soft);letter-spacing:2px}
+.ol-badge{font-size:14px;font-style:italic;color:var(--ink-soft)}
+.ol-badge.hot{color:var(--good);font-style:normal}
 
 /* ---------- game over ---------- */
 .over-scores{margin:10px 0}
