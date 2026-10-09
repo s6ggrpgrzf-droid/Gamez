@@ -39,7 +39,7 @@ var MODELS = [
   '@cf/meta/llama-3.1-8b-instruct-fp8',
   '@cf/mistral/mistral-7b-instruct-v0.2'
 ];
-var MAX_TOKENS = 1500;
+var MAX_TOKENS = 2500;
 
 /* Mutators the game engine actually supports. The AI picks ONE id; params
  * are applied verbatim by the client, so unknown ids/params are rejected. */
@@ -107,26 +107,33 @@ function fallbackPack(date) {
 
 /* ---------- pack validation (server-side, strict) ---------- */
 function validPack(p) {
-  if (!p || typeof p !== 'object') return false;
-  if (!Array.isArray(p.sectors) || p.sectors.length !== 3) return false;
+  if (!p || typeof p !== 'object') return 'not an object';
+  if (!Array.isArray(p.sectors) || p.sectors.length !== 3) return 'sectors != 3';
   for (var i = 0; i < 3; i++) {
     var s = p.sectors[i];
-    if (!s || !cleanStr(s.name, 48) || !cleanStr(s.intro, 160) || !cleanStr(s.clear, 120)) return false;
+    if (!s || typeof s !== 'object') return 'sector ' + i + ' not object';
+    if (!cleanStr(s.name, 48)) return 'sector ' + i + ' bad name';
+    if (!cleanStr(s.intro, 160)) return 'sector ' + i + ' bad intro';
+    if (!cleanStr(s.clear, 120)) return 'sector ' + i + ' bad clear';
   }
   var b = p.barks;
-  if (!b || typeof b !== 'object') return false;
+  if (!b || typeof b !== 'object') return 'barks not object';
   var keys = ['streak', 'hurt', 'novaReady', 'nova', 'lowAmmo', 'brute'];
   for (var k = 0; k < keys.length; k++) {
     var arr = b[keys[k]];
-    if (!Array.isArray(arr) || arr.length < 1 || arr.length > 3) return false;
-    for (var j = 0; j < arr.length; j++) if (!cleanStr(arr[j], 140)) return false;
+    if (!Array.isArray(arr) || arr.length < 1) return 'barks.' + keys[k] + ' not array';
+    for (var j = 0; j < Math.min(arr.length, 6); j++)
+      if (!cleanStr(arr[j], 140)) return 'barks.' + keys[k] + '[' + j + '] empty';
   }
   var m = p.mutator;
-  if (!m || MUTATOR_IDS.indexOf(m.id) < 0) return false;
-  if (!cleanStr(m.title, 48) || !cleanStr(m.flavor, 160)) return false;
-  if (!Array.isArray(p.logs) || p.logs.length !== 4) return false;
-  for (var l = 0; l < 4; l++) {
-    if (!p.logs[l] || [1, 2, 3].indexOf(Number(p.logs[l].sector)) < 0 || !cleanStr(p.logs[l].text, 180)) return false;
+  if (!m || typeof m !== 'object') return 'mutator not object';
+  if (MUTATOR_IDS.indexOf(m.id) < 0) return 'mutator bad id: ' + String(m.id).slice(0, 20);
+  if (!cleanStr(m.title, 48)) return 'mutator bad title';
+  if (!cleanStr(m.flavor, 160)) return 'mutator bad flavor';
+  if (!Array.isArray(p.logs) || p.logs.length < 4) return 'logs < 4';
+  for (var l = 0; l < Math.min(p.logs.length, 6); l++) {
+    if (!p.logs[l] || [1, 2, 3].indexOf(Number(p.logs[l].sector)) < 0) return 'logs[' + l + '] bad sector';
+    if (!cleanStr(p.logs[l].text, 180)) return 'logs[' + l + '] bad text';
   }
   return true;
 }
@@ -140,7 +147,7 @@ function sanitizePack(p, date) {
   });
   var keys = ['streak', 'hurt', 'novaReady', 'nova', 'lowAmmo', 'brute'];
   for (var k = 0; k < keys.length; k++)
-    out.barks[keys[k]] = p.barks[keys[k]].map(function (t) { return cleanStr(t, 140); });
+    out.barks[keys[k]] = p.barks[keys[k]].slice(0, 3).map(function (t) { return cleanStr(t, 140); });
   out.mutator = {
     id: p.mutator.id,
     title: cleanStr(p.mutator.title, 48),
@@ -149,6 +156,7 @@ function sanitizePack(p, date) {
   };
   for (var l = 0; l < 4; l++)
     out.logs.push({ sector: Number(p.logs[l].sector), text: cleanStr(p.logs[l].text, 180) });
+  /* NOTE: validPack guarantees >= 4 logs, so indices 0..3 exist */
   return out;
 }
 
@@ -222,12 +230,23 @@ async function generatePack(env, date) {
   var sys = 'You are MATRON, the cold clinical PA voice of a haunted medical facility. ' +
     'Dry, faintly menacing, never cruel, never graphic. No politics, no real people, no profanity. ' +
     'You output strict JSON only.';
-  var txt = await runAi(env, [
+  var msgs = [
     { role: 'system', content: sys },
     { role: 'user', content: buildPrompt(date, seed) }
-  ], MAX_TOKENS);
+  ];
+  var txt = await runAi(env, msgs, MAX_TOKENS);
   var p = extractJson(txt);
-  if (!validPack(p)) throw new Error('pack failed validation');
+  var v = p ? validPack(p) : 'no JSON found';
+  if (v !== true) {
+    /* one corrective retry: tell the model exactly what was wrong */
+    txt = await runAi(env, msgs.concat([
+      { role: 'assistant', content: txt.slice(0, 4000) },
+      { role: 'user', content: 'That output was rejected (' + v + '). Return the FULL pack again as strict JSON with that fixed. JSON only.' }
+    ]), MAX_TOKENS);
+    p = extractJson(txt);
+    v = p ? validPack(p) : 'no JSON found';
+  }
+  if (v !== true) throw new Error('pack failed validation: ' + v);
   return sanitizePack(p, date);
 }
 
@@ -248,7 +267,7 @@ export default {
       var key = 'matron:daily:' + date;
       try {
         var cached = await env.MATRON_KV.get(key, 'json');
-        if (cached && validPack(cached))
+        if (cached && validPack(cached) === true)
           return json(cached, 200, { 'x-matron-cache': 'HIT' });
       } catch (e) { /* KV hiccup: fall through to generation */ }
 
