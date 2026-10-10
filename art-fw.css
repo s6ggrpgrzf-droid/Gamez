@@ -1,0 +1,46 @@
+/* Fernwild hub key art — pure CSS composition.
+   Misty storybook pines, sun glow, drifting mist, fireflies. */
+.art-fernwild{
+  background:linear-gradient(180deg,#dce8c6 0%,#a9c795 34%,#5f8452 68%,#2c4429 100%);
+  overflow:hidden;
+}
+.art-fernwild .fw-sun{
+  content:"";position:absolute;z-index:0;right:-30px;top:-40px;width:190px;height:190px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,248,214,.95) 0%,rgba(255,248,214,.35) 45%,rgba(255,248,214,0) 70%);
+}
+.art-fernwild .fw-pine{position:absolute;z-index:1;bottom:34px;width:0;height:0;}
+.art-fernwild .fw-pine i{position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;
+  border-left:solid transparent;border-right:solid transparent;}
+.art-fernwild .fw-pine.p1{left:8%;}
+.art-fernwild .fw-pine.p1 i:nth-child(1){border-left-width:34px;border-right-width:34px;border-bottom:52px solid rgba(88,128,84,.65);bottom:44px;}
+.art-fernwild .fw-pine.p1 i:nth-child(2){border-left-width:27px;border-right-width:27px;border-bottom:42px solid rgba(88,128,84,.65);bottom:66px;}
+.art-fernwild .fw-pine.p1 i:nth-child(3){border-left-width:20px;border-right-width:20px;border-bottom:34px solid rgba(88,128,84,.65);bottom:88px;}
+.art-fernwild .fw-pine.p2{left:52%;}
+.art-fernwild .fw-pine.p2 i:nth-child(1){border-left-width:44px;border-right-width:44px;border-bottom:66px solid #3c6136;bottom:0;}
+.art-fernwild .fw-pine.p2 i:nth-child(2){border-left-width:35px;border-right-width:35px;border-bottom:54px solid #3c6136;bottom:34px;}
+.art-fernwild .fw-pine.p2 i:nth-child(3){border-left-width:26px;border-right-width:26px;border-bottom:44px solid #466e3e;bottom:62px;}
+.art-fernwild .fw-pine.p3{right:6%;}
+.art-fernwild .fw-pine.p3 i:nth-child(1){border-left-width:52px;border-right-width:52px;border-bottom:78px solid #243d22;bottom:0;}
+.art-fernwild .fw-pine.p3 i:nth-child(2){border-left-width:41px;border-right-width:41px;border-bottom:62px solid #243d22;bottom:40px;}
+.art-fernwild .fw-pine.p3 i:nth-child(3){border-left-width:30px;border-right-width:30px;border-bottom:50px solid #2c4a28;bottom:74px;}
+.art-fernwild .fw-mist{position:absolute;z-index:2;left:-10%;right:-10%;height:44px;
+  background:linear-gradient(180deg,rgba(240,246,230,0) 0%,rgba(240,246,230,.30) 50%,rgba(240,246,230,0) 100%);
+  animation:fwmist 9s ease-in-out infinite;}
+.art-fernwild .fw-mist.m1{bottom:96px;}
+.art-fernwild .fw-mist.m2{bottom:52px;animation-delay:-4.5s;}
+@keyframes fwmist{0%,100%{transform:translateX(-14px);}50%{transform:translateX(14px);}}
+.art-fernwild .fw-ground{position:absolute;z-index:2;left:0;right:0;bottom:0;height:36px;
+  background:linear-gradient(180deg,rgba(30,48,28,0) 0%,rgba(24,38,22,.85) 100%);}
+.art-fernwild .fw-fire{position:absolute;z-index:3;inset:0;}
+.art-fernwild .fw-fire i{position:absolute;width:5px;height:5px;border-radius:50%;
+  background:#ffe9a0;box-shadow:0 0 8px 2px rgba(255,233,160,.8);
+  animation:fwfire 3.2s ease-in-out infinite;}
+.art-fernwild .fw-fire i:nth-child(1){left:22%;bottom:30%;animation-delay:0s;}
+.art-fernwild .fw-fire i:nth-child(2){left:64%;bottom:44%;animation-delay:-1.1s;}
+.art-fernwild .fw-fire i:nth-child(3){left:44%;bottom:22%;animation-delay:-2.2s;}
+.art-fernwild .fw-fire i:nth-child(4){left:80%;bottom:30%;animation-delay:-.6s;}
+.art-fernwild .fw-fire i:nth-child(5){left:12%;bottom:52%;animation-delay:-1.7s;}
+@keyframes fwfire{0%,100%{transform:translateY(0);opacity:.25;}50%{transform:translateY(-14px);opacity:1;}}
+@media (prefers-reduced-motion:reduce){
+  .art-fernwild .fw-mist,.art-fernwild .fw-fire i{animation:none;}
+}

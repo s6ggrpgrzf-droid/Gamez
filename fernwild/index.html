@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d2b1a">
+<title>Fernwild — a cozy forest sim</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <!-- TITLE -->
+  <section id="screen-title" class="screen">
+    <canvas id="title-bg" aria-hidden="true"></canvas>
+    <div class="title-vignette" aria-hidden="true"></div>
+    <div class="title-content">
+      <div class="title-kicker">A COZY FOREST ECOSYSTEM SIM</div>
+      <h1 class="title-logo">FERNWILD</h1>
+      <p class="title-sub">Plant seeds. Grow a forest.<br>See who moves in.</p>
+      <button id="btn-play" class="btn primary" type="button">Tend the Forest</button>
+      <div class="title-best">RICHEST FOREST&nbsp; <span id="title-best">0</span> <span class="leaf-glyph" aria-hidden="true"></span></div>
+      <button id="btn-how" class="btn ghost" type="button">How to tend</button>
+      <div id="howto" class="hidden">
+        <div class="howto-head">FIELD GUIDE</div>
+        <p><b>PLANT</b> — tap an empty soil tile, pick a seed. Pine is quick, oak is mighty, berry bushes feed the small ones.</p>
+        <p><b>GROW</b> — trees grow on their own: seed, sprout, sapling, adult, ancient, fallen trunk. Every stage houses someone new.</p>
+        <p><b>WELCOME</b> — when the habitat is right, animals move in on their own. Tap them to see what they do.</p>
+        <p><b>WEAVE</b> — plant mushrooms beside trees to thread the mycorrhizal web. Linked trees grow faster and the web earns its keep.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="screen-game" class="screen hidden">
+    <canvas id="game"></canvas>
+    <header id="hud">
+      <div id="hud-points"><span class="leaf-glyph" aria-hidden="true"></span><span id="points-num">0</span></div>
+      <div id="hud-day">DAY 1</div>
+      <button id="btn-mute" class="hbtn" type="button" aria-label="Mute sound"><span id="mute-glyph">♪</span></button>
+    </header>
+    <div id="hint-bar" class="hidden"></div>
+    <button id="fab-guide" class="fab left" type="button">Field Guide</button>
+    <button id="fab-storm" class="fab right" type="button"><span class="leaf-glyph"></span><span id="storm-cost">40</span></button>
+    <div id="seed-sheet" class="hidden" aria-hidden="true">
+      <div class="sheet-title">Plant a seed</div>
+      <div id="seed-list"></div>
+      <button id="seed-cancel" class="btn ghost" type="button">Never mind</button>
+    </div>
+    <div id="toast" class="hidden"></div>
+    <div id="journal" class="hidden" role="dialog" aria-label="Field guide">
+      <div class="journal-card">
+        <div class="journal-head">FIELD GUIDE</div>
+        <div class="journal-sec">Discoveries <span id="disc-count"></span></div>
+        <div id="journal-species" class="journal-grid"></div>
+        <div class="journal-sec">Achievements <span id="ach-count"></span></div>
+        <div id="journal-ach" class="ach-list"></div>
+        <button id="journal-close" class="btn primary" type="button">Back to the forest</button>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="sim.js?v=1"></script>
+<script src="art.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
