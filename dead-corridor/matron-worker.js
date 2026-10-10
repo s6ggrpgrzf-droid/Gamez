@@ -140,8 +140,8 @@ function healPack(p, date) {
   var mid = MUTATOR_IDS.indexOf(pm.id) >= 0 ? pm.id : fb.mutator.id;
   out.mutator = {
     id: mid,
-    title: cleanStr(pm.title, 48) || MUTATORS[mid].title,
-    flavor: cleanStr(pm.flavor, 160) || MUTATORS[mid].flavor,
+    title: cleanStr(pm.title, 48) || fb.mutator.title,
+    flavor: cleanStr(pm.flavor, 160) || fb.mutator.flavor,
     params: MUTATORS[mid]   /* params ALWAYS from our allowlist, never the AI */
   };
   var pl = (p && Array.isArray(p.logs)) ? p.logs : [];
@@ -240,6 +240,50 @@ async function generatePack(env, date) {
   return healPack(p, date);
 }
 
+/* ---------- MATRON voice: server-synthesized speech (Workers AI TTS) ----------
+ * The 4 key spoken lines are synthesized once per daily pack and cached in KV.
+ * Voice is additive: any TTS failure leaves the text pack untouched. */
+var TTS_MODEL = '@cf/deepgram/aura-1';
+var TTS_SPEAKER = 'asteria';   /* cold female voice, fits the head-nurse */
+var AUDIO_IDS = ['s0', 's1', 's2', 'mut'];
+
+function audioLines(pack) {
+  return [
+    { id: 's0', text: pack.sectors[0].intro },
+    { id: 's1', text: pack.sectors[1].intro },
+    { id: 's2', text: pack.sectors[2].intro },
+    { id: 'mut', text: pack.mutator.title + '. ' + pack.mutator.flavor }
+  ];
+}
+
+async function synthLine(env, text) {
+  try {
+    var r = await env.ai.run(TTS_MODEL,
+      { text: String(text).slice(0, 400), speaker: TTS_SPEAKER, encoding: 'mp3' },
+      { returnRawResponse: true });
+    var buf = null;
+    if (r && typeof r.arrayBuffer === 'function') buf = await r.arrayBuffer();
+    else if (r instanceof ArrayBuffer) buf = r;
+    if (buf && buf.byteLength > 2000) return buf;
+  } catch (e) { /* fall through: voice stays silent for this line */ }
+  return null;
+}
+
+async function synthPackAudio(env, date, pack) {
+  var audio = {};
+  try {
+    var lines = audioLines(pack);
+    var bufs = await Promise.all(lines.map(function (l) { return synthLine(env, l.text); }));
+    for (var i = 0; i < lines.length; i++) {
+      if (!bufs[i]) continue;
+      var key = 'a/' + date + '/' + lines[i].id;
+      try { await env.MATRON_KV.put(key, bufs[i]); } catch (e) { continue; }
+      audio[lines[i].id] = '/audio?date=' + date + '&line=' + lines[i].id;
+    }
+  } catch (e) { /* voice is additive; never fail the pack */ }
+  return audio;
+}
+
 /* ---------- router ---------- */
 export default {
   async fetch(req, env, ctx) {
@@ -264,12 +308,28 @@ export default {
       if (rateLimited(getIP(req), 20)) return json(fallbackPack(date), 200, { 'x-matron-cache': 'FALLBACK' });
       try {
         var pack = await generatePack(env, date);
+        pack.audio = await synthPackAudio(env, date, pack);
         ctx.waitUntil(env.MATRON_KV.put(key, JSON.stringify(pack), { expirationTtl: 86400 }).catch(function () {}));
         return json(pack, 200, { 'x-matron-cache': 'MISS' });
       } catch (e) {
         console.error('[matron] generation failed:', String((e && e.message) || e).slice(0, 300));
         return json(fallbackPack(date), 200, { 'x-matron-cache': 'FALLBACK' });
       }
+    }
+    if (url.pathname === '/audio' && req.method === 'GET') {
+      var ad = url.searchParams.get('date') || '';
+      var al = url.searchParams.get('line') || '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ad) || AUDIO_IDS.indexOf(al) < 0)
+        return json({ error: 'bad audio request' }, 400);
+      try {
+        var ab = await env.MATRON_KV.get('a/' + ad + '/' + al, 'arrayBuffer');
+        if (!ab) return json({ error: 'no audio' }, 404);
+        return new Response(ab, { headers: {
+          'Content-Type': 'audio/mpeg',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          'access-control-allow-origin': '*'
+        }});
+      } catch (e) { return json({ error: 'audio unavailable' }, 502); }
     }
     return json({ error: 'not found' }, 404);
   }
