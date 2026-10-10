@@ -141,30 +141,54 @@
   /* MATRON's spoken voice: server-synthesized clips for the day's 4 key lines
    * (3 sector intros + mutator announcement). Preloaded at title; played on
    * the letterboxed cards. Text always shows too, so silence never loses info. */
-  var Mvoice = { clips: {}, enabled: true };
+  var Mvoice = { bufs: {}, enabled: true, ctx: null, cur: null };
   try { Mvoice.enabled = localStorage.getItem('dc_matron_voice') !== '0'; } catch (e) {}
+  /* voice AudioContext, created/resumed on the Play tap (user gesture unlocks it) */
+  function voiceCtx() {
+    try {
+      if (!Mvoice.ctx) Mvoice.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (Mvoice.ctx.state === 'suspended') Mvoice.ctx.resume();
+    } catch (e) {}
+    return Mvoice.ctx;
+  }
   function loadMatronVoice() {
     try {
       var a = matronPack().audio;
       if (!a) return;
-      ['s0', 's1', 's2', 'mut'].forEach(function (id) {
-        if (a[id] && !Mvoice.clips[id]) {
-          var au = new Audio(MATRON_URL + a[id]);
-          au.preload = 'auto';
-          try { au.load(); } catch (e2) {}
-          Mvoice.clips[id] = au;
+      var ctx = voiceCtx();
+      if (!ctx || !ctx.decodeAudioData) return;
+      ['s0', 's1', 's2'].forEach(function (id) {
+        if (a[id] && !Mvoice.bufs[id]) {
+          fetch(MATRON_URL + a[id]).then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+            .then(function (ab) { return ab ? ctx.decodeAudioData(ab) : null; })
+            .then(function (buf) { if (buf) Mvoice.bufs[id] = buf; })
+            .catch(function () {});
         }
       });
     } catch (e) {}
   }
+  /* MATRON speaks through the facility PA: band-limited with a cold slapback echo */
   function matronVoice(id) {
     try {
       if (!Mvoice.enabled) return;
-      var au = Mvoice.clips[id];
-      if (!au) return;
-      au.currentTime = 0;
-      var pr = au.play();
-      if (pr && pr.catch) pr.catch(function () {});
+      var ctx = voiceCtx();
+      var buf = Mvoice.bufs[id];
+      if (!ctx || !buf) return;
+      if (Mvoice.cur) { try { Mvoice.cur.stop(); } catch (e2) {} Mvoice.cur = null; }
+      var src = ctx.createBufferSource(); src.buffer = buf;
+      var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 280;
+      var lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4200;
+      var dry = ctx.createGain(); dry.gain.value = 0.85;
+      var dly = ctx.createDelay(1.0); dly.delayTime.value = 0.29;
+      var fb = ctx.createGain(); fb.gain.value = 0.36;
+      var wet = ctx.createGain(); wet.gain.value = 0.5;
+      src.connect(hp); hp.connect(lp);
+      lp.connect(dry); dry.connect(ctx.destination);
+      lp.connect(dly); dly.connect(fb); fb.connect(dly);
+      dly.connect(wet); wet.connect(ctx.destination);
+      Mvoice.cur = src;
+      src.onended = function () { if (Mvoice.cur === src) Mvoice.cur = null; };
+      src.start();
     } catch (e) {}
   }
   function mutatorHint(mp) {
@@ -1066,7 +1090,7 @@
     if (G.mutator) {
       var gg = G;
       setTimeout(function () {
-        if (G === gg && !G.over) { matronSay(G.mutator.title + ' \u2014 ' + G.mutator.flavor); matronVoice('mut'); }
+        if (G === gg && !G.over) matronSay(G.mutator.title + ' \u2014 ' + G.mutator.flavor);
       }, 2400);
     }
     DCSfx.start();
@@ -1176,7 +1200,7 @@
     window.addEventListener('resize', sizeTitleBg);
     fillMatronDaily();
     requestAnimationFrame(titleBg);
-    $('btn-play').addEventListener('click', function () { DCSfx.init(); startRide(null); });
+    $('btn-play').addEventListener('click', function () { DCSfx.init(); voiceCtx(); startRide(null); });
     $('btn-how').addEventListener('click', function () { $('howto').classList.toggle('hidden'); });
     try { $('voice-state').textContent = Mvoice.enabled ? 'ON' : 'OFF'; } catch (e) {}
     $('btn-voice').addEventListener('click', function () {
@@ -1185,7 +1209,7 @@
       $('voice-state').textContent = Mvoice.enabled ? 'ON' : 'OFF';
     });
     $('btn-daily').addEventListener('click', function () {
-      DCSfx.init();
+      DCSfx.init(); voiceCtx();
       var d = new Date();
       var seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
       startRide(seed);
