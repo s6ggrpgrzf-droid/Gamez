@@ -138,6 +138,35 @@
   };
   function matronPack() { return Mpack || MATRON_FALLBACK; }
   function mpick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  /* MATRON's spoken voice: server-synthesized clips for the day's 4 key lines
+   * (3 sector intros + mutator announcement). Preloaded at title; played on
+   * the letterboxed cards. Text always shows too, so silence never loses info. */
+  var Mvoice = { clips: {}, enabled: true };
+  try { Mvoice.enabled = localStorage.getItem('dc_matron_voice') !== '0'; } catch (e) {}
+  function loadMatronVoice() {
+    try {
+      var a = matronPack().audio;
+      if (!a) return;
+      ['s0', 's1', 's2', 'mut'].forEach(function (id) {
+        if (a[id] && !Mvoice.clips[id]) {
+          var au = new Audio(MATRON_URL + a[id]);
+          au.preload = 'auto';
+          try { au.load(); } catch (e2) {}
+          Mvoice.clips[id] = au;
+        }
+      });
+    } catch (e) {}
+  }
+  function matronVoice(id) {
+    try {
+      if (!Mvoice.enabled) return;
+      var au = Mvoice.clips[id];
+      if (!au) return;
+      au.currentTime = 0;
+      var pr = au.play();
+      if (pr && pr.catch) pr.catch(function () {});
+    } catch (e) {}
+  }
   function mutatorHint(mp) {
     if (!mp || !mp.params) return '';
     var pr = mp.params, bits = [];
@@ -174,7 +203,7 @@
       var to = setTimeout(function () { try { ctl.abort(); } catch (e) {} }, 3500);
       fetch(MATRON_URL + '/daily?date=' + ds, { signal: ctl.signal })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (p) { clearTimeout(to); if (p && p.sectors && p.barks) { Mpack = p; fillMatronDaily(); } })
+        .then(function (p) { clearTimeout(to); if (p && p.sectors && p.barks) { Mpack = p; fillMatronDaily(); loadMatronVoice(); } })
         .catch(function () { clearTimeout(to); });
     } catch (e) {}
   }
@@ -189,14 +218,15 @@
     clearTimeout(b._t);
     b._t = setTimeout(function () { b.classList.add('hidden'); b.classList.remove('matron'); }, 2600);
   }
-  /* sector intro card: letterboxed title card with MATRON's line */
-  function sectorCard(name, intro) {
+  /* sector intro card: letterboxed title card with MATRON's line, spoken aloud */
+  function sectorCard(name, intro, lineId) {
     try {
       var c = $('sector-card');
       $('sc-name').textContent = name;
       $('sc-intro').textContent = '\u201C' + intro + '\u201D';
       c.classList.remove('hidden'); c.classList.remove('hide');
       void c.offsetWidth; c.classList.add('show');
+      if (lineId) matronVoice(lineId);
       clearTimeout(c._t);
       c._t = setTimeout(function () {
         c.classList.add('hide');
@@ -291,7 +321,7 @@
     var si = dwell === 'w1' ? 0 : dwell === 'w2' ? 1 : 2;
     var sec = matronPack().sectors[si] || matronPack().sectors[0];
     G.waveName = sec.name;
-    sectorCard(sec.name, sec.intro);
+    sectorCard(sec.name, sec.intro, 's' + si);
   }
 
   /* ================= combat ================= */
@@ -1036,7 +1066,7 @@
     if (G.mutator) {
       var gg = G;
       setTimeout(function () {
-        if (G === gg && !G.over) matronSay(G.mutator.title + ' \u2014 ' + G.mutator.flavor);
+        if (G === gg && !G.over) { matronSay(G.mutator.title + ' \u2014 ' + G.mutator.flavor); matronVoice('mut'); }
       }, 2400);
     }
     DCSfx.start();
@@ -1148,6 +1178,12 @@
     requestAnimationFrame(titleBg);
     $('btn-play').addEventListener('click', function () { DCSfx.init(); startRide(null); });
     $('btn-how').addEventListener('click', function () { $('howto').classList.toggle('hidden'); });
+    try { $('voice-state').textContent = Mvoice.enabled ? 'ON' : 'OFF'; } catch (e) {}
+    $('btn-voice').addEventListener('click', function () {
+      Mvoice.enabled = !Mvoice.enabled;
+      try { localStorage.setItem('dc_matron_voice', Mvoice.enabled ? '1' : '0'); } catch (e) {}
+      $('voice-state').textContent = Mvoice.enabled ? 'ON' : 'OFF';
+    });
     $('btn-daily').addEventListener('click', function () {
       DCSfx.init();
       var d = new Date();
