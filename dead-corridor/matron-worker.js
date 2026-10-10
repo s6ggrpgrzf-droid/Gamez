@@ -164,9 +164,9 @@ function buildPrompt(date, seed) {
     'Write a content pack with exactly this shape:\n' +
     '{\n' +
     ' "sectors": [\n' +
-    '   {"name":"SECTOR 1 — INTAKE","intro":"<one line, max 24 words, MATRON welcoming the player to intake>","clear":"<one line, max 18 words, MATRON noting intake is cleared>"},\n' +
-    '   {"name":"SECTOR 2 — WARDS","intro":"<one line, max 24 words, the wards and their patients>","clear":"<one line, max 18 words>"},\n' +
-    '   {"name":"SECTOR 3 — THE HEART","intro":"<one line, max 24 words, the beating heart of the facility>","clear":"<one line, max 18 words>"}\n' +
+    '   {"name":"SECTOR 1 — INTAKE","intro":"<one or two short hard sentences, max 24 words, MATRON threatening whoever just walked into intake over the PA>","clear":"<one line, max 18 words, MATRON noting intake is cleared>"},\n' +
+    '   {"name":"SECTOR 2 — WARDS","intro":"<one or two short hard sentences, max 24 words, MATRON warning about the wards and their patients>","clear":"<one line, max 18 words>"},\n' +
+    '   {"name":"SECTOR 3 — THE HEART","intro":"<one or two short hard sentences, max 24 words, MATRON at her most threatening: the beating heart of the facility>","clear":"<one line, max 18 words>"}\n' +
     ' ],\n' +
     ' "barks": {\n' +
     '   "streak": ["<2 dry remarks on a kill streak, max 20 words each>"],\n' +
@@ -224,6 +224,9 @@ async function generatePack(env, date) {
   for (var i = 0; i < date.length; i++) seed = (seed * 31 + date.charCodeAt(i)) >>> 0;
   var sys = 'You are MATRON, the cold clinical PA voice of a haunted medical facility. ' +
     'Dry, faintly menacing, never cruel, never graphic. No politics, no real people, no profanity. ' +
+    'The sector intros will be SPOKEN ALOUD over the facility PA to frighten the listener: ' +
+    'write them as menacing spoken-word — short hard sentences, deliberate pauses (use periods), ' +
+    'threatening and cold. You want to unnerve. ' +
     'You output strict JSON only.';
   var msgs = [
     { role: 'system', content: sys },
@@ -244,7 +247,7 @@ async function generatePack(env, date) {
  * The 4 key spoken lines are synthesized once per daily pack and cached in KV.
  * Voice is additive: any TTS failure leaves the text pack untouched. */
 var TTS_MODEL = '@cf/deepgram/aura-1';
-var TTS_SPEAKER = 'asteria';   /* cold female voice, fits the head-nurse */
+var TTS_SPEAKER = 'orpheus';   /* harsh masculine voice — MATRON with teeth */
 var AUDIO_IDS = ['s0', 's1', 's2', 'mut'];
 
 function audioLines(pack) {
