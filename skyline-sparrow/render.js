@@ -816,8 +816,10 @@ Renderer.prototype.drawBird = function (p, ox, oy, alpha, ghost, tick, feel) {
   var cx = this.cx;
   var ix = p.px + (p.x - p.px) * alpha + ox;
   var iy = p.py + (p.y - p.py) * alpha + oy;
-  var frame = Math.floor(tick / 5) % 6;
-  if (p.ground) frame = 2;
+  // wings flap always: full 6-frame cycle in the air, slightly slower flutter
+  // on the ground (plus a tiny hop-bob). Never freeze on one frame.
+  var frame = Math.floor(tick / (p.ground ? 7 : 5)) % 6;
+  if (p.ground) iy += Math.sin(tick / 7 * Math.PI * 2) * 1.6;
   var spr = (ghost ? this.sprites.ghost : this.sprites.bird)[frame];
   var sx = 1, sy = 1;
   if (feel && !ghost) { sx = feel.squash.x; sy = feel.squash.y; }

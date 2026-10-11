@@ -8,7 +8,7 @@ var SS = window.SS, SSGen = window.SSGen, SSFeel = window.SSFeel,
     SSRender = window.SSRender, SSAudio = window.SSAudio;
 SS.setGen(SSGen);
 
-var BUILD = 'v20261011b';
+var BUILD = 'v20261011c';
 var STEP = 1 / 60;
 var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
 var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
