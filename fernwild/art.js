@@ -425,6 +425,30 @@ var FArt = (function () {
         g.beginPath(); g.moveTo(cx - 16, cy + 10); g.quadraticCurveTo(cx - 24, cy + 8, cx - 26, cy + 2); g.stroke();
         /* kicked-up dirt */
         ell(g, cx - 22, cy + 18, 5, 3.4, '#5a4632'); ell(g, cx - 28, cy + 15, 3.4, 2.6, '#6a5340');
+      } else if (sp === 'heron') {
+        /* statue-still fisher */
+        g.strokeStyle = '#3a3a3a'; g.lineWidth = 4; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(cx - 6, cy + 34); g.lineTo(cx - 6, cy + 12); g.stroke();
+        g.beginPath(); g.moveTo(cx + 6, cy + 34); g.lineTo(cx + 6, cy + 14); g.stroke();
+        /* body: slate torpedo */
+        ell(g, cx, cy + 2, 15, 22, '#8a94a0');
+        ell(g, cx - 4, cy - 2, 8, 15, '#a8b2bc');
+        rim(cx, cy - 18, 15, 22);
+        /* folded wing */
+        ell(g, cx + 2, cy + 4, 9, 16, '#6e7884');
+        /* long S neck */
+        g.strokeStyle = '#9aa4ae'; g.lineWidth = 9;
+        g.beginPath(); g.moveTo(cx + 2, cy - 14);
+        g.quadraticCurveTo(cx + 14, cy - 30, cx + 4, cy - 44);
+        g.quadraticCurveTo(cx - 2, cy - 52, cx + 6, cy - 58); g.stroke();
+        /* head + dagger beak */
+        ell(g, cx + 7, cy - 60, 9, 7, '#aeb8c2');
+        g.fillStyle = '#e8b83a';
+        g.beginPath(); g.moveTo(cx + 14, cy - 62); g.lineTo(cx + 34, cy - 58); g.lineTo(cx + 14, cy - 55); g.closePath(); g.fill();
+        eye(cx + 8, cy - 61, 3);
+        /* crest plume */
+        g.strokeStyle = '#4a545e'; g.lineWidth = 2.5;
+        g.beginPath(); g.moveTo(cx + 1, cy - 64); g.quadraticCurveTo(cx - 8, cy - 70, cx - 14, cy - 66); g.stroke();
       }
     });
   }
@@ -471,6 +495,71 @@ var FArt = (function () {
       g.strokeStyle = 'rgba(120,150,80,0.7)'; g.lineWidth = 1.6;
       g.beginPath(); g.moveTo(cx + j - 10, baseY - 14); g.lineTo(cx + j - 13, baseY - 20); g.stroke();
       g.beginPath(); g.moveTo(cx + j + 9, baseY - 15); g.lineTo(cx + j + 12, baseY - 21); g.stroke();
+    });
+  }
+
+  /* ---------- pond life: lily pads, koi, dragonflies, drought cracks ---------- */
+  function lilyPad(v) {
+    return get('lily' + (v % 3), function (g) {
+      var cx = S / 2, cy = S / 2;
+      var r = 32 + (v % 3) * 5;
+      g.fillStyle = '#4d8a44';
+      g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, 0.5, 5.9); g.closePath(); g.fill();
+      g.fillStyle = '#5da34f';
+      g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r * 0.7, 0.7, 5.7); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(30,60,30,0.4)'; g.lineWidth = 2;
+      for (var i = 0; i < 6; i++) {
+        var a = 0.8 + i * 0.85;
+        g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * r * 0.85, cy + Math.sin(a) * r * 0.85); g.stroke();
+      }
+      if (v % 2 === 0) {
+        for (var p = 0; p < 6; p++) {
+          var pa = p * 1.047;
+          ell(g, cx + Math.cos(pa) * 8, cy - 6 + Math.sin(pa) * 8, 7, 4.5, '#f2b8d0');
+        }
+        ell(g, cx, cy - 6, 5, 5, '#fbeef2');
+        ell(g, cx, cy - 6, 2.4, 2.4, '#e9a13b');
+      }
+    });
+  }
+  function koi(v) {
+    return get('koi' + (v % 3), function (g) {
+      var cx = S / 2, cy = S / 2;
+      var cols = [['#e07840', '#f4ead2'], ['#f4ead2', '#e07840'], ['#d8a93b', '#f4ead2']][v % 3];
+      ell(g, cx, cy, 20, 9, cols[0]);
+      ell(g, cx - 4, cy - 2, 10, 5, cols[1]);
+      g.fillStyle = cols[0];
+      g.beginPath(); g.moveTo(cx - 18, cy); g.lineTo(cx - 32, cy - 9); g.lineTo(cx - 32, cy + 9); g.closePath(); g.fill();
+      ell(g, cx + 2, cy + 8, 6, 3, cols[0]);
+      ell(g, cx + 10, cy - 2, 2.4, 2.4, '#241a12');
+      ell(g, cx + 9.2, cy - 2.8, 0.9, 0.9, '#fff');
+    });
+  }
+  function dragonfly(v) {
+    return get('dfly' + (v % 2), function (g) {
+      var cx = S / 2, cy = S / 2;
+      g.fillStyle = 'rgba(200,230,250,0.55)';
+      ell(g, cx - 10, cy - 8, 16, 5, 'rgba(200,230,250,0.55)');
+      ell(g, cx + 10, cy - 8, 16, 5, 'rgba(200,230,250,0.55)');
+      ell(g, cx - 8, cy + 6, 12, 4, 'rgba(200,230,250,0.4)');
+      ell(g, cx + 8, cy + 6, 12, 4, 'rgba(200,230,250,0.4)');
+      g.fillStyle = '#3a8a8a';
+      g.beginPath(); g.moveTo(cx - 2, cy - 14); g.lineTo(cx + 2, cy - 14); g.lineTo(cx + 1, cy + 18); g.lineTo(cx - 1, cy + 18); g.closePath(); g.fill();
+      ell(g, cx, cy - 16, 5, 5, '#2a6a6a');
+      ell(g, cx - 2, cy - 17, 1.8, 1.8, '#7ad0d0'); ell(g, cx + 2, cy - 17, 1.8, 1.8, '#7ad0d0');
+    });
+  }
+  function cracks(v) {
+    return get('cracks' + (v % 2), function (g) {
+      g.strokeStyle = 'rgba(40,26,14,0.55)'; g.lineWidth = 3; g.lineCap = 'round';
+      var cx = S / 2, cy = S / 2;
+      for (var i = 0; i < 5; i++) {
+        var a = hash(i, v * 7 + 1) * 6.2832;
+        var x2 = cx + Math.cos(a) * 44, y2 = cy + Math.sin(a) * 30;
+        g.beginPath(); g.moveTo(cx, cy);
+        g.lineTo((cx + x2) / 2 + (hash(i, 3) - 0.5) * 16, (cy + y2) / 2);
+        g.lineTo(x2, y2); g.stroke();
+      }
     });
   }
 
@@ -786,6 +875,7 @@ var FArt = (function () {
   return {
     tree: tree, mushroom: mushroom, animal: animal, fire: fire, dung: dung,
     drawWeb: drawWeb, gameBG: gameBG, titleBG: titleBG, hash: hash, nightSky: nightSky,
+    lilyPad: lilyPad, koi: koi, dragonfly: dragonfly, cracks: cracks,
     roots: roots, mycelium: mycelium, underground: underground
   };
 })();

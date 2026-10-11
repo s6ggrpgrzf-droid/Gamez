@@ -32,6 +32,24 @@ var FW = (function () {
     var d = (st.tod - 0.25) / 0.5;
     return Math.sin(d * Math.PI);
   }
+  /* weather: the sky has moods; each lasts a while, the next is forecast */
+  var WEATHERS = ['clear', 'cloudy', 'rain', 'storm', 'drought', 'fog', 'wind'];
+  var WX_DURATION = [50, 110]; /* seconds per weather */
+  function rollWeather(st) {
+    var se = st.season % 4, r = rnd(st), w = 'clear';
+    if (se === 0) {          /* spring: rain and sun */
+      w = r < 0.3 ? 'rain' : r < 0.5 ? 'cloudy' : r < 0.62 ? 'wind' : r < 0.68 ? 'fog' : 'clear';
+    } else if (se === 1) {   /* summer: heat, dry spells */
+      w = r < 0.22 ? 'drought' : r < 0.34 ? 'cloudy' : r < 0.46 ? 'wind' : r < 0.52 ? 'rain' : 'clear';
+    } else if (se === 2) {   /* autumn: grey and gusty */
+      w = r < 0.3 ? 'cloudy' : r < 0.48 ? 'rain' : r < 0.62 ? 'wind' : r < 0.72 ? 'fog' : 'clear';
+    } else {                 /* winter: pale and still */
+      w = r < 0.36 ? 'cloudy' : r < 0.5 ? 'fog' : r < 0.58 ? 'wind' : r < 0.66 ? 'rain' : 'clear';
+    }
+    if (r > 0.95 && w !== 'drought') w = 'storm'; /* rare storm */
+    return w;
+  }
+  function weatherOf(st) { return st.weather.kind; }
 
   var ACH = {
     'first-sprout': { name: 'Baby Steps',        desc: 'Grow your first sprout' },
@@ -45,7 +63,7 @@ var FW = (function () {
     'doolittle':    { name: 'Dr. Doolittle',     desc: 'Tap animals 100 times' },
     'rainmaker':    { name: 'Rainmaker',         desc: 'Summon a storm' },
     'rich':         { name: 'Thousand Leaves',   desc: 'Hold 1,000 leaves at once' },
-    'full-house':   { name: 'Full House',        desc: 'All 9 species move in' },
+    'full-house':   { name: 'Full House',        desc: 'Every species moves in' },
     'pando':        { name: 'Pando',             desc: 'Grow a grove of 8 aspens' },
     'collector':    { name: 'Rare Collector',    desc: 'Find all 3 rare tree variants' }
   };
@@ -80,7 +98,10 @@ var FW = (function () {
                  tapText: 'croaks for rain!' },
     vole:      { name: 'Vole',      need: '3 adult trees',     small: true, underground: true,
                  check: function (s) { return s.adultTrees >= 3; },
-                 tapText: 'squeaks and dives!' }
+                 tapText: 'squeaks and dives!' },
+    heron:     { name: 'Heron',     need: '10 plants',           small: false,
+                 check: function (s) { return s.plants >= 10; },
+                 tapText: 'blinks slowly.' }
   };
   var ANIMAL_IDS = Object.keys(ANIMALS);
   var TAP_COOLDOWN = 25;
@@ -105,6 +126,8 @@ var FW = (function () {
       v: 1, seed: seed >>> 0 || 1, _rs: (seed >>> 0 || 1),
       tiles: tiles, points: 30, day: 1, dayT: 0,
       season: 0, seasonDay: 0, tod: 0.32,   /* spring morning */
+      weather: { kind: 'clear', until: 90, next: 'cloudy' },
+      pond: { fish: [{ a: 0, sp: 0.5 }, { a: 2.1, sp: 0.42 }, { a: 4.2, sp: 0.55 }], respawn: 0 },
       animals: [], visiting: [],   /* visiting: [{species, t}] */
       dung: [],                    /* [{x, until}] fertilizer mounds */
       nextAid: 1, events: [],
@@ -243,6 +266,10 @@ var FW = (function () {
     if (se === 0) m *= 1.2;                                    /* spring surge */
     else if (se === 2) m *= 0.8;                               /* autumn slows */
     else if (se === 3) m *= ever ? 0.7 : 0.25;                 /* winter dormancy */
+    /* weather */
+    var wx = st.weather.kind;
+    if (wx === 'rain') m *= 1.3;
+    else if (wx === 'drought') m *= 0.6;
     if (st.dung.length) {                                       /* poop fertilizer */
       for (var d = 0; d < st.dung.length; d++) {
         var dg = st.dung[d];
@@ -514,6 +541,9 @@ var FW = (function () {
       for (var m = 0; m < st.tiles.length; m++)
         if (st.tiles[m].plant) st.tiles[m].plant.boostUntil = Math.max(st.tiles[m].plant.boostUntil, now + 30);
       addPoints(st, 5, 'rain', a.x, a.y); fx = 'rain';
+    } else if (sp === 'heron') {
+      addPoints(st, 12, 'heron', a.x, a.y); fx = 'sparkle';
+      msg += ' It stands perfectly still.';
     }
     ev(st, { t: 'tapped', species: sp, x: a.x, y: a.y, fx: fx });
     return { ok: true, msg: msg, fx: fx, x: a.x, y: a.y };
@@ -536,6 +566,14 @@ var FW = (function () {
       ev(st, { t: 'day', day: st.day });
     }
     st.tod = (st.tod + dt / DAY_NIGHT_LEN) % 1;
+    /* ---- weather: moods roll in, the next is forecast ---- */
+    if (now >= st.weather.until) {
+      st.weather.kind = st.weather.next;
+      st.weather.next = rollWeather(st);
+      st.weather.until = now + WX_DURATION[0] + rnd(st) * (WX_DURATION[1] - WX_DURATION[0]);
+      ev(st, { t: 'weather', kind: st.weather.kind });
+      if (st.weather.kind === 'storm' && st.storm <= 0) st.storm = Math.min(20, STORM_LEN);
+    }
     var comps = computeNetworks(st, now);
     /* web achievements */
     var biggest = 0;
@@ -649,7 +687,9 @@ var FW = (function () {
     }
     if (aspens >= 8) unlock(st, 'pando');
     /* ---- wildfire: ignition, spread, burnout ---- */
-    if (st.day >= 3 && st.storm <= 0) {
+    var wxk = st.weather.kind;
+    var wet = wxk === 'rain' || wxk === 'storm' || wxk === 'fog';
+    if (st.day >= 3 && st.storm <= 0 && !wet) {
       st._fireT = (st._fireT || 60) - dt;
       if (st._fireT <= 0) {
         st._fireT = 90 + rnd(st) * 120;
@@ -658,7 +698,10 @@ var FW = (function () {
           var bp = st.tiles[bi].plant;
           if (bp && bp.stage >= ST.SAPLING && bp.stage < ST.FALLEN && !st.tiles[bi].fire) burnables.push(bi);
         }
-        if (burnables.length >= 4 && rnd(st) < (st.season % 4 === 1 ? 0.55 : 0.35)) {
+        var ip = st.season % 4 === 1 ? 0.55 : 0.35;
+        if (wxk === 'drought') ip *= 1.6;
+        if (wxk === 'wind') ip *= 1.2;
+        if (burnables.length >= 4 && rnd(st) < ip) {
           var fi2 = pick(st, burnables);
           st.tiles[fi2].fire = 25;
           ev(st, { t: 'ignited', x: fi2 % GW, y: (fi2 / GW) | 0 });
@@ -676,7 +719,7 @@ var FW = (function () {
         if (fx2 < GW - 1) nb.push(fb + 1);
         for (var nb2 = 0; nb2 < nb.length; nb2++) {
           var ntl = st.tiles[nb[nb2]], np = ntl.plant;
-          if (!ntl.fire && np && np.stage >= ST.SAPLING && np.stage < ST.FALLEN && rnd(st) < dt * 0.06) {
+          if (!ntl.fire && np && np.stage >= ST.SAPLING && np.stage < ST.FALLEN && rnd(st) < dt * 0.06 * (wxk === 'wind' ? 1.5 : 1)) {
             ntl.fire = 25;
             ev(st, { t: 'ignited', x: nb[nb2] % GW, y: (nb[nb2] / GW) | 0 });
           }
@@ -743,6 +786,30 @@ var FW = (function () {
       if (rp && hm[rp.stage] > st.stats.tallest) st.stats.tallest = hm[rp.stage];
     }
     if (biggest > st.stats.widestWeb) st.stats.widestWeb = biggest;
+    /* ---- pond: koi circle, the heron fishes ---- */
+    var pond = st.pond;
+    for (var kf = 0; kf < pond.fish.length; kf++) {
+      var koi = pond.fish[kf];
+      koi.a += dt * koi.sp;
+      koi.x = Math.cos(koi.a) * 0.72; koi.y = Math.sin(koi.a) * 0.42;
+    }
+    var heronHere = false;
+    for (var hz = 0; hz < st.animals.length; hz++) if (st.animals[hz].species === 'heron') heronHere = true;
+    if (heronHere && pond.fish.length) {
+      st._heronT = (st._heronT || 45 + rnd(st) * 30) - dt;
+      if (st._heronT <= 0) {
+        st._heronT = 55 + rnd(st) * 40;
+        pond.fish.shift();
+        pond.respawn = now + 90;
+        addPoints(st, 8, 'heron fishes', 15, 0);
+        ev(st, { t: 'heroncatch', x: 15, y: 0 });
+      }
+    }
+    if (!pond.fish.length && pond.respawn && now >= pond.respawn) {
+      pond.fish = [{ a: rnd(st) * 6.28, sp: 0.5 }, { a: rnd(st) * 6.28, sp: 0.42 }, { a: rnd(st) * 6.28, sp: 0.55 }];
+      pond.respawn = 0;
+      ev(st, { t: 'fishreturn', x: 15, y: 0 });
+    }
     /* ---- food chain: foxes hunt rabbits, owls hunt voles at night ---- */
     var nightNow = isNight(st);
     st._huntT = (st._huntT || 0) - dt;
@@ -792,6 +859,7 @@ var FW = (function () {
     for (var a = 0; a < st.animals.length; a++) {
       var an = st.animals[a];
       if (an.species === 'vole') continue; /* voles tunnel with purpose */
+      if (an.species === 'heron') continue; /* the heron stands statue-still */
       if (an.mode === 'hunt') continue;    /* hunters move with purpose */
       /* diurnal animals rest at night */
       if (nightNow && (an.species === 'butterfly' || an.species === 'squirrel' ||
@@ -819,6 +887,8 @@ var FW = (function () {
       nextAid: st.nextAid, stats: st.stats, ach: st.ach || {}, storm: st.storm || 0,
       season: st.season || 0, seasonDay: st.seasonDay || 0, tod: (st.tod == null ? 0.32 : st.tod),
       questClaimed: st.questClaimed || {}, streak: st.streak || { last: '', n: 0 },
+      weather: st.weather || { kind: 'clear', until: 0, next: 'cloudy' },
+      pond: st.pond || { fish: [{ a: 0, sp: 0.5 }, { a: 2.1, sp: 0.42 }, { a: 4.2, sp: 0.55 }], respawn: 0 },
       savedAt: Date.now()
     });
   }
@@ -841,6 +911,8 @@ var FW = (function () {
       if (typeof d.stats.ancients !== 'number') d.stats.ancients = 0;
       if (typeof d.stats.firesSmothered !== 'number') d.stats.firesSmothered = 0;
       if (!d.stats.variantsSeen) d.stats.variantsSeen = [];
+      if (!d.weather) d.weather = { kind: 'clear', until: 0, next: 'cloudy' };
+      if (!d.pond) d.pond = { fish: [{ a: 0, sp: 0.5 }, { a: 2.1, sp: 0.42 }, { a: 4.2, sp: 0.55 }], respawn: 0 };
       return d;
     } catch (e) { return null; }
   }
@@ -1037,6 +1109,35 @@ var FW = (function () {
     var oldSave = JSON.stringify({ v: 3, tiles: st22.tiles, points: 10, day: 2, dayT: 0, animals: [], visiting: [], nextAid: 1, stats: { grown: 0, tapped: 0, speciesSeen: [], plantsSeen: [], plantedAny: true, arrivals: 0, peak: 10, tallest: 0, widestWeb: 0 }, ach: {}, storm: 0, seed: 5, _rs: 5 });
     var mig = deserialize(oldSave);
     ok(mig && mig.season === 0 && mig.tod === 0.32 && mig.streak.n === 0 && mig.stats.ancients === 0, 'old v3 save migrates with defaults');
+    /* weather: transitions, drought slows, rain boosts */
+    var st23 = newGame(32); st23.points = 500;
+    plant(st23, 0, 0, 'pine'); tile(st23, 0, 0).plant.fast = false;
+    st23.weather = { kind: 'drought', until: 1e9, next: 'rain' };
+    ok(growthMul(st23, tile(st23, 0, 0), now()) < 1, 'drought slows growth');
+    st23.weather.kind = 'rain';
+    ok(growthMul(st23, tile(st23, 0, 0), now()) > 1, 'rain boosts growth');
+    st23.weather.until = 0;
+    var evw = step(st23, 0.1);
+    ok(st23.weather.kind === 'rain' && evw.some(function (e) { return e.t === 'weather'; }), 'weather transitions to forecast');
+    ok(WEATHERS.indexOf(st23.weather.next) >= 0, 'next weather forecast');
+    /* pond: koi swim, heron arrives and fishes */
+    var st24 = newGame(33); st24.points = 500;
+    for (var px = 0; px < 10; px++) { plant(st24, px, 0, 'pine'); tile(st24, px, 0).plant.stage = ST.ADULT; }
+    /* park the other species as "present" so the heron gets the arrival slot */
+    ['squirrel', 'rabbit', 'butterfly', 'fox', 'owl', 'deer', 'hedgehog', 'frog', 'vole'].forEach(function (sp) {
+      st24.visiting.push({ species: sp, t: 9999 });
+    });
+    step(st24, 0.1);
+    ok(st24.visiting.some(function (v) { return v.species === 'heron'; }) || st24.animals.some(function (a) { return a.species === 'heron'; }), 'heron visits a lush forest');
+    var f0 = st24.pond.fish[0].a;
+    step(st24, 5);
+    ok(st24.pond.fish[0].a !== f0, 'koi swim');
+    var hr = addAnimal(st24, 'heron', 0);
+    var fn = st24.pond.fish.length;
+    st24._heronT = 0.01;
+    step(st24, 1);
+    ok(st24.pond.fish.length === fn - 1, 'heron catches a fish');
+    ok(tapAnimal(st24, hr.id, 500).ok, 'tap heron');
     console.log(fails === 0 ? 'SIM SELF-TEST: ALL PASS' : 'SIM SELF-TEST: ' + fails + ' FAILURES');
     return fails;
   }
@@ -1044,11 +1145,11 @@ var FW = (function () {
   return {
     GW: GW, GH: GH, ST: ST, PLANTS: PLANTS, ANIMALS: ANIMALS, ANIMAL_IDS: ANIMAL_IDS,
     MUSH_COST: MUSH_COST, TAP_COOLDOWN: TAP_COOLDOWN, STORM_COST: STORM_COST,
-    ACH: ACH, SEASONS: SEASONS, QUESTS: QUESTS,
+    ACH: ACH, SEASONS: SEASONS, QUESTS: QUESTS, WEATHERS: WEATHERS,
     newGame: newGame, step: step, plant: plant, plantMushroom: plantMushroom,
     clearTile: clearTile, tapAnimal: tapAnimal, smother: smother, wildGift: wildGift, stats: stats, summonStorm: summonStorm,
     computeNetworks: computeNetworks, drainEvents: drainEvents, now: now,
-    seasonOf: seasonOf, isNight: isNight, dayLight: dayLight,
+    seasonOf: seasonOf, isNight: isNight, dayLight: dayLight, weatherOf: weatherOf,
     quests: quests, claimQuest: claimQuest, dailyStatus: dailyStatus, claimDaily: claimDaily,
     serialize: serialize, deserialize: deserialize, selfTest: selfTest
   };
