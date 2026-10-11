@@ -581,7 +581,7 @@ function render(dt){
   // ships far to near
   shipHits=[];
   var order=st.ships.slice().sort(function(a,b){return a.depth-b.depth;});
-  for(var i=0;i<order.length;i++){ var hit=drawShip(order[i],sc); shipHits.push({id:order[i].id,x:hit.x,y:hit.y,w:hit.w}); }
+  for(var i=0;i<order.length;i++){ var hit=drawShip(order[i],sc); shipHits.push({id:order[i].id,x:hit.x,y:hit.y,w:hit.w,h:hit.h}); }
   drawRocks();
   drawIsland(sc);
   drawWhale(sc);
@@ -719,5 +719,5 @@ document.getElementById('begin').addEventListener('click',function(){
 renderHUD();
 requestAnimationFrame(frame);
 // debug/testing hooks
-window.GWDebug={ state:function(){return st;}, step:function(n){ for(var i=0;i<n;i++) GW.step(st,0.5); }, tap:handleTap, findShip:findShip };
+window.GWDebug={ state:function(){return st;}, step:function(n){ for(var i=0;i<n;i++) GW.step(st,0.5); }, tap:handleTap, findShip:findShip, hits:function(){return shipHits;} };
 })();

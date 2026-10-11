@@ -139,7 +139,8 @@
     { id: 'skyhook', name: 'Skyhook', cls: 'art-skyhook' },
     { id: 'dead-corridor', name: "Dead Man's Corridor", cls: 'art-dead-corridor' },
     { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' },
-    { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' }
+    { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' },
+    { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -179,6 +180,13 @@
       if (id === 'golden-acre') {
         var ga = readJSON('ga_arcade'); if (!ga || !ga.value) return null;
         return { label: 'Worth $' + (+ga.value).toLocaleString(), frac: Math.min(1, ga.value / 50000) };
+      }
+      if (id === 'greywater') {
+        var gw = readJSON('greywater-save-v1'); if (!gw || !gw.sim) return null;
+        try {
+          var gs = JSON.parse(gw.sim);
+          return { label: 'Day ' + gs.day + ' · ' + (+gs.stats.guided || 0) + ' guided', frac: Math.min(1, gs.day / 60) };
+        } catch (e) { return null; }
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;
