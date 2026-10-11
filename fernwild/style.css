@@ -116,6 +116,43 @@ body {
 .fab.right { right: 14px; }
 .fab .leaf-glyph { width: 13px; height: 13px; }
 .fab.poor { opacity: 0.55; }
+.fab.stack2 { bottom: calc(env(safe-area-inset-bottom) + 124px); }
+.dot {
+  width: 9px; height: 9px; border-radius: 50%; background: #d8a93b;
+  box-shadow: 0 0 8px #d8a93b; flex: none;
+  animation: dotpulse 1.6s ease-in-out infinite;
+}
+@keyframes dotpulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+#hud-dial { width: 44px; height: 44px; flex: none; }
+/* ---------- quests & gifts ---------- */
+#quest-panel, #gift-modal {
+  position: absolute; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 28, 16, 0.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+}
+.journal-sub { font-size: 12px; opacity: 0.65; text-align: center; margin: -6px 0 10px; }
+.quest-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.quest {
+  background: #fffdf6; border: 1px solid rgba(122,92,46,0.18); border-radius: 12px;
+  padding: 10px 12px;
+}
+.quest .q-name { font-size: 14px; font-weight: 800; }
+.quest .q-desc { font-size: 12px; opacity: 0.65; margin: 2px 0 8px; }
+.quest .q-bar { height: 8px; border-radius: 4px; background: rgba(122,92,46,0.15); overflow: hidden; }
+.quest .q-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7fb069, #a8c686); transition: width 0.4s; }
+.quest .q-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.quest .q-prog { font-size: 12px; font-weight: 700; opacity: 0.7; }
+.quest .q-claim {
+  padding: 7px 14px; border-radius: 999px; border: none; cursor: pointer;
+  background: #d9a441; color: #3a2a10; font-weight: 800; font-size: 12px;
+}
+.quest .q-claim:active { transform: scale(0.94); }
+.quest.done { border-color: rgba(217,164,65,0.6); background: #fdf6e3; }
+.quest.claimed { opacity: 0.55; }
+.quest.claimed .q-claim { background: #b8ac90; color: #fffdf6; pointer-events: none; }
+.gift-card { text-align: center; }
+.gift-streak { font-size: 13px; font-weight: 800; color: #7a5c2e; letter-spacing: 2px; margin-bottom: 10px; }
+#gift-modal .wild-text { margin-bottom: 14px; }
 /* ---------- journal ---------- */
 #journal {
   position: absolute; inset: 0; z-index: 30;

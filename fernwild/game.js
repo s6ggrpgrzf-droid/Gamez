@@ -9,7 +9,11 @@
   var W = 0, H = 0;
   var SY = 0, botY = 0, UD = 0, spotW = 0, padX = 16, pondX = 0, worldW = 0;
   var ASZ = 46;
-  var bgCache = null, soilCache = null, titleCache = null, lastTitleDraw = 0;
+  var bgCache = null, soilCache = null, titleCache = null, lastTitleDraw = 0, bgSeason = -1;
+  function rebuildBG() {
+    bgSeason = st ? st.season : 1;
+    bgCache = FArt.gameBG(Math.round(worldW), Math.round(H), Math.round(SY), 0, bgSeason);
+  }
   /* camera: world coords at z=1 match the old screen layout; camX = world x at screen center */
   var camX = 0, camZ = 1, fdt = 0;
   var VISIBLE_SPOTS = 12;
@@ -50,7 +54,8 @@
     worldW = padX * 2 + FW.GW * spotW;
     pondX = worldW * 0.78;
     ASZ = Math.max(34, Math.min(56, spotW * 1.5));
-    bgCache = FArt.gameBG(Math.round(worldW), Math.round(H), Math.round(SY), 0);
+    bgCache = FArt.gameBG(Math.round(worldW), Math.round(H), Math.round(SY), 0, st ? st.season : 1);
+    bgSeason = st ? st.season : 1;
     soilCache = FArt.underground(Math.round(worldW), Math.round(H), surfY, Math.round(botY));
     titleCache = null;
     if (!camX) camX = padX + (VISIBLE_SPOTS / 2) * spotW; /* start framed on the first grove */
@@ -547,6 +552,23 @@
       else if (e.t === 'sucker') { FAu.sprout(); floater(p.x, p.y, 'root sucker!', '#c9ecb0'); noteDay('an aspen sent up a root sucker'); }
       else if (e.t === 'fled') { /* tap toast already shown */ }
       else if (e.t === 'pooped' && e.loud) { floater(p.x, p.y - 8, 'poop!', '#c9b083'); }
+      else if (e.t === 'season') {
+        var snames = ['Spring arrives', 'Summer arrives', 'Autumn arrives', 'Winter arrives'];
+        var snotes = ['blossoms opened across the forest', 'the forest hums with heat',
+                      'leaves turned amber and gold', 'the first snow fell'];
+        toast(snames[e.season] + '!');
+        noteDay(snotes[e.season]);
+        rebuildBG();
+      }
+      else if (e.t === 'variant') {
+        var vnames = { golden: 'a golden sapling', rainbow: 'a rainbow sapling', bloom: 'a blooming sapling' };
+        toast('Rare! ' + (vnames[e.variant] || 'a rare sapling') + ' sprouted!');
+        noteDay('a rare ' + e.variant + ' ' + e.type + ' sprouted');
+      }
+      else if (e.t === 'foxhunt') { toast('The fox chases the rabbit!'); noteDay('the fox chased a rabbit'); }
+      else if (e.t === 'owlhunt') { toast('The owl swoops at a vole!'); noteDay('the owl hunted at night'); }
+      else if (e.t === 'quest') { FAu.achieve(); toast('Quest complete: ' + e.id + ' — claim it in the quest board!'); refreshQuests(); }
+      else if (e.t === 'daily') { /* modal handles it */ }
     }
   }
   function achToast(title, sub) {
@@ -607,6 +629,18 @@
     Object.keys(FW.PLANTS).forEach(function (k) {
       var p = FW.PLANTS[k];
       row(p.name, p.desc + ' — ' + ECO[k], st.stats.plantsSeen.indexOf(k) >= 0, function (g) { g.drawImage(FArt.tree(k, 4, 0), 0, 0, 88, 88); });
+    });
+    /* rare variants */
+    var VNAMES = {
+      golden: ['Golden tree', 'A rare golden variant — bonus leaves when it grows'],
+      rainbow: ['Rainbow aspen', 'A rare rainbow aspen — bonus leaves when it grows'],
+      bloom: ['Bloom bush', 'A berry bush heavy with extra blossom']
+    };
+    Object.keys(VNAMES).forEach(function (vk) {
+      row(VNAMES[vk][0], VNAMES[vk][1], st.stats.variantsSeen.indexOf(vk) >= 0, function (g) {
+        var tt = vk === 'rainbow' ? 'aspen' : vk === 'bloom' ? 'berry' : 'pine';
+        g.drawImage(FArt.tree(tt, 4, 1, 0, 1, vk), 0, 0, 88, 88);
+      });
     });
     var mushFound = st.tiles.some(function (t) { return t.mush; });
     row('Mushroom', 'Weaves the web — ' + ECO.mushroom, mushFound, function (g) { g.drawImage(FArt.mushroom(0), 0, 0, 88, 88); });
@@ -705,7 +739,7 @@
       }
       if (t2.plant) {
         var ps = TREE_PX[t2.plant.stage] || 40;
-        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred), s2x - ps / 2, s2y - ps * 0.94, ps, ps);
+        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred, st.season, t2.plant.variant), s2x - ps / 2, s2y - ps * 0.94, ps, ps);
       }
       /* wildfire flames */
       if (t2.fire > 0) {
@@ -777,12 +811,64 @@
         });
       }
     }
+    /* day/night: stars, moon, dark veil */
+    var light = FW.dayLight(st), night = FW.isNight(st);
+    var vx = camX - W / camZ / 2 - 4, vw = W / camZ + 8;
+    if (light < 0.85) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, (1 - light) * 1.6);
+      ctx.translate(vx, 0);
+      FArt.nightSky(ctx, vw, H, now, st.season === 3);
+      ctx.restore();
+      ctx.fillStyle = 'rgba(8,14,38,' + ((1 - light) * 0.42).toFixed(3) + ')';
+      ctx.fillRect(vx, 0, vw, H);
+    }
+    /* fireflies on warm nights */
+    if (night && st.season !== 3 && Math.random() < fdt * 3) {
+      parts.push({
+        x: vx + 4 + Math.random() * (vw - 8), y: SY * 0.35 + Math.random() * SY * 0.55,
+        vx: (Math.random() * 2 - 1) * 14, vy: (Math.random() * 2 - 1) * 10,
+        t: 0, life: 2.5, kind: 'glow', col: '#d8f27a'
+      });
+    }
+    /* seasonal drift: snow, falling leaves, blossom petals */
+    var se = st.season % 4;
+    if (se === 3 && Math.random() < fdt * 14) {
+      parts.push({
+        x: vx + Math.random() * vw, y: -10, vx: -18 + Math.random() * 18, vy: 42 + Math.random() * 30,
+        t: 0, life: 7, kind: 'snow', col: '#ffffff'
+      });
+    } else if (se === 2 && Math.random() < fdt * 4) {
+      var lcols = ['#c97a2e', '#d89a3b', '#a85a24', '#b8682e'];
+      parts.push({
+        x: vx + Math.random() * vw, y: SY * 0.25 + Math.random() * SY * 0.3,
+        vx: -34 + Math.random() * 20, vy: 26 + Math.random() * 22,
+        t: 0, life: 5, kind: 'leaf', col: lcols[(Math.random() * 4) | 0]
+      });
+    } else if (se === 0 && Math.random() < fdt * 3) {
+      parts.push({
+        x: vx + Math.random() * vw, y: SY * 0.3 + Math.random() * SY * 0.3,
+        vx: -26 + Math.random() * 16, vy: 20 + Math.random() * 18,
+        t: 0, life: 5, kind: 'leaf', col: Math.random() < 0.5 ? '#f2c9d4' : '#fbeef2'
+      });
+    }
     /* particles */
     for (var pi = parts.length - 1; pi >= 0; pi--) {
       var pt = parts[pi];
       pt.t += 1 / 60;
       if (pt.t > pt.life) { parts.splice(pi, 1); continue; }
       pt.x += pt.vx / 60; pt.y += pt.vy / 60; pt.vy += (pt.kind === 'streak' ? 0 : 60) / 60;
+      if (pt.kind === 'snow' || pt.kind === 'leaf') pt.x += Math.sin(now * 2 + pt.t * 3 + pt.y * 0.02) * 0.7;
+      if (pt.kind === 'glow') {
+        var ga = Math.max(0, (1 - pt.t / pt.life) * (0.6 + 0.4 * Math.sin(now * 6 + pt.x)));
+        ctx.globalAlpha = ga * 0.35;
+        ctx.fillStyle = pt.col;
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, 8, 0, 6.2832); ctx.fill();
+        ctx.globalAlpha = ga;
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, 3, 0, 6.2832); ctx.fill();
+        ctx.globalAlpha = 1;
+        continue;
+      }
       if (pt.kind === 'streak') {
         ctx.globalAlpha = 0.55 * (1 - pt.t / pt.life);
         ctx.strokeStyle = pt.col; ctx.lineWidth = 2;
@@ -819,10 +905,13 @@
       $('fab-storm').classList.toggle('poor', st.points < FW.STORM_COST || st.storm > 0);
     }
     if (st.day !== lastDay) { lastDay = st.day; $('hud-day').textContent = 'DAY ' + st.day; }
+    var nowS = perfNow();
+    if (nowS - lastDial > 1) { lastDial = nowS; drawDial(); }
+    if (nowS - lastDailyCheck > 30) { lastDailyCheck = nowS; checkDaily(); }
   }
 
   /* ---------------- loop ---------------- */
-  var last = 0;
+  var last = 0, ambT = 0;
   function loop(ts) {
     requestAnimationFrame(loop);
     if (!last) last = ts;
@@ -844,6 +933,14 @@
     var now = perfNow();
     render(now);
     hud();
+    /* ambience follows the forest: birds by day, crickets by night, rain, fire */
+    ambT += dt;
+    if (ambT > 1) {
+      ambT = 0;
+      var anyFire = false;
+      for (var fi = 0; fi < FW.GW; fi++) if (st.tiles[fi].fire > 0) { anyFire = true; break; }
+      FAu.ambTick({ night: FW.isNight(st), storm: st.storm > 0, fire: anyFire });
+    }
     saveT += dt;
     if (saveT > 5) { saveT = 0; gcAvis(); save(); }
   }
@@ -862,6 +959,8 @@
     screen = 'game';
     showScreen('screen-game');
     hud(); lastPts = -1;
+    checkDaily();
+    refreshQuests();
     if (!tutDone) hint(TUTS[tutStep]);
     toast('Welcome to your forest');
   }
@@ -888,6 +987,131 @@
   });
   $('journal-close').addEventListener('click', function () { $('journal').classList.add('hidden'); });
   $('journal').addEventListener('click', function (e) { if (e.target === $('journal')) $('journal').classList.add('hidden'); });
+
+  /* ---------------- season dial ---------------- */
+  var lastDial = 0;
+  function drawDial() {
+    var dc = $('hud-dial'); if (!dc) return;
+    var g = dc.getContext('2d');
+    var cx = 44, cy = 44;
+    g.clearRect(0, 0, 88, 88);
+    var se = st.season % 4;
+    var ringCols = ['#7fb069', '#d9a441', '#c97a2e', '#a8c8e0'];
+    g.fillStyle = 'rgba(22,33,15,0.72)';
+    g.beginPath(); g.arc(cx, cy, 40, 0, 6.2832); g.fill();
+    g.lineWidth = 5; g.strokeStyle = ringCols[se];
+    g.beginPath(); g.arc(cx, cy, 36, 0, 6.2832); g.stroke();
+    var night = FW.isNight(st), px, py;
+    if (!night) {
+      var ang = (st.tod - 0.25) / 0.5 * Math.PI;
+      px = cx - Math.cos(ang) * 22; py = cy - Math.sin(ang) * 22;
+    } else {
+      var nt = st.tod < 0.25 ? st.tod + 1 : st.tod;
+      var na = (nt - 0.75) / 0.5 * Math.PI;
+      px = cx - Math.cos(na) * 22; py = cy - Math.sin(na) * 22;
+    }
+    g.strokeStyle = 'rgba(242,232,201,0.35)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(cx - 24, cy); g.lineTo(cx + 24, cy); g.stroke();
+    if (!night) {
+      g.fillStyle = 'rgba(255,217,100,0.3)';
+      g.beginPath(); g.arc(px, py, 13, 0, 6.2832); g.fill();
+      g.fillStyle = '#ffd964';
+      g.beginPath(); g.arc(px, py, 8, 0, 6.2832); g.fill();
+    } else {
+      g.fillStyle = '#e8ecf4';
+      g.beginPath(); g.arc(px, py, 7, 0, 6.2832); g.fill();
+      g.fillStyle = 'rgba(22,33,15,0.9)';
+      g.beginPath(); g.arc(px - 3, py - 2, 6, 0, 6.2832); g.fill();
+    }
+    g.fillStyle = '#f2e8c9'; g.font = '700 12px system-ui'; g.textAlign = 'center';
+    g.fillText(FW.SEASONS[se].slice(0, 3).toUpperCase(), cx, cy + 30);
+  }
+
+  /* ---------------- quests ---------------- */
+  function refreshQuests() {
+    if (!st) return;
+    var list = $('quest-list'); list.innerHTML = '';
+    var anyClaimable = false;
+    FW.quests(st).forEach(function (q) {
+      if (q.done && !q.claimed) anyClaimable = true;
+      var d = document.createElement('div');
+      d.className = 'quest' + (q.done ? ' done' : '') + (q.claimed ? ' claimed' : '');
+      var name = document.createElement('div'); name.className = 'q-name'; name.textContent = q.name;
+      var desc = document.createElement('div'); desc.className = 'q-desc'; desc.textContent = q.desc;
+      var bar = document.createElement('div'); bar.className = 'q-bar';
+      var fill = document.createElement('div'); fill.className = 'q-fill';
+      fill.style.width = Math.round(q.progress / q.need * 100) + '%';
+      bar.appendChild(fill);
+      var foot = document.createElement('div'); foot.className = 'q-foot';
+      var prog = document.createElement('span'); prog.className = 'q-prog';
+      prog.textContent = q.progress + ' / ' + q.need;
+      foot.appendChild(prog);
+      if (!q.claimed) {
+        var btn = document.createElement('button');
+        btn.className = 'q-claim'; btn.type = 'button';
+        if (q.done) {
+          btn.textContent = 'Claim +' + q.reward;
+          (function (id) {
+            btn.addEventListener('click', function () {
+              var r = FW.claimQuest(st, id);
+              if (r.ok) {
+                FAu.coins();
+                toast('Quest complete: ' + r.name + ' (+' + r.reward + ' leaves)');
+                refreshQuests(); save();
+              }
+            });
+          })(q.id);
+        } else { btn.textContent = '+' + q.reward; btn.style.opacity = 0.55; btn.style.pointerEvents = 'none'; }
+        foot.appendChild(btn);
+      } else {
+        var done = document.createElement('span'); done.className = 'q-prog'; done.textContent = 'claimed';
+        foot.appendChild(done);
+      }
+      d.appendChild(name); d.appendChild(desc); d.appendChild(bar); d.appendChild(foot);
+      list.appendChild(d);
+    });
+    $('quest-dot').classList.toggle('hidden', !anyClaimable);
+  }
+  $('fab-quests').addEventListener('click', function () {
+    if (screen !== 'game' || !st) return;
+    refreshQuests();
+    $('quest-panel').classList.remove('hidden');
+  });
+  $('quest-close').addEventListener('click', function () { $('quest-panel').classList.add('hidden'); });
+  $('quest-panel').addEventListener('click', function (e) { if (e.target === $('quest-panel')) $('quest-panel').classList.add('hidden'); });
+
+  /* ---------------- daily gift ---------------- */
+  var lastDailyCheck = 0;
+  function giftPreview(day) {
+    if (day === 1) return 'a gift seed, planted free';
+    if (day === 2) return '15 leaves';
+    if (day === 3) return 'a rare sapling';
+    if (day === 4) return '25 leaves';
+    return '40 leaves and a wild mushroom';
+  }
+  function checkDaily() {
+    if (!st) return;
+    var ds = FW.dailyStatus(st);
+    $('fab-gift').classList.toggle('hidden', !ds.available);
+  }
+  $('fab-gift').addEventListener('click', function () {
+    if (screen !== 'game' || !st) return;
+    var ds = FW.dailyStatus(st);
+    if (!ds.available) return;
+    $('gift-streak').textContent = ds.day > 1 ? 'DAY ' + ds.day + ' STREAK' : 'WELCOME BACK';
+    $('gift-text').textContent = 'The forest offers ' + giftPreview(ds.day) + '.';
+    $('gift-modal').classList.remove('hidden');
+  });
+  $('gift-claim').addEventListener('click', function () {
+    var r = FW.claimDaily(st, FW.now());
+    $('gift-modal').classList.add('hidden');
+    if (r.ok) {
+      FAu.achieve();
+      toast('Day ' + r.day + ' gift: ' + r.gift + '!');
+      noteDay('received a daily gift');
+      checkDaily(); save();
+    }
+  });
   document.addEventListener('visibilitychange', function () { if (document.hidden) save(); });
   window.addEventListener('pagehide', save);
   document.addEventListener('pointerdown', function () { FAu.unlock(); }, { once: true });

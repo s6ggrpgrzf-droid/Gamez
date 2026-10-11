@@ -35,6 +35,7 @@ var FAu = (function () {
     src.connect(f); f.connect(g); g.connect(c.destination);
     src.start(t);
   }
+  var amb = { wind: 3, bird: 5, cricket: 1, owl: 30, rain: 0, fire: 0 };
   var S = {
     unlock: function () { ac(); },
     plant: function () { tone(180, 0.18, 'sine', 0.2, 0, 90); noise(0.12, 0.06, 0, 500); },
@@ -56,6 +57,41 @@ var FAu = (function () {
     },
     error: function () { tone(160, 0.16, 'sine', 0.1, 0, 120); },
     mush: function () { tone(330, 0.2, 'sine', 0.1, 0, 440); tone(495, 0.25, 'sine', 0.07, 0.08); },
+    /* generative ambience — called ~1/sec with the forest's state */
+    ambTick: function (o) {
+      if (muted) return;
+      var c = ac(); if (!c) return;
+      amb.wind -= 1;
+      if (amb.wind <= 0) { amb.wind = 6 + Math.random() * 7; noise(1.8, 0.022, 0, 400); }
+      if (o.storm) {
+        amb.rain -= 1;
+        if (amb.rain <= 0) { amb.rain = 0.4; noise(0.14, 0.03, 0, 2800); }
+      }
+      if (o.fire) {
+        amb.fire -= 1;
+        if (amb.fire <= 0) { amb.fire = 0.3 + Math.random() * 0.4; noise(0.09, 0.045, 0, 900); }
+      }
+      if (o.night) {
+        amb.cricket -= 1;
+        if (amb.cricket <= 0) {
+          amb.cricket = 1.8 + Math.random() * 1.5;
+          for (var i = 0; i < 3; i++) tone(4200 + Math.random() * 300, 0.05, 'sine', 0.018, i * 0.09);
+        }
+        amb.owl -= 1;
+        if (amb.owl <= 0) {
+          amb.owl = 40 + Math.random() * 50;
+          tone(340, 0.35, 'sine', 0.045, 0, 300); tone(300, 0.55, 'sine', 0.045, 0.42, 260);
+        }
+      } else {
+        amb.bird -= 1;
+        if (amb.bird <= 0) {
+          amb.bird = 4 + Math.random() * 7;
+          var base = 2200 + Math.random() * 900, n = 2 + ((Math.random() * 3) | 0);
+          for (var j = 0; j < n; j++)
+            tone(base + Math.random() * 700, 0.09, 'sine', 0.03, j * (0.11 + Math.random() * 0.06), base + Math.random() * 1200);
+        }
+      }
+    },
     toggleMute: function () {
       muted = !muted;
       try { localStorage.setItem('fw_mute', muted ? '1' : '0'); } catch (e) {}

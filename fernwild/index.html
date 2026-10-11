@@ -36,11 +36,14 @@
     <header id="hud">
       <div id="hud-points"><span class="leaf-glyph" aria-hidden="true"></span><span id="points-num">0</span></div>
       <div id="hud-day">DAY 1</div>
+      <canvas id="hud-dial" width="88" height="88" aria-label="Season and time of day"></canvas>
       <button id="btn-mute" class="hbtn" type="button" aria-label="Mute sound"><span id="mute-glyph">♪</span></button>
     </header>
     <div id="hint-bar" class="hidden"></div>
     <button id="fab-guide" class="fab left" type="button">Field Guide</button>
+    <button id="fab-quests" class="fab left stack2" type="button">Quests<span id="quest-dot" class="dot hidden"></span></button>
     <button id="fab-storm" class="fab right" type="button"><span class="leaf-glyph"></span><span id="storm-cost">40</span></button>
+    <button id="fab-gift" class="fab right stack2 hidden" type="button">Daily gift<span id="gift-dot" class="dot"></span></button>
     <div id="seed-sheet" class="hidden" aria-hidden="true">
       <div class="sheet-title">Plant a seed</div>
       <div id="seed-list"></div>
@@ -71,11 +74,27 @@
         <button id="journal-close" class="btn primary" type="button">Back to the forest</button>
       </div>
     </div>
+    <div id="quest-panel" class="hidden" role="dialog" aria-label="Quests">
+      <div class="journal-card">
+        <div class="journal-head">FOREST QUESTS</div>
+        <div class="journal-sub">Gentle goals. No timers, no failing — the forest is patient.</div>
+        <div id="quest-list" class="quest-list"></div>
+        <button id="quest-close" class="btn primary" type="button">Back to the forest</button>
+      </div>
+    </div>
+    <div id="gift-modal" class="hidden" role="dialog" aria-label="Daily gift">
+      <div class="journal-card gift-card">
+        <div class="journal-head">A GIFT FOR THE FOREST</div>
+        <div id="gift-streak" class="gift-streak"></div>
+        <div id="gift-text" class="wild-text"></div>
+        <button id="gift-claim" class="btn primary" type="button">Accept</button>
+      </div>
+    </div>
   </section>
 </div>
-<script src="sim.js?v=4"></script>
-<script src="art.js?v=3"></script>
-<script src="audio.js?v=1"></script>
-<script src="game.js?v=4"></script>
+<script src="sim.js?v=5"></script>
+<script src="art.js?v=4"></script>
+<script src="audio.js?v=2"></script>
+<script src="game.js?v=5"></script>
 </body>
 </html>
