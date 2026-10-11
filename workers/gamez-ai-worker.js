@@ -21,6 +21,8 @@
  *       fishlore  castaway-cove  whimsical fish lore line          {fish}
  *       krakentaunt neon-depths  kraken taunt for pinball          {}
  *       palette   still-life     harmonious hex color array        {mood} -> {text: "[...]"}
+ *       shipstory greywater      harbormaster: new/returning ship   {keeper,day,...} -> {ship} (KV registry)
+ *       logentry  greywater      literary keeper's logbook entry   {kind,day,ship?,whale?}
  *   GET  / -> health check
  *
  * Generations are cached in KV by kind/game/context so one call serves all
@@ -327,8 +329,97 @@ var KINDS = {
         "Example: [\"#556b95\",\"#698b8e\",\"#8b9467\",\"#b2c7ac\",\"#87a2b5\",\"#4f516e\",\"#455a64\",\"#5d6b7a\"]. " +
         "Output ONLY the array, nothing else.";
     }
+  },
+  shipstory: {
+    max: 200,
+    custom: true, // handled by shipStory() below: KV-backed registry of returning ships
+    sys: "You are the harbormaster of Greywater Light, a lonely lighthouse. You invent passing ships with salt in their stories. Warm, storybook maritime voice, family-friendly. Never cruel, never graphic, no politics, no real people.",
+    prompt: function (c) { return ""; }
+  },
+  logentry: {
+    max: 230,
+    tokens: 170,
+    sys: "You are the keeper of Greywater Light writing in the lighthouse logbook. Storybook maritime voice: warm, observant, a little poetic, past tense. Family-friendly. Never cruel, never graphic, no politics, no real people.",
+    prompt: function (c) {
+      var kind = String((c && c.kind) || "greet");
+      var season = String((c && c.season) || "summer"), weather = String((c && c.weather) || "clear");
+      var day = +((c && c.day) || 1);
+      var ship = (c && c.ship) || null, whale = (c && c.whale) || null;
+      var base = "Write a lighthouse logbook entry, 1-2 sentences, past tense, max 38 words, for day " + day + ", a " + weather + " " + season + " day. ";
+      if (kind === "whale") return base + "The keeper sounded the foghorn, and a whale answered from the dark \u2014 not a ship. " +
+        (whale && whale.name ? "The whale is known to the keeper as " + String(whale.name).slice(0, 40) + ". " : "") +
+        "Wonder and quiet companionship, never fear.";
+      if (kind === "guided") return base + "The keeper guided " + (ship ? "'" + String(ship.name).slice(0, 40) + "'" : "a ship") +
+        " through the rocky narrows with lamp flashes in foul weather. Relief, quiet pride.";
+      return base + "The keeper exchanged lamp signals with " +
+        (ship ? "'" + String(ship.name).slice(0, 40) + "', a " + String(ship.type).slice(0, 20) + " out of " + String(ship.origin).slice(0, 24) +
+          " bound for " + String(ship.dest).slice(0, 24) + " carrying " + String(ship.cargo).slice(0, 30) + "." : "a passing ship.") +
+        " Warm, observant, a little poetic.";
+    }
   }
 };
+
+/* shipstory: the harbormaster remembers. KV registry per keeper so ships return
+   across sessions as recurring characters. Bypasses the generic cache. */
+async function shipStory(env, ctx, body, game, ip) {
+  if (!(await checkRate(env, ip, "shipstory", 10))) return json({ error: "slow down" }, 429);
+  var c = body.ctx || {};
+  var keeper = String(c.keeper || "anon").replace(/[^a-z0-9]/gi, "").slice(0, 24) || "anon";
+  var regKey = "greywater/ships/" + keeper;
+  var reg = (await env.STORE.get(regKey, "json")) || [];
+  if (!Array.isArray(reg)) reg = [];
+  var day = +c.day || 1;
+  var returning = null;
+  if (reg.length && Math.random() < 0.38) {
+    var cands = reg.filter(function (s) { return (day - (+s.lastSeen || 0)) > 6; });
+    var pool = cands.length ? cands : reg;
+    returning = pool[Math.floor(Math.random() * pool.length)];
+  }
+  var fields = ["name", "type", "origin", "dest", "cargo", "story", "memory"];
+  var sys = KINDS.shipstory.sys, prompt;
+  if (returning) {
+    prompt = "A ship the keeper has met before is passing again on day " + day + ". " +
+      "Ship: '" + returning.name + "' (" + returning.type + "), previously carried " + returning.cargo +
+      ", " + (+returning.encounters || 1) + " past encounter(s). " +
+      "Return JSON with: name (exactly '" + returning.name + "'), type (one of: schooner, steamer, fishing smack, clipper), " +
+      "origin (a north-atlantic port), dest (a north-atlantic port), cargo (goods in her hold), " +
+      "story (one fresh sentence of ship lore, max 24 words), " +
+      "memory (one warm sentence recalling a past meeting with the keeper, max 20 words).";
+  } else {
+    var used = reg.slice(-14).map(function (s) { return s.name; }).join(", ");
+    prompt = "Invent a new passing ship sighted near a lonely lighthouse on a " + String(c.weather || "clear") +
+      " " + String(c.season || "summer") + " day. " +
+      "Return JSON with: name (an evocative two-word ship name), type (one of: schooner, steamer, fishing smack, clipper), " +
+      "origin (a north-atlantic port), dest (a different north-atlantic port), cargo (goods in her hold), " +
+      "story (one sentence of ship lore, max 24 words), memory (empty string). " +
+      (used ? "Do not reuse these names: " + used + "." : "");
+  }
+  var aiTxt;
+  try {
+    aiTxt = await runAi(env, [{ role: "system", content: sys }, { role: "user", content: prompt }], 200, 0.9, fieldSchema(fields));
+  } catch (e) { return json({ error: "ai unavailable" }, 502); }
+  var d = extractJson(aiTxt || "") || {};
+  var rawType = String(d.type || "").toLowerCase();
+  var ship = {
+    name: cleanWord(d.name || "", 30) || "Grey Wanderer",
+    type: rawType.indexOf("steam") >= 0 ? "steamer" : rawType.indexOf("clipper") >= 0 ? "clipper" : rawType.indexOf("smack") >= 0 ? "smack" : "schooner",
+    origin: cleanWord(d.origin || "", 24) || "Bergen",
+    dest: cleanWord(d.dest || "", 24) || "St. Johns",
+    cargo: cleanWord(d.cargo || "", 30) || "salt cod",
+    story: cleanWord(d.story || "", 170) || "She has weathered three gales and never lost a soul.",
+    memory: cleanWord(d.memory || "", 150),
+    returned: !!returning
+  };
+  if (returning) {
+    returning.encounters = (+returning.encounters || 1) + 1;
+    returning.lastSeen = day; returning.cargo = ship.cargo;
+  } else {
+    reg.push({ name: ship.name, type: ship.type, origin: ship.origin, dest: ship.dest, cargo: ship.cargo, story: ship.story, encounters: 1, lastSeen: day });
+    if (reg.length > 40) reg = reg.slice(-40);
+  }
+  ctx.waitUntil(env.STORE.put(regKey, JSON.stringify(reg), { expirationTtl: 86400 * 90 }));
+  return json({ ship: ship });
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -344,6 +435,7 @@ export default {
       try { body = await request.json(); } catch (e) { return json({ error: "bad json" }, 400); }
       var kind = KINDS[body.kind], game = String(body.game || "unknown").replace(/[^a-z0-9-]/g, "").slice(0, 24);
       if (!kind) return json({ error: "unknown kind" }, 400);
+      if (body.kind === "shipstory") return await shipStory(env, ctx, body, game, ip);
       var key = "g/" + body.kind + "/" + game + "/" + ctxHash(body.ctx);
       var cached = await env.STORE.get(key, "json");
       if (cached && (cached.text || (kind.fields && cached[kind.fields[0]]))) return json(cached);
