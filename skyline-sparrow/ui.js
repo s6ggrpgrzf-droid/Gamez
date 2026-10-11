@@ -8,7 +8,7 @@ var SS = window.SS, SSGen = window.SSGen, SSFeel = window.SSFeel,
     SSRender = window.SSRender, SSAudio = window.SSAudio;
 SS.setGen(SSGen);
 
-var BUILD = 'v20261011a';
+var BUILD = 'v20261011b';
 var STEP = 1 / 60;
 var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
 var ARCADE_BASE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
@@ -161,10 +161,14 @@ function onEvent(e) {
       SSAudio.SFX.walljump(); break;
     case 'land':
       feel.squashLand(e.hard);
+      // landing dust: soft puffs always, trauma kick on hard landings
+      feel.burst(e.x, e.y + 16, 3, '#d8c49a', 70, 300, 7);
       if (e.hard) { feel.addTrauma(0.25); feel.burst(e.x, e.y + 18, 6, '#cbb89a', 120, 500, 4); }
       SSAudio.SFX.land(e.hard); break;
     case 'feather':
-      feel.burst(e.x, e.y, 10, '#f5ead2', 140, 200, 4);
+      // feather burst: 5 shards + a soft white pop
+      feel.burst(e.x, e.y, 5, '#f5ead2', 200, 250, 5);
+      feel.burst(e.x, e.y, 4, '#ffffff', 120, 0, 3);
       SSAudio.SFX.feather(e.n); break;
     case 'near':
       feel.hitstop(50); feel.addTrauma(0.18);
@@ -200,6 +204,12 @@ function drawHUD() {
   if (st.combo >= 2) {
     var cl = r.text('COMBO x' + st.combo, 'bold 26px system-ui, sans-serif', '#ffd34d');
     cx.drawImage(cl, r.W / 2 - cl.width / 2, 60);
+    // combo drain bar: thin gold bar under the score, drains with comboT
+    var bw = 110, frac = Math.max(0, Math.min(1, st.comboT / 1.6));
+    cx.fillStyle = 'rgba(20,14,30,0.55)';
+    cx.fillRect(16, 70, bw, 6);
+    cx.fillStyle = '#ffd34d';
+    cx.fillRect(16, 70, bw * frac, 6);
   }
 }
 
@@ -217,15 +227,16 @@ function showScreen(name) {
 }
 
 function renderMenuStatic() {
-  // static menu art: pre-rendered text canvases, set once
+  // static menu art: pre-rendered canvases, set once
   var r = renderer;
-  var title = r.text('SKYLINE SPARROW', '900 44px system-ui, sans-serif', '#fff8ea');
-  var sub = r.text('one tap to fly', 'italic 24px system-ui, sans-serif', 'rgba(255,248,234,0.8)');
-  var best = r.text('BEST  ' + save.best.score + ' PTS', 'bold 22px system-ui, sans-serif', '#ffd34d');
-  setImg('menu-title', title); setImg('menu-sub', sub); setImg('menu-best', best);
+  setImg('menu-title', r.titleCard());
+  var sub = r.text('one tap to fly', 'italic 24px system-ui, sans-serif', 'rgba(90,60,90,0.85)');
+  setImg('menu-sub', sub);
+  var best = r.text('BEST  ' + save.best.score + ' PTS', 'bold 22px system-ui, sans-serif', '#8a5a1e');
+  setImg('menu-best', best);
   var db = save.daily.date === todayStr() && save.daily.best > 0
     ? 'DAILY BEST  ' + save.daily.best + ' PTS' : 'DAILY RUN — same sky for everyone';
-  setImg('menu-daily', r.text(db, 'bold 20px system-ui, sans-serif', '#9adcff'));
+  setImg('menu-daily', r.text(db, 'bold 20px system-ui, sans-serif', '#1a6e94'));
   renderRivalCard();
 }
 function setImg(id, canvas) {
@@ -234,17 +245,27 @@ function setImg(id, canvas) {
   el.appendChild(canvas);
 }
 function renderMenu(ts) {
-  // gentle animated menu backdrop: slow drift through dawn
+  // living dawn backdrop: haze + clouds + skyline drift, silhouette gliding
   var r = renderer, cx = r.cx;
   cx.drawImage(r.skyStrips[0], 0, 0, r.W, r.H);
   var t = (ts || 0) / 1000;
+  r.tileLayer(r.hazeStrips[0], t * 6, 0, r.W, r.H);
+  // a couple of drifting clouds
+  for (var ci = 0; ci < 3; ci++) {
+    var cl = r.sprites.clouds[ci % 3];
+    var cxx = r.W - ((t * (10 + ci * 5) + ci * 430) % (r.W + 480)) + 240;
+    cx.globalAlpha = 0.8;
+    cx.drawImage(cl, cxx - 110, r.H * (0.1 + ci * 0.09), 220, 90);
+  }
+  cx.globalAlpha = 1;
   r.tileLayer(r.bgLayers[0][0], t * 12, 0, r.W, r.H);
   r.tileLayer(r.bgLayers[0][1], t * 30, 0, r.W, r.H);
-  // a lone sparrow gliding across
-  var bx = r.W - ((t * 60) % (r.W + 200)) + 100;
+  // a lone sparrow silhouette gliding across
+  var bx = r.W - ((t * 60) % (r.W + 300)) + 150;
   var by = r.H * 0.3 + Math.sin(t * 1.3) * 24;
-  var spr = r.sprites.bird[Math.floor(t * 6) % 3];
-  cx.drawImage(spr, bx - 26, by - 20, 52, 40);
+  cx.globalAlpha = 0.85;
+  cx.drawImage(r.sprites.silhouette, bx - 70, by - 45, 140, 90);
+  cx.globalAlpha = 1;
 }
 
 /* ================= death / restart ================= */
@@ -267,12 +288,12 @@ function onDeath() {
 }
 function renderOver() {
   var r = renderer;
-  setImg('over-title', r.text(st.overCause === 'fall' ? 'LOST TO THE STREET' : 'CLIPPED!', '900 40px system-ui, sans-serif', '#fff8ea'));
-  setImg('over-score', r.text(st.score + ' PTS', '900 54px system-ui, sans-serif', '#ffd34d'));
+  setImg('over-title', r.text(st.overCause === 'fall' ? 'LOST TO THE STREET' : 'CLIPPED!', '900 40px system-ui, sans-serif', '#4a3423'));
+  setImg('over-score', r.text(st.score + ' PTS', '900 54px system-ui, sans-serif', '#b97f1f'));
   var sub = st.score >= save.best.score && st.score > 0 ? 'NEW BEST!' : 'BEST  ' + save.best.score + ' PTS';
-  setImg('over-best', r.text(sub, 'bold 24px system-ui, sans-serif', '#9adcff'));
+  setImg('over-best', r.text(sub, 'bold 24px system-ui, sans-serif', '#1a6e94'));
   var stats = r.text(st.distM + 'm   ·   ' + st.feathers + ' feathers   ·   x' + st.bestCombo + ' combo',
-    '20px system-ui, sans-serif', 'rgba(255,248,234,0.8)');
+    '20px system-ui, sans-serif', 'rgba(74,52,35,0.75)');
   setImg('over-stats', stats);
   // tale: fallback instantly, AI swaps in when it arrives (never blocks)
   var ms = highestMilestone();
