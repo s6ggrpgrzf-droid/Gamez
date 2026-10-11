@@ -111,7 +111,7 @@ var FArt = (function () {
       var topness = 1 - (ly - (y - r)) / (2 * r);
       var pick = hash(i * 7, seed * 13 + 2);
       var col = pick < 0.16 + 0.3 * topness ? c2 : (pick < 0.68 ? c1 : c3);
-      var lr = 2.1 + hash(i * 11, seed * 5) * 2.5;
+      var lr = 1.8 + hash(i * 11, seed * 5) * 1.8;
       g.fillStyle = col;
       g.save(); g.translate(lx, ly); g.rotate(hash(i * 13, seed * 3 + 4) * 3.1416);
       g.beginPath(); g.ellipse(0, 0, lr, lr * 0.55, 0, 0, 6.2832); g.fill();
@@ -119,19 +119,26 @@ var FArt = (function () {
     }
   }
   function deciduousCrown(g, cx, topY, spread, c1, c2, c3, seed, nLimbs, trunkCol) {
-    /* scaffold limbs fanning from the trunk top, leaf sprays at the tips */
+    /* delicate scaffold limbs, leaves scattered along them — airy, PolyPine-like */
     var tips = [];
     for (var i = 0; i < nLimbs; i++) {
       var ang = -Math.PI / 2 + (i / (nLimbs - 1) - 0.5) * 2.3 + (hash(i, seed) - 0.5) * 0.3;
       var len = spread * (0.72 + hash(i * 3, seed + 1) * 0.45);
-      var tip = limb(g, cx, topY + 6, ang, len, 4.5, trunkCol, seed + i);
+      var bx = cx, by = topY + 6;
+      var tip = limb(g, bx, by, ang, len, 3.2, trunkCol, seed + i);
       var tang = ang + (hash(i * 5, seed + 2) - 0.5) * 1.1;
-      tips.push(limb(g, tip[0], tip[1], tang, len * 0.45, 2.4, trunkCol, seed + i * 3));
+      tips.push(limb(g, tip[0], tip[1], tang, len * 0.45, 1.8, trunkCol, seed + i * 3));
+      /* leaves dotted along the outer two-thirds of each limb */
+      for (var s = 0; s < 3; s++) {
+        var tt = 0.45 + s * 0.22 + (hash(s * 7, seed + i) - 0.5) * 0.1;
+        var lx = bx + (tip[0] - bx) * tt, ly = by + (tip[1] - by) * tt;
+        leafSpray(g, lx, ly, 6.5 + hash(s * 3, i * 5) * 4, c1, c2, c3, seed + i * 17 + s * 5, 7);
+      }
     }
     for (var t = 0; t < tips.length; t++) {
-      leafSpray(g, tips[t][0], tips[t][1], spread * 0.4, c1, c2, c3, seed + t * 11 + 5, 20);
+      leafSpray(g, tips[t][0], tips[t][1], spread * 0.3, c1, c2, c3, seed + t * 11 + 5, 10);
     }
-    leafSpray(g, cx, topY - spread * 0.32, spread * 0.52, c1, c2, c3, seed + 99, 28);
+    leafSpray(g, cx, topY - spread * 0.3, spread * 0.38, c1, c2, c3, seed + 99, 14);
   }
   function pineTiers(g, cx, baseY, big, c1, c2, c3, j, snowy, seed, snowFn, tiers, yStart) {
     tiers = tiers || 4; yStart = yStart == null ? 52 : yStart;
@@ -835,99 +842,22 @@ var FArt = (function () {
     season = (season == null ? 1 : season) % 4;
     var c = document.createElement('canvas'); c.width = w; c.height = h;
     var g = c.getContext('2d');
-    /* ---- inside a real forest: light falling through canopy, trunks in haze ---- */
-    var pal = [
-      { top: '#cfe0a8', mid: '#9db87e', low: '#5d7a4e', haze: '190,210,150', trunk: '90,110,80', shaft: '255,250,215' },
-      { top: '#c2d898', mid: '#8fae72', low: '#4f6b42', haze: '180,205,140', trunk: '80,100,70', shaft: '255,246,200' },
-      { top: '#e8cf9a', mid: '#c49a5e', low: '#6e5a34', haze: '220,190,130', trunk: '105,85,55', shaft: '255,230,170' },
-      { top: '#d8e2e8', mid: '#aebbc2', low: '#5e6a72', haze: '215,225,232', trunk: '95,105,112', shaft: '245,250,255' }
-    ][season];
+    /* quiet open sky — the trees are the subject, nothing competes */
+    var tops = ['#a9d2e6', '#9cc6e0', '#c2b198', '#b6c6d2'];
+    var bots = ['#dcecd6', '#d6e2c2', '#e6d2a4', '#dbe2e6'];
     var bg = g.createLinearGradient(0, 0, 0, h);
-    bg.addColorStop(0, pal.top); bg.addColorStop(0.45, pal.mid); bg.addColorStop(1, pal.low);
+    bg.addColorStop(0, tops[season]); bg.addColorStop(1, bots[season]);
     g.fillStyle = bg; g.fillRect(0, 0, w, h);
-    /* far trunks: tall, faint, lost in haze */
-    for (var fi = 0; fi < 16; fi++) {
-      var fx = hash(fi, 511) * w;
-      var fw = 14 + hash(fi, 512) * 26;
-      var fa = 0.10 + hash(fi, 513) * 0.10;
-      var fg = g.createLinearGradient(fx - fw / 2, 0, fx + fw / 2, 0);
-      fg.addColorStop(0, 'rgba(' + pal.trunk + ',0)');
-      fg.addColorStop(0.5, 'rgba(' + pal.trunk + ',' + fa.toFixed(3) + ')');
-      fg.addColorStop(1, 'rgba(' + pal.trunk + ',0)');
-      g.fillStyle = fg;
-      g.fillRect(fx - fw / 2, 0, fw, h);
-    }
-    /* haze wash */
-    g.fillStyle = 'rgba(' + pal.haze + ',0.16)'; g.fillRect(0, 0, w, h);
-    /* mid trunks: nearer, darker, still soft */
-    for (var mi = 0; mi < 7; mi++) {
-      var mx = hash(mi, 521) * w;
-      var mw = 26 + hash(mi, 522) * 34;
-      var ma = 0.14 + hash(mi, 523) * 0.10;
-      var mg = g.createLinearGradient(mx - mw / 2, 0, mx + mw / 2, 0);
-      mg.addColorStop(0, 'rgba(' + pal.trunk + ',0)');
-      mg.addColorStop(0.5, 'rgba(' + pal.trunk + ',' + ma.toFixed(3) + ')');
-      mg.addColorStop(1, 'rgba(' + pal.trunk + ',0)');
-      g.fillStyle = mg;
-      g.fillRect(mx - mw / 2, h * 0.04, mw, h * 0.96);
-      if (season === 3) { /* snow dusting on mid trunks */
-        g.fillStyle = 'rgba(240,246,250,0.20)';
-        g.fillRect(mx - mw / 2, h * 0.04, mw * 0.3, h * 0.96);
-      }
-    }
-    /* light shafts falling through the canopy */
-    for (var si = 0; si < 3; si++) {
-      var sx = w * (0.2 + si * 0.28) + (hash(si, 531) - 0.5) * 60;
-      var sway = 60 + hash(si, 532) * 40;
-      var shg = g.createLinearGradient(sx, 0, sx + sway, h);
-      shg.addColorStop(0, 'rgba(' + pal.shaft + ',0.20)');
-      shg.addColorStop(1, 'rgba(' + pal.shaft + ',0)');
-      g.fillStyle = shg;
-      g.beginPath();
-      g.moveTo(sx - 26, 0); g.lineTo(sx + 26, 0);
-      g.lineTo(sx + sway + 44, h); g.lineTo(sx + sway - 44, h);
-      g.closePath(); g.fill();
-    }
-    /* overhead canopy: dark out-of-focus leaves along the top edge */
-    for (var ci = 0; ci < 26; ci++) {
-      var clx = hash(ci, 541) * w, cly = hash(ci, 542) * h * 0.10 - 8;
-      var clr = 22 + hash(ci, 543) * 40;
-      var leafC = season === 2 ? '58,84,44' : season === 0 ? '84,120,60' : season === 3 ? '120,130,135' : '140,110,60';
-      ell(g, clx, cly, clr, clr * 0.7, 'rgba(' + leafC + ',' + (0.20 + hash(ci, 544) * 0.18).toFixed(3) + ')');
-    }
-    /* floating motes in the light */
-    g.fillStyle = 'rgba(255,252,235,0.5)';
-    for (var mo = 0; mo < 36; mo++) {
-      var mox = hash(mo, 551) * w, moy = hash(mo, 552) * h * 0.8;
-      var mor = 1 + hash(mo, 553) * 1.8;
-      g.globalAlpha = 0.14 + hash(mo, 554) * 0.3;
-      g.beginPath(); g.arc(mox, moy, mor, 0, 6.2832); g.fill();
-    }
-    g.globalAlpha = 1;
-    /* undergrowth at the forest floor: ferns and grass in shadow */
+    /* faintest haze for depth */
+    var hz = g.createLinearGradient(0, h * 0.3, 0, h * 0.8);
+    hz.addColorStop(0, 'rgba(255,255,255,0)');
+    hz.addColorStop(1, 'rgba(255,255,255,0.10)');
+    g.fillStyle = hz; g.fillRect(0, h * 0.3, w, h * 0.5);
+    /* soft shadow where the meadow meets the soil */
     var gy = surfBaseY - 2;
-    var gc = season === 3 ? 'rgba(150,160,150,0.5)' : season === 2 ? 'rgba(46,84,44,0.55)' : 'rgba(60,95,50,0.5)';
-    g.strokeStyle = gc; g.lineCap = 'round';
-    for (var gi = 0; gi < w / 14; gi++) {
-      var gx = gi * 14 + hash(gi, 561) * 8;
-      var gh = 10 + hash(gi, 562) * 22;
-      g.lineWidth = 2.4;
-      /* fern frond: curved stem with leaflets */
-      g.beginPath(); g.moveTo(gx, gy + 4);
-      g.quadraticCurveTo(gx + (hash(gi, 563) - 0.5) * 18, gy - gh * 0.6, gx + (hash(gi, 564) - 0.5) * 26, gy - gh);
-      g.stroke();
-      g.lineWidth = 1.6;
-      for (var fl = 1; fl <= 4; fl++) {
-        var fxp = gx + (hash(gi, 564) - 0.5) * 26 * fl / 4;
-        var fyp = gy + 4 - (gh + 4) * fl / 4;
-        g.beginPath(); g.moveTo(fxp, fyp); g.lineTo(fxp - 7, fyp - 4); g.stroke();
-        g.beginPath(); g.moveTo(fxp, fyp); g.lineTo(fxp + 7, fyp - 4); g.stroke();
-      }
-    }
-    /* soft shadow where floor meets soil */
-    var sh = g.createLinearGradient(0, gy - 26, 0, gy + 10);
-    sh.addColorStop(0, 'rgba(20,30,16,0)'); sh.addColorStop(1, 'rgba(20,30,16,0.35)');
-    g.fillStyle = sh; g.fillRect(0, gy - 26, w, 36);
+    var sh = g.createLinearGradient(0, gy - 18, 0, gy + 8);
+    sh.addColorStop(0, 'rgba(30,45,25,0)'); sh.addColorStop(1, 'rgba(30,45,25,0.22)');
+    g.fillStyle = sh; g.fillRect(0, gy - 18, w, 26);
     return c;
   }
   function titleBG(w, h, tsec) {
