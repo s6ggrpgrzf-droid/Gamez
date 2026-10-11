@@ -57,6 +57,9 @@ var FAu = (function () {
     },
     error: function () { tone(160, 0.16, 'sine', 0.1, 0, 120); },
     mush: function () { tone(330, 0.2, 'sine', 0.1, 0, 440); tone(495, 0.25, 'sine', 0.07, 0.08); },
+    season: function () { var n = [392, 440, 523, 587]; for (var i = 0; i < 4; i++) tone(n[i], 0.7, 'sine', 0.07, i * 0.16); },
+    rumble: function () { noise(1.6, 0.1, 0, 120); noise(1.1, 0.07, 0.35, 90); },
+    plip: function () { tone(900 + Math.random() * 200, 0.09, 'sine', 0.1, 0, 420); noise(0.05, 0.03, 0.02, 2500); },
     /* generative ambience — called ~1/sec with the forest's state */
     ambTick: function (o) {
       if (muted) return;
