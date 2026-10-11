@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1d2b1a">
 <title>Fernwild — a cozy forest sim</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div id="app">
@@ -36,6 +36,7 @@
     <header id="hud">
       <div id="hud-points"><span class="leaf-glyph" aria-hidden="true"></span><span id="points-num">0</span></div>
       <div id="hud-day">DAY 1</div>
+      <canvas id="hud-wx" width="72" height="72" aria-label="Weather"></canvas>
       <canvas id="hud-dial" width="88" height="88" aria-label="Season and time of day"></canvas>
       <button id="btn-mute" class="hbtn" type="button" aria-label="Mute sound"><span id="mute-glyph">♪</span></button>
     </header>
@@ -92,9 +93,9 @@
     </div>
   </section>
 </div>
-<script src="sim.js?v=5"></script>
-<script src="art.js?v=4"></script>
-<script src="audio.js?v=2"></script>
-<script src="game.js?v=5"></script>
+<script src="sim.js?v=6"></script>
+<script src="art.js?v=5"></script>
+<script src="audio.js?v=3"></script>
+<script src="game.js?v=6"></script>
 </body>
 </html>

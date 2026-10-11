@@ -124,6 +124,7 @@ body {
 }
 @keyframes dotpulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.35); } }
 #hud-dial { width: 44px; height: 44px; flex: none; }
+#hud-wx { width: 36px; height: 36px; flex: none; }
 /* ---------- quests & gifts ---------- */
 #quest-panel, #gift-modal {
   position: absolute; inset: 0; z-index: 30;

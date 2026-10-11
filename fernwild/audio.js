@@ -35,7 +35,7 @@ var FAu = (function () {
     src.connect(f); f.connect(g); g.connect(c.destination);
     src.start(t);
   }
-  var amb = { wind: 3, bird: 5, cricket: 1, owl: 30, rain: 0, fire: 0 };
+  var amb = { wind: 3, bird: 5, cricket: 1, owl: 30, rain: 0, fire: 0, windHowl: 2 };
   var S = {
     unlock: function () { ac(); },
     plant: function () { tone(180, 0.18, 'sine', 0.2, 0, 90); noise(0.12, 0.06, 0, 500); },
@@ -66,6 +66,13 @@ var FAu = (function () {
       if (o.storm) {
         amb.rain -= 1;
         if (amb.rain <= 0) { amb.rain = 0.4; noise(0.14, 0.03, 0, 2800); }
+      } else if (o.rain) {
+        amb.rain -= 1;
+        if (amb.rain <= 0) { amb.rain = 0.7; noise(0.1, 0.02, 0, 3200); }
+      }
+      if (o.wind) {
+        amb.windHowl -= 1;
+        if (amb.windHowl <= 0) { amb.windHowl = 3 + Math.random() * 3; noise(2.2, 0.035, 0, 300); }
       }
       if (o.fire) {
         amb.fire -= 1;

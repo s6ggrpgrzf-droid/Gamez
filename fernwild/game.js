@@ -20,7 +20,7 @@
 
   var st = null;            /* FW sim state */
   var screen = 'title';
-  var floaters = [], parts = [];
+  var floaters = [], parts = [], ripples = [], rippleT = 1;
   var tutStep = 0, tutDone = false;
   var saveT = 0, elapsed = 0;
   var migrated = false;
@@ -414,6 +414,12 @@
         return { x: ox + 12 + look, y: oy - treeH(st.tiles[oi].plant.stage) * 0.94 + sway, s: ASZ, ground: false };
       }
     }
+    if (sp === 'heron') {
+      /* statue at the pond's edge */
+      var hx = pondX - 82, hy = surfY(hx);
+      var breathe = Math.sin(elapsed * 0.9 + a.ph) * 1.5;
+      return { x: hx, y: hy + breathe, s: ASZ * 1.5, ground: true };
+    }
     /* ground wanderers: rabbit, fox, deer, hedgehog */
     var homeX = spotX(a.x);
     wanderGround(a, v, homeX);
@@ -569,6 +575,14 @@
       else if (e.t === 'owlhunt') { toast('The owl swoops at a vole!'); noteDay('the owl hunted at night'); }
       else if (e.t === 'quest') { FAu.achieve(); toast('Quest complete: ' + e.id + ' — claim it in the quest board!'); refreshQuests(); }
       else if (e.t === 'daily') { /* modal handles it */ }
+      else if (e.t === 'weather') {
+        var wnames = { clear: 'The sky clears', cloudy: 'Clouds gather', rain: 'Rain sweeps in', storm: 'A storm rolls in!',
+                       drought: 'A dry spell settles in', fog: 'Fog drifts through', wind: 'The wind picks up' };
+        if (wnames[e.kind]) toast(wnames[e.kind]);
+        if (e.kind === 'rain' || e.kind === 'drought') noteDay(wnames[e.kind].toLowerCase());
+      }
+      else if (e.t === 'heroncatch') { toast('The heron spears a fish!'); noteDay('the heron caught a fish'); }
+      else if (e.t === 'fishreturn') { toast('Fish return to the pond'); }
     }
   }
   function achToast(title, sub) {
@@ -598,6 +612,7 @@
     deer: 'No upper front teeth — grinds plants with tough dental pads.',
     hedgehog: 'Shrugs off most snake venom — and happily eats snakes.',
     frog: 'Drinks through its skin — it soaks, never sips.',
+    heron: 'Stands motionless for hours — then strikes faster than you can blink.',
     vole: 'Its tunnels aerate the soil — an engineer, and a root-nibbler.'
   };
   function buildJournal() {
@@ -692,6 +707,7 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
     applyCam();
+    var vx = camX - W / camZ / 2 - 4, vw = W / camZ + 8; /* visible world region */
     ctx.drawImage(bgCache, 0, 0, worldW, H);
     ctx.drawImage(soilCache, 0, 0, worldW, H);
     /* deep soil continues below the cached strata when zoomed out */
@@ -699,10 +715,59 @@
     ctx.fillRect(0, botY, worldW, H / camZ);
     /* pond */
     var ppy = surfY(pondX);
-    ctx.fillStyle = '#6fa8c8';
+    var wxk = st.weather.kind;
+    ctx.fillStyle = wxk === 'drought' ? '#5f93ad' : '#6fa8c8';
     ctx.beginPath(); ctx.ellipse(pondX, ppy + 7, 62, 19, 0, 0, 6.2832); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.28)';
     ctx.beginPath(); ctx.ellipse(pondX - 15, ppy + 3, 28, 7, -0.1, 0, 6.2832); ctx.fill();
+    /* koi circling beneath the surface */
+    for (var kf = 0; kf < st.pond.fish.length; kf++) {
+      var koi = st.pond.fish[kf];
+      var kx = pondX + koi.x * 62, ky = ppy + 7 + koi.y * 19;
+      var ksz = 30, facing = Math.cos(koi.a) < 0 ? -1 : 1;
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.translate(kx, ky); ctx.scale(facing, 1);
+      var wig = Math.sin(now * 6 + koi.a * 3) * 4;
+      ctx.drawImage(FArt.koi(kf % 3), -ksz / 2, -ksz / 2 + wig * 0.2, ksz, ksz);
+      ctx.restore();
+    }
+    /* lily pads drifting */
+    for (var lp = 0; lp < 2; lp++) {
+      var lpx = pondX - 28 + lp * 52 + Math.sin(now * 0.24 + lp * 2.4) * 7;
+      var lpy = ppy + 9 + (lp % 2) * 6 + Math.cos(now * 0.3 + lp) * 2.5;
+      var lsz = 44 - lp * 8;
+      ctx.drawImage(FArt.lilyPad(lp), lpx - lsz / 2, lpy - lsz / 2, lsz, lsz);
+    }
+    /* dragonflies on warm days */
+    if (!night && st.season !== 3) {
+      for (var df = 0; df < 2; df++) {
+        var dfx = pondX + Math.sin(now * 1.7 + df * 3.1) * 52 + Math.sin(now * 5.3 + df) * 9;
+        var dfy = ppy - 26 - Math.abs(Math.sin(now * 2.3 + df * 1.7)) * 30;
+        var dsz = 26;
+        ctx.drawImage(FArt.dragonfly(df), dfx - dsz / 2, dfy - dsz / 2, dsz, dsz);
+      }
+    }
+    /* ripples */
+    rippleT -= fdt;
+    if (rippleT <= 0) {
+      rippleT = 1.6 + Math.random() * 1.6;
+      ripples.push({ x: pondX + (Math.random() * 2 - 1) * 44, y: ppy + 4 + Math.random() * 10, t: 0 });
+    }
+    for (var rp = ripples.length - 1; rp >= 0; rp--) {
+      var rip = ripples[rp];
+      rip.t += fdt;
+      if (rip.t > 1.6) { ripples.splice(rp, 1); continue; }
+      ctx.globalAlpha = 0.4 * (1 - rip.t / 1.6);
+      ctx.strokeStyle = '#e8f4fa'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(rip.x, rip.y, 6 + rip.t * 22, 2.5 + rip.t * 8, 0, 0, 6.2832); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    /* moonlight on the water */
+    if (night) {
+      ctx.fillStyle = 'rgba(244,240,220,' + (0.22 + 0.08 * Math.sin(now * 1.7)).toFixed(3) + ')';
+      ctx.beginPath(); ctx.ellipse(pondX + 12, ppy + 6, 16, 5, 0.1, 0, 6.2832); ctx.fill();
+    }
     ctx.fillStyle = '#4d8a44';
     ctx.beginPath(); ctx.ellipse(pondX + 30, ppy + 8, 12, 5, 0.2, 0, 6.2832); ctx.fill();
     /* mycelium + roots */
@@ -739,7 +804,9 @@
       }
       if (t2.plant) {
         var ps = TREE_PX[t2.plant.stage] || 40;
-        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred, st.season, t2.plant.variant), s2x - ps / 2, s2y - ps * 0.94, ps, ps);
+        var swx = st.weather.kind;
+        var sway = (swx === 'wind' ? 7 : swx === 'storm' ? 5 : 1.2) * Math.sin(now * 2.1 + ti * 1.3);
+        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred, st.season, t2.plant.variant), s2x - ps / 2 + sway, s2y - ps * 0.94, ps, ps);
       }
       /* wildfire flames */
       if (t2.fire > 0) {
@@ -800,20 +867,39 @@
         ctx.fillText('…', ap.x, ap.y - ap.s * 0.98);
       }
     }
-    /* storm: dim + rain streaks */
-    if (st.storm > 0) {
-      ctx.fillStyle = 'rgba(30,42,70,0.16)';
-      ctx.fillRect(camX - W / camZ / 2 - 4, 0, W / camZ + 8, H);
-      for (var ri = 0; ri < 7; ri++) {
+    /* weather: rain streaks, fog bands, drought cracks */
+    var wxk2 = st.weather.kind;
+    if (wxk2 === 'rain' || st.storm > 0) {
+      var dense = st.storm > 0 ? 7 : 4;
+      ctx.fillStyle = st.storm > 0 ? 'rgba(30,42,70,0.16)' : 'rgba(40,55,85,0.08)';
+      ctx.fillRect(vx, 0, vw, H);
+      for (var ri = 0; ri < dense; ri++) {
         parts.push({
-          x: camX - W / camZ / 2 + Math.random() * (W / camZ + 80) - 40, y: -12, vx: -50, vy: 430,
+          x: vx + Math.random() * vw, y: -12, vx: -50, vy: 430,
           t: 0, life: 1.8, kind: 'streak', col: 'rgba(160,200,255,0.55)'
         });
       }
     }
+    if (wxk2 === 'fog') {
+      for (var fgi = 0; fgi < 4; fgi++) {
+        var fgy = H * (0.2 + fgi * 0.16);
+        var fgoff = (now * 14 + fgi * 340) % (vw + 400) - 200;
+        var fgrd = ctx.createLinearGradient(vx + fgoff, 0, vx + fgoff + 340, 0);
+        fgrd.addColorStop(0, 'rgba(230,238,242,0)');
+        fgrd.addColorStop(0.5, 'rgba(230,238,242,0.38)');
+        fgrd.addColorStop(1, 'rgba(230,238,242,0)');
+        ctx.fillStyle = fgrd;
+        ctx.fillRect(vx + fgoff, fgy - 40, 340, 80);
+      }
+    }
+    if (wxk2 === 'drought') {
+      for (var cr = 0; cr < FW.GW; cr += 2) {
+        var csx = spotX(cr), csy = surfY(csx);
+        ctx.drawImage(FArt.cracks(cr % 2), csx - 40, csy + 4, 80, 80);
+      }
+    }
     /* day/night: stars, moon, dark veil */
     var light = FW.dayLight(st), night = FW.isNight(st);
-    var vx = camX - W / camZ / 2 - 4, vw = W / camZ + 8;
     if (light < 0.85) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, (1 - light) * 1.6);
@@ -906,7 +992,7 @@
     }
     if (st.day !== lastDay) { lastDay = st.day; $('hud-day').textContent = 'DAY ' + st.day; }
     var nowS = perfNow();
-    if (nowS - lastDial > 1) { lastDial = nowS; drawDial(); }
+    if (nowS - lastDial > 1) { lastDial = nowS; drawDial(); drawWx(); }
     if (nowS - lastDailyCheck > 30) { lastDailyCheck = nowS; checkDaily(); }
   }
 
@@ -939,7 +1025,8 @@
       ambT = 0;
       var anyFire = false;
       for (var fi = 0; fi < FW.GW; fi++) if (st.tiles[fi].fire > 0) { anyFire = true; break; }
-      FAu.ambTick({ night: FW.isNight(st), storm: st.storm > 0, fire: anyFire });
+      FAu.ambTick({ night: FW.isNight(st), storm: st.storm > 0, fire: anyFire,
+                    rain: st.weather.kind === 'rain', wind: st.weather.kind === 'wind' });
     }
     saveT += dt;
     if (saveT > 5) { saveT = 0; gcAvis(); save(); }
@@ -1027,7 +1114,76 @@
     g.fillText(FW.SEASONS[se].slice(0, 3).toUpperCase(), cx, cy + 30);
   }
 
-  /* ---------------- quests ---------------- */
+  /* ---------------- weather glyph ---------------- */
+  function drawWxIcon(g, kind, cx, cy, s) {
+    g.lineWidth = Math.max(2, s * 0.09); g.lineCap = 'round';
+    if (kind === 'clear' || kind === 'drought') {
+      g.strokeStyle = kind === 'drought' ? '#e8933a' : '#ffd964';
+      g.fillStyle = kind === 'drought' ? '#e8933a' : '#ffd964';
+      g.beginPath(); g.arc(cx, cy - s * 0.1, s * 0.32, 0, 6.2832); g.fill();
+      for (var i = 0; i < 8; i++) {
+        var a = i * 0.785;
+        g.beginPath();
+        g.moveTo(cx + Math.cos(a) * s * 0.44, cy - s * 0.1 + Math.sin(a) * s * 0.44);
+        g.lineTo(cx + Math.cos(a) * s * 0.58, cy - s * 0.1 + Math.sin(a) * s * 0.58);
+        g.stroke();
+      }
+      if (kind === 'drought') {
+        g.strokeStyle = 'rgba(232,147,58,0.7)';
+        for (var h = 0; h < 2; h++) {
+          g.beginPath(); g.moveTo(cx - s * 0.4 + h * s * 0.4, cy + s * 0.42);
+          g.quadraticCurveTo(cx - s * 0.3 + h * s * 0.4, cy + s * 0.52, cx - s * 0.4 + h * s * 0.4, cy + s * 0.62); g.stroke();
+        }
+      }
+    } else if (kind === 'cloudy' || kind === 'rain' || kind === 'storm' || kind === 'fog') {
+      g.fillStyle = 'rgba(232,238,244,0.92)';
+      g.beginPath();
+      g.ellipse(cx - s * 0.22, cy - s * 0.05, s * 0.3, s * 0.2, 0, 0, 6.2832);
+      g.ellipse(cx + s * 0.18, cy - s * 0.05, s * 0.36, s * 0.24, 0, 0, 6.2832);
+      g.ellipse(cx, cy - s * 0.22, s * 0.3, s * 0.2, 0, 0, 6.2832);
+      g.fill();
+      if (kind === 'rain' || kind === 'storm') {
+        g.strokeStyle = '#7ab8e0';
+        for (var r = 0; r < 3; r++) {
+          var rx = cx - s * 0.3 + r * s * 0.3;
+          g.beginPath(); g.moveTo(rx, cy + s * 0.22); g.lineTo(rx - s * 0.06, cy + s * 0.42); g.stroke();
+        }
+      }
+      if (kind === 'storm') {
+        g.fillStyle = '#ffd964';
+        g.beginPath(); g.moveTo(cx + s * 0.05, cy + s * 0.1); g.lineTo(cx - s * 0.08, cy + s * 0.42);
+        g.lineTo(cx + s * 0.06, cy + s * 0.42); g.lineTo(cx - s * 0.04, cy + s * 0.66);
+        g.lineTo(cx + s * 0.14, cy + s * 0.3); g.lineTo(cx, cy + s * 0.3); g.closePath(); g.fill();
+      }
+      if (kind === 'fog') {
+        g.strokeStyle = 'rgba(232,238,244,0.8)';
+        for (var f = 0; f < 3; f++) {
+          g.beginPath(); g.moveTo(cx - s * 0.5, cy + s * 0.28 + f * s * 0.14);
+          g.lineTo(cx + s * 0.5, cy + s * 0.28 + f * s * 0.14); g.stroke();
+        }
+      }
+    } else if (kind === 'wind') {
+      g.strokeStyle = 'rgba(180,220,235,0.95)';
+      for (var w = 0; w < 3; w++) {
+        var wy = cy - s * 0.3 + w * s * 0.3;
+        g.beginPath(); g.moveTo(cx - s * 0.5, wy);
+        g.quadraticCurveTo(cx, wy - s * 0.18, cx + s * 0.5, wy);
+        g.stroke();
+      }
+    }
+  }
+  function drawWx() {
+    var c = $('hud-wx'); if (!c || !st) return;
+    var g = c.getContext('2d');
+    g.clearRect(0, 0, 72, 72);
+    g.fillStyle = 'rgba(22,33,15,0.72)';
+    g.beginPath(); g.arc(36, 36, 33, 0, 6.2832); g.fill();
+    g.strokeStyle = 'rgba(217,164,65,0.4)'; g.lineWidth = 3;
+    g.beginPath(); g.arc(36, 36, 31, 0, 6.2832); g.stroke();
+    drawWxIcon(g, st.weather.kind, 32, 32, 44);
+    /* forecast: tiny next-weather in the corner */
+    drawWxIcon(g, st.weather.next, 56, 56, 22);
+  }
   function refreshQuests() {
     if (!st) return;
     var list = $('quest-list'); list.innerHTML = '';
