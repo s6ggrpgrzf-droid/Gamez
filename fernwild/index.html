@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1d2b1a">
 <title>Fernwild — a cozy forest sim</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <div id="app">
@@ -47,21 +47,35 @@
       <button id="seed-cancel" class="btn ghost" type="button">Never mind</button>
     </div>
     <div id="toast" class="hidden"></div>
+    <div id="wild-event" class="hidden" role="dialog" aria-label="Something stirs in the forest">
+      <div class="journal-card">
+        <div class="journal-head" id="wild-title"></div>
+        <div id="wild-text" class="wild-text"></div>
+        <div class="wild-btns">
+          <button id="wild-a" class="btn primary" type="button"></button>
+          <button id="wild-b" class="btn" type="button"></button>
+        </div>
+      </div>
+    </div>
     <div id="journal" class="hidden" role="dialog" aria-label="Field guide">
       <div class="journal-card">
         <div class="journal-head">FIELD GUIDE</div>
+        <div class="journal-sec">Forest records</div>
+        <div id="journal-records" class="rec-list"></div>
         <div class="journal-sec">Discoveries <span id="disc-count"></span></div>
         <div id="journal-species" class="journal-grid"></div>
         <div class="journal-sec">Achievements <span id="ach-count"></span></div>
         <div id="journal-ach" class="ach-list"></div>
+        <div class="journal-sec">Chronicle</div>
+        <div id="journal-chron" class="chron-list"></div>
         <button id="journal-close" class="btn primary" type="button">Back to the forest</button>
       </div>
     </div>
   </section>
 </div>
-<script src="sim.js?v=2"></script>
-<script src="art.js?v=2"></script>
+<script src="sim.js?v=4"></script>
+<script src="art.js?v=3"></script>
 <script src="audio.js?v=1"></script>
-<script src="game.js?v=2"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

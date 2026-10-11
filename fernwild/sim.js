@@ -5,7 +5,7 @@
  * ========================================================================== */
 'use strict';
 var FW = (function () {
-  var GW = 12, GH = 1; /* side view: one row of 12 soil spots */
+  var GW = 20, GH = 1; /* side view: one row of 20 soil spots */
 
   /* growth stages */
   var ST = { EMPTY: 0, SEED: 1, SPROUT: 2, SAPLING: 3, ADULT: 4, ANCIENT: 5, FALLEN: 6 };
@@ -13,6 +13,7 @@ var FW = (function () {
   var PLANTS = {
     pine:  { name: 'Pine',       cost: 5,  times: [20, 45, 80],  desc: 'Quick and hardy',        color: '#2f5d33' },
     berry: { name: 'Berry bush',  cost: 12, times: [25, 55, 95],  desc: 'Flowers feed butterflies', color: '#3f7038' },
+    aspen: { name: 'Aspen',       cost: 14, times: [22, 50, 90],  desc: 'Clones itself through roots', color: '#4a7a4a' },
     oak:   { name: 'Oak',        cost: 20, times: [35, 80, 150],  desc: 'Slow and mighty',        color: '#2a5230' }
   };
   var ANCIENT_T = 260;   /* adult -> ancient */
@@ -32,7 +33,8 @@ var FW = (function () {
     'doolittle':    { name: 'Dr. Doolittle',     desc: 'Tap animals 100 times' },
     'rainmaker':    { name: 'Rainmaker',         desc: 'Summon a storm' },
     'rich':         { name: 'Thousand Leaves',   desc: 'Hold 1,000 leaves at once' },
-    'full-house':   { name: 'Full House',        desc: 'All 8 species move in' }
+    'full-house':   { name: 'Full House',        desc: 'All 9 species move in' },
+    'pando':        { name: 'Pando',             desc: 'Grow a grove of 8 aspens' }
   };
   function unlock(st, id) {
     if (!st.ach[id]) { st.ach[id] = 1; ev(st, { t: 'ach', id: id }); }
@@ -62,11 +64,14 @@ var FW = (function () {
                  tapText: 'snuffles about!' },
     frog:      { name: 'Frog',      need: '8 plants',         small: false,
                  check: function (s) { return s.plants >= 8; },
-                 tapText: 'croaks for rain!' }
+                 tapText: 'croaks for rain!' },
+    vole:      { name: 'Vole',      need: '3 adult trees',     small: true, underground: true,
+                 check: function (s) { return s.adultTrees >= 3; },
+                 tapText: 'squeaks and dives!' }
   };
   var ANIMAL_IDS = Object.keys(ANIMALS);
   var TAP_COOLDOWN = 25;
-  var MAX_ANIMALS = 14;
+  var MAX_ANIMALS = 16;
 
   /* ---------- rng ---------- */
   function rnd(st) {
@@ -82,14 +87,16 @@ var FW = (function () {
   /* ---------- state ---------- */
   function newGame(seed) {
     var tiles = [];
-    for (var i = 0; i < GW * GH; i++) tiles.push({ plant: null, mush: false, net: 0 });
+    for (var i = 0; i < GW * GH; i++) tiles.push({ x: i, plant: null, mush: false, net: 0, fire: 0, gnawedUntil: 0 });
     return {
       v: 1, seed: seed >>> 0 || 1, _rs: (seed >>> 0 || 1),
       tiles: tiles, points: 30, day: 1, dayT: 0,
       animals: [], visiting: [],   /* visiting: [{species, t}] */
+      dung: [],                    /* [{x, until}] fertilizer mounds */
       nextAid: 1, events: [],
       ach: {}, storm: 0,
-      stats: { grown: 0, tapped: 0, speciesSeen: [], plantsSeen: [], plantedAny: false, arrivals: 0, peak: 30 }
+      stats: { grown: 0, tapped: 0, speciesSeen: [], plantsSeen: [], plantedAny: false, arrivals: 0, peak: 30,
+               tallest: 0, widestWeb: 0 }
     };
   }
   function tile(st, x, y) { return st.tiles[y * GW + x]; }
@@ -202,6 +209,13 @@ var FW = (function () {
     if (tl.net > 0) m *= 1.3;
     if (tl.plant && tl.plant.boostUntil > now) m *= 1.6;
     if (tl.plant && tl.plant.fast && tl.plant.stage <= ST.SAPLING) m *= 3;
+    if (tl.gnawedUntil > now) m *= 0.45;                       /* vole damage */
+    if (st.dung.length) {                                       /* poop fertilizer */
+      for (var d = 0; d < st.dung.length; d++) {
+        var dg = st.dung[d];
+        if (dg.until > now && Math.abs(dg.x - tl.x) <= 1) { m *= 1.5; break; }
+      }
+    }
     return m;
   }
   function stageTime(type, stage) {
@@ -273,6 +287,60 @@ var FW = (function () {
     unlock(st, 'rainmaker');
     return { ok: true };
   }
+  /* wild-event gifts: the AI writes the story, the sim applies the outcome */
+  function wildGift(st, kind, now) {
+    if (kind === 'seed') {
+      var empty = [];
+      for (var i = 0; i < st.tiles.length; i++) if (!st.tiles[i].plant && !st.tiles[i].mush) empty.push(i);
+      if (!empty.length) return { ok: false };
+      var ti = pick(st, empty), types = ['pine', 'aspen', 'berry', 'oak'];
+      var ty = pick(st, types);
+      st.tiles[ti].plant = { type: ty, stage: ST.SEED, t: 0, boostUntil: 0, gift: true };
+      ev(st, { t: 'planted', x: ti % GW, y: (ti / GW) | 0, type: ty, free: true });
+      return { ok: true, x: ti % GW, y: 0, what: 'seed' };
+    }
+    if (kind === 'mush') {
+      var spots = [];
+      for (var m = 0; m < st.tiles.length; m++) {
+        if (st.tiles[m].plant || st.tiles[m].mush) continue;
+        var mx = m % GW, ok2 = false;
+        if (mx > 0 && st.tiles[m - 1].plant) ok2 = true;
+        if (mx < GW - 1 && st.tiles[m + 1].plant) ok2 = true;
+        if (ok2) spots.push(m);
+      }
+      if (!spots.length) return { ok: false };
+      var mi = pick(st, spots);
+      st.tiles[mi].mush = true;
+      ev(st, { t: 'mushroom', x: mi % GW, y: (mi / GW) | 0, free: true });
+      return { ok: true, x: mi % GW, y: 0, what: 'mushroom' };
+    }
+    if (kind === 'boost') {
+      var n = 0;
+      for (var b = 0; b < st.tiles.length; b++) {
+        var bp = st.tiles[b].plant;
+        if (bp && bp.stage < ST.FALLEN) { bp.boostUntil = Math.max(bp.boostUntil, now + 90); n++; }
+      }
+      return { ok: n > 0, what: 'boost' };
+    }
+    return { ok: false };
+  }
+  function dropDung(st, x, now, loud) {
+    if (st.dung.length >= 6) st.dung.shift();
+    st.dung.push({ x: Math.max(0, Math.min(GW - 1, Math.round(x))), until: now + 90 });
+    ev(st, { t: 'pooped', x: x, y: 0, loud: !!loud });
+  }
+  /* tap a burning tree to beat at the flames */
+  function smother(st, x, y, now) {
+    var tl = tile(st, x, y);
+    if (!tl || !tl.fire) return { ok: false };
+    tl.fire -= 9;
+    if (tl.fire <= 0) {
+      tl.fire = 0;
+      ev(st, { t: 'smothered', x: x, y: y });
+      return { ok: true, out: true };
+    }
+    return { ok: true, out: false };
+  }
   function tapAnimal(st, id, now) {
     var a = null;
     for (var i = 0; i < st.animals.length; i++) if (st.animals[i].id === id) a = st.animals[i];
@@ -283,6 +351,13 @@ var FW = (function () {
     if (st.stats.tapped >= 25) unlock(st, 'social');
     if (st.stats.tapped >= 100) unlock(st, 'doolittle');
     var sp = a.species, msg = ANIMALS[sp].name + ' ' + ANIMALS[sp].tapText, fx = null;
+    if (sp === 'vole') {
+      /* shooed! the vole flees the forest */
+      for (var vi = 0; vi < st.animals.length; vi++) if (st.animals[vi].id === id) st.animals.splice(vi, 1);
+      addPoints(st, 4, 'vole shooed', a.x, a.y);
+      ev(st, { t: 'fled', species: sp, x: a.x, y: a.y });
+      return { ok: true, msg: 'The vole flees underground!', fx: null, x: a.x, y: a.y };
+    }
     if (sp === 'squirrel') {
       var spot = emptyTileNear(st, a.x, a.y);
       if (spot) {
@@ -294,6 +369,7 @@ var FW = (function () {
     } else if (sp === 'rabbit') {
       var pts = 6; if (rnd(st) < 0.25) { pts += 10; msg += ' Found a cache!'; }
       addPoints(st, pts, 'rabbit', a.x, a.y); fx = 'hearts';
+      dropDung(st, a.x, now, true);
     } else if (sp === 'butterfly') {
       for (var k = 0; k < st.tiles.length; k++) {
         var tx = k % GW, ty = (k / GW) | 0;
@@ -307,6 +383,7 @@ var FW = (function () {
       addPoints(st, 8, 'owl', a.x, a.y);
     } else if (sp === 'deer') {
       addPoints(st, 10, 'deer', a.x, a.y);
+      dropDung(st, a.x, now, true);
       var saps = [];
       for (var j = 0; j < st.tiles.length; j++)
         if (st.tiles[j].plant && st.tiles[j].plant.stage === ST.SAPLING) saps.push(j);
@@ -393,7 +470,7 @@ var FW = (function () {
     /* plants */
     for (var i = 0; i < st.tiles.length; i++) {
       var tl = st.tiles[i], p = tl.plant;
-      if (!p || p.stage === ST.FALLEN) continue;
+      if (!p || p.stage === ST.FALLEN || tl.fire > 0) continue;
       p.t += dt * growthMul(st, tl, now);
       var need = stageTime(p.type, p.stage);
       if (p.t >= need) {
@@ -412,9 +489,131 @@ var FW = (function () {
       st.visiting[v].t -= dt;
       if (st.visiting[v].t <= 0) { addAnimal(st, st.visiting[v].species, now); st.visiting.splice(v, 1); }
     }
+    /* ---- aspen root suckers: Pando-style cloning ---- */
+    for (var as = 0; as < st.tiles.length; as++) {
+      var atl = st.tiles[as], ap = atl.plant;
+      if (!ap || ap.type !== 'aspen' || ap.stage < ST.ADULT) continue;
+      ap.suckT = (ap.suckT || 40 + rnd(st) * 40) - dt;
+      if (ap.suckT <= 0) {
+        ap.suckT = 50 + rnd(st) * 40;
+        if ((ap.suckers || 0) < 4) {
+          var ax = as % GW, spots2 = [];
+          if (ax > 0 && !st.tiles[as - 1].plant) spots2.push(as - 1);
+          if (ax < GW - 1 && !st.tiles[as + 1].plant) spots2.push(as + 1);
+          if (spots2.length) {
+            var si = pick(st, spots2);
+            st.tiles[si].plant = { type: 'aspen', stage: ST.SPROUT, t: 0, boostUntil: 0, fast: true, sucker: true };
+            ap.suckers = (ap.suckers || 0) + 1;
+            ev(st, { t: 'sucker', x: si % GW, y: (si / GW) | 0 });
+          }
+        }
+      }
+    }
+    /* pando achievement: a grove of 8 aspens */
+    var aspens = 0;
+    for (var ac = 0; ac < st.tiles.length; ac++) {
+      var acp = st.tiles[ac].plant;
+      if (acp && acp.type === 'aspen' && acp.stage >= ST.SAPLING) aspens++;
+    }
+    if (aspens >= 8) unlock(st, 'pando');
+    /* ---- wildfire: ignition, spread, burnout ---- */
+    if (st.day >= 3 && st.storm <= 0) {
+      st._fireT = (st._fireT || 60) - dt;
+      if (st._fireT <= 0) {
+        st._fireT = 90 + rnd(st) * 120;
+        var burnables = [];
+        for (var bi = 0; bi < st.tiles.length; bi++) {
+          var bp = st.tiles[bi].plant;
+          if (bp && bp.stage >= ST.SAPLING && bp.stage < ST.FALLEN && !st.tiles[bi].fire) burnables.push(bi);
+        }
+        if (burnables.length >= 4 && rnd(st) < 0.35) {
+          var fi2 = pick(st, burnables);
+          st.tiles[fi2].fire = 25;
+          ev(st, { t: 'ignited', x: fi2 % GW, y: (fi2 / GW) | 0 });
+        }
+      }
+    }
+    for (var fb = 0; fb < st.tiles.length; fb++) {
+      var ftl = st.tiles[fb];
+      if (!ftl.fire) continue;
+      if (st.storm > 0) ftl.fire -= dt * 10; else ftl.fire -= dt;
+      /* spread to neighboring trees */
+      if (ftl.fire > 0 && st.storm <= 0) {
+        var fx2 = fb % GW, nb = [];
+        if (fx2 > 0) nb.push(fb - 1);
+        if (fx2 < GW - 1) nb.push(fb + 1);
+        for (var nb2 = 0; nb2 < nb.length; nb2++) {
+          var ntl = st.tiles[nb[nb2]], np = ntl.plant;
+          if (!ntl.fire && np && np.stage >= ST.SAPLING && np.stage < ST.FALLEN && rnd(st) < dt * 0.06) {
+            ntl.fire = 25;
+            ev(st, { t: 'ignited', x: nb[nb2] % GW, y: (nb[nb2] / GW) | 0 });
+          }
+        }
+      }
+      if (ftl.fire <= 0) {
+        ftl.fire = 0;
+        if (ftl.plant && ftl.plant.stage >= ST.SAPLING) {
+          ftl.plant.stage = ST.FALLEN; ftl.plant.t = 0; ftl.plant.charred = true;
+          ev(st, { t: 'burnout', x: fb % GW, y: (fb / GW) | 0, type: ftl.plant.type });
+          unlock(st, 'circle');
+          /* ash fertilizes neighbors */
+          var fx3 = fb % GW, ash = [];
+          if (fx3 > 0) ash.push(fb - 1);
+          if (fx3 < GW - 1) ash.push(fb + 1);
+          for (var ai = 0; ai < ash.length; ai++) {
+            var apl = st.tiles[ash[ai]].plant;
+            if (apl) apl.boostUntil = Math.max(apl.boostUntil, now + 120);
+          }
+        }
+      }
+    }
+    /* ---- voles gnaw roots ---- */
+    for (var vo = 0; vo < st.animals.length; vo++) {
+      var va = st.animals[vo];
+      if (va.species !== 'vole') continue;
+      /* pick a tree to gnaw */
+      if (va.gnaw == null || va.gnaw < 0 || !st.tiles[va.gnaw] || !st.tiles[va.gnaw].plant ||
+          st.tiles[va.gnaw].plant.stage < ST.SAPLING) {
+        var trees = [];
+        for (var ti = 0; ti < st.tiles.length; ti++) {
+          var tp2 = st.tiles[ti].plant;
+          if (tp2 && tp2.stage >= ST.SAPLING && tp2.stage < ST.FALLEN) trees.push(ti);
+        }
+        va.gnaw = trees.length ? pick(st, trees) : -1;
+      }
+      if (va.gnaw >= 0) {
+        /* scurry toward the target tile, about one spot per 2.5s */
+        va._mx = (va._mx || 0) + dt;
+        var gx = va.gnaw % GW;
+        if (va._mx >= 2.5) {
+          va._mx = 0;
+          if (va.x < gx) va.x++; else if (va.x > gx) va.x--;
+          va.y = 0;
+        }
+        if (va.x === gx) st.tiles[va.gnaw].gnawedUntil = now + 20;
+      }
+    }
+    /* ---- dung expiry + passive poop ---- */
+    for (var dg2 = st.dung.length - 1; dg2 >= 0; dg2--) if (st.dung[dg2].until <= now) st.dung.splice(dg2, 1);
+    st._poopT = (st._poopT || 40 + rnd(st) * 30) - dt;
+    if (st._poopT <= 0) {
+      st._poopT = 50 + rnd(st) * 40;
+      var poopers = [];
+      for (var pp = 0; pp < st.animals.length; pp++)
+        if (st.animals[pp].species === 'rabbit' || st.animals[pp].species === 'deer') poopers.push(st.animals[pp]);
+      if (poopers.length) { var pz = pick(st, poopers); dropDung(st, pz.x, now); }
+    }
+    /* ---- records ---- */
+    var hm = {}; hm[ST.SPROUT] = 0.5; hm[ST.SAPLING] = 2; hm[ST.ADULT] = 12; hm[ST.ANCIENT] = 30;
+    for (var ri = 0; ri < st.tiles.length; ri++) {
+      var rp = st.tiles[ri].plant;
+      if (rp && hm[rp.stage] > st.stats.tallest) st.stats.tallest = hm[rp.stage];
+    }
+    if (biggest > st.stats.widestWeb) st.stats.widestWeb = biggest;
     /* wander */
     for (var a = 0; a < st.animals.length; a++) {
       var an = st.animals[a];
+      if (an.species === 'vole') continue; /* voles tunnel with purpose */
       an.wt -= dt;
       if (an.wt <= 0) {
         an.wt = 4 + rnd(st) * 6;
@@ -433,8 +632,8 @@ var FW = (function () {
   /* ---------- save ---------- */
   function serialize(st) {
     return JSON.stringify({
-      v: 2, seed: st.seed, _rs: st._rs, tiles: st.tiles, points: st.points,
-      day: st.day, dayT: st.dayT, animals: st.animals, visiting: st.visiting,
+      v: 3, seed: st.seed, _rs: st._rs, tiles: st.tiles, points: st.points,
+      day: st.day, dayT: st.dayT, animals: st.animals, visiting: st.visiting, dung: st.dung,
       nextAid: st.nextAid, stats: st.stats, ach: st.ach || {}, storm: st.storm || 0,
       savedAt: Date.now()
     });
@@ -442,10 +641,11 @@ var FW = (function () {
   function deserialize(json) {
     try {
       var d = JSON.parse(json);
-      /* v1 was the top-down 8x8 build; the side-view rebuild starts fresh */
-      if (!d || d.v !== 2 || !Array.isArray(d.tiles) || d.tiles.length !== GW * GH) return null;
+      /* v1 was the top-down 8x8 build, v2 the 12-spot row; v3 is the 20-spot forest */
+      if (!d || d.v !== 3 || !Array.isArray(d.tiles) || d.tiles.length !== GW * GH) return null;
       d.events = [];
       if (!d.ach) d.ach = {};
+      if (!d.dung) d.dung = [];
       if (!d.stats.plantsSeen) d.stats.plantsSeen = [];
       if (typeof d.storm !== 'number') d.storm = 0;
       return d;
@@ -458,7 +658,7 @@ var FW = (function () {
     function ok(c, name) { if (!c) { fails++; console.log('FAIL:', name); } }
     var st = newGame(42);
     ok(st.points === 30, 'start points');
-    ok(st.tiles.length === 12, 'one row of 12 spots');
+    ok(st.tiles.length === 20, 'one row of 20 spots');
     var r = plant(st, 0, 0, 'pine');
     ok(r.ok && st.points === 25, 'plant pine costs 5');
     ok(!plant(st, 0, 0, 'pine').ok, 'no double plant');
@@ -501,8 +701,9 @@ var FW = (function () {
     ok(tile(st5, 0, 0).plant.stage === ST.SPROUT, 'deer nibbles sapling');
     /* serialize round-trip */
     var s = serialize(st5), back = deserialize(s);
-    ok(back && back.points === st5.points && back.tiles.length === 12, 'save round-trip');
+    ok(back && back.points === st5.points && back.tiles.length === 20, 'save round-trip');
     ok(deserialize('{"v":1,"tiles":[]}') === null, 'old top-down save rejected');
+    ok(deserialize('{"v":2,"tiles":[]}') === null, 'v2 12-spot save rejected');
     /* fallen trunk + hedgehog */
     var st6 = newGame(13); st6.points = 500;
     plant(st6, 5, 0, 'oak'); tile(st6, 5, 0).plant.stage = ST.FALLEN;
@@ -538,6 +739,51 @@ var FW = (function () {
     plant(st10, 7, 0, 'pine');
     step(st10, 30); /* fast tree: 20s/3 -> sprout */
     ok(st10.ach['first-sprout'], 'first-sprout achievement');
+    /* vole gnaws roots, tap shoos it */
+    var st11 = newGame(19); st11.points = 500;
+    plant(st11, 5, 0, 'pine'); plant(st11, 6, 0, 'pine'); plant(st11, 7, 0, 'pine');
+    [[5,0],[6,0],[7,0]].forEach(function (c) { tile(st11, c[0], c[1]).plant.stage = ST.ADULT; });
+    var vl = addAnimal(st11, 'vole', 0);
+    for (var vg = 0; vg < 40; vg++) step(st11, 1);
+    ok(tile(st11, 5, 0).gnawedUntil > 0 || tile(st11, 6, 0).gnawedUntil > 0 || tile(st11, 7, 0).gnawedUntil > 0, 'vole gnaws the tree roots');
+    var tl11 = tile(st11, 5, 0);
+    tl11.gnawedUntil = now() + 60;
+    ok(growthMul(st11, tl11, now()) < 1, 'gnawed roots slow growth');
+    ok(tapAnimal(st11, vl.id, 100).ok && !st11.animals.some(function (a) { return a.species === 'vole'; }), 'tap shoos the vole');
+    /* dung fertilizes */
+    var st12 = newGame(20); st12.points = 500;
+    plant(st12, 8, 0, 'pine');
+    dropDung(st12, 8, now());
+    ok(st12.dung.length === 1, 'dung dropped');
+    ok(growthMul(st12, tile(st12, 8, 0), now()) > 1, 'dung boosts growth');
+    /* aspen suckers + pando */
+    var st13 = newGame(21); st13.points = 500;
+    for (var ai2 = 0; ai2 < 8; ai2++) { plant(st13, ai2 * 2, 0, 'aspen'); tile(st13, ai2 * 2, 0).plant.stage = ST.SAPLING; }
+    step(st13, 0.1);
+    ok(st13.ach['pando'], 'pando: 8 aspens');
+    var st13b = newGame(22); st13b.points = 500;
+    plant(st13b, 10, 0, 'aspen');
+    var asp = tile(st13b, 10, 0).plant; asp.stage = ST.ADULT; asp.suckT = 0.01; asp.fast = false;
+    step(st13b, 1);
+    ok(tile(st13b, 9, 0).plant || tile(st13b, 11, 0).plant, 'aspen sends up a root sucker');
+    /* wildfire: ignite, smother, burnout */
+    var st14 = newGame(23); st14.points = 500;
+    plant(st14, 3, 0, 'pine'); tile(st14, 3, 0).plant.stage = ST.ADULT;
+    tile(st14, 3, 0).fire = 25;
+    step(st14, 1);
+    ok(tile(st14, 3, 0).fire === 24, 'fire burns down');
+    var sm1 = smother(st14, 3, 0, now());
+    ok(sm1.ok && !sm1.out, 'smother weakens fire');
+    smother(st14, 3, 0, now()); smother(st14, 3, 0, now());
+    ok(tile(st14, 3, 0).fire === 0, 'three taps smother the fire');
+    tile(st14, 3, 0).fire = 0.5;
+    step(st14, 1);
+    ok(tile(st14, 3, 0).plant.stage === ST.FALLEN && tile(st14, 3, 0).plant.charred, 'burned tree becomes charred trunk');
+    /* records */
+    var st15 = newGame(24); st15.points = 500;
+    plant(st15, 0, 0, 'oak'); tile(st15, 0, 0).plant.stage = ST.ANCIENT;
+    step(st15, 0.1);
+    ok(st15.stats.tallest === 30, 'tallest tree tracked in meters');
     console.log(fails === 0 ? 'SIM SELF-TEST: ALL PASS' : 'SIM SELF-TEST: ' + fails + ' FAILURES');
     return fails;
   }
@@ -547,7 +793,7 @@ var FW = (function () {
     MUSH_COST: MUSH_COST, TAP_COOLDOWN: TAP_COOLDOWN, STORM_COST: STORM_COST,
     ACH: ACH,
     newGame: newGame, step: step, plant: plant, plantMushroom: plantMushroom,
-    clearTile: clearTile, tapAnimal: tapAnimal, stats: stats, summonStorm: summonStorm,
+    clearTile: clearTile, tapAnimal: tapAnimal, smother: smother, wildGift: wildGift, stats: stats, summonStorm: summonStorm,
     computeNetworks: computeNetworks, drainEvents: drainEvents, now: now,
     serialize: serialize, deserialize: deserialize, selfTest: selfTest
   };

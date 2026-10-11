@@ -7,9 +7,12 @@
 
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
   var W = 0, H = 0;
-  var SY = 0, botY = 0, UD = 0, spotW = 0, padX = 16, pondX = 0;
+  var SY = 0, botY = 0, UD = 0, spotW = 0, padX = 16, pondX = 0, worldW = 0;
   var ASZ = 46;
   var bgCache = null, soilCache = null, titleCache = null, lastTitleDraw = 0;
+  /* camera: world coords at z=1 match the old screen layout; camX = world x at screen center */
+  var camX = 0, camZ = 1, fdt = 0;
+  var VISIBLE_SPOTS = 12;
 
   var st = null;            /* FW sim state */
   var screen = 'title';
@@ -43,12 +46,25 @@
     SY = topPad + (H - topPad - botPad) * 0.40;
     botY = H - botPad;
     UD = botY - SY;
-    spotW = (W - padX * 2) / FW.GW;
-    pondX = W * 0.78;
+    spotW = (W - padX * 2) / VISIBLE_SPOTS;
+    worldW = padX * 2 + FW.GW * spotW;
+    pondX = worldW * 0.78;
     ASZ = Math.max(34, Math.min(56, spotW * 1.5));
-    bgCache = FArt.gameBG(Math.round(W), Math.round(H), Math.round(SY), 0);
-    soilCache = FArt.underground(Math.round(W), Math.round(H), surfY, Math.round(botY));
+    bgCache = FArt.gameBG(Math.round(worldW), Math.round(H), Math.round(SY), 0);
+    soilCache = FArt.underground(Math.round(worldW), Math.round(H), surfY, Math.round(botY));
     titleCache = null;
+    if (!camX) camX = padX + (VISIBLE_SPOTS / 2) * spotW; /* start framed on the first grove */
+    clampCam();
+  }
+  function clampCam() {
+    var viewW = W / camZ;
+    if (viewW >= worldW) camX = worldW / 2;
+    else camX = Math.max(viewW / 2, Math.min(worldW - viewW / 2, camX));
+  }
+  function w2sX(wx) { return W / 2 + (wx - camX) * camZ; }   /* world -> screen */
+  function s2wX(sx) { return camX + (sx - W / 2) / camZ; }     /* screen -> world */
+  function applyCam() {
+    ctx.setTransform(DPR * camZ, 0, 0, DPR * camZ, DPR * (W / 2 - camX * camZ), 0);
   }
   window.addEventListener('resize', resize);
 
@@ -114,7 +130,95 @@
     return { x: W / 2, y: SY - 40 };
   }
 
-  /* ---------------- seed sheet ---------------- */
+  /* ---------------- forest AI (gamez-ai worker; everything optional) ---------------- */
+  var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
+  function aiFetch(kind, payload, cb) {
+    var done = false;
+    var timer = setTimeout(function () { fin(null); }, 7000);
+    function fin(t) { if (!done) { done = true; clearTimeout(timer); cb(t); } }
+    try {
+      fetch(AI_BASE + '/g', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind, game: 'fernwild', ctx: payload })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) { fin(d && !d.error ? d : null); })
+        .catch(function () { fin(null); });
+    } catch (e) { fin(null); }
+  }
+  /* chronicle: one storybook line per day, stored locally */
+  var chronLog = [], dayNotes = [];
+  try { chronLog = JSON.parse(localStorage.getItem('fw_chron') || '[]'); } catch (e) { chronLog = []; }
+  function saveChron() {
+    try {
+      if (chronLog.length > 30) chronLog = chronLog.slice(-30);
+      localStorage.setItem('fw_chron', JSON.stringify(chronLog));
+    } catch (e) {}
+  }
+  function noteDay(s) {
+    dayNotes.push(s);
+    if (dayNotes.length > 8) dayNotes.shift();
+  }
+  function writeChronicle(day) {
+    if (!dayNotes.length) return;
+    var summary = dayNotes.join('; ');
+    dayNotes = [];
+    aiFetch('chronicle', { day: day, events: summary, seed: st.seed }, function (d) {
+      if (d && d.text) {
+        chronLog.push({ day: day, text: d.text });
+        saveChron();
+      }
+    });
+  }
+
+  /* ---------------- wandering events: the AI writes the story, the sim applies it ---------------- */
+  var WILD_TEMPLATES = [
+    { kind: 'seed',  hint: 'a jay drops a strange seed at the forest edge' },
+    { kind: 'mush',  hint: 'a fairy ring of mushrooms glows at dusk' },
+    { kind: 'boost', hint: 'a traveling painted lady butterfly rests on a leaf' },
+    { kind: 'boost', hint: 'a warm sun-shower drifts over the canopy' }
+  ];
+  function maybeWildEvent(day) {
+    if (day < 2 || !st) return;
+    var lastDay = 0;
+    try { lastDay = parseInt(localStorage.getItem('fw_wildday') || '0', 10); } catch (e) {}
+    if (lastDay >= day) return;
+    var tpl = WILD_TEMPLATES[day % WILD_TEMPLATES.length];
+    aiFetch('wildevent', { day: day, hint: tpl.hint, seed: st.seed }, function (d) {
+      if (!d || !d.title || !d.text) return;
+      try { localStorage.setItem('fw_wildday', String(day)); } catch (e) {}
+      showWildEvent(d, tpl.kind);
+    });
+  }
+  function showWildEvent(d, kind) {
+    $('wild-title').textContent = d.title;
+    $('wild-text').textContent = d.text;
+    var ba = $('wild-a'), bb = $('wild-b');
+    ba.textContent = d.a || 'Tend it';
+    bb.textContent = d.b || 'Just watch';
+    function close() { $('wild-event').classList.add('hidden'); }
+    ba.onclick = function () {
+      close(); FAu.tap();
+      var r = FW.wildGift(st, kind, FW.now());
+      if (r.ok && r.x >= 0) {
+        var px = spotX(r.x);
+        floater(px, surfY(px) - 50, r.what === 'seed' ? 'a wild seed sprouts!' : (r.what === 'mushroom' ? 'wild mushrooms!' : 'the forest glows!'), '#c9ecb0');
+        burst(px, surfY(px) - 30, 'petals');
+        noteDay('something wild happened at the forest edge');
+      } else if (r.ok) {
+        floater(W / 2, SY - 60, 'the forest glows!', '#c9ecb0');
+      } else {
+        st.points += 8;
+        toast('The forest thanks you anyway (+8 leaves)');
+      }
+    };
+    bb.onclick = function () {
+      close(); FAu.tap();
+      st.points += 6;
+      toast('You watch quietly (+6 leaves)');
+    };
+    $('wild-event').classList.remove('hidden');
+    FAu.arrive();
+  }
   function openSheet(i) {
     selTile = { x: i, y: 0 };
     var list = $('seed-list'); list.innerHTML = '';
@@ -152,20 +256,101 @@
   }
   $('seed-cancel').addEventListener('click', closeSheet);
 
-  /* ---------------- input ---------------- */
-  var pdown = null;
+  /* ---------------- input: tap, drag-pan, pinch-zoom ---------------- */
+  var pointers = {}, pdown = null, pinchD0 = 0, pinchZ0 = 1, pinchMid0 = 0, movedFar = false;
   canvas.addEventListener('pointerdown', function (e) {
-    pdown = { x: e.clientX, y: e.clientY };
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(pointers);
+    if (ids.length === 1) {
+      pdown = { x: e.clientX, y: e.clientY };
+      movedFar = false;
+    } else if (ids.length === 2) {
+      var p1 = pointers[ids[0]], p2 = pointers[ids[1]];
+      pinchD0 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      pinchZ0 = camZ; pinchMid0 = (p1.x + p2.x) / 2;
+      pdown = null; /* a pinch is never a tap */
+    }
   });
-  canvas.addEventListener('pointerup', function (e) {
-    if (!pdown) return;
-    var dx = e.clientX - pdown.x, dy = e.clientY - pdown.y;
-    pdown = null;
-    if (dx * dx + dy * dy > 144) return; /* it was a drag */
-    handleTap(e.clientX, e.clientY);
+  canvas.addEventListener('pointermove', function (e) {
+    if (!pointers[e.pointerId]) return;
+    var prev = pointers[e.pointerId];
+    var dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(pointers);
+    if (ids.length === 2) {
+      var p1 = pointers[ids[0]], p2 = pointers[ids[1]];
+      var d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      if (pinchD0 > 0 && d > 0) {
+        var mid = (p1.x + p2.x) / 2;
+        var nz = Math.max(0.5, Math.min(1.8, pinchZ0 * d / pinchD0));
+        /* keep the world point under the pinch midpoint stable */
+        var worldUnder = camX + (pinchMid0 - W / 2) / pinchZ0;
+        camZ = nz;
+        camX = worldUnder - (mid - W / 2) / nz;
+        clampCam();
+      }
+      return;
+    }
+    if (pdown && ids.length === 1) {
+      var tdx = e.clientX - pdown.x, tdy = e.clientY - pdown.y;
+      if (tdx * tdx + tdy * tdy > 144) movedFar = true;
+      if (movedFar) { camX -= dx / camZ; clampCam(); }
+    }
   });
-  canvas.addEventListener('pointercancel', function () { pdown = null; });
+  function endPointer(e) {
+    var wasTap = !!(pdown && !movedFar && Object.keys(pointers).length === 1);
+    delete pointers[e.pointerId];
+    if (Object.keys(pointers).length === 0) {
+      if (wasTap) handleTap(e.clientX, e.clientY);
+      pdown = null;
+    } else if (Object.keys(pointers).length === 1) {
+      /* dropping from pinch back to one finger: re-anchor */
+      var id = Object.keys(pointers)[0];
+      pdown = { x: pointers[id].x, y: pointers[id].y };
+      movedFar = true; /* don't fire a tap after pinching */
+    }
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('wheel', function (e) {
+    if (screen !== 'game') return;
+    e.preventDefault();
+    var nz = Math.max(0.5, Math.min(1.8, camZ * (e.deltaY < 0 ? 1.12 : 0.89)));
+    var worldUnder = camX + (e.clientX - W / 2) / camZ;
+    camZ = nz;
+    camX = worldUnder - (e.clientX - W / 2) / nz;
+    clampCam();
+  }, { passive: false });
 
+  /* ---------------- animal visual state (movement FSM, game-side only) ---------------- */
+  var avis = {};
+  function animV(a) {
+    var v = avis[a.id];
+    if (!v) v = avis[a.id] = {
+      x: spotX(a.x), y: surfY(spotX(a.x)), tx: spotX(a.x), ty: 0,
+      mode: 'idle', t: 1 + Math.random() * 3, hopT: 0, sx: 0, sy: 0, init: false
+    };
+    return v;
+  }
+  function gcAvis() {
+    var alive = {};
+    for (var i = 0; i < st.animals.length; i++) alive[st.animals[i].id] = 1;
+    for (var id in avis) if (!alive[id]) delete avis[id];
+  }
+  function wanderGround(a, v, homeX) {
+    v.t -= fdt;
+    if (Math.abs(v.x - homeX) > spotW * 4) { v.x = homeX; v.tx = homeX; v.mode = 'idle'; v.t = 1; }
+    if (v.mode === 'idle') {
+      if (v.t <= 0) {
+        v.mode = 'walk';
+        v.tx = Math.max(padX + 8, Math.min(worldW - padX - 8, homeX + (Math.random() * 2 - 1) * spotW * 3));
+      }
+    } else {
+      var dx = v.tx - v.x, sp = 36;
+      v.x += Math.sign(dx) * Math.min(Math.abs(dx), sp * fdt);
+      if (Math.abs(dx) < 2) { v.mode = 'idle'; v.t = 2 + Math.random() * 4; }
+    }
+  }
   function nearestTree(x, minStage) {
     var best = -1, bd = 1e9;
     for (var i = 0; i < FW.GW; i++) {
@@ -177,10 +362,30 @@
     return best;
   }
   function animalPos(a) {
-    var sp = a.species;
+    var sp = a.species, v = animV(a);
+    if (sp === 'vole') {
+      var vx = spotX(a.x), vy = surfY(vx) + 36;
+      var gnawing = st.tiles[a.x] && st.tiles[a.x].gnawedUntil > FW.now();
+      var wig = gnawing ? Math.sin(elapsed * 9 + a.ph) * 4 : Math.sin(elapsed * 2 + a.ph) * 2;
+      return { x: vx + wig, y: vy, s: ASZ * 0.8, ground: false, vole: true, gnawing: !!gnawing };
+    }
     if (sp === 'frog') {
-      var fx = pondX + Math.sin(elapsed * 0.9 + a.ph) * 26;
-      return { x: fx, y: surfY(fx) + 2, s: ASZ * 0.95, ground: true };
+      if (!v.init) { v.init = true; v.x = pondX; v.y = surfY(pondX) + 2; v.tx = v.x; v.ty = v.y; }
+      v.t -= fdt;
+      if (v.mode === 'idle' && v.t <= 0) {
+        v.mode = 'hop'; v.hopT = 0; v.sx = v.x; v.sy = v.y;
+        v.tx = pondX + (Math.random() * 2 - 1) * 44;
+        v.ty = surfY(v.tx) + 2;
+      } else if (v.mode === 'hop') {
+        v.hopT += fdt / 0.55;
+        if (v.hopT >= 1) { v.mode = 'idle'; v.t = 2 + Math.random() * 4; v.x = v.tx; v.y = v.ty; }
+        else {
+          v.x = v.sx + (v.tx - v.sx) * v.hopT;
+          v.y = v.sy + (v.ty - v.sy) * v.hopT - Math.sin(v.hopT * Math.PI) * 46;
+        }
+      }
+      var croak = 1 + 0.18 * Math.max(0, Math.sin(elapsed * 2.2 + a.ph * 3));
+      return { x: v.x, y: v.y, s: ASZ * 0.95 * croak, ground: true, hopping: v.mode === 'hop' };
     }
     if (sp === 'butterfly') {
       var bx = spotX(a.x) + Math.sin(elapsed * 1.2 + a.ph) * 42;
@@ -191,24 +396,38 @@
       if (si >= 0) {
         var sx = spotX(si), sy = surfY(sx);
         var climb = 0.5 + 0.18 * Math.sin(elapsed * 0.8 + a.ph);
-        return { x: sx + Math.sin(elapsed * 0.8 + a.ph) * 9, y: sy - treeH(st.tiles[si].plant.stage) * climb, s: ASZ * 0.9, ground: false };
+        var dart = Math.sin(elapsed * 0.23 + a.ph * 2) > 0.93 ? 14 : 0; /* sudden dash */
+        return { x: sx + Math.sin(elapsed * 0.8 + a.ph) * 9 + dart, y: sy - treeH(st.tiles[si].plant.stage) * climb, s: ASZ * 0.9, ground: false };
       }
     }
     if (sp === 'owl') {
       var oi = nearestTree(spotX(a.x), FW.ST.ADULT);
       if (oi >= 0) {
         var ox = spotX(oi), oy = surfY(ox);
-        return { x: ox + 12, y: oy - treeH(st.tiles[oi].plant.stage) * 0.94 + Math.sin(elapsed * 1.1 + a.ph) * 3, s: ASZ, ground: false };
+        var sway = Math.sin(elapsed * 1.1 + a.ph) * 3;
+        var look = Math.sin(elapsed * 0.31 + a.ph * 2) > 0.7 ? 6 : 0; /* head turn */
+        return { x: ox + 12 + look, y: oy - treeH(st.tiles[oi].plant.stage) * 0.94 + sway, s: ASZ, ground: false };
       }
     }
-    var gx = spotX(a.x) + Math.sin(elapsed * 0.6 + a.ph) * 14;
+    /* ground wanderers: rabbit, fox, deer, hedgehog */
+    var homeX = spotX(a.x);
+    wanderGround(a, v, homeX);
+    var gy = surfY(v.x), graze = 0, hopY = 0;
+    if (sp === 'deer') {
+      var gc = (elapsed * 0.45 + a.ph) % 9;
+      if (gc < 1.6) graze = 13 * Math.sin(gc / 1.6 * Math.PI);
+    }
+    if (sp === 'rabbit' && v.mode === 'walk') hopY = Math.abs(Math.sin(elapsed * 11)) * 15;
+    if (sp === 'fox' && v.mode === 'walk') hopY = Math.abs(Math.sin(elapsed * 13)) * 7;
+    if (sp === 'hedgehog') v.x += Math.sin(elapsed * 22 + a.ph) * 0.8; /* shuffle */
     var size = sp === 'deer' ? ASZ * 1.3 : (sp === 'fox' ? ASZ * 1.1 : ASZ);
-    return { x: gx, y: surfY(gx), s: size, ground: true };
+    return { x: v.x, y: gy - hopY + graze, s: size, ground: true, walking: v.mode === 'walk' };
   }
   function spotAt(px, py) {
+    var wx = s2wX(px);
     var best = -1, bd = 1e9;
     for (var i = 0; i < FW.GW; i++) {
-      var sx = spotX(i), d = Math.abs(px - sx);
+      var sx = spotX(i), d = Math.abs(wx - sx);
       if (d < bd) { bd = d; best = i; }
     }
     if (best < 0 || bd > spotW * 0.62) return -1;
@@ -218,26 +437,35 @@
   function handleTap(px, py) {
     if (screen !== 'game' || !st) return;
     FAu.unlock();
+    var wx = s2wX(px);
     var best = null, bd = 1e9, bp = null;
     for (var i = 0; i < st.animals.length; i++) {
       var a = st.animals[i], ap = animalPos(a);
-      var d = Math.hypot(px - ap.x, py - (ap.y - ap.s * 0.45));
+      var d = Math.hypot(wx - ap.x, py - (ap.y - ap.s * 0.45));
       if (d < ap.s * 0.62 && d < bd) { bd = d; best = a; bp = ap; }
     }
     if (best) {
       var r = FW.tapAnimal(st, best.id, FW.now());
       if (r.ok) {
         FAu.tap();
-        toast(r.msg);
+        var tmsg = r.msg;
+        if (best.name) tmsg = tmsg.replace(FW.ANIMALS[best.species].name, best.name);
+        toast(tmsg);
         if (r.fx) burst(bp.x, bp.y - bp.s * 0.4, r.fx);
         tutAdvance('tap');
-      } else if (r.reason === 'resting') toast(FW.ANIMALS[best.species].name + ' is resting…');
+      } else if (r.reason === 'resting') toast((best.name || FW.ANIMALS[best.species].name) + ' is resting…');
       return;
     }
     var si = spotAt(px, py);
     if (si < 0) return;
     var tl = st.tiles[si];
     if (!tl.plant && !tl.mush) { openSheet(si); return; }
+    if (tl.fire > 0) {
+      var sm = FW.smother(st, si, 0, FW.now());
+      if (sm.out) { FAu.tap(); floater(spotX(si), surfY(spotX(si)) - 60, 'smothered!', '#cfe8ff'); }
+      else if (sm.ok) { FAu.tap(); floater(spotX(si), surfY(spotX(si)) - 60, 'pfft…', '#cfe8ff'); }
+      return;
+    }
     if (tl.plant && tl.plant.stage === FW.ST.FALLEN) {
       var cr = FW.clearTile(st, si, 0);
       if (cr.ok) { FAu.plant(); toast('Cleared the old trunk'); }
@@ -246,14 +474,14 @@
     if (tl.plant) {
       var pn = FW.PLANTS[tl.plant.type].name;
       var sn = ['soil', 'seed', 'sprout', 'sapling', 'adult', 'ancient', 'fallen trunk'][tl.plant.stage];
-      toast(pn + ' · ' + sn);
+      toast(pn + ' · ' + sn + (tl.gnawedUntil > FW.now() ? ' · roots gnawed!' : ''));
     } else toast('Mushroom · weaving the web');
   }
 
   /* ---------------- tutorial ---------------- */
   var TUTS = [
     'Tap a glowing patch of soil to plant your first seed',
-    'Trees grow on their own — watch their roots spread below',
+    'Trees grow on their own — swipe to look around, pinch to zoom out',
     'Someone moved in! Tap animals to see what they do',
     'Plant mushrooms beside trees to weave the web'
   ];
@@ -275,18 +503,35 @@
       else if (e.t === 'grew') {
         if (e.stage === 2) FAu.sprout();
         else if (e.stage === 4) { FAu.grow(); floater(p.x, p.y, 'grown!', '#c9ecb0'); }
-        else if (e.stage === 5) floater(p.x, p.y, 'ancient', '#e8d9ae');
-        else if (e.stage === 6) { toast('An old tree has fallen — new homes for small ones'); }
+        else if (e.stage === 5) { floater(p.x, p.y, 'ancient', '#e8d9ae'); noteDay('a ' + (FW.PLANTS[e.type] || {}).name.toLowerCase() + ' turned ancient'); }
+        else if (e.stage === 6) { toast('An old tree has fallen — new homes for small ones'); noteDay('an old tree fell'); }
       }
       else if (e.t === 'sniffing') { toast('Something\'s sniffing around…'); }
       else if (e.t === 'arrived') {
         FAu.arrive();
-        toast('A ' + FW.ANIMALS[e.species].name + ' moved in!');
         burst(p.x, p.y, 'sparkle');
         tutAdvance('arrive');
+        noteDay('a ' + FW.ANIMALS[e.species].name.toLowerCase() + ' moved in');
+        /* name the newcomer, then announce */
+        (function (sp, ex, why) {
+          aiFetch('crittername', { species: sp, n: st.stats.arrivals }, function (d) {
+            var nm = d && d.text ? d.text : null, an = null, bestId = -1;
+            for (var i = 0; i < st.animals.length; i++) {
+              var ca = st.animals[i];
+              if (ca.species === sp && ca.id > bestId) { bestId = ca.id; an = ca; }
+            }
+            if (an && nm) an.name = nm;
+            var who = (an && an.name ? an.name + ' the ' : 'A ') + FW.ANIMALS[sp].name.toLowerCase();
+            toast(who.charAt(0).toUpperCase() + who.slice(1) + ' moved in!');
+          });
+        })(e.species, e.x, e.y);
       }
       else if (e.t === 'points' && e.x >= 0) floater(p.x, p.y, '+' + e.n, '#ffe9a8');
-      else if (e.t === 'day') toast('Day ' + e.day + ' in the forest');
+      else if (e.t === 'day') {
+        toast('Day ' + e.day + ' in the forest');
+        writeChronicle(e.day);
+        maybeWildEvent(e.day);
+      }
       else if (e.t === 'mushroom') {
         FAu.mush(); tutAdvance('mush');
         if (e.free) floater(p.x, p.y, 'wild mushroom!', '#c9ecb0');
@@ -294,8 +539,14 @@
       else if (e.t === 'tapped' && e.fx) burst(p.x, p.y, e.fx);
       else if (e.t === 'left') { FAu.leave(); toast('The ' + FW.ANIMALS[e.species].name + ' moved on…'); }
       else if (e.t === 'ach') { FAu.achieve(); achToast(FW.ACH[e.id].name, FW.ACH[e.id].desc); }
-      else if (e.t === 'storm-start') { FAu.storm(); toast('A storm rolls in!'); }
+      else if (e.t === 'storm-start') { FAu.storm(); toast('A storm rolls in!'); noteDay('a storm rolled through'); }
       else if (e.t === 'storm-end') { toast('The storm passes'); }
+      else if (e.t === 'ignited') { FAu.storm(); toast('Lightning struck a tree! Tap the flames — or call a storm'); noteDay('lightning struck a tree'); }
+      else if (e.t === 'burnout') { toast('The tree burned down — its ash feeds the soil'); noteDay('a tree burned down'); }
+      else if (e.t === 'smothered') { /* floater already shown at tap */ }
+      else if (e.t === 'sucker') { FAu.sprout(); floater(p.x, p.y, 'root sucker!', '#c9ecb0'); noteDay('an aspen sent up a root sucker'); }
+      else if (e.t === 'fled') { /* tap toast already shown */ }
+      else if (e.t === 'pooped' && e.loud) { floater(p.x, p.y - 8, 'poop!', '#c9b083'); }
     }
   }
   function achToast(title, sub) {
@@ -311,8 +562,37 @@
   }
 
   /* ---------------- journal ---------------- */
+  var ECO = {
+    pine: 'Keeps each needle for years — one needle can photosynthesize for a decade.',
+    berry: 'Berries are built to be eaten — seeds that pass through a bird sprout better.',
+    aspen: 'A grove is often one organism — Utah\u2019s Pando clone weighs 6,000 tons.',
+    oak: 'One oak can shelter 2,000 species — more than any other tree.',
+    mushroom: 'The biggest living thing on Earth is an Oregon honey fungus — miles of mycelium.',
+    squirrel: 'Forgets most buried acorns — the forgotten ones plant forests.',
+    rabbit: 'Teeth never stop growing — constant gnawing keeps them filed.',
+    butterfly: 'Tastes with its feet — drums on leaves to pick the right plant.',
+    fox: 'Hears a mouse squeak from 100 meters and pounces on it.',
+    owl: 'Fringed wing feathers muffle sound — its flight is nearly silent.',
+    deer: 'No upper front teeth — grinds plants with tough dental pads.',
+    hedgehog: 'Shrugs off most snake venom — and happily eats snakes.',
+    frog: 'Drinks through its skin — it soaks, never sips.',
+    vole: 'Its tunnels aerate the soil — an engineer, and a root-nibbler.'
+  };
   function buildJournal() {
     var sp = $('journal-species'); sp.innerHTML = '';
+    /* forest records */
+    var rl = $('journal-records'); rl.innerHTML = '';
+    var recs = [
+      [Math.round(st.stats.tallest || 0) + ' m', 'tallest tree'],
+      [(st.stats.widestWeb || 0) + ' trees', 'widest web'],
+      ['Day ' + st.day, 'forest age']
+    ];
+    recs.forEach(function (r) {
+      var d = document.createElement('div'); d.className = 'rec';
+      var b = document.createElement('b'); b.textContent = r[0];
+      var s = document.createElement('span'); s.textContent = r[1];
+      d.appendChild(b); d.appendChild(s); rl.appendChild(d);
+    });
     function row(name, desc, found, draw) {
       var d = document.createElement('div');
       d.className = 'jsp' + (found ? '' : ' locked');
@@ -326,15 +606,16 @@
     }
     Object.keys(FW.PLANTS).forEach(function (k) {
       var p = FW.PLANTS[k];
-      row(p.name, p.desc, st.stats.plantsSeen.indexOf(k) >= 0, function (g) { g.drawImage(FArt.tree(k, 4, 0), 0, 0, 88, 88); });
+      row(p.name, p.desc + ' — ' + ECO[k], st.stats.plantsSeen.indexOf(k) >= 0, function (g) { g.drawImage(FArt.tree(k, 4, 0), 0, 0, 88, 88); });
     });
     var mushFound = st.tiles.some(function (t) { return t.mush; });
-    row('Mushroom', 'Weaves the web', mushFound, function (g) { g.drawImage(FArt.mushroom(0), 0, 0, 88, 88); });
+    row('Mushroom', 'Weaves the web — ' + ECO.mushroom, mushFound, function (g) { g.drawImage(FArt.mushroom(0), 0, 0, 88, 88); });
     FW.ANIMAL_IDS.forEach(function (id) {
       var a = FW.ANIMALS[id];
-      row(a.name, a.need, st.stats.speciesSeen.indexOf(id) >= 0, function (g) { g.drawImage(FArt.animal(id, 0), 0, 0, 88, 88); });
+      row(a.name, 'Needs: ' + a.need + ' — ' + ECO[id], st.stats.speciesSeen.indexOf(id) >= 0, function (g) { g.drawImage(FArt.animal(id, 0), 0, 0, 88, 88); });
     });
-    $('disc-count').textContent = (st.stats.plantsSeen.length + (mushFound ? 1 : 0) + st.stats.speciesSeen.length) + ' / 12';
+    $('disc-count').textContent = (st.stats.plantsSeen.length + (mushFound ? 1 : 0) + st.stats.speciesSeen.length) + ' / ' +
+      (Object.keys(FW.PLANTS).length + 1 + FW.ANIMAL_IDS.length);
     var al = $('journal-ach'); al.innerHTML = '';
     var ids = Object.keys(FW.ACH), un = 0;
     ids.forEach(function (id) {
@@ -349,6 +630,21 @@
       d.appendChild(star); d.appendChild(tx); al.appendChild(d);
     });
     $('ach-count').textContent = un + ' / ' + ids.length;
+    /* chronicle */
+    var ch = $('journal-chron'); ch.innerHTML = '';
+    if (!chronLog.length) {
+      var ce = document.createElement('div'); ce.className = 'chron-empty';
+      ce.textContent = 'The forest is still young — its story begins soon.';
+      ch.appendChild(ce);
+    } else {
+      for (var ci = chronLog.length - 1; ci >= 0; ci--) {
+        var en = chronLog[ci];
+        var cd = document.createElement('div'); cd.className = 'chron';
+        var cb = document.createElement('b'); cb.textContent = 'DAY ' + en.day;
+        var ct = document.createElement('span'); ct.textContent = en.text;
+        cd.appendChild(cb); cd.appendChild(ct); ch.appendChild(cd);
+      }
+    }
   }
 
   /* ---------------- render ---------------- */
@@ -358,9 +654,15 @@
     return surfY(spotX(i)) + depth;
   }
   function render(now) {
+    /* clear in screen pixels first: when zoomed out the camera view extends past the world */
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    ctx.drawImage(bgCache, 0, 0, W, H);
-    ctx.drawImage(soilCache, 0, 0, W, H);
+    applyCam();
+    ctx.drawImage(bgCache, 0, 0, worldW, H);
+    ctx.drawImage(soilCache, 0, 0, worldW, H);
+    /* deep soil continues below the cached strata when zoomed out */
+    ctx.fillStyle = '#33271a';
+    ctx.fillRect(0, botY, worldW, H / camZ);
     /* pond */
     var ppy = surfY(pondX);
     ctx.fillStyle = '#6fa8c8';
@@ -403,7 +705,25 @@
       }
       if (t2.plant) {
         var ps = TREE_PX[t2.plant.stage] || 40;
-        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv), s2x - ps / 2, s2y - ps * 0.94, ps, ps);
+        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred), s2x - ps / 2, s2y - ps * 0.94, ps, ps);
+      }
+      /* wildfire flames */
+      if (t2.fire > 0) {
+        var fr = (now * 7) | 0;
+        var glow = 0.35 + 0.15 * Math.sin(now * 9 + ti);
+        ctx.fillStyle = 'rgba(255,120,30,' + glow.toFixed(3) + ')';
+        ctx.beginPath(); ctx.ellipse(s2x, s2y - 40, 46, 60, 0, 0, 6.2832); ctx.fill();
+        ctx.drawImage(FArt.fire(fr), s2x - 42, s2y - 96, 84, 84);
+        if (Math.random() < fdt * 6) {
+          parts.push({ x: s2x + (Math.random() * 2 - 1) * 24, y: s2y - 80, vx: (Math.random() * 2 - 1) * 20, vy: -60 - Math.random() * 40, t: 0, life: 0.9, kind: 'ember', col: '#ffb050' });
+        }
+      }
+      /* vole gnaw warning */
+      if (t2.gnawedUntil > FW.now() && t2.plant && t2.plant.stage >= FW.ST.SAPLING) {
+        var gw2 = 0.55 + 0.45 * Math.sin(now * 6);
+        ctx.fillStyle = 'rgba(215,70,45,' + gw2.toFixed(3) + ')';
+        ctx.font = '800 22px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('!', s2x, s2y - treeH(t2.plant.stage) - 18);
       }
       if (!t2.plant && !t2.mush && tutStep === 0 && !tutDone && ti === 5) {
         var pu = 0.5 + 0.5 * Math.sin(now * 4);
@@ -412,15 +732,33 @@
         ctx.beginPath(); ctx.ellipse(s2x, s2y, spotW * 0.42, 12, 0, 0, 6.2832); ctx.stroke();
       }
     }
+    /* dung mounds */
+    for (var dg = 0; dg < st.dung.length; dg++) {
+      var dgm = st.dung[dg], dsx = spotX(dgm.x), dsy = surfY(dsx);
+      ctx.drawImage(FArt.dung(dgm.x % 2), dsx - 24, dsy - 44, 48, 48);
+    }
     /* animals */
     for (var a = 0; a < st.animals.length; a++) {
       var an = st.animals[a], ap = animalPos(an);
-      if (ap.ground) {
+      if (ap.vole) {
+        /* tunneling: dark trail + dirt */
+        ctx.fillStyle = 'rgba(30,22,14,0.30)';
+        ctx.beginPath(); ctx.ellipse(ap.x, ap.y + 4, ap.s * 0.42, ap.s * 0.2, 0, 0, 6.2832); ctx.fill();
+      } else if (ap.ground) {
         ctx.fillStyle = 'rgba(20,15,8,0.22)';
         ctx.beginPath(); ctx.ellipse(ap.x, surfY(ap.x) + 5, ap.s * 0.3, ap.s * 0.09, 0, 0, 6.2832); ctx.fill();
       }
-      var bob = ap.ground ? 0 : Math.sin(now * 2.4 + an.ph) * 3;
-      ctx.drawImage(FArt.animal(an.species, an.id % 2), ap.x - ap.s / 2, ap.y - ap.s * 0.94 + bob, ap.s, ap.s);
+      var bob = ap.ground && !ap.hopping ? 0 : Math.sin(now * 2.4 + an.ph) * 3;
+      var spr = FArt.animal(an.species, an.id % 2);
+      if (an.species === 'butterfly') {
+        var fl = 0.7 + 0.3 * Math.abs(Math.sin(now * 9 + an.ph)); /* wing flap */
+        ctx.drawImage(spr, ap.x - ap.s / 2, ap.y - ap.s * fl * 0.94 + bob, ap.s, ap.s * fl);
+      } else {
+        ctx.drawImage(spr, ap.x - ap.s / 2, ap.y - ap.s * 0.94 + bob, ap.s, ap.s);
+      }
+      if (ap.gnawing && Math.random() < fdt * 3) {
+        parts.push({ x: ap.x + (Math.random() * 2 - 1) * 14, y: ap.y - 6, vx: (Math.random() * 2 - 1) * 26, vy: -24 - Math.random() * 20, t: 0, life: 0.7, kind: 'dirt', col: '#8a6f4d' });
+      }
       if (an.cd > FW.now()) {
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
         ctx.font = '700 15px system-ui';
@@ -431,10 +769,10 @@
     /* storm: dim + rain streaks */
     if (st.storm > 0) {
       ctx.fillStyle = 'rgba(30,42,70,0.16)';
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillRect(camX - W / camZ / 2 - 4, 0, W / camZ + 8, H);
       for (var ri = 0; ri < 7; ri++) {
         parts.push({
-          x: Math.random() * (W + 80) - 40, y: -12, vx: -50, vy: 430,
+          x: camX - W / camZ / 2 + Math.random() * (W / camZ + 80) - 40, y: -12, vx: -50, vy: 430,
           t: 0, life: 1.8, kind: 'streak', col: 'rgba(160,200,255,0.55)'
         });
       }
@@ -500,13 +838,14 @@
     }
     if (!st) return;
     elapsed += dt;
+    fdt = dt;
     var rem = dt, n = 0;
     while (rem > 0 && n++ < 4) { var c = Math.min(rem, 0.05); handleEvents(FW.step(st, c)); rem -= c; }
     var now = perfNow();
     render(now);
     hud();
     saveT += dt;
-    if (saveT > 5) { saveT = 0; save(); }
+    if (saveT > 5) { saveT = 0; gcAvis(); save(); }
   }
 
   /* ---------------- boot ---------------- */
@@ -567,9 +906,10 @@
     state: function () { return st; },
     step: function (dt) { if (st) handleEvents(FW.step(st, dt)); },
     simNow: function () { return FW.now(); },
+    setCam: function (z, x) { camZ = z; if (x !== undefined) camX = x; clampCam(); render(perfNow()); },
     spotXY: function (i) {
       var r = canvas.getBoundingClientRect(), sx = spotX(i);
-      return { x: r.left + sx, y: r.top + surfY(sx) };
+      return { x: r.left + W / 2 + (sx - camX) * camZ, y: r.top + surfY(sx) };
     }
   };
 })();
