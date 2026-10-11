@@ -206,31 +206,15 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
 .sndbtn:active{transform:scale(.94)}
 .sndbtn.off{color:rgba(255,255,255,.28)}
 
-/* Word Well key art: pure CSS, ink & parchment (no image file) */
-.art-word-well{background:radial-gradient(circle at 50% 28%,#f8f0dc 0%,#ead9b6 52%,#c8ab7d 100%)}
-.art-word-well::before{content:"\1FAA2";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 8px 12px rgba(58,43,28,.35))}
+/* Word Well key art: painted, see art-i.css */
 
-/* Tiny Fairway key art: pure CSS, dawn-meadow gradient with flag (no image file) */
-.art-tiny-fairway{background:linear-gradient(180deg,#f7b267 0%,#fdf3d8 42%,#8fbf63 43%,#5d8a43 100%)}
-.art-tiny-fairway::before{content:"\26F3";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 8px 12px rgba(46,74,32,.4))}
+/* Tiny Fairway key art: painted, see art-i.css */
 
-/* Castaway Cove key art: pure CSS watercolor dawn (no image file) */
-.art-castaway-cove{background:
-  radial-gradient(circle at 50% 24%,#fff6dd 0%,#ffdf9e 13%,rgba(255,223,158,0) 27%),
-  linear-gradient(180deg,#f9d9a8 0%,#f2a988 40%,#e89a7c 47%,#7fb3c9 48%,#4f86a8 100%)}
-.art-castaway-cove::before{content:"\1F3A3";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:80px;z-index:1;filter:drop-shadow(0 8px 12px rgba(40,60,80,.35))}
+/* Castaway Cove key art: painted, see art-j.css */
 
-/* Neon Drift key art: pure CSS, night asphalt with neon light trails (no image file) */
-.art-neon-drift{background:linear-gradient(160deg,#070a16 0%,#10162e 55%,#1c1240 100%)}
-.art-neon-drift::before{content:"\1F3CE";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 18px rgba(77,216,255,.8))}
-.card .art-neon-drift{box-shadow:inset 0 -70px 50px -30px rgba(8,4,16,.66),inset 0 0 120px rgba(10,6,24,.18)}
-.card .art-neon-drift::after{content:"";position:absolute;left:-25%;right:-25%;top:64%;height:16px;transform:rotate(-16deg);background:linear-gradient(90deg,transparent,#4dd8ff 30%,#ff4dd8 70%,transparent);filter:blur(3px);opacity:.85;z-index:0}
+/* Neon Drift key art: painted, see art-j.css */
 
-/* Dead Man's Hand key art: pure CSS, black-green felt with blood slash (no image file) */
-.art-dead-mans-hand{background:radial-gradient(circle at 50% 30%,#1c2b18 0%,#0c110a 55%,#050604 100%)}
-.art-dead-mans-hand::before{content:"\1F0CF";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:88px;z-index:1;filter:drop-shadow(0 0 16px rgba(201,162,39,.55))}
-.card .art-dead-mans-hand{box-shadow:inset 0 -70px 50px -30px rgba(8,4,16,.66),inset 0 0 120px rgba(10,6,24,.18)}
-.card .art-dead-mans-hand::after{content:"";position:absolute;left:-25%;right:-25%;top:58%;height:12px;transform:rotate(18deg);background:linear-gradient(90deg,transparent,#a4161a 35%,#e63946 65%,transparent);filter:blur(4px);opacity:.9;z-index:0}
+/* Dead Man's Hand key art: painted, see art-fw.css */
 
 
 /* Moss & Stone key art: in-game screenshot, baked as data URI */
