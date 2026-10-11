@@ -138,7 +138,8 @@
     { id: 'dead-mans-hand', name: "Dead Man's Hand", cls: 'art-dead-mans-hand' },
     { id: 'skyhook', name: 'Skyhook', cls: 'art-skyhook' },
     { id: 'dead-corridor', name: "Dead Man's Corridor", cls: 'art-dead-corridor' },
-    { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' }
+    { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' },
+    { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -174,6 +175,10 @@
       if (id === 'fernwild') {
         var fw = +(read('fw_best') || 0); if (!fw) return null;
         return { label: 'Richest ' + fw.toLocaleString(), frac: Math.min(1, fw / 2000) };
+      }
+      if (id === 'golden-acre') {
+        var ga = readJSON('ga_arcade'); if (!ga || !ga.value) return null;
+        return { label: 'Worth $' + (+ga.value).toLocaleString(), frac: Math.min(1, ga.value / 50000) };
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;

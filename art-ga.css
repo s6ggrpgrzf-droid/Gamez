@@ -1,0 +1,88 @@
+/* Golden Acre hub key art — pure CSS composition.
+   Morning over the farm: rising sun, drifting cloud, red barn and silo,
+   plowed furrows with a fence line. */
+.art-golden-acre{
+  background:linear-gradient(180deg,#ffdf9e 0%,#ffd27a 34%,#e8c877 52%,#a8a05c 74%,#7d8f4a 100%);
+  overflow:hidden;
+}
+.art-golden-acre .ga-sun{
+  position:absolute;z-index:0;left:-34px;top:-44px;width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,252,232,.98) 0%,rgba(255,244,200,.55) 42%,rgba(255,244,200,0) 70%);
+  animation:gasun 7s ease-in-out infinite;
+}
+@keyframes gasun{0%,100%{transform:scale(1);}50%{transform:scale(1.07);}}
+.art-golden-acre .ga-cloud{
+  position:absolute;z-index:1;top:16%;left:-70px;width:120px;height:30px;
+  background:rgba(255,252,240,.92);border-radius:20px;
+  box-shadow:26px -10px 0 4px rgba(255,252,240,.92),52px -2px 0 -2px rgba(255,252,240,.92);
+  animation:gacloud 26s linear infinite;
+}
+@keyframes gacloud{from{transform:translateX(0);}to{transform:translateX(420px);}}
+.art-golden-acre .ga-field{
+  position:absolute;z-index:1;left:0;right:0;bottom:0;height:46%;
+  background:
+    repeating-linear-gradient(90deg,rgba(74,48,24,.45) 0 9px,rgba(96,62,30,.28) 9px 18px),
+    linear-gradient(180deg,#8a6234 0%,#6e4b26 100%);
+  border-top:3px solid rgba(60,38,18,.55);
+}
+.art-golden-acre .ga-sprouts{position:absolute;z-index:2;left:0;right:0;bottom:6%;height:34%;}
+.art-golden-acre .ga-sprouts i{
+  position:absolute;bottom:0;width:7px;height:16px;border-radius:4px 4px 0 0;
+  background:linear-gradient(180deg,#7ed957 0%,#3f9e3a 100%);
+  box-shadow:0 0 0 1px rgba(30,70,25,.35);
+}
+.art-golden-acre .ga-sprouts i:nth-child(1){left:6%;height:13px;}
+.art-golden-acre .ga-sprouts i:nth-child(2){left:15%;height:18px;}
+.art-golden-acre .ga-sprouts i:nth-child(3){left:24%;height:14px;}
+.art-golden-acre .ga-sprouts i:nth-child(4){left:33%;height:19px;}
+.art-golden-acre .ga-sprouts i:nth-child(5){left:42%;height:15px;}
+.art-golden-acre .ga-sprouts i:nth-child(6){left:51%;height:18px;}
+.art-golden-acre .ga-sprouts i:nth-child(7){left:60%;height:13px;}
+.art-golden-acre .ga-sprouts i:nth-child(8){left:69%;height:17px;}
+.art-golden-acre .ga-sprouts i:nth-child(9){left:78%;height:14px;}
+.art-golden-acre .ga-sprouts i:nth-child(10){left:87%;height:18px;}
+.art-golden-acre .ga-sprouts i:nth-child(11){left:95%;height:15px;}
+.art-golden-acre .ga-barn{
+  position:absolute;z-index:2;left:9%;bottom:38%;width:86px;height:56px;
+  background:linear-gradient(180deg,#b03a2e 0%,#8e2b22 100%);
+  border:2px solid rgba(60,15,10,.6);border-bottom:none;
+}
+.art-golden-acre .ga-barn::before{
+  content:"";position:absolute;left:-4px;right:-4px;top:-30px;height:0;
+  border-left:47px solid transparent;border-right:47px solid transparent;
+  border-bottom:30px solid #6e211b;
+}
+.art-golden-acre .ga-barn::after{
+  content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:26px;height:34px;background:#3d1a12;
+  border:2px solid rgba(255,235,200,.75);border-bottom:none;
+  background-image:linear-gradient(45deg,transparent 46%,rgba(255,235,200,.75) 46%,rgba(255,235,200,.75) 54%,transparent 54%),
+                   linear-gradient(-45deg,transparent 46%,rgba(255,235,200,.75) 46%,rgba(255,235,200,.75) 54%,transparent 54%);
+}
+.art-golden-acre .ga-silo{
+  position:absolute;z-index:2;left:calc(9% + 96px);bottom:38%;width:34px;height:74px;
+  background:linear-gradient(90deg,#c9cdd4 0%,#9aa0ab 55%,#7c828c 100%);
+  border:2px solid rgba(50,55,65,.55);border-bottom:none;border-radius:4px 4px 0 0;
+}
+.art-golden-acre .ga-silo::before{
+  content:"";position:absolute;left:-2px;right:-2px;top:-20px;height:20px;
+  background:radial-gradient(ellipse 19px 20px at 50% 100%,#8b9099 0%,#6d727b 100%);
+  border:2px solid rgba(50,55,65,.55);border-bottom:none;
+}
+.art-golden-acre .ga-fence{
+  position:absolute;z-index:3;left:0;right:0;bottom:30%;height:22px;
+}
+.art-golden-acre .ga-fence::before{
+  content:"";position:absolute;left:0;right:0;top:4px;height:4px;background:#6b4a2c;
+  box-shadow:0 10px 0 #6b4a2c;
+}
+.art-golden-acre .ga-fence i{
+  position:absolute;top:0;width:6px;height:22px;background:#7d5a36;
+  box-shadow:inset -1px 0 0 rgba(0,0,0,.25);
+}
+.art-golden-acre .ga-fence i:nth-child(1){left:4%;}
+.art-golden-acre .ga-fence i:nth-child(2){left:22%;}
+.art-golden-acre .ga-fence i:nth-child(3){left:40%;}
+.art-golden-acre .ga-fence i:nth-child(4){left:58%;}
+.art-golden-acre .ga-fence i:nth-child(5){left:76%;}
+.art-golden-acre .ga-fence i:nth-child(6){left:94%;}
