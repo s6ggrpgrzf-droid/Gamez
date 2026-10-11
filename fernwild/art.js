@@ -482,8 +482,9 @@ var FArt = (function () {
         ell(g, cx - 26 + hash(s2, v) * 52, baseY - 60 - hash(s2, v * 3) * 50, 2, 2.6, 'rgba(255,180,80,0.9)');
     });
   }
-  function dung(v) {
-    return get('dung' + (v % 2), function (g) {
+  function dung(v, season) {
+    season = (season == null ? 1 : season) % 4;
+    return get('dung' + (v % 2) + 's' + season, function (g) {
       var cx = S / 2, baseY = S - 10, j = (v % 2) * 6 - 3;
       ell(g, cx + j, baseY - 4, 20, 9, 'rgba(0,0,0,0.15)');
       ell(g, cx + j - 8, baseY - 10, 12, 9, '#6a4f30');
@@ -491,8 +492,9 @@ var FArt = (function () {
       ell(g, cx + j, baseY - 16, 9, 7, '#7d5f42');
       ell(g, cx + j - 4, baseY - 19, 3.4, 2.6, '#8f7050');
       ell(g, cx + j + 3, baseY - 18, 2.8, 2.2, '#8f7050');
-      /* grass flecks */
-      g.strokeStyle = 'rgba(120,150,80,0.7)'; g.lineWidth = 1.6;
+      /* grass flecks (dormant straw in winter, amber in autumn) */
+      g.strokeStyle = season === 3 ? 'rgba(150,130,90,0.6)' : season === 2 ? 'rgba(140,130,70,0.65)' : 'rgba(120,150,80,0.7)';
+      g.lineWidth = 1.6;
       g.beginPath(); g.moveTo(cx + j - 10, baseY - 14); g.lineTo(cx + j - 13, baseY - 20); g.stroke();
       g.beginPath(); g.moveTo(cx + j + 9, baseY - 15); g.lineTo(cx + j + 12, baseY - 21); g.stroke();
     });
@@ -815,6 +817,14 @@ var FArt = (function () {
     pine(w * 0.16, h * 0.95, h * 0.3, '#2a4a28', -4);
     pine(w * 0.94, h * 0.92, h * 0.44, '#223c22', -6);
     pine(w * 0.84, h * 0.96, h * 0.3, '#2a4a28', 5);
+    /* drifting fireflies + a wandering moth */
+    for (var fi = 0; fi < 14; fi++) {
+      var fx = (hash(fi, 7) * w + tsec * (8 + hash(fi, 3) * 10)) % w;
+      var fy = h * 0.3 + hash(fi, 11) * h * 0.5 + Math.sin(tsec * 1.4 + fi * 2.1) * 14;
+      var fl = 0.5 + 0.5 * Math.sin(tsec * 2.2 + fi * 1.7);
+      g.fillStyle = 'rgba(255,240,170,' + (0.25 + fl * 0.55).toFixed(3) + ')';
+      g.beginPath(); g.arc(fx, fy, 2.2 + fl * 1.6, 0, 6.2832); g.fill();
+    }
     /* cardinal perched on the right front pine */
     var cardX = w * 0.9, cardY = h * 0.62 + Math.sin(tsec * 1.3) * 4;
     g.strokeStyle = '#223c22'; g.lineWidth = 5;

@@ -21,6 +21,7 @@
   var st = null;            /* FW sim state */
   var screen = 'title';
   var floaters = [], parts = [], ripples = [], rippleT = 1;
+  var flashT = 0, shakeT = 0, seasonSweepT = 0, wxShown = null, wxFade = 1, bounceMap = {};
   var tutStep = 0, tutDone = false;
   var saveT = 0, elapsed = 0;
   var migrated = false;
@@ -69,7 +70,9 @@
   function w2sX(wx) { return W / 2 + (wx - camX) * camZ; }   /* world -> screen */
   function s2wX(sx) { return camX + (sx - W / 2) / camZ; }     /* screen -> world */
   function applyCam() {
-    ctx.setTransform(DPR * camZ, 0, 0, DPR * camZ, DPR * (W / 2 - camX * camZ), 0);
+    var shx = shakeT > 0 ? (Math.random() * 2 - 1) * 5 * shakeT : 0;
+    var shy = shakeT > 0 ? (Math.random() * 2 - 1) * 3 * shakeT : 0;
+    ctx.setTransform(DPR * camZ, 0, 0, DPR * camZ, DPR * (W / 2 - (camX + shx) * camZ), shy * DPR * camZ);
   }
   window.addEventListener('resize', resize);
 
@@ -108,6 +111,7 @@
   function toast(msg, ms) {
     var t = $('toast');
     t.textContent = msg; t.classList.remove('hidden');
+    t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
     clearTimeout(t._h);
     t._h = setTimeout(function () { t.classList.add('hidden'); }, ms || 2400);
   }
@@ -510,8 +514,19 @@
   function handleEvents(evs) {
     for (var i = 0; i < evs.length; i++) {
       var e = evs[i], p = evXY(e);
-      if (e.t === 'planted' && e.free) floater(p.x, p.y, 'free sprout!', '#c9ecb0');
+      if (e.t === 'planted') {
+        if (e.free) floater(p.x, p.y, 'free sprout!', '#c9ecb0');
+        for (var pf = 0; pf < 8; pf++) {
+          var pfa = Math.random() * 6.2832, pfsp = 20 + Math.random() * 40;
+          parts.push({
+            x: p.x, y: p.y, vx: Math.cos(pfa) * pfsp, vy: -30 - Math.random() * 30,
+            t: 0, life: 0.5 + Math.random() * 0.3, kind: 'puff', col: '#8a6f52'
+          });
+        }
+      }
       else if (e.t === 'grew') {
+        var gti = e.y * FW.GW + e.x;
+        if (e.stage === 2 || e.stage === 4) { bounceMap[gti] = 1; burst(p.x, p.y - 24, 'sparkle'); }
         if (e.stage === 2) FAu.sprout();
         else if (e.stage === 4) { FAu.grow(); floater(p.x, p.y, 'grown!', '#c9ecb0'); }
         else if (e.stage === 5) { floater(p.x, p.y, 'ancient', '#e8d9ae'); noteDay('a ' + (FW.PLANTS[e.type] || {}).name.toLowerCase() + ' turned ancient'); }
@@ -552,7 +567,7 @@
       else if (e.t === 'ach') { FAu.achieve(); achToast(FW.ACH[e.id].name, FW.ACH[e.id].desc); }
       else if (e.t === 'storm-start') { FAu.storm(); toast('A storm rolls in!'); noteDay('a storm rolled through'); }
       else if (e.t === 'storm-end') { toast('The storm passes'); }
-      else if (e.t === 'ignited') { FAu.storm(); toast('Lightning struck a tree! Tap the flames — or call a storm'); noteDay('lightning struck a tree'); }
+      else if (e.t === 'ignited') { FAu.storm(); flashT = 1; shakeT = 1; toast('Lightning struck a tree! Tap the flames — or call a storm'); noteDay('lightning struck a tree'); }
       else if (e.t === 'burnout') { toast('The tree burned down — its ash feeds the soil'); noteDay('a tree burned down'); }
       else if (e.t === 'smothered') { /* floater already shown at tap */ }
       else if (e.t === 'sucker') { FAu.sprout(); floater(p.x, p.y, 'root sucker!', '#c9ecb0'); noteDay('an aspen sent up a root sucker'); }
@@ -565,6 +580,19 @@
         toast(snames[e.season] + '!');
         noteDay(snotes[e.season]);
         rebuildBG();
+        FAu.season();
+        seasonSweepT = 1;
+        /* celebration: leaves, petals, or snow drifting down over the visible forest */
+        var skind = e.season === 3 ? 'snow' : e.season === 2 ? 'leaf' : 'petals';
+        var scol = skind === 'snow' ? '#f4f8fb' : skind === 'leaf' ? '#d8a24a' : '#f2c9de';
+        var svx = camX - W / camZ / 2, svw = W / camZ;
+        for (var si2 = 0; si2 < 36; si2++) {
+          parts.push({
+            x: svx + Math.random() * svw, y: -20 - Math.random() * 120,
+            vx: (Math.random() * 2 - 1) * 22, vy: 44 + Math.random() * 44,
+            t: 0, life: 3 + Math.random() * 2, kind: skind, col: scol
+          });
+        }
       }
       else if (e.t === 'variant') {
         var vnames = { golden: 'a golden sapling', rainbow: 'a rainbow sapling', bloom: 'a blooming sapling' };
@@ -579,9 +607,17 @@
         var wnames = { clear: 'The sky clears', cloudy: 'Clouds gather', rain: 'Rain sweeps in', storm: 'A storm rolls in!',
                        drought: 'A dry spell settles in', fog: 'Fog drifts through', wind: 'The wind picks up' };
         if (wnames[e.kind]) toast(wnames[e.kind]);
+        if (e.kind === 'storm') FAu.rumble();
         if (e.kind === 'rain' || e.kind === 'drought') noteDay(wnames[e.kind].toLowerCase());
       }
-      else if (e.t === 'heroncatch') { toast('The heron spears a fish!'); noteDay('the heron caught a fish'); }
+      else if (e.t === 'heroncatch') {
+        toast('The heron spears a fish!'); noteDay('the heron caught a fish');
+        FAu.plip();
+        var hpy = surfY(pondX);
+        for (var hr = 0; hr < 2; hr++) {
+          ripples.push({ x: pondX + (Math.random() * 2 - 1) * 30, y: hpy + 4 + Math.random() * 8, t: hr * 0.3 });
+        }
+      }
       else if (e.t === 'fishreturn') { toast('Fish return to the pond'); }
     }
   }
@@ -706,6 +742,14 @@
     /* clear in screen pixels first: when zoomed out the camera view extends past the world */
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    /* polish timers */
+    flashT = Math.max(0, flashT - fdt * 3.2);
+    shakeT = Math.max(0, shakeT - fdt * 2.6);
+    seasonSweepT = Math.max(0, seasonSweepT - fdt / 1.6);
+    var wk0 = st.weather.kind;
+    if (wxShown !== wk0) { wxShown = wk0; wxFade = 0; }
+    wxFade = Math.min(1, wxFade + fdt / 2.5);
+    for (var bk in bounceMap) { bounceMap[bk] -= fdt * 2.2; if (bounceMap[bk] <= 0) delete bounceMap[bk]; }
     applyCam();
     var vx = camX - W / camZ / 2 - 4, vw = W / camZ + 8; /* visible world region */
     ctx.drawImage(bgCache, 0, 0, worldW, H);
@@ -806,7 +850,9 @@
         var ps = TREE_PX[t2.plant.stage] || 40;
         var swx = st.weather.kind;
         var sway = (swx === 'wind' ? 7 : swx === 'storm' ? 5 : 1.2) * Math.sin(now * 2.1 + ti * 1.3);
-        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred, st.season, t2.plant.variant), s2x - ps / 2 + sway, s2y - ps * 0.94, ps, ps);
+        var bnc = bounceMap[ti] > 0 ? 1 + Math.sin(bounceMap[ti] * Math.PI) * 0.18 : 1;
+        var bps = ps * bnc;
+        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred, st.season, t2.plant.variant), s2x - bps / 2 + sway, s2y - bps * 0.94, bps, bps);
       }
       /* wildfire flames */
       if (t2.fire > 0) {
@@ -836,7 +882,7 @@
     /* dung mounds */
     for (var dg = 0; dg < st.dung.length; dg++) {
       var dgm = st.dung[dg], dsx = spotX(dgm.x), dsy = surfY(dsx);
-      ctx.drawImage(FArt.dung(dgm.x % 2), dsx - 24, dsy - 44, 48, 48);
+      ctx.drawImage(FArt.dung(dgm.x % 2, st.season), dsx - 24, dsy - 44, 48, 48);
     }
     /* animals */
     for (var a = 0; a < st.animals.length; a++) {
@@ -867,16 +913,18 @@
         ctx.fillText('…', ap.x, ap.y - ap.s * 0.98);
       }
     }
-    /* weather: rain streaks, fog bands, drought cracks */
+    /* weather: rain streaks, fog bands, drought cracks (crossfaded in) */
     var wxk2 = st.weather.kind;
     if (wxk2 === 'rain' || st.storm > 0) {
-      var dense = st.storm > 0 ? 7 : 4;
+      var dense = Math.round((st.storm > 0 ? 7 : 4) * wxFade);
+      ctx.globalAlpha = wxFade;
       ctx.fillStyle = st.storm > 0 ? 'rgba(30,42,70,0.16)' : 'rgba(40,55,85,0.08)';
       ctx.fillRect(vx, 0, vw, H);
+      ctx.globalAlpha = 1;
       for (var ri = 0; ri < dense; ri++) {
         parts.push({
           x: vx + Math.random() * vw, y: -12, vx: -50, vy: 430,
-          t: 0, life: 1.8, kind: 'streak', col: 'rgba(160,200,255,0.55)'
+          t: 0, life: 1.8, kind: 'streak', col: 'rgba(160,200,255,' + (0.55 * wxFade).toFixed(3) + ')'
         });
       }
     }
@@ -886,17 +934,32 @@
         var fgoff = (now * 14 + fgi * 340) % (vw + 400) - 200;
         var fgrd = ctx.createLinearGradient(vx + fgoff, 0, vx + fgoff + 340, 0);
         fgrd.addColorStop(0, 'rgba(230,238,242,0)');
-        fgrd.addColorStop(0.5, 'rgba(230,238,242,0.38)');
+        fgrd.addColorStop(0.5, 'rgba(230,238,242,' + (0.38 * wxFade).toFixed(3) + ')');
         fgrd.addColorStop(1, 'rgba(230,238,242,0)');
         ctx.fillStyle = fgrd;
         ctx.fillRect(vx + fgoff, fgy - 40, 340, 80);
       }
     }
     if (wxk2 === 'drought') {
+      ctx.globalAlpha = wxFade;
       for (var cr = 0; cr < FW.GW; cr += 2) {
         var csx = spotX(cr), csy = surfY(csx);
         ctx.drawImage(FArt.cracks(cr % 2), csx - 40, csy + 4, 80, 80);
       }
+      ctx.globalAlpha = 1;
+    }
+    /* lightning flash + season-change sweep */
+    if (flashT > 0) {
+      ctx.fillStyle = 'rgba(255,252,240,' + (flashT * 0.6).toFixed(3) + ')';
+      ctx.fillRect(vx, 0, vw, H);
+    }
+    if (seasonSweepT > 0) {
+      var scol = st.season === 3 ? '240,248,252' : st.season === 2 ? '232,180,120' : st.season === 0 ? '250,220,230' : '255,250,220';
+      var sgrd = ctx.createLinearGradient(0, 0, 0, H);
+      sgrd.addColorStop(0, 'rgba(' + scol + ',' + (0.32 * seasonSweepT).toFixed(3) + ')');
+      sgrd.addColorStop(1, 'rgba(' + scol + ',0)');
+      ctx.fillStyle = sgrd;
+      ctx.fillRect(vx, 0, vw, H);
     }
     /* day/night: stars, moon, dark veil */
     var light = FW.dayLight(st), night = FW.isNight(st);
