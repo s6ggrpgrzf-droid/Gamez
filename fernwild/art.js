@@ -46,6 +46,112 @@ var FArt = (function () {
     g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(cx - w * 0.18, baseY - 4); g.lineTo(cx - w * 0.1, baseY - h + 6); g.stroke();
   }
+  /* ---------- real-tree kit: textured bark, tapered limbs, leaf sprays ---------- */
+  function barkTrunk(g, cx, baseY, w, h, col, seed, rough) {
+    var topW = w * 0.55;
+    g.fillStyle = col;
+    g.beginPath();
+    g.moveTo(cx - w / 2 - 2, baseY);
+    g.quadraticCurveTo(cx - w * 0.42, baseY - h * 0.5, cx - topW / 2, baseY - h);
+    g.lineTo(cx + topW / 2, baseY - h);
+    g.quadraticCurveTo(cx + w * 0.42, baseY - h * 0.5, cx + w / 2 + 2, baseY);
+    g.closePath(); g.fill();
+    /* root flare shadow */
+    ell(g, cx - w * 0.4, baseY - 2, w * 0.2, 4.5, 'rgba(0,0,0,0.16)');
+    ell(g, cx + w * 0.4, baseY - 2, w * 0.2, 4.5, 'rgba(0,0,0,0.16)');
+    /* vertical bark striations */
+    g.lineCap = 'round';
+    var n = rough ? 7 : 5;
+    for (var i = 0; i < n; i++) {
+      var fx = i / (n - 1) - 0.5;
+      var bx = cx + fx * w * 0.68;
+      g.strokeStyle = 'rgba(0,0,0,' + (0.13 + hash(i, seed) * 0.13).toFixed(3) + ')';
+      g.lineWidth = 1.4 + hash(i * 3, seed) * 1.6;
+      g.beginPath();
+      g.moveTo(bx, baseY - 3);
+      g.quadraticCurveTo(bx + (hash(i, seed * 2) - 0.5) * 8, baseY - h * 0.55, cx + fx * topW * 0.8, baseY - h + 4);
+      g.stroke();
+    }
+    /* sunlit edge for roundness */
+    g.strokeStyle = 'rgba(255,244,210,0.15)';
+    g.lineWidth = Math.max(2, w * 0.2);
+    g.beginPath();
+    g.moveTo(cx - w * 0.3, baseY - 4);
+    g.quadraticCurveTo(cx - w * 0.26, baseY - h * 0.5, cx - topW * 0.32, baseY - h + 6);
+    g.stroke();
+    /* knots */
+    var nk = rough ? 2 : 1;
+    for (var k = 0; k < nk; k++) {
+      var ky = baseY - h * (0.3 + hash(k, seed * 5) * 0.4);
+      var kx = cx + (hash(k * 7, seed) - 0.5) * w * 0.4;
+      ell(g, kx, ky, 3.2, 4.4, 'rgba(0,0,0,0.32)');
+      ell(g, kx - 0.8, ky - 1.2, 1.7, 2.3, 'rgba(255,240,210,0.22)');
+    }
+  }
+  function limb(g, x, y, ang, len, w, col, seed) {
+    /* tapered branch; returns tip [x2, y2] */
+    var x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+    g.strokeStyle = col; g.lineCap = 'round'; g.lineWidth = w;
+    g.beginPath(); g.moveTo(x, y);
+    g.quadraticCurveTo(x + Math.cos(ang) * len * 0.5, y + Math.sin(ang) * len * 0.5 - w * 0.8, x2, y2);
+    g.stroke();
+    g.strokeStyle = 'rgba(0,0,0,0.14)'; g.lineWidth = Math.max(1, w * 0.32);
+    g.beginPath(); g.moveTo(x + 1.2, y);
+    g.quadraticCurveTo(x + Math.cos(ang) * len * 0.5 + 1.2, y + Math.sin(ang) * len * 0.5 - w * 0.8, x2 + 1.2, y2);
+    g.stroke();
+    return [x2, y2];
+  }
+  function leafSpray(g, x, y, r, c1, c2, c3, seed, n) {
+    /* a cluster of individual leaves, sunlit on top */
+    n = n || 24;
+    for (var i = 0; i < n; i++) {
+      var a = hash(i, seed) * 6.2832;
+      var d = Math.sqrt(hash(i * 3, seed * 7 + 1)) * r;
+      var lx = x + Math.cos(a) * d, ly = y + Math.sin(a) * d * 0.85;
+      var topness = 1 - (ly - (y - r)) / (2 * r);
+      var pick = hash(i * 7, seed * 13 + 2);
+      var col = pick < 0.16 + 0.3 * topness ? c2 : (pick < 0.68 ? c1 : c3);
+      var lr = 2.1 + hash(i * 11, seed * 5) * 2.5;
+      g.fillStyle = col;
+      g.save(); g.translate(lx, ly); g.rotate(hash(i * 13, seed * 3 + 4) * 3.1416);
+      g.beginPath(); g.ellipse(0, 0, lr, lr * 0.55, 0, 0, 6.2832); g.fill();
+      g.restore();
+    }
+  }
+  function deciduousCrown(g, cx, topY, spread, c1, c2, c3, seed, nLimbs, trunkCol) {
+    /* scaffold limbs fanning from the trunk top, leaf sprays at the tips */
+    var tips = [];
+    for (var i = 0; i < nLimbs; i++) {
+      var ang = -Math.PI / 2 + (i / (nLimbs - 1) - 0.5) * 2.3 + (hash(i, seed) - 0.5) * 0.3;
+      var len = spread * (0.72 + hash(i * 3, seed + 1) * 0.45);
+      var tip = limb(g, cx, topY + 6, ang, len, 4.5, trunkCol, seed + i);
+      var tang = ang + (hash(i * 5, seed + 2) - 0.5) * 1.1;
+      tips.push(limb(g, tip[0], tip[1], tang, len * 0.45, 2.4, trunkCol, seed + i * 3));
+    }
+    for (var t = 0; t < tips.length; t++) {
+      leafSpray(g, tips[t][0], tips[t][1], spread * 0.4, c1, c2, c3, seed + t * 11 + 5, 20);
+    }
+    leafSpray(g, cx, topY - spread * 0.32, spread * 0.52, c1, c2, c3, seed + 99, 28);
+  }
+  function pineTiers(g, cx, baseY, big, c1, c2, c3, j, snowy, seed, snowFn, tiers, yStart) {
+    tiers = tiers || 4; yStart = yStart == null ? 52 : yStart;
+    for (var k = 0; k < tiers; k++) {
+      var w2 = (62 - k * 12) * big, y2 = baseY - yStart - k * 24;
+      g.fillStyle = [c3, c1, c2, c1][k];
+      g.beginPath(); g.moveTo(cx - w2 / 2, y2); g.lineTo(cx + j * 6, y2 - 30 * big); g.lineTo(cx + w2 / 2, y2); g.closePath(); g.fill();
+      /* needle strokes */
+      g.strokeStyle = 'rgba(0,0,0,0.16)'; g.lineWidth = 1.4;
+      for (var nd = 0; nd < 9; nd++) {
+        var nx = cx - w2 / 2 + hash(nd, k * 7 + seed) * w2;
+        var ny = y2 - hash(nd * 3, k + seed) * 22 * big;
+        g.beginPath(); g.moveTo(nx, ny); g.lineTo(nx - 4, ny + 7); g.stroke();
+      }
+      /* sunlit left edge */
+      g.strokeStyle = 'rgba(220,255,220,0.13)'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(cx + j * 6 - 3, y2 - 26 * big); g.lineTo(cx - w2 * 0.28, y2 - 4); g.stroke();
+      if (snowy) snowFn(cx + j * 6, y2 - 28 * big, w2 * 0.24);
+    }
+  }
   var TREE_STYLE = {
     pine:  { trunk: '#4e3823', c1: '#2e6b34', c2: '#3a7d40', c3: '#245427', pine: true },
     berry: { trunk: '#54402a', c1: '#4d8a44', c2: '#5d9a4e', c3: '#3c6e36', berry: true },
@@ -72,18 +178,13 @@ var FArt = (function () {
         ell(g, x, y, w, w * 0.32, 'rgba(240,246,250,0.92)');
       }
       function bareBranches(bx, by, hgt, seed) {
-        g.strokeStyle = st.trunk; g.lineCap = 'round';
         for (var b = 0; b < 5; b++) {
           var ang = -Math.PI / 2 + (b - 2) * 0.42 + (hash(b, seed) - 0.5) * 0.2;
           var len = hgt * (0.5 + hash(b * 3, seed) * 0.3);
-          var x2 = bx + Math.cos(ang) * len, y2 = by - hgt * 0.35 + Math.sin(ang) * len;
-          g.lineWidth = 5 - b * 0.5;
-          g.beginPath(); g.moveTo(bx, by - hgt * 0.3); g.lineTo(x2, y2); g.stroke();
+          var tip = limb(g, bx, by - hgt * 0.3, ang, len, 5 - b * 0.5, st.trunk, seed + b);
           for (var t = 0; t < 3; t++) {
             var ta = ang + (hash(t, b * 7 + seed) - 0.5) * 1.2;
-            g.lineWidth = 2;
-            g.beginPath(); g.moveTo(x2, y2);
-            g.lineTo(x2 + Math.cos(ta) * len * 0.35, y2 + Math.sin(ta) * len * 0.35); g.stroke();
+            limb(g, tip[0], tip[1], ta, len * 0.35, 2, st.trunk, seed + t * 3);
           }
         }
         if (season === 3) { /* snow dusting on branches */
@@ -94,39 +195,52 @@ var FArt = (function () {
           }
         }
       }
-      function aspenBark(bx, by, w, h) {
-        /* white bark with dark knots */
+      function aspenBark(bx, by, w, h, seed) {
+        /* white bark: tapered, shaded, dark knots + lenticel lines */
+        var topW = w * 0.62;
         g.fillStyle = '#d9d4c2';
         g.beginPath();
-        g.moveTo(bx - w / 2, by); g.lineTo(bx - w * 0.32, by - h);
-        g.lineTo(bx + w * 0.32, by - h); g.lineTo(bx + w / 2, by);
+        g.moveTo(bx - w / 2, by); g.lineTo(bx - topW / 2, by - h);
+        g.lineTo(bx + topW / 2, by - h); g.lineTo(bx + w / 2, by);
         g.closePath(); g.fill();
-        g.fillStyle = 'rgba(50,45,35,0.55)';
+        g.fillStyle = 'rgba(90,85,70,0.28)';
+        g.fillRect(bx + topW * 0.16, by - h, w * 0.24, h);
+        g.fillStyle = 'rgba(255,252,240,0.35)';
+        g.fillRect(bx - topW * 0.4, by - h, w * 0.12, h);
+        seed = seed || 0;
         for (var kn = 0; kn < 4; kn++) {
           var ky = by - 8 - kn * (h / 4.5);
-          ell(g, bx + (hash(kn, v) - 0.5) * w * 0.4, ky, w * 0.13, w * 0.09, 'rgba(50,45,35,0.55)');
+          ell(g, bx + (hash(kn, seed) - 0.5) * w * 0.4, ky, w * 0.13, w * 0.09, 'rgba(50,45,35,0.55)');
+        }
+        g.strokeStyle = 'rgba(80,75,60,0.3)'; g.lineWidth = 1.2;
+        for (var l = 0; l < 5; l++) {
+          var ly = by - 6 - l * h / 5.5;
+          g.beginPath(); g.moveTo(bx - w * 0.3, ly); g.lineTo(bx + w * 0.3, ly); g.stroke();
         }
       }
       if (stage === 1) { /* seed: little mound + seed */
         ell(g, cx, baseY - 6, 16, 7, 'rgba(0,0,0,0.18)');
         ell(g, cx + j * 8, baseY - 12, 6, 8, '#8a6b42');
         ell(g, cx + j * 8 - 2, baseY - 14, 2.5, 3.5, 'rgba(255,240,210,0.5)');
-      } else if (stage === 2) { /* sprout */
-        g.strokeStyle = '#4d8a44'; g.lineWidth = 5; g.lineCap = 'round';
-        g.beginPath(); g.moveTo(cx, baseY); g.quadraticCurveTo(cx + j * 10, baseY - 22, cx + j * 6, baseY - 34); g.stroke();
-        ell(g, cx + j * 6 - 9, baseY - 34, 10, 6.5, '#5da34f');
-        ell(g, cx + j * 6 + 9, baseY - 30, 10, 6.5, '#4d8a44');
-      } else if (stage === 3) { /* sapling */
-        if (st.aspen) aspenBark(cx, baseY, 12, 34); else trunk(g, cx, baseY, 13, 34, st.trunk);
+      } else if (stage === 2) { /* sprout: leaves unfurling */
+        var stx = cx + j * 6, sty = baseY - 34;
+        g.strokeStyle = '#5a7a3a'; g.lineWidth = 5; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(cx, baseY); g.quadraticCurveTo(cx + j * 10, baseY - 22, stx, sty); g.stroke();
+        for (var sl = 0; sl < 6; sl++) {
+          var sa = -Math.PI / 2 + (sl - 2.5) * 0.5;
+          var sr = 7 + hash(sl, v) * 4;
+          var slx = stx + Math.cos(sa) * 10, sly = sty + Math.sin(sa) * 10 - 4;
+          g.fillStyle = sl % 2 ? c1 : c2;
+          g.save(); g.translate(slx, sly); g.rotate(sa + 1.2);
+          g.beginPath(); g.ellipse(0, 0, sr, sr * 0.5, 0, 0, 6.2832); g.fill();
+          g.restore();
+        }
+      } else if (stage === 3) { /* sapling: bark, first limbs, young leaves */
+        var th3 = 34;
+        if (st.aspen) aspenBark(cx, baseY, 12, th3, v); else barkTrunk(g, cx, baseY, 13, th3, st.trunk, v, false);
         if (bare) bareBranches(cx, baseY, 52, v);
-        else if (st.pine) {
-          for (var i = 0; i < 3; i++) {
-            var w = 44 - i * 11, y = baseY - 30 - i * 20;
-            g.fillStyle = [c3, c1, c2][i];
-            g.beginPath(); g.moveTo(cx - w / 2, y); g.lineTo(cx, y - 22); g.lineTo(cx + w / 2, y); g.closePath(); g.fill();
-            if (snowy) snowCap(cx, y - 20, w * 0.28);
-          }
-        } else canopy(g, cx, baseY - 52, 30, c1, c2, c3, v);
+        else if (st.pine) pineTiers(g, cx, baseY, 0.72, c1, c2, c3, j, snowy, v, snowCap, 3, 30);
+        else deciduousCrown(g, cx, baseY - th3, 30, c1, c2, c3, v, 4, st.trunk);
         if (!bare && season === 0 && !st.pine) { /* spring blossom */
           for (var bl = 0; bl < 6; bl++)
             ell(g, cx - 22 + hash(bl, v * 3) * 44, baseY - 66 + hash(bl * 7, v) * 30, 3.4, 3.4,
@@ -140,30 +254,23 @@ var FArt = (function () {
         if (st.berry) for (var b = 0; b < 4; b++) {
           ell(g, cx - 18 + hash(b, v) * 36, baseY - 60 + hash(b * 3, v) * 26, 4, 4, '#c94f5e');
         }
-      } else if (stage === 4 || stage === 5) { /* adult / ancient */
+      } else if (stage === 4 || stage === 5) { /* adult / ancient: full scaffold */
         var big = stage === 5 ? 1.18 : 1;
-        if (st.aspen) aspenBark(cx, baseY, 19 * big, 62, v); else trunk(g, cx, baseY, 20 * big, 62, st.trunk);
+        var th45 = 62 * big;
+        if (st.aspen) aspenBark(cx, baseY, 19 * big, th45, v + stage);
+        else barkTrunk(g, cx, baseY, 20 * big, th45, st.trunk, v + stage, stage === 5);
         if (bare) bareBranches(cx, baseY, 110 * big, v + stage);
-        else if (st.pine) {
-          for (var k = 0; k < 4; k++) {
-            var w2 = (62 - k * 12) * big, y2 = baseY - 52 - k * 24;
-            g.fillStyle = [c3, c1, c2, c1][k];
-            g.beginPath(); g.moveTo(cx - w2 / 2, y2); g.lineTo(cx + j * 6, y2 - 30 * big); g.lineTo(cx + w2 / 2, y2); g.closePath(); g.fill();
-            if (snowy) snowCap(cx + j * 6, y2 - 28 * big, w2 * 0.24);
-          }
-        } else {
-          canopy(g, cx + j * 8, baseY - 92 * big, 46 * big, c1, c2, c3, v + stage);
-          canopy(g, cx - 26 + j * 8, baseY - 66, 26, c2, c3, c1, v + 40);
-          if (season === 0) { /* spring blossom */
-            for (var bl2 = 0; bl2 < 10; bl2++)
-              ell(g, cx - 40 + hash(bl2, v * 3) * 80, baseY - 120 + hash(bl2 * 7, v) * 70, 3.6, 3.6,
-                bl2 % 2 ? '#f2c9d4' : '#fbeef2');
-          }
-          if (variant === 'rainbow') {
-            var rcols2 = ['#e88ca0', '#f2d06b', '#6aa8d8', '#b08cd8'];
-            for (var rb2 = 0; rb2 < 14; rb2++)
-              ell(g, cx - 42 + hash(rb2, v * 5) * 84, baseY - 122 + hash(rb2 * 11, v) * 72, 4, 4, rcols2[rb2 % 4]);
-          }
+        else if (st.pine) pineTiers(g, cx, baseY, big, c1, c2, c3, j, snowy, v + stage, snowCap, 4, 52);
+        else deciduousCrown(g, cx, baseY - th45, 46 * big, c1, c2, c3, v + stage, stage === 5 ? 8 : 6, st.trunk);
+        if (!bare && !st.pine && season === 0) { /* spring blossom */
+          for (var bl2 = 0; bl2 < 10; bl2++)
+            ell(g, cx - 40 + hash(bl2, v * 3) * 80, baseY - 120 + hash(bl2 * 7, v) * 70, 3.6, 3.6,
+              bl2 % 2 ? '#f2c9d4' : '#fbeef2');
+        }
+        if (!bare && !st.pine && variant === 'rainbow') {
+          var rcols2 = ['#e88ca0', '#f2d06b', '#6aa8d8', '#b08cd8'];
+          for (var rb2 = 0; rb2 < 14; rb2++)
+            ell(g, cx - 42 + hash(rb2, v * 5) * 84, baseY - 122 + hash(rb2 * 11, v) * 72, 4, 4, rcols2[rb2 % 4]);
         }
         if (st.berry && !bare) for (var f = 0, fmax = variant === 'bloom' ? 18 : 10; f < fmax; f++) {
           var fx = cx - 34 + hash(f, v * 2) * 68, fy = baseY - 118 + hash(f * 5, v) * 66;
@@ -184,6 +291,10 @@ var FArt = (function () {
         g.fillStyle = barkCol; g.beginPath(); g.roundRect(-46, -13, 92, 26, 12); g.fill();
         g.fillStyle = burnt ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.2)';
         g.beginPath(); g.ellipse(42, 0, 7, 12, 0, 0, 6.2832); g.fill();
+        if (!burnt) { /* growth rings on the cut end */
+          g.strokeStyle = 'rgba(120,90,50,0.5)'; g.lineWidth = 1;
+          for (var gr = 2; gr < 7; gr += 2) { g.beginPath(); g.ellipse(42, 0, gr, gr * 1.7, 0, 0, 6.2832); g.stroke(); }
+        }
         g.strokeStyle = burnt ? 'rgba(120,90,60,0.35)' : 'rgba(60,40,20,0.5)'; g.lineWidth = 2.5;
         for (var r = -30; r < 36; r += 14) { g.beginPath(); g.moveTo(r, -11); g.lineTo(r + 5, 11); g.stroke(); }
         if (!burnt) {
@@ -724,49 +835,99 @@ var FArt = (function () {
     season = (season == null ? 1 : season) % 4;
     var c = document.createElement('canvas'); c.width = w; c.height = h;
     var g = c.getContext('2d');
-    /* seasonal skies */
-    var skies = [
-      ['#8fc7e8', '#c4e2d8', '#e9efd2', '#dfe8c8'],  /* spring: fresh */
-      ['#7fb8e0', '#b8d8cc', '#e4e8c4', '#d4dcb8'],  /* summer: deep */
-      ['#a8b8d8', '#d8c4a8', '#f0d8a8', '#e0d0a0'],  /* autumn: golden */
-      ['#a8bdd0', '#c8d4dc', '#e4e8ec', '#dfe4e8']   /* winter: pale */
+    /* ---- inside a real forest: light falling through canopy, trunks in haze ---- */
+    var pal = [
+      { top: '#cfe0a8', mid: '#9db87e', low: '#5d7a4e', haze: '190,210,150', trunk: '90,110,80', shaft: '255,250,215' },
+      { top: '#c2d898', mid: '#8fae72', low: '#4f6b42', haze: '180,205,140', trunk: '80,100,70', shaft: '255,246,200' },
+      { top: '#e8cf9a', mid: '#c49a5e', low: '#6e5a34', haze: '220,190,130', trunk: '105,85,55', shaft: '255,230,170' },
+      { top: '#d8e2e8', mid: '#aebbc2', low: '#5e6a72', haze: '215,225,232', trunk: '95,105,112', shaft: '245,250,255' }
     ][season];
-    var sky = g.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, skies[0]); sky.addColorStop(0.5, skies[1]);
-    sky.addColorStop(0.78, skies[2]); sky.addColorStop(1, skies[3]);
-    g.fillStyle = sky; g.fillRect(0, 0, w, h);
-    var sunX = w * 0.8, sunY = h * 0.13;
-    var sunCol = season === 2 ? '255,230,180' : season === 3 ? '240,244,250' : '255,250,220';
-    var sg = g.createRadialGradient(sunX, sunY, 6, sunX, sunY, w * 0.3);
-    sg.addColorStop(0, 'rgba(' + sunCol + ',0.95)'); sg.addColorStop(1, 'rgba(' + sunCol + ',0)');
-    g.fillStyle = sg; g.fillRect(0, 0, w, h * 0.6);
-    for (var ci = 0; ci < 5; ci++) {
-      var cxp = hash(ci, 501) * w, cyp = h * (0.08 + hash(ci, 503) * 0.22), cw = 46 + hash(ci, 504) * 60;
-      var cloudCol = season === 3 ? 'rgba(245,248,250,0.85)' : 'rgba(255,255,255,0.7)';
-      ell(g, cxp, cyp, cw, cw * 0.32, cloudCol);
-      ell(g, cxp - cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, cloudCol);
-      ell(g, cxp + cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, cloudCol);
+    var bg = g.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, pal.top); bg.addColorStop(0.45, pal.mid); bg.addColorStop(1, pal.low);
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    /* far trunks: tall, faint, lost in haze */
+    for (var fi = 0; fi < 16; fi++) {
+      var fx = hash(fi, 511) * w;
+      var fw = 14 + hash(fi, 512) * 26;
+      var fa = 0.10 + hash(fi, 513) * 0.10;
+      var fg = g.createLinearGradient(fx - fw / 2, 0, fx + fw / 2, 0);
+      fg.addColorStop(0, 'rgba(' + pal.trunk + ',0)');
+      fg.addColorStop(0.5, 'rgba(' + pal.trunk + ',' + fa.toFixed(3) + ')');
+      fg.addColorStop(1, 'rgba(' + pal.trunk + ',0)');
+      g.fillStyle = fg;
+      g.fillRect(fx - fw / 2, 0, fw, h);
     }
-    var hy = surfBaseY - 4;
-    g.fillStyle = season === 3 ? '#dfe8ee' : season === 2 ? '#7a8a4a' : season === 0 ? '#7aa872' : '#6f9a6a';
-    g.beginPath(); g.moveTo(0, hy + 34);
-    for (var x = 0; x <= w; x += 18) {
-      var th = 26 + hash(x, 601) * 46 + (hash(x, 602) > 0.72 ? 30 : 0);
-      g.lineTo(x, hy - th); g.lineTo(x + 9, hy + 8);
+    /* haze wash */
+    g.fillStyle = 'rgba(' + pal.haze + ',0.16)'; g.fillRect(0, 0, w, h);
+    /* mid trunks: nearer, darker, still soft */
+    for (var mi = 0; mi < 7; mi++) {
+      var mx = hash(mi, 521) * w;
+      var mw = 26 + hash(mi, 522) * 34;
+      var ma = 0.14 + hash(mi, 523) * 0.10;
+      var mg = g.createLinearGradient(mx - mw / 2, 0, mx + mw / 2, 0);
+      mg.addColorStop(0, 'rgba(' + pal.trunk + ',0)');
+      mg.addColorStop(0.5, 'rgba(' + pal.trunk + ',' + ma.toFixed(3) + ')');
+      mg.addColorStop(1, 'rgba(' + pal.trunk + ',0)');
+      g.fillStyle = mg;
+      g.fillRect(mx - mw / 2, h * 0.04, mw, h * 0.96);
+      if (season === 3) { /* snow dusting on mid trunks */
+        g.fillStyle = 'rgba(240,246,250,0.20)';
+        g.fillRect(mx - mw / 2, h * 0.04, mw * 0.3, h * 0.96);
+      }
     }
-    g.lineTo(w, hy + 34); g.closePath(); g.fill();
-    if (season === 3) { /* snow sparkle */
-      g.fillStyle = 'rgba(255,255,255,0.5)';
-      for (var sn = 0; sn < 40; sn++)
-        ell(g, hash(sn, 603) * w, hy - hash(sn, 604) * 60, 2.2, 1.6, 'rgba(255,255,255,0.5)');
+    /* light shafts falling through the canopy */
+    for (var si = 0; si < 3; si++) {
+      var sx = w * (0.2 + si * 0.28) + (hash(si, 531) - 0.5) * 60;
+      var sway = 60 + hash(si, 532) * 40;
+      var shg = g.createLinearGradient(sx, 0, sx + sway, h);
+      shg.addColorStop(0, 'rgba(' + pal.shaft + ',0.20)');
+      shg.addColorStop(1, 'rgba(' + pal.shaft + ',0)');
+      g.fillStyle = shg;
+      g.beginPath();
+      g.moveTo(sx - 26, 0); g.lineTo(sx + 26, 0);
+      g.lineTo(sx + sway + 44, h); g.lineTo(sx + sway - 44, h);
+      g.closePath(); g.fill();
     }
-    g.fillStyle = 'rgba(255,255,255,0.14)'; g.fillRect(0, hy - 64, w, 64);
-    g.strokeStyle = 'rgba(60,70,80,0.6)'; g.lineWidth = 2;
-    for (var b = 0; b < 3; b++) {
-      var bx = hash(b, 701) * w, by = h * (0.12 + hash(b, 702) * 0.14);
-      g.beginPath(); g.moveTo(bx - 8, by); g.quadraticCurveTo(bx - 3, by - 5, bx, by);
-      g.quadraticCurveTo(bx + 3, by - 5, bx + 8, by); g.stroke();
+    /* overhead canopy: dark out-of-focus leaves along the top edge */
+    for (var ci = 0; ci < 26; ci++) {
+      var clx = hash(ci, 541) * w, cly = hash(ci, 542) * h * 0.10 - 8;
+      var clr = 22 + hash(ci, 543) * 40;
+      var leafC = season === 2 ? '58,84,44' : season === 0 ? '84,120,60' : season === 3 ? '120,130,135' : '140,110,60';
+      ell(g, clx, cly, clr, clr * 0.7, 'rgba(' + leafC + ',' + (0.20 + hash(ci, 544) * 0.18).toFixed(3) + ')');
     }
+    /* floating motes in the light */
+    g.fillStyle = 'rgba(255,252,235,0.5)';
+    for (var mo = 0; mo < 36; mo++) {
+      var mox = hash(mo, 551) * w, moy = hash(mo, 552) * h * 0.8;
+      var mor = 1 + hash(mo, 553) * 1.8;
+      g.globalAlpha = 0.14 + hash(mo, 554) * 0.3;
+      g.beginPath(); g.arc(mox, moy, mor, 0, 6.2832); g.fill();
+    }
+    g.globalAlpha = 1;
+    /* undergrowth at the forest floor: ferns and grass in shadow */
+    var gy = surfBaseY - 2;
+    var gc = season === 3 ? 'rgba(150,160,150,0.5)' : season === 2 ? 'rgba(46,84,44,0.55)' : 'rgba(60,95,50,0.5)';
+    g.strokeStyle = gc; g.lineCap = 'round';
+    for (var gi = 0; gi < w / 14; gi++) {
+      var gx = gi * 14 + hash(gi, 561) * 8;
+      var gh = 10 + hash(gi, 562) * 22;
+      g.lineWidth = 2.4;
+      /* fern frond: curved stem with leaflets */
+      g.beginPath(); g.moveTo(gx, gy + 4);
+      g.quadraticCurveTo(gx + (hash(gi, 563) - 0.5) * 18, gy - gh * 0.6, gx + (hash(gi, 564) - 0.5) * 26, gy - gh);
+      g.stroke();
+      g.lineWidth = 1.6;
+      for (var fl = 1; fl <= 4; fl++) {
+        var fxp = gx + (hash(gi, 564) - 0.5) * 26 * fl / 4;
+        var fyp = gy + 4 - (gh + 4) * fl / 4;
+        g.beginPath(); g.moveTo(fxp, fyp); g.lineTo(fxp - 7, fyp - 4); g.stroke();
+        g.beginPath(); g.moveTo(fxp, fyp); g.lineTo(fxp + 7, fyp - 4); g.stroke();
+      }
+    }
+    /* soft shadow where floor meets soil */
+    var sh = g.createLinearGradient(0, gy - 26, 0, gy + 10);
+    sh.addColorStop(0, 'rgba(20,30,16,0)'); sh.addColorStop(1, 'rgba(20,30,16,0.35)');
+    g.fillStyle = sh; g.fillRect(0, gy - 26, w, 36);
     return c;
   }
   function titleBG(w, h, tsec) {

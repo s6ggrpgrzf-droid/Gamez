@@ -981,11 +981,14 @@
     /* day/night: stars, moon, dark veil */
     var light = FW.dayLight(st), night = FW.isNight(st);
     if (light < 0.85) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, (1 - light) * 1.6);
-      ctx.translate(vx, 0);
-      FArt.nightSky(ctx, vw, H, now, st.season === 3);
-      ctx.restore();
+      var skyA = Math.min(1, Math.max(0, 0.55 - light) * 2.5);
+      if (skyA > 0) {
+        ctx.save();
+        ctx.globalAlpha = skyA;
+        ctx.translate(vx, 0);
+        FArt.nightSky(ctx, vw, H, now, st.season === 3);
+        ctx.restore();
+      }
       ctx.fillStyle = 'rgba(8,14,38,' + ((1 - light) * 0.42).toFixed(3) + ')';
       ctx.fillRect(vx, 0, vw, H);
     }
