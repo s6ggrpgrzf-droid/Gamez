@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3d5a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Golden Acre — a SimFarm-style harvest tale</title>
+<link rel="stylesheet" href="style.css?v=20261011a">
+</head>
+<body>
+
+<!-- ============ MENU ============ -->
+<section id="screen-menu" class="screen on" aria-label="Menu">
+  <canvas id="menu-art" aria-hidden="true"></canvas>
+  <div class="menu-inner">
+    <p class="kicker">Workman Designs presents</p>
+    <h1 class="wordmark">Golden Acre</h1>
+    <p class="tagline">Plow, plant, and pray for rain — a SimFarm-style harvest tale.</p>
+    <p id="menu-valley" class="valley"></p>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-new" type="button">New Farm<span class="btn-sub">start in Spring with $4,000</span></button>
+      <button class="btn primary" id="btn-continue" type="button" hidden>Continue<span class="btn-sub">your farm kept working</span></button>
+      <button class="btn ghost" id="btn-how" type="button">How to farm</button>
+      <button class="btn ghost" id="btn-mute" type="button"></button>
+    </div>
+    <p class="build-tag" id="build-tag">v20261011a</p>
+  </div>
+</section>
+
+<!-- ============ PLAY ============ -->
+<section id="screen-play" class="screen" aria-label="Farm">
+  <header id="hud">
+    <div class="hud-left">
+      <div id="hud-cash">$4,000</div>
+      <div id="hud-net" class="dim">Worth $0</div>
+    </div>
+    <div class="hud-mid">
+      <div id="hud-date">Spring · Day 1 · Yr 1</div>
+      <div class="hud-wx"><span id="hud-weather"></span><span id="hud-forecast"></span></div>
+      <div id="daybar"><div id="daybar-fill"></div></div>
+    </div>
+    <div class="hud-right">
+      <div id="hud-loan" class="dim"></div>
+      <div class="hud-btns">
+        <button id="btn-speed" class="corner-btn" type="button" aria-label="Speed"></button>
+        <button id="btn-mute2" class="corner-btn" type="button" aria-label="Mute"></button>
+        <button id="btn-pause" class="corner-btn" type="button" aria-label="Pause">II</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="ticker" aria-hidden="true"></div>
+
+  <div id="game-wrap"><canvas id="game"></canvas></div>
+
+  <nav id="actionbar" aria-label="Farm business">
+    <button id="btn-market" type="button">Market</button>
+    <button id="btn-bank" type="button">Bank</button>
+    <button id="btn-animals" type="button">Animals</button>
+    <button id="btn-fair" type="button" hidden>County Fair</button>
+  </nav>
+
+  <nav id="toolbar" aria-label="Tools"></nav>
+</section>
+
+<!-- ============ GAME OVER ============ -->
+<section id="screen-over" class="screen" aria-label="Foreclosed">
+  <div class="menu-inner">
+    <p class="kicker">the valley bank presents</p>
+    <h1 class="wordmark small" id="over-title">Foreclosed</h1>
+    <p class="tagline" id="over-text"></p>
+    <p id="over-stats" class="valley"></p>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-again" type="button">Start a new farm</button>
+    </div>
+    <p class="build-tag">v20261011a</p>
+  </div>
+</section>
+
+<!-- ============ SHEET / OVERLAYS ============ -->
+<div id="sheet" class="hidden" role="dialog" aria-modal="true">
+  <div id="sheet-card"></div>
+  <button id="sheet-close" type="button" aria-label="Close">✕</button>
+</div>
+<div id="banner" aria-hidden="true"></div>
+<div id="toast" aria-hidden="true"></div>
+
+<script src="sim.js?v=20261011a"></script>
+<script src="audio.js?v=20261011a"></script>
+<script src="render.js?v=20261011a"></script>
+<script src="ui.js?v=20261011a"></script>
+<script>
+document.getElementById('btn-again').addEventListener('click', function () {
+  window.__goldenacre.newGame();
+});
+</script>
+</body>
+</html>
