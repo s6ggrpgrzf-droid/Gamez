@@ -140,7 +140,8 @@
     { id: 'dead-corridor', name: "Dead Man's Corridor", cls: 'art-dead-corridor' },
     { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' },
     { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' },
-    { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' }
+    { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' },
+    { id: 'skyline-sparrow', name: 'Skyline Sparrow', cls: 'art-skyline-sparrow' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -187,6 +188,10 @@
           var gs = JSON.parse(gw.sim);
           return { label: 'Day ' + gs.day + ' · ' + (+gs.stats.guided || 0) + ' guided', frac: Math.min(1, gs.day / 60) };
         } catch (e) { return null; }
+      }
+      if (id === 'skyline-sparrow') {
+        var ssv = readJSON('ss_save_v1'); if (!ssv || !ssv.best || !ssv.best.score) return null;
+        return { label: 'Best ' + (+ssv.best.score).toLocaleString() + ' pts', frac: Math.min(1, ssv.best.score / 5000) };
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;
