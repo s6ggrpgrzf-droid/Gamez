@@ -848,11 +848,28 @@
       }
       if (t2.plant) {
         var ps = TREE_PX[t2.plant.stage] || 40;
-        var swx = st.weather.kind;
-        var sway = (swx === 'wind' ? 7 : swx === 'storm' ? 5 : 1.2) * Math.sin(now * 2.1 + ti * 1.3);
         var bnc = bounceMap[ti] > 0 ? 1 + Math.sin(bounceMap[ti] * Math.PI) * 0.18 : 1;
         var bps = ps * bnc;
-        ctx.drawImage(FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred, st.season, t2.plant.variant), s2x - bps / 2 + sway, s2y - bps * 0.94, bps, bps);
+        var timg = FArt.tree(t2.plant.type, t2.plant.stage, vv, t2.plant.charred, st.season, t2.plant.variant);
+        var tdx = s2x - bps / 2, tdy = s2y - bps * 0.94;
+        var swx = st.weather.kind, stg = t2.plant.stage;
+        if (stg >= 3 && stg <= 5 && !t2.plant.charred) {
+          /* trunk stays planted; only the crown pivots in the wind */
+          var pivY = tdy + (stg === 3 ? 80 : stg === 5 ? 41 : 52) / 128 * bps;
+          var wamp = swx === 'wind' ? 0.05 : swx === 'storm' ? 0.04 : 0.01;
+          var wang = wamp * Math.sin(now * 2.1 + ti * 1.3);
+          ctx.save();
+          ctx.beginPath(); ctx.rect(tdx - 10, pivY, bps + 20, tdy + bps - pivY + 10); ctx.clip();
+          ctx.drawImage(timg, tdx, tdy, bps, bps);
+          ctx.restore();
+          ctx.save();
+          ctx.beginPath(); ctx.rect(tdx - 10, tdy - 10, bps + 20, pivY - tdy + 10); ctx.clip();
+          ctx.translate(s2x, pivY); ctx.rotate(wang); ctx.translate(-s2x, -pivY);
+          ctx.drawImage(timg, tdx, tdy, bps, bps);
+          ctx.restore();
+        } else {
+          ctx.drawImage(timg, tdx, tdy, bps, bps);
+        }
       }
       /* wildfire flames */
       if (t2.fire > 0) {
