@@ -22,24 +22,6 @@ var FArt = (function () {
     g.fillStyle = fill; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 6.2832); g.fill();
   }
 
-  /* ---------- soil ---------- */
-  function soil(v) {
-    return get('soil' + v, function (g) {
-      var base = ['#5a4630', '#54422c', '#5e4a33', '#52402b'][v % 4];
-      g.fillStyle = base;
-      g.beginPath(); g.roundRect(2, 2, S - 4, S - 4, 22); g.fill();
-      /* speckles */
-      for (var i = 0; i < 26; i++) {
-        var h1 = hash(v * 31 + i, i * 7 + v), h2 = hash(i * 13, v * 17 + i);
-        g.fillStyle = h1 > 0.5 ? 'rgba(0,0,0,0.13)' : 'rgba(255,240,210,0.07)';
-        g.beginPath(); g.arc(8 + h1 * (S - 16), 8 + h2 * (S - 16), 1.5 + h2 * 3, 0, 6.2832); g.fill();
-      }
-      /* soft inner edge */
-      g.strokeStyle = 'rgba(0,0,0,0.18)'; g.lineWidth = 5;
-      g.beginPath(); g.roundRect(4, 4, S - 8, S - 8, 20); g.stroke();
-    });
-  }
-
   /* ---------- trees ---------- */
   function canopy(g, cx, cy, r, c1, c2, c3, seed) {
     var blobs = 7;
@@ -231,48 +213,192 @@ var FArt = (function () {
     });
   }
 
-  /* ---------- network glow threads ---------- */
-  function drawThreads(g, ox, oy, ts, links, tsec) {
+  /* ---------- mycorrhizal web: glowing threads between root zones ---------- */
+  function drawWeb(g, links, tsec) {
+    if (!links.length) return;
     g.save();
-    g.strokeStyle = 'rgba(190,235,165,' + (0.5 + 0.2 * Math.sin(tsec * 2.4)) + ')';
-    g.lineWidth = Math.max(2.5, ts * 0.06); g.lineCap = 'round';
-    g.shadowColor = 'rgba(150,220,130,0.9)'; g.shadowBlur = 10;
+    g.lineCap = 'round';
+    var pulse = 0.55 + 0.25 * Math.sin(tsec * 2.2);
     for (var i = 0; i < links.length; i++) {
       var L = links[i];
-      g.beginPath();
-      g.moveTo(ox + L.x1 * ts + ts / 2, oy + L.y1 * ts + ts * 0.72);
-      g.quadraticCurveTo(
-        ox + (L.x1 + L.x2) / 2 * ts + ts / 2, oy + (L.y1 + L.y2) / 2 * ts + ts * 0.95,
-        ox + L.x2 * ts + ts / 2, oy + L.y2 * ts + ts * 0.72);
-      g.stroke();
+      var sagY = Math.max(L.y1, L.y2) + 26, midX = (L.x1 + L.x2) / 2;
+      g.strokeStyle = 'rgba(150,220,130,0.20)'; g.lineWidth = 9;
+      g.beginPath(); g.moveTo(L.x1, L.y1);
+      g.quadraticCurveTo(midX, sagY, L.x2, L.y2); g.stroke();
+      g.strokeStyle = 'rgba(196,240,170,' + pulse.toFixed(3) + ')'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(L.x1, L.y1);
+      g.quadraticCurveTo(midX, sagY, L.x2, L.y2); g.stroke();
+      var t = (tsec * 0.35 + i * 0.37) % 1, u = 1 - t;
+      var mx = u * u * L.x1 + 2 * u * t * midX + t * t * L.x2;
+      var my = u * u * L.y1 + 2 * u * t * sagY + t * t * L.y2;
+      g.fillStyle = 'rgba(230,255,205,0.95)';
+      g.beginPath(); g.arc(mx, my, 4, 0, 6.2832); g.fill();
     }
     g.restore();
   }
 
+  /* ---------- root systems (cached sprites, 160x200, origin top-center) ---------- */
+  function roots(type, stage, seed) {
+    var key = 'root' + type + stage + 's' + (seed % 5);
+    return get(key, function (g) {
+      var cx = 80;
+      g.lineCap = 'round';
+      function branch(x, y, ang, len, w) {
+        var x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len * 0.55 + len * 0.3;
+        g.strokeStyle = '#5f4128'; g.lineWidth = w;
+        g.beginPath(); g.moveTo(x, y);
+        g.quadraticCurveTo(x + (x2 - x) * 0.5 + (hash(x | 0, y | 0) - 0.5) * 10, y + (y2 - y) * 0.6, x2, y2);
+        g.stroke();
+        return [x2, y2];
+      }
+      if (stage <= 1) { branch(cx, 4, Math.PI / 2 + 0.2, 10, 3); return; }
+      var depth = [0, 0, 46, 96, 150, 186][stage] || 60;
+      var nLat = [0, 0, 3, 6, 10, 13][stage] || 4;
+      var tx = cx, ty = 2;
+      for (var sgi = 0; sgi < 5; sgi++) {
+        var ny = ty + depth / 5, nx = tx + (hash(seed, sgi * 3) - 0.5) * 22;
+        g.strokeStyle = '#523a20'; g.lineWidth = 8.5 - sgi * 1.2;
+        g.beginPath(); g.moveTo(tx, ty);
+        g.quadraticCurveTo((tx + nx) / 2 + 6, (ty + ny) / 2, nx, ny); g.stroke();
+        tx = nx; ty = ny;
+      }
+      for (var li = 0; li < nLat; li++) {
+        var side = li % 2 ? 1 : -1;
+        var ly = 8 + hash(seed, li * 7) * depth * 0.55;
+        var lx = cx + (hash(seed, li * 11) - 0.5) * 14;
+        var ang = Math.PI / 2 + side * (0.5 + hash(seed, li * 13) * 0.55);
+        var len = (30 + hash(seed, li * 17) * 55) * (depth / 150 + 0.35);
+        var end = branch(lx, ly, ang, len, 4);
+        var nb = 2 + ((hash(seed, li * 19) * 2) | 0);
+        for (var bi = 0; bi < nb; bi++) {
+          var t = 0.4 + 0.6 * (bi / nb);
+          branch(lx + (end[0] - lx) * t, ly + (end[1] - ly) * t,
+                 ang + side * (0.5 + hash(seed, bi * 23 + li) * 0.5), len * 0.32, 2);
+        }
+      }
+      g.strokeStyle = 'rgba(224,196,150,0.6)'; g.lineWidth = 1.3;
+      for (var hi = 0; hi < 14; hi++) {
+        var hx = cx + (hash(seed, hi * 29) - 0.5) * 130;
+        var hy = 20 + hash(seed, hi * 31) * depth * 0.9;
+        g.beginPath(); g.moveTo(hx, hy);
+        g.lineTo(hx + (hash(seed, hi * 37) - 0.5) * 14, hy + 4 + hash(seed, hi * 41) * 8); g.stroke();
+      }
+    });
+  }
+
+  /* ---------- mycelium fan under mushroom spots ---------- */
+  function mycelium(seed) {
+    return get('myc' + (seed % 5), function (g) {
+      var cx = 80;
+      g.lineCap = 'round';
+      g.strokeStyle = 'rgba(232,220,194,0.75)'; g.lineWidth = 1.6;
+      for (var i = 0; i < 16; i++) {
+        var ang = Math.PI * (0.15 + 0.7 * (i / 15)) + (hash(seed, i) - 0.5) * 0.2;
+        var len = 40 + hash(seed, i * 3) * 55;
+        var x2 = cx + Math.cos(ang) * len, y2 = 6 + Math.sin(ang) * len * 0.55;
+        g.beginPath(); g.moveTo(cx, 4);
+        g.quadraticCurveTo(cx + (x2 - cx) * 0.5, 4 + (y2 - 4) * 0.3, x2, y2); g.stroke();
+      }
+      g.fillStyle = 'rgba(232,220,194,0.5)';
+      for (var d = 0; d < 20; d++) {
+        g.beginPath(); g.arc(cx + (hash(seed, d * 7) - 0.5) * 150, 10 + hash(seed, d * 11) * 60, 1.4, 0, 6.2832); g.fill();
+      }
+    });
+  }
+
+  /* ---------- underground cross-section (cached per resize) ---------- */
+  function underground(w, h, surfFn, botY) {
+    var key = 'ug' + w + 'x' + h;
+    if (cache[key]) return cache[key];
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    var g = c.getContext('2d');
+    var top = h;
+    for (var x0 = 0; x0 < w; x0 += 8) top = Math.min(top, surfFn(x0));
+    g.fillStyle = '#33271a'; g.fillRect(0, top - 4, w, botY - top + 8);
+    g.fillStyle = '#3d2e1f';
+    g.beginPath(); g.moveTo(0, top - 4); g.lineTo(w, top - 4);
+    var ym = top + 0.55 * (botY - top);
+    for (var x = w; x >= 0; x -= 16) g.lineTo(x, ym + Math.sin(x * 0.018 + 1.2) * 9 + (hash(x, 5) - 0.5) * 10);
+    g.closePath(); g.fill();
+    g.fillStyle = '#4a3826';
+    g.beginPath(); g.moveTo(0, top - 4); g.lineTo(w, top - 4);
+    var yt = top + 0.28 * (botY - top);
+    for (var x2 = w; x2 >= 0; x2 -= 16) g.lineTo(x2, yt + Math.sin(x2 * 0.023 + 4.0) * 7 + (hash(x2, 9) - 0.5) * 8);
+    g.closePath(); g.fill();
+    for (var i = 0; i < 340; i++) {
+      var px = hash(i, 101) * w, py = top + 8 + hash(i, 103) * (botY - top - 12);
+      if (py < surfFn(px) + 5) continue;
+      g.fillStyle = hash(i, 107) > 0.5 ? 'rgba(0,0,0,0.14)' : 'rgba(255,235,200,0.06)';
+      g.beginPath(); g.arc(px, py, 1 + hash(i, 109) * 2.6, 0, 6.2832); g.fill();
+    }
+    for (var sN = 0; sN < 12; sN++) {
+      var qx = hash(sN, 201) * w, qy = top + 20 + hash(sN, 203) * (botY - top - 40);
+      if (qy < surfFn(qx) + 14) continue;
+      var qr = 5 + hash(sN, 205) * 9;
+      ell(g, qx, qy, qr, qr * 0.72, '#5a5148');
+      ell(g, qx - qr * 0.25, qy - qr * 0.2, qr * 0.4, qr * 0.28, 'rgba(255,255,255,0.10)');
+    }
+    /* deep zone: big buried stones + faint ancient root traces */
+    for (var dS = 0; dS < 5; dS++) {
+      var dx = hash(dS, 401) * w, dy = top + (botY - top) * (0.62 + hash(dS, 403) * 0.3);
+      var dr = 12 + hash(dS, 405) * 16;
+      ell(g, dx, dy, dr, dr * 0.66, '#4e463d');
+      ell(g, dx - dr * 0.25, dy - dr * 0.2, dr * 0.38, dr * 0.26, 'rgba(255,255,255,0.08)');
+    }
+    g.strokeStyle = 'rgba(0,0,0,0.20)'; g.lineWidth = 5; g.lineCap = 'round';
+    for (var oR = 0; oR < 4; oR++) {
+      var ox = hash(oR, 411) * w, oy = top + (botY - top) * (0.7 + hash(oR, 413) * 0.22);
+      g.beginPath(); g.moveTo(ox, oy);
+      g.quadraticCurveTo(ox + 40 - hash(oR, 415) * 80, oy + 24, ox + 90 - hash(oR, 417) * 180, oy + 44);
+      g.stroke();
+    }
+    g.strokeStyle = '#5da34f'; g.lineWidth = 2; g.lineCap = 'round';
+    for (var tI = 0; tI < 130; tI++) {
+      var gx = hash(tI, 301) * w, gy = surfFn(gx);
+      var gh = 5 + hash(tI, 303) * 8, lean = (hash(tI, 305) - 0.5) * 8;
+      g.beginPath(); g.moveTo(gx, gy + 2);
+      g.quadraticCurveTo(gx + lean * 0.4, gy - gh * 0.6, gx + lean, gy - gh); g.stroke();
+    }
+    g.strokeStyle = 'rgba(140,220,140,0.28)'; g.lineWidth = 3;
+    g.beginPath();
+    for (var sx = 0; sx <= w; sx += 8) { var sy = surfFn(sx); if (sx === 0) g.moveTo(sx, sy); else g.lineTo(sx, sy); }
+    g.stroke();
+    cache[key] = c;
+    return c;
+  }
+
   /* ---------- backgrounds ---------- */
-  function gameBG(w, h, tsec) {
+  function gameBG(w, h, surfBaseY, tsec) {
     var c = document.createElement('canvas'); c.width = w; c.height = h;
     var g = c.getContext('2d');
     var sky = g.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#9dc3a5'); sky.addColorStop(0.45, '#7ba76f'); sky.addColorStop(1, '#4a6b3f');
+    sky.addColorStop(0, '#8fc7e8'); sky.addColorStop(0.5, '#c4e2d8');
+    sky.addColorStop(0.78, '#e9efd2'); sky.addColorStop(1, '#dfe8c8');
     g.fillStyle = sky; g.fillRect(0, 0, w, h);
-    /* distant treeline */
-    g.fillStyle = '#3d6034';
-    g.beginPath(); g.moveTo(0, h * 0.34);
-    for (var x = 0; x <= w; x += 24) g.lineTo(x, h * 0.34 - 14 - hash(x, 7) * 44 - (hash(x, 13) > 0.7 ? 26 : 0));
-    g.lineTo(w, h * 0.42); g.lineTo(0, h * 0.42); g.closePath(); g.fill();
-    g.fillStyle = 'rgba(255,250,220,0.10)';
-    for (var i = 0; i < 26; i++) {
-      var lx = hash(i, 21) * w, lw = 20 + hash(i, 22) * 46;
-      g.save(); g.translate(lx, 0); g.rotate(0.22);
-      g.fillRect(0, -40, lw, h * 0.75); g.restore();
+    var sunX = w * 0.8, sunY = h * 0.13;
+    var sg = g.createRadialGradient(sunX, sunY, 6, sunX, sunY, w * 0.3);
+    sg.addColorStop(0, 'rgba(255,250,220,0.95)'); sg.addColorStop(1, 'rgba(255,250,220,0)');
+    g.fillStyle = sg; g.fillRect(0, 0, w, h * 0.6);
+    for (var ci = 0; ci < 5; ci++) {
+      var cxp = hash(ci, 501) * w, cyp = h * (0.08 + hash(ci, 503) * 0.22), cw = 46 + hash(ci, 504) * 60;
+      ell(g, cxp, cyp, cw, cw * 0.32, 'rgba(255,255,255,0.7)');
+      ell(g, cxp - cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, 'rgba(255,255,255,0.7)');
+      ell(g, cxp + cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, 'rgba(255,255,255,0.7)');
     }
-    /* drifting motes */
-    g.fillStyle = 'rgba(255,250,220,0.5)';
-    for (var m = 0; m < 22; m++) {
-      var mx = (hash(m, 31) * w + tsec * (6 + hash(m, 32) * 10)) % w;
-      var my = hash(m, 33) * h * 0.7 + Math.sin(tsec * 0.9 + m) * 12;
-      g.beginPath(); g.arc(mx, my, 1.4 + hash(m, 34) * 1.6, 0, 6.2832); g.fill();
+    var hy = surfBaseY - 4;
+    g.fillStyle = '#6f9a6a';
+    g.beginPath(); g.moveTo(0, hy + 34);
+    for (var x = 0; x <= w; x += 18) {
+      var th = 26 + hash(x, 601) * 46 + (hash(x, 602) > 0.72 ? 30 : 0);
+      g.lineTo(x, hy - th); g.lineTo(x + 9, hy + 8);
+    }
+    g.lineTo(w, hy + 34); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.14)'; g.fillRect(0, hy - 64, w, 64);
+    g.strokeStyle = 'rgba(60,70,80,0.6)'; g.lineWidth = 2;
+    for (var b = 0; b < 3; b++) {
+      var bx = hash(b, 701) * w, by = h * (0.12 + hash(b, 702) * 0.14);
+      g.beginPath(); g.moveTo(bx - 8, by); g.quadraticCurveTo(bx - 3, by - 5, bx, by);
+      g.quadraticCurveTo(bx + 3, by - 5, bx + 8, by); g.stroke();
     }
     return c;
   }
@@ -346,7 +472,8 @@ var FArt = (function () {
   }
 
   return {
-    soil: soil, tree: tree, mushroom: mushroom, animal: animal,
-    drawThreads: drawThreads, gameBG: gameBG, titleBG: titleBG, hash: hash
+    tree: tree, mushroom: mushroom, animal: animal,
+    drawWeb: drawWeb, gameBG: gameBG, titleBG: titleBG, hash: hash,
+    roots: roots, mycelium: mycelium, underground: underground
   };
 })();

@@ -5,7 +5,7 @@
  * ========================================================================== */
 'use strict';
 var FW = (function () {
-  var GRID = 8;
+  var GW = 12, GH = 1; /* side view: one row of 12 soil spots */
 
   /* growth stages */
   var ST = { EMPTY: 0, SEED: 1, SPROUT: 2, SAPLING: 3, ADULT: 4, ANCIENT: 5, FALLEN: 6 };
@@ -82,7 +82,7 @@ var FW = (function () {
   /* ---------- state ---------- */
   function newGame(seed) {
     var tiles = [];
-    for (var i = 0; i < GRID * GRID; i++) tiles.push({ plant: null, mush: false, net: 0 });
+    for (var i = 0; i < GW * GH; i++) tiles.push({ plant: null, mush: false, net: 0 });
     return {
       v: 1, seed: seed >>> 0 || 1, _rs: (seed >>> 0 || 1),
       tiles: tiles, points: 30, day: 1, dayT: 0,
@@ -92,8 +92,8 @@ var FW = (function () {
       stats: { grown: 0, tapped: 0, speciesSeen: [], plantsSeen: [], plantedAny: false, arrivals: 0, peak: 30 }
     };
   }
-  function tile(st, x, y) { return st.tiles[y * GRID + x]; }
-  function inGrid(x, y) { return x >= 0 && y >= 0 && x < GRID && y < GRID; }
+  function tile(st, x, y) { return st.tiles[y * GW + x]; }
+  function inGrid(x, y) { return x >= 0 && y >= 0 && x < GW && y < GH; }
 
   function stats(st) {
     var s = { adultTrees: 0, bushes: 0, flowering: 0, fallen: 0, plants: 0, small: 0, trees: 0 };
@@ -180,14 +180,14 @@ var FW = (function () {
       var id = comps.length, trees = 0, stack = [i];
       comp[i] = id;
       while (stack.length) {
-        var c = stack.pop(), cx = c % GRID, cy = (c / GRID) | 0;
+        var c = stack.pop(), cx = c % GW, cy = (c / GW) | 0;
         var tl = st.tiles[c];
         if (tl.plant && tl.plant.stage >= ST.SAPLING && tl.plant.stage <= ST.ANCIENT) trees++;
         var dx = [1, -1, 0, 0], dy = [0, 0, 1, -1];
         for (var d = 0; d < 4; d++) {
           var nx = cx + dx[d], ny = cy + dy[d];
           if (!inGrid(nx, ny)) continue;
-          var ni = ny * GRID + nx;
+          var ni = ny * GW + nx;
           if (node(ni) && comp[ni] < 0) { comp[ni] = id; stack.push(ni); }
         }
       }
@@ -217,7 +217,7 @@ var FW = (function () {
   function emptyTileNear(st, x, y) {
     var opts = [];
     for (var i = 0; i < st.tiles.length; i++) {
-      var tx = i % GRID, ty = (i / GRID) | 0;
+      var tx = i % GW, ty = (i / GW) | 0;
       if (!st.tiles[i].plant && !st.tiles[i].mush) opts.push({ x: tx, y: ty });
     }
     return opts.length ? pick(st, opts) : null;
@@ -296,7 +296,7 @@ var FW = (function () {
       addPoints(st, pts, 'rabbit', a.x, a.y); fx = 'hearts';
     } else if (sp === 'butterfly') {
       for (var k = 0; k < st.tiles.length; k++) {
-        var tx = k % GRID, ty = (k / GRID) | 0;
+        var tx = k % GW, ty = (k / GW) | 0;
         if (Math.abs(tx - a.x) <= 1 && Math.abs(ty - a.y) <= 1 && st.tiles[k].plant)
           st.tiles[k].plant.boostUntil = Math.max(st.tiles[k].plant.boostUntil, now + 60);
       }
@@ -313,7 +313,7 @@ var FW = (function () {
       if (saps.length) {
         var c = pick(st, saps), pl = st.tiles[c].plant;
         pl.stage = ST.SPROUT; pl.t = 0;
-        ev(st, { t: 'nibbled', x: c % GRID, y: (c / GRID) | 0 });
+        ev(st, { t: 'nibbled', x: c % GW, y: (c / GW) | 0 });
         msg += ' It nibbles a sapling.';
       }
     } else if (sp === 'hedgehog') {
@@ -357,7 +357,7 @@ var FW = (function () {
           var ap = st.tiles[tp].plant;
           if (ap && ap.stage === ST.ANCIENT && rnd(st) < 0.3) {
             ap.stage = ST.FALLEN; ap.t = 0;
-            ev(st, { t: 'grew', x: tp % GRID, y: (tp / GRID) | 0, stage: ST.FALLEN, type: ap.type, toppled: true });
+            ev(st, { t: 'grew', x: tp % GW, y: (tp / GW) | 0, stage: ST.FALLEN, type: ap.type, toppled: true });
           }
         }
         ev(st, { t: 'storm-end' });
@@ -371,7 +371,7 @@ var FW = (function () {
       for (var fi = 0; fi < st.tiles.length; fi++) {
         var fp = st.tiles[fi].plant;
         if (!fp || fp.stage !== ST.FALLEN || rnd(st) >= 0.5) continue;
-        var fx = fi % GRID, fy = (fi / GRID) | 0, spots = [];
+        var fx = fi % GW, fy = (fi / GW) | 0, spots = [];
         for (var sd = 0; sd < 4; sd++) {
           var sx = fx + sdx[sd], sy = fy + sdy[sd];
           if (inGrid(sx, sy)) { var stl = tile(st, sx, sy); if (!stl.plant && !stl.mush) spots.push({ x: sx, y: sy }); }
@@ -387,7 +387,7 @@ var FW = (function () {
     st._inc = (st._inc || 0);
     for (var c = 0; c < comps.length; c++) {
       if (!comps[c].live) continue;
-      st._inc += dt * (comps[c].trees / 3) / 12;
+      st._inc += dt * (comps[c].trees / 3) / 8;
       if (st._inc >= 1) { var n = Math.floor(st._inc); st._inc -= n; addPoints(st, n, 'web', -1, -1); }
     }
     /* plants */
@@ -398,11 +398,11 @@ var FW = (function () {
       var need = stageTime(p.type, p.stage);
       if (p.t >= need) {
         p.stage++; p.t = 0;
-        var tx = i % GRID, ty = (i / GRID) | 0;
+        var tx = i % GW, ty = (i / GW) | 0;
         ev(st, { t: 'grew', x: tx, y: ty, stage: p.stage, type: p.type });
         if (p.stage === ST.SPROUT) unlock(st, 'first-sprout');
-        if (p.stage === ST.ADULT) addPoints(st, 5, 'grown', tx, ty);
-        if (p.stage === ST.ANCIENT) { addPoints(st, 10, 'ancient', tx, ty); unlock(st, 'old-growth'); }
+        if (p.stage === ST.ADULT) addPoints(st, 8, 'grown', tx, ty);
+        if (p.stage === ST.ANCIENT) { addPoints(st, 15, 'ancient', tx, ty); unlock(st, 'old-growth'); }
         if (p.stage === ST.FALLEN) unlock(st, 'circle');
         st.stats.grown++;
       }
@@ -433,7 +433,7 @@ var FW = (function () {
   /* ---------- save ---------- */
   function serialize(st) {
     return JSON.stringify({
-      v: 1, seed: st.seed, _rs: st._rs, tiles: st.tiles, points: st.points,
+      v: 2, seed: st.seed, _rs: st._rs, tiles: st.tiles, points: st.points,
       day: st.day, dayT: st.dayT, animals: st.animals, visiting: st.visiting,
       nextAid: st.nextAid, stats: st.stats, ach: st.ach || {}, storm: st.storm || 0,
       savedAt: Date.now()
@@ -442,7 +442,8 @@ var FW = (function () {
   function deserialize(json) {
     try {
       var d = JSON.parse(json);
-      if (!d || d.v !== 1 || !Array.isArray(d.tiles)) return null;
+      /* v1 was the top-down 8x8 build; the side-view rebuild starts fresh */
+      if (!d || d.v !== 2 || !Array.isArray(d.tiles) || d.tiles.length !== GW * GH) return null;
       d.events = [];
       if (!d.ach) d.ach = {};
       if (!d.stats.plantsSeen) d.stats.plantsSeen = [];
@@ -457,12 +458,13 @@ var FW = (function () {
     function ok(c, name) { if (!c) { fails++; console.log('FAIL:', name); } }
     var st = newGame(42);
     ok(st.points === 30, 'start points');
-    ok(st.tiles.length === 64, 'grid 8x8');
+    ok(st.tiles.length === 12, 'one row of 12 spots');
     var r = plant(st, 0, 0, 'pine');
     ok(r.ok && st.points === 25, 'plant pine costs 5');
     ok(!plant(st, 0, 0, 'pine').ok, 'no double plant');
-    ok(plant(st, 1, 1, 'oak').ok, 'oak affordable at 25 pts');
-    ok(plant(st, 2, 2, 'oak').reason === 'poor', 'cannot afford second oak at 5 pts');
+    ok(plant(st, 5, 0, 'oak').ok, 'oak affordable at 25 pts');
+    ok(plant(st, 6, 0, 'oak').reason === 'poor', 'cannot afford second oak at 5 pts');
+    ok(plant(st, 0, 1, 'pine').reason === 'edge', 'single row: y=1 is outside');
     st.points = 500;
     plant(st, 1, 0, 'oak'); plant(st, 2, 0, 'berry'); plant(st, 3, 0, 'berry');
     /* force adults */
@@ -471,9 +473,9 @@ var FW = (function () {
     ok(st.visiting.length >= 1 || st.animals.length >= 1, 'arrival triggered: ' + JSON.stringify(evs.map(function(e){return e.t;})));
     /* grow a pine to adult via steps */
     var st2 = newGame(7); st2.points = 500;
-    plant(st2, 4, 4, 'pine');
-    var p = tile(st2, 4, 4).plant, guard = 0;
-    while (p.stage < ST.ADULT && guard++ < 5000) { step(st2, 5); p = tile(st2, 4, 4).plant; }
+    plant(st2, 4, 0, 'pine');
+    var p = tile(st2, 4, 0).plant, guard = 0;
+    while (p.stage < ST.ADULT && guard++ < 5000) { step(st2, 5); p = tile(st2, 4, 0).plant; }
     ok(p.stage === ST.ADULT, 'pine reaches adult, guard=' + guard);
     /* mushroom network */
     var st3 = newGame(9); st3.points = 500;
@@ -481,7 +483,7 @@ var FW = (function () {
     [[0,0],[2,0],[4,0]].forEach(function (c) { tile(st3, c[0], c[1]).plant.stage = ST.SAPLING; });
     ok(plantMushroom(st3, 1, 0).ok, 'mushroom between trees');
     ok(plantMushroom(st3, 3, 0).ok, 'mushroom between trees 2');
-    ok(plantMushroom(st3, 7, 7).reason === 'lonely', 'mushroom needs tree neighbor');
+    ok(plantMushroom(st3, 9, 0).reason === 'lonely', 'mushroom needs tree neighbor');
     var comps = computeNetworks(st3, 0);
     ok(comps.some(function (c) { return c.live && c.trees === 3; }), '3-tree web is live');
     ok(tile(st3, 0, 0).net > 0, 'tile marked in network');
@@ -499,13 +501,14 @@ var FW = (function () {
     ok(tile(st5, 0, 0).plant.stage === ST.SPROUT, 'deer nibbles sapling');
     /* serialize round-trip */
     var s = serialize(st5), back = deserialize(s);
-    ok(back && back.points === st5.points && back.tiles.length === 64, 'save round-trip');
+    ok(back && back.points === st5.points && back.tiles.length === 12, 'save round-trip');
+    ok(deserialize('{"v":1,"tiles":[]}') === null, 'old top-down save rejected');
     /* fallen trunk + hedgehog */
     var st6 = newGame(13); st6.points = 500;
-    plant(st6, 5, 5, 'oak'); tile(st6, 5, 5).plant.stage = ST.FALLEN;
+    plant(st6, 5, 0, 'oak'); tile(st6, 5, 0).plant.stage = ST.FALLEN;
     step(st6, 0.1);
     ok(st6.visiting.some(function (v) { return v.species === 'hedgehog'; }) || st6.animals.some(function (a) { return a.species === 'hedgehog'; }), 'hedgehog likes fallen trunk');
-    ok(clearTile(st6, 5, 5).ok && !tile(st6, 5, 5).plant, 'clear fallen trunk');
+    ok(clearTile(st6, 5, 0).ok && !tile(st6, 5, 0).plant, 'clear fallen trunk');
     /* eviction: squirrel leaves when its tree is gone */
     var st7 = newGame(14); st7.points = 500;
     plant(st7, 0, 0, 'pine'); tile(st7, 0, 0).plant.stage = ST.ADULT;
@@ -528,11 +531,11 @@ var FW = (function () {
     var st9 = newGame(17); st9.points = 500;
     plant(st9, 0, 0, 'pine');
     ok(tile(st9, 0, 0).plant.fast === true, 'first plant is fast');
-    plant(st9, 1, 1, 'pine');
-    ok(!tile(st9, 1, 1).plant.fast, 'second plant is normal speed');
+    plant(st9, 6, 0, 'pine');
+    ok(!tile(st9, 6, 0).plant.fast, 'second plant is normal speed');
     /* achievements fire through play */
     var st10 = newGame(18); st10.points = 500;
-    plant(st10, 2, 2, 'pine');
+    plant(st10, 7, 0, 'pine');
     step(st10, 30); /* fast tree: 20s/3 -> sprout */
     ok(st10.ach['first-sprout'], 'first-sprout achievement');
     console.log(fails === 0 ? 'SIM SELF-TEST: ALL PASS' : 'SIM SELF-TEST: ' + fails + ' FAILURES');
@@ -540,7 +543,7 @@ var FW = (function () {
   }
 
   return {
-    GRID: GRID, ST: ST, PLANTS: PLANTS, ANIMALS: ANIMALS, ANIMAL_IDS: ANIMAL_IDS,
+    GW: GW, GH: GH, ST: ST, PLANTS: PLANTS, ANIMALS: ANIMALS, ANIMAL_IDS: ANIMAL_IDS,
     MUSH_COST: MUSH_COST, TAP_COOLDOWN: TAP_COOLDOWN, STORM_COST: STORM_COST,
     ACH: ACH,
     newGame: newGame, step: step, plant: plant, plantMushroom: plantMushroom,
