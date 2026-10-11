@@ -1,0 +1,54 @@
+/* Skyline Sparrow — style.css. Opaque cards (>=90%), no backdrop-filter,
+   DOM UI animates via transform/opacity only. 44px+ touch targets. */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: #1a1430; }
+body { font-family: system-ui, -apple-system, sans-serif; color: #fff8ea;
+  touch-action: none; user-select: none; -webkit-user-select: none; }
+#wrap { position: fixed; inset: 0; }
+#game { position: absolute; inset: 0; display: block; touch-action: none; }
+
+.screen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+  opacity: 0; pointer-events: none; transition: opacity 0.22s ease-out; }
+.screen.on { opacity: 1; pointer-events: auto; }
+#screen-play { pointer-events: none; }
+
+.menu-card { background: rgba(20, 14, 38, 0.94); border-radius: 20px; padding: 26px 24px;
+  max-width: 340px; width: 100%; text-align: center;
+  border: 1px solid rgba(255, 248, 234, 0.14);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.5);
+  transform: translateY(8px); transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.screen.on .menu-card { transform: translateY(0); }
+.art-text { margin: 6px auto; }
+.art-text canvas { max-width: 100%; height: auto; }
+
+#rival-card { background: rgba(255, 211, 77, 0.1); border: 1px solid rgba(255, 211, 77, 0.35);
+  border-radius: 12px; padding: 10px 12px; margin: 12px 0; text-align: left; }
+#rival-name { font-weight: 800; font-size: 15px; color: #ffd34d; margin-bottom: 4px; }
+#rival-text { font-size: 13.5px; line-height: 1.45; color: rgba(255, 248, 234, 0.85); font-style: italic; }
+
+.bigbtn { display: block; width: 100%; min-height: 56px; margin: 10px 0; border: none; border-radius: 16px;
+  font-size: 20px; font-weight: 900; letter-spacing: 2px; cursor: pointer;
+  background: linear-gradient(180deg, #ffd34d, #f0a92e); color: #3a2408;
+  box-shadow: 0 4px 0 #a86e14, 0 8px 18px rgba(0, 0, 0, 0.35); }
+.bigbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 #a86e14; }
+.bigbtn.alt { background: linear-gradient(180deg, #4de3ff, #2aa8d8); color: #082a3a;
+  box-shadow: 0 4px 0 #1a6e94, 0 8px 18px rgba(0, 0, 0, 0.35); }
+.bigbtn.alt:active { box-shadow: 0 1px 0 #1a6e94; }
+.smallbtn { min-height: 44px; padding: 0 14px; margin: 6px 4px; border-radius: 12px; border: 1px solid rgba(255,248,234,0.25);
+  background: rgba(255, 248, 234, 0.08); color: #fff8ea; font-size: 13px; font-weight: 700; cursor: pointer; }
+.smallbtn:active { transform: scale(0.96); }
+.row { display: flex; justify-content: center; flex-wrap: wrap; }
+.hint { margin-top: 10px; font-size: 13px; color: rgba(255, 248, 234, 0.6); }
+.buildtag { margin-top: 8px; font-size: 11px; color: rgba(255, 248, 234, 0.35); font-family: monospace; }
+
+#over-tale { margin: 12px 0; padding: 12px; font-size: 14.5px; line-height: 1.5; font-style: italic;
+  color: rgba(255, 248, 234, 0.9); background: rgba(77, 227, 255, 0.07);
+  border-left: 3px solid #4de3ff; border-radius: 0 10px 10px 0; text-align: left; min-height: 60px; }
+
+#hud { position: absolute; top: 0; right: 0; padding: calc(10px + env(safe-area-inset-top)) 12px 0 0; }
+#hud.hidden { display: none; }
+.iconbtn { width: 48px; height: 48px; border-radius: 14px; border: 1px solid rgba(255,248,234,0.25);
+  background: rgba(20, 14, 38, 0.85); color: #fff8ea; font-size: 16px; font-weight: 900; cursor: pointer; }
+.iconbtn:active { transform: scale(0.94); }
+#paused-title { font-size: 34px; font-weight: 900; letter-spacing: 3px; margin-bottom: 8px; }

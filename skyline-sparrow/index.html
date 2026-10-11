@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2a2140">
+<title>Skyline Sparrow — Workman Designs</title>
+<link rel="stylesheet" href="./style.css?v=20261011a">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <button id="btn-pause" class="iconbtn" aria-label="Pause">II</button>
+  </div>
+
+  <section id="screen-menu" class="screen on">
+    <div class="menu-card">
+      <div id="menu-title" class="art-text"></div>
+      <div id="menu-sub" class="art-text"></div>
+      <div id="rival-card">
+        <div id="rival-name"></div>
+        <div id="rival-text"></div>
+      </div>
+      <button id="btn-start" class="bigbtn">FLY</button>
+      <button id="btn-daily" class="bigbtn alt">DAILY RUN</button>
+      <div id="menu-daily" class="art-text"></div>
+      <div id="menu-best" class="art-text"></div>
+      <div class="row">
+        <button id="btn-mute" class="smallbtn">SOUND ON</button>
+        <button id="btn-calm" class="smallbtn">CALM MODE OFF</button>
+      </div>
+      <div class="hint">Tap anywhere to jump. Hold for higher.</div>
+      <div id="build-tag" class="buildtag"></div>
+    </div>
+  </section>
+
+  <section id="screen-play" class="screen">
+  </section>
+
+  <section id="screen-over" class="screen">
+    <div class="menu-card">
+      <div id="over-title" class="art-text"></div>
+      <div id="over-score" class="art-text"></div>
+      <div id="over-best" class="art-text"></div>
+      <div id="over-stats" class="art-text"></div>
+      <div id="over-tale"></div>
+      <button id="btn-again" class="bigbtn">FLY AGAIN</button>
+      <button id="btn-menu" class="bigbtn alt">MENU</button>
+      <div id="build-tag2" class="buildtag"></div>
+    </div>
+  </section>
+
+  <section id="screen-paused" class="screen">
+    <div class="menu-card">
+      <div class="art-text" id="paused-title">PAUSED</div>
+      <button id="btn-resume" class="bigbtn">RESUME</button>
+      <button id="btn-menu2" class="bigbtn alt" onclick="document.getElementById('btn-menu').click()">MENU</button>
+    </div>
+  </section>
+</div>
+<script src="./sim.js?v=20261011a"></script>
+<script src="./gen.js?v=20261011a"></script>
+<script src="./feel.js?v=20261011a"></script>
+<script src="./audio.js?v=20261011a"></script>
+<script src="./render.js?v=20261011a"></script>
+<script src="./ui.js?v=20261011a"></script>
+</body>
+</html>
