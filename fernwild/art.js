@@ -52,10 +52,48 @@ var FArt = (function () {
     oak:   { trunk: '#5d4227', c1: '#3a7a38', c2: '#4c8c42', c3: '#2c5e2e', oak: true },
     aspen: { trunk: '#d9d4c2', c1: '#69a854', c2: '#7dbc60', c3: '#54853f', aspen: true }
   };
-  function tree(type, stage, v, burnt) {
-    return get('tree' + type + stage + 'v' + (v % 3) + (burnt ? 'b' : ''), function (g) {
+  function tree(type, stage, v, burnt, season, variant) {
+    season = (season == null ? 1 : season) % 4;
+    variant = variant || '';
+    return get('tree' + type + stage + 'v' + (v % 3) + (burnt ? 'b' : '') + 's' + season + variant, function (g) {
       var st = TREE_STYLE[type], cx = S / 2, baseY = S - 14;
       var j = hash(v, stage) - 0.5;
+      /* seasonal palette */
+      var c1 = st.c1, c2 = st.c2, c3 = st.c3;
+      var bare = (season === 3 && !st.pine && !burnt);   /* winter: deciduous lose leaves */
+      var snowy = (season === 3 && st.pine && !burnt);
+      if (!burnt && !bare) {
+        if (variant === 'golden') { c1 = '#d8a93b'; c2 = '#e8c04b'; c3 = '#b8862e'; }
+        else if (variant === 'rainbow') { c1 = '#7fb069'; c2 = '#e88ca0'; c3 = '#6aa8d8'; }
+        else if (season === 2 && !st.pine) { c1 = '#c97a2e'; c2 = '#d89a3b'; c3 = '#a85a24'; }
+        else if (season === 0 && !st.pine) { c1 = '#5da34f'; c2 = '#6fb45a'; c3 = '#4a8a42'; }
+      }
+      function snowCap(x, y, w) {
+        ell(g, x, y, w, w * 0.32, 'rgba(240,246,250,0.92)');
+      }
+      function bareBranches(bx, by, hgt, seed) {
+        g.strokeStyle = st.trunk; g.lineCap = 'round';
+        for (var b = 0; b < 5; b++) {
+          var ang = -Math.PI / 2 + (b - 2) * 0.42 + (hash(b, seed) - 0.5) * 0.2;
+          var len = hgt * (0.5 + hash(b * 3, seed) * 0.3);
+          var x2 = bx + Math.cos(ang) * len, y2 = by - hgt * 0.35 + Math.sin(ang) * len;
+          g.lineWidth = 5 - b * 0.5;
+          g.beginPath(); g.moveTo(bx, by - hgt * 0.3); g.lineTo(x2, y2); g.stroke();
+          for (var t = 0; t < 3; t++) {
+            var ta = ang + (hash(t, b * 7 + seed) - 0.5) * 1.2;
+            g.lineWidth = 2;
+            g.beginPath(); g.moveTo(x2, y2);
+            g.lineTo(x2 + Math.cos(ta) * len * 0.35, y2 + Math.sin(ta) * len * 0.35); g.stroke();
+          }
+        }
+        if (season === 3) { /* snow dusting on branches */
+          g.fillStyle = 'rgba(240,246,250,0.8)';
+          for (var sb = 0; sb < 5; sb++) {
+            var sang = -Math.PI / 2 + (sb - 2) * 0.42;
+            ell(g, bx + Math.cos(sang) * hgt * 0.3, by - hgt * 0.35 + Math.sin(sang) * hgt * 0.3, 7, 3, 'rgba(240,246,250,0.8)');
+          }
+        }
+      }
       function aspenBark(bx, by, w, h) {
         /* white bark with dark knots */
         g.fillStyle = '#d9d4c2';
@@ -80,32 +118,57 @@ var FArt = (function () {
         ell(g, cx + j * 6 + 9, baseY - 30, 10, 6.5, '#4d8a44');
       } else if (stage === 3) { /* sapling */
         if (st.aspen) aspenBark(cx, baseY, 12, 34); else trunk(g, cx, baseY, 13, 34, st.trunk);
-        if (st.pine) {
+        if (bare) bareBranches(cx, baseY, 52, v);
+        else if (st.pine) {
           for (var i = 0; i < 3; i++) {
             var w = 44 - i * 11, y = baseY - 30 - i * 20;
-            g.fillStyle = [st.c3, st.c1, st.c2][i];
+            g.fillStyle = [c3, c1, c2][i];
             g.beginPath(); g.moveTo(cx - w / 2, y); g.lineTo(cx, y - 22); g.lineTo(cx + w / 2, y); g.closePath(); g.fill();
+            if (snowy) snowCap(cx, y - 20, w * 0.28);
           }
-        } else canopy(g, cx, baseY - 52, 30, st.c1, st.c2, st.c3, v);
+        } else canopy(g, cx, baseY - 52, 30, c1, c2, c3, v);
+        if (!bare && season === 0 && !st.pine) { /* spring blossom */
+          for (var bl = 0; bl < 6; bl++)
+            ell(g, cx - 22 + hash(bl, v * 3) * 44, baseY - 66 + hash(bl * 7, v) * 30, 3.4, 3.4,
+              bl % 2 ? '#f2c9d4' : '#fbeef2');
+        }
+        if (!bare && variant === 'rainbow') {
+          var rcols = ['#e88ca0', '#f2d06b', '#6aa8d8', '#b08cd8'];
+          for (var rb = 0; rb < 8; rb++)
+            ell(g, cx - 24 + hash(rb, v * 5) * 48, baseY - 68 + hash(rb * 11, v) * 34, 3.6, 3.6, rcols[rb % 4]);
+        }
         if (st.berry) for (var b = 0; b < 4; b++) {
           ell(g, cx - 18 + hash(b, v) * 36, baseY - 60 + hash(b * 3, v) * 26, 4, 4, '#c94f5e');
         }
       } else if (stage === 4 || stage === 5) { /* adult / ancient */
         var big = stage === 5 ? 1.18 : 1;
         if (st.aspen) aspenBark(cx, baseY, 19 * big, 62, v); else trunk(g, cx, baseY, 20 * big, 62, st.trunk);
-        if (st.pine) {
+        if (bare) bareBranches(cx, baseY, 110 * big, v + stage);
+        else if (st.pine) {
           for (var k = 0; k < 4; k++) {
             var w2 = (62 - k * 12) * big, y2 = baseY - 52 - k * 24;
-            g.fillStyle = [st.c3, st.c1, st.c2, st.c1][k];
+            g.fillStyle = [c3, c1, c2, c1][k];
             g.beginPath(); g.moveTo(cx - w2 / 2, y2); g.lineTo(cx + j * 6, y2 - 30 * big); g.lineTo(cx + w2 / 2, y2); g.closePath(); g.fill();
+            if (snowy) snowCap(cx + j * 6, y2 - 28 * big, w2 * 0.24);
           }
         } else {
-          canopy(g, cx + j * 8, baseY - 92 * big, 46 * big, st.c1, st.c2, st.c3, v + stage);
-          canopy(g, cx - 26 + j * 8, baseY - 66, 26, st.c2, st.c3, st.c1, v + 40);
+          canopy(g, cx + j * 8, baseY - 92 * big, 46 * big, c1, c2, c3, v + stage);
+          canopy(g, cx - 26 + j * 8, baseY - 66, 26, c2, c3, c1, v + 40);
+          if (season === 0) { /* spring blossom */
+            for (var bl2 = 0; bl2 < 10; bl2++)
+              ell(g, cx - 40 + hash(bl2, v * 3) * 80, baseY - 120 + hash(bl2 * 7, v) * 70, 3.6, 3.6,
+                bl2 % 2 ? '#f2c9d4' : '#fbeef2');
+          }
+          if (variant === 'rainbow') {
+            var rcols2 = ['#e88ca0', '#f2d06b', '#6aa8d8', '#b08cd8'];
+            for (var rb2 = 0; rb2 < 14; rb2++)
+              ell(g, cx - 42 + hash(rb2, v * 5) * 84, baseY - 122 + hash(rb2 * 11, v) * 72, 4, 4, rcols2[rb2 % 4]);
+          }
         }
-        if (st.berry) for (var f = 0; f < 10; f++) {
+        if (st.berry && !bare) for (var f = 0, fmax = variant === 'bloom' ? 18 : 10; f < fmax; f++) {
           var fx = cx - 34 + hash(f, v * 2) * 68, fy = baseY - 118 + hash(f * 5, v) * 66;
-          ell(g, fx, fy, 5.5, 5.5, '#e8e4da');           /* blossom */
+          var bcol = variant === 'bloom' ? (f % 2 ? '#f2b8d0' : '#fbeef2') : '#e8e4da';
+          ell(g, fx, fy, 5.5, 5.5, bcol);           /* blossom */
           ell(g, fx, fy, 2.4, 2.4, '#e9a13b');
         }
         if (stage === 5) { /* ancient: hanging moss + gnarl */
@@ -566,31 +629,46 @@ var FArt = (function () {
   }
 
   /* ---------- backgrounds ---------- */
-  function gameBG(w, h, surfBaseY, tsec) {
+  function gameBG(w, h, surfBaseY, tsec, season) {
+    season = (season == null ? 1 : season) % 4;
     var c = document.createElement('canvas'); c.width = w; c.height = h;
     var g = c.getContext('2d');
+    /* seasonal skies */
+    var skies = [
+      ['#8fc7e8', '#c4e2d8', '#e9efd2', '#dfe8c8'],  /* spring: fresh */
+      ['#7fb8e0', '#b8d8cc', '#e4e8c4', '#d4dcb8'],  /* summer: deep */
+      ['#a8b8d8', '#d8c4a8', '#f0d8a8', '#e0d0a0'],  /* autumn: golden */
+      ['#a8bdd0', '#c8d4dc', '#e4e8ec', '#dfe4e8']   /* winter: pale */
+    ][season];
     var sky = g.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#8fc7e8'); sky.addColorStop(0.5, '#c4e2d8');
-    sky.addColorStop(0.78, '#e9efd2'); sky.addColorStop(1, '#dfe8c8');
+    sky.addColorStop(0, skies[0]); sky.addColorStop(0.5, skies[1]);
+    sky.addColorStop(0.78, skies[2]); sky.addColorStop(1, skies[3]);
     g.fillStyle = sky; g.fillRect(0, 0, w, h);
     var sunX = w * 0.8, sunY = h * 0.13;
+    var sunCol = season === 2 ? '255,230,180' : season === 3 ? '240,244,250' : '255,250,220';
     var sg = g.createRadialGradient(sunX, sunY, 6, sunX, sunY, w * 0.3);
-    sg.addColorStop(0, 'rgba(255,250,220,0.95)'); sg.addColorStop(1, 'rgba(255,250,220,0)');
+    sg.addColorStop(0, 'rgba(' + sunCol + ',0.95)'); sg.addColorStop(1, 'rgba(' + sunCol + ',0)');
     g.fillStyle = sg; g.fillRect(0, 0, w, h * 0.6);
     for (var ci = 0; ci < 5; ci++) {
       var cxp = hash(ci, 501) * w, cyp = h * (0.08 + hash(ci, 503) * 0.22), cw = 46 + hash(ci, 504) * 60;
-      ell(g, cxp, cyp, cw, cw * 0.32, 'rgba(255,255,255,0.7)');
-      ell(g, cxp - cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, 'rgba(255,255,255,0.7)');
-      ell(g, cxp + cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, 'rgba(255,255,255,0.7)');
+      var cloudCol = season === 3 ? 'rgba(245,248,250,0.85)' : 'rgba(255,255,255,0.7)';
+      ell(g, cxp, cyp, cw, cw * 0.32, cloudCol);
+      ell(g, cxp - cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, cloudCol);
+      ell(g, cxp + cw * 0.4, cyp + 6, cw * 0.6, cw * 0.24, cloudCol);
     }
     var hy = surfBaseY - 4;
-    g.fillStyle = '#6f9a6a';
+    g.fillStyle = season === 3 ? '#dfe8ee' : season === 2 ? '#7a8a4a' : season === 0 ? '#7aa872' : '#6f9a6a';
     g.beginPath(); g.moveTo(0, hy + 34);
     for (var x = 0; x <= w; x += 18) {
       var th = 26 + hash(x, 601) * 46 + (hash(x, 602) > 0.72 ? 30 : 0);
       g.lineTo(x, hy - th); g.lineTo(x + 9, hy + 8);
     }
     g.lineTo(w, hy + 34); g.closePath(); g.fill();
+    if (season === 3) { /* snow sparkle */
+      g.fillStyle = 'rgba(255,255,255,0.5)';
+      for (var sn = 0; sn < 40; sn++)
+        ell(g, hash(sn, 603) * w, hy - hash(sn, 604) * 60, 2.2, 1.6, 'rgba(255,255,255,0.5)');
+    }
     g.fillStyle = 'rgba(255,255,255,0.14)'; g.fillRect(0, hy - 64, w, 64);
     g.strokeStyle = 'rgba(60,70,80,0.6)'; g.lineWidth = 2;
     for (var b = 0; b < 3; b++) {
@@ -669,9 +747,45 @@ var FArt = (function () {
     }
   }
 
+  /* ---------- night sky: stars, moon, winter aurora ---------- */
+  function nightSky(g, w, h, tsec, winter) {
+    for (var i = 0; i < 70; i++) {
+      var sx = hash(i, 801) * w, sy = hash(i, 802) * h * 0.62;
+      g.globalAlpha = (0.35 + 0.65 * Math.abs(Math.sin(tsec * 1.5 + i))) * 0.9;
+      g.fillStyle = '#fff';
+      g.fillRect(sx, sy, 2, 2);
+    }
+    g.globalAlpha = 1;
+    var mx = w * 0.78, my = h * 0.13;
+    var mg = g.createRadialGradient(mx, my, 20, mx, my, 95);
+    mg.addColorStop(0, 'rgba(244,240,220,0.4)'); mg.addColorStop(1, 'rgba(244,240,220,0)');
+    g.fillStyle = mg; g.fillRect(mx - 95, my - 95, 190, 190);
+    g.fillStyle = '#f4f0dc';
+    g.beginPath(); g.arc(mx, my, 24, 0, 6.2832); g.fill();
+    g.fillStyle = 'rgba(190,185,160,0.55)';
+    g.beginPath(); g.arc(mx - 8, my - 5, 5.5, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(mx + 7, my + 8, 4, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(mx + 2, my - 11, 3, 0, 6.2832); g.fill();
+    if (winter) {
+      for (var b = 0; b < 3; b++) {
+        var yb = h * (0.07 + b * 0.07);
+        var hue = 140 + b * 30 + Math.sin(tsec * 0.4 + b) * 20;
+        var ag = g.createLinearGradient(0, yb - 30, 0, yb + 30);
+        ag.addColorStop(0, 'hsla(' + hue + ',60%,60%,0)');
+        ag.addColorStop(0.5, 'hsla(' + hue + ',60%,60%,0.16)');
+        ag.addColorStop(1, 'hsla(' + hue + ',60%,60%,0)');
+        g.fillStyle = ag;
+        g.beginPath(); g.moveTo(0, yb);
+        for (var x = 0; x <= w; x += 40)
+          g.lineTo(x, yb + Math.sin(x * 0.01 + tsec * 0.5 + b * 2) * 18);
+        g.lineTo(w, yb + 34); g.lineTo(0, yb + 34); g.closePath(); g.fill();
+      }
+    }
+  }
+
   return {
     tree: tree, mushroom: mushroom, animal: animal, fire: fire, dung: dung,
-    drawWeb: drawWeb, gameBG: gameBG, titleBG: titleBG, hash: hash,
+    drawWeb: drawWeb, gameBG: gameBG, titleBG: titleBG, hash: hash, nightSky: nightSky,
     roots: roots, mycelium: mycelium, underground: underground
   };
 })();

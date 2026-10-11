@@ -11,7 +11,7 @@ var FW = (function () {
   var ST = { EMPTY: 0, SEED: 1, SPROUT: 2, SAPLING: 3, ADULT: 4, ANCIENT: 5, FALLEN: 6 };
 
   var PLANTS = {
-    pine:  { name: 'Pine',       cost: 5,  times: [20, 45, 80],  desc: 'Quick and hardy',        color: '#2f5d33' },
+    pine:  { name: 'Pine',       cost: 5,  times: [20, 45, 80],  desc: 'Quick and hardy',        color: '#2f5d33', ever: true },
     berry: { name: 'Berry bush',  cost: 12, times: [25, 55, 95],  desc: 'Flowers feed butterflies', color: '#3f7038' },
     aspen: { name: 'Aspen',       cost: 14, times: [22, 50, 90],  desc: 'Clones itself through roots', color: '#4a7a4a' },
     oak:   { name: 'Oak',        cost: 20, times: [35, 80, 150],  desc: 'Slow and mighty',        color: '#2a5230' }
@@ -20,6 +20,18 @@ var FW = (function () {
   var FALLEN_T = 140;    /* ancient -> fallen trunk */
   var MUSH_COST = 8;
   var STORM_COST = 40, STORM_LEN = 20;
+
+  /* seasons: 0 spring, 1 summer, 2 autumn, 3 winter; 4 in-game days each */
+  var SEASONS = ['spring', 'summer', 'autumn', 'winter'];
+  var SEASON_DAYS = 4;
+  var DAY_NIGHT_LEN = 240; /* seconds per full day/night cycle */
+  function seasonOf(st) { return SEASONS[st.season % 4]; }
+  function isNight(st) { return st.tod < 0.25 || st.tod >= 0.75; }
+  function dayLight(st) {
+    if (st.tod < 0.25 || st.tod >= 0.75) return 0;
+    var d = (st.tod - 0.25) / 0.5;
+    return Math.sin(d * Math.PI);
+  }
 
   var ACH = {
     'first-sprout': { name: 'Baby Steps',        desc: 'Grow your first sprout' },
@@ -34,7 +46,8 @@ var FW = (function () {
     'rainmaker':    { name: 'Rainmaker',         desc: 'Summon a storm' },
     'rich':         { name: 'Thousand Leaves',   desc: 'Hold 1,000 leaves at once' },
     'full-house':   { name: 'Full House',        desc: 'All 9 species move in' },
-    'pando':        { name: 'Pando',             desc: 'Grow a grove of 8 aspens' }
+    'pando':        { name: 'Pando',             desc: 'Grow a grove of 8 aspens' },
+    'collector':    { name: 'Rare Collector',    desc: 'Find all 3 rare tree variants' }
   };
   function unlock(st, id) {
     if (!st.ach[id]) { st.ach[id] = 1; ev(st, { t: 'ach', id: id }); }
@@ -91,19 +104,21 @@ var FW = (function () {
     return {
       v: 1, seed: seed >>> 0 || 1, _rs: (seed >>> 0 || 1),
       tiles: tiles, points: 30, day: 1, dayT: 0,
+      season: 0, seasonDay: 0, tod: 0.32,   /* spring morning */
       animals: [], visiting: [],   /* visiting: [{species, t}] */
       dung: [],                    /* [{x, until}] fertilizer mounds */
       nextAid: 1, events: [],
-      ach: {}, storm: 0,
+      ach: {}, storm: 0, questClaimed: {},
+      streak: { last: '', n: 0 },
       stats: { grown: 0, tapped: 0, speciesSeen: [], plantsSeen: [], plantedAny: false, arrivals: 0, peak: 30,
-               tallest: 0, widestWeb: 0 }
+               tallest: 0, widestWeb: 0, ancients: 0, firesSmothered: 0, variantsSeen: [] }
     };
   }
   function tile(st, x, y) { return st.tiles[y * GW + x]; }
   function inGrid(x, y) { return x >= 0 && y >= 0 && x < GW && y < GH; }
 
   function stats(st) {
-    var s = { adultTrees: 0, bushes: 0, flowering: 0, fallen: 0, plants: 0, small: 0, trees: 0 };
+    var s = { adultTrees: 0, bushes: 0, flowering: 0, fallen: 0, plants: 0, small: 0, trees: 0, oaks: 0, aspens: 0 };
     for (var i = 0; i < st.tiles.length; i++) {
       var p = st.tiles[i].plant;
       if (!p) continue;
@@ -113,6 +128,8 @@ var FW = (function () {
       if (p.type === 'berry' && p.stage >= ST.SAPLING) s.bushes++;
       if (p.type === 'berry' && (p.stage === ST.ADULT || p.stage === ST.ANCIENT)) s.flowering++;
       if (p.stage === ST.FALLEN) s.fallen++;
+      if (p.type === 'oak' && p.stage >= ST.ADULT && p.stage <= ST.ANCIENT) s.oaks++;
+      if (p.type === 'aspen' && p.stage >= ST.SAPLING) s.aspens++;
     }
     for (var a = 0; a < st.animals.length; a++)
       if (ANIMALS[st.animals[a].species].small) s.small++;
@@ -135,6 +152,17 @@ var FW = (function () {
     if (st.points < def.cost) return { ok: false, reason: 'poor' };
     st.points -= def.cost;
     tl.plant = { type: type, stage: ST.SEED, t: 0, boostUntil: 0 };
+    /* rare variants: a little magic in the seed packet */
+    if (rnd(st) < 0.06) {
+      tl.plant.variant = type === 'aspen' ? (rnd(st) < 0.5 ? 'rainbow' : 'golden')
+        : type === 'berry' ? 'bloom' : 'golden';
+      if (st.stats.variantsSeen.indexOf(tl.plant.variant) < 0) {
+        st.stats.variantsSeen.push(tl.plant.variant);
+        addPoints(st, 10, 'rare variant!', x, y);
+        ev(st, { t: 'variant', x: x, y: y, variant: tl.plant.variant, type: type });
+      }
+      if (st.stats.variantsSeen.length >= 3) unlock(st, 'collector');
+    }
     if (st.stats.plantsSeen.indexOf(type) < 0) st.stats.plantsSeen.push(type);
     if (!st.stats.plantedAny) { st.stats.plantedAny = true; tl.plant.fast = true; } /* tutorial pine grows 3x */
     ev(st, { t: 'planted', x: x, y: y, type: type });
@@ -210,6 +238,11 @@ var FW = (function () {
     if (tl.plant && tl.plant.boostUntil > now) m *= 1.6;
     if (tl.plant && tl.plant.fast && tl.plant.stage <= ST.SAPLING) m *= 3;
     if (tl.gnawedUntil > now) m *= 0.45;                       /* vole damage */
+    /* seasons */
+    var se = st.season % 4, ever = tl.plant && PLANTS[tl.plant.type].ever;
+    if (se === 0) m *= 1.2;                                    /* spring surge */
+    else if (se === 2) m *= 0.8;                               /* autumn slows */
+    else if (se === 3) m *= ever ? 0.7 : 0.25;                 /* winter dormancy */
     if (st.dung.length) {                                       /* poop fertilizer */
       for (var d = 0; d < st.dung.length; d++) {
         var dg = st.dung[d];
@@ -251,6 +284,7 @@ var FW = (function () {
     return a;
   }
   function checkArrivals(st, now) {
+    if (st.season % 4 === 3) return; /* winter: the forest sleeps, no new arrivals */
     if (st.animals.length + st.visiting.length >= MAX_ANIMALS) return;
     var s = stats(st);
     var present = {};
@@ -322,7 +356,87 @@ var FW = (function () {
       }
       return { ok: n > 0, what: 'boost' };
     }
+    if (kind === 'rare') {
+      /* a gift sapling with a guaranteed rare variant */
+      var empty2 = [];
+      for (var q = 0; q < st.tiles.length; q++) if (!st.tiles[q].plant && !st.tiles[q].mush) empty2.push(q);
+      if (!empty2.length) return { ok: false };
+      var ri = pick(st, empty2);
+      var rtypes = ['pine', 'aspen', 'berry', 'oak'];
+      var rt = pick(st, rtypes);
+      st.tiles[ri].plant = { type: rt, stage: ST.SAPLING, t: 0, boostUntil: 0, gift: true,
+        variant: rt === 'aspen' ? 'rainbow' : rt === 'berry' ? 'bloom' : 'golden' };
+      if (st.stats.variantsSeen.indexOf(st.tiles[ri].plant.variant) < 0)
+        st.stats.variantsSeen.push(st.tiles[ri].plant.variant);
+      if (st.stats.variantsSeen.length >= 3) unlock(st, 'collector');
+      ev(st, { t: 'planted', x: ri % GW, y: (ri / GW) | 0, type: rt, free: true });
+      return { ok: true, x: ri % GW, y: 0, what: 'rare' };
+    }
     return { ok: false };
+  }
+  /* ---------- gentle quests: no timers, no fail states ---------- */
+  var QUESTS = [
+    { id: 'sprout3', name: 'First Sprouts',  desc: 'Grow 3 sprouts',            reward: 10,
+      prog: function (st, s) { return Math.min(3, st.stats.grown); }, need: 3 },
+    { id: 'oak2',    name: 'Mighty Oaks',    desc: 'Grow 2 adult oaks',         reward: 20,
+      prog: function (st, s) { return Math.min(2, s.oaks); }, need: 2 },
+    { id: 'friends5', name: 'New Friends',   desc: 'Welcome 5 animals',         reward: 15,
+      prog: function (st, s) { return Math.min(5, st.stats.arrivals); }, need: 5 },
+    { id: 'web5',    name: 'Weaving the Web', desc: 'Link 5 trees in one web',  reward: 25,
+      prog: function (st, s) { return Math.min(5, st.stats.widestWeb); }, need: 5 },
+    { id: 'ancient1', name: 'Old Soul',      desc: 'Grow an ancient tree',      reward: 30,
+      prog: function (st, s) { return Math.min(1, st.stats.ancients); }, need: 1 },
+    { id: 'fire1',   name: 'Firekeeper',     desc: 'Smother a wildfire',        reward: 20,
+      prog: function (st, s) { return Math.min(1, st.stats.firesSmothered); }, need: 1 },
+    { id: 'taps10',  name: 'Hello, Neighbors', desc: 'Tap animals 10 times',    reward: 10,
+      prog: function (st, s) { return Math.min(10, st.stats.tapped); }, need: 10 },
+    { id: 'aspen4',  name: 'Pando Dreams',   desc: 'Grow 4 aspens',             reward: 20,
+      prog: function (st, s) { return Math.min(4, s.aspens); }, need: 4 }
+  ];
+  function questState(st, q) {
+    var p = q.prog(st, stats(st));
+    return { id: q.id, name: q.name, desc: q.desc, reward: q.reward,
+             progress: p, need: q.need, done: p >= q.need, claimed: !!st.questClaimed[q.id] };
+  }
+  function quests(st) { return QUESTS.map(function (q) { return questState(st, q); }); }
+  function claimQuest(st, id) {
+    for (var i = 0; i < QUESTS.length; i++) {
+      if (QUESTS[i].id !== id) continue;
+      var qs = questState(st, QUESTS[i]);
+      if (!qs.done || qs.claimed) return { ok: false };
+      st.questClaimed[id] = 1;
+      addPoints(st, qs.reward, 'quest: ' + qs.name, -1, -1);
+      ev(st, { t: 'quest', id: id });
+      return { ok: true, reward: qs.reward, name: qs.name };
+    }
+    return { ok: false };
+  }
+  /* ---------- daily streak (real-world days) ---------- */
+  function dayStr(d) {
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function dailyStatus(st, today) {
+    today = today || dayStr(new Date());
+    if (st.streak.last === today) return { available: false, day: st.streak.n };
+    var tp = today.split('-');
+    var td = new Date(+tp[0], (+tp[1] || 1) - 1, +tp[2] || 1);
+    td.setDate(td.getDate() - 1);
+    var cont = st.streak.last === dayStr(td);
+    return { available: true, day: cont ? st.streak.n + 1 : 1 };
+  }
+  function claimDaily(st, now, today) {
+    var ds = dailyStatus(st, today);
+    if (!ds.available) return { ok: false };
+    today = today || dayStr(new Date());
+    st.streak.n = ds.day; st.streak.last = today;
+    var d = ds.day, gift;
+    if (d === 1) { gift = wildGift(st, 'seed', now); gift.label = 'a gift seed'; }
+    else if (d === 2) { addPoints(st, 15, 'daily gift', -1, -1); gift = { ok: true, what: 'leaves', label: '15 leaves' }; }
+    else if (d === 3) { gift = wildGift(st, 'rare', now); gift.label = 'a rare sapling'; }
+    else if (d === 4) { addPoints(st, 25, 'daily gift', -1, -1); gift = { ok: true, what: 'leaves', label: '25 leaves' }; }
+    else { addPoints(st, 40, 'daily gift', -1, -1); var m = wildGift(st, 'mush', now); gift = { ok: true, what: 'feast', label: '40 leaves' + (m.ok ? ' and a mushroom' : '') }; }
+    ev(st, { t: 'daily', day: d });
+    return { ok: true, day: d, gift: gift.label || 'a gift' };
   }
   function dropDung(st, x, now, loud) {
     if (st.dung.length >= 6) st.dung.shift();
@@ -336,6 +450,7 @@ var FW = (function () {
     tl.fire -= 9;
     if (tl.fire <= 0) {
       tl.fire = 0;
+      st.stats.firesSmothered++;
       ev(st, { t: 'smothered', x: x, y: y });
       return { ok: true, out: true };
     }
@@ -410,7 +525,17 @@ var FW = (function () {
     _now += dt;
     var now = _now;
     st.dayT += dt;
-    if (st.dayT >= 180) { st.dayT -= 180; st.day++; ev(st, { t: 'day', day: st.day }); }
+    if (st.dayT >= 180) {
+      st.dayT -= 180; st.day++;
+      st.seasonDay++;
+      if (st.seasonDay >= SEASON_DAYS) {
+        st.seasonDay = 0;
+        st.season = (st.season + 1) % 4;
+        ev(st, { t: 'season', season: st.season });
+      }
+      ev(st, { t: 'day', day: st.day });
+    }
+    st.tod = (st.tod + dt / DAY_NIGHT_LEN) % 1;
     var comps = computeNetworks(st, now);
     /* web achievements */
     var biggest = 0;
@@ -478,8 +603,15 @@ var FW = (function () {
         var tx = i % GW, ty = (i / GW) | 0;
         ev(st, { t: 'grew', x: tx, y: ty, stage: p.stage, type: p.type });
         if (p.stage === ST.SPROUT) unlock(st, 'first-sprout');
-        if (p.stage === ST.ADULT) addPoints(st, 8, 'grown', tx, ty);
-        if (p.stage === ST.ANCIENT) { addPoints(st, 15, 'ancient', tx, ty); unlock(st, 'old-growth'); }
+        if (p.stage === ST.ADULT) {
+          addPoints(st, 8, 'grown', tx, ty);
+          if (p.variant) addPoints(st, 6, 'rare ' + p.variant, tx, ty);
+        }
+        if (p.stage === ST.ANCIENT) {
+          addPoints(st, 15, 'ancient', tx, ty); unlock(st, 'old-growth');
+          st.stats.ancients++;
+          if (p.variant) addPoints(st, 10, 'rare ' + p.variant, tx, ty);
+        }
         if (p.stage === ST.FALLEN) unlock(st, 'circle');
         st.stats.grown++;
       }
@@ -526,7 +658,7 @@ var FW = (function () {
           var bp = st.tiles[bi].plant;
           if (bp && bp.stage >= ST.SAPLING && bp.stage < ST.FALLEN && !st.tiles[bi].fire) burnables.push(bi);
         }
-        if (burnables.length >= 4 && rnd(st) < 0.35) {
+        if (burnables.length >= 4 && rnd(st) < (st.season % 4 === 1 ? 0.55 : 0.35)) {
           var fi2 = pick(st, burnables);
           st.tiles[fi2].fire = 25;
           ev(st, { t: 'ignited', x: fi2 % GW, y: (fi2 / GW) | 0 });
@@ -571,6 +703,7 @@ var FW = (function () {
     for (var vo = 0; vo < st.animals.length; vo++) {
       var va = st.animals[vo];
       if (va.species !== 'vole') continue;
+      if (va.diveUntil > now) continue; /* laying low after an owl swoop */
       /* pick a tree to gnaw */
       if (va.gnaw == null || va.gnaw < 0 || !st.tiles[va.gnaw] || !st.tiles[va.gnaw].plant ||
           st.tiles[va.gnaw].plant.stage < ST.SAPLING) {
@@ -610,10 +743,59 @@ var FW = (function () {
       if (rp && hm[rp.stage] > st.stats.tallest) st.stats.tallest = hm[rp.stage];
     }
     if (biggest > st.stats.widestWeb) st.stats.widestWeb = biggest;
+    /* ---- food chain: foxes hunt rabbits, owls hunt voles at night ---- */
+    var nightNow = isNight(st);
+    st._huntT = (st._huntT || 0) - dt;
+    for (var ha = 0; ha < st.animals.length; ha++) {
+      var hunter = st.animals[ha];
+      if (hunter.mode !== 'hunt') continue;
+      var prey = null;
+      for (var pi = 0; pi < st.animals.length; pi++)
+        if (st.animals[pi].id === hunter.preyId) prey = st.animals[pi];
+      if (!prey || (hunter.species === 'owl' && !nightNow)) { hunter.mode = null; continue; }
+      hunter._hm = (hunter._hm || 0) + dt;
+      if (hunter._hm >= (hunter.species === 'owl' ? 1.1 : 1.6)) {
+        hunter._hm = 0;
+        if (hunter.x < prey.x) hunter.x++; else if (hunter.x > prey.x) hunter.x--;
+        hunter.y = 0;
+      }
+      if (hunter.x === prey.x) {
+        /* caught! cozy rules: the prey dashes away unharmed */
+        var hspot = emptyTileNear(st, prey.x, 0);
+        if (hspot) { prey.x = hspot.x; prey.y = hspot.y; }
+        if (hunter.species === 'owl') prey.diveUntil = now + 40; /* vole lays low */
+        ev(st, { t: hunter.species === 'owl' ? 'owlhunt' : 'foxhunt', x: prey.x, y: 0 });
+        addPoints(st, 6, hunter.species + ' hunt', hunter.x, 0);
+        hunter.mode = null; hunter._hm = 0;
+        st._huntT = 75;
+      }
+    }
+    if (st._huntT <= 0) {
+      for (var hb = 0; hb < st.animals.length; hb++) {
+        var h2 = st.animals[hb];
+        if (h2.mode === 'hunt') continue;
+        var want = h2.species === 'fox' ? 'rabbit' : (h2.species === 'owl' && nightNow ? 'vole' : null);
+        if (!want) continue;
+        var tgt = null;
+        for (var pc = 0; pc < st.animals.length; pc++) {
+          var cand = st.animals[pc];
+          if (cand.species === want && !(cand.diveUntil > now)) { tgt = cand; break; }
+        }
+        if (tgt && Math.abs(tgt.x - h2.x) <= 6) {
+          h2.mode = 'hunt'; h2.preyId = tgt.id; h2._hm = 0;
+          st._huntT = 20;
+          break;
+        }
+      }
+    }
     /* wander */
     for (var a = 0; a < st.animals.length; a++) {
       var an = st.animals[a];
       if (an.species === 'vole') continue; /* voles tunnel with purpose */
+      if (an.mode === 'hunt') continue;    /* hunters move with purpose */
+      /* diurnal animals rest at night */
+      if (nightNow && (an.species === 'butterfly' || an.species === 'squirrel' ||
+          an.species === 'rabbit' || an.species === 'deer' || an.species === 'fox')) continue;
       an.wt -= dt;
       if (an.wt <= 0) {
         an.wt = 4 + rnd(st) * 6;
@@ -635,6 +817,8 @@ var FW = (function () {
       v: 3, seed: st.seed, _rs: st._rs, tiles: st.tiles, points: st.points,
       day: st.day, dayT: st.dayT, animals: st.animals, visiting: st.visiting, dung: st.dung,
       nextAid: st.nextAid, stats: st.stats, ach: st.ach || {}, storm: st.storm || 0,
+      season: st.season || 0, seasonDay: st.seasonDay || 0, tod: (st.tod == null ? 0.32 : st.tod),
+      questClaimed: st.questClaimed || {}, streak: st.streak || { last: '', n: 0 },
       savedAt: Date.now()
     });
   }
@@ -648,6 +832,15 @@ var FW = (function () {
       if (!d.dung) d.dung = [];
       if (!d.stats.plantsSeen) d.stats.plantsSeen = [];
       if (typeof d.storm !== 'number') d.storm = 0;
+      /* living-forest fields: graceful defaults, no save wipe */
+      if (typeof d.season !== 'number') d.season = 0;
+      if (typeof d.seasonDay !== 'number') d.seasonDay = 0;
+      if (typeof d.tod !== 'number') d.tod = 0.32;
+      if (!d.questClaimed) d.questClaimed = {};
+      if (!d.streak) d.streak = { last: '', n: 0 };
+      if (typeof d.stats.ancients !== 'number') d.stats.ancients = 0;
+      if (typeof d.stats.firesSmothered !== 'number') d.stats.firesSmothered = 0;
+      if (!d.stats.variantsSeen) d.stats.variantsSeen = [];
       return d;
     } catch (e) { return null; }
   }
@@ -784,6 +977,66 @@ var FW = (function () {
     plant(st15, 0, 0, 'oak'); tile(st15, 0, 0).plant.stage = ST.ANCIENT;
     step(st15, 0.1);
     ok(st15.stats.tallest === 30, 'tallest tree tracked in meters');
+    /* seasons: 4 days each, starting in spring */
+    var st16 = newGame(25);
+    ok(st16.season === 0 && seasonOf(st16) === 'spring', 'new grove starts in spring');
+    for (var sd = 0; sd < 4; sd++) step(st16, 180);
+    ok(st16.season === 1 && st16.day === 5, 'summer after 4 days, got season=' + st16.season + ' day=' + st16.day);
+    /* day/night */
+    var st17 = newGame(26);
+    ok(!isNight(st17) && dayLight(st17) > 0.3, 'morning is day');
+    st17.tod = 0.9;
+    ok(isNight(st17) && dayLight(st17) === 0, 'tod 0.9 is night');
+    st17.tod = 0.5;
+    ok(!isNight(st17) && Math.abs(dayLight(st17) - 1) < 0.01, 'tod 0.5 is noon');
+    /* winter slows deciduous growth, pine keeps going */
+    var st18 = newGame(27); st18.points = 500; st18.season = 3;
+    plant(st18, 0, 0, 'oak'); plant(st18, 1, 0, 'pine');
+    tile(st18, 0, 0).plant.fast = false; tile(st18, 1, 0).plant.fast = false;
+    var oakM = growthMul(st18, tile(st18, 0, 0), now());
+    var pineM = growthMul(st18, tile(st18, 1, 0), now());
+    ok(oakM < 0.5 && pineM > 0.5, 'winter: oak dormant, pine hardy (oak=' + oakM.toFixed(2) + ' pine=' + pineM.toFixed(2) + ')');
+    /* quests: progress + claim */
+    var st19 = newGame(28); st19.points = 500;
+    var qs = quests(st19);
+    ok(qs.length === 8 && qs[0].id === 'sprout3' && !qs[0].done, '8 quests listed, none done yet');
+    st19.stats.tapped = 10;
+    var qs2 = quests(st19).filter(function (q) { return q.id === 'taps10'; })[0];
+    ok(qs2.done && !qs2.claimed, 'taps quest done after 10 taps');
+    var cl = claimQuest(st19, 'taps10');
+    ok(cl.ok && cl.reward === 10 && st19.points === 510, 'quest claim pays leaves');
+    ok(!claimQuest(st19, 'taps10').ok, 'quest cannot be claimed twice');
+    /* daily streak with injected dates */
+    var st20 = newGame(29); st20.points = 500;
+    ok(dailyStatus(st20, '2026-10-11').available, 'first daily gift available');
+    var dc = claimDaily(st20, now(), '2026-10-11');
+    ok(dc.ok && dc.day === 1, 'day 1 streak claimed');
+    ok(!dailyStatus(st20, '2026-10-11').available, 'no double-dip same day');
+    ok(dailyStatus(st20, '2026-10-12').available && dailyStatus(st20, '2026-10-12').day === 2, 'streak continues next day');
+    ok(dailyStatus(st20, '2026-10-14').day === 1, 'streak resets after a missed day');
+    /* rare variants appear */
+    var st21 = newGame(30); st21.points = 5000; var seenV = false;
+    for (var pv = 0; pv < 60; pv++) { plant(st21, pv % 20, 0, pv % 2 ? 'aspen' : 'pine'); var pl = tile(st21, pv % 20, 0).plant; if (pl && pl.variant) seenV = true; tile(st21, pv % 20, 0).plant = null; st21.points = 5000; }
+    ok(seenV, 'rare variants appear when planting (6%)');
+    /* fox hunts rabbit: cozy catch, rabbit flees unharmed */
+    var st22 = newGame(31); st22.points = 500;
+    plant(st22, 0, 0, 'pine'); plant(st22, 1, 0, 'pine'); plant(st22, 2, 0, 'pine');
+    plant(st22, 3, 0, 'berry'); plant(st22, 4, 0, 'berry');
+    [[0,0],[1,0],[2,0],[3,0],[4,0]].forEach(function (c) { tile(st22, c[0], c[1]).plant.stage = ST.ADULT; });
+    tile(st22, 6, 0).plant = { type: 'oak', stage: ST.FALLEN, t: 0, boostUntil: 0 };
+    addAnimal(st22, 'squirrel', 0); addAnimal(st22, 'hedgehog', 0);
+    var rb = addAnimal(st22, 'rabbit', 0); var fx = addAnimal(st22, 'fox', 0);
+    fx.x = 5; rb.x = 7;
+    var hunted = false;
+    for (var hh = 0; hh < 200 && !hunted; hh++) { step(st22, 1); if (st22.animals.some(function (a) { return a.mode === 'hunt'; })) hunted = true; }
+    ok(hunted, 'fox starts hunting a nearby rabbit');
+    var rbAlive = st22.animals.some(function (a) { return a.species === 'rabbit'; });
+    for (var hh2 = 0; hh2 < 300; hh2++) step(st22, 1);
+    ok(rbAlive && st22.animals.some(function (a) { return a.species === 'rabbit'; }), 'rabbit survives the hunt (cozy rules)');
+    /* graceful save migration: v3 save without living-forest fields */
+    var oldSave = JSON.stringify({ v: 3, tiles: st22.tiles, points: 10, day: 2, dayT: 0, animals: [], visiting: [], nextAid: 1, stats: { grown: 0, tapped: 0, speciesSeen: [], plantsSeen: [], plantedAny: true, arrivals: 0, peak: 10, tallest: 0, widestWeb: 0 }, ach: {}, storm: 0, seed: 5, _rs: 5 });
+    var mig = deserialize(oldSave);
+    ok(mig && mig.season === 0 && mig.tod === 0.32 && mig.streak.n === 0 && mig.stats.ancients === 0, 'old v3 save migrates with defaults');
     console.log(fails === 0 ? 'SIM SELF-TEST: ALL PASS' : 'SIM SELF-TEST: ' + fails + ' FAILURES');
     return fails;
   }
@@ -791,10 +1044,12 @@ var FW = (function () {
   return {
     GW: GW, GH: GH, ST: ST, PLANTS: PLANTS, ANIMALS: ANIMALS, ANIMAL_IDS: ANIMAL_IDS,
     MUSH_COST: MUSH_COST, TAP_COOLDOWN: TAP_COOLDOWN, STORM_COST: STORM_COST,
-    ACH: ACH,
+    ACH: ACH, SEASONS: SEASONS, QUESTS: QUESTS,
     newGame: newGame, step: step, plant: plant, plantMushroom: plantMushroom,
     clearTile: clearTile, tapAnimal: tapAnimal, smother: smother, wildGift: wildGift, stats: stats, summonStorm: summonStorm,
     computeNetworks: computeNetworks, drainEvents: drainEvents, now: now,
+    seasonOf: seasonOf, isNight: isNight, dayLight: dayLight,
+    quests: quests, claimQuest: claimQuest, dailyStatus: dailyStatus, claimDaily: claimDaily,
     serialize: serialize, deserialize: deserialize, selfTest: selfTest
   };
 })();
