@@ -34,10 +34,10 @@ function layout(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
   L.horizonY=Math.round(H*0.46);
   L.seaH=H-L.horizonY;
-  L.islandX=Math.round(W*0.68);
+  L.islandX=Math.round(W*0.30);
   L.islandBaseY=L.horizonY+L.seaH*0.40;
   L.islandPeakY=L.horizonY-H*0.062;
-  L.lhH=Math.round(H*0.30);
+  L.lhH=Math.round(H*0.235);
   L.lhW=L.lhH*140/380;
   L.lhTop=L.islandPeakY+10-L.lhH;
   L.lampX=L.islandX;
@@ -354,6 +354,17 @@ function drawShip(sh,sc){
   ctx.fillStyle='#0a1626';
   ctx.fillRect(-iw*0.32,ih*0.28,iw*0.64,ih*0.5);
   ctx.globalAlpha=alpha;
+  // wake trailing behind the stern
+  var wk=sh.dir>=0?-1:1, wl=iw*(0.9+sh.depth*0.5);
+  var wg=ctx.createLinearGradient(0,0,wk*wl,0);
+  wg.addColorStop(0,'rgba(255,255,255,'+(0.28*alpha).toFixed(3)+')');
+  wg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=wg;
+  ctx.beginPath();
+  ctx.moveTo(wk*iw*0.42,ih*0.30);
+  ctx.lineTo(wk*(iw*0.42+wl),ih*0.30-4*scale);
+  ctx.lineTo(wk*(iw*0.42+wl),ih*0.30+4*scale);
+  ctx.closePath(); ctx.fill();
   // night lights + signal flashes
   var nf=sc.nf;
   if(nf>0.3){
@@ -403,25 +414,32 @@ function drawIsland(sc){
   g.addColorStop(0,css(mixc(rockC,[20,26,36],0.2))); g.addColorStop(1,css([22,28,38]));
   ctx.fillStyle=g;
   ctx.beginPath();
-  ctx.moveTo(ix-190,baseY+70);
-  ctx.quadraticCurveTo(ix-170,peakY+40,ix-90,peakY+18);
-  ctx.quadraticCurveTo(ix-30,peakY-6,ix+30,peakY+2);
-  ctx.quadraticCurveTo(ix+120,peakY+26,ix+170,baseY+40);
-  ctx.quadraticCurveTo(ix+185,baseY+70,ix+190,baseY+70);
+  ctx.moveTo(ix-95,baseY+70);
+  ctx.quadraticCurveTo(ix-86,peakY+44,ix-46,peakY+20);
+  ctx.quadraticCurveTo(ix-16,peakY-4,ix+16,peakY+4);
+  ctx.quadraticCurveTo(ix+62,peakY+28,ix+86,baseY+40);
+  ctx.quadraticCurveTo(ix+93,baseY+70,ix+95,baseY+70);
   ctx.closePath(); ctx.fill();
+  // foam lapping the island base
+  ctx.strokeStyle='rgba(255,255,255,'+(0.20+0.08*Math.sin(tG*2.2)).toFixed(3)+')';
+  ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.ellipse(ix,baseY+56,102,13,0,0,7); ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,'+(0.10+0.05*Math.sin(tG*2.2+1.4)).toFixed(3)+')';
+  ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(ix,baseY+64,114,10,0,0,7); ctx.stroke();
   // grass / snow cap
   var s=st.season;
   var capC=s===0?[96,128,80]:s===1?[74,110,66]:s===2?[150,120,70]:[214,222,230];
   if(sc.nf>0.4) capC=mixc(capC,[30,36,50],0.6);
   ctx.fillStyle=css(capC);
   ctx.beginPath();
-  ctx.ellipse(ix-20,peakY+16,105,20,0.06,0,7);
+  ctx.ellipse(ix-14,peakY+16,54,13,0.06,0,7);
   ctx.fill();
   // side rocks
-  ctx.drawImage(ART.rock(1),ix-215,baseY-58,150,88);
-  ctx.drawImage(ART.rock(2),ix+95,baseY-48,130,76);
+  ctx.drawImage(ART.rock(1),ix-108,baseY-58,76,45);
+  ctx.drawImage(ART.rock(2),ix+44,baseY-48,70,41);
   // cottage with a warm window
-  var chx=ix-118, chy=baseY-46;
+  var chx=ix-70, chy=baseY-46;
   ctx.fillStyle=sc.nf>0.5?'#2c2620':'#5a4c3e';
   ctx.fillRect(chx,chy,64,42);
   ctx.fillStyle=sc.nf>0.5?'#1c1814':'#3a2f26';
@@ -441,11 +459,11 @@ function drawIsland(sc){
   ctx.drawImage(ART.rock(2),ix+L.lhW/2-40,L.islandPeakY-4,80,47);
   // the lighthouse
   ctx.drawImage(ART.lighthouse(),ix-L.lhW/2,L.lhTop,L.lhW,L.lhH);
-  // lamp glow
+  // lamp glow — the one warm thing on a dark coast
   if(st.lamp.lit&&sc.nf>0.15){
-    var lg2=ctx.createRadialGradient(L.lampX,L.lampY,4,L.lampX,L.lampY,60);
-    lg2.addColorStop(0,'rgba(255,220,150,'+(0.75*sc.nf)+')'); lg2.addColorStop(1,'rgba(255,220,150,0)');
-    ctx.fillStyle=lg2; ctx.beginPath(); ctx.arc(L.lampX,L.lampY,60,0,7); ctx.fill();
+    var lg2=ctx.createRadialGradient(L.lampX,L.lampY,4,L.lampX,L.lampY,78);
+    lg2.addColorStop(0,'rgba(255,214,140,'+(0.8*sc.nf)+')'); lg2.addColorStop(1,'rgba(255,214,140,0)');
+    ctx.fillStyle=lg2; ctx.beginPath(); ctx.arc(L.lampX,L.lampY,78,0,7); ctx.fill();
   }
   // the cat
   drawCat(sc);
@@ -455,7 +473,7 @@ function drawCat(sc){
   var x,y,s;
   if(c.spot==='gallery'){ x=L.lampX-48; y=L.lampY+26; s=0.5; }
   else if(c.spot==='lamp'){ x=L.lampX-44; y=L.lampY+26; s=0.5; }
-  else{ x=L.islandX+120; y=L.islandBaseY-46; s=0.85; }
+  else{ x=L.islandX+78; y=L.islandBaseY-46; s=0.85; }
   ctx.save();
   if(sc.nf>0.4){ ctx.globalAlpha=0.92; }
   ctx.drawImage(spr,x-45*s,y-80*s+8*s,90*s,80*s);
@@ -485,30 +503,44 @@ function drawBeam(sc){
   var vis=Math.max(sc.nf,sc.df*0.6);
   if(vis<0.2) return;
   var bm=GW.beam(st);
+  var breathe=0.85+0.15*Math.sin(tG*1.3);
   beamAng+=0.016;
   ctx.save();
   ctx.globalCompositeOperation='lighter';
+  // Gris-style luminous shafts: three layered wedges, soft by layering
+  var layers=[{half:0.055,a:0.78},{half:0.108,a:0.38},{half:0.175,a:0.17}];
   for(var k=0;k<2;k++){
-    var a=beamAng+k*Math.PI;
-    var len=W*1.05, half=0.105+0.03*(1-bm);
-    var bx=L.lampX+Math.cos(a)*len, by=L.lampY+Math.sin(a)*len*0.35;
-    var g=ctx.createRadialGradient(L.lampX,L.lampY,10,L.lampX,L.lampY,len);
-    g.addColorStop(0,'rgba(255,236,180,'+(0.60*vis*bm)+')');
-    g.addColorStop(0.55,'rgba(255,236,180,'+(0.22*vis*bm)+')');
-    g.addColorStop(1,'rgba(255,236,180,0)');
-    ctx.fillStyle=g;
-    ctx.beginPath();
-    ctx.moveTo(L.lampX,L.lampY);
-    ctx.arc(L.lampX,L.lampY,len,a-half,a+half);
-    ctx.closePath(); ctx.fill();
+    var ang=beamAng+k*Math.PI;
+    var len=W*1.15;
+    var bx=L.lampX+Math.cos(ang)*len, by=L.lampY+Math.sin(ang)*len*0.35;
+    for(var li=0;li<layers.length;li++){
+      var half=layers[li].half, ia=layers[li].a*vis*bm*breathe;
+      var g=ctx.createLinearGradient(L.lampX,L.lampY,bx,by);
+      g.addColorStop(0,'rgba(255,240,200,'+ia.toFixed(3)+')');
+      g.addColorStop(0.65,'rgba(255,240,200,'+(ia*0.42).toFixed(3)+')');
+      g.addColorStop(1,'rgba(255,240,200,0)');
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.moveTo(L.lampX,L.lampY);
+      ctx.arc(L.lampX,L.lampY,len,ang-half,ang+half);
+      ctx.closePath(); ctx.fill();
+    }
   }
-  // sea shimmer where the beam falls
-  var shx=L.lampX+Math.cos(beamAng)*W*0.30;
-  if(shx>0&&shx<W){
-    var sg2=ctx.createLinearGradient(0,L.horizonY,0,H);
-    sg2.addColorStop(0,'rgba(255,230,170,'+(0.12*vis*bm)+')'); sg2.addColorStop(1,'rgba(255,230,170,0)');
-    ctx.fillStyle=sg2;
-    ctx.fillRect(shx-26,L.horizonY+6,52,L.seaH*0.5);
+  // sea shimmer: a glittering pool where the beam lands
+  var shx=L.lampX+Math.cos(beamAng)*W*0.32;
+  if(shx>-50&&shx<W+50){
+    var sg=ctx.createLinearGradient(0,L.horizonY,0,H);
+    sg.addColorStop(0,'rgba(255,232,175,'+(0.22*vis*bm*breathe).toFixed(3)+')');
+    sg.addColorStop(1,'rgba(255,232,175,0)');
+    ctx.fillStyle=sg;
+    ctx.fillRect(shx-36,L.horizonY+6,72,L.seaH*0.55);
+    for(var sp=0;sp<16;sp++){
+      var sxx=shx+Math.sin(sp*7.3)*32;
+      var syy=L.horizonY+10+((sp*53+tG*46)%(L.seaH*0.5));
+      var sa=vis*bm*0.55*Math.abs(Math.sin(tG*3+sp*2.1));
+      ctx.fillStyle='rgba(255,244,210,'+sa.toFixed(3)+')';
+      ctx.fillRect(sxx,syy,2+(sp%3),1.6);
+    }
   }
   ctx.restore();
 }
