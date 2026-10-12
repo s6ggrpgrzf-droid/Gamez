@@ -143,8 +143,7 @@
     { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' },
     { id: 'skyline-sparrow', name: 'Skyline Sparrow', cls: 'art-skyline-sparrow' },
     { id: 'emberline', name: 'Emberline', cls: 'art-emberline' },
-    { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
-    { id: 'food-truck', name: 'Food Truck Manager', cls: 'art-food-truck' }
+    { id: 'skylark', name: 'Skylark', cls: 'art-skylark' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -195,10 +194,6 @@
       if (id === 'skyline-sparrow') {
         var ss = readJSON('ss_save_v1'); if (!ss || !ss.best || !ss.best.score) return null;
         return { label: 'Best ' + (+ss.best.score).toLocaleString() + ' pts', frac: Math.min(1, ss.best.score / 5000) };
-      }
-      if (id === 'food-truck') {
-        var f = readJSON('ftm_save_v1'); if (!f || !f.shifts) return null;
-        return { label: f.shifts + ' shifts' + ((f.totalStars || 0) ? ' · ★' + (f.totalStars || 0) : ''), frac: Math.min(1, f.shifts / 30) };
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;
