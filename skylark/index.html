@@ -43,6 +43,7 @@
     <button id="skip-final" class="hidden">skip to final &rsaquo;</button>
     <div id="telegrams" aria-live="polite"></div>
     <button id="hud-mute" aria-label="Mute">&#x266A;</button>
+    <button id="view-toggle" aria-label="Toggle cockpit view">cockpit</button>
   </div>
 
   <!-- title -->
@@ -71,9 +72,25 @@
       <div id="route-cards"></div>
       <h3 class="board-h">Aircraft</h3>
       <div id="plane-row"></div>
+      <h3 class="board-h">Training</h3>
+      <div id="training"></div>
       <h3 class="board-h">Logbook</h3>
       <div id="logbook"></div>
       <button id="to-title" class="link-btn">back to title</button>
+    </div>
+  </div>
+
+  <!-- manifest: passport-style boarding docs -->
+  <div id="manifest" class="hidden">
+    <div class="mani-card">
+      <div class="mani-kicker">PASSENGER MANIFEST</div>
+      <div class="mani-route" id="mani-route">—</div>
+      <div class="mani-plane" id="mani-plane">—</div>
+      <div id="mani-pax"></div>
+      <div class="mani-btns">
+        <button id="b-board">Board &amp; fly &rsaquo;</button>
+        <button id="b-manifest-back" class="link-btn">back</button>
+      </div>
     </div>
   </div>
 
@@ -89,6 +106,7 @@
         <div><span>Passengers</span><b id="sum-pax">0</b></div>
       </div>
       <div class="log-pax" id="sum-paxsay"></div>
+      <div class="log-award hidden" id="sum-award"></div>
       <div class="log-btns">
         <button id="b-again">Fly again</button>
         <button id="b-hangar">Hangar</button>
@@ -99,9 +117,10 @@
   <div id="toast"></div>
 </div>
 
-<script src="sim.js?v=2"></script>
-<script src="art.js?v=2"></script>
+<script src="sim.js?v=3"></script>
+<script src="art.js?v=3"></script>
 <script src="audio.js?v=2"></script>
-<script src="game.js?v=3"></script>
+<script src="cockpit.js?v=1"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

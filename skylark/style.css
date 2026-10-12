@@ -174,14 +174,27 @@ html, body {
   pointer-events: none;
 }
 .telegram {
-  display: inline-block; background: rgba(245,233,208,.94);
-  color: var(--ink); font-size: 13px; padding: 8px 14px; margin-top: 6px;
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(245,233,208,.94);
+  color: var(--ink); font-size: 13px; padding: 8px 12px 8px 8px; margin-top: 6px;
   border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.25);
   transform: rotate(-.6deg);
   animation: tg-in .35s ease-out;
   max-width: 100%;
 }
 @keyframes tg-in { from { opacity: 0; transform: translateY(8px) rotate(-.6deg); } }
+.tg-face {
+  width: 40px; height: 48px; flex: 0 0 40px;
+  border-radius: 3px; border: 2px solid #d9c9a8;
+  background: #f7efdd; image-rendering: pixelated;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+}
+.tg-body { flex: 1; min-width: 0; }
+.tg-name {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: #7a5c2e; font-family: 'Special Elite', monospace; margin-bottom: 2px;
+}
+.tg-text { font-family: 'Special Elite', monospace; line-height: 1.35; }
 
 #hud-mute {
   position: absolute; top: calc(86px + env(safe-area-inset-top)); left: 22px;
@@ -189,6 +202,15 @@ html, body {
   background: rgba(245,233,208,.85); font-size: 18px; cursor: pointer;
   pointer-events: auto; box-shadow: 0 2px 6px rgba(0,0,0,.3);
 }
+#view-toggle {
+  position: absolute; top: calc(140px + env(safe-area-inset-top)); left: 22px;
+  min-width: 44px; height: 32px; border-radius: 16px; border: none;
+  background: rgba(245,233,208,.85); color: #5a4020;
+  font-family: 'Special Elite', monospace; font-size: 11px; letter-spacing: .06em;
+  cursor: pointer; pointer-events: auto; box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  padding: 0 10px;
+}
+#view-toggle.on { background: #c9962e; color: #fff8e8; }
 
 /* ---------- title: cinematic poster ---------- */
 #title {
@@ -386,3 +408,101 @@ html, body {
   opacity: 0; transition: opacity .3s;
 }
 #toast.show { opacity: 1; }
+
+/* ---------- manifest: passport boarding docs ---------- */
+#manifest {
+  position: absolute; inset: 0; z-index: 15; overflow-y: auto;
+  background: linear-gradient(to bottom, #2b2135, #4a3040);
+  padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+}
+.mani-card { max-width: 430px; margin: 0 auto; }
+.mani-kicker {
+  font-family: 'Special Elite', monospace; font-size: 11px; letter-spacing: .3em;
+  color: #e8c86a; text-align: center; margin-bottom: 6px;
+}
+.mani-route {
+  font-family: 'DM Serif Display', serif; font-size: 26px; color: #f5e9d0;
+  text-align: center; margin-bottom: 2px;
+}
+.mani-plane {
+  font-family: 'Special Elite', monospace; font-size: 13px; color: #c9a86a;
+  text-align: center; margin-bottom: 18px;
+}
+#mani-pax { display: flex; flex-direction: column; gap: 12px; }
+.passport {
+  position: relative; display: flex; gap: 12px;
+  background: linear-gradient(135deg, #f7f0dd 0%, #efe3c8 100%);
+  border-radius: 4px; padding: 12px;
+  border-left: 3px dashed #b89b5e;
+  box-shadow: 0 3px 10px rgba(0,0,0,.35);
+  transform: rotate(-.4deg);
+  animation: pp-in .4s ease-out backwards;
+}
+.passport:nth-child(even) { transform: rotate(.5deg); }
+.passport:nth-child(2) { animation-delay: .08s; }
+.passport:nth-child(3) { animation-delay: .16s; }
+.passport:nth-child(4) { animation-delay: .24s; }
+@keyframes pp-in { from { opacity: 0; transform: translateY(10px); } }
+.pp-photo {
+  width: 56px; height: 67px; flex: 0 0 56px;
+  border: 2px solid #fff; outline: 1px solid #b89b5e;
+  image-rendering: pixelated; background: #cfe3ef;
+}
+.pp-info { flex: 1; min-width: 0; }
+.pp-name { font-family: 'DM Serif Display', serif; font-size: 17px; color: #2b1d12; }
+.pp-story { font-size: 12px; font-style: italic; color: #6b543a; margin: 3px 0 6px; line-height: 1.4; }
+.pp-dest {
+  display: inline-block; font-family: 'Special Elite', monospace; font-size: 11px;
+  letter-spacing: .12em; color: #2e6b4f; border: 1.5px solid #2e6b4f;
+  border-radius: 3px; padding: 2px 8px; transform: rotate(-3deg);
+}
+.pp-mrz {
+  font-family: 'Special Elite', monospace; font-size: 9px; color: #a08c60;
+  margin-top: 6px; letter-spacing: .06em; word-break: break-all;
+}
+.pp-stamp {
+  position: absolute; right: 10px; top: 10px;
+  font-family: 'Special Elite', monospace; font-size: 10px; letter-spacing: .15em;
+  color: #c94f38; border: 2px solid #c94f38; border-radius: 4px;
+  padding: 3px 8px; transform: rotate(8deg); opacity: .85;
+}
+.pp-empty {
+  text-align: center; color: #c9a86a; font-style: italic; font-size: 14px; padding: 20px;
+}
+.mani-btns { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
+#b-board {
+  flex: 1; font-family: 'DM Serif Display', serif; font-size: 19px;
+  padding: 14px; border-radius: 30px; border: none; cursor: pointer;
+  background: linear-gradient(to bottom, var(--brass-hi), var(--brass));
+  color: #2b1d12; box-shadow: 0 4px 14px rgba(0,0,0,.4);
+}
+#b-board:active { transform: scale(.97); }
+#b-manifest-back { color: #c9a86a; }
+
+/* ---------- training challenges ---------- */
+#training { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.train-card {
+  background: rgba(245,233,208,.07); border: 1px solid rgba(232,200,106,.25);
+  border-radius: 8px; padding: 10px 12px;
+}
+.train-card.done { border-color: #e8c86a; background: rgba(232,200,106,.1); }
+.tc-name { font-family: 'DM Serif Display', serif; font-size: 16px; color: #f5e9d0; }
+.tc-stamp {
+  font-family: 'Special Elite', monospace; font-size: 10px; letter-spacing: .15em;
+  color: #7fb069; border: 1.5px solid #7fb069; border-radius: 3px;
+  padding: 1px 6px; margin-left: 6px; vertical-align: middle;
+}
+.tc-desc { font-size: 12px; color: #b8a67e; margin: 2px 0 8px; font-style: italic; }
+.tc-pips { display: flex; align-items: center; gap: 6px; }
+.pip {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid #8a7648; background: transparent;
+}
+.pip.on { background: #e8c86a; border-color: #e8c86a; box-shadow: 0 0 6px rgba(232,200,106,.6); }
+.tc-xp { margin-left: auto; font-size: 11px; color: #8a7648; font-family: 'Special Elite', monospace; }
+.log-award {
+  margin-top: 10px; padding: 10px 14px; border-radius: 8px;
+  background: linear-gradient(135deg, rgba(232,200,106,.2), rgba(232,200,106,.08));
+  border: 1px solid #e8c86a; color: #e8c86a;
+  font-family: 'DM Serif Display', serif; font-size: 15px; text-align: center;
+}
