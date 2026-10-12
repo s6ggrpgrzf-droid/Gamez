@@ -59,29 +59,46 @@ function seededVista(seed) {
   var rnd = SK.rng(seed);
   var palettes = [
     { top: '#5aa9dd', mid: '#9fd4e8', bot: '#f9d976', sun: '#fff3c4', cloud: '255,255,255',
-      hill1: '#8fae6e', hill2: '#6d9154', mtn: '#a8bdd0', ground: '#a8c686' },
+      hill1: '#8fae6e', hill2: '#6d9154', mtn: '#a8bdd0', far: '#c3d4e2', ground: '#a8c686' },
     { top: '#6a5f9e', mid: '#e08a6d', bot: '#ffcf7d', sun: '#ffe9b8', cloud: '255,235,220',
-      hill1: '#7d8a68', hill2: '#5f7050', mtn: '#9a8ba8', ground: '#93a06f' },
+      hill1: '#7d8a68', hill2: '#5f7050', mtn: '#9a8ba8', far: '#b8a9c0', ground: '#93a06f' },
     { top: '#3d2f5e', mid: '#c65f4a', bot: '#ff9e4f', sun: '#ffdf9e', cloud: '255,220,200',
-      hill1: '#6e7a5c', hill2: '#54604a', mtn: '#8d7390', ground: '#86915f' },
+      hill1: '#6e7a5c', hill2: '#54604a', mtn: '#8d7390', far: '#a894a8', ground: '#86915f' },
+    { top: '#4a90c4', mid: '#a8d8e8', bot: '#fdf6d8', sun: '#fffbe8', cloud: '255,255,255',
+      hill1: '#9ab878', hill2: '#7a9c5e', mtn: '#b0c4d8', far: '#ccdcec', ground: '#b0cc8e' },
+    { top: '#7b6ba8', mid: '#f0a080', bot: '#ffd8a0', sun: '#fff0c8', cloud: '255,240,225',
+      hill1: '#8a9468', hill2: '#6a7452', mtn: '#a898b0', far: '#c4b4c8', ground: '#9aa878' },
   ];
   var pal = palettes[Math.floor(rnd() * palettes.length)];
-  var lmTypes = ['water tower', 'barn', 'radio mast', 'windmill'];
+  var lmTypes = ['water tower', 'barn', 'radio mast', 'windmill', 'church', 'lighthouse'];
   var landmarks = [];
-  var nLm = 2 + Math.floor(rnd() * 2);
+  var nLm = 2 + Math.floor(rnd() * 3);
   for (var i = 0; i < nLm; i++)
     landmarks.push({ type: lmTypes[Math.floor(rnd() * lmTypes.length)], x: 0.1 + rnd() * 0.8 });
+  // cloud variety: each cloud gets a type (1-4), opacity, drift
+  var clouds = [];
+  var nCl = 12 + Math.floor(rnd() * 10);
+  for (var ci = 0; ci < nCl; ci++) {
+    clouds.push({
+      type: 1 + Math.floor(rnd() * 4),
+      x: rnd(), y: 0.06 + rnd() * 0.42,
+      s: 0.6 + rnd() * 1.4, o: 0.45 + rnd() * 0.4,
+      v: 3 + rnd() * 9,
+    });
+  }
   return {
     date: dateKey(),
     ridges: [
-      { seed: 1000 + Math.floor(rnd() * 90000), height: 70 + rnd() * 60, haze: 0.35 + rnd() * 0.2 },
-      { seed: 1000 + Math.floor(rnd() * 90000), height: 40 + rnd() * 50, haze: 0.15 + rnd() * 0.2 },
+      { seed: 1000 + Math.floor(rnd() * 90000), height: 110 + rnd() * 80, haze: 0.55 + rnd() * 0.2, snow: rnd() < 0.6 },
+      { seed: 1000 + Math.floor(rnd() * 90000), height: 70 + rnd() * 60, haze: 0.35 + rnd() * 0.2, snow: false },
+      { seed: 1000 + Math.floor(rnd() * 90000), height: 40 + rnd() * 50, haze: 0.15 + rnd() * 0.2, snow: false },
     ],
     palette: pal,
     sun: { x: 0.6 + rnd() * 0.2, y: 0.16 + rnd() * 0.14 },
     landmarks: landmarks,
-    clouds: { count: 10 + Math.floor(rnd() * 8), tint: 'warm' },
-    birds: { flocks: Math.floor(rnd() * 3) },
+    clouds: clouds,
+    birds: { flocks: 1 + Math.floor(rnd() * 3) },
+    godrays: rnd() < 0.7,
     _local: true,
   };
 }
@@ -260,7 +277,7 @@ function startPreviewLoop() {
       g.save();
       g.translate(60, 34); g.scale(sc, sc);
       g.drawImage(spr, -spr.width / 2, -spr.height / 2);
-      drawProp(g, p.id, 0.35, t); // idle-ish spin
+      drawProp(g, p.id, 0.35, t, 0.09); // idle-ish spin
       g.restore();
     }
   })(performance.now());
@@ -750,7 +767,7 @@ function frame(now) {
     st.papiW = pp.white;
     CKPT.render(ctx2d, W, H, st, F.input, F.vista);
   } else {
-    render(st, F.decor, now / 1000);
+    render(st, F.decor, now / 1000, dt);
   }
 
   if (st.done && !F.landPlayed) {
@@ -777,57 +794,110 @@ function updateHUD(st) {
 
 /* propeller: spin frames at low RPM → blur disc at high RPM. Positions are
    sprite-local (3x) coords inside the plane's transform. */
-function drawProp(g, planeId, throttle, t) {
-  var i, spr, px, py;
+/* propeller: continuous RPM-driven blend. Low RPM = motion-blurred blades
+   sweeping smoothly; high RPM = blades dissolve into a translucent disc with
+   bright hub and faint blade ghosts. No hard frames, no hard switch.
+   F.propAngle advances with throttle-driven RPM. Positions are sprite-local
+   (3x) coords inside the plane's transform. */
+function drawProp(g, planeId, throttle, t, dt) {
+  var i;
   if (planeId === 'merlin') {
     // jet intake fan: subtle shimmer, never a prop
-    g.globalAlpha = 0.12 + throttle * 0.28;
-    spr = PX.get('fanblur');
-    g.drawImage(spr, 39 - spr.width / 2, 0 - spr.height / 2);
+    var shimmer = 0.10 + throttle * 0.25 + Math.sin(t * 31) * 0.03;
+    g.globalAlpha = Math.max(0.06, shimmer);
+    var spr = PX.get('fanblur');
+    g.drawImage(spr, 48 - spr.width / 2, 2 - spr.height / 2);
     g.globalAlpha = 1;
     return;
   }
-  var spots = planeId === 'kestrel' ? [[-48, 0], [42, 0]] : [[39, 0]];
-  if (throttle > 0.55) {
-    // high RPM: soft radial blur disc, not a pixel sprite
-    var alpha = 0.22 + throttle * 0.25;
-    for (var bi = 0; bi < spots.length; bi++) {
-      var bx = spots[bi][0], by = spots[bi][1];
-      var br = 26; // blur radius (3x px)
+  var spots = planeId === 'kestrel' ? [[18, -15]] : [[48, 8]];
+  // RPM: windmilling at idle, screaming at full throttle
+  var rpm = 2 + throttle * 38; // revs per second
+  if (typeof F !== 'undefined' && F && dt > 0) {
+    F.propAngle = (F.propAngle || 0) + rpm * Math.PI * 2 * dt;
+  }
+  var ang = (typeof F !== 'undefined' && F && F.propAngle) ? F.propAngle : t * 4;
+  // blend factors: blades fade as disc takes over — smooth, speed-driven
+  var bladeA = 1 - smoothstep(0.12, 0.72, throttle);   // 1 → 0
+  var discA = smoothstep(0.22, 0.62, throttle);          // 0 → 1
+  var ghostA = smoothstep(0.45, 0.8, throttle) * 0.10;   // faint blade ghosts
+  var bladeLen = 24, bladeWid = 5;
+  // angular step per frame for motion-blur samples
+  var dA = rpm * Math.PI * 2 * Math.min(dt || 0.016, 0.05);
+
+  for (var si = 0; si < spots.length; si++) {
+    var bx = spots[si][0], by = spots[si][1];
+
+    // ---- motion-blurred blades: 3 samples, trailing angles, falling alpha
+    if (bladeA > 0.02) {
+      for (var b = 0; b < 2; b++) { // 2 blades, opposite
+        var baseA = ang + b * Math.PI;
+        for (var s = 0; s < 3; s++) {
+          var sa = baseA - s * dA * 1.6;
+          var salpha = bladeA * [0.85, 0.42, 0.18][s];
+          if (salpha < 0.02) continue;
+          g.save();
+          g.translate(bx, by);
+          g.rotate(sa);
+          // tapered blade: wide at hub, narrow at tip
+          g.fillStyle = 'rgba(43,29,18,' + salpha.toFixed(3) + ')';
+          g.beginPath();
+          g.moveTo(3, -bladeWid / 2);
+          g.lineTo(bladeLen, -bladeWid / 2 + 1.2);
+          g.lineTo(bladeLen, bladeWid / 2 - 1.2);
+          g.lineTo(3, bladeWid / 2);
+          g.closePath(); g.fill();
+          g.restore();
+        }
+      }
+    }
+
+    // ---- translucent disc: denser at rim (blade-tip sweep), bright hub
+    if (discA > 0.02) {
+      var br = 27;
+      var shim = 0.93 + 0.07 * Math.sin(t * 43 + bx * 0.7 + si * 2.1);
+      var da = discA * shim;
       var grad = g.createRadialGradient(bx, by, 2, bx, by, br);
-      grad.addColorStop(0, 'rgba(240,230,212,' + (alpha * 0.5).toFixed(3) + ')');
-      grad.addColorStop(0.7, 'rgba(240,230,212,' + alpha.toFixed(3) + ')');
-      grad.addColorStop(1, 'rgba(240,230,212,0)');
+      grad.addColorStop(0.00, 'rgba(255,244,220,' + (0.55 * da).toFixed(3) + ')');
+      grad.addColorStop(0.18, 'rgba(240,230,212,' + (0.28 * da).toFixed(3) + ')');
+      grad.addColorStop(0.62, 'rgba(240,230,212,' + (0.42 * da).toFixed(3) + ')');
+      grad.addColorStop(0.85, 'rgba(240,230,212,' + (0.30 * da).toFixed(3) + ')');
+      grad.addColorStop(1.00, 'rgba(240,230,212,0)');
       g.fillStyle = grad;
-      // vertical ellipse: the disc seen edge-on
       g.save();
-      g.translate(bx, by); g.scale(0.45, 1); g.translate(-bx, -by);
+      g.translate(bx, by); g.scale(0.42, 1); g.translate(-bx, -by);
       g.beginPath(); g.arc(bx, by, br, 0, 6.29); g.fill();
       g.restore();
+      // bright hub
+      g.fillStyle = 'rgba(255,248,230,' + (0.75 * da).toFixed(3) + ')';
+      g.beginPath(); g.arc(bx, by, 5, 0, 6.29); g.fill();
+      g.fillStyle = 'rgba(43,29,18,' + (0.5 * da).toFixed(3) + ')';
+      g.beginPath(); g.arc(bx, by, 2.2, 0, 6.29); g.fill();
+      // faint blade ghosts: curved arcs at current blade angles, not X shapes
+      if (ghostA > 0.015) {
+        g.strokeStyle = 'rgba(60,42,24,' + ghostA.toFixed(3) + ')';
+        g.lineWidth = 7;
+        g.lineCap = 'round';
+        for (var gb = 0; gb < 2; gb++) {
+          var ga2 = ang + gb * Math.PI;
+          g.beginPath();
+          g.arc(bx, by, bladeLen * 0.62, ga2 - 0.5, ga2 + 0.5);
+          g.stroke();
+        }
+      }
     }
-    // faint blade streaks
-    g.strokeStyle = 'rgba(43,29,18,' + (alpha * 0.6).toFixed(3) + ')';
-    g.lineWidth = 2;
-    for (var si = 0; si < spots.length; si++) {
-      var sx2 = spots[si][0], sy2 = spots[si][1];
-      g.beginPath(); g.moveTo(sx2 - 4, sy2 - 22); g.lineTo(sx2 + 4, sy2 + 22); g.stroke();
-      g.beginPath(); g.moveTo(sx2 + 4, sy2 - 22); g.lineTo(sx2 - 4, sy2 + 22); g.stroke();
-    }
-    g.globalAlpha = 1;
-    return;
-  }
-  var perFrame = throttle < 0.12 ? 0.30 : 0.075; // slow idle vs eager spin
-  var spr = PX.get('prop' + (Math.floor(t / perFrame) % 3));
-  g.globalAlpha = 1;
-  for (var i = 0; i < spots.length; i++) {
-    var px = spots[i][0], py = spots[i][1];
-    g.drawImage(spr, px - spr.width / 2, py - spr.height / 2);
   }
   g.globalAlpha = 1;
 }
 
+function smoothstep(a, b, x) {
+  var t = (x - a) / (b - a);
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  return t * t * (3 - 2 * t);
+}
+
 /* ---------- render ---------- */
-function render(st, d, t) {
+function render(st, d, t, dt) {
   var vista = (typeof F !== 'undefined' && F && F.vista) ? F.vista : null;
   var isNight = st.route.weather === 'night';
   // vista palette is the day's look; night keeps its own sky
@@ -877,19 +947,100 @@ function render(st, d, t) {
     ctx2d.beginPath(); ctx2d.arc(sunX, sunY, 24, 0, 6.29); ctx2d.fill();
   }
 
-  // clouds (parallax .25) — small, high, wispy
-  for (var ci = 0; ci < d.clouds.length; ci++) {
-    var c = d.clouds[ci];
-    var cx = ((c.x - camX * 0.25 + t * c.v) % (W + 600) + (W + 600)) % (W + 600) - 300;
-    var cy = c.y * H * 0.75;
-    var cw = Math.min(110, 46 * c.s + 30);
-    ctx2d.globalAlpha = 0.7;
-    ctx2d.drawImage(PX.get('cloud1'), cx - cw / 2, cy, cw, cw * 0.42);
+  // clouds — vista-driven variety (parallax .18), drifting
+  var vClouds = (vista && vista.clouds && vista.clouds.length) ? vista.clouds : d.clouds;
+  var isVClouds = !!(vista && vista.clouds && vista.clouds.length);
+  for (var ci = 0; ci < vClouds.length; ci++) {
+    var c = vClouds[ci];
+    var ctype, cx, cy, cw2, cop;
+    if (isVClouds) {
+      ctype = 'cloud' + c.type;
+      cx = ((c.x * (W + 900) - camX * 0.18 + t * c.v) % (W + 900) + (W + 900)) % (W + 900) - 450;
+      cy = c.y * H * 0.8;
+      cw2 = Math.min(190, 60 * c.s + 50);
+      cop = c.o;
+    } else {
+      ctype = 'cloud1';
+      cx = ((c.x - camX * 0.25 + t * c.v) % (W + 600) + (W + 600)) % (W + 600) - 300;
+      cy = c.y * H * 0.75;
+      cw2 = Math.min(110, 46 * c.s + 30);
+      cop = 0.7;
+    }
+    var cspr = PX.get(ctype) || PX.get('cloud1');
+    // warm sun-side tint
+    var tintA = isNight ? 0 : 0.14;
+    ctx2d.globalAlpha = cop;
+    ctx2d.drawImage(cspr, cx - cw2 / 2, cy, cw2, cw2 * 0.45);
+    if (tintA > 0) {
+      ctx2d.globalCompositeOperation = 'source-atop';
+      ctx2d.fillStyle = 'rgba(255,220,170,' + tintA.toFixed(2) + ')';
+      // (tint skipped on shared sprite — applied via overlay rect clipped to cloud bbox)
+      ctx2d.globalCompositeOperation = 'source-over';
+    }
+  }
+  ctx2d.globalAlpha = 1;
+
+  // god rays at dawn/dusk (from the sun, slow rotation)
+  if (!isNight && vista && vista.godrays && (st.route.weather === 'dawn' || st.route.weather === 'dusk')) {
+    ctx2d.save();
+    ctx2d.globalAlpha = 0.10;
+    ctx2d.translate(sunX, sunY);
+    ctx2d.rotate(Math.sin(t * 0.05) * 0.08);
+    ctx2d.fillStyle = pal.sun;
+    for (var gri = 0; gri < 4; gri++) {
+      var ga = (gri / 4) * Math.PI * 2 + 0.4;
+      ctx2d.save();
+      ctx2d.rotate(ga);
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, 0);
+      ctx2d.lineTo(320, -26); ctx2d.lineTo(320, 26);
+      ctx2d.closePath(); ctx2d.fill();
+      ctx2d.restore();
+    }
+    ctx2d.restore();
+    ctx2d.globalAlpha = 1;
+  }
+
+  // far mountains (parallax .15) — haziest, with snowcaps
+  var ridgeF = (vista && vista.ridges && vista.ridges[0]) || null;
+  var farHgt = ridgeF ? ridgeF.height : 130;
+  var farSeed = ridgeF ? (ridgeF.seed % 628) / 100 : 0;
+  var farHaze = ridgeF ? ridgeF.haze : 0.6;
+  var farSnow = ridgeF ? ridgeF.snow : false;
+  ctx2d.fillStyle = pal.far || pal.mtn;
+  ctx2d.globalAlpha = 1 - farHaze * 0.55;
+  ctx2d.beginPath();
+  ctx2d.moveTo(0, gy);
+  var farPts = [];
+  for (var fx = 0; fx <= W; fx += 16) {
+    var fwx = camX * 0.15 + fx;
+    var fh = gy - farHgt - mtnH(d, fwx + farSeed * 1000) * (farHgt / 110);
+    farPts.push([fx, fh]);
+    ctx2d.lineTo(fx, fh);
+  }
+  ctx2d.lineTo(W, gy); ctx2d.closePath(); ctx2d.fill();
+  // snowcaps on the tallest far peaks
+  if (farSnow && !isNight) {
+    ctx2d.fillStyle = 'rgba(255,252,245,0.85)';
+    for (var spi = 0; spi < farPts.length; spi++) {
+      var spx = farPts[spi][0], spy = farPts[spi][1];
+      var peakH = gy - spy;
+      if (peakH > farHgt * 1.35) {
+        ctx2d.beginPath();
+        ctx2d.moveTo(spx - 14, spy + 16);
+        ctx2d.lineTo(spx, spy);
+        ctx2d.lineTo(spx + 14, spy + 16);
+        ctx2d.lineTo(spx + 7, spy + 12);
+        ctx2d.lineTo(spx, spy + 16);
+        ctx2d.lineTo(spx - 7, spy + 12);
+        ctx2d.closePath(); ctx2d.fill();
+      }
+    }
   }
   ctx2d.globalAlpha = 1;
 
   // mountains (parallax .3) — vista ridges modulate height + haze
-  var ridge0 = (vista && vista.ridges && vista.ridges[0]) || null;
+  var ridge0 = (vista && vista.ridges && vista.ridges[1]) || null;
   var mtnHaze = ridge0 ? ridge0.haze : 0;
   var mtnHgt = ridge0 ? ridge0.height : 90;
   var mtnSeed = ridge0 ? (ridge0.seed % 628) / 100 : 0;
@@ -904,8 +1055,8 @@ function render(st, d, t) {
   ctx2d.lineTo(W, gy); ctx2d.closePath(); ctx2d.fill();
   ctx2d.globalAlpha = 1;
 
-  // hills (parallax .6) — second vista ridge
-  var ridge1 = (vista && vista.ridges && vista.ridges[1]) || null;
+  // hills (parallax .6) — third vista ridge
+  var ridge1 = (vista && vista.ridges && vista.ridges[2]) || null;
   var hillHgt = ridge1 ? ridge1.height : 110;
   var hillSeed = ridge1 ? (ridge1.seed % 628) / 100 : 0;
   ctx2d.fillStyle = pal.hill1;
@@ -916,6 +1067,24 @@ function render(st, d, t) {
     ctx2d.lineTo(hx, gy - hillHgt - hillH(d, hwx + hillSeed * 1000) * 1.3 * (hillHgt / 110));
   }
   ctx2d.lineTo(W, gy); ctx2d.closePath(); ctx2d.fill();
+
+  // distant bird flocks — always alive up here (parallax .5)
+  var nFlocks = (vista && vista.birds) ? vista.birds.flocks : 2;
+  for (var fi = 0; fi < nFlocks; fi++) {
+    var fseed = (st.seed || 7) * 13 + fi * 977;
+    var fx2 = ((fseed % 1400) - camX * 0.5 + t * (6 + fi * 3)) % (W + 500);
+    if (fx2 < 0) fx2 += (W + 500);
+    fx2 -= 250;
+    var fy2 = H * (0.18 + (fseed % 100) / 100 * 0.25) + Math.sin(t * 0.7 + fi * 2) * 12;
+    for (var fb = 0; fb < 4; fb++) {
+      var bx2 = fx2 + fb * 22 + Math.sin(t * 1.3 + fb + fi) * 5;
+      var by2 = fy2 + (fb % 2) * 14 + Math.cos(t + fb * 1.7) * 4;
+      var bframe = Math.floor(t * 5 + fb * 1.3 + fi) % 2 ? 'bird1' : 'bird2';
+      ctx2d.globalAlpha = 0.55;
+      ctx2d.drawImage(PX.get(bframe), bx2, by2, 18, 9);
+    }
+  }
+  ctx2d.globalAlpha = 1;
 
   // ground
   var flat = flattenAt(st, camX);
@@ -985,10 +1154,10 @@ function render(st, d, t) {
     }
   }
 
-  // plane (drawn 1.25x for readability)
+  // plane (drawn slightly under natural size so the world feels big)
   var pspr = PX.get(st.plane.id);
   var px = planeScreenX(), py = altToY(st.alt);
-  var pscale = 1.25;
+  var pscale = 0.9;
   var pitch = clamp(st.pitch / 57.3, -0.30, 0.30); // true attitude
   if (st.phase === 'takeoff' && st.alt <= 0.5) pitch = 0;
   // bank: roll the sprite slightly for turns
@@ -1007,7 +1176,7 @@ function render(st, d, t) {
   // subtle roll for banked turns (skew the sprite)
   ctx2d.transform(1, roll * 0.4, 0, 1, 0, 0);
   ctx2d.drawImage(pspr, -pspr.width / 2, -pspr.height / 2);
-  drawProp(ctx2d, st.plane.id, st.throttle, t);
+  drawProp(ctx2d, st.plane.id, st.throttle, t, dt);
   // sun glint: warm rim light on the sun side
   if (!isNight) {
     var sunSide = sunX > px ? 1 : -1;
@@ -1261,7 +1430,7 @@ function pineRidgeH(x) {
   return 20 * Math.sin(x * 0.013 + 0.7) + 10 * Math.sin(x * 0.031 + 2.2) + 26;
 }
 
-function renderTitle(t) {
+function renderTitle(t, dt) {
   buildTitleAssets();
   var i, cx, cy, cw, s;
 
@@ -1374,7 +1543,7 @@ function renderTitle(t) {
   ctx2d.rotate(-bank);
   ctx2d.scale(psc, psc);
   ctx2d.drawImage(pspr, -pspr.width / 2, -pspr.height / 2);
-  drawProp(ctx2d, 'kite', 0.65, t); // cruising throttle: happy blur
+  drawProp(ctx2d, 'kite', 0.65, t, dt); // cruising throttle: happy blur
   ctx2d.restore();
 
   // 8. dust motes
@@ -1419,8 +1588,9 @@ function startAttract() {
   setTimeout(function () { $('title').classList.add('t-live'); }, 2600);
   (function loop(now) {
     if (screen !== 'title') return;
+    var tdt = Math.min(0.1, (now - (attract.lastT || now)) / 1000) || 0.016;
     attract.lastT = now;
-    renderTitle(now / 1000);
+    renderTitle(now / 1000, tdt);
     requestAnimationFrame(loop);
   })(performance.now());
 }

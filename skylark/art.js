@@ -74,63 +74,76 @@ var PX = (function () {
 
   /* ---------------- planes (facing right) ---------------- */
 
-  /* Kite — little bush Cub, high wing, amber (prop drawn separately, animated) */
+  /* Kite — Super Cub: high wing, struts, big cabin windows, tall tail fin,
+     bush wheels. Prop at nose (sprite-relative +48, +8). */
   var KITE = [
-    '............KKKK..............',
-    '..........KKWWWWKK............',
-    '.........KWWWWWWWWK...........',
-    '.........KWWWWWWWWK...........',
-    '......KKKKKKKKKKKKKK..........',
-    '....KKBBBBBBBBBBBBBBKK........',
-    '..KKBBBBBKWWBBBBBBBBBBKK......',
-    '.KBBBBBBBBBWWBBBBBBBBBBBK.....',
-    '.KBBBBBBBBBBBBBBBBBBBBBBK.....',
-    '.KBBBBBBBBBBBBBBBBBBBBBBK.....',
-    '..KKBBBBBBBBBBBBBBBBBBKK......',
-    '....KKBBBBBBBBBBBBBBKK........',
-    '......KKKKKKKKKKKKKK..........',
-    '........KKK......KKK..........',
-    '.......KDDDK....KDDDK.........',
-    '.......KDDDK....KDDDK.........',
+    '............KKKKKKKKKKKKKKKK............',
+    '...........KBBBBBBBBBBBBBBBBK...........',
+    '...........KBBBBBBBBBBBBBBBBK...........',
+    '..KK.......KBBBBBBBBBBBBBBBBK...........',
+    '.KBBK.......KKKBBKKKKKBBKKKK............',
+    '.KBBKK........KBBK...KBBK...............',
+    '.KBBBBK.......KBBK...KBBK...............',
+    '.KBBBBKK......KBBK...KBBK...............',
+    'KKBBBBBBK.....KBBK...KBBK...............',
+    'BBBBBBBBKKKKKKKKKKKKKKKKKKKKKKKKKK......',
+    'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBKK....',
+    'KKKBBBBBBBBBBBBBBBBBBBBBWWWWWWBBBBBBK...',
+    '..KBBBBBBBBBBBBBBBBBBBBBWWWWWWBBBBBBBK..',
+    '..KBBBBBBBBBBBBBBBBBBBBBWWWWWWBBBBBBBK..',
+    '..KBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBK..',
+    '..KBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBK...',
+    '...KDDKKKKKKKKDDDKKKKKKKKKDDDKKKKKKK....',
+    '...KDDK......KDDDK.......KDDDK..........',
+    '....KK.......KDDDK.......KDDDK..........',
+    '..............KKK.........KKK...........',
   ];
 
-  /* Kestrel — twin-prop, teal, bigger (props drawn separately, animated) */
+  /* Kestrel — Twin Otter: long high-wing twin, engine nacelle, pax windows.
+     Prop at nacelle nose (sprite-relative +18, -15). */
   var KESTREL = [
-    '..............KKKKKK................',
-    '............KKWWWWWWKK..............',
-    '...........KWWWWWWWWWWK.............',
-    '...........KWWWWWWWWWWK.............',
-    '........KKKKKKKKKKKKKKKKKK..........',
-    '......KKTTTTTTTTTTTTTTTTTTKK........',
-    '....KKTTTTKWWWTTTTTTTTTTTTTTKK......',
-    '..KKTTTTTTTTWWWTTTTTTTTTTTTTTK......',
-    '..KKTTTTTTTTTTTTTTTTTTTTTTTTTK......',
-    '..KKTTTTTTTTTTTTTTTTTTTTTTTTTK......',
-    '....KKTTTTTTTTTTTTTTTTTTTKTTKK......',
-    '......KKTTTTTTTTTTTTTTTTTTKK........',
-    '........KKKKKKKKKKKKKKKKKK..........',
-    '..........KKK........KKK...........',
-    '.........KDDDK......KDDDK..........',
-    '.........KDDDK......KDDDK..........',
+    '..........KKKKKKKKKKKKKKKKKKKKK.........',
+    '.........KTTTTTTTTTTTTTTTTTTTTTK........',
+    '.KK......KTTTTTTTTTTTTTTTTTTTTTK........',
+    'KTTK.....KTTTTTTTTTTTTTTTTTTTTTK........',
+    'KTTKK.....KKKKKKKKtttttttttKKKK.........',
+    'KTTTTK...........KtttttttttK............',
+    'KTTTTKK..........KtttttttKK.............',
+    'KTTTTTTK..........KKKKKKK...............',
+    'TTTTTTTKKKKKKKKKKKKKKKKKKKKKKKKKKKKK....',
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTKK..',
+    'KKTTTTTTTTTTWWTTWWTTWWTTWWTTTTWWWWWTTTK.',
+    '.KTTTTTTTTTTWWTTWWTTWWTTWWTTTTWWWWWTTTK.',
+    '.KTTTTTTTTTTTTTTTTTTTTTTTTTTTTWWWWWTTTK.',
+    '.KTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTK.',
+    '.KTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTKK..',
+    '..KDDKKKKKKKKKKDDDKKKKKKKKKDDDKKKKKK....',
+    '..KDDK........KDDDK.......KDDDK.........',
+    '...KK.........KDDDK.......KDDDK.........',
+    '...............KKK.........KKK..........',
   ];
 
-  /* Merlin — sleek regional jet, cream + red */
+  /* Merlin — regional jet: T-tail, tapered nose, swept wing, underwing jets.
+     Fan blur at nose intake (sprite-relative +48, +2). */
   var MERLIN = [
-    '....................................',
-    '..........KKKKKKKKKK.................',
-    '........KKWWWWWWWWWWKK...............',
-    '.......KWWWWWWWWWWWWWWK..............',
-    '......KKKKKKKKKKKKKKKKKKK............',
-    '....KKMMMMMMMMMMMMMMMMMMMK.....KK....',
-    '..KKMMMMMKWWWMMMMMMMMMMMMMMKKKKmmK...',
-    '.KMMMMMMMMMWWWMMMMMMMMMMMMMMMMMmmmK..',
-    'KMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMmmK.',
-    '.KMMMMMMMMMMMMMMMMMMMMMMMMMMMMMmmmK..',
-    '..KKMMMMMMMMMMMMMMMMMMMMMMKKKKmmK....',
-    '....KKMMMMMMMMMMMMMMMMMMMK.....KK....',
-    '......KKKKKKKKKKKKKKKKKKK............',
-    '.........JJJ..........JJJ...........',
-    '.........JJJ..........JJJ...........',
+    '........................................',
+    '........................................',
+    'KKKKKKK.................................',
+    'mmmmmmmK................................',
+    'mmmmmmmK................................',
+    'KKMMKKK.................................',
+    '.KMMK...................................',
+    '.KmmK...................................',
+    '.KmmK...................................',
+    '.KmmKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK.....',
+    '..KMMMMMMMMMMMMMMMMMMMMMMMMMMWWWWMMKK...',
+    '..KMMMMMMMMMMMMMMMMMMMMMMMMMMWWWWMMMMK..',
+    '..KMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMKK...',
+    '..KMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMKK.....',
+    '...KKKKKKKKKJJMMMMMMMMMKKKKKJJKKK.......',
+    '...........KJJKKKJJJKKJJJK.KJJK.........',
+    '............KK..KJJJKKJJJK..KK..........',
+    '.................KKK..KKK...............',
   ];
 
   /* ---------------- scenery ---------------- */
@@ -224,6 +237,36 @@ var PX = (function () {
     '.KKKKKKKKKKKKK.',
   ];
 
+  /* tall cumulus — puffy */
+  var CLOUD2 = [
+    '.....KKKK.......',
+    '...KKCCCCKK.....',
+    '..KCCCCCCCCK....',
+    '.KCCCCCCCCCCKK..',
+    'KCCCCcCCCCCCCCK.',
+    'KCCCCCCCCCCCCCCK',
+    'KCCcCCCCCCcCCCCK',
+    '.KKKKKKKKKKKKKK.',
+  ];
+
+  /* flat stratus — long and low */
+  var CLOUD3 = [
+    '........................',
+    '.....KKKKKKKKKKKK.......',
+    '..KKKCCCCCCCCCCCCKKK....',
+    '.KCCCCCCCCCCCCCCCCCCCK..',
+    'KCCCCcCCCCCCCCCCcCCCCCK.',
+    '.KKKKKKKKKKKKKKKKKKKKK..',
+  ];
+
+  /* wispy cirrus */
+  var CLOUD4 = [
+    '..KK....KKK......KK...',
+    '.KCCKKKCCCCKK..KKCCK..',
+    'KCCCCCCCCCCCCCKCCCCCK.',
+    '.KKKKKKKKKKKKKKKKKKK..',
+  ];
+
   var BIRD1 = ['K..K', 'KKKK'];
   var BIRD2 = ['....', 'KKKK'];
 
@@ -309,6 +352,9 @@ var PX = (function () {
     compile('hangar', HANGAR);
     compile('windsock', WINDSOCK);
     compile('cloud1', CLOUD1);
+    compile('cloud2', CLOUD2);
+    compile('cloud3', CLOUD3);
+    compile('cloud4', CLOUD4);
     compile('bird1', BIRD1);
     compile('bird2', BIRD2);
     compile('mabel', MABEL);
