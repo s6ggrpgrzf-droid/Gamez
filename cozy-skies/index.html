@@ -92,21 +92,6 @@ const grainTex=new T.CanvasTexture(nc2);
 grainTex.wrapS=grainTex.wrapT=T.RepeatWrapping;
 grainTex.anisotropy=Math.min(4,ren.capabilities.getMaxAnisotropy());
 
-// water shimmer: blobby heightfield baked to a normal map, scrolled slowly in frame()
-const HS=128,hf=new Float32Array(HS*HS);
-for(let i=0;i<90;i++){const bx=Math.random()*HS,by=Math.random()*HS,br=6+Math.random()*20,ba=.4+Math.random()*.6;
- for(let y=0;y<HS;y++)for(let x=0;x<HS;x++){let dx=Math.abs(x-bx),dy=Math.abs(y-by);dx=Math.min(dx,HS-dx);dy=Math.min(dy,HS-dy);
-  const d=Math.sqrt(dx*dx+dy*dy);if(d<br)hf[y*HS+x]+=ba*(1-d/br)}}
-const wc2=document.createElement('canvas');wc2.width=wc2.height=HS;
-const wctx=wc2.getContext('2d'),wimg=wctx.createImageData(HS,HS);
-for(let y=0;y<HS;y++)for(let x=0;x<HS;x++){
- const nx2=(hf[y*HS+((x-1+HS)%HS)]-hf[y*HS+((x+1)%HS)])*2,ny2=(hf[((y-1+HS)%HS)*HS+x]-hf[((y+1)%HS)*HS+x])*2;
- const il=1/Math.sqrt(nx2*nx2+ny2*ny2+1),o=(y*HS+x)*4;
- wimg.data[o]=(nx2*il*.5+.5)*255;wimg.data[o+1]=(ny2*il*.5+.5)*255;wimg.data[o+2]=il*255;wimg.data[o+3]=255}
-wctx.putImageData(wimg,0,0);
-const wnorm=new T.CanvasTexture(wc2);
-wnorm.wrapS=wnorm.wrapT=T.RepeatWrapping;wnorm.repeat.set(24,24);
-
 const MOODS=[
 {n:'Golden hour',top:'#79a6d2',bot:'#ffd0a0',sun:'#ffb870',hs:'#ffe3c4',hg:'#7a8f5a',i:.6,y:.16,gl:'#ff9a5a'},
 {n:'Dusk',top:'#352f6b',bot:'#f4a3a0',sun:'#ff8a7a',hs:'#b9a4e0',hg:'#5a4a6a',i:.4,y:.06,gl:'#ff6a5e'},
@@ -162,7 +147,7 @@ const tp=tg.attributes.position,tc=new Float32Array(tp.count*3);tg.setAttribute(
 const tuv=tg.attributes.uv,GTILE=32;
 const terrain=new T.Mesh(tg,new T.MeshPhongMaterial({vertexColors:true,flatShading:true,shininess:0,specular:0,map:grainTex}));
 terrain.frustumCulled=false;terrain.receiveShadow=true;scene.add(terrain);
-const water=new T.Mesh(new T.PlaneGeometry(4000,4000).rotateX(-Math.PI/2),new T.MeshPhongMaterial({color:0x7cc4d0,transparent:true,opacity:.8,shininess:80,specular:0xffe6c0,normalMap:wnorm,normalScale:new T.Vector2(.45,.45)}));
+const water=new T.Mesh(new T.PlaneGeometry(4000,4000).rotateX(-Math.PI/2),new T.MeshPhongMaterial({color:0x7cc4d0,transparent:true,opacity:.8,shininess:80,specular:0xffe6c0}));
 water.frustumCulled=false;water.receiveShadow=true;scene.add(water);
 const pal=[[-4,'#e9d8a6'],[1.5,'#e9d8a6'],[7,'#b5d97b'],[36,'#86c26f'],[62,'#5fa56a'],[88,'#cdbbe0']].map(([h,c])=>[h,new T.Color(c)]),tmp=new T.Color();
 function colAt(h){let i=1;while(i<pal.length-1&&h>pal[i][0])i++;const a=pal[i-1],b=pal[i];return tmp.lerpColors(a[1],b[1],cl((h-a[0])/(b[0]-a[0]),0,1))}
@@ -347,7 +332,6 @@ function frame(now){
  sky.position.copy(cam.position);sunSpr.position.copy(cam.position).addScaledVector(sunDir,1300);
  sun.position.copy(P).addScaledVector(sunDir,180);sun.target.position.copy(P);
  water.position.set(P.x,0,P.z);rebuild(P.x,P.z);
- wnorm.offset.set((t*.008+P.x/167)%1,(t*.011+P.z/167)%1);
  for(const g of clouds){const u=g.userData;g.position.set(u.x+Math.round((P.x-u.x)/W)*W,u.y,u.z+Math.round((P.z-u.z)/W)*W)}
  for(const g of lant){const dx=g.position.x-P.x,dz=g.position.z-P.z,dy=g.position.y-P.y,d2=dx*dx+dy*dy+dz*dz;
   g.position.y=g.userData.by+Math.sin(t*1.4+g.userData.ph)*2.5;g.rotation.y+=dt*.6;
