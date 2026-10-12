@@ -1157,7 +1157,7 @@ function render(st, d, t, dt) {
   // plane (drawn slightly under natural size so the world feels big)
   var pspr = PX.get(st.plane.id);
   var px = planeScreenX(), py = altToY(st.alt);
-  var pscale = 0.9;
+  var pscale = 0.65;
   var pitch = clamp(st.pitch / 57.3, -0.30, 0.30); // true attitude
   if (st.phase === 'takeoff' && st.alt <= 0.5) pitch = 0;
   // bank: roll the sprite slightly for turns
