@@ -142,7 +142,8 @@
     { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' },
     { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' },
     { id: 'skyline-sparrow', name: 'Skyline Sparrow', cls: 'art-skyline-sparrow' },
-    { id: 'emberline', name: 'Emberline', cls: 'art-emberline' }
+    { id: 'emberline', name: 'Emberline', cls: 'art-emberline' },
+    { id: 'skylark', name: 'Skylark', cls: 'art-skylark' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
