@@ -102,6 +102,9 @@
     circle(x, cx, cy, r - 1.5); x.stroke();
     x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 2.5;
     x.beginPath(); x.arc(cx, cy, r - 3, -2.6, -0.4); x.stroke();
+    // subtle inner glow ring (moonlit sheen just inside the rim)
+    x.strokeStyle = 'rgba(255,255,255,.15)'; x.lineWidth = 7;
+    circle(x, cx, cy, r - 9); x.stroke();
 
     // black doom bubble: cursed purple cracks
     if (key[0] === 'K') {
@@ -212,27 +215,36 @@
       // tear
       x.fillStyle = 'rgba(140,200,255,.9)';
       x.beginPath(); x.ellipse(-13, eyeY + 8, 2.2, 3.4, 0, 0, 7); x.fill();
-    } else if (pose === 'win') {
-      // happy ^ ^ eyes
+    } else if (pose === 'win' || pose === 'happy') {
+      // delighted ^ ^ eyes
       x.strokeStyle = '#2a1633'; x.lineWidth = 2.8; x.lineCap = 'round';
       x.beginPath(); x.arc(-8, eyeY + 2, 5, Math.PI + 0.3, -0.3); x.stroke();
       x.beginPath(); x.arc(8, eyeY + 2, 5, Math.PI + 0.3, -0.3); x.stroke();
+      if (pose === 'happy') {
+        // sparkle glints above the delighted eyes
+        sparkle4(x, -8, eyeY - 7, 3.4, 'rgba(255,255,255,.95)');
+        sparkle4(x, 8, eyeY - 7, 3.4, 'rgba(255,255,255,.95)');
+      }
       x.fillStyle = '#2a1633';
     } else {
-      ell(x, -8, eyeY, 3.4, 4.4); x.fill(); ell(x, 8, eyeY, 3.4, 4.4); x.fill();
+      ell(x, -8, eyeY, 3.8, 5); x.fill(); ell(x, 8, eyeY, 3.8, 5); x.fill();
       x.fillStyle = '#fff';
-      circle(x, -8 + look + 1.2, eyeY - 1.5, 1.3); x.fill();
-      circle(x, 8 + look + 1.2, eyeY - 1.5, 1.3); x.fill();
+      circle(x, -8 + look + 1.4, eyeY - 1.7, 1.5); x.fill();
+      circle(x, 8 + look + 1.4, eyeY - 1.7, 1.5); x.fill();
+      circle(x, -8 + look - 1, eyeY + 1.6, 0.8); x.fill();
+      circle(x, 8 + look - 1, eyeY + 1.6, 0.8); x.fill();
     }
-    // cheeks + smile
-    x.fillStyle = 'rgba(255,120,130,.5)';
-    circle(x, -13, eyeY + 7, 3.4); x.fill(); circle(x, 13, eyeY + 7, 3.4); x.fill();
+    // cheeks + smile (softer, rosier)
+    x.fillStyle = 'rgba(255,130,140,.55)';
+    circle(x, -13, eyeY + 7, 4); x.fill(); circle(x, 13, eyeY + 7, 4); x.fill();
     x.strokeStyle = '#5a2c1e'; x.lineWidth = 2; x.lineCap = 'round';
     if (pose === 'sad') {
       x.beginPath(); x.arc(0, eyeY + 12, 6, Math.PI + 0.35, -0.35); x.stroke(); // frown
-    } else if (pose === 'win') {
+    } else if (pose === 'win' || pose === 'happy') {
       x.fillStyle = '#7a2c1e';
-      x.beginPath(); x.ellipse(0, eyeY + 8, 6.5, 5, 0, 0, 7); x.fill(); // open happy mouth
+      x.beginPath(); x.ellipse(0, eyeY + 8, 7, 5.6, 0, 0, 7); x.fill(); // open delighted mouth
+      x.fillStyle = '#e88a7a';
+      x.beginPath(); x.ellipse(0, eyeY + 10.5, 3.4, 2.2, 0, 0, 7); x.fill(); // tongue
     } else {
       x.beginPath(); x.arc(0, eyeY + 5, 6, 0.35, Math.PI - 0.35); x.stroke();
     }
@@ -260,7 +272,7 @@
     } else {
       x.beginPath(); x.moveTo(-16, 74); x.quadraticCurveTo(-26, 86, -24, 96); x.stroke(); // left arm
     }
-    var wandAng = pose === 'win' ? -1.9 : (pose === 'cast' ? -1.15 : (pose === 'aim' ? -0.9 : -0.35));
+    var wandAng = pose === 'win' ? -1.9 : ((pose === 'cast' || pose === 'happy') ? -1.15 : (pose === 'aim' ? -0.9 : -0.35));
     var ax = 16, ay = 74;
     var hx = ax + Math.cos(wandAng) * 20, hyy = ay + Math.sin(wandAng) * 20;
     x.beginPath(); x.moveTo(ax, ay); x.lineTo(hx, hyy); x.stroke();
@@ -268,10 +280,20 @@
     x.strokeStyle = '#8a5a2e'; x.lineWidth = 4;
     var wx = hx + Math.cos(wandAng) * 26, wy = hyy + Math.sin(wandAng) * 26;
     x.beginPath(); x.moveTo(hx, hyy); x.lineTo(wx, wy); x.stroke();
-    // wand tip star (glow)
+    // wand tip star (glow — brightest on cast / happy)
+    var bigGlow = (pose === 'cast' || pose === 'happy');
     x.save();
-    x.shadowColor = '#ffe14d'; x.shadowBlur = pose === 'cast' ? 22 : 10;
-    x.fillStyle = '#ffe14d'; star(x, wx, wy, pose === 'cast' ? 11 : 8, 3.6); x.fill();
+    x.shadowColor = '#ffe14d'; x.shadowBlur = bigGlow ? 24 : 10;
+    x.fillStyle = '#ffe14d'; star(x, wx, wy, bigGlow ? 11 : 8, 3.6); x.fill();
+    x.restore();
+
+    // moonlit rim light (cool sheen on the moon side, clipped to the sprite)
+    x.save();
+    x.globalCompositeOperation = 'source-atop';
+    var rim = x.createLinearGradient(26, 0, -26, 0);
+    rim.addColorStop(0, 'rgba(170,200,255,.22)');
+    rim.addColorStop(0.45, 'rgba(170,200,255,0)');
+    x.fillStyle = rim; x.fillRect(-60, -40, Wd, Ht + 40);
     x.restore();
 
     // store wand tip for aim origin (in sprite coords)
@@ -309,8 +331,9 @@
   }
 
   // Nero — black cat familiar. Anchor: bottom center. Sitting ~64px.
+  // happy=true draws the celebration variant (curved happy eyes, raised paw).
   var neroCache = {};
-  function paintNero(mouth, paw) {
+  function paintNero(mouth, paw, happy) {
     var Wd = 76, Ht = 70;
     var cv = mkCanvas(Wd, Ht), c = cv[0], x = cv[1];
     var cx = 38, base = 64;
@@ -319,13 +342,15 @@
     x.beginPath(); x.moveTo(cx + 18, base - 6);
     x.quadraticCurveTo(cx + 34, base - 10, cx + 30, base - 30);
     x.stroke();
-    // body
+    // body (sleeker gradient, soft chest sheen)
     var bg = x.createRadialGradient(cx - 6, base - 30, 4, cx, base - 22, 24);
-    bg.addColorStop(0, '#2c2440'); bg.addColorStop(1, '#14101e');
+    bg.addColorStop(0, '#332a4e'); bg.addColorStop(0.55, '#221b38'); bg.addColorStop(1, '#14101e');
     x.fillStyle = bg; ell(x, cx, base - 22, 19, 24); x.fill();
+    x.fillStyle = 'rgba(150,160,230,.10)';
+    ell(x, cx - 5, base - 32, 8, 13, -0.25); x.fill();
     // paws (one raised mid-bat when pawing at the shooter bubble)
     x.fillStyle = '#14101e';
-    if (paw) {
+    if (paw || happy) {
       ell(x, cx + 10, base - 2, 8, 5); x.fill();
       x.strokeStyle = '#14101e'; x.lineWidth = 7; x.lineCap = 'round';
       x.beginPath(); x.moveTo(cx - 12, base - 22); x.quadraticCurveTo(cx - 26, base - 34, cx - 30, base - 46); x.stroke();
@@ -351,20 +376,32 @@
       x.closePath(); x.fill();
       x.fillStyle = '#1a1428';
     });
-    // eyes (green, glowing)
-    x.save(); x.shadowColor = '#7dff6a'; x.shadowBlur = 6;
-    x.fillStyle = '#8dff5a';
-    ell(x, cx - 6.5, base - 48, 4.4, 5.2); x.fill();
-    ell(x, cx + 6.5, base - 48, 4.4, 5.2); x.fill();
-    x.restore();
-    x.fillStyle = '#0c0a12';
-    ell(x, cx - 6.5, base - 48, 1.4, 3.4); x.fill();
-    ell(x, cx + 6.5, base - 48, 1.4, 3.4); x.fill();
+    if (happy) {
+      // celebration: curved happy eyes, still glowing green
+      x.save(); x.shadowColor = '#7dff6a'; x.shadowBlur = 7;
+      x.strokeStyle = '#8dff5a'; x.lineWidth = 3; x.lineCap = 'round';
+      x.beginPath(); x.arc(cx - 6.5, base - 45, 5, Math.PI + 0.35, -0.35); x.stroke();
+      x.beginPath(); x.arc(cx + 6.5, base - 45, 5, Math.PI + 0.35, -0.35); x.stroke();
+      x.restore();
+    } else {
+      // eyes (green, glowing)
+      x.save(); x.shadowColor = '#7dff6a'; x.shadowBlur = 6;
+      x.fillStyle = '#8dff5a';
+      ell(x, cx - 6.5, base - 48, 4.6, 5.4); x.fill();
+      ell(x, cx + 6.5, base - 48, 4.6, 5.4); x.fill();
+      x.restore();
+      x.fillStyle = '#0c0a12';
+      ell(x, cx - 6.5, base - 48, 1.5, 3.6); x.fill();
+      ell(x, cx + 6.5, base - 48, 1.5, 3.6); x.fill();
+      x.fillStyle = 'rgba(255,255,255,.85)';
+      circle(x, cx - 7.5, base - 50, 1.1); x.fill();
+      circle(x, cx + 5.5, base - 50, 1.1); x.fill();
+    }
     // nose
     x.fillStyle = '#ff8ab0';
     x.beginPath(); x.moveTo(cx - 2.5, base - 41); x.lineTo(cx + 2.5, base - 41); x.lineTo(cx, base - 38.5); x.closePath(); x.fill();
     // mouth
-    if (mouth) {
+    if (mouth || happy) {
       x.fillStyle = '#7a1e2e';
       ell(x, cx, base - 34, 6, 7.5); x.fill();
       x.fillStyle = '#ff9db0'; ell(x, cx, base - 31, 3, 3); x.fill();
@@ -380,12 +417,26 @@
     [[-1, -44, -1, -40], [-1, -46, -1, -42], [1, -44, 1, -40], [1, -46, 1, -42]].forEach(function (w) {
       x.beginPath(); x.moveTo(cx + w[0] * 12, base + w[1]); x.lineTo(cx + w[2] * 24, base + w[3]); x.stroke();
     });
+    // faint moonlit rim so the black cat reads against the night
+    x.save();
+    x.globalCompositeOperation = 'source-atop';
+    var nrim = x.createLinearGradient(Wd, 0, 0, 0);
+    nrim.addColorStop(0, 'rgba(170,190,255,.20)');
+    nrim.addColorStop(0.5, 'rgba(170,190,255,0)');
+    x.fillStyle = nrim; x.fillRect(0, 0, Wd, Ht);
+    x.restore();
     return c;
   }
   function nero(mouth, paw) {
     var k = (mouth ? 'open' : 'shut') + (paw ? '-paw' : '');
-    if (!neroCache[k]) neroCache[k] = paintNero(mouth, paw);
+    if (!neroCache[k]) neroCache[k] = paintNero(mouth, paw, false);
     return neroCache[k];
+  }
+  // celebration variant: happy curved eyes + raised paw (spell-charge cheer)
+  var neroHappySprite = null;
+  function neroHappy() {
+    if (!neroHappySprite) neroHappySprite = paintNero(false, true, true);
+    return neroHappySprite;
   }
 
   // Owl familiar (drawn inside its bubble). ~r*1.5 tall.
@@ -398,18 +449,20 @@
     x.fillStyle = '#7a4a22';
     x.beginPath(); x.moveTo(cx - 16, cy - 16); x.lineTo(cx - 22, cy - 30); x.lineTo(cx - 8, cy - 20); x.closePath(); x.fill();
     x.beginPath(); x.moveTo(cx + 16, cy - 16); x.lineTo(cx + 22, cy - 30); x.lineTo(cx + 8, cy - 20); x.closePath(); x.fill();
-    // body
-    var bg = x.createRadialGradient(cx - 8, cy - 10, 4, cx, cy, 24);
-    bg.addColorStop(0, '#a06a35'); bg.addColorStop(1, '#5f3a18');
-    x.fillStyle = bg; circle(x, cx, cy, 22); x.fill();
+    // body (rounder)
+    var bg = x.createRadialGradient(cx - 8, cy - 10, 4, cx, cy, 26);
+    bg.addColorStop(0, '#a8743a'); bg.addColorStop(1, '#5f3a18');
+    x.fillStyle = bg; circle(x, cx, cy, 23); x.fill();
     // belly
-    x.fillStyle = '#e8c890'; ell(x, cx, cy + 8, 13, 11); x.fill();
+    x.fillStyle = '#e8c890'; ell(x, cx, cy + 9, 14, 12); x.fill();
     // wings
     x.fillStyle = '#4a2c12';
-    ell(x, cx - 20, cy + 4, 7, 12, 0.4); x.fill();
-    ell(x, cx + 20, cy + 4, 7, 12, -0.4); x.fill();
-    // big eyes
+    ell(x, cx - 21, cy + 4, 7, 12, 0.4); x.fill();
+    ell(x, cx + 21, cy + 4, 7, 12, -0.4); x.fill();
+    // big glowing eyes
+    x.save(); x.shadowColor = '#ffcf5a'; x.shadowBlur = 12;
     x.fillStyle = '#fff'; circle(x, cx - 9, cy - 8, 9); x.fill(); circle(x, cx + 9, cy - 8, 9); x.fill();
+    x.restore();
     x.fillStyle = '#241408'; circle(x, cx - 9, cy - 8, 4.2); x.fill(); circle(x, cx + 9, cy - 8, 4.2); x.fill();
     x.fillStyle = '#fff'; circle(x, cx - 7.5, cy - 9.5, 1.5); x.fill(); circle(x, cx + 10.5, cy - 9.5, 1.5); x.fill();
     // beak
@@ -533,14 +586,19 @@
     x.arc(cx, top + 22, 22, 0, Math.PI, true);
     x.closePath(); x.fill();
     x.strokeStyle = 'rgba(120,140,220,.6)'; x.lineWidth = 2; x.stroke();
-    // face
+    // face: big sparkly eyes, tiny smile
     x.fillStyle = '#2a2a4a';
-    ell(x, cx - 8, top + 22, 4.5, 6); x.fill();
-    ell(x, cx + 8, top + 22, 4.5, 6); x.fill();
-    ell(x, cx, top + 38, 5, 7); x.fill(); // "ooh" mouth
+    ell(x, cx - 8, top + 22, 5.5, 7); x.fill();
+    ell(x, cx + 8, top + 22, 5.5, 7); x.fill();
+    x.fillStyle = '#fff';
+    circle(x, cx - 9.5, top + 19.5, 2); x.fill();
+    circle(x, cx + 6.5, top + 19.5, 2); x.fill();
+    x.strokeStyle = '#2a2a4a'; x.lineWidth = 2; x.lineCap = 'round';
+    x.beginPath(); x.arc(cx, top + 33, 5, 0.4, Math.PI - 0.4); x.stroke(); // tiny smile
     // blush
-    x.fillStyle = 'rgba(255,150,180,.55)';
-    circle(x, cx - 14, top + 32, 3.5); x.fill(); circle(x, cx + 14, top + 32, 3.5); x.fill();
+    x.fillStyle = 'rgba(255,150,180,.6)';
+    circle(x, cx - 15, top + 31, 4); x.fill(); circle(x, cx + 15, top + 31, 4); x.fill();
+    sparkle4(x, cx + 13, top + 12, 3, 'rgba(255,255,255,.8)');
     return c;
   }
 
@@ -567,6 +625,19 @@
     g.addColorStop(0.35, 'rgba(255,225,140,.85)');
     g.addColorStop(1, 'rgba(255,200,100,0)');
     x.fillStyle = g; circle(x, 12, 12, 12); x.fill();
+    return c;
+  }
+  // firefly: warm glowing core for the night swarm
+  var fireflySprite = null;
+  function paintFirefly() {
+    var cv = mkCanvas(26, 26), c = cv[0], x = cv[1];
+    var g = x.createRadialGradient(13, 13, 1, 13, 13, 13);
+    g.addColorStop(0, 'rgba(255,255,225,1)');
+    g.addColorStop(0.28, 'rgba(225,255,160,.9)');
+    g.addColorStop(0.62, 'rgba(170,255,130,.28)');
+    g.addColorStop(1, 'rgba(170,255,130,0)');
+    x.fillStyle = g; circle(x, 13, 13, 13); x.fill();
+    x.fillStyle = '#fffde8'; circle(x, 13, 13, 2.8); x.fill();
     return c;
   }
   // idle shimmer glint: 4-point star with halo
@@ -654,52 +725,127 @@
     if (bgCache.w === w && bgCache.h === h && bgCache.layers.length) return bgCache.layers;
     var layers = [];
 
-    // L0: sky + stars + moon
+    // L0: night sky — deep indigo zenith melting into a watery teal-violet
+    // horizon, faint nebula veils, star field, cratered moon with halo.
     var cv0 = mkCanvas(w, h), c0 = cv0[0], x0 = cv0[1];
     var sky = x0.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#0d0620'); sky.addColorStop(0.55, '#1c0f3d'); sky.addColorStop(1, '#2b1450');
+    sky.addColorStop(0, '#090518');
+    sky.addColorStop(0.34, '#150c36');
+    sky.addColorStop(0.58, '#1f1546');
+    sky.addColorStop(0.76, '#2a2358');   // watery violet lift at the horizon
+    sky.addColorStop(0.9, '#233a5e');    // faint teal, like distant water
+    sky.addColorStop(1, '#1a1440');
     x0.fillStyle = sky; x0.fillRect(0, 0, w, h);
-    // stars
+    // nebula veils (very faint, cool tints)
+    var nebs = [
+      [w * 0.22, h * 0.30, Math.min(w, h) * 0.42, '150,110,220', 0.10],
+      [w * 0.66, h * 0.52, Math.min(w, h) * 0.50, '90,160,220', 0.08],
+      [w * 0.40, h * 0.66, Math.min(w, h) * 0.36, '220,110,190', 0.06]
+    ];
+    nebs.forEach(function (n) {
+      var ng = x0.createRadialGradient(n[0], n[1], 0, n[0], n[1], n[2]);
+      ng.addColorStop(0, 'rgba(' + n[3] + ',' + n[4] + ')');
+      ng.addColorStop(1, 'rgba(' + n[3] + ',0)');
+      x0.fillStyle = ng; circle(x0, n[0], n[1], n[2]); x0.fill();
+    });
+    // stars (a few warm / cool tinted)
     var srng = mulberry(w * 7 + h * 13);
     var twinkles = [];
-    for (var i = 0; i < 90; i++) {
-      var sx = srng() * w, sy = srng() * h * 0.7, ss = srng();
-      x0.fillStyle = 'rgba(255,255,255,' + (0.25 + ss * 0.6) + ')';
+    for (var i = 0; i < 130; i++) {
+      var sx = srng() * w, sy = srng() * h * 0.72, ss = srng();
+      var tint = ss < 0.12 ? '255,230,190' : (ss < 0.24 ? '190,220,255' : '255,255,255');
+      x0.fillStyle = 'rgba(' + tint + ',' + (0.25 + ss * 0.6) + ')';
       circle(x0, sx, sy, ss < 0.85 ? 1 : 1.8); x0.fill();
       if (ss > 0.93) twinkles.push([sx, sy, 2 + srng() * 3, srng() * 7]); // x, y, size, phase
     }
-    // moon
-    var mx = w * 0.82, my = h * 0.13, mr = Math.min(w, h) * 0.09;
-    var mglow = x0.createRadialGradient(mx, my, mr * 0.4, mx, my, mr * 2.6);
-    mglow.addColorStop(0, 'rgba(255,244,214,.5)'); mglow.addColorStop(1, 'rgba(255,244,214,0)');
-    x0.fillStyle = mglow; circle(x0, mx, my, mr * 2.6); x0.fill();
+    // moon: wide two-tone halo + cratered disc (craters drawn fresh in code)
+    var mx = w * 0.82, my = h * 0.13, mr = Math.min(w, h) * 0.095;
+    var mhalo = x0.createRadialGradient(mx, my, mr * 0.5, mx, my, mr * 3.4);
+    mhalo.addColorStop(0, 'rgba(255,244,214,.42)');
+    mhalo.addColorStop(0.55, 'rgba(210,190,255,.14)');
+    mhalo.addColorStop(1, 'rgba(210,190,255,0)');
+    x0.fillStyle = mhalo; circle(x0, mx, my, mr * 3.4); x0.fill();
     var mg = x0.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.2, mx, my, mr);
-    mg.addColorStop(0, '#fff8e2'); mg.addColorStop(1, '#e8d9a8');
+    mg.addColorStop(0, '#fff9e6'); mg.addColorStop(0.7, '#f0e2b8'); mg.addColorStop(1, '#d9c48f');
     x0.fillStyle = mg; circle(x0, mx, my, mr); x0.fill();
-    x0.fillStyle = 'rgba(190,170,130,.35)';
-    circle(x0, mx - mr * 0.25, my - mr * 0.1, mr * 0.18); x0.fill();
-    circle(x0, mx + mr * 0.2, my + mr * 0.25, mr * 0.12); x0.fill();
-    circle(x0, mx + mr * 0.05, my - mr * 0.35, mr * 0.1); x0.fill();
+    // crater texture: dark floors + lit rims
+    var craters = [
+      [-0.28, -0.12, 0.20], [0.22, 0.24, 0.14], [0.06, -0.38, 0.11],
+      [0.34, -0.18, 0.08], [-0.05, 0.34, 0.09], [-0.38, 0.28, 0.07]
+    ];
+    craters.forEach(function (cr) {
+      var px = mx + cr[0] * mr, py = my + cr[1] * mr, pr = cr[2] * mr;
+      x0.fillStyle = 'rgba(150,128,88,.38)';
+      circle(x0, px, py, pr); x0.fill();
+      x0.strokeStyle = 'rgba(255,250,232,.55)'; x0.lineWidth = Math.max(1, pr * 0.22);
+      x0.beginPath(); x0.arc(px, py, pr * 0.92, 0.5, 2.4); x0.stroke();
+      x0.strokeStyle = 'rgba(120,100,70,.35)'; x0.lineWidth = Math.max(1, pr * 0.18);
+      x0.beginPath(); x0.arc(px, py, pr * 0.92, 3.4, 5.6); x0.stroke();
+    });
+    // faint moonlit mist band low in the sky, behind the treelines
+    var mb = x0.createLinearGradient(0, h * 0.66, 0, h * 0.92);
+    mb.addColorStop(0, 'rgba(170,150,230,0)');
+    mb.addColorStop(0.55, 'rgba(170,150,230,.10)');
+    mb.addColorStop(1, 'rgba(170,150,230,0)');
+    x0.fillStyle = mb; x0.fillRect(0, h * 0.66, w, h * 0.26);
     layers.push(c0);
 
-    // L1: far pines (blue-violet silhouettes)
+    // L1: far pines — two depth rows with moonlit edges, mist at the roots
     var cv1 = mkCanvas(w, h), c1 = cv1[0], x1 = cv1[1];
-    x1.fillStyle = 'rgba(46,32,92,.85)';
     var trng = mulberry(w * 3 + 5);
-    for (var tx = -20; tx < w + 20; tx += 34 + trng() * 30) {
-      var th = h * (0.10 + trng() * 0.10), tw = 26 + trng() * 22;
-      pine(x1, tx, h * 0.94, tw, th);
+    x1.fillStyle = 'rgba(40,28,84,.8)';
+    for (var tx = -20; tx < w + 20; tx += 44 + trng() * 38) {
+      var th = h * (0.09 + trng() * 0.09), tw = 24 + trng() * 20;
+      pine(x1, tx, h * 0.93, tw, th);
     }
+    x1.fillStyle = 'rgba(56,40,108,.9)';
+    for (var txa = -30; txa < w + 30; txa += 60 + trng() * 50) {
+      var thb = h * (0.12 + trng() * 0.10), twb = 30 + trng() * 24;
+      pine(x1, txa, h * 0.95, twb, thb);
+      // moonlit right edge on the nearer row
+      x1.fillStyle = 'rgba(160,180,240,.13)';
+      x1.beginPath();
+      x1.moveTo(txa + twb * 0.08, h * 0.95 - thb * 0.22);
+      x1.lineTo(txa + twb * 0.5, h * 0.95 - thb);
+      x1.lineTo(txa + twb * 0.40, h * 0.95 - thb * 0.18);
+      x1.closePath(); x1.fill();
+      x1.fillStyle = 'rgba(56,40,108,.9)';
+    }
+    // mist pooling at the roots
+    var m1 = x1.createLinearGradient(0, h * 0.80, 0, h * 0.99);
+    m1.addColorStop(0, 'rgba(160,140,230,0)');
+    m1.addColorStop(0.6, 'rgba(160,140,230,.12)');
+    m1.addColorStop(1, 'rgba(160,140,230,.05)');
+    x1.fillStyle = m1; x1.fillRect(0, h * 0.80, w, h * 0.19);
     layers.push(c1);
 
     // L1b: mid-distance pines (lighter, painted wide for parallax sway)
     var cv1b = mkCanvas(w + 48, h), c1b = cv1b[0], x1b = cv1b[1];
-    x1b.fillStyle = 'rgba(64,44,120,.9)';
     var mrng = mulberry(w * 5 + 31);
-    for (var tx2 = -20; tx2 < w + 68; tx2 += 52 + mrng() * 44) {
-      var th2 = h * (0.14 + mrng() * 0.12), tw2 = 34 + mrng() * 26;
-      pine(x1b, tx2, h * 0.96, tw2, th2);
+    x1b.fillStyle = 'rgba(58,40,112,.85)';
+    for (var tx2 = -20; tx2 < w + 68; tx2 += 62 + mrng() * 52) {
+      var th2 = h * (0.13 + mrng() * 0.11), tw2 = 32 + mrng() * 24;
+      pine(x1b, tx2, h * 0.95, tw2, th2);
     }
+    x1b.fillStyle = 'rgba(72,52,134,.92)';
+    for (var tx2b = -30; tx2b < w + 78; tx2b += 84 + mrng() * 60) {
+      var th2b = h * (0.17 + mrng() * 0.12), tw2b = 40 + mrng() * 28;
+      pine(x1b, tx2b, h * 0.97, tw2b, th2b);
+      // moonlit right edge
+      x1b.fillStyle = 'rgba(170,190,250,.15)';
+      x1b.beginPath();
+      x1b.moveTo(tx2b + tw2b * 0.08, h * 0.97 - th2b * 0.22);
+      x1b.lineTo(tx2b + tw2b * 0.5, h * 0.97 - th2b);
+      x1b.lineTo(tx2b + tw2b * 0.40, h * 0.97 - th2b * 0.18);
+      x1b.closePath(); x1b.fill();
+      x1b.fillStyle = 'rgba(72,52,134,.92)';
+    }
+    // mist band drifting between the rows
+    var m2 = x1b.createLinearGradient(0, h * 0.78, 0, h * 0.94);
+    m2.addColorStop(0, 'rgba(170,150,235,0)');
+    m2.addColorStop(0.55, 'rgba(170,150,235,.10)');
+    m2.addColorStop(1, 'rgba(170,150,235,0)');
+    x1b.fillStyle = m2; x1b.fillRect(0, h * 0.78, w + 48, h * 0.16);
     layers.push(c1b);
 
     // L2: near twisted trees (dark) with hanging lanterns
@@ -824,10 +970,11 @@
     dotSprite = paintDot(); sparkSprite = paintSpark();
     ringSprite = paintRing(); featherSprite = paintFeather();
     glintSprite = paintGlint(); aimDotSprite = paintAimDot();
+    fireflySprite = paintFirefly();
     wilburAuraSprite = paintWilburAura();
-    stella('idle'); stella('aim'); stella('cast'); stella('sad'); stella('win');
-    stellaImg('sad'); stellaImg('win');
-    nero(false, false); nero(true, false); nero(false, true);
+    stella('idle'); stella('aim'); stella('cast'); stella('sad'); stella('win'); stella('happy');
+    stellaImg('sad'); stellaImg('win'); stellaImg('happy');
+    nero(false, false); nero(true, false); nero(false, true); neroHappy();
     wilbur(false); wilbur(true);
   }
 
@@ -840,11 +987,13 @@
     stella: stella,
     stellaImg: stellaImg,
     nero: nero,
+    neroHappy: neroHappy,
     wilbur: wilbur,
     wilburAura: function () { return wilburAuraSprite; },
     dot: function () { return dotSprite; },
     aimDot: function () { return aimDotSprite; },
     glint: function () { return glintSprite; },
+    firefly: function () { return fireflySprite; },
     glowRing: glowRing,
     spark: function () { return sparkSprite; },
     ring: function () { return ringSprite; },
