@@ -131,49 +131,139 @@ function buildSparrow() {
   body.scale.set(0.78, 0.72, 1.3); g.add(body);
   var belly = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 8), cream);
   belly.scale.set(0.72, 0.6, 1.15); belly.position.set(0, -0.11, 0.06); g.add(belly);
+  var headG = new THREE.Group();
+  headG.position.set(0, 0.17, 0.40); g.add(headG); // stabilizer: counter-rotates vs body
   var head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 12, 10), brown);
-  head.position.set(0, 0.17, 0.40); g.add(head);
+  headG.add(head);
   var cap = new THREE.Mesh(new THREE.SphereGeometry(0.155, 10, 8), new THREE.MeshLambertMaterial({ color: 0x3a2c22 }));
-  cap.scale.set(1, 0.62, 1); cap.position.set(0, 0.30, 0.37); g.add(cap);
+  cap.scale.set(1, 0.62, 1); cap.position.set(0, 0.13, -0.03); headG.add(cap);
   [-1, 1].forEach(function (s) {
     var cheek = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), cream);
-    cheek.position.set(s * 0.13, 0.15, 0.44); g.add(cheek);
+    cheek.position.set(s * 0.13, -0.02, 0.04); headG.add(cheek);
     var eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x14100c }));
-    eye.position.set(s * 0.095, 0.225, 0.52); g.add(eye);
+    eye.position.set(s * 0.095, 0.055, 0.12); headG.add(eye);
   });
   var beak = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.17, 8), new THREE.MeshLambertMaterial({ color: 0xd89a4a }));
-  beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.13, 0.62); g.add(beak);
-  var tail = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.045, 0.46), darkB);
-  tail.position.set(0, 0.05, -0.55); tail.rotation.x = -0.28; g.add(tail);
-  function wing(side) {
-    var pivot = new THREE.Group();
-    pivot.position.set(side * 0.16, 0.10, 0.06);
-    var inner = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 0.36), brown);
-    inner.position.x = side * 0.33; pivot.add(inner);
-    var tip = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.24), darkB);
-    tip.position.x = side * 0.80; tip.rotation.y = side * -0.18; pivot.add(tip);
-    g.add(pivot);
-    return pivot;
+  beak.rotation.x = Math.PI / 2; beak.position.set(0, -0.04, 0.22); headG.add(beak);
+  // tail: a real control surface — 5 slats fanning from the tail group
+  var tailG = new THREE.Group();
+  tailG.position.set(0, 0.05, -0.55); g.add(tailG);
+  var tailSlats = [];
+  for (var ti = 0; ti < 5; ti++) {
+    var tsg = new THREE.Group(); tailG.add(tsg);
+    var tslat = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.03, 0.44), darkB);
+    tslat.position.z = -0.24; tsg.add(tslat);
+    tailSlats.push(tsg);
   }
-  var wl = wing(1), wr = wing(-1);
+  // articulated wing: shoulder -> arm -> elbow -> hand -> wrist -> primary slats + alula
+  function buildWing(side) {
+    var shoulder = new THREE.Group();
+    shoulder.position.set(side * 0.16, 0.10, 0.06);
+    g.add(shoulder);
+    var arm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.045, 0.34), brown);
+    arm.position.x = side * 0.25; shoulder.add(arm);
+    var covert = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.2), darkB);
+    covert.position.set(side * 0.28, 0.012, -0.1); shoulder.add(covert);
+    var elbow = new THREE.Group();
+    elbow.position.set(side * 0.5, 0, -0.01); shoulder.add(elbow);
+    var hand = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.04, 0.24), brown);
+    hand.position.x = side * 0.26; elbow.add(hand);
+    var wrist = new THREE.Group();
+    wrist.position.set(side * 0.52, 0, -0.03); elbow.add(wrist);
+    var slats = [];
+    for (var pi = 0; pi < 4; pi++) {
+      var psg = new THREE.Group(); wrist.add(psg);
+      var pslat = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.025, 0.07), darkB);
+      pslat.position.set(side * 0.17, 0, -0.02 - pi * 0.062);
+      psg.add(pslat);
+      slats.push(psg);
+    }
+    var alula = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.06), cream);
+    alula.position.set(side * 0.1, 0.02, 0.13); elbow.add(alula);
+    return { shoulder: shoulder, elbow: elbow, wrist: wrist, slats: slats, alula: alula };
+  }
+  var wl = buildWing(1), wr = buildWing(-1);
   g.scale.setScalar(1.35); // readable at phone distance
   g.rotation.order = 'YXZ';
-  return { group: g, wl: wl, wr: wr };
+  return { group: g, head: headG, tail: tailG, tailSlats: tailSlats, wl: wl, wr: wr };
 }
 var bird = buildSparrow();
 scene.add(bird.group);
 
+/* wingbeat keyframes (from the kinematics spec §10; elevation 0 = horizontal).
+ * Twist is sampled phase-LEAD by WING.twistLead — the reversal happens BEFORE
+ * the vertical reversal. That phase lead is what kills the floating-plane look. */
+function keyed(keys, x) {
+  var n = keys.length;
+  x = ((x % 1) + 1) % 1;
+  var i = 0;
+  while (i < n - 2 && keys[i + 1][0] < x) i++;
+  var a = keys[i], b = keys[i + 1];
+  var t = (x - a[0]) / Math.max(1e-6, b[0] - a[0]);
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  var s = (1 - Math.cos(t * Math.PI)) / 2; // cosine ease: spike-free curves
+  return a[1] + (b[1] - a[1]) * s;
+}
+var ELEV_KEYS = [[0,55],[0.08,50],[0.30,-10],[0.55,-45],[0.63,-40],[0.95,50],[1,55]];
+var FLEX_KEYS = [[0,0.35],[0.08,0.2],[0.30,0.05],[0.55,0.3],[0.63,0.62],[0.80,0.62],[0.95,0.35],[1,0.35]];
+var TWIST_KEYS = [[0,14],[0.2,4],[0.35,-12],[0.55,-12],[0.7,10],[0.85,14],[1,14]]; // deg, + = supination
+var SWEEP_KEYS = [[0,0],[0.15,14],[0.4,8],[0.55,-6],[0.7,-12],[0.9,-4],[1,0]];     // deg, + = forward
+
+function poseWing(w, side, elevD, flexS, twistD, sweepD, slot) {
+  var D = Math.PI / 180;
+  w.shoulder.rotation.z = side * elevD * D;      // elevation: the flap
+  w.shoulder.rotation.y = -side * sweepD * D;    // sweep: figure-8 fore/aft
+  w.shoulder.rotation.x = side * (-twistD) * D;  // twist: pronation/supination
+  w.elbow.rotation.z = -side * flexS * 1.15;     // elbow flexion folds the hand-wing
+  w.elbow.rotation.x = side * (-twistD) * 0.6 * D; // twist carries through the wrist
+  for (var i = 0; i < w.slats.length; i++) {     // primary slotting: fingers at high AoA
+    w.slats[i].rotation.y = side * slot * (0.05 + i * 0.13);
+    w.slats[i].rotation.x = side * slot * 0.1;
+  }
+  w.alula.visible = slot > 0.04;                 // alula pops out at high AoA
+  w.alula.rotation.y = side * slot * 0.75;
+}
+
 function poseBird(ist, time) {
+  var D = Math.PI / 180;
   bird.group.position.set(ist.px, ist.py, ist.pz);
   bird.group.rotation.y = ist.heading;
-  bird.group.rotation.x = -ist.pitch;
+  bird.group.rotation.x = -(ist.pitch + ist.bodyPitchOsc); // body rides the wingbeat
   bird.group.rotation.z = ist.bank;
-  var ang;
-  if (ist.flapping) ang = Math.sin(ist.flapPhase) * 0.95;          // wing-blur flap
-  else if (ist.braking) ang = 1.15;                                 // tucked
-  else ang = 0.16 + Math.sin(time * 1.8) * 0.06;                    // glide dihedral
-  bird.wl.rotation.z = ang; bird.wr.rotation.z = -ang;
-  bird.group.position.y += ist.flapping ? Math.sin(ist.flapPhase) * 0.05 : 0;
+  // head stabilizer: gyroscopically level — counter-pitch the flap bob,
+  // counter-roll the bank. A glued-on head reads as dead.
+  bird.head.rotation.x = ist.bodyPitchOsc * 0.9;
+  bird.head.rotation.z = -ist.bank * 0.85;
+
+  var p = ist.wingPhase, fold = ist.foldAmount;
+  var gliding = !ist.flapping && fold < 0.05 && !ist.braking;
+  var elevD, flexS, twistD, sweepD;
+  if (ist.braking) {                       // airbrake: raised wings, fanned tail
+    elevD = 26; flexS = 0.25; twistD = 6; sweepD = 10;
+  } else if (gliding) {                    // held-out glide: gentle dihedral
+    elevD = 9 + Math.sin(time * 1.8) * 3; flexS = 0.15; twistD = 0; sweepD = 0;
+  } else {                                 // burst: the asymmetric power stroke
+    elevD = keyed(ELEV_KEYS, p);
+    var spdF = clamp(1.25 - ist.speed / 18, 0.35, 0.95); // deep fold slow, shallow fast
+    flexS = keyed(FLEX_KEYS, p) * spdF;
+    twistD = keyed(TWIST_KEYS, (p + 0.12) % 1);          // twist LEADS the flap
+    sweepD = keyed(SWEEP_KEYS, p);
+    if (!RM.on) bird.group.position.y += Math.sin(p * Math.PI * 2 - 0.7) * 0.045;
+  }
+  // bound: fold the wings TIGHT to the body (never a held-out glide)
+  elevD = elevD * (1 - fold) + (-30) * fold;
+  flexS = flexS * (1 - fold) + 1 * fold;
+  twistD *= (1 - fold);
+  sweepD = sweepD * (1 - fold) + (-68) * fold; // swept hard back against the flank
+  poseWing(bird.wl, 1, elevD, flexS, twistD, sweepD, ist.slotAmt);
+  poseWing(bird.wr, -1, elevD, flexS, twistD, sweepD, ist.slotAmt);
+
+  // tail control surface: fan + pitch + twist from the sim
+  for (var i = 0; i < bird.tailSlats.length; i++) {
+    bird.tailSlats[i].rotation.y = (i - 2) * ist.tailSpread * D / 4;
+  }
+  bird.tail.rotation.x = ist.tailPitch * D;
+  bird.tail.rotation.z = ist.tailTwist * D;
 }
 
 /* ---------------- sim state + fixed-step loop ---------------- */
@@ -183,14 +273,14 @@ var P = { px: 0, py: 0, pz: 0, heading: 0, pitch: 0, bank: 0 }; // prev, for int
 var R = { px: 0, py: 0, pz: 0, heading: 0, pitch: 0, bank: 0 };   // render state
 var simIn = { flap: 0, steerX: 0, steerY: 0, brake: 0 };
 var acc = 0, simTime = 0, timeSec = 0;
-var nextWp = 0, wasFlapping = false, streakT = 0, moteT = 0, bellRung = false;
+var nextWp = 0, lastTick = 0, streakT = 0, moteT = 0, bellRung = false;
 var flyStart = 0, hudT = 0, lastWpText = '', lastEnergy = -1;
 
 function resetFlight() {
   var b = FLIGHT.newBird(0, 64, -60, 0);
   for (var k in b) S[k] = b[k];
   P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = S.heading; P.pitch = 0; P.bank = 0;
-  nextWp = 0; world.nextWp = 0; acc = 0; wasFlapping = false; bellRung = false;
+  nextWp = 0; world.nextWp = 0; acc = 0; lastTick = 0; bellRung = false;
   flyStart = timeSec; lastWpText = ''; lastEnergy = -1;
   camera.position.set(S.px, S.py + 4, S.pz - 12);
 }
@@ -211,12 +301,14 @@ function stepSim(dt) {
   FLIGHT.stepBird(S, simIn, dt, env);
   simTime += dt;
 
-  if (S.flapping && !wasFlapping) {
-    var fx = Math.sin(S.heading), fz = Math.cos(S.heading);
-    EFFECTS.puff(S.px, S.py, S.pz, fx, fz);
-    AUD.whoosh();
+  if (S.downstrokeTick !== lastTick) { // synced to the real downstroke start
+    lastTick = S.downstrokeTick;
+    AUD.whoosh(); // light flick per stroke -> blends into a sparrow flutter at 13 Hz
+    if (S.beatsDone === 1) { // feather puff only on the first beat of each burst
+      var fx = Math.sin(S.heading), fz = Math.cos(S.heading);
+      EFFECTS.puff(S.px, S.py, S.pz, fx, fz);
+    }
   }
-  wasFlapping = !!S.flapping;
 
   if (S.speed > 16 && !RM.on) { // dive -> wind streaks
     streakT -= dt;
@@ -266,8 +358,16 @@ function autoInput(t) { // title-screen autopilot: lazy evening circling
 }
 
 /* ---------------- camera rig ---------------- */
+var sideCam = false; // test hook: profile view of the wing rig
 function updateCamera(dt, ist) {
   var fx = Math.sin(ist.heading), fz = Math.cos(ist.heading);
+  if (sideCam) {
+    var rx = -fz, rz = fx; // bird's right vector
+    camera.position.set(ist.px + rx * 7.5, ist.py + 1.2, ist.pz + rz * 7.5);
+    camera.lookAt(ist.px, ist.py + 0.3, ist.pz);
+    camera.rotation.z = 0;
+    return;
+  }
   var kp = 1 - Math.exp(-5 * dt);
   camera.position.x += ((ist.px - fx * 10.5) - camera.position.x) * kp;
   camera.position.y += ((ist.py + 3.6) - camera.position.y) * kp;
@@ -395,6 +495,10 @@ function frame(now) {
   R.pitch = P.pitch + (S.pitch - P.pitch) * a;
   R.bank = P.bank + (S.bank - P.bank) * a;
   R.speed = S.speed;
+  // rig channels: copied raw (60 Hz sim rate is plenty; phase must never lerp)
+  R.wingPhase = S.wingPhase; R.foldAmount = S.foldAmount; R.flapping = S.flapping;
+  R.braking = S.braking; R.slotAmt = S.slotAmt; R.tailSpread = S.tailSpread;
+  R.tailPitch = S.tailPitch; R.tailTwist = S.tailTwist; R.bodyPitchOsc = S.bodyPitchOsc;
 
   poseBird(R, timeSec);
   updateCamera(dt, R);
@@ -434,6 +538,7 @@ window.__bf = {
   waypoint: function () { return nextWp; },
   debugFlap: function (sec) { Input.tapPulse = Math.max(Input.tapPulse, sec || 2); },
   steer: function (x, y) { Input.touchSteerX = x; Input.touchSteerY = y; },
+  sideView: function () { sideCam = !sideCam; return sideCam ? 'side' : 'chase'; },
   // test only: drop the bird 100m short of waypoint i, aimed at it
   warp: function (i) {
     i = Math.max(0, Math.min(world.waypoints.length - 1, i));

@@ -78,14 +78,15 @@
 
   function whoosh() {
     if (!A.ctx || A.muted) return;
+    // light flick per downstroke: at ~13 Hz these blend into a sparrow flutter
     var ctx = A.ctx, t = ctx.currentTime;
-    var s = ctx.createBufferSource(); s.buffer = noiseBuffer(ctx, 0.3);
-    var f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 850; f.Q.value = 1.1;
+    var s = ctx.createBufferSource(); s.buffer = noiseBuffer(ctx, 0.16);
+    var f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 1.1;
     var g = ctx.createGain();
-    g.gain.setValueAtTime(0.28, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    g.gain.setValueAtTime(0.13, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
     s.connect(f); f.connect(g); g.connect(A.master);
-    s.start(t); s.stop(t + 0.3);
+    s.start(t); s.stop(t + 0.16);
   }
 
   function tone(freq, t0, dur, vol, type) {
