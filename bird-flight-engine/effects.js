@@ -3,6 +3,7 @@
  *
  *   flap    -> feather puff at the wingtips + wing-blur (engine spins wings fast)
  *   dive    -> wind streak lines rushing past the camera + FOV kick (engine)
+ *   wind    -> faint ambient streaks drifting with the living gust field
  *   soar    -> golden motes spiraling up inside the thermal column + lift hum
  *   waypoint-> expanding light ring + soft chime (audio)
  *   (original touch) shed feather -> now and then a single loose feather
@@ -129,6 +130,26 @@
     }
   }
 
+  // ambient wind -> faint streaks flowing WITH the local wind vector.
+  // Unlike dive streaks (fast, backward, speed-driven), these drift at true
+  // wind velocity so direction reads in normal flight. Thinner + fainter.
+  // Spawn is biased ahead of the camera along the bird's forward so the
+  // streaks stream through the frame instead of hiding behind the camera.
+  // wx, wz: the actual advecting wind (base + gust) at the bird; strength 0..1.
+  function windStreaks(cx, cy, cz, fx, fz, wx, wz, strength) {
+    if (E.reduced) return;
+    var n = 3 + Math.round(strength * 4);
+    var wl = Math.sqrt(wx * wx + wz * wz);
+    if (wl < 0.05) return; // dead calm: nothing to see
+    for (var k = 0; k < n; k++) {
+      var sx = cx + fx * rnd(4, 30) + rnd(-13, 13),
+          sy = cy + rnd(-10, 10),
+          sz = cz + fz * rnd(4, 30) + rnd(-13, 13);
+      spawn(sx, sy, sz, wx * 1.15, rnd(-0.15, 0.15), wz * 1.15,
+        rnd(1.6, 2.6), rnd(1.1, 1.7), 1.0, 0.96, 0.88, 0.42, 0, 0);
+    }
+  }
+
   // soar -> golden motes spiraling up in the column
   function thermalMotes(tx, tz, r, top, y) {
     var n = E.reduced ? 1 : 3;
@@ -214,7 +235,7 @@
 
   return {
     init: init, setReduced: setReduced, update: update,
-    puff: puff, streaks: streaks, thermalMotes: thermalMotes,
+    puff: puff, streaks: streaks, windStreaks: windStreaks, thermalMotes: thermalMotes,
     waypointBurst: waypointBurst, shedFeather: shedFeather, featherDue: featherDue,
   };
 });

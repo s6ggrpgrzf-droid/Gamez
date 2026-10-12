@@ -31,6 +31,8 @@
   }
   function riverX(z) { return 260 * Math.sin(z * 0.004) + 120 * Math.sin(z * 0.0013 + 2.0); }
 
+  var PERCH_X = 42, PERCH_Z = 148; // the perch post: a landmark on the route
+
   var WATER_Y = -5;
 
   function heightAt(x, z) {
@@ -40,6 +42,10 @@
     // gentle bowl near spawn so takeoff is forgiving
     var sd = Math.sqrt(x * x + z * z);
     if (sd < 150) h = h * (sd / 150) + 2 * (1 - sd / 150);
+    // low mound under the perch post so it reads as a landmark
+    var mdx = x - PERCH_X, mdz = z - PERCH_Z;
+    var md = Math.sqrt(mdx * mdx + mdz * mdz);
+    if (md < 26) { var mt = 1 - md / 26; h += 3.2 * mt * mt * (3 - 2 * mt); }
     return h;
   }
 
@@ -56,6 +62,8 @@
   function groundColor(x, z, h, out) {
     var rd = Math.abs(x - riverX(z));
     if (h < WATER_Y + 0.6) { out[0] = 0.30; out[1] = 0.44; out[2] = 0.55; return; } // river
+    var pex = x - PERCH_X, pez = z - PERCH_Z;
+    if (pex * pex + pez * pez < 42) { out[0] = 0.55; out[1] = 0.44; out[2] = 0.30; return; } // worn earth
     if (rd < 26) { out[0] = 0.72; out[1] = 0.60; out[2] = 0.42; return; } // sandy bank
     var forest = fbm(x * 0.008 + 40, z * 0.008 + 9);
     if (forest > 0.60 && h > WATER_Y + 2) {
@@ -86,28 +94,50 @@
     sun.position.copy(sunDir).multiplyScalar(900);
     scene.add(sun);
     scene.add(new THREE.HemisphereLight(0xffd9a6, 0x6b4a2f, 0.85));
-    scene.fog = new THREE.Fog(0xe8a268, 160, 1750);
+    /* Atmospheric haze: exponential fog in a warm golden-hour peach shared
+     * EXACTLY with the sky shader's horizon color (legacy color mode, so
+     * 0xffb373 uploads raw as (1.0, 0.702, 0.451) — the shader uses the
+     * same numbers, which is why distant ridges melt into the sky with no
+     * seam). Exp2's long-tail falloff gives layered aerial perspective:
+     * near ground crisp, mid slopes soft, far ridges fully dissolved. */
+    var HAZE = new THREE.Vector3(1.0, 0.702, 0.451); // == 0xffb373
+    scene.fog = new THREE.FogExp2(0xffb373, 0.00095);
+    /* real-time shadows: tight ortho box that follows the bird (engine.js
+     * repositions sun+target every frame). Small box + small map = crisp
+     * shadows on mobile. Golden-hour sun is low (~11.5°), so the bird's
+     * ground shadow falls almost purely along the light's view axis —
+     * same view x/y as the bird, only deeper — which is why a tight box
+     * still catches it. near/far spans light->bird->ground depth. */
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    var sc = sun.shadow.camera;
+    sc.left = -55; sc.right = 55; sc.top = 55; sc.bottom = -55;
+    sc.near = 50; sc.far = 800;
+    sc.updateProjectionMatrix();
+    sun.shadow.bias = -0.0003;
+    sun.shadow.normalBias = 1.0;
+    scene.add(sun.target);
+    W.sun = sun; W.sunDir = sunDir;
 
     /* ---------- sky dome ---------- */
     var skyMat = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { sunDir: { value: sunDir } },
+      uniforms: { sunDir: { value: sunDir }, haze: { value: HAZE } },
       vertexShader: 'varying vec3 vDir; void main(){ vDir = position; ' +
         'gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: [
-        'varying vec3 vDir; uniform vec3 sunDir;',
+        'varying vec3 vDir; uniform vec3 sunDir; uniform vec3 haze;',
         'void main(){',
         '  vec3 d = normalize(vDir);',
         '  float h = clamp(d.y, -0.08, 1.0);',
         '  vec3 zen = vec3(0.20, 0.32, 0.48);',
         '  vec3 mid = vec3(0.83, 0.52, 0.32);',
-        '  vec3 hor = vec3(1.00, 0.76, 0.47);',
-        '  vec3 col = mix(hor, mid, smoothstep(0.0, 0.22, h));',
-        '  col = mix(col, zen, smoothstep(0.18, 0.75, h));',
+        // horizon == fog color exactly: terrain dissolves into sky with no seam
+        '  vec3 col = mix(haze, mid, smoothstep(0.0, 0.24, h));',
+        '  col = mix(col, zen, smoothstep(0.20, 0.75, h));',
         '  float s = max(dot(d, sunDir), 0.0);',
         '  col += vec3(1.0, 0.75, 0.45) * pow(s, 350.0) * 1.6;',  // disc
         '  col += vec3(1.0, 0.60, 0.30) * pow(s, 18.0) * 0.45;',   // glow
-        '  col += vec3(0.95, 0.45, 0.25) * pow(1.0 - abs(d.y), 6.0) * 0.35;', // haze band
         '  gl_FragColor = vec4(col, 1.0);',
         '}',
       ].join('\n'),
@@ -130,7 +160,10 @@
     }
     tg.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     tg.computeVertexNormals();
-    scene.add(new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ vertexColors: true })));
+    var terrain = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    terrain.receiveShadow = true; // the money shot: long golden-hour shadows play here
+    terrain.castShadow = true;    // nearby hills throw shadows onto the valley
+    scene.add(terrain);
 
     /* ---------- trees (instanced, 2 draw calls) ---------- */
     var NT = 520;
@@ -158,6 +191,7 @@
     }
     trunks.count = placed; cans.count = placed;
     trunks.instanceMatrix.needsUpdate = true; cans.instanceMatrix.needsUpdate = true;
+    trunks.castShadow = true; cans.castShadow = true; // 2 extra instanced draws in the shadow pass
     scene.add(trunks); scene.add(cans);
 
     /* ---------- clouds (1 instanced draw call) ---------- */
@@ -217,6 +251,39 @@
     church.position.set(chX, chH, chZ);
     scene.add(church);
 
+    /* ---------- the perch post: a weathered old fence post, a place to land ---------- */
+    var perchGH = heightAt(PERCH_X, PERCH_Z); // includes the mound
+    var POST_H = 4.6;
+    var POST_TOP = perchGH + POST_H - 0.21; // top surface of the worn cap
+    var perchG = new THREE.Group();
+    var woodM = new THREE.MeshLambertMaterial({ color: 0x6e5138 });
+    var woodDark = new THREE.MeshLambertMaterial({ color: 0x4f3a28 });
+    var woodWorn = new THREE.MeshLambertMaterial({ color: 0x8a6a48 });
+    var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, POST_H, 7), woodM);
+    shaft.position.y = POST_H / 2 - 0.3; // sunk into the mound
+    perchG.add(shaft);
+    // worn landing cap: paler where a thousand feet have gripped — the target
+    var cap = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.26, 0.14, 7), woodWorn);
+    cap.position.y = POST_H - 0.3 + 0.02;
+    perchG.add(cap);
+    // a broken side peg, lower down — old-fence character
+    var peg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.9, 5), woodDark);
+    peg.position.set(0.3, 1.6, 0); peg.rotation.z = -1.1;
+    perchG.add(peg);
+    perchG.position.set(PERCH_X, perchGH, PERCH_Z);
+    perchG.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+    scene.add(perchG);
+    // two short companion posts: the ghost of the old fence line (not landable)
+    [[-7, -4, 0.12], [8, 5, -0.1]].forEach(function (o) {
+      var chx = PERCH_X + o[0], chz = PERCH_Z + o[1];
+      var cp = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 1.3, 6), woodDark);
+      cp.position.set(chx, heightAt(chx, chz) + 0.55, chz);
+      cp.rotation.z = o[2];
+      cp.castShadow = true;
+      scene.add(cp);
+    });
+    W.perch = { x: PERCH_X, y: POST_TOP, z: PERCH_Z }; // precise landing point for the sim
+
     /* ---------- migration route ---------- */
     var wp = [
       [0, 58, 0],
@@ -239,8 +306,17 @@
     }
     var trailG = new THREE.BufferGeometry();
     trailG.setAttribute('position', new THREE.BufferAttribute(tpos, 3));
+    // circular soft sprite: gl_Points are squares — without a map the
+    // near-camera trail points render as big white squares (drive-by fix)
+    var spCv = document.createElement('canvas'); spCv.width = spCv.height = 64;
+    var spCx = spCv.getContext('2d');
+    var spGr = spCx.createRadialGradient(32, 32, 2, 32, 32, 30);
+    spGr.addColorStop(0, 'rgba(255,255,255,1)');
+    spGr.addColorStop(0.6, 'rgba(255,255,255,0.55)');
+    spGr.addColorStop(1, 'rgba(255,255,255,0)');
+    spCx.fillStyle = spGr; spCx.fillRect(0, 0, 64, 64);
     var trail = new THREE.Points(trailG, new THREE.PointsMaterial({
-      color: 0xffd98a, size: 2.6, sizeAttenuation: true,
+      color: 0xffd98a, size: 2.6, sizeAttenuation: true, map: new THREE.CanvasTexture(spCv),
       transparent: true, opacity: 0.55, depthWrite: false,
     }));
     scene.add(trail);
@@ -306,6 +382,16 @@
       scene.add(b);
       W.flock.push(b);
     }
+    /* one bold bird circles the perch post — it draws the eye to the landmark */
+    var pbG = new THREE.Group();
+    var pbd = new THREE.Mesh(new THREE.ConeGeometry(0.5, 2.6, 5), flockMat);
+    pbd.rotation.x = Math.PI / 2; pbG.add(pbd);
+    var pbwl = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.1), flockMat);
+    pbwl.position.x = -1.7; pbG.add(pbwl);
+    var pbwr = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.1), flockMat);
+    pbwr.position.x = 1.7; pbG.add(pbwr);
+    scene.add(pbG);
+    W.perchBird = { g: pbG, wl: pbwl, wr: pbwr, r: 15, h: 10, a: rng() * 6.28 };
 
     W.groundH = heightAt;
     return W;
@@ -338,6 +424,17 @@
       b.lookAt(p2.x, b.position.y, p2.z);
       var flap = Math.sin(time * 9 + u.ph) * 0.65;
       u.wl.rotation.y = flap; u.wr.rotation.y = -flap;
+    }
+    // the bold bird circles the perch post, drawing the eye to the landmark
+    var pb = world.perchBird;
+    if (pb && world.perch) {
+      pb.a += dt * 0.55;
+      var pbx = world.perch.x + Math.cos(pb.a) * pb.r;
+      var pbz = world.perch.z + Math.sin(pb.a) * pb.r;
+      pb.g.position.set(pbx, world.perch.y + pb.h + Math.sin(time * 1.1) * 1.2, pbz);
+      pb.g.lookAt(world.perch.x, pb.g.position.y, pbz);
+      var pbfl = Math.sin(time * 9 + 1.3) * 0.65;
+      pb.wl.rotation.y = pbfl; pb.wr.rotation.y = -pbfl;
     }
     // clouds drift
     var m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion(), vv = new THREE.Vector3(), ss = new THREE.Vector3();

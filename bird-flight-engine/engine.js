@@ -96,6 +96,8 @@ if (!renderer) {
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // perf: cap DPR at 2
 renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // soft long shadows, one 1024 map
 scene = new THREE.Scene();
 camera = new THREE.PerspectiveCamera(62, 1, 0.5, 7000);
 camera.position.set(0, 70, -80);
@@ -119,6 +121,7 @@ var env = {
   windX: 1.4, windZ: 0.6, // gentle evening breeze down the valley
   thermals: world.thermals,
   groundH: world.groundH,
+  perch: world.perch, // the old fence post: a place to land
 };
 
 /* ---------------- the sparrow ---------------- */
@@ -183,9 +186,22 @@ function buildSparrow() {
     return { shoulder: shoulder, elbow: elbow, wrist: wrist, slats: slats, alula: alula };
   }
   var wl = buildWing(1), wr = buildWing(-1);
+  // legs: tucked invisible in flight, dropping on short final (spec §9)
+  var legs = [];
+  [-1, 1].forEach(function (s) {
+    var legG = new THREE.Group();
+    legG.position.set(s * 0.09, -0.15, 0.14);
+    var shin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.24, 0.05), darkB);
+    shin.position.y = -0.12; legG.add(shin);
+    var foot = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.035, 0.13), darkB);
+    foot.position.set(0, -0.25, 0.035); legG.add(foot);
+    legG.visible = false;
+    g.add(legG); legs.push(legG);
+  });
   g.scale.setScalar(1.35); // readable at phone distance
   g.rotation.order = 'YXZ';
-  return { group: g, head: headG, tail: tailG, tailSlats: tailSlats, wl: wl, wr: wr };
+  g.traverse(function (o) { if (o.isMesh) o.castShadow = true; }); // the bird throws its shadow
+  return { group: g, head: headG, tail: tailG, tailSlats: tailSlats, wl: wl, wr: wr, legs: legs };
 }
 var bird = buildSparrow();
 scene.add(bird.group);
@@ -228,42 +244,75 @@ function poseBird(ist, time) {
   var D = Math.PI / 180;
   bird.group.position.set(ist.px, ist.py, ist.pz);
   bird.group.rotation.y = ist.heading;
-  bird.group.rotation.x = -(ist.pitch + ist.bodyPitchOsc); // body rides the wingbeat
+  // body rides the wingbeat; the flare pitches it up toward the cross-parachute
+  bird.group.rotation.x = -(ist.pitch + ist.bodyPitchOsc) + (ist.flare || 0) * 0.55;
   bird.group.rotation.z = ist.bank;
   // head stabilizer: gyroscopically level — counter-pitch the flap bob,
   // counter-roll the bank. A glued-on head reads as dead.
   bird.head.rotation.x = ist.bodyPitchOsc * 0.9;
   bird.head.rotation.z = -ist.bank * 0.85;
+  bird.head.rotation.y = 0;
+  if (ist.land === 'perched') {
+    // alive on the post: head looks around, body breathes
+    // (tail flicks are folded into the tail control surface below)
+    bird.head.rotation.y = Math.sin(time * 0.6) * 0.45 + Math.sin(time * 1.73) * 0.12;
+    bird.head.rotation.x = 0.04;
+    if (!RM.on) bird.group.position.y += Math.sin(time * 2.1) * 0.008;
+  }
 
   var p = ist.wingPhase, fold = ist.foldAmount;
   var gliding = !ist.flapping && fold < 0.05 && !ist.braking;
   var elevD, flexS, twistD, sweepD;
-  if (ist.braking) {                       // airbrake: raised wings, fanned tail
-    elevD = 26; flexS = 0.25; twistD = 6; sweepD = 10;
-  } else if (gliding) {                    // held-out glide: gentle dihedral
-    elevD = 9 + Math.sin(time * 1.8) * 3; flexS = 0.15; twistD = 0; sweepD = 0;
-  } else {                                 // burst: the asymmetric power stroke
-    elevD = keyed(ELEV_KEYS, p);
-    var spdF = clamp(1.25 - ist.speed / 18, 0.35, 0.95); // deep fold slow, shallow fast
-    flexS = keyed(FLEX_KEYS, p) * spdF;
-    twistD = keyed(TWIST_KEYS, (p + 0.12) % 1);          // twist LEADS the flap
-    sweepD = keyed(SWEEP_KEYS, p);
-    if (!RM.on) bird.group.position.y += Math.sin(p * Math.PI * 2 - 0.7) * 0.045;
+  if (ist.land === 'perched') {
+    // wings ended UP at touchdown (animator's rule), folding to the body
+    // within ~1 beat — perchT drives the blend, not the gait fold
+    var pk = Math.min(1, (ist.perchT || 0) / 0.3);
+    elevD = 55 * (1 - pk) + (-28) * pk;
+    flexS = 0.85;
+    twistD = 12 * (1 - pk);
+    sweepD = -6 * (1 - pk) + (-60) * pk;
+  } else {
+    if (ist.braking) {                       // airbrake: raised wings, fanned tail
+      elevD = 26; flexS = 0.25; twistD = 6; sweepD = 10;
+    } else if (gliding) {                    // held-out glide: gentle dihedral
+      elevD = 9 + Math.sin(time * 1.8) * 3; flexS = 0.15; twistD = 0; sweepD = 0;
+    } else {                                 // burst: the asymmetric power stroke
+      elevD = keyed(ELEV_KEYS, p);
+      var spdF = clamp(1.25 - ist.speed / 18, 0.35, 0.95); // deep fold slow, shallow fast
+      flexS = keyed(FLEX_KEYS, p) * spdF;
+      twistD = keyed(TWIST_KEYS, (p + 0.12) % 1);          // twist LEADS the flap
+      sweepD = keyed(SWEEP_KEYS, p);
+      if (!RM.on) bird.group.position.y += Math.sin(p * Math.PI * 2 - 0.7) * 0.045;
+    }
+    if (ist.flare > 0) { // cross-parachute: wings sweep forward, body pitched up
+      elevD = elevD * (1 - ist.flare) + 25 * ist.flare;
+      sweepD = sweepD * (1 - ist.flare) + 38 * ist.flare;
+      twistD *= (1 - ist.flare);
+    }
+    // bound: fold the wings TIGHT to the body (never a held-out glide)
+    elevD = elevD * (1 - fold) + (-30) * fold;
+    flexS = flexS * (1 - fold) + 1 * fold;
+    twistD *= (1 - fold);
+    sweepD = sweepD * (1 - fold) + (-68) * fold; // swept hard back against the flank
   }
-  // bound: fold the wings TIGHT to the body (never a held-out glide)
-  elevD = elevD * (1 - fold) + (-30) * fold;
-  flexS = flexS * (1 - fold) + 1 * fold;
-  twistD *= (1 - fold);
-  sweepD = sweepD * (1 - fold) + (-68) * fold; // swept hard back against the flank
   poseWing(bird.wl, 1, elevD, flexS, twistD, sweepD, ist.slotAmt);
   poseWing(bird.wr, -1, elevD, flexS, twistD, sweepD, ist.slotAmt);
+
+  // legs drop on short final (~53ms before touchdown, spec §9)
+  var legA = ist.legs || 0;
+  for (var li = 0; li < bird.legs.length; li++) {
+    var lg = bird.legs[li];
+    lg.visible = legA > 0.03;
+    lg.rotation.x = -1.25 * (1 - legA); // tucked forward under the belly -> hanging
+  }
 
   // tail control surface: fan + pitch + twist from the sim
   for (var i = 0; i < bird.tailSlats.length; i++) {
     bird.tailSlats[i].rotation.y = (i - 2) * ist.tailSpread * D / 4;
   }
   bird.tail.rotation.x = ist.tailPitch * D;
-  bird.tail.rotation.z = ist.tailTwist * D;
+  bird.tail.rotation.z = ist.tailTwist * D +
+    (ist.land === 'perched' ? Math.sin(time * 2.3) * 0.09 : 0); // idle tail flicks
 }
 
 /* ---------------- sim state + fixed-step loop ---------------- */
@@ -273,7 +322,8 @@ var P = { px: 0, py: 0, pz: 0, heading: 0, pitch: 0, bank: 0 }; // prev, for int
 var R = { px: 0, py: 0, pz: 0, heading: 0, pitch: 0, bank: 0 };   // render state
 var simIn = { flap: 0, steerX: 0, steerY: 0, brake: 0 };
 var acc = 0, simTime = 0, timeSec = 0;
-var nextWp = 0, lastTick = 0, streakT = 0, moteT = 0, bellRung = false;
+var nextWp = 0, lastTick = 0, streakT = 0, moteT = 0, windT = 0, bellRung = false;
+var wasLand = 'air'; // touchdown edge detection
 var flyStart = 0, hudT = 0, lastWpText = '', lastEnergy = -1;
 
 function resetFlight() {
@@ -281,6 +331,7 @@ function resetFlight() {
   for (var k in b) S[k] = b[k];
   P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = S.heading; P.pitch = 0; P.bank = 0;
   nextWp = 0; world.nextWp = 0; acc = 0; lastTick = 0; bellRung = false;
+  wasLand = 'air'; perchUI(false);
   flyStart = timeSec; lastWpText = ''; lastEnergy = -1;
   camera.position.set(S.px, S.py + 4, S.pz - 12);
 }
@@ -300,6 +351,12 @@ function stepSim(dt) {
   simIn.flap = Input.flap; simIn.steerX = Input.steerX; simIn.steerY = Input.steerY; simIn.brake = Input.brake;
   FLIGHT.stepBird(S, simIn, dt, env);
   simTime += dt;
+
+  if (S.land === 'perched' && wasLand !== 'perched') { // touchdown: dust + a soft note
+    AUD.chime();
+    EFFECTS.puff(S.px, S.py - 0.2, S.pz, 0.2, 0.2);
+  }
+  wasLand = S.land;
 
   if (S.downstrokeTick !== lastTick) { // synced to the real downstroke start
     lastTick = S.downstrokeTick;
@@ -326,7 +383,8 @@ function stepSim(dt) {
       if (th) EFFECTS.thermalMotes(th.x, th.z, th.r, th.top, S.py);
     }
   }
-  if (EFFECTS.featherDue()) EFFECTS.shedFeather(S.px, S.py - 0.5, S.pz, env.windX, env.windZ);
+  ambientWind(dt); // wind you can SEE: streaks ride the living gust field
+  if (EFFECTS.featherDue()) EFFECTS.shedFeather(S.px, S.py - 0.5, S.pz, S.windGX, S.windGZ);
 
   if (sceneName === 'fly') {
     // waypoint arrival
@@ -345,6 +403,20 @@ function stepSim(dt) {
     var vd2 = vx * vx + vz * vz;
     if (!bellRung && vd2 < world.village.r * world.village.r) { AUD.bells(); bellRung = true; }
     else if (bellRung && vd2 > world.village.r * world.village.r * 2.25) bellRung = false;
+  }
+}
+
+// ambient wind streaks: what you see is what pushes you — streak velocity
+// is the sim's actual advecting wind (base + gust) at the bird's position.
+// Distinct from dive streaks: faint, slow, wind-following. RM kills them.
+function ambientWind(dt) {
+  if (RM.on) return;
+  windT -= dt;
+  if (windT <= 0) {
+    windT = 0.13;
+    var fx = Math.sin(S.heading), fz = Math.cos(S.heading);
+    EFFECTS.windStreaks(camera.position.x, camera.position.y, camera.position.z,
+      fx, fz, S.windGX, S.windGZ, S.gustAmt);
   }
 }
 
@@ -369,6 +441,22 @@ function updateCamera(dt, ist) {
     return;
   }
   var kp = 1 - Math.exp(-5 * dt);
+  if (ist.land === 'perched') { // rest framing: pulled back, bird-on-post against the sunset vista
+    // (no rotation.z touch here: lookAt already levels the horizon, and
+    // overwriting the euler after lookAt corrupts the orientation)
+    // sun-relative anchor: camera sits anti-sunward so the sunset stays behind the bird,
+    // with a slight lateral offset for a 3/4 angle (kept small so the sun stays in frame);
+    // ~40% wider than the old framing
+    var sd = world.sunDir, hl = Math.hypot(sd.x, sd.z) || 1;
+    var shx = sd.x / hl, shz = sd.z / hl;
+    var tx2 = ist.px - shx * 7.8 - shz * 1.2;
+    var tz2 = ist.pz - shz * 7.8 + shx * 1.2;
+    camera.position.x += (tx2 - camera.position.x) * kp;
+    camera.position.y += ((ist.py + 2.2) - camera.position.y) * kp;
+    camera.position.z += (tz2 - camera.position.z) * kp;
+    camera.lookAt(ist.px, ist.py + 0.35, ist.pz);
+    return;
+  }
   camera.position.x += ((ist.px - fx * 10.5) - camera.position.x) * kp;
   camera.position.y += ((ist.py + 3.6) - camera.position.y) * kp;
   camera.position.z += ((ist.pz - fz * 10.5) - camera.position.z) * kp;
@@ -418,7 +506,8 @@ var Scenes = {
       P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = S.heading; P.pitch = S.pitch; P.bank = S.bank;
       FLIGHT.stepBird(S, simIn, STEP, env);
       simTime += dt;
-      if (EFFECTS.featherDue()) EFFECTS.shedFeather(S.px, S.py - 0.5, S.pz, env.windX, env.windZ);
+      ambientWind(dt); // title is already flying: wind is visible here too
+      if (EFFECTS.featherDue()) EFFECTS.shedFeather(S.px, S.py - 0.5, S.pz, S.windGX, S.windGZ);
       world.nextWp = -1; // no glowing ring on the title screen
     },
   },
@@ -431,7 +520,7 @@ var Scenes = {
       $('done-ui').classList.add('hidden');
     },
     exit: function () {},
-    update: function (dt) { updateHUD(); },
+    update: function (dt) { updateHUD(); perchUI(S.land === 'perched'); },
   },
   pause: {
     enter: function () { $('pause-ui').classList.remove('hidden'); },
@@ -453,7 +542,15 @@ var Scenes = {
 function show(name) {
   if (Scenes[sceneName] && Scenes[sceneName].exit) Scenes[sceneName].exit();
   sceneName = name;
+  perchUI(false); // the breather hint only lives in fly
   Scenes[name].enter();
+}
+// perched hint: "tap to take wing" — shown only while resting on the post
+var perchUIon = false;
+function perchUI(on) {
+  if (on === perchUIon) return;
+  perchUIon = on;
+  $('perch-ui').classList.toggle('hidden', !on);
 }
 // fresh start: new bird at the head of the valley (title, restart, fly-again)
 function startFlyFresh() {
@@ -499,9 +596,16 @@ function frame(now) {
   R.wingPhase = S.wingPhase; R.foldAmount = S.foldAmount; R.flapping = S.flapping;
   R.braking = S.braking; R.slotAmt = S.slotAmt; R.tailSpread = S.tailSpread;
   R.tailPitch = S.tailPitch; R.tailTwist = S.tailTwist; R.bodyPitchOsc = S.bodyPitchOsc;
+  R.land = S.land; R.perchT = S.perchT; R.legs = S.legs; R.flare = S.flare;
 
   poseBird(R, timeSec);
   updateCamera(dt, R);
+  // shadow rig follows the bird: light stays parked on the sun ray, target
+  // rides the bird — the tight ortho box (world.js) keeps the map crisp.
+  var sd = world.sunDir;
+  world.sun.position.set(R.px + sd.x * 320, R.py + sd.y * 320, R.pz + sd.z * 320);
+  world.sun.target.position.set(R.px, R.py, R.pz);
+  world.sun.target.updateMatrixWorld();
   WORLD.update(world, THREE, dt, timeSec, routeProgressT());
   EFFECTS.update(dt, timeSec);
   AUD.update({ speed: S.speed, inThermal: !!S.inThermal });
@@ -551,6 +655,21 @@ window.__bf = {
     nextWp = i; world.nextWp = i;
     camera.position.set(S.px, S.py + 4, S.pz - 12);
     return 'warped to wp' + i;
+  },
+  // test only: place the bird on short final for the perch post, slow and aimed
+  perch: function () {
+    var pc = world.perch;
+    S.px = pc.x; S.py = pc.y + 4; S.pz = pc.z - 20;
+    S.heading = 0; // +z, straight at the post
+    S.vx = 0; S.vy = -0.8; S.vz = 8;
+    S.pitch = 0; S.bank = 0; S.land = 'air';
+    // clean input slate: tapPulse runs on sim-time (dt-clamped), so a long
+    // debugFlap from earlier can still be alive under low-FPS time dilation
+    Input.tapPulse = 0; Input.touchFlap = 0;
+    Input.touchSteerX = 0; Input.touchSteerY = 0;
+    P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = 0;
+    camera.position.set(S.px, S.py + 4, S.pz - 12);
+    return 'perch approach';
   },
 };
 

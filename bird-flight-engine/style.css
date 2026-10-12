@@ -59,6 +59,19 @@ body { font-family: Georgia, 'Times New Roman', serif; color: #f5e7c8; }
 }
 #pause-btn::before { content: '❚❚'; letter-spacing: 1px; }
 
+/* ---------- perched: a breath on the post ---------- */
+#perch-ui { pointer-events: none; }
+.perch-hint {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 108px);
+  font-size: 13.5px; font-style: italic; letter-spacing: 0.06em; color: #ffe9c4;
+  background: rgba(40, 22, 8, 0.55); border: 1px solid rgba(255, 210, 140, 0.25);
+  padding: 10px 20px; border-radius: 999px; white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(60, 25, 5, 0.9);
+  animation: perchPulse 2.6s ease-in-out infinite;
+}
+@keyframes perchPulse { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+
 /* ---------- cards (pause / complete): frosted dusk glass ---------- */
 .card {
   pointer-events: auto; position: absolute; left: 50%; top: 50%;

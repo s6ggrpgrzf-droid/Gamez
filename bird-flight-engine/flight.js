@@ -11,7 +11,8 @@
  *    NEVER a cliff: sink rate is bounded by drag, recovery is pitch-down.
  *  - bank: steerX rolls the bird; heading turns proportional to bank & speed authority
  *  - velocity eases toward the nose direction (carve feel), pitch input aims the nose
- *  - thermals: vertical lift columns in env; wind advects position
+ *  - thermals: vertical lift columns in env; living wind (base breeze +
+ *    coherent seeded gusts) advects position — exposed on state for visuals
  */
 (function (root, factory) {
   var api = factory();
@@ -54,6 +55,18 @@
     foldRegen: 0.16,    // energy/s earned back during a fold
     groundClear: 1.2, // meters above terrain
     maxSink: -16,     // hard bound on vy (safety, never hit in practice)
+    // --- landing (spec §9): generous detection, no fail state ever ---
+    landDetectR: 30,   // m horizontal: enter final approach
+    landDetectAlt: 14, // m above post top: enter final
+    landDetectSpd: 15, // m/s max to enter final
+    landAbortR: 44,    // beyond this in final -> back to air (botched: no punishment)
+    touchR: 2.5,       // m horizontal of post: touchdown (generous capture)
+    touchDy: 2.0,      // m |above post top|: touchdown
+    touchSpd: 12,      // m/s max at touchdown
+    takeoffPop: 3.2,   // m/s leg-drive leap (spec §8: legs supply initial velocity)
+    perchRegen: 0.25,  // energy/s while perched
+    perchFootH: 0.57,  // bird origin sits this high above the post top when perched
+                    // (leg reach 0.42 local × 1.35 rig scale)
   };
 
   // Wingbeat rig constants (from the sparrow kinematics spec). Exposed so
@@ -66,10 +79,22 @@
     twistLead: 0.12, // twist phase-LEADS elevation by ~12% of cycle
   };
 
+  // Living wind: coherent gusts on top of the base breeze. Sum of seeded
+  // sine components with incommensurate periods -> smooth, slow-varying,
+  // deterministic gusts (a few seconds each). Max |gust| per axis is
+  // amp1+amp2; kept small on purpose: this is a cozy-skilled game, the wind
+  // should be felt, never unfair. Tests pin the gentle bound.
+  var GUST = {
+    amp1: 0.85,  // m/s, primary gust component
+    amp2: 0.45,  // m/s, secondary gust component
+    per1: 6.8,   // s, primary gust period
+    per2: 2.9,   // s, secondary gust period
+  };
+
   function newBird(x, y, z, heading, seed) {
     var h = heading || 0;
     var cruise = 11;
-    return {
+    var b = {
       px: x, py: y, pz: z,
       vx: Math.sin(h) * cruise, vy: 0, vz: Math.cos(h) * cruise,
       heading: h, pitch: 0, bank: 0,
@@ -80,6 +105,14 @@
       gait: 'glide',   // 'burst' | 'fold' | 'glide'
       gaitT: 0,        // seconds in current gait phase
       beatsLeft: 0, beatsDone: 0, foldDur: 0.15,
+      // --- landing state (spec §9) + rig channels ---
+      land: 'air',   // 'air' | 'final' | 'perched' | 'takeoff'
+      legs: 0,       // 0 tucked -> 1 extended (~53ms on final, spec §9)
+      flare: 0,      // 0 -> 1 cross-parachute flare
+      perchT: 0,     // seconds perched (drives idle life)
+      takeoffT: 0,
+      finalT: 0,     // seconds in final (safety valve against a stuck final)
+      landCd: 0,     // cooldown after takeoff: don't re-trigger final immediately
       wingPhase: 0,    // 0-1 position in wingbeat cycle (0 = top, downstroke first)
       twistPhase: 0.12,// wingPhase + WING.twistLead (the anti-floating-plane channel)
       foldAmount: 0,   // 0 extended -> 1 folded tight to body
@@ -90,7 +123,22 @@
       slotAmt: 0,      // smoothed aoaHi for the rig
       lastSteerX: 0,
       rng: mulberry32((seed === undefined ? 20261012 : seed) >>> 0),
+      // --- gust field state (seeded; pure function of gustT + phases) ---
+      gustT: 0,
+      gustP1: 0, gustP2: 0, gustP3: 0, gustP4: 0, // seeded phases, set below
+      windGX: 0, windGZ: 0, // base wind + gust: the actual advecting wind (visuals sync to this)
+      gustAmt: 0,           // 0..1 normalized gust strength (drives streak density)
     };
+    seedGust(b); // deterministic phases from the bird's seeded rng
+    return b;
+  }
+
+  // seed the gust phases once per bird (deterministic per seed)
+  function seedGust(s) {
+    s.gustP1 = s.rng() * Math.PI * 2;
+    s.gustP2 = s.rng() * Math.PI * 2;
+    s.gustP3 = s.rng() * Math.PI * 2;
+    s.gustP4 = s.rng() * Math.PI * 2;
   }
 
   // env: { windX, windZ, thermals: [{x,z,r,top,lift}], groundH: function(x,z)->y }
@@ -189,6 +237,71 @@
     s.flapPhase = s.wingPhase * Math.PI * 2; // legacy compat
     s.twistPhase = (s.wingPhase + WING.twistLead) % 1;
 
+    // --- landing: perch-post approach, flare, touchdown (spec §9). ---
+    // Detection is generous and missing costs nothing: botch the approach
+    // and the bird just flies past — loop around and try again. NEVER a
+    // fail state.
+    var perch = (env && env.perch) ? env.perch : null;
+    var pdx = 0, pdz = 0, plh = 1e9, pdy = 1e9;
+    if (s.landCd > 0) s.landCd -= dt;
+    if (perch && (s.land === 'air' || s.land === 'final')) {
+      airspeed();
+      pdx = s.px - perch.x; pdz = s.pz - perch.z;
+      plh = Math.sqrt(pdx * pdx + pdz * pdz);
+      pdy = s.py - perch.y; // height above the post top
+      if (s.land === 'air') {
+        if (s.landCd <= 0 && plh < TUNE.landDetectR && pdy > -1 && pdy < TUNE.landDetectAlt && spd < TUNE.landDetectSpd) {
+          s.land = 'final'; s.finalT = 0;
+        }
+      } else { // final
+        if (plh > TUNE.landAbortR || spd > TUNE.landDetectSpd + 4 || pdy > TUNE.landDetectAlt + 6) {
+          s.land = 'air'; // botched approach: no punishment, just fly past
+        } else {
+          // landing assist: the bird aims its nose at the post on short
+          // final, crabbing into the wind like a real bird. This works WITH
+          // the velocity carve (which aligns motion to the nose) instead of
+          // fighting it. Only while closing: never pulls back an overshoot,
+          // so no orbiting. Invisible.
+          var closing = (s.vx * pdx + s.vz * pdz) < 0;
+          if (closing && plh > 0.5 && plh < 15) {
+            var wantH = Math.atan2(-pdx, -pdz); // heading toward the post
+            var dh = wantH - s.heading;
+            while (dh > Math.PI) dh -= Math.PI * 2;
+            while (dh < -Math.PI) dh += Math.PI * 2;
+            s.heading += clamp(dh * 2.0, -1.2, 1.2) * dt;
+          }
+          // the bird aims its feet: ease along a shallow glideslope that
+          // converges to just above the cap. Gentle suggestion, not a rail.
+          if (plh < 12) {
+            var wantY = perch.y + 0.4 + Math.max(0, plh - 2) * 0.12;
+            s.vy += clamp((wantY - s.py) * 0.8, -1.5, 1.5) * dt;
+          }
+          // settled in the grass short of the post: not a landing, no drama
+          var ghf = env && env.groundH ? env.groundH(s.px, s.pz) : 0;
+          if (s.py <= ghf + TUNE.groundClear + 0.3 && plh > TUNE.touchR) s.land = 'air';
+          // safety valve: a final that never resolves just ends (no punishment)
+          s.finalT += dt;
+          if (s.finalT > 12) s.land = 'air';
+          if (plh < TUNE.touchR && Math.abs(pdy) < TUNE.touchDy && spd < TUNE.touchSpd) {
+            // touchdown: snap to the post. Wings end UP (wingPhase=0), then
+            // fold to the body within ~1 beat (spec §9).
+            s.land = 'perched';
+            s.px = perch.x; s.py = perch.y + TUNE.perchFootH; s.pz = perch.z;
+            s.vx = 0; s.vy = 0; s.vz = 0; s.speed = 0;
+            s.wingPhase = 0; s.foldAmount = 0;
+            s.gait = 'fold'; s.gaitT = 0; s.foldDur = 0.2;
+            s.bank = 0; s.pitch = 0.05;
+            s.perchT = 0;
+          }
+        }
+      }
+    }
+    // legs extend in ~53ms on final (spec §9); flare blooms the cross-parachute
+    var legTgt = (s.land === 'final' || s.land === 'perched' || s.land === 'takeoff') ? 1 : 0;
+    s.legs += (legTgt - s.legs) * Math.min(1, 20 * dt);
+    var flareTgt = (s.land === 'final') ? 1 : 0;
+    s.flare += (flareTgt - s.flare) * Math.min(1, 6 * dt);
+
     // --- gravity (inertial) ---
     s.vy -= TUNE.gravity * dt;
 
@@ -198,6 +311,7 @@
     // progressively -> mush, not cliff. ---
     airspeed();
     var liftMul = brake ? TUNE.brakeLiftMul : (s.gait === 'fold' ? TUNE.foldLiftMul : 1);
+    if (s.land === 'final') liftMul *= 1.35; // flare + ground-effect cushion
     var stallF = spd < TUNE.stallSpeed ? Math.pow(spd / TUNE.stallSpeed, 1.6) : 1;
     s.stalled = spd < TUNE.stallSpeed;
     var liftA = TUNE.liftK * spd * spd * stallF * liftMul;
@@ -214,6 +328,7 @@
     // --- drag opposes airspeed (parasitic + stall mush drag bounding sink) ---
     airspeed();
     var dragMul = brake ? TUNE.brakeDragMul : (s.gait === 'fold' ? TUNE.foldDragMul : 1);
+    if (s.land === 'final') dragMul *= 6; // cross-parachute: the flare trades speed for lift
     var dragA = TUNE.dragK * dragMul * spd * spd;
     if (s.stalled) dragA += TUNE.stallDragK * (TUNE.stallSpeed - spd) * spd;
     var dec = (dragA / spd) * dt;
@@ -248,12 +363,14 @@
     // --- rig channels: tail control surface, head-stabilizer + AoA targets ---
     // (smoothed here so the rig never sees a step; the rig itself is dumb)
     var slowF = clamp((9 - spd) / 6, 0, 1);
-    s.aoaHi = clamp(slowF + (s.stalled ? 0.4 : 0) + (brake ? 0.5 : 0), 0, 1);
+    s.aoaHi = clamp(slowF + (s.stalled ? 0.4 : 0) + (brake ? 0.5 : 0) + s.flare * 0.9, 0, 1);
     s.slotAmt += (s.aoaHi - s.slotAmt) * Math.min(1, 8 * dt);
     var tsT = 5 + s.aoaHi * 45 + (brake ? 55 : 0) + (s.inThermal ? 12 : 0);
     if (tsT > 150) tsT = 150;
+    if (s.land === 'final') tsT = 140; // flare: tail fans fully (spec §9)
     s.tailSpread += (tsT - s.tailSpread) * Math.min(1, 6 * dt);
     var tpT = 8 + s.aoaHi * 35 + (brake ? 20 : 0);
+    if (s.land === 'final') tpT = 55; // flare: tail pitches up steeply
     s.tailPitch += (tpT - s.tailPitch) * Math.min(1, 6 * dt);
     var ttT = clamp(-steerX * 60, -60, 60) * authority;
     s.tailTwist += (ttT - s.tailTwist) * Math.min(1, 8 * dt);
@@ -262,8 +379,56 @@
       : 0;
     s.bodyPitchOsc += (oscT - s.bodyPitchOsc) * Math.min(1, 10 * dt);
 
-    // --- integrate (wind advects; thermal airUp rides along inside s.vy) ---
-    var wx = (env && env.windX) || 0, wz = (env && env.windZ) || 0;
+    // --- perched: the bird sleeps on the post; energy restores. Tap (flap)
+    // starts the takeoff sequence (spec §8): leg-drive leap, a small first
+    // downstroke, legs retract, then normal flight resumes. ---
+    if (s.land === 'perched') {
+      s.perchT += dt;
+      s.energy = clamp(s.energy + TUNE.perchRegen * dt, 0, 1);
+      s.vx = 0; s.vy = 0; s.vz = 0; // pinned to the post: no drift
+      s.legs = Math.min(1, s.legs + 20 * dt);
+      s.flare = Math.max(0, s.flare - 6 * dt);
+      s.foldAmount = Math.min(1, s.foldAmount + 5 * dt); // folded within ~1 beat
+      s.flapping = false; s.braking = false; s.stalled = false;
+      // the wind stays alive for the visuals while perched
+      s.gustT += dt;
+      var TAU2 = Math.PI * 2;
+      var pgx = GUST.amp1 * Math.sin((s.gustT / GUST.per1) * TAU2 + s.gustP1)
+              + GUST.amp2 * Math.sin((s.gustT / GUST.per2) * TAU2 + s.gustP2);
+      var pgz = GUST.amp1 * Math.sin((s.gustT / (GUST.per1 * 0.62)) * TAU2 + s.gustP3)
+              + GUST.amp2 * Math.sin((s.gustT / (GUST.per2 * 0.71)) * TAU2 + s.gustP4);
+      s.windGX = ((env && env.windX) || 0) + pgx;
+      s.windGZ = ((env && env.windZ) || 0) + pgz;
+      s.gustAmt = clamp(Math.sqrt(pgx * pgx + pgz * pgz) / ((GUST.amp1 + GUST.amp2) * 1.42), 0, 1);
+      s.speed = 0;
+      if (flapIn) {
+        s.land = 'takeoff'; s.takeoffT = 0; s.landCd = 3; // don't re-trigger final at once
+        s.vy = TUNE.takeoffPop; // leg drive: legs supply the initial velocity
+        s.vx = Math.sin(s.heading) * 2.5; s.vz = Math.cos(s.heading) * 2.5;
+        s.wingPhase = 0; // first downstroke starts at the top: smaller, quicker
+        s.gait = 'burst'; s.gaitT = 0; s.beatsDone = 0; s.beatsLeft = 3;
+        s.pitch = 0.15;
+      }
+      return s;
+    }
+    if (s.land === 'takeoff') {
+      s.takeoffT += dt;
+      s.legs = Math.max(0, s.legs - 5 * dt); // legs retract against the body
+      if (s.takeoffT > 0.35) s.land = 'air';
+    }
+
+    // --- integrate: the LIVING WIND advects (base breeze + coherent gusts).
+    // Gusts are a pure function of gustT + seeded phases -> smooth, slow,
+    // deterministic. Exposed on the state so visuals sync to what pushes you.
+    s.gustT += dt;
+    var TAU = Math.PI * 2;
+    var gx = GUST.amp1 * Math.sin((s.gustT / GUST.per1) * TAU + s.gustP1)
+           + GUST.amp2 * Math.sin((s.gustT / GUST.per2) * TAU + s.gustP2);
+    var gz = GUST.amp1 * Math.sin((s.gustT / (GUST.per1 * 0.62)) * TAU + s.gustP3)
+           + GUST.amp2 * Math.sin((s.gustT / (GUST.per2 * 0.71)) * TAU + s.gustP4);
+    var wx = ((env && env.windX) || 0) + gx, wz = ((env && env.windZ) || 0) + gz;
+    s.windGX = wx; s.windGZ = wz;
+    s.gustAmt = clamp(Math.sqrt(gx * gx + gz * gz) / ((GUST.amp1 + GUST.amp2) * 1.42), 0, 1);
     var step = Math.sqrt(s.vx * s.vx + s.vy * s.vy + s.vz * s.vz) * dt;
     s.px += (s.vx + wx) * dt;
     s.py += s.vy * dt;
@@ -273,6 +438,8 @@
     // --- ground: soft floor, never crash ---
     var gh = env && env.groundH ? env.groundH(s.px, s.pz) : 0;
     var floor = gh + TUNE.groundClear;
+    // the post occupies its column: don't sink through it on short final
+    if (perch && s.land === 'final' && plh < 1.0 && perch.y > floor) floor = perch.y;
     if (s.py < floor) {
       s.py = floor;
       if (s.vy < 0) s.vy = 0;
@@ -292,6 +459,7 @@
     mulberry32: mulberry32,
     TUNE: TUNE,
     WING: WING,
+    GUST: GUST,
     newBird: newBird,
     stepBird: stepBird,
     demoEnv: demoEnv,
