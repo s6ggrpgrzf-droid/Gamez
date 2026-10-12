@@ -20,15 +20,15 @@ var SK = (function () {
     { id: 'kite', name: 'Kite', desc: 'A ragged little bush Cub. Forgiving, lands anywhere.',
       maxSpeed: 95, cruiseSpeed: 70, climb: 55, vr: 42, pax: 2, cargo: 1,
       stripNeed: 300, price: 0, fuelUse: 1.0, forgive: 1.5,
-      stall: 36, maxTW: 0.34, cd0: 0.133, ki: 0.025, ponder: 0.85, stab: 1.5 },
+      stall: 36, maxTW: 0.34, cd0: 0.133, ki: 0.025, ponder: 0.85, stab: 1.5, flapD: 0.35 },
     { id: 'kestrel', name: 'Kestrel', desc: 'A honest twin-prop. Faster, roomier, thirstier.',
       maxSpeed: 150, cruiseSpeed: 115, climb: 80, vr: 62, pax: 4, cargo: 3,
       stripNeed: 520, price: 2400, fuelUse: 1.8, forgive: 1.0,
-      stall: 55, maxTW: 0.38, cd0: 0.059, ki: 0.048, ponder: 1.0, stab: 1.0 },
+      stall: 55, maxTW: 0.38, cd0: 0.059, ki: 0.048, ponder: 1.0, stab: 1.0, flapD: 0.22 },
     { id: 'merlin', name: 'Merlin', desc: 'A regional jet with manners. Long strips only.',
       maxSpeed: 230, cruiseSpeed: 180, climb: 120, vr: 95, pax: 6, cargo: 6,
       stripNeed: 800, price: 9800, fuelUse: 3.0, forgive: 0.8,
-      stall: 88, maxTW: 0.44, cd0: 0.029, ki: 0.086, ponder: 1.35, stab: 0.8 },
+      stall: 88, maxTW: 0.44, cd0: 0.029, ki: 0.086, ponder: 1.35, stab: 0.8, flapD: 0.12 },
   ];
 
   var STRIP_NAMES = ['Meadowlark Field', 'Cinder Hollow', 'Pebblebrook', 'Foxglove Meadows',
@@ -224,7 +224,7 @@ var SK = (function () {
       if (st.stalled) st.pitch -= 5.5 * dt; // nose mushes down slowly on its own
 
       // load factor n = L/W — flaps lower the stall speed (more lift at low speed)
-      var vStall = P.stall * (1 - 0.18 * st.flaps) * 1.688;
+      var vStall = P.stall * (1 - 0.28 * st.flaps) * 1.688;
       var nBase = (vFps * vFps) / (vStall * vStall) * Math.max(-0.6, Math.min(1.45, st.aoa / 6));
       nBase /= st.massF; // lighter = floatier
       var n = st.stalled ? nBase * 0.68 : nBase;
@@ -241,7 +241,7 @@ var SK = (function () {
       var induced = P.ki * n * n / (v100 * v100);
       if (st.alt < 50) induced *= 0.35 + 0.65 * (st.alt / 50); // ground effect: flares float
       var dw = P.cd0 * v100 * v100 + induced;
-      dw += st.flaps * 0.22 * v100; // flaps are draggy — that's how you get down and slow
+      dw += st.flaps * (P.flapD || 0.3) * v100 * v100; // flaps: strong when fast, gentle when slow; per-plane so the Cub can drag it in and the jet can still fly the approach
       var tw = st.throttle * P.maxTW;
       var ax = (tw - dw) * G - G * Math.sin(fpa) * 0.9;
       st.speed = Math.max(0, st.speed + ax / 1.688 * dt);
@@ -257,9 +257,13 @@ var SK = (function () {
       // fuel burn
       st.fuel = Math.max(0, st.fuel - dt * (0.25 + st.throttle * 0.55) * P.fuelUse * 0.35);
 
-      // phase: final when close to destination
+      // phase: final when close to destination — scaled to the plane so the
+      // stable approach (full flaps, idle, gentle nose-down) reaches the runway
+      var finalDist = 4200 * (P.cruiseSpeed / 70);
       var distToDest = st.destX - st.x;
-      if (st.phase === 'cruise' && distToDest < 2600) {
+      // high? tower calls it earlier — the descent must always be flyable
+      var callDist = finalDist + Math.max(0, st.alt - 400) * 8;
+      if (st.phase === 'cruise' && distToDest < callDist) {
         st.phase = 'final';
         pushMsg(st, 'Tower: ' + st.route.to + ' in sight. Wind ' +
           (st.wind >= 0 ? 'calm' : 'light') + '. Runway is yours. Flaps out, ease her down.', 'kit');
@@ -268,17 +272,17 @@ var SK = (function () {
       // landing procedure: tower talks you down the final
       if (st.phase === 'final' && !st.done) {
         var dFinal = st.destX + st.destLen * 0.18 - st.x; // to aim point
-        if (!st._proc1 && dFinal < 1900) {
+        if (!st._proc1 && dFinal < finalDist * 0.45) {
           st._proc1 = true;
           pushMsg(st, 'Tower: Line up on final. Follow the beacon needle.', 'mabel');
-        } else if (st._proc1 && !st._proc2 && dFinal < 1100) {
+        } else if (st._proc1 && !st._proc2 && dFinal < finalDist * 0.26) {
           st._proc2 = true;
           var p = papi(st);
           var hint = p.white === 2 ? 'Two white, two red — right on the slope.'
             : p.white > 2 ? 'Mostly white — ease her down a touch.'
             : 'Mostly red — you\'re low, add a breath of power.';
           pushMsg(st, 'Tower: Check the lights by the runway. ' + hint, 'mabel');
-        } else if (st._proc2 && !st._proc3 && dFinal < 420) {
+        } else if (st._proc2 && !st._proc3 && dFinal < 700) {
           st._proc3 = true;
           pushMsg(st, 'Tower: Easy… flare! Nose up, let her settle.', 'kit');
         }
@@ -296,7 +300,7 @@ var SK = (function () {
           // flew past everything: gentle go-around
           st.goArounds++;
           pushMsg(st, 'Tower: Go around, line up again. Easy does it.', 'mabel');
-          st.x = st.destX - 2200; st.alt = Math.max(st.alt, 350); st.lat = 0;
+          st.x = st.destX - finalDist * 0.55; st.alt = Math.max(st.alt, 350); st.lat = 0;
           st.phase = 'final';
         } else if (!overRunway && st.x > st.runwayX + 500 && st.phase === 'cruise' && st.alt <= 0.5) {
           // mushy meadow landing (never a crash)
@@ -427,8 +431,10 @@ var SK = (function () {
   /* skip-to-final: jump to short final with approach energy */
   function skipToFinal(st) {
     if (st.phase !== 'cruise' || st.skipped) return false;
-    st.x = st.destX - 2400;
-    st.alt = Math.max(st.alt, 420);
+    var finalDist = 4200 * (st.plane.cruiseSpeed / 70);
+    var callDist = finalDist + Math.max(0, st.alt - 400) * 8;
+    st.x = st.destX - callDist;
+    st.alt = Math.max(st.alt, 380);
     st.speed = Math.max(st.speed, st.plane.cruiseSpeed * 0.75);
     st.vspeed = -8; st.pitch = -2; st.bank = 0; st.lat = 0;
     st.throttle = Math.min(st.throttle, 0.45);
