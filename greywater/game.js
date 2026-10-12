@@ -343,12 +343,22 @@ function drawShip(sh,sc){
   var sx=wx2sx(sh.x), sy=depthY(sh.depth)+sh.bob*0.45;
   var scale=0.5+sh.depth*0.62;
   var spr=ART.ship(sh.type), iw=240*scale*0.85, ih=120*scale*0.85;
+  // part around the island: ships give the rock a wide berth instead of crossing it
+  (function(){
+    var dx=sx-L.islandX;
+    var yF=Math.max(0,Math.min(1,(sy-L.islandPeakY)/Math.max(1,L.islandBaseY-L.islandPeakY)));
+    var rockHW=22+73*yF, avoidR=rockHW+iw*0.32;
+    if(Math.abs(dx)>avoidR*1.6){ sh.avoidSide=dx>0?1:-1; }
+    else if(Math.abs(dx)<avoidR){ var side=sh.avoidSide||(dx>=0?1:-1); sx+=(avoidR-Math.abs(dx))*side; }
+  })();
   ctx.save();
   ctx.translate(sx,sy); ctx.rotate(sh.pitch*0.55);
   var w=st.wx.cur;
   var alpha=(w==='fog'?0.55:1)*(sh.depth<0.35?0.8:1);
   ctx.globalAlpha=alpha;
   ctx.drawImage(spr,-iw/2,-ih+ih*0.28,iw,ih);
+  // night: sink hull and sails into silhouette (portholes/signals drawn later stay lit)
+  if(sc.nf>0.25){ ctx.fillStyle='rgba(7,11,22,'+(0.68*sc.nf).toFixed(3)+')'; ctx.fillRect(-iw/2,-ih+ih*0.28,iw,ih); }
   // hull reflection
   ctx.globalAlpha=alpha*0.16;
   ctx.fillStyle='#0a1626';
@@ -357,7 +367,7 @@ function drawShip(sh,sc){
   // wake trailing behind the stern
   var wk=sh.dir>=0?-1:1, wl=iw*(0.9+sh.depth*0.5);
   var wg=ctx.createLinearGradient(0,0,wk*wl,0);
-  wg.addColorStop(0,'rgba(255,255,255,'+(0.28*alpha).toFixed(3)+')');
+  wg.addColorStop(0,'rgba(255,255,255,'+(0.28*alpha*(1-sc.nf*0.55)).toFixed(3)+')');
   wg.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle=wg;
   ctx.beginPath();
@@ -420,6 +430,16 @@ function drawIsland(sc){
   ctx.quadraticCurveTo(ix+62,peakY+28,ix+86,baseY+40);
   ctx.quadraticCurveTo(ix+93,baseY+70,ix+95,baseY+70);
   ctx.closePath(); ctx.fill();
+  // moonlit rim on the rock's upper edge at night, so it isn't a black void
+  if(sc.nf>0.3){
+    ctx.strokeStyle='rgba(170,190,220,'+(0.26*sc.nf).toFixed(3)+')';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(ix-46,peakY+20);
+    ctx.quadraticCurveTo(ix-16,peakY-4,ix+16,peakY+4);
+    ctx.quadraticCurveTo(ix+62,peakY+28,ix+80,peakY+54);
+    ctx.stroke();
+  }
   // foam lapping the island base
   ctx.strokeStyle='rgba(255,255,255,'+(0.20+0.08*Math.sin(tG*2.2)).toFixed(3)+')';
   ctx.lineWidth=2.5;
@@ -473,7 +493,7 @@ function drawCat(sc){
   var x,y,s;
   if(c.spot==='gallery'){ x=L.lampX-48; y=L.lampY+26; s=0.5; }
   else if(c.spot==='lamp'){ x=L.lampX-44; y=L.lampY+26; s=0.5; }
-  else{ x=L.islandX+78; y=L.islandBaseY-46; s=0.85; }
+  else{ x=L.islandX+44; y=L.islandPeakY+14; s=0.85; } // on the rock terrace by the tower — grounded
   ctx.save();
   if(sc.nf>0.4){ ctx.globalAlpha=0.92; }
   ctx.drawImage(spr,x-45*s,y-80*s+8*s,90*s,80*s);
@@ -526,14 +546,17 @@ function drawBeam(sc){
       ctx.closePath(); ctx.fill();
     }
   }
-  // sea shimmer: a glittering pool where the beam lands
+  // sea shimmer: a soft glittering pool where the beam lands
   var shx=L.lampX+Math.cos(beamAng)*W*0.32;
   if(shx>-50&&shx<W+50){
-    var sg=ctx.createLinearGradient(0,L.horizonY,0,H);
-    sg.addColorStop(0,'rgba(255,232,175,'+(0.22*vis*bm*breathe).toFixed(3)+')');
+    ctx.save();
+    ctx.translate(shx,L.horizonY+10); ctx.scale(1.7,0.5);
+    var sg=ctx.createRadialGradient(0,0,4,0,0,46);
+    sg.addColorStop(0,'rgba(255,232,175,'+(0.20*vis*bm*breathe).toFixed(3)+')');
     sg.addColorStop(1,'rgba(255,232,175,0)');
     ctx.fillStyle=sg;
-    ctx.fillRect(shx-36,L.horizonY+6,72,L.seaH*0.55);
+    ctx.beginPath(); ctx.arc(0,0,46,0,7); ctx.fill();
+    ctx.restore();
     for(var sp=0;sp<16;sp++){
       var sxx=shx+Math.sin(sp*7.3)*32;
       var syy=L.horizonY+10+((sp*53+tG*46)%(L.seaH*0.5));
@@ -588,9 +611,21 @@ function drawGulls(sc){
     var gl=gulls[i];
     var gx=(gl.cx+Math.sin(tG*gl.sp+gl.ph)*gl.rx)*W;
     var gy=(gl.cy+Math.cos(tG*gl.sp*0.7+gl.ph)*gl.ry)*H;
-    var flap=0.55+0.45*Math.sin(tG*9+gl.ph*3);
-    ctx.save(); ctx.translate(gx,gy); ctx.scale(0.8,flap*0.9);
-    ctx.drawImage(ART.gull(),-35,-15,70,30);
+    var flap=Math.sin(tG*9+gl.ph*3); // -1..1, wings only — body stays rigid
+    ctx.save(); ctx.translate(gx,gy);
+    // wings: two curved quads sweeping with the flap
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(-13,-3-flap*9,-25,-1-flap*13);
+    ctx.quadraticCurveTo(-13,3,0,0);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(13,-3-flap*9,25,-1-flap*13);
+    ctx.quadraticCurveTo(13,3,0,0);
+    ctx.fill();
+    // body: small static ellipse
+    ctx.beginPath(); ctx.ellipse(0,0,7,2.8,0,0,7); ctx.fill();
     ctx.restore();
   }
 }
@@ -614,11 +649,11 @@ function render(dt){
   shipHits=[];
   var order=st.ships.slice().sort(function(a,b){return a.depth-b.depth;});
   for(var i=0;i<order.length;i++){ var hit=drawShip(order[i],sc); shipHits.push({id:order[i].id,x:hit.x,y:hit.y,w:hit.w,h:hit.h}); }
+  drawBeam(sc); // behind rocks/island so the rock occludes the light, as it should
   drawRocks();
   drawIsland(sc);
   drawWhale(sc);
   drawWaves(sc);
-  drawBeam(sc);
   drawWeatherFX(sc);
   drawGulls(sc);
   drawForeground();
@@ -642,8 +677,8 @@ function handleTap(x,y){
       for(var j=0;j<st.ships.length;j++) if(st.ships[j].id===h.id){ shipSheet(st.ships[j]); return; }
     }
   }
-  // lighthouse
-  if(x>L.islandX-L.lhW*0.75&&x<L.islandX+L.lhW*0.75&&y>L.lhTop-10&&y<L.islandPeakY+16){ lampSheet(); return; }
+  // lighthouse (wider touch target for thumbs)
+  if(x>L.islandX-L.lhW*1.1&&x<L.islandX+L.lhW*1.1&&y>L.lhTop-16&&y<L.islandPeakY+24){ lampSheet(); return; }
   closeSheet();
 }
 
@@ -710,6 +745,7 @@ var tut={};
 try{ tut=JSON.parse(localStorage.getItem(TUT_KEY)||'{}'); }catch(e){}
 function tutSave(){ try{localStorage.setItem(TUT_KEY,JSON.stringify(tut));}catch(e){} }
 function tutorial(){
+  if(!started) return; // not on the title screen
   if(!tut.lamp){ toast('Tap the lighthouse to tend the lamp.',4200); }
   else if(!tut.ship&&st.stats.greeted===0&&st.ships.some(function(s){return s.state==='signal';})){ toast('A ship signals you \u2014 tap her to answer.',4200); }
   else if(!tut.horn&&st.wx.cur==='fog'){ toast('Fog. The horn button is top-right.',4200); tut.horn=1; tutSave(); }
@@ -741,6 +777,7 @@ var started=false;
 document.getElementById('begin').addEventListener('click',function(){
   AU.ensure(); started=true;
   titleEl.classList.add('hide');
+  document.body.classList.add('playing'); // reveals the HUD
   setTimeout(function(){ titleEl.style.display='none'; },900);
   if(!tut.lamp){
     setTimeout(function(){ toast('Tap the lighthouse to tend the lamp.',4500); },1200);
