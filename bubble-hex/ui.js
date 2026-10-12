@@ -308,7 +308,7 @@
   function lsSet(k) { try { localStorage.setItem(k, '1'); } catch (e) {} }
   function showCoach(html, holdMs) {
     var c = $('coach');
-    c.innerHTML = '<span class="hand">👆</span>' + html;
+    c.innerHTML = '<span class="hand">▾</span>' + html;
     c.classList.remove('hidden');
     if (coachTimer) clearTimeout(coachTimer);
     if (holdMs) coachTimer = setTimeout(hideCoach, holdMs);
@@ -328,7 +328,7 @@
     var hasDoom = L.layout.some(function (row) { return row.indexOf('K') >= 0; });
     if (hasDoom && !lsFlag('bubblehex_doomseen')) {
       lsSet('bubblehex_doomseen');
-      showCoach('😈 <b>Doom bubbles</b> can\'t be matched —<br>drop them or blast around them!', 7000);
+      showCoach('⬢ <b>Doom bubbles</b> can\'t be matched —<br>drop them or blast around them!', 7000);
     }
   }
 
@@ -477,9 +477,16 @@
     if (state.nero >= 4) {
       state.nero = 0;
       state.current = { color: 'W' };
-      banner('🐈‍⬛ Nero coughed up a <b>rainbow bubble</b>!');
+      banner('⬢ Nero coughed up a <b>rainbow bubble</b>!');
       HexAudio.orb();
       burst(nx, ny - 20, 14, '#ffffff', 130, 0.7, 5);
+      // charged! — happy-cat reaction: mouth-open + paw-up, glint burst, label pulse
+      state.neroCheer = 1.4;
+      state.neroLabelPulse = 1;
+      for (var gi = 0; gi < 10; gi++) {
+        spawnGlint(nx + (Math.random() - 0.5) * 76, ny - 24 + (Math.random() - 0.5) * 54,
+          6 + Math.random() * 6, -30);
+      }
     } else {
       state.current = state.next;
       state.next = newShooterBubble();
@@ -506,6 +513,9 @@
       vx: Math.cos(state.aimAngle) * 10.5, vy: Math.sin(state.aimAngle) * 10.5,
       bub: bub, trail: 0
     };
+    // wand-tip muzzle sparkle on the cast
+    burst(o[0], o[1], 6, '#ffe14d', 90, 0.4, 4);
+    spawnGlint(o[0], o[1] - 6, 8, -30);
     state.current = state.next;
     state.next = newShooterBubble();
     state.shots--;
@@ -555,6 +565,8 @@
     E.set(state.board, r, c, f.bub);
     HexAudio.stick();
     pulseAround(r, c, true); // gentle squash on the landed bubble + neighbors
+    // brief screen shimmer on the hit — whisper-soft, never a shake
+    if (!reduceMotion) state.flash = Math.max(state.flash || 0, 0.12);
     var res = E.resolveBoard(state.board, r, c);
     var xy = E.cellXY(r, c, R);
     state.flying = null;
@@ -617,6 +629,13 @@
       spawnP(px, py, (Math.random() - 0.5) * 60, -120 - Math.random() * 80, 0.6, 5,
         ['#fff3b0', '#ff9df5', '#9df5ff', '#c44dff'][(Math.random() * 4) | 0], 0);
     }
+    // wand sparkle trail: glints drift along the beam while it sweeps
+    if (!reduceMotion) {
+      for (var gi2 = 0; gi2 < 2; gi2++) {
+        var gt = Math.random() * H * 0.9;
+        spawnGlint(b.x + dirx * gt, b.y + diry * gt, 5 + Math.random() * 5, -20);
+      }
+    }
     if (state.castT <= 0) {
       state.castBeam = null;
       state.stellaPose = 'idle';
@@ -668,7 +687,7 @@
     if (res.popped.length) {
       state.combo++;
       mult = Math.min(state.combo, 5);
-      if (mult > 1) banner('🔥 <b>Combo x' + mult + '</b>');
+      if (mult > 1) banner('✶ <b>Combo x' + mult + '</b>');
     } else {
       state.combo = 0;
       state.missStreak++;
@@ -735,7 +754,7 @@
     if (wb.hp <= 0) {
       wb.hp = 0; wb.flee = 1;
       state.score += 2000;
-      banner('🐈‍⬛ <b>Wilbur is defeated!</b> +2000');
+      banner('⬢ <b>Wilbur is defeated!</b> +2000');
       floaters.push({ x: fx, y: fy, t: 0, dur: 1.4, text: '+2000 WILBUR DOWN!', kind: 'text', big: true });
       HexAudio.wilburDown();
     }
@@ -745,8 +764,27 @@
   function rescueOwl(x, y) {
     state.rescued++;
     HexAudio.hoot();
-    state.owlsFlying.push({ x: x, y: y, t: 0, vx: (Math.random() - 0.5) * 60, vy: -160 });
-    burst(x, y, 10, '#ffe9b0', 120, 0.7, 5);
+    // a moment: feather + glint burst, a soft ring, then a joyful flutter upward
+    for (var fi2 = 0; fi2 < 4; fi2++) {
+      floaters.push({
+        x: x + (Math.random() - 0.5) * 30, y: y + (Math.random() - 0.5) * 20,
+        vx: (Math.random() - 0.5) * 70, vy: -70 - Math.random() * 70,
+        t: -fi2 * 0.07, dur: 1.1, kind: 'feather'
+      });
+    }
+    burst(x, y, 12, '#ffe9b0', 140, 0.8, 5);
+    for (var og = 0; og < 8; og++) {
+      spawnGlint(x + (Math.random() - 0.5) * 48, y + (Math.random() - 0.5) * 48,
+        6 + Math.random() * 6, -30);
+    }
+    rings.push({ x: x, y: y, t: 0, dur: 0.5, max: R * 3 });
+    state.owlsFlying.push({
+      x: x, y: y, t: 0, vx: (Math.random() - 0.5) * 40, vy: -170,
+      ph: Math.random() * Math.PI * 2, trail: 0
+    });
+    // HUD goal pill pulses on every rescue
+    state.goalPulse = 1;
+    updateHUD();
   }
 
   function descendBoard() {
@@ -761,7 +799,7 @@
     state.descending = true;
     if (state.ghost) state.ghost.r = Math.min(state.ghost.r + 1, E.ROWS - 1);
     HexAudio.rumble();
-    if (!gameOver) banner('⚠️ The branches <b>descend</b>!');
+    if (!gameOver) banner('! The branches <b>descend</b>!');
     else lose('The bubbles reached Stella!');
   }
 
@@ -772,10 +810,23 @@
     if (g.r === 0) {
       state.ghost = null;
       state.score += 1000;
-      banner('👻 <b>Spirit freed!</b> +1000');
+      banner('✧ <b>Spirit freed!</b> +1000');
       floaters.push({ x: W / 2, y: BOARD_TOP + 60, t: 0, dur: 1.4, text: '+1000 SPIRIT FREED!', kind: 'text', big: true });
       HexAudio.ghostFree();
       burst(W / 2, BOARD_TOP + 60, 22, '#c9d4ff', 170, 1, 6);
+      // reunion burst: heart-ish glints + pink sparks + ring shockwave
+      var rgx = W / 2, rgy = BOARD_TOP + 60, hi, hx, hy, a1;
+      for (hi = 0; hi < 16; hi++) {
+        if (hi < 6) { a1 = hi / 6 * Math.PI * 2; hx = rgx + Math.cos(a1) * 11 - 9; hy = rgy + Math.sin(a1) * 11 - 8; }
+        else if (hi < 12) { a1 = (hi - 6) / 6 * Math.PI * 2; hx = rgx + Math.cos(a1) * 11 + 9; hy = rgy + Math.sin(a1) * 11 - 8; }
+        else { hx = rgx + (hi - 13.5) * 7; hy = rgy + 6 + (hi - 12) * 5; }
+        spawnGlint(hx, hy, 8, -40);
+      }
+      burst(rgx, rgy, 10, '#ffb3d9', 130, 0.9, 5);
+      rings.push({ x: rgx, y: rgy, t: 0, dur: 0.7, max: R * 5 });
+      rings.push({ x: rgx, y: rgy, t: -0.15, dur: 0.7, max: R * 3.4 });
+      state.goalPulse = 1;
+      updateHUD();
     }
   }
 
@@ -859,12 +910,31 @@
       rings[ri].t += dt;
       if (rings[ri].t >= rings[ri].dur) rings.splice(ri, 1);
     }
-    // owls flying off
+    // owls flying off: joyful flutter — sine weave as they climb,
+    // with a little "hoot" line of sparkles behind them
     for (var oi = s.owlsFlying.length - 1; oi >= 0; oi--) {
       var ow = s.owlsFlying[oi];
       ow.t += dt;
-      ow.x += ow.vx * dt; ow.y += ow.vy * dt;
+      ow.x += (ow.vx + Math.sin(ow.t * 9 + ow.ph) * 55) * dt;
+      ow.y += (ow.vy + Math.cos(ow.t * 7 + ow.ph) * 34) * dt;
+      if (!reduceMotion) {
+        ow.trail += dt;
+        if (ow.trail > 0.07) {
+          ow.trail = 0;
+          spawnGlint(ow.x, ow.y + 8, 5 + Math.random() * 4, -24);
+        }
+      }
       if (ow.y < -60) s.owlsFlying.splice(oi, 1);
+    }
+    // ghost wisp trail: soft wisps drift up behind the rising spirit
+    if (s.ghost && !reduceMotion) {
+      s.ghostTrail = (s.ghostTrail || 0) + dt;
+      if (s.ghostTrail > 0.09) {
+        s.ghostTrail = 0;
+        var gtc = E.cellXY(s.ghost.r, s.ghost.c, R);
+        spawnP(gtc[0] + (Math.random() - 0.5) * 12, gtc[1] + BOARD_TOP + boardDY() + 16,
+          (Math.random() - 0.5) * 14, 26, 1.1, 4.5, '#c9d4ff', 0);
+      }
     }
     // firefly scatter drift (decays back to ambient)
     for (var fly = 0; fly < fireflies.length; fly++) {
@@ -877,9 +947,25 @@
         if (Math.abs(ff.svy) < 2) ff.svy = 0;
       }
     }
-    // Nero idly paws at the shooter bubble every few seconds
+    // Nero idly paws at the shooter bubble every few seconds — and when he bats
+    // it he meows, bouncing the loaded bubble like a toy
     if (s.neroPaw > 0) s.neroPaw -= dt;
-    else if (!s.aiming && !s.flying && !s.over && Math.random() < dt * 0.16) s.neroPaw = 0.55;
+    else if (!s.aiming && !s.flying && !s.over && Math.random() < dt * 0.16) {
+      s.neroPaw = 0.55; s.neroMeow = 0.55; s.bubBounce = 0.45;
+      if (!reduceMotion) { var mwt = wandTip(); spawnGlint(mwt[0], mwt[1], 7, -20); }
+    }
+    if (s.neroMeow > 0) s.neroMeow -= dt;
+    if (s.bubBounce > 0) s.bubBounce -= dt;
+    if (s.neroCheer > 0) s.neroCheer -= dt;
+    if (s.neroLabelPulse > 0) s.neroLabelPulse = Math.max(0, s.neroLabelPulse - dt * 1.2);
+    // HUD goal pill pulse (owl rescue / spirit freed): scale pop, then release
+    var gpEl = null;
+    if (s.goalPulse > 0) {
+      s.goalPulse = Math.max(0, s.goalPulse - dt * 1.4);
+      gpEl = $('hud-goal');
+      if (s.goalPulse > 0) gpEl.style.transform = 'scale(' + (1 + 0.22 * s.goalPulse).toFixed(3) + ')';
+      else gpEl.style.transform = '';
+    }
     // screen flash decay
     if (s.flash > 0) s.flash = Math.max(0, s.flash - dt * 0.55);
     // Nero toss anim
@@ -986,15 +1072,25 @@
         }
       }
     }
-    // ghost
+    // ghost: glows and pulses softly as it rises, wisp trail handled in update
     if (s.ghost) {
       var gx = E.cellXY(s.ghost.r, s.ghost.c, R);
-      var gs = R * 2.4;
+      var gxp = gx[0], gyp = gx[1] + BOARD_TOP + dy;
+      var gs = R * 2.4 * (reduceMotion ? 1 : 1 + Math.sin(now * 5) * 0.06);
       var bob = Math.sin(now * 3 + 1) * 5;
+      if (!reduceMotion) {
+        var gp2 = 0.5 + 0.5 * Math.sin(now * 4.2);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.35 + 0.3 * gp2;
+        var gg2 = Art.glowRing('W');
+        var gd2 = gs * 2.1;
+        ctx.drawImage(gg2, gxp - gd2 / 2, gyp + bob - gd2 / 2, gd2, gd2);
+        ctx.restore();
+      }
       ctx.globalAlpha = 0.92;
-      ctx.drawImage(Art.ghost(), gx[0] - gs / 2, gx[1] + BOARD_TOP + dy - gs / 2 + bob, gs, gs * 76 / 64);
+      ctx.drawImage(Art.ghost(), gxp - gs / 2, gyp - gs / 2 + bob, gs, gs * 76 / 64);
       ctx.globalAlpha = 1;
-      if (Math.random() < 0.1) spawnP(gx[0], gx[1] + BOARD_TOP + dy + 14, (Math.random() - 0.5) * 20, 30, 0.8, 4, '#c9d4ff', 0);
     }
 
     // flying bubble + trail
@@ -1032,14 +1128,19 @@
       drawBoardBubble(txp, typ, ta.bub, 0.8);
     }
 
-    // owls flying free
+    // owls flying free: tilting joyfully with the flutter
     for (var oi = 0; oi < s.owlsFlying.length; oi++) {
       var ow = s.owlsFlying[oi];
       var os = R * 1.6, oa = Math.max(0, 1 - ow.t / 1.4);
+      var tilt = reduceMotion ? 0 : Math.sin(ow.t * 9 + ow.ph) * 0.28;
+      ctx.save();
+      ctx.translate(ow.x, ow.y);
+      ctx.rotate(tilt);
       ctx.globalAlpha = oa;
-      ctx.drawImage(Art.owl(), ow.x - os / 2, ow.y - os / 2, os, os);
-      ctx.globalAlpha = 1;
+      ctx.drawImage(Art.owl(), -os / 2, -os / 2, os, os);
+      ctx.restore();
     }
+    ctx.globalAlpha = 1;
 
     // particles + rings: additive glow pass for the dreamy look
     ctx.save();
@@ -1185,9 +1286,16 @@
     var gd = d * 2.4;
     ctx.drawImage(gr, wt[0] - gd / 2, wt[1] - gd / 2, gd, gd);
     ctx.restore();
-    // the bubble itself
+    // the bubble itself — hops with a squash when Nero bats it (meow-bounce)
+    var bncY = 0, bsq = 1;
+    if (s.bubBounce > 0 && !reduceMotion) {
+      var bbt = 1 - s.bubBounce / 0.45;
+      var bsv = Math.sin(bbt * Math.PI);
+      bncY = -bsv * 13;
+      bsq = 1 - bsv * 0.1;
+    }
     var dd = d * pulse;
-    ctx.drawImage(Art.bubble(key), wt[0] - dd / 2, wt[1] - dd / 2, dd, dd);
+    ctx.drawImage(Art.bubble(key), wt[0] - dd / 2, wt[1] - dd / 2 + bncY, dd, dd * bsq);
   }
 
   function drawStella(now) {
@@ -1224,13 +1332,19 @@
   function drawNero(now) {
     var s = state;
     var nx = W / 2 + R * 3.4, ny = SHOOT_Y + 34;
-    var img = Art.nero(s.neroEat > 0, s.neroPaw > 0);
+    var happy = s.neroCheer > 0;
+    // mouth-open + paw-up while cheering (or mid-meow); mouth-open while eating
+    var img = Art.nero(s.neroEat > 0 || happy || s.neroMeow > 0, s.neroPaw > 0 || happy);
     var dw = 62, dh = 62 * 70 / 76;
     var bob = Math.sin(now * 2.2 + 2) * 2;
+    if (happy && !reduceMotion) bob += Math.abs(Math.sin(now * 10)) * 7 * Math.min(1, s.neroCheer);
     ctx.drawImage(img, nx - dw / 2, ny - dh + bob, dw, dh);
-    // discard counter / hint: pre-rendered label sprite, no per-frame text
+    // discard counter / hint: pre-rendered label sprite, no per-frame text.
+    // label pulses (scale pop) while the "charged!" cheer is fresh
     var nl = neroLabel(s.nero);
-    ctx.drawImage(nl.c, nx - nl.w / 2, ny + 8, nl.w, 22);
+    var lp = s.neroLabelPulse > 0 ? 1 + 0.3 * s.neroLabelPulse : 1;
+    var lw = nl.w * lp, lh = 22 * lp;
+    ctx.drawImage(nl.c, nx - lw / 2, ny + 8 - (lh - 22) / 2, lw, lh);
     s.neroXY = [nx, ny - 20];
   }
 
@@ -1245,26 +1359,60 @@
     ctx.save();
     ctx.globalCompositeOperation = 'lighter'; // soft additive glow on the path
     ctx.globalAlpha = 0.85 * ain;
-    var dot = Art.aimDot();
+    var dot = Art.aimDot(), glintS = Art.glint(), sparkS = Art.spark();
+    // board scan hoisted out of the march: the board is static while aiming
+    var keys = Object.keys(s.board), nkeys = keys.length;
+    var rr = R * 1.7;
     for (var i = 0; i < 90; i++) {
       x += vx * stepLen; y += vy * stepLen;
       if (x < R) { x = R; vx = -vx; }
       if (x > W - R) { x = W - R; vx = -vx; }
       if (y <= R + BOARD_TOP) break;
       var hitB = false;
-      var keys = Object.keys(s.board);
-      for (var k = 0; k < keys.length; k++) {
+      for (var k = 0; k < nkeys; k++) {
         var p = keys[k].split(','), xy = E.cellXY(+p[0], +p[1], R);
         var dx = x - xy[0], dyy = y - (xy[1] + BOARD_TOP + boardDY());
-        if (dx * dx + dyy * dyy < (R * 1.7) * (R * 1.7)) { hitB = true; break; }
+        if (dx * dx + dyy * dyy < rr * rr) { hitB = true; break; }
       }
       if (hitB) break;
-      var ds = (5 + Math.sin(now * 8 - drawn * 0.55) * 1.4) * (0.35 + 0.65 * ain);
-      ctx.drawImage(dot, x - ds, y - ds, ds * 2, ds * 2);
+      // sparkly magic: gold dots with a traveling twinkle; every 3rd dot is a
+      // star glint, every 9th a brighter spark — glitter marches down the line
+      var tw = 0.5 + 0.5 * Math.sin(now * 10 - drawn * 0.9);
+      var ds = (4.6 + tw * 2.8) * (0.35 + 0.65 * ain);
+      if (drawn % 9 === 8) {
+        var ss = ds * 1.9;
+        ctx.globalAlpha = (0.3 + 0.7 * tw) * ain;
+        ctx.drawImage(sparkS, x - ss, y - ss, ss * 2, ss * 2);
+        ctx.globalAlpha = 0.85 * ain;
+      } else if (drawn % 3 === 2) {
+        var gs2 = ds * 1.5;
+        ctx.globalAlpha = (0.35 + 0.65 * tw) * ain;
+        ctx.drawImage(glintS, x - gs2, y - gs2, gs2 * 2, gs2 * 2);
+        ctx.globalAlpha = 0.85 * ain;
+      } else {
+        ctx.drawImage(dot, x - ds, y - ds, ds * 2, ds * 2);
+      }
       drawn++;
     }
     ctx.restore();
     ctx.globalAlpha = 1;
+    // magic pulse at the wand tip: additive ring tinted in the loaded bubble's
+    // color, breathing with a shimmering glint on top
+    if (!reduceMotion) {
+      var tipKey = s.current ? bubbleKey(s.current) : 'W';
+      var tp = 0.5 + 0.5 * Math.sin(now * 7);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (0.45 + 0.35 * tp) * ain;
+      var tglow = Art.glowRing(tipKey);
+      var gd = R * 3.4 * (1 + tp * 0.22);
+      ctx.drawImage(tglow, o[0] - gd / 2, o[1] - gd / 2, gd, gd);
+      ctx.globalAlpha = (0.4 + 0.6 * tp) * ain;
+      var tg = R * 0.9 * (0.8 + tp * 0.5);
+      ctx.drawImage(glintS, o[0] - tg, o[1] - tg, tg * 2, tg * 2);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
     // landing ring: double ring, pulsing
     var pulse = 1 + Math.sin(now * 6) * 0.14;
     var ring = Art.ring();
@@ -1335,14 +1483,14 @@
     if (curKey !== s._ammoCur) { s._ammoCur = curKey; if (curKey) $('ammo-cur').src = Art.bubbleImg(curKey); }
     if (nextKey !== s._ammoNext) { s._ammoNext = nextKey; if (nextKey) $('ammo-next').src = Art.bubbleImg(nextKey); }
     var L = s.level, goal = '';
-    if (L.type === 'clear') goal = '✨ Pop every bubble';
+    if (L.type === 'clear') goal = '✦ Pop every bubble';
     else if (L.type === 'rescue') {
       var left = 0;
       Object.keys(s.board).forEach(function (k) { if (s.board[k].familiar) left++; });
-      goal = '🦉 Rescue the owls: ' + left + ' left';
+      goal = '◉ Rescue the owls: ' + left + ' left';
     }
-    else if (L.type === 'ghost') goal = s.ghost ? '👻 Guide the spirit up!' : '👻 Spirit freed!';
-    else if (L.type === 'boss') goal = s.wilbur && s.wilbur.hp > 0 ? '🐈‍⬛ Defeat Wilbur!' : '✨ Pop every bubble';
+    else if (L.type === 'ghost') goal = s.ghost ? '✧ Guide the spirit up!' : '✧ Spirit freed!';
+    else if (L.type === 'boss') goal = s.wilbur && s.wilbur.hp > 0 ? '⬢ Defeat Wilbur!' : '✦ Pop every bubble';
     $('hud-goal').textContent = goal;
     // star bar
     if (!s.thresholds) s.thresholds = starThresholds(L, s.board);
@@ -1390,7 +1538,7 @@
     var rainBonus = s.shots * 50;
     s.score += rainBonus;
     if (rainBonus > 0) {
-      banner('✨ <b>Gold Bubble Rain!</b> +' + rainBonus.toLocaleString());
+      banner('✦ <b>Gold Bubble Rain!</b> +' + rainBonus.toLocaleString());
       var n = Math.min(s.shots, 24);
       var golds = ['#ffd34d', '#fff3b0', '#ffb52e', '#ffe14d', '#ffdf80'];
       for (var i = 0; i < n; i++) {
@@ -1427,11 +1575,11 @@
     var st = starsEarned();
     if (!s.daily) saveStars(s.idx, st);
     var isDaily = !!s.daily;
-    var title = isDaily ? '📅 Daily Hex Complete!' : 'Level Complete!';
+    var title = isDaily ? '✦ Daily Hex Complete!' : 'Level Complete!';
     var streakHtml = '';
     if (isDaily) {
       var rec = streakBump();
-      streakHtml = '<div class="win-streak">🔥 ' + rec.streak + '-day streak!' +
+      streakHtml = '<div class="win-streak">✶ ' + rec.streak + '-day streak!' +
         (rec.streak >= 3 ? ' · ×' + Math.min(rec.streak, 5) + ' coin bonus' : '') + '</div>';
     }
     showModal(title,
@@ -1538,9 +1686,9 @@
     }).join('');
     var dc = document.createElement('div');
     dc.className = 'daily-card';
-    dc.innerHTML = '<div class="dc-cal">📅</div><div class="dc-body"><b>Daily Hex</b>' +
+    dc.innerHTML = '<div class="dc-cal">✦</div><div class="dc-body"><b>Daily Hex</b>' +
       '<span id="daily-sub">a fresh board every day…</span></div>' +
-      (rec.streak > 0 ? '<div class="dc-streak">🔥 ' + rec.streak + '</div>' : '') +
+      (rec.streak > 0 ? '<div class="dc-streak">✶ ' + rec.streak + '</div>' : '') +
       '<div class="dc-week">' + stripHtml + '</div>';
     dc.onclick = function () { HexAudio.click(); playDaily(); };
     wind.appendChild(dc);
@@ -1590,7 +1738,7 @@
       wpath.appendChild(gate);
     }
     // nodes
-    var typeIcon = { clear: '✨', rescue: '🦉', ghost: '👻', boss: '🐈‍⬛' };
+    var typeIcon = { clear: '✦', rescue: '◉', ghost: '✧', boss: '⬢' };
     var firstUnplayed = -1;
     LEVELS.forEach(function (L, i) {
       var unlocked = i === 0 || saved[i - 1];
@@ -1602,9 +1750,9 @@
       el.style.left = pos[0] + '%';
       el.style.top = (pos[1] - 40) + 'px';
       el.setAttribute('aria-label', 'Level ' + (i + 1) + ': ' + L.name + (unlocked ? '' : ' (locked)'));
-      el.innerHTML = '<span class="wn-circle">' + (unlocked ? (i + 1) : '🔒') + '</span>' +
+      el.innerHTML = '<span class="wn-circle">' + (unlocked ? (i + 1) : '·') + '</span>' +
         '<span class="wn-stars">' + (played ? '★'.repeat(saved[i]) + '☆'.repeat(3 - saved[i]) : (unlocked ? '☆☆☆' : '')) + '</span>' +
-        '<span class="wn-name">' + (typeIcon[L.type] || '✨') + ' ' + L.name + '</span>';
+        '<span class="wn-name">' + (typeIcon[L.type] || '✦') + ' ' + L.name + '</span>';
       if (unlocked) {
         (function (idx) { el.onclick = function () { HexAudio.click(); showIntro(idx); }; })(i);
       }
@@ -1628,8 +1776,8 @@
         // today's best
         arcadeFetch('/scores?game=bubble-hex&board=daily-' + d.date, null, function (e2, d2) {
           if (best && d2 && d2.top && d2.top.length) {
-            best.innerHTML = '🏆 ' + arcadeEsc(d2.top[0].name) + ' ' + (+d2.top[0].score).toLocaleString();
-          } else if (best) best.innerHTML = '🏆 no scores yet';
+            best.innerHTML = '★ ' + arcadeEsc(d2.top[0].name) + ' ' + (+d2.top[0].score).toLocaleString();
+          } else if (best) best.innerHTML = '★ no scores yet';
         });
       } else {
         // offline fallback: deterministic local seed from date
@@ -1650,22 +1798,22 @@
 
   /* ================= Intro card ================= */
   var GOAL_COPY = {
-    clear: ['✨', 'Pop every last bubble to clear the board.'],
-    rescue: ['🦉', 'Free the trapped owls — pop or drop their bubbles.'],
-    ghost: ['👻', 'Clear a path so the spirit can float to the top.'],
-    boss: ['🐈‍⬛', 'Pelt Wilbur with pops, then clear every bubble.']
+    clear: ['✦', 'Pop every last bubble to clear the board.'],
+    rescue: ['◉', 'Free the trapped owls — pop or drop their bubbles.'],
+    ghost: ['✧', 'Clear a path so the spirit can float to the top.'],
+    boss: ['⬢', 'Pelt Wilbur with pops, then clear every bubble.']
   };
   function showIntro(idx, dailyL) {
     var L = dailyL || LEVELS[idx];
     var saved = getStars();
     var best = idx >= 0 && saved[idx] ? '★'.repeat(saved[idx]) + '☆'.repeat(3 - saved[idx]) : '';
     var g = GOAL_COPY[L.type] || GOAL_COPY.clear;
-    showModal((idx >= 0 ? 'Level ' + (idx + 1) : '📅 Daily Hex'),
+    showModal((idx >= 0 ? 'Level ' + (idx + 1) : '✦ Daily Hex'),
       '<div class="intro-name">' + g[0] + ' ' + L.name + '</div>' +
       '<div class="intro-goal">' + g[1] + '</div>' +
       '<div class="intro-meta">' + L.shots + ' shots · ' + best + '</div>' +
       '<div class="intro-tip">' + introTip(L) + '</div>',
-      [{ t: 'Play! 🪄', fn: function () { hideModal(); loadLevel(idx, dailyL || null); } },
+      [{ t: 'Play! ✦', fn: function () { hideModal(); loadLevel(idx, dailyL || null); } },
        { t: 'Map', fn: function () { hideModal(); showScreen('map'); renderMap(); } }]);
     view = 'intro';
   }
@@ -1713,9 +1861,9 @@
       return '<div class="set-row"><span>' + icon + ' ' + label + '</span>' +
         '<button class="set-tog" data-set="' + key + '" aria-pressed="' + on + '">' + (on ? 'ON' : 'OFF') + '</button></div>';
     }
-    return row('🔊', 'Sound FX', 'sfx', HexAudio.sfx()) +
-           row('🎵', 'Music', 'music', HexAudio.music()) +
-           row('📳', 'Haptics', 'hap', hapOn);
+    return row('♪', 'Sound FX', 'sfx', HexAudio.sfx()) +
+           row('♫', 'Music', 'music', HexAudio.music()) +
+           row('≋', 'Haptics', 'hap', hapOn);
   }
   function wireSettings(card) {
     var btns = card.querySelectorAll('.set-tog');
@@ -1781,7 +1929,7 @@
   ];
   function wilburTaunt(levelIdx, hpBucket) {
     var slot = (levelIdx * 3 + hpBucket) % WILBUR_TAUNTS.length;
-    function show(t) { banner('🐈‍⬛ <i>' + (t || WILBUR_TAUNTS[slot]) + '</i>'); }
+    function show(t) { banner('⬢ <i>' + (t || WILBUR_TAUNTS[slot]) + '</i>'); }
     aiFetch('taunt', { level: levelIdx, hp: hpBucket }, show);
     setTimeout(function () { if (!$('banner').classList.contains('hidden')) return; show(null); }, 2500);
   }
@@ -1804,7 +1952,7 @@
   }
   function arcadeBoardHtml(top, hl) {
     if (!top || !top.length) return '<div class="arc-lb-empty">No scores yet — be the first!</div>';
-    var medals = ['🥇', '🥈', '🥉'];
+    var medals = ['#1', '#2', '#3'];
     return top.slice(0, 3).map(function (e, i) {
       return '<div class="arc-lb-row' + (e.name === hl ? ' me' : '') + '"><span>' +
         (medals[i] || (i + 1) + '.') + ' ' + arcadeEsc(e.name) + '</span><b>' +
@@ -1827,13 +1975,13 @@
   function arcadeLevelComplete(game, board, levelN, score, isDaily) {
     var box = $('arc-lb');
     if (!box || !(score > 0)) return;
-    box.innerHTML = '<div class="arc-lb-empty">🏆 loading scores…</div>';
+    box.innerHTML = '<div class="arc-lb-empty">★ loading scores…</div>';
     arcadeEnsureName(box, function (name) {
-      box.innerHTML = '<div class="arc-lb-empty">🏆 sending…</div>';
+      box.innerHTML = '<div class="arc-lb-empty">★ sending…</div>';
       arcadeFetch('/score', { game: game, board: board, name: name, score: score }, function (err, res) {
         function done(top, rank) {
           var r = rank > 0 ? '<div class="arc-lb-rank">GLOBAL #' + rank + '!</div>' : '';
-          var title = isDaily ? '📅 TODAY’S BEST' : '🏆 LEVEL ' + levelN + ' BEST';
+          var title = isDaily ? '✦ TODAY’S BEST' : '★ LEVEL ' + levelN + ' BEST';
           box.innerHTML = r + '<div class="arc-lb-title">' + title + '</div>' + arcadeBoardHtml(top, name);
         }
         if (res && res.top) done(res.top, res.rank);
