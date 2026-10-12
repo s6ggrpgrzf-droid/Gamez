@@ -193,3 +193,43 @@ body{margin:0;color:#fff;font-family:ui-rounded,"SF Pro Rounded",system-ui,-appl
 .win-stars .wstar{color:rgba(255,255,255,.16)}
 .win-stars .wstar.lit{color:#ffd34d;display:inline-block;animation:streakPop .45s cubic-bezier(.2,1.6,.4,1)}
 #modal-card .mbtn.primary.ready{animation:playGlow 1.6s infinite alternate}
+
+/* ================= identity rebuild: moonlit chrome ================= */
+.hud-pill{background:rgba(22,12,44,.6);border-color:rgba(196,77,255,.38);box-shadow:0 0 14px rgba(123,47,247,.28),inset 0 1px 0 rgba(255,255,255,.09)}
+.icon-btn{background:rgba(30,16,60,.62);border-color:rgba(196,77,255,.42);box-shadow:0 0 12px rgba(123,47,247,.25),inset 0 1px 0 rgba(255,255,255,.1)}
+#hud-ammo{box-shadow:0 0 12px rgba(196,77,255,.25)}
+#star-track{box-shadow:0 0 14px rgba(255,211,77,.2),inset 0 1px 3px rgba(0,0,0,.45)}
+#star-fill{box-shadow:0 0 10px rgba(255,211,77,.7)}
+#orb-btn{box-shadow:0 6px 24px rgba(0,0,0,.5),0 0 24px rgba(196,77,255,.55),inset 0 2px 10px rgba(255,255,255,.12)}
+#orb-btn.full{box-shadow:0 0 30px rgba(255,211,77,.8)}
+#banner{text-shadow:0 2px 10px rgba(0,0,0,.7);box-shadow:0 8px 40px rgba(196,77,255,.45),0 0 70px rgba(150,80,255,.22)}
+#modal-card{background:linear-gradient(160deg,#341a63 0%,#1d0e38 55%,#120826 100%);border-color:rgba(196,77,255,.65);box-shadow:0 12px 60px rgba(0,0,0,.65),0 0 50px rgba(150,60,255,.22),inset 0 1px 0 rgba(255,255,255,.1)}
+.mbtn{box-shadow:0 4px 18px rgba(123,47,247,.45),inset 0 1px 0 rgba(255,255,255,.25)}
+.wn-circle{box-shadow:0 4px 18px rgba(123,47,247,.55),0 0 18px rgba(196,77,255,.35),inset 0 2px 8px rgba(255,255,255,.35)}
+.wind-gate{box-shadow:0 4px 20px rgba(255,180,46,.25),0 0 20px rgba(255,211,77,.2)}
+.daily-card{box-shadow:0 4px 24px rgba(255,180,46,.14),0 0 26px rgba(196,77,255,.14)}
+.dc-day.hit{box-shadow:0 0 10px rgba(255,211,77,.6)}
+/* title moon: deeper halo + slow breathing glow */
+.title-moon{box-shadow:0 0 70px 24px rgba(255,244,214,.22),0 0 160px 80px rgba(255,244,214,.08);animation:moonHalo 6s ease-in-out infinite}
+@keyframes moonHalo{0%,100%{filter:brightness(1)}50%{filter:brightness(1.09)}}
+/* text glyphs replace pictographic emoji (selectors/ids untouched) */
+#title-play{font-size:0}
+#title-play::after{content:"✦ Play";font-size:23px;font-weight:800}
+#title-gear{font-size:0}
+#title-gear::after{content:"⚙";font-size:20px}
+.title-meta{font-size:0}
+.title-meta::before{content:"★ ";font-size:15px;color:#ffd34d}
+.title-meta #title-stars,.title-meta #title-streak{font-size:15px}
+.title-meta #title-streak::before{content:"· ✦ ";font-size:15px;color:#ff9d5f}
+.title-meta #title-streak::after{content:" day streak";font-size:15px;color:#ffffffbb}
+.map-foot{font-size:0}
+.map-foot::after{content:"a Gamez joint ✦";font-size:13px;color:#ffffff55}
+#shots-warn{font-size:0}
+#shots-warn::after{content:"!";font-size:18px;font-weight:900;color:#ffb52e;text-shadow:0 2px 4px #000}
+#coach .hand{font-size:0}
+#coach .hand::after{content:"▾";font-size:26px;color:#ffd34d;text-shadow:0 2px 8px rgba(255,211,77,.6)}
+.dc-cal{font-size:0}
+.dc-cal::after{content:"✦";font-size:30px;color:#ffd34d;text-shadow:0 0 12px rgba(255,211,77,.7)}
+/* locked map nodes: the lock emoji is the whole circle content, so hide it —
+   the dimmed empty circle + "(locked)" aria-label carry the meaning */
+.wind-node.locked .wn-circle{font-size:0;min-height:60px}
