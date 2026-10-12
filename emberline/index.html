@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Emberline</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <!-- the world, seen through the cab window -->
+  <div id="window-wrap">
+    <canvas id="scene"></canvas>
+    <div id="window-frame" aria-hidden="true"></div>
+    <div id="win-hud">
+      <div id="win-station">Ember Hollow</div>
+      <div id="win-speed"><span id="speed-num">0</span><span class="unit">mph</span></div>
+    </div>
+  </div>
+
+  <!-- the cab: brass, wood, and everything within reach -->
+  <div id="cab">
+    <div id="cab-top">
+      <!-- the big lever: push up for steam, pull down for brake -->
+      <div id="lever-wrap">
+        <div id="lever-scale"><span>+</span><span>·</span><span>−</span></div>
+        <div id="lever-track" role="slider" aria-label="Throttle and brake" aria-valuemin="-1" aria-valuemax="1" tabindex="0">
+          <div id="lever-handle"></div>
+        </div>
+        <div class="cab-label">REGULATOR</div>
+      </div>
+      <!-- tending verbs -->
+      <div id="tend">
+        <button id="b-coal" class="tend-btn"><i class="dot"></i>Coal</button>
+        <button id="b-water" class="tend-btn"><i class="dot"></i>Water</button>
+        <button id="b-lamp" class="tend-btn"><i class="dot"></i>Lamp</button>
+        <button id="b-whistle" class="tend-btn"><i class="dot"></i>Whistle</button>
+      </div>
+      <!-- gauges -->
+      <div id="gauges">
+        <div class="gauge"><div class="g-label">COAL</div><div class="g-bar"><i id="g-coal"></i></div></div>
+        <div class="gauge"><div class="g-label">WATER</div><div class="g-bar"><i id="g-water"></i></div></div>
+        <div class="gauge"><div class="g-label">LAMP</div><div class="g-bar"><i id="g-lamp"></i></div></div>
+      </div>
+    </div>
+    <!-- timetable -->
+    <div id="timetable" aria-label="Timetable"></div>
+    <!-- passenger tickets -->
+    <div id="tickets" aria-label="Passengers aboard"></div>
+    <!-- conductor's log line -->
+    <div id="cablog" aria-live="polite"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- run summary -->
+<div id="summary" class="hidden">
+  <div class="sum-card">
+    <div class="sum-kicker">END OF THE LINE</div>
+    <div class="sum-score"><span id="sum-num">0</span></div>
+    <div class="sum-sub" id="sum-sub">smooth running</div>
+    <div class="sum-log" id="sum-log"></div>
+    <button id="b-again">Run it again</button>
+    <button id="b-hub">Arcade</button>
+  </div>
+</div>
+
+<div id="title">
+  <div class="t-inner">
+    <div class="t-kicker">Workman Designs presents</div>
+    <div class="t-name">Emberline</div>
+    <div class="t-sub">a conductor&rsquo;s tale</div>
+    <button id="begin">Take the regulator</button>
+    <div class="t-hint">one thumb &middot; keep the timetable &middot; tend the engine</div>
+  </div>
+</div>
+
+<script src="sim.js?v=1"></script>
+<script src="art.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
