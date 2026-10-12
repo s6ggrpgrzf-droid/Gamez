@@ -512,6 +512,29 @@ async function shipStory(env, ctx, body, game, ip) {
 
 /* trainpassenger: one generation per date, cached in KV, served to every
    conductor. Structured {passengers:[{name,story}]}. */
+var TRAINPASSENGER_SCHEMA = {
+  type: "json_schema",
+  json_schema: {
+    name: "TrainPassengers",
+    schema: {
+      type: "object",
+      properties: {
+        passengers: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              story: { type: "string" }
+            },
+            required: ["name", "story"]
+          }
+        }
+      },
+      required: ["passengers"]
+    }
+  }
+};
 async function trainPassenger(env, ctx, body, ip) {
   if (!(await checkRate(env, ip, "trainpassenger", 10))) return json({ error: "slow down" }, 429);
   var date = String((body.ctx && body.ctx.date) || "").replace(/[^0-9-]/g, "").slice(0, 10) || "daily";
@@ -525,7 +548,7 @@ async function trainPassenger(env, ctx, body, ip) {
       { role: "user", content: "Invent 12 cozy train passengers for today's valley line. " +
         "Each: a full name (varied, storybook) and one sentence (max 18 words) about why they're traveling — warm, specific, charming. " +
         "Output ONLY this JSON, nothing else: {\"passengers\":[{\"name\":\"...\",\"story\":\"...\"}, ... 12 total]}." }
-    ], 400, 0.9, TEXT_SCHEMA);
+    ], 600, 0.9, TRAINPASSENGER_SCHEMA);
   } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 120) }, 502); }
   var d = extractJson(aiTxt || ""), list = [];
   if (d && Array.isArray(d.passengers)) {
