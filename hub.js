@@ -145,7 +145,6 @@
     { id: 'emberline', name: 'Emberline', cls: 'art-emberline' },
     { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
     { id: 'poolball', name: 'Poolball', cls: 'art-poolball' },
-    { id: 'fairway-rivals', name: 'Fairway Rivals', cls: 'art-fairway-rivals' },
     { id: 'night-market', name: 'Night Market', cls: 'art-night-market' }
   ];
   function progressFor(id) {
@@ -265,14 +264,6 @@
         var dmh = readJSON('dmh_progress_v1');
         if (!dmh) return null;
         return { label: '🃏 Best ' + (dmh.best || 0) + ' · ' + (dmh.rooms || 0) + '/5 rooms', frac: Math.min(1, (dmh.rooms || 0) / 5) };
-      }
-      if (id === 'fairway-rivals') {
-        var frv = readJSON('fairway-rivals-save');
-        if (!frv) return null;
-        var ft = +frv.trophies || 0, rc = frv.record || {};
-        var gw = (+rc.w || 0) + (+rc.l || 0) + (+rc.d || 0);
-        if (!gw && !ft) return null;
-        return { label: '★ ' + ft + ' trophies · ' + (rc.w || 0) + 'W-' + (rc.l || 0) + 'L', frac: Math.min(1, ft / 2000) };
       }
     } catch (e) { return null; }
     return null;
