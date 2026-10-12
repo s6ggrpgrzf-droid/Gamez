@@ -1,0 +1,452 @@
+/* "you're the sparrow, low over golden fields, riding the evening wind home
+ *  with the flock ahead of you."
+ * (fantasy sentence, written before layout. It drives every choice below:
+ *  the world fills the screen — no poster title, no button stack, no HUD bar.
+ *  The title screen is already flying; the HUD is a whisper; one thumb flies.)
+ */
+(function () {
+'use strict';
+
+/* ---------------- utils ---------------- */
+function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+function lerpAngle(a, b, t) {
+  var d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
+}
+function $(id) { return document.getElementById(id); }
+
+var RM = { on: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) };
+
+/* ---------------- input: logical actions, never raw keys ---------------- */
+var Input = {
+  keys: {},
+  touchSteerX: 0, touchSteerY: 0, touchFlap: 0, tapPulse: 0,
+  steerX: 0, steerY: 0, flap: 0, brake: 0,
+  pid: -1, sx: 0, sy: 0, moved: false, downAt: 0,
+};
+function resetTouch() {
+  Input.pid = -1; Input.touchSteerX = 0; Input.touchSteerY = 0;
+  Input.touchFlap = 0; Input.moved = false;
+}
+function initInput(canvas) {
+  var GAME_KEYS = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight'];
+  window.addEventListener('keydown', function (e) {
+    if (GAME_KEYS.indexOf(e.code) >= 0) e.preventDefault();
+    Input.keys[e.code] = true;
+    if (e.code === 'KeyP') togglePauseKey();
+    if (e.code === 'Enter' && sceneName === 'title') startFlyFresh();
+  });
+  window.addEventListener('keyup', function (e) { Input.keys[e.code] = false; });
+  window.addEventListener('blur', function () { Input.keys = {}; resetTouch(); });
+  document.addEventListener('visibilitychange', function () {
+    Input.keys = {}; resetTouch();
+    if (document.hidden && sceneName === 'fly') show('pause');
+  });
+
+  canvas.style.touchAction = 'none';
+  canvas.addEventListener('pointerdown', function (e) {
+    if (Input.pid !== -1) return;
+    Input.pid = e.pointerId; Input.sx = e.clientX; Input.sy = e.clientY;
+    Input.moved = false; Input.downAt = performance.now();
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (e.pointerId !== Input.pid) return;
+    var dx = e.clientX - Input.sx, dy = e.clientY - Input.sy;
+    if (Math.hypot(dx, dy) > 14) {
+      Input.moved = true;
+      Input.touchSteerX = clamp(dx / 90, -1, 1);
+      Input.touchSteerY = clamp(-dy / 90, -1, 1); // drag up = climb
+    }
+  });
+  function release(e) {
+    if (e.pointerId !== Input.pid) return;
+    var dur = performance.now() - Input.downAt;
+    if (!Input.moved && dur < 260) Input.tapPulse = Math.max(Input.tapPulse, 0.3); // tap = one flap
+    resetTouch();
+  }
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release); // pointercancel = release, always
+}
+function pollInput(dt) {
+  if (Input.tapPulse > 0) Input.tapPulse -= dt;
+  // hold-without-moving >160ms = keep flapping
+  Input.touchFlap = (Input.pid !== -1 && !Input.moved && (performance.now() - Input.downAt) > 160) ? 1 : 0;
+  var kx = ((Input.keys.ArrowRight || Input.keys.KeyD) ? 1 : 0) - ((Input.keys.ArrowLeft || Input.keys.KeyA) ? 1 : 0);
+  var ky = ((Input.keys.ArrowUp || Input.keys.KeyW) ? 1 : 0) - ((Input.keys.ArrowDown || Input.keys.KeyS) ? 1 : 0);
+  var scrX = clamp(kx + Input.touchSteerX, -1, 1);
+  var scrY = clamp(ky + Input.touchSteerY, -1, 1);
+  // screen-right is world -x; sim steerX+ turns toward +x (screen left) -> negate
+  Input.steerX = -scrX;
+  Input.steerY = scrY; // drag up / ArrowUp = climb
+  Input.flap = ((Input.keys.Space ? 1 : 0) || Input.touchFlap || (Input.tapPulse > 0 ? 1 : 0));
+  Input.brake = (Input.keys.ShiftLeft || Input.keys.ShiftRight) ? 1 : 0;
+}
+
+/* ---------------- three.js setup ---------------- */
+var canvas = $('view'), renderer = null, scene = null, camera = null;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (e) { renderer = null; }
+if (!renderer) {
+  $('nogl').classList.remove('hidden');
+  return;
+}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // perf: cap DPR at 2
+renderer.outputEncoding = THREE.sRGBEncoding;
+scene = new THREE.Scene();
+camera = new THREE.PerspectiveCamera(62, 1, 0.5, 7000);
+camera.position.set(0, 70, -80);
+
+function resize() {
+  var w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------------- world, effects ---------------- */
+var world = WORLD.build(scene, THREE, 20261012);
+EFFECTS.init(scene, THREE);
+EFFECTS.setReduced(RM.on);
+world.nextWp = 0;
+
+var env = {
+  windX: 1.4, windZ: 0.6, // gentle evening breeze down the valley
+  thermals: world.thermals,
+  groundH: world.groundH,
+};
+
+/* ---------------- the sparrow ---------------- */
+function buildSparrow() {
+  var g = new THREE.Group();
+  var brown = new THREE.MeshLambertMaterial({ color: 0x8a6844 });
+  var darkB = new THREE.MeshLambertMaterial({ color: 0x4a3826 });
+  var cream = new THREE.MeshLambertMaterial({ color: 0xe9dab9 });
+  var body = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 10), brown);
+  body.scale.set(0.78, 0.72, 1.3); g.add(body);
+  var belly = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 8), cream);
+  belly.scale.set(0.72, 0.6, 1.15); belly.position.set(0, -0.11, 0.06); g.add(belly);
+  var head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 12, 10), brown);
+  head.position.set(0, 0.17, 0.40); g.add(head);
+  var cap = new THREE.Mesh(new THREE.SphereGeometry(0.155, 10, 8), new THREE.MeshLambertMaterial({ color: 0x3a2c22 }));
+  cap.scale.set(1, 0.62, 1); cap.position.set(0, 0.30, 0.37); g.add(cap);
+  [-1, 1].forEach(function (s) {
+    var cheek = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), cream);
+    cheek.position.set(s * 0.13, 0.15, 0.44); g.add(cheek);
+    var eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0x14100c }));
+    eye.position.set(s * 0.095, 0.225, 0.52); g.add(eye);
+  });
+  var beak = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.17, 8), new THREE.MeshLambertMaterial({ color: 0xd89a4a }));
+  beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.13, 0.62); g.add(beak);
+  var tail = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.045, 0.46), darkB);
+  tail.position.set(0, 0.05, -0.55); tail.rotation.x = -0.28; g.add(tail);
+  function wing(side) {
+    var pivot = new THREE.Group();
+    pivot.position.set(side * 0.16, 0.10, 0.06);
+    var inner = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 0.36), brown);
+    inner.position.x = side * 0.33; pivot.add(inner);
+    var tip = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.24), darkB);
+    tip.position.x = side * 0.80; tip.rotation.y = side * -0.18; pivot.add(tip);
+    g.add(pivot);
+    return pivot;
+  }
+  var wl = wing(1), wr = wing(-1);
+  g.scale.setScalar(1.35); // readable at phone distance
+  g.rotation.order = 'YXZ';
+  return { group: g, wl: wl, wr: wr };
+}
+var bird = buildSparrow();
+scene.add(bird.group);
+
+function poseBird(ist, time) {
+  bird.group.position.set(ist.px, ist.py, ist.pz);
+  bird.group.rotation.y = ist.heading;
+  bird.group.rotation.x = -ist.pitch;
+  bird.group.rotation.z = ist.bank;
+  var ang;
+  if (ist.flapping) ang = Math.sin(ist.flapPhase) * 0.95;          // wing-blur flap
+  else if (ist.braking) ang = 1.15;                                 // tucked
+  else ang = 0.16 + Math.sin(time * 1.8) * 0.06;                    // glide dihedral
+  bird.wl.rotation.z = ang; bird.wr.rotation.z = -ang;
+  bird.group.position.y += ist.flapping ? Math.sin(ist.flapPhase) * 0.05 : 0;
+}
+
+/* ---------------- sim state + fixed-step loop ---------------- */
+var STEP = 1 / 60;
+var S = FLIGHT.newBird(0, 64, -60, 0);   // live state (mutated in place)
+var P = { px: 0, py: 0, pz: 0, heading: 0, pitch: 0, bank: 0 }; // prev, for interpolation
+var R = { px: 0, py: 0, pz: 0, heading: 0, pitch: 0, bank: 0 };   // render state
+var simIn = { flap: 0, steerX: 0, steerY: 0, brake: 0 };
+var acc = 0, simTime = 0, timeSec = 0;
+var nextWp = 0, wasFlapping = false, streakT = 0, moteT = 0, bellRung = false;
+var flyStart = 0, hudT = 0, lastWpText = '', lastEnergy = -1;
+
+function resetFlight() {
+  var b = FLIGHT.newBird(0, 64, -60, 0);
+  for (var k in b) S[k] = b[k];
+  P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = S.heading; P.pitch = 0; P.bank = 0;
+  nextWp = 0; world.nextWp = 0; acc = 0; wasFlapping = false; bellRung = false;
+  flyStart = timeSec; lastWpText = ''; lastEnergy = -1;
+  camera.position.set(S.px, S.py + 4, S.pz - 12);
+}
+
+function nearestThermal(x, z) {
+  var best = null, bd = 1e18;
+  for (var i = 0; i < world.thermals.length; i++) {
+    var t = world.thermals[i];
+    var d = (x - t.x) * (x - t.x) + (z - t.z) * (z - t.z);
+    if (d < bd) { bd = d; best = t; }
+  }
+  return best;
+}
+
+function stepSim(dt) {
+  P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = S.heading; P.pitch = S.pitch; P.bank = S.bank;
+  simIn.flap = Input.flap; simIn.steerX = Input.steerX; simIn.steerY = Input.steerY; simIn.brake = Input.brake;
+  FLIGHT.stepBird(S, simIn, dt, env);
+  simTime += dt;
+
+  if (S.flapping && !wasFlapping) {
+    var fx = Math.sin(S.heading), fz = Math.cos(S.heading);
+    EFFECTS.puff(S.px, S.py, S.pz, fx, fz);
+    AUD.whoosh();
+  }
+  wasFlapping = !!S.flapping;
+
+  if (S.speed > 16 && !RM.on) { // dive -> wind streaks
+    streakT -= dt;
+    if (streakT <= 0) {
+      streakT = 0.09;
+      var cf = Math.sin(S.heading), sf = Math.cos(S.heading);
+      EFFECTS.streaks(camera.position.x, camera.position.y, camera.position.z, cf, 0, sf, S.speed);
+    }
+  }
+  if (S.inThermal) { // soar -> golden motes
+    moteT -= dt;
+    if (moteT <= 0) {
+      moteT = 0.12;
+      var th = nearestThermal(S.px, S.pz);
+      if (th) EFFECTS.thermalMotes(th.x, th.z, th.r, th.top, S.py);
+    }
+  }
+  if (EFFECTS.featherDue()) EFFECTS.shedFeather(S.px, S.py - 0.5, S.pz, env.windX, env.windZ);
+
+  if (sceneName === 'fly') {
+    // waypoint arrival
+    if (nextWp < world.waypoints.length) {
+      var wp = world.waypoints[nextWp];
+      var dx = S.px - wp.x, dz = S.pz - wp.z;
+      if (dx * dx + dz * dz < 45 * 45) {
+        EFFECTS.waypointBurst(wp.x, wp.y, wp.z, world.wpRings[nextWp].quaternion);
+        AUD.chime();
+        nextWp++; world.nextWp = nextWp;
+        if (nextWp >= world.waypoints.length) { show('complete'); return; }
+      }
+    }
+    // riverside village -> distant church bells (once per pass)
+    var vx = S.px - world.village.x, vz = S.pz - world.village.z;
+    var vd2 = vx * vx + vz * vz;
+    if (!bellRung && vd2 < world.village.r * world.village.r) { AUD.bells(); bellRung = true; }
+    else if (bellRung && vd2 > world.village.r * world.village.r * 2.25) bellRung = false;
+  }
+}
+
+function autoInput(t) { // title-screen autopilot: lazy evening circling
+  return {
+    flap: (S.speed < 9.5 && S.energy > 0.25) ? 1 : 0,
+    steerX: -0.38 * Math.sin(t * 0.22),
+    steerY: 0.10 * Math.sin(t * 0.4),
+    brake: 0,
+  };
+}
+
+/* ---------------- camera rig ---------------- */
+function updateCamera(dt, ist) {
+  var fx = Math.sin(ist.heading), fz = Math.cos(ist.heading);
+  var kp = 1 - Math.exp(-5 * dt);
+  camera.position.x += ((ist.px - fx * 10.5) - camera.position.x) * kp;
+  camera.position.y += ((ist.py + 3.6) - camera.position.y) * kp;
+  camera.position.z += ((ist.pz - fz * 10.5) - camera.position.z) * kp;
+  camera.lookAt(ist.px + fx * 14, ist.py + Math.sin(ist.pitch) * 10 + 0.8, ist.pz + fz * 14);
+  camera.rotation.z += ist.bank * 0.28; // roll with the bird
+  var target = 62, kick = 0;
+  if (!RM.on && (ist.speed > 16 || S.vy < -6)) kick = Math.min(1, (ist.speed - 16) / 10) * 12;
+  target += kick;
+  if (Math.abs(camera.fov - target) > 0.05) {
+    camera.fov += (target - camera.fov) * Math.min(1, 3 * dt);
+    camera.updateProjectionMatrix();
+  }
+}
+
+/* ---------------- HUD (DOM; updated on change only — never per-frame fillText) ---------------- */
+function updateHUD() {
+  hudT -= 1 / 60;
+  if (hudT > 0) return;
+  hudT = 0.25;
+  var txt;
+  if (nextWp < world.waypoints.length) {
+    var wp = world.waypoints[nextWp];
+    var d = Math.round(Math.hypot(S.px - wp.x, S.pz - wp.z));
+    txt = 'waypoint ' + (nextWp + 1) + ' of ' + world.waypoints.length + ' · ' + d + ' m';
+  } else txt = 'the flock settles…';
+  if (txt !== lastWpText) { $('wp').textContent = txt; lastWpText = txt; }
+  var e = Math.round(S.energy * 50);
+  if (e !== lastEnergy) { $('energyfill').style.width = (e * 2) + '%'; lastEnergy = e; }
+}
+
+/* ---------------- scenes: title / fly / pause / complete ---------------- */
+var sceneName = 'none';
+var Scenes = {
+  title: {
+    enter: function () {
+      resetFlight();
+      $('title-ui').classList.remove('hidden');
+      $('hud').classList.add('hidden');
+      $('pause-ui').classList.add('hidden');
+      $('done-ui').classList.add('hidden');
+    },
+    exit: function () { $('title-ui').classList.add('hidden'); },
+    update: function (dt) {
+      var ai = autoInput(timeSec);
+      simIn.flap = ai.flap; simIn.steerX = ai.steerX; simIn.steerY = ai.steerY; simIn.brake = 0;
+      // reuse stepSim's machinery but keep title self-contained
+      P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = S.heading; P.pitch = S.pitch; P.bank = S.bank;
+      FLIGHT.stepBird(S, simIn, STEP, env);
+      simTime += dt;
+      if (EFFECTS.featherDue()) EFFECTS.shedFeather(S.px, S.py - 0.5, S.pz, env.windX, env.windZ);
+      world.nextWp = -1; // no glowing ring on the title screen
+    },
+  },
+  fly: {
+    enter: function () {
+      // NOTE: enter does NOT reset — resume comes back to the same sky.
+      // Fresh starts go through startFlyFresh() below.
+      $('hud').classList.remove('hidden');
+      $('pause-ui').classList.add('hidden');
+      $('done-ui').classList.add('hidden');
+    },
+    exit: function () {},
+    update: function (dt) { updateHUD(); },
+  },
+  pause: {
+    enter: function () { $('pause-ui').classList.remove('hidden'); },
+    exit: function () { $('pause-ui').classList.add('hidden'); acc = 0; },
+    update: function () {},
+  },
+  complete: {
+    enter: function () {
+      $('hud').classList.add('hidden');
+      $('done-ui').classList.remove('hidden');
+      var mins = Math.floor((timeSec - flyStart) / 60), secs = Math.floor((timeSec - flyStart) % 60);
+      $('done-stats').textContent =
+        Math.round(S.dist) + ' m flown · ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+    },
+    exit: function () { $('done-ui').classList.add('hidden'); $('hud').classList.add('hidden'); },
+    update: function () {},
+  },
+};
+function show(name) {
+  if (Scenes[sceneName] && Scenes[sceneName].exit) Scenes[sceneName].exit();
+  sceneName = name;
+  Scenes[name].enter();
+}
+// fresh start: new bird at the head of the valley (title, restart, fly-again)
+function startFlyFresh() {
+  AUD.init(); AUD.resume();
+  resetFlight();
+  show('fly');
+}
+function togglePauseKey() {
+  if (sceneName === 'fly') show('pause');
+  else if (sceneName === 'pause') show('fly');
+}
+
+/* ---------------- main loop: fixed-step sim + render interpolation ---------------- */
+var last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  var dtRaw = (now - last) / 1000; last = now;
+  var dt = Math.min(dtRaw, 0.1); // clamp: tab-switch never spirals
+  timeSec += dt;
+  pollInput(dt);
+
+  if (sceneName === 'fly') {
+    acc += dt;
+    var n = 0;
+    while (acc >= STEP && n < 5) { stepSim(STEP); acc -= STEP; n++; }
+    if (n === 5) acc = 0;
+    Scenes.fly.update(dt);
+  } else if (sceneName === 'title') {
+    Scenes.title.update(dt);
+    acc = 0;
+  }
+
+  // render interpolation between prev and current sim state
+  var a = sceneName === 'fly' ? clamp(acc / STEP, 0, 1) : 1;
+  R.px = P.px + (S.px - P.px) * a;
+  R.py = P.py + (S.py - P.py) * a;
+  R.pz = P.pz + (S.pz - P.pz) * a;
+  R.heading = lerpAngle(P.heading, S.heading, a);
+  R.pitch = P.pitch + (S.pitch - P.pitch) * a;
+  R.bank = P.bank + (S.bank - P.bank) * a;
+  R.speed = S.speed;
+
+  poseBird(R, timeSec);
+  updateCamera(dt, R);
+  WORLD.update(world, THREE, dt, timeSec, routeProgressT());
+  EFFECTS.update(dt, timeSec);
+  AUD.update({ speed: S.speed, inThermal: !!S.inThermal });
+  renderer.render(scene, camera);
+}
+
+function routeProgressT() {
+  // approx: fraction of waypoints reached
+  return clamp(nextWp / world.waypoints.length, 0, 1);
+}
+
+/* ---------------- UI wiring ---------------- */
+$('take-wing').addEventListener('click', startFlyFresh);
+$('pause-btn').addEventListener('click', function () { if (sceneName === 'fly') show('pause'); });
+$('resume-btn').addEventListener('click', function () { AUD.resume(); show('fly'); });
+$('restart-btn').addEventListener('click', startFlyFresh);
+$('again-btn').addEventListener('click', startFlyFresh);
+$('rm-toggle').addEventListener('change', function (e) {
+  RM.on = e.target.checked;
+  EFFECTS.setReduced(RM.on);
+});
+$('mute-toggle').addEventListener('change', function (e) { AUD.setMuted(e.target.checked); });
+if (RM.on) $('rm-toggle').checked = true;
+
+initInput(canvas);
+show('title');
+requestAnimationFrame(frame);
+
+/* test hooks (per playbook: inspect state, not pixels) */
+window.__bf = {
+  get scene() { return sceneName; },
+  get state() { return S; },
+  altitude: function () { return S.py; },
+  waypoint: function () { return nextWp; },
+  debugFlap: function (sec) { Input.tapPulse = Math.max(Input.tapPulse, sec || 2); },
+  steer: function (x, y) { Input.touchSteerX = x; Input.touchSteerY = y; },
+  // test only: drop the bird 100m short of waypoint i, aimed at it
+  warp: function (i) {
+    i = Math.max(0, Math.min(world.waypoints.length - 1, i));
+    var wp = world.waypoints[i], pv = world.waypoints[Math.max(0, i - 1)];
+    var dx = wp.x - pv.x, dz = wp.z - pv.z, dl = Math.hypot(dx, dz) || 1;
+    S.px = wp.x - dx / dl * 100; S.py = wp.y + 4; S.pz = wp.z - dz / dl * 100;
+    S.heading = Math.atan2(dx / dl, dz / dl);
+    S.vx = Math.sin(S.heading) * 11; S.vz = Math.cos(S.heading) * 11; S.vy = 0;
+    P.px = S.px; P.py = S.py; P.pz = S.pz; P.heading = S.heading;
+    nextWp = i; world.nextWp = i;
+    camera.position.set(S.px, S.py + 4, S.pz - 12);
+    return 'warped to wp' + i;
+  },
+};
+
+})();

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Sparrow — a migration prototype</title>
+<link rel="stylesheet" href="style.css?v=20261012">
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="ui">
+  <div id="title-ui" class="overlay">
+    <div class="wordmark">S P A R R O W</div>
+    <div class="subtitle">a migration prototype</div>
+    <button id="take-wing">Take wing</button>
+    <div class="hint">drag to steer &middot; tap to flap &middot; hold to keep flapping</div>
+  </div>
+  <div id="hud" class="hidden">
+    <div id="wp">waypoint 1 of 6</div>
+    <div id="energy"><i id="energyfill"></i></div>
+    <button id="pause-btn" aria-label="Pause"></button>
+  </div>
+  <div id="pause-ui" class="overlay hidden">
+    <div class="card">
+      <h2>Resting on the wind</h2>
+      <p>the valley waits for you</p>
+      <button id="resume-btn">Keep flying</button>
+      <button id="restart-btn" class="ghost">Start the route over</button>
+      <label class="row">Reduced motion <input type="checkbox" id="rm-toggle"></label>
+      <label class="row">Mute <input type="checkbox" id="mute-toggle"></label>
+    </div>
+  </div>
+  <div id="done-ui" class="overlay hidden">
+    <div class="card">
+      <h2>The flock settles for the night</h2>
+      <p id="done-stats"></p>
+      <button id="again-btn">Fly again</button>
+    </div>
+  </div>
+</div>
+<div id="nogl" class="hidden">This prototype needs WebGL, which your browser has disabled.</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script src="flight.js?v=20261012"></script>
+<script src="world.js?v=20261012"></script>
+<script src="effects.js?v=20261012"></script>
+<script src="audio.js?v=20261012"></script>
+<script src="engine.js?v=20261012"></script>
+</body>
+</html>
