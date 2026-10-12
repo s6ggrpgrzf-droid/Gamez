@@ -293,6 +293,26 @@ function drawSky(sc){
       ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(px2,py2,pr,0,7); ctx.fill();
     }
   }
+  // crepuscular rays at dawn/dusk
+  var t2=st.tod;
+  if((t2>0.24&&t2<0.34)||(t2>0.66&&t2<0.79)){
+    var fr3=(t2-0.25)/0.53, rsx=W*(0.12+0.76*fr3), rsy=L.horizonY-Math.sin(fr3*Math.PI)*H*0.36;
+    var ra=(1-sc.nf)*0.10;
+    if(ra>0.01){
+      ctx.save(); ctx.globalCompositeOperation='lighter';
+      for(var ri3=0;ri3<4;ri3++){
+        var rang=-0.5+ri3*0.28+Math.sin(tG*0.2+ri3)*0.03;
+        var rg=ctx.createLinearGradient(rsx,rsy,rsx+Math.cos(rang)*H,rsy+Math.sin(rang)*H);
+        rg.addColorStop(0,'rgba(255,220,160,'+ra.toFixed(3)+')'); rg.addColorStop(1,'rgba(255,220,160,0)');
+        ctx.fillStyle=rg;
+        ctx.beginPath(); ctx.moveTo(rsx,rsy);
+        ctx.lineTo(rsx+Math.cos(rang-0.06)*H,rsy+Math.sin(rang-0.06)*H);
+        ctx.lineTo(rsx+Math.cos(rang+0.06)*H,rsy+Math.sin(rang+0.06)*H);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
 }
 function drawSeaBase(sc){
   var g=ctx.createLinearGradient(0,L.horizonY,0,H);
@@ -311,6 +331,18 @@ function drawSeaBase(sc){
       var a=sc.nf*0.28*Math.abs(Math.sin(tG*3+i*2.3));
       ctx.fillStyle='rgba(220,230,245,'+a.toFixed(3)+')';
       ctx.fillRect(gx-gw2/2+(Math.sin(tG+i)*4),gy,gw2,2);
+    }
+  }
+  // sun glitter path (daytime)
+  if(sc.nf<0.4&&st.tod>0.24&&st.tod<0.79){
+    var fr2=(st.tod-0.25)/0.53, sgx=W*(0.12+0.76*fr2);
+    var sgl=(1-sc.nf)*0.5;
+    for(var j=0;j<26;j++){
+      var gy2=L.horizonY+12+j*(L.seaH*0.6/26);
+      var gw3=6+Math.sin(tG*2.2+j*1.9)*5+j*1.3;
+      var a2=sgl*0.5*Math.abs(Math.sin(tG*2.6+j*2.7));
+      ctx.fillStyle='rgba(255,236,190,'+a2.toFixed(3)+')';
+      ctx.fillRect(sgx-gw3/2+Math.sin(tG*1.3+j)*5,gy2,gw3,1.8);
     }
   }
 }
@@ -425,18 +457,51 @@ function drawRocks(){
 }
 function drawIsland(sc){
   var ix=L.islandX, baseY=L.islandBaseY, peakY=L.islandPeakY;
-  // mound
+  // mound path (reused for fill + clip)
+  function moundPath(){
+    ctx.beginPath();
+    ctx.moveTo(ix-95,baseY+70);
+    ctx.quadraticCurveTo(ix-86,peakY+44,ix-46,peakY+20);
+    ctx.quadraticCurveTo(ix-16,peakY-4,ix+16,peakY+4);
+    ctx.quadraticCurveTo(ix+62,peakY+28,ix+86,baseY+40);
+    ctx.quadraticCurveTo(ix+93,baseY+70,ix+95,baseY+70);
+    ctx.closePath();
+  }
+  // base rock
   var g=ctx.createLinearGradient(0,peakY,0,baseY+60);
   var rockC=sc.nf>0.5?[38,44,54]:[74,82,92];
   g.addColorStop(0,css(mixc(rockC,[20,26,36],0.2))); g.addColorStop(1,css([22,28,38]));
   ctx.fillStyle=g;
-  ctx.beginPath();
-  ctx.moveTo(ix-95,baseY+70);
-  ctx.quadraticCurveTo(ix-86,peakY+44,ix-46,peakY+20);
-  ctx.quadraticCurveTo(ix-16,peakY-4,ix+16,peakY+4);
-  ctx.quadraticCurveTo(ix+62,peakY+28,ix+86,baseY+40);
-  ctx.quadraticCurveTo(ix+93,baseY+70,ix+95,baseY+70);
-  ctx.closePath(); ctx.fill();
+  moundPath(); ctx.fill();
+  ctx.save(); moundPath(); ctx.clip();
+  // sedimentary strata: horizontal bands following the dome
+  var nStrata=6;
+  for(var si=0;si<nStrata;si++){
+    var sy0=peakY+14+si*(baseY+56-peakY)/nStrata;
+    ctx.fillStyle=si%2?'rgba(0,0,0,0.14)':'rgba(255,255,255,0.05)';
+    ctx.fillRect(ix-110,sy0,220,(baseY+56-peakY)/nStrata*0.55);
+    // strata shadow line
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.fillRect(ix-110,sy0+(baseY+56-peakY)/nStrata*0.55,220,2);
+  }
+  // directional light: lit face left, shadow face right
+  var lg=ctx.createLinearGradient(ix-95,0,ix+95,0);
+  var li=sc.nf>0.4?0.5:1;
+  lg.addColorStop(0,'rgba(255,244,220,'+(0.14*li)+')');
+  lg.addColorStop(0.45,'rgba(255,244,220,0)');
+  lg.addColorStop(1,'rgba(8,10,18,'+(0.30*li)+')');
+  ctx.fillStyle=lg; ctx.fillRect(ix-110,peakY-10,220,baseY+80-peakY);
+  // cracks: dark jagged seams
+  ctx.strokeStyle='rgba(12,14,20,0.5)'; ctx.lineWidth=1.6;
+  var cracks=[[ix-52,peakY+34,ix-44,peakY+78,ix-50,peakY+112],[ix+30,peakY+22,ix+38,peakY+66,ix+32,peakY+104],[ix+64,peakY+52,ix+58,peakY+92]];
+  for(var ci=0;ci<cracks.length;ci++){ var cp=cracks[ci];
+    ctx.beginPath(); ctx.moveTo(cp[0],cp[1]); ctx.lineTo(cp[2],cp[3]); ctx.lineTo(cp[4],cp[5]); ctx.stroke();
+  }
+  // tide line: dark wet band near the water
+  var tg=ctx.createLinearGradient(0,baseY+18,0,baseY+66);
+  tg.addColorStop(0,'rgba(10,14,22,0)'); tg.addColorStop(1,'rgba(10,14,22,'+(0.45*li)+')');
+  ctx.fillStyle=tg; ctx.fillRect(ix-110,baseY+18,220,48);
+  ctx.restore();
   // moonlit rim on the rock's upper edge at night, so it isn't a black void
   if(sc.nf>0.3){
     ctx.strokeStyle='rgba(170,190,220,'+(0.26*sc.nf).toFixed(3)+')';
@@ -465,27 +530,77 @@ function drawIsland(sc){
   // side rocks
   ctx.drawImage(ART.rock(1),ix-108,baseY-58,76,45);
   ctx.drawImage(ART.rock(2),ix+44,baseY-48,70,41);
-  // cottage with a warm window
-  var chx=ix-70, chy=baseY-46;
-  ctx.fillStyle=sc.nf>0.5?'#2c2620':'#5a4c3e';
-  ctx.fillRect(chx,chy,64,42);
-  ctx.fillStyle=sc.nf>0.5?'#1c1814':'#3a2f26';
-  ctx.beginPath(); ctx.moveTo(chx-8,chy); ctx.lineTo(chx+32,chy-26); ctx.lineTo(chx+72,chy); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#241f19'; ctx.fillRect(chx+26,chy+18,14,24);
-  if(sc.nf>0.25){
-    ctx.fillStyle='rgba(255,190,110,'+(0.9*sc.nf+0.1)+')';
-    ctx.fillRect(chx+10,chy+12,13,13);
-    var wg=ctx.createRadialGradient(chx+16,chy+18,2,chx+16,chy+18,26);
-    wg.addColorStop(0,'rgba(255,190,110,'+(0.35*sc.nf)+')'); wg.addColorStop(1,'rgba(255,190,110,0)');
-    ctx.fillStyle=wg; ctx.beginPath(); ctx.arc(chx+16,chy+18,26,0,7); ctx.fill();
-  }else{
-    ctx.fillStyle='#20262e'; ctx.fillRect(chx+10,chy+12,13,13);
-  }
+  // keeper's cottage: stone walls, slate roof, chimney with smoke
+  (function(){
+    var chx=ix-78, chy=baseY-52, cw=76, ch=46;
+    var night=sc.nf>0.5;
+    // walls: stone with visible courses
+    ctx.fillStyle=night?'#33302b':'#6b6257';
+    ctx.fillRect(chx,chy,cw,ch);
+    ctx.strokeStyle=night?'rgba(0,0,0,0.35)':'rgba(60,50,40,0.35)'; ctx.lineWidth=1;
+    for(var ri=0;ri<4;ri++){ var ry=chy+6+ri*10;
+      ctx.beginPath(); ctx.moveTo(chx,ry); ctx.lineTo(chx+cw,ry); ctx.stroke();
+      for(var rj=0;rj<5;rj++){ var rx=chx+8+rj*15+(ri%2)*7;
+        ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx,ry+10); ctx.stroke(); }
+    }
+    // foundation shadow
+    ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fillRect(chx,chy+ch-5,cw,5);
+    // roof: pitched slate with overhang and ridge
+    var rOver=10, rPeak=30;
+    ctx.fillStyle=night?'#232227':'#4a4d55';
+    ctx.beginPath();
+    ctx.moveTo(chx-rOver,chy); ctx.lineTo(chx+cw/2,chy-rPeak); ctx.lineTo(chx+cw+rOver,chy);
+    ctx.lineTo(chx+cw+rOver-4,chy+3); ctx.lineTo(chx+cw/2,chy-rPeak+5); ctx.lineTo(chx-rOver+4,chy+3);
+    ctx.closePath(); ctx.fill();
+    // slate courses
+    ctx.strokeStyle=night?'rgba(0,0,0,0.4)':'rgba(30,32,40,0.4)'; ctx.lineWidth=1;
+    for(var si2=0;si2<3;si2++){ var syy=chy-6-si2*8;
+      ctx.beginPath(); ctx.moveTo(chx-rOver+6+si2*7,syy); ctx.lineTo(chx+cw+rOver-6-si2*7,syy); ctx.stroke(); }
+    // chimney with drifting smoke
+    var chmx=chx+cw-20;
+    ctx.fillStyle=night?'#2c2a26':'#5e564b'; ctx.fillRect(chmx,chy-rPeak+2,12,rPeak-2);
+    ctx.fillStyle=night?'#1e1c19':'#4a443c'; ctx.fillRect(chmx-2,chy-rPeak,16,5);
+    for(var pu=0;pu<4;pu++){ var pt=((tG*0.22+pu/4)%1);
+      var px2=chmx+6+Math.sin(pt*5+pu)*8*pt, py2=chy-rPeak-6-pt*44;
+      ctx.fillStyle='rgba(200,205,215,'+(0.30*(1-pt)*(sc.nf>0.5?0.5:1))+')';
+      ctx.beginPath(); ctx.arc(px2,py2,3+pt*7,0,7); ctx.fill(); }
+    // door: paneled, with step and warm spill
+    var dx=chx+44;
+    ctx.fillStyle='#2e2620'; ctx.fillRect(dx,chy+16,16,ch-16);
+    ctx.strokeStyle='rgba(200,170,120,0.5)'; ctx.lineWidth=1;
+    ctx.strokeRect(dx+3,chy+19,10,10); ctx.strokeRect(dx+3,chy+31,10,8);
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(dx-3,chy+ch,22,4); // step
+    if(sc.nf>0.25){ var dg=ctx.createRadialGradient(dx+8,chy+30,2,dx+8,chy+30,22);
+      dg.addColorStop(0,'rgba(255,190,110,'+(0.25*sc.nf)+')'); dg.addColorStop(1,'rgba(255,190,110,0)');
+      ctx.fillStyle=dg; ctx.beginPath(); ctx.arc(dx+8,chy+30,22,0,7); ctx.fill(); }
+    // window: framed, warm at night
+    var wx2=chx+12, wy2=chy+14;
+    ctx.fillStyle=night?'#1d1a16':'#3d3831'; ctx.fillRect(wx2-2,wy2-2,18,18);
+    if(sc.nf>0.25){
+      ctx.fillStyle='rgba(255,190,110,'+(0.85*sc.nf+0.1)+')'; ctx.fillRect(wx2,wy2,14,14);
+      ctx.strokeStyle='rgba(40,30,20,0.8)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(wx2+7,wy2); ctx.lineTo(wx2+7,wy2+14); ctx.moveTo(wx2,wy2+7); ctx.lineTo(wx2+14,wy2+7); ctx.stroke();
+      var wg2=ctx.createRadialGradient(wx2+7,wy2+7,2,wx2+7,wy2+7,30);
+      wg2.addColorStop(0,'rgba(255,190,110,'+(0.35*sc.nf)+')'); wg2.addColorStop(1,'rgba(255,190,110,0)');
+      ctx.fillStyle=wg2; ctx.beginPath(); ctx.arc(wx2+7,wy2+7,30,0,7); ctx.fill();
+    }else{
+      ctx.fillStyle='#1f2a36'; ctx.fillRect(wx2,wy2,14,14);
+      ctx.fillStyle='rgba(160,190,215,0.45)'; ctx.fillRect(wx2,wy2,14,5);
+    }
+  })();
   // rocks hugging the tower base so she sits IN the island
   ctx.drawImage(ART.rock(0),ix-L.lhW/2-40,L.islandPeakY-8,80,47);
   ctx.drawImage(ART.rock(2),ix+L.lhW/2-40,L.islandPeakY-4,80,47);
   // the lighthouse
   ctx.drawImage(ART.lighthouse(),ix-L.lhW/2,L.lhTop,L.lhW,L.lhH);
+  // tower windows glow warm at night
+  if(st.lamp.lit&&sc.nf>0.25){
+    for(var wgi=0;wgi<3;wgi++){ var wyy=L.lhTop+[196,248,300][wgi]*(L.lhH/380);
+      var wgg=ctx.createRadialGradient(ix,wyy,1,ix,wyy,14);
+      wgg.addColorStop(0,'rgba(255,200,120,'+(0.7*sc.nf)+')'); wgg.addColorStop(1,'rgba(255,200,120,0)');
+      ctx.fillStyle=wgg; ctx.beginPath(); ctx.arc(ix,wyy,14,0,7); ctx.fill();
+    }
+  }
   // lamp glow — the one warm thing on a dark coast
   if(st.lamp.lit&&sc.nf>0.15){
     var lg2=ctx.createRadialGradient(L.lampX,L.lampY,4,L.lampX,L.lampY,78);
@@ -577,6 +692,31 @@ function drawBeam(sc){
   }
   ctx.restore();
 }
+function drawAtmosphere(sc){
+  var w=st.wx.cur, t=st.tod;
+  // morning mist: soft bands hugging the water
+  if((t>0.24&&t<0.32)&&(w==='clear'||w==='cloudy')){
+    var ma=(1-Math.abs(t-0.28)/0.04)*0.16*(1-sc.nf);
+    if(ma>0.01){
+      for(var mi=0;mi<3;mi++){
+        var my=L.horizonY+20+mi*26, mx=(tG*12*(mi+1))% (W+200)-100;
+        var mg=ctx.createLinearGradient(mx-140,0,mx+140,0);
+        mg.addColorStop(0,'rgba(220,228,238,0)'); mg.addColorStop(0.5,'rgba(220,228,238,'+ma.toFixed(3)+')'); mg.addColorStop(1,'rgba(220,228,238,0)');
+        ctx.fillStyle=mg;
+        ctx.fillRect(mx-140,my,280,10+mi*4);
+      }
+    }
+  }
+  // storm spray bursting off the rocks
+  if(w==='storm'){
+    for(var si4=0;si4<10;si4++){
+      var pt=((tG*0.9+si4/10)%1);
+      var px3=L.islandX-80+((si4*53)%160), py3=L.islandBaseY+40-pt*70;
+      ctx.fillStyle='rgba(225,235,245,'+(0.4*(1-pt))+')';
+      ctx.beginPath(); ctx.arc(px3+Math.sin(pt*6+si4)*10*pt,py3,2+pt*5,0,7); ctx.fill();
+    }
+  }
+}
 function drawWeatherFX(sc){
   var w=st.wx.cur;
   if(w==='rain'||w==='storm'){
@@ -664,6 +804,7 @@ function render(dt){
   drawIsland(sc);
   drawWhale(sc);
   drawWaves(sc);
+  drawAtmosphere(sc);
   drawWeatherFX(sc);
   drawGulls(sc);
   drawForeground();
