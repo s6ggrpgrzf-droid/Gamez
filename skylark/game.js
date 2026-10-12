@@ -464,7 +464,7 @@ function startFlight(i) {
     decor = makeDecor(st.seed, route.dist + 700);
     enrichPassengers(st);
   }
-  F = { st: st, decor: decor, input: { throttle: 0, pitch: 0, lateral: 0 },
+  F = { st: st, decor: decor, input: { throttle: 0, pitch: 0, lateral: 0, flaps: 0 },
         lastT: 0, running: false, lastMsg: 0, landPlayed: false, endT: 0,
         pitchTouch: null, thrTouch: false, lastDetent: 0, view: 'side', vista: null };
   fetchVista(st);
@@ -596,6 +596,40 @@ thrTrack.addEventListener('pointermove', function (e) {
 function thrEnd() { if (F) F.thrTouch = false; }
 thrTrack.addEventListener('pointerup', thrEnd);
 thrTrack.addEventListener('pointercancel', thrEnd);
+
+/* flaps lever: 3 detents — UP (0), 1 (0.5), FULL (1) */
+var flapTrack = $('flap-track'), flapKnob = $('flap-knob');
+flapTrack.addEventListener('pointerdown', function (e) {
+  e.stopPropagation();
+  if (!F) return;
+  F.flapTouch = true;
+  flapTrack.setPointerCapture(e.pointerId);
+  flapTo(e.clientY);
+});
+flapTrack.addEventListener('pointermove', function (e) {
+  if (F && F.flapTouch) flapTo(e.clientY);
+});
+function flapEnd() { if (F) F.flapTouch = false; }
+flapTrack.addEventListener('pointerup', flapEnd);
+flapTrack.addEventListener('pointercancel', flapEnd);
+function flapTo(clientY) {
+  var r = flapTrack.getBoundingClientRect();
+  var v = clamp(1 - (clientY - r.top) / r.height, 0, 1);
+  // snap to 3 detents: 0 / 0.5 / 1
+  var detents = [0, 0.5, 1], snapped = detents[0];
+  for (var i = 0; i < detents.length; i++)
+    if (Math.abs(v - detents[i]) < Math.abs(v - snapped)) snapped = detents[i];
+  v = snapped;
+  if (F && v !== F.lastFlap) {
+    F.lastFlap = v;
+    try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+    AU.tick();
+    if (v > 0) say('Flaps ' + (v >= 1 ? 'FULL' : '1') + ' — she\'ll slow down and settle.', 'mabel');
+  }
+  F.input.flaps = v;
+  // knob position: top = UP (0), bottom = FULL (1)
+  flapKnob.style.top = (8 + v * (r.height - 50)) + 'px';
+}
 function thrTo(clientY) {
   var r = thrTrack.getBoundingClientRect();
   var v = clamp(1 - (clientY - r.top) / r.height, 0, 1);
