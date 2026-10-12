@@ -114,18 +114,42 @@ water.frustumCulled=false;scene.add(water);
 const pal=[[-4,'#e9d8a6'],[1.5,'#e9d8a6'],[7,'#b5d97b'],[36,'#86c26f'],[62,'#5fa56a'],[88,'#cdbbe0']].map(([h,c])=>[h,new T.Color(c)]),tmp=new T.Color();
 function colAt(h){let i=1;while(i<pal.length-1&&h>pal[i][0])i++;const a=pal[i-1],b=pal[i];return tmp.lerpColors(a[1],b[1],cl((h-a[0])/(b[0]-a[0]),0,1))}
 const dm=new T.Object3D(),MAXT=900,MAXC=60;
-const mk=(g,col,n,em)=>{const m=new T.InstancedMesh(g,new T.MeshPhongMaterial({color:col,flatShading:true,shininess:0,emissive:em||0}),n);m.frustumCulled=false;m.count=0;scene.add(m);return m};
+const mk=(g,col,n,em)=>{const m=new T.InstancedMesh(g,new T.MeshPhongMaterial({color:col,flatShading:true,shininess:0,emissive:em||0}),n);m.frustumCulled=false;m.count=0;
+ const ic=new T.InstancedBufferAttribute(new Float32Array(n*3),3);for(let i=0;i<n;i++)ic.setXYZ(i,1,1,1);m.instanceColor=ic;scene.add(m);return m};
 const leaves=mk(new T.ConeGeometry(5.5,15,7).translate(0,11,0),0xffffff,MAXT),trunks=mk(new T.CylinderGeometry(.9,1.2,5,6).translate(0,2.5,0),0x7a5a48,MAXT),
 cabins=mk(new T.BoxGeometry(9,6,9).translate(0,2,0),0xf3e6cf,MAXC,0x6b3d10),roofs=mk(new T.ConeGeometry(8,5,4).rotateY(Math.PI/4).translate(0,7.5,0),0xffffff,MAXC);
 const treeCols=['#6fb56a','#5aa066','#8bc46a','#e8a24f','#e87f7a'].map(c=>new T.Color(c)),roofCols=['#e56b5d','#3f9aa6','#e8b04a'].map(c=>new T.Color(c));
+// ground detail: patchwork fields (hashed quilt, pure function of world pos) + scattered props
+const MAXB=600,MAXR=220,MAXH=120,FS=150;
+const bushes=mk(new T.IcosahedronGeometry(2.4,0).scale(1,.65,1),0xffffff,MAXB),
+rocks=mk(new T.DodecahedronGeometry(1.7,0),0xffffff,MAXR),
+hay=mk(new T.CylinderGeometry(2,2,3.2,9).rotateX(Math.PI/2),0xffffff,MAXH);
+const bushCols=['#5da35f','#6fb56a','#4c8f52'].map(c=>new T.Color(c)),
+rockCols=['#9a9aa2','#8a8a94','#a8a8b0'].map(c=>new T.Color(c)),
+hayCols=['#d9a94f','#c99944','#e3b95c'].map(c=>new T.Color(c));
+const fieldCols=['#d9b96a','#9ed07a','#7cc47f','#a9805e','#e6cf8e','#c9e39a'].map(c=>new T.Color(c)),
+hedgeC=new T.Color('#3f7a4e'),tmp2=new T.Color();
+function fieldCol(x,z,h,out){
+ if(h<2||h>42)return false;
+ const cx=Math.floor(x/FS),cz=Math.floor(z/FS),fr=R(cx,cz,21);
+ if(fr<.18)return false;
+ out.copy(fieldCols[Math.min(5,((fr-.18)/.82*6)|0)]);
+ const lx=x-cx*FS,lz=z-cz*FS,db=Math.min(lx,FS-lx,lz,FS-lz);
+ if(db<16)out.lerp(hedgeC,(1-db/16)*.7);
+ out.multiplyScalar(.96+R(x,z,11)*.08);
+ return true;
+}
 let tx=1e9,tz=1e9;
 function rebuild(px,pz){
  const ox=Math.round(px/C)*C,oz=Math.round(pz/C)*C;
  if(ox===tx&&oz===tz)return;tx=ox;tz=oz;terrain.position.set(ox,0,oz);
- let nt=0,nc=0;
+ let nt=0,nc=0,nb=0,nr=0,nh=0;
  for(let i=0;i<tp.count;i++){
   const x=tp.getX(i)+ox,z=tp.getZ(i)+oz,h=H(x,z);
-  tp.setY(i,h);colAt(h).multiplyScalar(.94+R(x,z,1)*.12).toArray(tc,i*3);
+  tp.setY(i,h);
+  const bc=colAt(h).multiplyScalar(.94+R(x,z,1)*.12);
+  if(fieldCol(x,z,h,tmp2))bc.lerp(tmp2,.85);
+  bc.toArray(tc,i*3);
   const r=R(x,z,2);
   if(h>2&&h<64){
    if(r<.11&&nt<MAXT){const jx=x+(R(x,z,3)-.5)*C*.8,jz=z+(R(x,z,4)-.5)*C*.8,s=.8+R(x,z,5)*.8;
@@ -134,11 +158,19 @@ function rebuild(px,pz){
     leaves.setColorAt(nt,treeCols[q<.55?(q<.27?0:1):q<.8?2:q<.9?3:4]);nt++}
    else if(r>.992&&h<32&&nc<MAXC){dm.position.set(x,h,z);dm.rotation.y=R(x,z,8)*6.28;dm.scale.setScalar(1);dm.updateMatrix();
     cabins.setMatrixAt(nc,dm.matrix);roofs.setMatrixAt(nc,dm.matrix);roofs.setColorAt(nc,roofCols[(R(x,z,9)*3)|0]);nc++}
+   const rb=R(x,z,22);
+   if(rb<.06&&h<50&&nb<MAXB){const jx=x+(R(x,z,23)-.5)*C*.7,jz=z+(R(x,z,24)-.5)*C*.7,s=.7+R(x,z,25)*.9;
+    dm.position.set(jx,H(jx,jz)+.8,jz);dm.rotation.y=R(x,z,26)*6.28;dm.scale.set(s,s*.7,s);dm.updateMatrix();
+    bushes.setMatrixAt(nb,dm.matrix);bushes.setColorAt(nb,bushCols[(R(x,z,27)*3)|0]);nb++}
+   else if(rb>.985&&h<60&&nr<MAXR){dm.position.set(x,h+.2,z);dm.rotation.y=R(x,z,28)*6.28;const s2=.6+R(x,z,29)*1.1;dm.scale.set(s2,s2*.8,s2);dm.updateMatrix();
+    rocks.setMatrixAt(nr,dm.matrix);rocks.setColorAt(nr,rockCols[(R(x,z,30)*3)|0]);nr++}
+   else if(rb>.94&&h<40&&nh<MAXH){dm.position.set(x,h+1.6,z);dm.rotation.y=R(x,z,31)*6.28;dm.scale.setScalar(.8+R(x,z,32)*.5);dm.updateMatrix();
+    hay.setMatrixAt(nh,dm.matrix);hay.setColorAt(nh,hayCols[(R(x,z,33)*3)|0]);nh++}
   }
  }
- leaves.count=trunks.count=nt;cabins.count=roofs.count=nc;
+ leaves.count=trunks.count=nt;cabins.count=roofs.count=nc;bushes.count=nb;rocks.count=nr;hay.count=nh;
  tp.needsUpdate=true;tg.attributes.color.needsUpdate=true;
- [leaves,trunks,cabins,roofs].forEach(m=>{m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true});
+ [leaves,trunks,cabins,roofs,bushes,rocks,hay].forEach(m=>{m.instanceMatrix.needsUpdate=true;if(m.instanceColor)m.instanceColor.needsUpdate=true});
 }
 
 // clouds
