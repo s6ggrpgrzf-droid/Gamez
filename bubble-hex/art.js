@@ -163,7 +163,7 @@
 
   /* ---------------- Characters ---------------- */
 
-  // Stella — original chibi witch. Anchor: feet center. ~120px tall.
+  // Stella — elegant fairy-tale witch. Anchor: feet center. 120x132.
   var stellaCache = {};
   function paintStella(pose) {
     var Wd = 120, Ht = 132;
@@ -172,119 +172,199 @@
     var lean = pose === 'cast' ? -6 : (pose === 'aim' ? 2 : 0);
     x.translate(cx + lean, 0);
 
-    var bobY = 0;
-    // robe (violet, star pattern)
-    var rg = x.createLinearGradient(0, 60, 0, 128);
-    rg.addColorStop(0, '#7b4fd6'); rg.addColorStop(1, '#472a86');
+    var hy = 45;                 // face center
+    var eyeY = hy + 3;
+    var look = pose === 'aim' ? 1.5 : 0;
+    var delighted = (pose === 'win' || pose === 'happy');
+    var downcast = (pose === 'sad');
+
+    // ---------- back hair: long raven flow ----------
+    var hairG = x.createLinearGradient(-30, 0, 30, 0);
+    hairG.addColorStop(0, '#1c101f');
+    hairG.addColorStop(0.5, '#3a2135');
+    hairG.addColorStop(1, '#130b15');
+    x.fillStyle = hairG;
+    x.beginPath();
+    x.moveTo(-20, hy - 22);
+    x.bezierCurveTo(-34, hy - 12, -36, hy + 26, -31, hy + 52);
+    x.bezierCurveTo(-28, hy + 64, -18, hy + 66, -13, hy + 58);
+    x.bezierCurveTo(-19, hy + 44, -18, hy + 30, -13, hy + 20);
+    x.lineTo(13, hy + 20);
+    x.bezierCurveTo(19, hy + 32, 20, hy + 48, 27, hy + 58);
+    x.bezierCurveTo(32, hy + 66, 26, hy + 70, 20, hy + 62);
+    x.bezierCurveTo(28, hy + 46, 32, hy + 12, 20, hy - 22);
+    x.quadraticCurveTo(0, hy - 34, -20, hy - 22);
+    x.closePath(); x.fill();
+
+    // ---------- gown: flowing midnight-violet ----------
+    var rg = x.createLinearGradient(0, 58, 0, 128);
+    rg.addColorStop(0, '#4b2f92');
+    rg.addColorStop(0.55, '#33206b');
+    rg.addColorStop(1, '#1d1140');
     x.fillStyle = rg;
     x.beginPath();
-    x.moveTo(-26, 66); x.quadraticCurveTo(-30, 104, -36, 126);
-    x.lineTo(36, 126); x.quadraticCurveTo(30, 104, 26, 66);
+    x.moveTo(-17, 62);
+    x.bezierCurveTo(-24, 84, -30, 104, -33, 126);
+    x.lineTo(33, 126);
+    x.bezierCurveTo(30, 104, 24, 84, 17, 62);
+    x.quadraticCurveTo(0, 56, -17, 62);
     x.closePath(); x.fill();
-    // robe shading
-    x.fillStyle = 'rgba(0,0,0,.22)';
-    x.beginPath(); x.moveTo(8, 66); x.quadraticCurveTo(12, 100, 14, 126); x.lineTo(36, 126); x.quadraticCurveTo(30, 104, 26, 66); x.closePath(); x.fill();
-    // stars on robe
-    x.fillStyle = '#ffd34d';
-    [[-14, 92], [10, 104], [-4, 116]].forEach(function (p) {
-      x.save(); x.translate(p[0], p[1] + bobY * 0); x.rotate(0.3);
-      star(x, 0, 0, 5, 2.2); x.fill(); x.restore();
+    // soft fold shadows
+    x.strokeStyle = 'rgba(10,4,26,.32)'; x.lineWidth = 5; x.lineCap = 'round';
+    [[-14, 72, -18, 120], [2, 74, 4, 122], [16, 72, 20, 120]].forEach(function (f) {
+      x.beginPath(); x.moveTo(f[0], f[1]);
+      x.quadraticCurveTo(f[0] + 3, (f[1] + f[3]) / 2, f[2], f[3]); x.stroke();
     });
-    // belt
-    x.fillStyle = '#2c1a52'; x.fillRect(-24, 78, 48, 7);
-    x.fillStyle = '#ffd34d'; circle(x, 0, 81.5, 4); x.fill();
+    // moonlit sheen on the moon side
+    var sheen = x.createLinearGradient(8, 0, 30, 0);
+    sheen.addColorStop(0, 'rgba(190,205,255,0)');
+    sheen.addColorStop(1, 'rgba(190,205,255,.16)');
+    x.fillStyle = sheen;
+    x.beginPath();
+    x.moveTo(10, 64); x.bezierCurveTo(20, 86, 26, 106, 30, 126);
+    x.lineTo(33, 126); x.bezierCurveTo(30, 104, 24, 84, 17, 62);
+    x.closePath(); x.fill();
+    // fine star specks on the gown
+    [[-16, 96], [6, 88], [18, 108], [-6, 114], [12, 99]].forEach(function (p) {
+      sparkle4(x, p[0], p[1], 2.1, 'rgba(255,235,170,.8)');
+    });
+    // slim waist sash + crescent clasp
+    x.fillStyle = '#241545'; x.fillRect(-20, 76, 40, 5);
+    x.strokeStyle = '#d9c37c'; x.lineWidth = 2; x.lineCap = 'round';
+    x.beginPath(); x.arc(2, 78.5, 4.5, Math.PI * 0.35, Math.PI * 1.65); x.stroke();
+    // neckline
+    x.strokeStyle = 'rgba(217,195,124,.55)'; x.lineWidth = 1.6;
+    x.beginPath(); x.moveTo(-9, 60); x.quadraticCurveTo(0, 66, 9, 60); x.stroke();
 
-    // head
-    var hy = 46;
-    var hg = x.createRadialGradient(-6, hy - 8, 4, 0, hy, 24);
-    hg.addColorStop(0, '#ffd9b8'); hg.addColorStop(1, '#f0a97e');
-    x.fillStyle = hg; circle(x, 0, hy, 21); x.fill();
-    // hair (auburn bob)
-    x.fillStyle = '#b34a2e';
-    x.beginPath(); x.arc(0, hy - 4, 22, Math.PI * 1.02, Math.PI * 1.98); x.fill();
-    circle(x, -20, hy + 2, 7); x.fill(); circle(x, 20, hy + 2, 7); x.fill();
+    // ---------- face: calm porcelain oval ----------
+    var fg = x.createRadialGradient(-5, hy - 9, 4, 0, hy, 24);
+    fg.addColorStop(0, '#ffe9d2'); fg.addColorStop(1, '#f4b489');
+    x.fillStyle = fg;
+    ell(x, 0, hy, 16.5, 20.5); x.fill();
+    // soft frontal light so her face opens up under the brim
+    x.fillStyle = 'rgba(255,240,220,.14)';
+    ell(x, -2, hy - 2, 13, 16); x.fill();
+    // faint rose on the cheeks (soft wash, no mascot circles)
+    var bl = x.createRadialGradient(0, 0, 0, 0, 0, 7);
+    bl.addColorStop(0, 'rgba(232,120,120,.20)'); bl.addColorStop(1, 'rgba(232,120,120,0)');
+    x.save(); x.translate(-11, eyeY + 6); x.fillStyle = bl; circle(x, 0, 0, 7); x.fill(); x.restore();
+    x.save(); x.translate(11, eyeY + 6); x.fillStyle = bl; circle(x, 0, 0, 7); x.fill(); x.restore();
+    // slender arched brows
+    x.strokeStyle = '#3a1f2e'; x.lineWidth = 1.6; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(-13, eyeY - 10.5); x.quadraticCurveTo(-7, eyeY - 14, -1.5, eyeY - 11.5); x.stroke();
+    x.beginPath(); x.moveTo(13, eyeY - 10.5); x.quadraticCurveTo(7, eyeY - 14, 1.5, eyeY - 11.5); x.stroke();
+
     // eyes
-    x.fillStyle = '#2a1633';
-    var eyeY = hy + 2, look = pose === 'aim' ? 1.5 : 0;
-    if (pose === 'sad') {
-      // closed, downcast eyes
-      x.strokeStyle = '#2a1633'; x.lineWidth = 2.4; x.lineCap = 'round';
-      x.beginPath(); x.arc(-8, eyeY - 1, 4.5, 0.3, Math.PI - 0.3); x.stroke();
-      x.beginPath(); x.arc(8, eyeY - 1, 4.5, 0.3, Math.PI - 0.3); x.stroke();
-      x.fillStyle = '#2a1633';
-      // tear
+    function sereneEye(ex) {
+      x.fillStyle = '#fdf6ec';
+      x.beginPath();
+      x.moveTo(ex - 7.2, eyeY);
+      x.quadraticCurveTo(ex, eyeY - 4.4, ex + 7.2, eyeY);
+      x.quadraticCurveTo(ex, eyeY + 3.8, ex - 7.2, eyeY);
+      x.closePath(); x.fill();
+      x.fillStyle = '#8a6fb8';            // light amethyst iris, open and readable
+      circle(x, ex + look, eyeY + 0.4, 3.7); x.fill();
+      x.fillStyle = '#241a38';
+      circle(x, ex + look, eyeY + 0.4, 1.8); x.fill();
+      x.fillStyle = 'rgba(255,255,255,.95)';
+      circle(x, ex + look - 1.3, eyeY - 0.9, 1.1); x.fill();
+      x.strokeStyle = '#3a2440'; x.lineWidth = 1.9; x.lineCap = 'round';
+      x.beginPath();                       // fine lash line, whisper of a wing
+      x.moveTo(ex - 7.4, eyeY - 0.6);
+      x.quadraticCurveTo(ex, eyeY - 4.8, ex + 7.8, eyeY - 1.4);
+      x.stroke();
+      x.strokeStyle = 'rgba(120,70,70,.28)'; x.lineWidth = 1.1;
+      x.beginPath();                       // lid-fold shade
+      x.moveTo(ex - 6, eyeY - 6.6);
+      x.quadraticCurveTo(ex, eyeY - 9.4, ex + 6, eyeY - 7);
+      x.stroke();
+    }
+    if (downcast) {
+      x.strokeStyle = '#2b1830'; x.lineWidth = 2.2; x.lineCap = 'round';
+      [-8, 8].forEach(function (ex) {
+        x.beginPath(); x.arc(ex, eyeY - 1.5, 5, 0.35, Math.PI - 0.35); x.stroke();
+      });
       x.fillStyle = 'rgba(140,200,255,.9)';
-      x.beginPath(); x.ellipse(-13, eyeY + 8, 2.2, 3.4, 0, 0, 7); x.fill();
-    } else if (pose === 'win' || pose === 'happy') {
-      // delighted ^ ^ eyes
-      x.strokeStyle = '#2a1633'; x.lineWidth = 2.8; x.lineCap = 'round';
-      x.beginPath(); x.arc(-8, eyeY + 2, 5, Math.PI + 0.3, -0.3); x.stroke();
-      x.beginPath(); x.arc(8, eyeY + 2, 5, Math.PI + 0.3, -0.3); x.stroke();
-      if (pose === 'happy') {
-        // sparkle glints above the delighted eyes
-        sparkle4(x, -8, eyeY - 7, 3.4, 'rgba(255,255,255,.95)');
-        sparkle4(x, 8, eyeY - 7, 3.4, 'rgba(255,255,255,.95)');
-      }
-      x.fillStyle = '#2a1633';
+      x.beginPath(); x.ellipse(-12, eyeY + 8, 2, 3.1, 0, 0, 7); x.fill();
+    } else if (delighted) {
+      x.strokeStyle = '#2b1830'; x.lineWidth = 2.4; x.lineCap = 'round';
+      [-8, 8].forEach(function (ex) {
+        x.beginPath(); x.arc(ex, eyeY - 0.5, 5.2, 0.3, Math.PI - 0.3); x.stroke();
+      });
     } else {
-      ell(x, -8, eyeY, 3.8, 5); x.fill(); ell(x, 8, eyeY, 3.8, 5); x.fill();
-      x.fillStyle = '#fff';
-      circle(x, -8 + look + 1.4, eyeY - 1.7, 1.5); x.fill();
-      circle(x, 8 + look + 1.4, eyeY - 1.7, 1.5); x.fill();
-      circle(x, -8 + look - 1, eyeY + 1.6, 0.8); x.fill();
-      circle(x, 8 + look - 1, eyeY + 1.6, 0.8); x.fill();
+      sereneEye(-8); sereneEye(8);
     }
-    // cheeks + smile (softer, rosier)
-    x.fillStyle = 'rgba(255,130,140,.55)';
-    circle(x, -13, eyeY + 7, 4); x.fill(); circle(x, 13, eyeY + 7, 4); x.fill();
-    x.strokeStyle = '#5a2c1e'; x.lineWidth = 2; x.lineCap = 'round';
-    if (pose === 'sad') {
-      x.beginPath(); x.arc(0, eyeY + 12, 6, Math.PI + 0.35, -0.35); x.stroke(); // frown
-    } else if (pose === 'win' || pose === 'happy') {
-      x.fillStyle = '#7a2c1e';
-      x.beginPath(); x.ellipse(0, eyeY + 8, 7, 5.6, 0, 0, 7); x.fill(); // open delighted mouth
-      x.fillStyle = '#e88a7a';
-      x.beginPath(); x.ellipse(0, eyeY + 10.5, 3.4, 2.2, 0, 0, 7); x.fill(); // tongue
-    } else {
-      x.beginPath(); x.arc(0, eyeY + 5, 6, 0.35, Math.PI - 0.35); x.stroke();
-    }
+    // nose: a whisper of a line
+    x.strokeStyle = 'rgba(150,90,70,.5)'; x.lineWidth = 1.4; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(0, eyeY + 5); x.quadraticCurveTo(1.5, eyeY + 8, 0, eyeY + 9.5); x.stroke();
+    // mouth: gentle closed-lip smile, never a grin
+    var mouthY = eyeY + (delighted ? 11.5 : 12.5);
+    x.fillStyle = 'rgba(190,100,95,.25)';
+    x.beginPath(); x.ellipse(0, mouthY + 1, delighted ? 5.5 : 4.2, 1.8, 0, 0, 7); x.fill();
+    x.strokeStyle = '#a5554b'; x.lineWidth = 2; x.lineCap = 'round';
+    x.beginPath();
+    if (delighted) { x.moveTo(-6, mouthY); x.quadraticCurveTo(0, mouthY + 4, 6, mouthY); }
+    else if (downcast) { x.moveTo(-4.5, mouthY + 2); x.quadraticCurveTo(0, mouthY - 1, 4.5, mouthY + 2); }
+    else { x.moveTo(-4.5, mouthY); x.quadraticCurveTo(0, mouthY + 3, 4.5, mouthY); }
+    x.stroke();
 
-    // witch hat
-    var hg2 = x.createLinearGradient(0, -18, 0, 28);
-    hg2.addColorStop(0, '#3a2066'); hg2.addColorStop(1, '#241243');
+    // ---------- witch hat: tall, softly bent ----------
+    var hg2 = x.createLinearGradient(0, 0, 0, 34);
+    hg2.addColorStop(0, '#3a2568'); hg2.addColorStop(1, '#1c1139');
     x.fillStyle = hg2;
     x.beginPath();
-    x.moveTo(-24, 30);
-    x.quadraticCurveTo(-10, 2, -2, -16);   // left side up to bent tip
-    x.quadraticCurveTo(4, -26, 12, -30);   // tip flop
-    x.quadraticCurveTo(8, -18, 10, -6);
-    x.quadraticCurveTo(14, 10, 24, 30);
+    x.moveTo(-19, 32);
+    x.bezierCurveTo(-13, 18, -6, 8, 4, 2);
+    x.quadraticCurveTo(9, 2, 7, 9);
+    x.bezierCurveTo(11, 17, 15, 25, 19, 32);
     x.closePath(); x.fill();
-    x.fillStyle = '#241243';
-    ell(x, 0, 30, 34, 9); x.fill();          // brim
-    x.fillStyle = '#ffd34d'; x.fillRect(-13, 20, 26, 6); // hat band
-    x.fillStyle = '#ff8a3d'; star(x, 0, 23, 6, 2.6); x.fill();
+    x.fillStyle = '#1c1139';
+    ell(x, 0, 33, 26, 7.5); x.fill();          // flowing brim
+    x.fillStyle = '#c9a24d'; x.fillRect(-17, 22.5, 34, 4.5); // slim gold band
+    x.strokeStyle = '#e8e2f2'; x.lineWidth = 1.8; x.lineCap = 'round';
+    x.beginPath(); x.arc(1, 24.8, 3.4, Math.PI * 0.35, Math.PI * 1.65); x.stroke(); // moon charm
 
-    // arms + wand (right arm raised when aiming/casting; both up for win)
-    x.strokeStyle = '#f0a97e'; x.lineWidth = 7; x.lineCap = 'round';
+    // ---------- front hair locks over the shoulders ----------
+    x.fillStyle = '#2a1626';
+    x.beginPath();
+    x.moveTo(-16, hy - 18);
+    x.bezierCurveTo(-24, hy - 6, -25, hy + 14, -21, hy + 30);
+    x.bezierCurveTo(-19, hy + 36, -13, hy + 36, -12, hy + 28);
+    x.bezierCurveTo(-15, hy + 14, -14, hy - 2, -8, hy - 12);
+    x.closePath(); x.fill();
+    x.beginPath();
+    x.moveTo(16, hy - 18);
+    x.bezierCurveTo(24, hy - 6, 25, hy + 14, 21, hy + 30);
+    x.bezierCurveTo(19, hy + 36, 13, hy + 36, 12, hy + 28);
+    x.bezierCurveTo(15, hy + 14, 14, hy - 2, 8, hy - 12);
+    x.closePath(); x.fill();
+    // moonlit edge on the right lock
+    x.strokeStyle = 'rgba(190,205,255,.35)'; x.lineWidth = 1.6; x.lineCap = 'round';
+    x.beginPath();
+    x.moveTo(22, hy - 4); x.bezierCurveTo(24, hy + 10, 22, hy + 24, 18, hy + 30);
+    x.stroke();
+
+    // arms (sleeves) + wand — geometry identical to before, so the aim origin never moves
+    x.strokeStyle = '#3d2a7d'; x.lineWidth = 9; x.lineCap = 'round';
     if (pose === 'win') {
-      x.beginPath(); x.moveTo(-16, 74); x.quadraticCurveTo(-30, 60, -34, 44); x.stroke(); // left arm up
+      x.beginPath(); x.moveTo(-14, 72); x.quadraticCurveTo(-28, 58, -32, 42); x.stroke();
     } else {
-      x.beginPath(); x.moveTo(-16, 74); x.quadraticCurveTo(-26, 86, -24, 96); x.stroke(); // left arm
+      x.beginPath(); x.moveTo(-14, 72); x.quadraticCurveTo(-24, 84, -22, 94); x.stroke();
     }
     var wandAng = pose === 'win' ? -1.9 : ((pose === 'cast' || pose === 'happy') ? -1.15 : (pose === 'aim' ? -0.9 : -0.35));
     var ax = 16, ay = 74;
     var hx = ax + Math.cos(wandAng) * 20, hyy = ay + Math.sin(wandAng) * 20;
     x.beginPath(); x.moveTo(ax, ay); x.lineTo(hx, hyy); x.stroke();
+    x.fillStyle = '#f0ad84'; circle(x, hx, hyy, 4.2); x.fill();   // hand
     // wand
-    x.strokeStyle = '#8a5a2e'; x.lineWidth = 4;
+    x.strokeStyle = '#7a4f26'; x.lineWidth = 3.4;
     var wx = hx + Math.cos(wandAng) * 26, wy = hyy + Math.sin(wandAng) * 26;
     x.beginPath(); x.moveTo(hx, hyy); x.lineTo(wx, wy); x.stroke();
-    // wand tip star (glow — brightest on cast / happy)
+    // wand tip: soft star glow
     var bigGlow = (pose === 'cast' || pose === 'happy');
     x.save();
-    x.shadowColor = '#ffe14d'; x.shadowBlur = bigGlow ? 24 : 10;
-    x.fillStyle = '#ffe14d'; star(x, wx, wy, bigGlow ? 11 : 8, 3.6); x.fill();
+    x.shadowColor = '#ffe9a8'; x.shadowBlur = bigGlow ? 20 : 9;
+    x.fillStyle = '#ffe9a8'; star(x, wx, wy, bigGlow ? 9 : 7, 3.2); x.fill();
     x.restore();
 
     // moonlit rim light (cool sheen on the moon side, clipped to the sprite)
