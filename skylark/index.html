@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <div id="app">
@@ -25,19 +25,22 @@
       <span id="fd-speed">0</span><span class="fd-unit">kts</span>
       <span id="fd-alt">0</span><span class="fd-unit">ft</span>
     </div>
-    <div id="throttle" aria-label="Throttle">
-      <div id="thr-track" role="slider" aria-valuemin="0" aria-valuemax="100" tabindex="0">
-        <div class="thr-detents"></div>
-        <div id="thr-knob"></div>
+    <!-- compact control cluster: throttle + flaps in one slim panel -->
+    <div id="ctl-cluster" aria-label="Engine controls">
+      <div class="ctl-mini" id="throttle" aria-label="Throttle">
+        <div id="thr-track" role="slider" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+          <div class="thr-detents"></div>
+          <div id="thr-knob"></div>
+        </div>
+        <div class="ctl-label">THR</div>
       </div>
-      <div class="ctl-label">THR</div>
-    </div>
-    <div id="flaps" aria-label="Flaps">
-      <div id="flap-track" role="slider" aria-valuemin="0" aria-valuemax="2" tabindex="0">
-        <div class="flap-detents"><i></i><i></i><i></i></div>
-        <div id="flap-knob"></div>
+      <div class="ctl-mini" id="flaps" aria-label="Flaps">
+        <div id="flap-track" role="slider" aria-valuemin="0" aria-valuemax="2" tabindex="0">
+          <div class="flap-detents"><i></i><i></i><i></i></div>
+          <div id="flap-knob"></div>
+        </div>
+        <div class="ctl-label">FLP</div>
       </div>
-      <div class="ctl-label">FLAP</div>
     </div>
     <div id="yoke" aria-hidden="true">
       <div id="yoke-column"></div>
@@ -125,10 +128,10 @@
   <div id="toast"></div>
 </div>
 
-<script src="sim.js?v=5"></script>
+<script src="sim.js?v=6"></script>
 <script src="art.js?v=4"></script>
 <script src="audio.js?v=2"></script>
 <script src="cockpit.js?v=1"></script>
-<script src="game.js?v=7"></script>
+<script src="game.js?v=8"></script>
 </body>
 </html>

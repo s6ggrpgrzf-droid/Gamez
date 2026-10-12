@@ -56,112 +56,99 @@ html, body {
 }
 .fd-unit { font-size: 11px; opacity: .8; margin: 0 8px 0 2px; font-family: 'Special Elite', monospace; }
 
-/* throttle: wooden quadrant, right edge — thumb-sized */
-#throttle {
-  position: absolute; right: 10px; top: 24%; height: 38%; width: 56px;
+/* compact control cluster: throttle + flaps in one slim wood panel, right edge */
+#ctl-cluster {
+  position: absolute; right: 8px; top: 34%; height: 30%; width: 68px;
+  display: flex; gap: 5px; padding: 10px 7px 20px;
+  background: linear-gradient(to bottom, #4a3016, #33200e);
+  border-radius: 14px; border: 2px solid #2a1a0a;
+  box-shadow: 0 3px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,220,150,.18);
   pointer-events: auto;
 }
-#thr-track {
-  position: absolute; inset: 0; border-radius: 28px;
-  background: linear-gradient(to right, #4a3016, #6b4a26 30%, #8a6234 50%, #6b4a26 70%, #4a3016);
-  box-shadow: inset 0 4px 12px rgba(0,0,0,.6), 0 3px 8px rgba(0,0,0,.35),
-    inset 0 1px 0 rgba(255,220,150,.25);
+.ctl-mini { position: relative; flex: 1; min-width: 0; }
+#throttle, #flaps { position: relative; }
+#thr-track, #flap-track {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0; border-radius: 12px;
+  box-shadow: inset 0 3px 8px rgba(0,0,0,.6), 0 1px 3px rgba(0,0,0,.3),
+    inset 0 1px 0 rgba(255,220,150,.2);
   touch-action: none; cursor: pointer;
-  border: 2px solid #3a2410;
+  border: 1px solid #2a1c0c;
+}
+#thr-track {
+  background: linear-gradient(to right, #4a3016, #6b4a26 30%, #8a6234 50%, #6b4a26 70%, #4a3016);
+}
+#flap-track {
+  background: linear-gradient(to right, #3d2a12, #5a3f20 30%, #75532c 50%, #5a3f20 70%, #3d2a12);
 }
 /* detent tick marks */
 .thr-detents {
-  position: absolute; left: 6px; right: 6px; top: 14px; bottom: 14px;
+  position: absolute; left: 3px; right: 3px; top: 8px; bottom: 8px;
   pointer-events: none;
   background:
     repeating-linear-gradient(to bottom,
-      transparent 0, transparent calc(25% - 1.5px),
-      rgba(255,230,170,.55) calc(25% - 1.5px), rgba(255,230,170,.55) calc(25% + 1.5px));
+      transparent 0, transparent calc(25% - 1px),
+      rgba(255,230,170,.5) calc(25% - 1px), rgba(255,230,170,.5) calc(25% + 1px));
 }
 .thr-detents::before {
-  content: ''; position: absolute; left: 0; right: 0; top: -2px; height: 4px;
+  content: ''; position: absolute; left: 0; right: 0; top: -1px; height: 3px;
   background: rgba(255,230,170,.8); border-radius: 2px;
 }
 .thr-detents::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 4px;
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
   background: rgba(255,230,170,.8); border-radius: 2px;
 }
-#thr-knob {
-  position: absolute; left: 5px; right: 5px; height: 46px; border-radius: 20px;
+#thr-knob, #flap-knob {
+  position: absolute; left: 2px; right: 2px; height: 30px; border-radius: 12px;
   background:
     radial-gradient(circle at 35% 25%, var(--brass-hi), var(--brass) 55%, #6e5018 90%),
     var(--brass);
-  box-shadow: 0 4px 10px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.5),
+  box-shadow: 0 3px 7px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.5),
     inset 0 -3px 6px rgba(80,50,10,.4);
-  top: calc(100% - 50px);
   border: 1px solid #5a3f14;
 }
+#thr-knob { top: calc(100% - 32px); }
 #thr-knob::after {
-  content: ''; position: absolute; left: 8px; right: 8px; top: 50%; height: 3px;
+  content: ''; position: absolute; left: 5px; right: 5px; top: 50%; height: 2px;
   transform: translateY(-50%);
   background: rgba(60,35,10,.5); border-radius: 2px;
-  box-shadow: 0 -7px 0 rgba(60,35,10,.3), 0 7px 0 rgba(60,35,10,.3);
+  box-shadow: 0 -5px 0 rgba(60,35,10,.3), 0 5px 0 rgba(60,35,10,.3);
 }
-#thr-track::before {
-  content: 'THR'; position: absolute; top: -22px; left: 0; right: 0; text-align: center;
-  font-size: 11px; letter-spacing: 3px; color: #fff8e8; text-shadow: 0 1px 4px rgba(0,0,0,.6);
-}
-.ctl-label {
-  position: absolute; bottom: -20px; left: 0; right: 0; text-align: center;
-  font-size: 10px; letter-spacing: 2px; color: #fff8e8; text-shadow: 0 1px 4px rgba(0,0,0,.6);
-  font-family: 'Special Elite', monospace;
-}
-/* flaps lever: smaller, 3 detents (UP / 1 / FULL) */
-#flaps {
-  position: absolute; right: 76px; top: 30%; height: 26%; width: 44px;
-  pointer-events: auto;
-}
-#flap-track {
-  position: absolute; inset: 0; border-radius: 22px;
-  background: linear-gradient(to right, #3d2a12, #5a3f20 30%, #75532c 50%, #5a3f20 70%, #3d2a12);
-  box-shadow: inset 0 4px 10px rgba(0,0,0,.6), 0 3px 8px rgba(0,0,0,.35),
-    inset 0 1px 0 rgba(255,220,150,.2);
-  touch-action: none; cursor: pointer;
-  border: 2px solid #32200c;
-}
-.flap-detents { position: absolute; left: 5px; right: 5px; top: 12px; bottom: 12px; pointer-events: none; }
+.flap-detents { position: absolute; left: 3px; right: 3px; top: 8px; bottom: 8px; pointer-events: none; }
 .flap-detents i {
-  position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px;
+  position: absolute; left: 0; right: 0; height: 2px; border-radius: 2px;
   background: rgba(255,230,170,.6);
 }
 .flap-detents i:nth-child(1) { top: 0; }
-.flap-detents i:nth-child(2) { top: calc(50% - 1.5px); }
+.flap-detents i:nth-child(2) { top: calc(50% - 1px); }
 .flap-detents i:nth-child(3) { bottom: 0; }
-#flap-knob {
-  position: absolute; left: 4px; right: 4px; height: 34px; border-radius: 15px;
-  background: radial-gradient(circle at 35% 25%, var(--brass-hi), var(--brass) 55%, #6e5018 90%), var(--brass);
-  box-shadow: 0 3px 8px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.5),
-    inset 0 -3px 6px rgba(80,50,10,.4);
-  top: 8px;
-  border: 1px solid #5a3f14;
-  transition: top .18s ease-out;
+#flap-knob { top: 4px; transition: top .18s ease-out; }
+.ctl-label {
+  position: absolute; bottom: -16px; left: 0; right: 0; text-align: center;
+  font-size: 8px; letter-spacing: 1px; color: #ffe9b8; text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  font-family: 'Special Elite', monospace;
+  opacity: .85;
 }
 
-/* yoke: wooden control yoke, bottom-center — mirrors your drag */
+/* yoke: mini wooden indicator, bottom-right — mirrors your drag, stays out of the way */
 #yoke {
-  position: absolute; bottom: calc(64px + env(safe-area-inset-bottom)); left: 50%;
-  width: 120px; height: 76px; margin-left: -60px;
-  pointer-events: none; opacity: .92;
+  position: absolute; bottom: calc(120px + env(safe-area-inset-bottom)); right: 12px;
+  width: 62px; height: 40px;
+  pointer-events: none; opacity: .8;
   transition: transform .12s ease-out;
 }
 #yoke-column {
-  position: absolute; bottom: -6px; left: 50%; width: 14px; height: 40px;
-  margin-left: -7px; border-radius: 6px;
+  position: absolute; bottom: -3px; left: 50%; width: 8px; height: 22px;
+  margin-left: -4px; border-radius: 4px;
   background: linear-gradient(to right, #4a3016, #7a5530 50%, #4a3016);
   box-shadow: 0 2px 6px rgba(0,0,0,.4);
 }
 #yoke-wheel {
-  position: absolute; bottom: 22px; left: 50%; width: 104px; height: 40px;
-  margin-left: -52px;
+  position: absolute; bottom: 12px; left: 50%; width: 56px; height: 22px;
+  margin-left: -28px;
   transition: transform .12s ease-out;
 }
 .yoke-grip {
-  position: absolute; top: 0; width: 30px; height: 40px; border-radius: 12px;
+  position: absolute; top: 0; width: 16px; height: 22px; border-radius: 7px;
   background: linear-gradient(to bottom, #8a6234 0%, #6b4a26 60%, #4a3016 100%);
   box-shadow: inset 0 2px 4px rgba(255,220,150,.35), inset 0 -3px 6px rgba(0,0,0,.4),
     0 3px 8px rgba(0,0,0,.4);
@@ -170,8 +157,8 @@ html, body {
 .yg-left { left: 0; transform: rotate(-8deg); }
 .yg-right { right: 0; transform: rotate(8deg); }
 .yoke-cap {
-  position: absolute; left: 50%; top: 50%; width: 34px; height: 34px;
-  margin: -17px 0 0 -17px; border-radius: 50%;
+  position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
+  margin: -9px 0 0 -9px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 60%, #6e5018);
   box-shadow: 0 3px 8px rgba(0,0,0,.45), inset 0 1px 2px rgba(255,255,255,.5);
   border: 1px solid #5a3f14;
