@@ -1,7 +1,7 @@
 /* Food Truck Manager — ALL tunables live here. Nothing gameplay-related is
  * hardcoded anywhere else. Tweak by playing, not by guessing. */
 var FTC = {
-  BUILD: '20261012a',          // bump on every change (cache-bust + menu build tag)
+  BUILD: '20261012b',          // bump on every change (cache-bust + menu build tag)
   GAME_ID: 'food-truck',       // gamez-arcade leaderboard slot
   SAVE_KEY: 'ftm_save_v1',
   VOL_KEY: 'ftm_vol',
