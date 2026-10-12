@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./hub.css?v=9">
+<link rel="stylesheet" href="./hub.css?v=10">
 <link rel="stylesheet" href="./art-a.css?v=1">
 <link rel="stylesheet" href="./art-b.css?v=1">
 <link rel="stylesheet" href="./art-c.css?v=1">
@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="./art-ss.css?v=1">
 <link rel="stylesheet" href="./art-i.css?v=1">
 <link rel="stylesheet" href="./art-j.css?v=1">
+<link rel="stylesheet" href="./art-k.css?v=1">
 </head>
 <body>
 <header class="hero">
@@ -44,13 +45,18 @@
   </a>
 </header>
 
+<section id="editorial" aria-label="Tonight at the arcade">
+  <div class="shead rvl"><span class="kicker">02 &middot; Tonight</span><h2>Tonight at the arcade</h2><p class="sub">Three picks, fresh every day.</p></div>
+  <div class="ed-picks" id="edPicks"></div>
+</section>
+
 <section id="continue" aria-label="Continue playing">
   <div class="shead rvx"><span class="kicker">01 &middot; Continue</span><h2>Continue playing</h2></div>
   <div class="rail" id="rail"></div>
 </section>
 
 <section aria-label="Today's daily challenges">
-  <div class="shead rvx"><span class="kicker">02 &middot; Daily</span><h2>Today's dailies</h2></div>
+  <div class="shead rvx"><span class="kicker">03 &middot; Daily</span><h2>Today's dailies</h2></div>
   <div class="dgrid">
     <a class="daily" href="./bubble-hex/"><span class="cal">🔮</span><span><b>Daily Hex</b><span>same board, worldwide</span></span></a>
     <a class="daily" href="./bloom-defense/"><span class="cal">🌸</span><span><b>Daily Bloom</b><span>seeded waves</span></span></a>
@@ -66,7 +72,7 @@
 </section>
 
 <main class="collection">
-  <div class="shead rvx"><span class="kicker">03 &middot; Collection</span><h2>The collection</h2></div>
+  <div class="shead rvx"><span class="kicker">04 &middot; Collection</span><h2>The collection</h2></div>
   <div class="games" id="games">
   <a class="card" data-game="candy-cascade" href="./candy-cascade/" style="--glow:#ff5fa2">
     <div class="art art-candy-cascade" role="img" aria-label="Candy Cascade key art"><span class="badge">25 LEVELS</span><div class="pbar"><i></i></div></div>
@@ -257,8 +263,17 @@
       <div class="meta"><span class="play">Play</span><span class="prog"></span></div>
     </div>
   </a>
+  <a class="card" data-game="emberline" href="./emberline/" style="--glow:#e8a83e">
+    <div class="art art-emberline" role="img" aria-label="Emberline key art"><span class="badge">NEW</span><div class="pbar"><i></i></div>
+    </div>
+    <div class="body">
+      <h3>Emberline</h3>
+      <p>A cozy conductor's tale — drive the valley line. Stoke the fire, keep time on the timetable, and carry your little passengers home through golden meadows and quiet storms.</p>
+      <div class="meta"><span class="play">Play</span><span class="prog"></span></div>
+    </div>
+  </a>
 </main>
 <footer class="studio-footer"><span class="made-by">Made by</span><span class="wordmark">Workman Designs</span><span class="tagline">more games coming</span><button id="sndbtn" class="sndbtn" aria-label="Toggle hub sounds">&#x1F50A;</button></footer>
-<script src="./hub.js?v=14"></script>
+<script src="./hub.js?v=16"></script>
 </body>
 </html>

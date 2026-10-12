@@ -141,7 +141,8 @@
     { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' },
     { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' },
     { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' },
-    { id: 'skyline-sparrow', name: 'Skyline Sparrow', cls: 'art-skyline-sparrow' }
+    { id: 'skyline-sparrow', name: 'Skyline Sparrow', cls: 'art-skyline-sparrow' },
+    { id: 'emberline', name: 'Emberline', cls: 'art-emberline' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -190,8 +191,8 @@
         } catch (e) { return null; }
       }
       if (id === 'skyline-sparrow') {
-        var ssv = readJSON('ss_save_v1'); if (!ssv || !ssv.best || !ssv.best.score) return null;
-        return { label: 'Best ' + (+ssv.best.score).toLocaleString() + ' pts', frac: Math.min(1, ssv.best.score / 5000) };
+        var ss = readJSON('ss_save_v1'); if (!ss || !ss.best || !ss.best.score) return null;
+        return { label: 'Best ' + (+ss.best.score).toLocaleString() + ' pts', frac: Math.min(1, ss.best.score / 5000) };
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;
@@ -286,7 +287,80 @@
     var lab = card.querySelector('.prog');
     if (lab) lab.textContent = pr.label;
   });
-  /* ---------- premium layer: spotlight, count, shine, reveals, tick ---------- */
+  /* ---------- tonight at the arcade: daily curator picks ---------- */
+  (function () {
+    var wrap = document.getElementById('editorial');
+    if (!wrap) return;
+    var picksEl = document.getElementById('edPicks');
+    var FALLBACK = [
+      { game: 'greywater', blurb: 'Fog on the water tonight and ships standing into the narrows. They need their keeper.' },
+      { game: 'neon-void', blurb: 'Turn it up, thread the gravity wells, and try not to blink. The swarm is waiting.' },
+      { game: 'castaway-cove', blurb: 'One cast, one fish, one quiet dawn. The heron will judge your form regardless.' }
+    ];
+    function cardFor(id) {
+      return document.querySelector('.card[data-game="' + id + '"]');
+    }
+    function render(picks) {
+      if (!picksEl) return;
+      picksEl.innerHTML = '';
+      picks.forEach(function (p, i) {
+        var card = cardFor(p.game);
+        if (!card) return;
+        var a = document.createElement('a');
+        a.className = 'ed-pick rvl';
+        a.href = card.getAttribute('href');
+        a.style.setProperty('--glow', card.style.getPropertyValue('--glow') || '#4de3ff');
+        a.style.transitionDelay = (i * 90) + 'ms';
+        var art = card.querySelector('.art');
+        var acls = '';
+        if (art) art.className.split(/\s+/).forEach(function (k) { if (k.indexOf('art-') === 0 && k !== 'art') acls = k; });
+        a.innerHTML = '<span class="ed-art ' + acls + '" aria-hidden="true"></span>' +
+          '<span class="ed-body"><b>' + escapeHtml(card.querySelector('h3').textContent.replace(/^(\p{Extended_Pictographic}\uFE0F?\s+)+/u, '')) + '</b>' +
+          '<i>' + escapeHtml(p.blurb) + '</i></span>' +
+          '<span class="ed-go" aria-hidden="true">&rarr;</span>';
+        picksEl.appendChild(a);
+      });
+      observeReveals();
+    }
+    function dateKey() {
+      var d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    // static picks first (instant), AI replaces them when it lands
+    render(FALLBACK);
+    try {
+      var ctl = new AbortController();
+      var to = setTimeout(function () { ctl.abort(); }, 6000);
+      fetch('https://gamez-ai.chaoticutopia84.workers.dev/g', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'arcadeeditorial', game: 'hub', ctx: { date: dateKey() } }),
+        signal: ctl.signal
+      }).then(function (r) { clearTimeout(to); return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (d && d.picks && d.picks.length === 3) render(d.picks);
+        }).catch(function () { /* fallback stays */ });
+    } catch (e) { /* fallback stays */ }
+  })();
+
+  /* ---------- scroll reveals: cards rise in, staggered ---------- */
+  var revealIO = null;
+  function observeReveals() {
+    var els = document.querySelectorAll('.rvl:not(.in)');
+    if (!('IntersectionObserver' in window) || !els.length) {
+      els.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    if (!revealIO) {
+      revealIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('in'); revealIO.unobserve(en.target); }
+        });
+      }, { threshold: 0.12 });
+    }
+    els.forEach(function (el) { revealIO.observe(el); });
+  }
+  document.querySelectorAll('.card,.daily,.chip,.shead').forEach(function (el) { el.classList.add('rvl'); });
+  observeReveals();
   var WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
   var cardEls = document.querySelectorAll('.card');
@@ -315,7 +389,7 @@
       while (ac.firstChild) spArt.appendChild(ac.firstChild);
     }
     var sh3 = sc.querySelector('h3');
-    if (sh3) document.getElementById('spName').textContent = sh3.textContent.replace(/^\S+\s+/, '');
+    if (sh3) document.getElementById('spName').textContent = sh3.textContent.replace(/^(\p{Extended_Pictographic}\uFE0F?\s+)+/u, '');
     var spp = sc.querySelector('.body p');
     if (spp) document.getElementById('spBlurb').textContent = spp.textContent.trim();
   })();
