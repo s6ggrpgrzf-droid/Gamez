@@ -42,10 +42,10 @@ function lighthouse(){
   // windows up the tower
   g.fillStyle='#2b3542';
   [[70,196],[70,248],[70,300]].forEach(function(p){
-    var t=(p[0]-ty)/(by-ty), w=(topW+(botW-topW)*t);
-    g.beginPath(); g.arc(W/2,p[0],Math.min(7,w*0.16),0,7); g.fill();
+    var t=(p[1]-ty)/(by-ty), w=(topW+(botW-topW)*t);
+    g.beginPath(); g.arc(W/2,p[1],Math.min(7,w*0.16),0,7); g.fill();
     g.fillStyle='rgba(140,180,210,0.5)';
-    g.beginPath(); g.arc(W/2-1.5,p[0]-1.5,Math.min(4,w*0.09),0,7); g.fill();
+    g.beginPath(); g.arc(W/2-1.5,p[1]-1.5,Math.min(4,w*0.09),0,7); g.fill();
     g.fillStyle='#2b3542';
   });
   // door
@@ -73,6 +73,17 @@ function lighthouse(){
   g.fillStyle='#7e2a25'; g.beginPath(); g.arc(W/2,ty-66,26,Math.PI*1.15,Math.PI*1.85); g.fill();
   g.fillStyle='#2b2f36'; g.beginPath(); g.arc(W/2,ty-94,4,0,7); g.fill();
   g.fillRect(W/2-1.5,ty-104,3,10);
+  // weathering: stone courses, rain stains, salt wear
+  g.strokeStyle='rgba(90,85,75,0.35)'; g.lineWidth=1;
+  for(var wy=ty+18;wy<by;wy+=22){
+    var wt=(wy-ty)/(by-ty), ww=topW+(botW-topW)*wt;
+    g.beginPath(); g.moveTo((W-ww)/2+2,wy); g.lineTo((W+ww)/2-2,wy); g.stroke();
+  }
+  g.fillStyle='rgba(70,75,80,0.18)';
+  for(var si3=0;si3<5;si3++){ var sx3=W/2-24+si3*11;
+    g.fillRect(sx3,ty-8,3,26+((si3*37)%18)); } // streaks under the gallery
+  g.fillStyle='rgba(255,255,255,0.10)';
+  g.fillRect(tx+4,ty+6,5,by-ty-12); // worn highlight edge
   cache.lighthouse=c[0]; return c[0];
 }
 
