@@ -70,10 +70,13 @@ var SK = (function () {
     var weather = rnd() < 0.25 ? 'dusk' : (rnd() < 0.15 ? 'dawn' : 'day');
     if (rnd() < 0.08) weather = 'night';
     var wind = Math.round((rnd() * 16 - 8)); // kts headwind +/-
+    // flying weather: clear | rain | wind (gusty) | snow — seeded, shown on the card
+    var wxr = rnd();
+    var wx = wxr < 0.45 ? 'clear' : (wxr < 0.68 ? 'rain' : (wxr < 0.84 ? 'wind' : 'snow'));
     var base = 120 + Math.round(dist / 120) + paxN * 45 + cargoN * 30;
     return {
       from: homeName, to: names[0], dist: dist,
-      paxN: paxN, cargoN: cargoN, weather: weather, wind: wind,
+      paxN: paxN, cargoN: cargoN, weather: weather, wind: wind, wx: wx,
       payout: base,
     };
   }
@@ -116,6 +119,11 @@ var SK = (function () {
       pax[j].story = FALLBACK_STORIES[Math.floor(rnd() * FALLBACK_STORIES.length)];
     }
     var quip = TOWER_QUIPS[Math.floor(rnd() * TOWER_QUIPS.length)].replace('{dest}', route.to);
+    // tower weather briefing — Mabel tells you what you're flying into
+    var wxBrief = '';
+    if (route.wx === 'rain') wxBrief = 'Tower: Rain over ' + route.to + '. She\'ll be slick — easy on the rollout.';
+    else if (route.wx === 'wind') wxBrief = 'Tower: Gusty out there today. Watch the needle, mind the drift.';
+    else if (route.wx === 'snow') wxBrief = 'Tower: Snow on the way to ' + route.to + '. She\'ll feel heavy — carry a touch more speed.';
     return {
       seed: seed, rndState: null, // (we re-seed decor separately in render)
       route: route, plane: plane,
@@ -125,6 +133,9 @@ var SK = (function () {
       x: 0, lat: 0, alt: 0, speed: 0, vspeed: 0,
       pitch: 0, bank: 0, aoa: 0, stalled: false,
       throttle: 0, flaps: 0,
+      wx: route.wx || 'clear', // flying weather: clear | rain | wind | snow
+      ice: 0, // snow: icing builds slowly, throttle heat melts it
+      gustT: 0, gust: 0, // wind: shifting gusts
       massF: 1.0, // 1.0 full → ~0.93 empty (fuel burn lightens)
       phase: 'takeoff', // takeoff | cruise | final | done
       runwayX: 0, runwayLen: 850, destX: route.dist, destLen: 850,
@@ -134,7 +145,8 @@ var SK = (function () {
       touchdownVs: null, touchdownOff: null, goArounds: 0,
       ribbon: [], // {x, alt, smooth} trail for the sky-ribbon
       ribbonT: 0,
-      messages: [{ t: 0, text: 'Tower: ' + quip }],
+      messages: [{ t: 0, text: 'Tower: ' + quip }].concat(
+        wxBrief ? [{ t: 0, text: wxBrief, who: 'mabel' }] : []),
       msgT: 0,
       time: 0, done: false, landed: false,
       score: 0, payout: 0, xpGain: 0,
@@ -178,11 +190,26 @@ var SK = (function () {
     var vFps = Math.max(0, st.speed * 1.688); // kts → ft/s
     var onGround = st.alt <= 0.5 && st.phase === 'takeoff';
 
+    // weather: gusts shift through the flight (deterministic in st.time)
+    var isRain = st.wx === 'rain', isWind = st.wx === 'wind', isSnow = st.wx === 'snow';
+    if (isWind) {
+      st.gustT += dt;
+      st.gust = Math.sin(st.gustT * 0.9) * 4 + Math.sin(st.gustT * 2.17 + 1.3) * 2.5;
+    } else st.gust = 0;
+    var wEff = st.wind + st.gust; // effective wind incl. gusts
+    // snow: icing builds slowly on the wings, throttle heat melts it off
+    if (isSnow) {
+      st.ice = Math.min(1, st.ice + dt * 0.008);
+      st.ice = Math.max(0, st.ice - st.throttle * dt * 0.03);
+    } else st.ice = Math.max(0, st.ice - dt * 0.05);
+
     if (onGround) {
-      // takeoff roll
+      // takeoff roll (rain: slick runway, longer roll)
       var twRoll = st.throttle * P.maxTW;
       var dwRoll = 0.03 + 0.0004 * st.speed * st.speed / 100;
-      var accelKts = (twRoll - dwRoll) * G / 1.688 - (st.wind > 0 ? st.wind * 0.02 : 0);
+      if (isRain) dwRoll *= 0.65;
+      if (isSnow) dwRoll *= 1.5;
+      var accelKts = (twRoll - dwRoll) * G / 1.688 - (wEff > 0 ? wEff * 0.02 : 0);
       st.speed = Math.max(0, st.speed + accelKts * dt);
       st.x += st.speed * dt * 3;
       st.vspeed = 0; st.lat = 0;
@@ -227,11 +254,17 @@ var SK = (function () {
       var vStall = P.stall * (1 - 0.28 * st.flaps) * 1.688;
       var nBase = (vFps * vFps) / (vStall * vStall) * Math.max(-0.6, Math.min(1.45, st.aoa / 6));
       nBase /= st.massF; // lighter = floatier
+      if (isSnow) nBase *= 0.93 * (1 - 0.08 * st.ice); // heavy air + icing
       var n = st.stalled ? nBase * 0.68 : nBase;
 
       // vertical: lift (banked) vs weight
       var ay = (n * Math.cos(bankRad) - 1) * G;
       st.vspeed += ay * dt;
+      // wind: turbulence bumps on approach — she shudders in the gusts
+      if (isWind && (st.phase === 'final' || st.alt < 150)) {
+        st.vspeed += Math.sin(st.time * 7.3) * 7 * dt;
+        st.bank += Math.sin(st.time * 5.1 + 2) * 5 * dt;
+      }
       st.vspeed *= (1 - 0.12 * dt); // damping
       st.vspeed = Math.max(-90, Math.min(90, st.vspeed));
       st.alt = Math.max(0, st.alt + st.vspeed * dt);
@@ -242,16 +275,18 @@ var SK = (function () {
       if (st.alt < 50) induced *= 0.35 + 0.65 * (st.alt / 50); // ground effect: flares float
       var dw = P.cd0 * v100 * v100 + induced;
       dw += st.flaps * (P.flapD || 0.3) * v100 * v100; // flaps: strong when fast, gentle when slow; per-plane so the Cub can drag it in and the jet can still fly the approach
+      if (isRain) dw *= 1.12; // rain: wet wings, more drag
+      if (isSnow) dw *= 1.18;
       var tw = st.throttle * P.maxTW;
       var ax = (tw - dw) * G - G * Math.sin(fpa) * 0.9;
       st.speed = Math.max(0, st.speed + ax / 1.688 * dt);
 
-      // lateral: banked turn + crosswind drift on final
+      // lateral: banked turn + crosswind drift on final (gusts push harder)
       st.lat += Math.sin(bankRad) * vFps * dt;
-      if (st.phase === 'final' || st.alt < 120) st.lat += st.wind * -0.9 * dt;
+      if (st.phase === 'final' || st.alt < 120) st.lat += wEff * (isWind ? -1.6 : -0.9) * dt;
 
       // along-track: wind affects ground speed
-      var gndKts = Math.max(0, st.speed + st.wind * 0.35);
+      var gndKts = Math.max(0, st.speed + wEff * 0.35);
       st.x += gndKts * dt * 3;
 
       // fuel burn
@@ -267,6 +302,20 @@ var SK = (function () {
         st.phase = 'final';
         pushMsg(st, 'Tower: ' + st.route.to + ' in sight. Wind ' +
           (st.wind >= 0 ? 'calm' : 'light') + '. Runway is yours. Flaps out, ease her down.', 'kit');
+      }
+
+      // Mabel's high warning: stranded upstairs? she'll tell you early.
+      // 3° profile: alt should be ~ d*0.052. If you're 250ft+ above it with
+      // less than 9000px to go, you're not making it without starting down NOW.
+      if (!st._highWarn && !st.done && (st.phase === 'cruise' || st.phase === 'final')) {
+        var dAimH = st.destX + st.destLen * 0.18 - st.x;
+        if (dAimH > 0 && dAimH < 9000) {
+          var profAlt = dAimH * 0.052;
+          if (st.alt > profAlt + 250) {
+            st._highWarn = true;
+            pushMsg(st, 'Tower: You\'re high — start her down or you\'ll overshoot ' + st.route.to + '.', 'mabel');
+          }
+        }
       }
 
       // landing procedure: tower talks you down the final
@@ -521,9 +570,19 @@ var SK = (function () {
 
   function selfTest() {
     // headless sanity: full flight must complete without errors (new physics model)
+    // — flown once in each weather type.
+    var wxs = ['clear', 'rain', 'wind', 'snow'];
+    for (var wi = 0; wi < wxs.length; wi++) {
+      var r = flyOnce(wxs[wi]);
+      if (r !== 'PASS') return 'FAIL[' + wxs[wi] + ']: ' + r;
+    }
+    return 'PASS';
+  }
+
+  function flyOnce(wx) {
     var pilot = newPilot('Test');
     var route = makeRoute(rng(7), pilot.home);
-    route.dist = 6000; route.wind = 0;
+    route.dist = 6000; route.wind = 0; route.wx = wx;
     var st = newFlight(7, route, 'kite', pilot);
     var inp = { throttle: 1, pitch: 0, lateral: 0 };
     var steps = 0, stalledOnce = false;
