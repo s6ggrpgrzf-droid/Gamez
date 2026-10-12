@@ -124,7 +124,7 @@ var SK = (function () {
       // physics — real lift/drag/thrust/weight. Units: kts, ft, ft/s, deg.
       x: 0, lat: 0, alt: 0, speed: 0, vspeed: 0,
       pitch: 0, bank: 0, aoa: 0, stalled: false,
-      throttle: 0,
+      throttle: 0, flaps: 0,
       massF: 1.0, // 1.0 full → ~0.93 empty (fuel burn lightens)
       phase: 'takeoff', // takeoff | cruise | final | done
       runwayX: 0, runwayLen: 850, destX: route.dist, destLen: 850,
@@ -142,8 +142,9 @@ var SK = (function () {
     };
   }
 
-  /* input: {throttle 0..1, pitch -1..1, lateral -1..1} — logical actions.
-     pitch: -1 push (nose down) … +1 pull (nose up). lateral: -1 left … +1 right. */
+  /* input: {throttle 0..1, pitch -1..1, lateral -1..1, flaps 0..1} — logical actions.
+     pitch: -1 push (nose down) … +1 pull (nose up). lateral: -1 left … +1 right.
+     flaps: 0 clean … 1 full — more lift at low speed, much more drag. */
   var G = 32.2; // ft/s^2
   function step(st, inp, dt) {
     dt = Math.min(dt, 0.05);
@@ -154,6 +155,8 @@ var SK = (function () {
     var resp = 3.2 / P.ponder;
     if (inp && typeof inp.throttle === 'number')
       st.throttle += (Math.max(0, Math.min(1, inp.throttle)) - st.throttle) * Math.min(1, dt * 3);
+    if (inp && typeof inp.flaps === 'number')
+      st.flaps += (Math.max(0, Math.min(1, inp.flaps)) - st.flaps) * Math.min(1, dt * 2.5);
     var pitchIn = (inp && typeof inp.pitch === 'number') ? Math.max(-1, Math.min(1, inp.pitch)) : 0;
     var latIn = (inp && typeof inp.lateral === 'number') ? Math.max(-1, Math.min(1, inp.lateral)) : 0;
     var sloppy = st.stalled ? 0.45 : 1; // stalled controls get mushy
@@ -220,9 +223,9 @@ var SK = (function () {
       }
       if (st.stalled) st.pitch -= 5.5 * dt; // nose mushes down slowly on its own
 
-      // load factor n = L/W
-      var vStall = P.stall * 1.688;
-      var nBase = (vFps * vFps) / (vStall * vStall) * Math.max(0, Math.min(1.45, st.aoa / 6));
+      // load factor n = L/W — flaps lower the stall speed (more lift at low speed)
+      var vStall = P.stall * (1 - 0.18 * st.flaps) * 1.688;
+      var nBase = (vFps * vFps) / (vStall * vStall) * Math.max(-0.6, Math.min(1.45, st.aoa / 6));
       nBase /= st.massF; // lighter = floatier
       var n = st.stalled ? nBase * 0.68 : nBase;
 
@@ -238,6 +241,7 @@ var SK = (function () {
       var induced = P.ki * n * n / (v100 * v100);
       if (st.alt < 50) induced *= 0.35 + 0.65 * (st.alt / 50); // ground effect: flares float
       var dw = P.cd0 * v100 * v100 + induced;
+      dw += st.flaps * 0.22 * v100; // flaps are draggy — that's how you get down and slow
       var tw = st.throttle * P.maxTW;
       var ax = (tw - dw) * G - G * Math.sin(fpa) * 0.9;
       st.speed = Math.max(0, st.speed + ax / 1.688 * dt);
@@ -258,7 +262,7 @@ var SK = (function () {
       if (st.phase === 'cruise' && distToDest < 2600) {
         st.phase = 'final';
         pushMsg(st, 'Tower: ' + st.route.to + ' in sight. Wind ' +
-          (st.wind >= 0 ? 'calm' : 'light') + '. Runway is yours.', 'kit');
+          (st.wind >= 0 ? 'calm' : 'light') + '. Runway is yours. Flaps out, ease her down.', 'kit');
       }
 
       // landing procedure: tower talks you down the final
