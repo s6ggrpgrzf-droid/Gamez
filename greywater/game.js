@@ -345,28 +345,74 @@ function drawSeaBase(sc){
       ctx.fillRect(sgx-gw3/2+Math.sin(tG*1.3+j)*5,gy2,gw3,1.8);
     }
   }
+  // drifting light patches: sun playing through clouds on the water
+  if(sc.nf<0.55){
+    var pk=(1-sc.nf)*0.9;
+    for(var pi=0;pi<4;pi++){
+      var px4=((tG*9*(0.5+pi*0.3)+pi*W*0.37)%(W+240))-120;
+      var py4=L.horizonY+30+((pi*67)%Math.max(40,L.seaH*0.55));
+      var pr4=60+pi*22;
+      var pa=0.09*pk*(0.6+0.4*Math.sin(tG*0.7+pi*2.4));
+      if(pa>0.008){
+        var pg4=ctx.createRadialGradient(px4,py4,6,px4,py4,pr4);
+        pg4.addColorStop(0,'rgba(255,244,214,'+pa.toFixed(3)+')');
+        pg4.addColorStop(1,'rgba(255,244,214,0)');
+        ctx.fillStyle=pg4;
+        ctx.save(); ctx.translate(px4,py4); ctx.scale(1.8,0.55); ctx.translate(-px4,-py4);
+        ctx.beginPath(); ctx.arc(px4,py4,pr4,0,7); ctx.fill(); ctx.restore();
+      }
+    }
+  }
 }
 function drawWaves(sc){
-  var N=13, w=st.wx.cur;
-  var wob=GW.waveAmp(st)*0.5;
+  var w=st.wx.cur, N=9;
+  var stormK=w==='storm'?1.9:(w==='rain'?1.35:1);
+  var rough=(w==='storm'?1:(w==='rain'?0.5:0.15));
   for(var i=0;i<N;i++){
-    var f=i/(N-1);
-    var y=L.horizonY+8+Math.pow(f,1.55)*L.seaH*0.9;
-    var amp=(1.5+f*9)*(w==='storm'?1.8:1);
-    ctx.strokeStyle='rgba(255,255,255,'+(0.03+f*0.09).toFixed(3)+')';
-    ctx.lineWidth=1+f*1.8;
-    ctx.beginPath();
-    for(var px=0;px<=W;px+=16){
-      var py=y+Math.sin(px*0.018+tG*(1.1+f*1.4)+i*1.3)*amp*0.45+GW.waveH(st,px*2.4)*0.35*(0.25+f);
-      if(px===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    var f=i/(N-1); // 0=far horizon, 1=near foreground
+    var yBase=L.horizonY+10+Math.pow(f,1.6)*L.seaH*0.88;
+    var amp=(2+f*10)*stormK;
+    var speed=1.1+f*1.9; // near water moves faster (parallax)
+    // wave crest line: three layered sines traveling shoreward
+    function waveY(px){
+      var ph=px*0.016-tG*speed+i*1.7;
+      return yBase
+        + Math.sin(ph)*amp*0.5
+        + Math.sin(ph*2.3+1.3)*amp*0.22
+        + Math.sin(px*0.052+tG*2.4+i*2.1)*amp*0.09;
     }
+    // band body: fill below the crest for water volume
+    var bandH=8+f*26;
+    ctx.beginPath();
+    for(var px=0;px<=W;px+=12){ var py=waveY(px); if(px===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+    ctx.lineTo(W,yBase+bandH); ctx.lineTo(0,yBase+bandH); ctx.closePath();
+    ctx.fillStyle='rgba(8,18,34,'+(0.13+f*0.20).toFixed(3)+')';
+    ctx.fill();
+    // sunlit face: the forward slope catches light
+    ctx.fillStyle='rgba(140,180,215,'+(0.05+f*0.10).toFixed(3)+')';
+    ctx.beginPath();
+    for(var fx=0;fx<=W;fx+=12){ var fy=waveY(fx)-2-f*4; if(fx===0) ctx.moveTo(fx,fy); else ctx.lineTo(fx,fy); }
+    for(var bx=W;bx>=0;bx-=12){ ctx.lineTo(bx,waveY(bx)+3); }
+    ctx.closePath(); ctx.fill();
+    // crest highlight
+    ctx.strokeStyle='rgba(190,220,242,'+(0.15+f*0.32).toFixed(3)+')';
+    ctx.lineWidth=1+f*2.4;
+    ctx.beginPath();
+    for(var qx=0;qx<=W;qx+=12){ var qy=waveY(qx); if(qx===0) ctx.moveTo(qx,qy); else ctx.lineTo(qx,qy); }
     ctx.stroke();
-    if(f>0.62){ // foam flecks on near bands
-      ctx.fillStyle='rgba(255,255,255,'+(0.05+f*0.08).toFixed(3)+')';
-      for(var fx2=0;fx2<W;fx2+=46){
-        var fxp=fx2+((i*37)%46);
-        var fyp=y+Math.sin(fxp*0.018+tG*(1.1+f*1.4)+i*1.3)*amp*0.45-3;
-        ctx.beginPath(); ctx.ellipse(fxp,fyp,7+f*9,1.6+f,0,0,7); ctx.fill();
+    // whitecaps: foam bursting on crests when rough
+    if(rough>0.3){
+      for(var cx=0;cx<W;cx+=30){
+        var cph=cx*0.016-tG*speed+i*1.7;
+        var crest=Math.sin(cph)+0.4*Math.sin(cph*2.3+1.3);
+        if(crest>0.85){
+          var cyy=waveY(cx)-3;
+          var ca=(crest-0.85)*1.4*rough*(0.25+f*0.75);
+          if(ca>0.02){
+            ctx.fillStyle='rgba(232,240,248,'+Math.min(0.75,ca).toFixed(3)+')';
+            ctx.beginPath(); ctx.ellipse(cx,cyy,10+f*10,1.8+f*1.4,0,0,7); ctx.fill();
+          }
+        }
       }
     }
   }
