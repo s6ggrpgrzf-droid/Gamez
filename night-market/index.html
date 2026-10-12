@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05070A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Night Market</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="game">
+
+  <!-- Inline SVG defs: coin (tongbao), lantern, gem, gong, ticket, lock -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="nm-coin" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+        <rect x="9" y="9" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      </symbol>
+      <symbol id="nm-lantern" viewBox="0 0 24 24">
+        <path d="M12 1v2" stroke="currentColor" stroke-width="1.6"/>
+        <rect x="8.5" y="3" width="7" height="2.4" rx="1" fill="currentColor"/>
+        <ellipse cx="12" cy="12.5" rx="8" ry="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M12 5v15M7.5 6.5c-1 2-1.6 4-1.6 6s.6 4 1.6 6M16.5 6.5c1 2 1.6 4 1.6 6s-.6 4-1.6 6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="8.5" y="20" width="7" height="2.4" rx="1" fill="currentColor"/>
+        <path d="M12 22.4v1.2" stroke="currentColor" stroke-width="1.6"/>
+      </symbol>
+      <symbol id="nm-gem" viewBox="0 0 24 24">
+        <path d="M12 2.5L20 9l-8 12.5L4 9z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M4 9h16M12 2.5L8.5 9 12 21.5 15.5 9 12 2.5" fill="none" stroke="currentColor" stroke-width="1.1"/>
+      </symbol>
+      <symbol id="nm-gong" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M5 5.5L3.4 3.8M19 5.5l1.6-1.7" stroke="currentColor" stroke-width="1.6"/>
+      </symbol>
+      <symbol id="nm-ticket" viewBox="0 0 24 24">
+        <path d="M3 7a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2.2a2.3 2.3 0 0 0 0 4.6V16a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2.2a2.3 2.3 0 0 0 0-4.6z" fill="none" stroke="currentColor" stroke-width="1.7"/>
+        <path d="M14 5v14" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2.4 2"/>
+      </symbol>
+      <symbol id="nm-lock" viewBox="0 0 24 24">
+        <rect x="6" y="10.5" width="12" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="12" cy="14.6" r="1.4" fill="currentColor"/>
+      </symbol>
+      <symbol id="nm-shop" viewBox="0 0 24 24">
+        <path d="M4 9l1.2-5h13.6L20 9" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M4 9h16v3a2.4 2.4 0 0 1-4.8 0 2.4 2.4 0 0 1-4.8 0A2.4 2.4 0 0 1 5.6 12 2.4 2.4 0 0 1 4 12z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M6 14v6M18 14v6M6 17.5h12" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      </symbol>
+      <symbol id="nm-person" viewBox="0 0 24 24">
+        <circle cx="12" cy="7.5" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M5 20c1-3.6 3.8-5.4 7-5.4s6 1.8 7 5.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      </symbol>
+      <symbol id="nm-book" viewBox="0 0 24 24">
+        <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15.5H6.7A1.7 1.7 0 0 0 5 20.2z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M5 19.5A1.5 1.5 0 0 1 6.5 18H19" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M9 8h7M9 11.5h5" stroke="currentColor" stroke-width="1.4"/>
+      </symbol>
+      <symbol id="nm-moon" viewBox="0 0 24 24">
+        <path d="M19.5 14.5A8.5 8.5 0 0 1 9.5 4.5a8.5 8.5 0 1 0 10 10z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      </symbol>
+      <symbol id="nm-gear" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1" stroke="currentColor" stroke-width="1.8"/>
+      </symbol>
+      <symbol id="nm-hourglass" viewBox="0 0 24 24">
+        <path d="M6 3h12M6 21h12M7.5 3c0 5 4.5 6.5 4.5 9s-4.5 4-4.5 9M16.5 3c0 5-4.5 6.5-4.5 9s4.5 4 4.5 9" fill="none" stroke="currentColor" stroke-width="1.7"/>
+      </symbol>
+      <symbol id="nm-dish" viewBox="0 0 24 24">
+        <path d="M4 13h16c0 4-3.6 7-8 7s-8-3-8-7z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M9.5 13c-.4-2.6.4-4.6 1.6-6M14.5 13c.4-2.6-.4-4.6-1.6-6" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      </symbol>
+      <symbol id="nm-close" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- Status strip: coins + /s, lanterns, gems, settings; quest chip below -->
+  <header id="status-strip">
+    <div class="pill" id="pill-coins">
+      <svg class="ic"><use href="#nm-coin"/></svg>
+      <div class="pill-nums"><span class="num" id="coins-num">20</span><span class="pill-sub num" id="cps-num">0/s</span></div>
+    </div>
+    <div class="pill" id="pill-lanterns">
+      <svg class="ic"><use href="#nm-lantern"/></svg>
+      <span class="num" id="lanterns-num">0</span>
+    </div>
+    <div class="pill" id="pill-gems">
+      <svg class="ic"><use href="#nm-gem"/></svg>
+      <span class="num" id="gems-num">0</span>
+    </div>
+    <button id="settings-btn" aria-label="Settings"><svg class="ic"><use href="#nm-gear"/></svg></button>
+    <div id="quest-chip"><svg class="ic"><use href="#nm-lantern"/></svg><span id="quest-chip-text">Tonight's quests are posted</span></div>
+  </header>
+
+  <!-- Diorama: canvas world + on-world chrome -->
+  <div id="diorama-wrap">
+    <canvas id="diorama"></canvas>
+
+    <div id="dish-tray" class="plaque">
+      <svg class="ic"><use href="#nm-dish"/></svg>
+      <div id="dish-icons"></div>
+      <button id="dish-sell" class="buy-btn">SELL</button>
+    </div>
+
+    <button id="night-gong" aria-label="Strike the night gong">
+      <svg class="ic"><use href="#nm-gong"/></svg>
+      <span id="gong-taps" class="num"></span>
+    </button>
+
+    <button id="edge-left" class="edge-plaque" aria-label="Recommended next buy">
+      <svg class="ic"><use href="#nm-ticket"/></svg>
+      <span class="edge-kicker">NEXT</span>
+      <span id="edge-left-text">Noodle Cart</span>
+    </button>
+
+    <button id="edge-right" class="edge-plaque" aria-label="Quests">
+      <svg class="ic"><use href="#nm-lantern"/></svg>
+      <span class="edge-kicker">QUESTS</span>
+      <span id="edge-right-badge" class="edge-badge num" hidden></span>
+    </button>
+
+    <div id="stall-panel" class="plaque" hidden></div>
+
+    <!-- Encounter choice card: tap the drifting visitor, never a blocking modal -->
+    <div id="encounter-card" class="plaque" hidden>
+      <button id="enc-x" aria-label="Dismiss"><svg class="ic"><use href="#nm-close"/></svg></button>
+      <div class="enc-kicker kicker">A visitor wanders over</div>
+      <div class="enc-name" id="enc-name"></div>
+      <div class="enc-flavor" id="enc-flavor"></div>
+      <button class="ticket-btn enc-btn" id="enc-windfall"></button>
+      <button class="ticket-btn enc-btn" id="enc-boost"></button>
+    </div>
+
+    <div id="toast" class="plaque" hidden></div>
+  </div>
+
+  <!-- Bottom tab rail -->
+  <nav id="tab-rail">
+    <button class="tab" data-tab="stalls">
+      <svg class="ic"><use href="#nm-shop"/></svg>
+      <span class="tab-label">Stalls</span>
+      <span class="tab-hint" hidden></span>
+    </button>
+    <button class="tab" data-tab="crew">
+      <svg class="ic"><use href="#nm-person"/></svg>
+      <span class="tab-label">Crew</span>
+      <span class="tab-hint" hidden></span>
+    </button>
+    <button class="tab" data-tab="guests">
+      <svg class="ic"><use href="#nm-book"/></svg>
+      <span class="tab-label">Guests</span>
+      <span class="tab-hint" hidden></span>
+    </button>
+    <button class="tab" data-tab="season">
+      <svg class="ic"><use href="#nm-moon"/></svg>
+      <span class="tab-label">Season</span>
+      <span class="tab-hint" hidden></span>
+    </button>
+  </nav>
+
+  <!-- Full overlay sheet -->
+  <div id="sheet" hidden>
+    <div class="sheet-backdrop" id="sheet-backdrop"></div>
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <span class="sheet-title" id="sheet-title">Stalls</span>
+        <span class="bulk-pill" id="bulk-pill" hidden>
+          <button data-bulk="x1" class="on">x1</button><button data-bulk="x10">x10</button><button data-bulk="max">Max</button>
+        </span>
+        <button id="sheet-close" aria-label="Close"><svg class="ic"><use href="#nm-close"/></svg></button>
+      </div>
+      <div class="sheet-body" id="sheet-body"></div>
+    </div>
+  </div>
+
+  <!-- Welcome-back overlay: dimmed, never a blocking modal; tap anywhere collects -->
+  <div id="welcome" hidden>
+    <div class="welcome-card">
+      <svg class="ic welcome-lantern"><use href="#nm-lantern"/></svg>
+      <div class="welcome-title">The night market missed you</div>
+      <div class="welcome-line num" id="welcome-line"></div>
+      <div class="welcome-visitors" id="welcome-visitors"></div>
+      <div class="welcome-tap">tap anywhere</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="format.js?v=1"></script>
+<script src="content.js?v=1"></script>
+<script src="sim.js?v=1"></script>
+<script src="save.js?v=1"></script>
+<script src="offline.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="render.js?v=1"></script>
+<script src="ui.js?v=1"></script>
+<script src="main.js?v=1"></script>
+</body>
+</html>
