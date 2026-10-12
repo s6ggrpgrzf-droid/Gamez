@@ -19,7 +19,7 @@ body.playing #ctl{transition-delay:.12s}
 .chip svg{flex:none;display:block}
 #n span{font-weight:700}
 #vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 52%,rgba(24,12,34,.42) 100%)}
-@media(max-width:430px){.hud{gap:6px}.chip{padding:7px 11px;font-size:13.5px;gap:5px}.chip svg{width:16px;height:16px}}
+@media(max-width:430px){.hud{gap:5px}.chip{padding:6px 9px;font-size:12.5px;gap:4px}.chip svg{width:15px;height:15px}}
 #score{left:14px}#ctl{right:14px}#n{cursor:default}
 .pop{animation:pop .4s}@keyframes pop{50%{transform:scale(1.3)}}
 #intro{position:fixed;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;background:radial-gradient(ellipse at center,rgba(40,25,60,.2),rgba(40,25,60,.65));transition:opacity .8s}
@@ -38,7 +38,7 @@ body.playing #ctl{transition-delay:.12s}
 <canvas id="c"></canvas>
 <div id="vig"></div>
 <div class="hud" id="score"><span class="chip" id="n"><svg viewBox="0 0 24 24" width="18" height="18"><rect x="8" y="7" width="8" height="10" rx="4.5" fill="#ffab5e"/><rect x="10.4" y="4.6" width="3.2" height="2.6" rx="1" fill="#fff3dd"/><rect x="10.4" y="16.8" width="3.2" height="2.2" rx="1" fill="#fff3dd"/><path d="M12 2v2.6" stroke="#fff3dd" stroke-width="1.4" stroke-linecap="round"/></svg><span>0</span></span></div>
-<div class="hud" id="ctl"><button class="chip" id="wth"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="5" fill="#ffd97a"/><g stroke="#ffd97a" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></g></svg><span>Clear</span></button><button class="chip" id="mood"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 15a6 6 0 0 1 12 0" fill="#ffb36b"/><path d="M3 18.5h18" stroke="#fff3dd" stroke-width="1.8" stroke-linecap="round"/><g stroke="#ffb36b" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M5.6 5.6l2.1 2.1M18.4 5.6l-2.1 2.1"/></g></svg><span>Golden hour</span></button><button class="chip" id="snd" aria-label="Toggle sound"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="#fff3dd"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" stroke="#fff3dd" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></button></div>
+<div class="hud" id="ctl"><button class="chip" id="wth"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="5" fill="#ffd97a"/><g stroke="#ffd97a" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></g></svg><span>Clear</span></button><button class="chip" id="mood"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 15a6 6 0 0 1 12 0" fill="#ffb36b"/><path d="M3 18.5h18" stroke="#fff3dd" stroke-width="1.8" stroke-linecap="round"/><g stroke="#ffb36b" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M5.6 5.6l2.1 2.1M18.4 5.6l-2.1 2.1"/></g></svg><span>Golden hour</span></button><button class="chip" id="flap" aria-label="Flaps"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 8h12" stroke="#fff3dd" stroke-width="2.2" stroke-linecap="round"/><path d="M15 8l6 5" stroke="#ffab5e" stroke-width="2.2" stroke-linecap="round"/><path d="M3 16h18" stroke="#fff3dd" stroke-width="1.2" stroke-linecap="round" opacity=".45"/></svg><span>Up</span></button><button class="chip" id="snd" aria-label="Toggle sound"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="#fff3dd"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" stroke="#fff3dd" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></button></div>
 <div id="hint">Drag anywhere to steer. Fly through the glowing lanterns.</div>
 <div id="intro"><div class="intro-mark"><svg viewBox="0 0 24 24" width="56" height="56"><rect x="8" y="7" width="8" height="10" rx="4.5" fill="#ffab5e"/><rect x="10.4" y="4.6" width="3.2" height="2.6" rx="1" fill="#fff3dd"/><rect x="10.4" y="16.8" width="3.2" height="2.2" rx="1" fill="#fff3dd"/><path d="M12 2v2.6" stroke="#fff3dd" stroke-width="1.4" stroke-linecap="round"/></svg></div><h1>Cozy Skies</h1><div class="rule"><span></span><i>✦</i><span></span></div><button class="chip" id="go"><span>Take off</span></button></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -51,9 +51,11 @@ const SVG_SNOW='<svg viewBox="0 0 24 24" width="18" height="18"><g stroke="#e8f1
 const SVG_SUNRISE='<svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 15a6 6 0 0 1 12 0" fill="#ffb36b"/><path d="M3 18.5h18" stroke="#fff3dd" stroke-width="1.8" stroke-linecap="round"/><g stroke="#ffb36b" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M5.6 5.6l2.1 2.1M18.4 5.6l-2.1 2.1"/></g></svg>';
 const SVG_SND='<svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="#fff3dd"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" stroke="#fff3dd" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>';
 const SVG_MUTE='<svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="#fff3dd"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="#ff9a8a" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const SVG_FLAP='<svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 8h12" stroke="#fff3dd" stroke-width="2.2" stroke-linecap="round"/><path d="M15 8l6 5" stroke="#ffab5e" stroke-width="2.2" stroke-linecap="round"/><path d="M3 16h18" stroke="#fff3dd" stroke-width="1.2" stroke-linecap="round" opacity=".45"/></svg>';
+const FLAPN=['Up','Half','Full'];
 const R=(x,z,s=0)=>{const v=Math.sin(x*12.9898+z*78.233+s*37.7)*43758.5453;return v-Math.floor(v)};
 const H=(x,z)=>{const r=Math.sin(x*.004+Math.sin(z*.0031)*2)*50+Math.sin(z*.0057-x*.0021)*38+Math.sin((x+z)*.011)*14+Math.sin(x*.023-z*.019)*5;return Math.max(r*.7+14,-3)};
-const P=new T.Vector3(0,70,0);let hd=0,pit=0,rol=0,sx=0,sy=0,started=false,score=0,t=0,mi=0;
+const P=new T.Vector3(0,70,0);let hd=0,pit=0,rol=0,sx=0,sy=0,bank=0,v=40,flapT=0,flaps=0,started=false,score=0,t=0,mi=0;
 
 const cv=$('c'),ren=new T.WebGLRenderer({canvas:cv,antialias:true});
 ren.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -119,7 +121,7 @@ const WXP=[{fog:700,sun:1,hemi:1,cloud:'#ffffff',rain:0,snow:0},
  {fog:460,sun:.5,hemi:.92,cloud:'#a8aec4',rain:1,snow:0},
  {fog:600,sun:.85,hemi:1.02,cloud:'#eef2f8',rain:0,snow:1}];
 const wxCloudT=WXP.map(w=>new T.Color(w.cloud));
-let wxB=0,wxTimer=150+Math.random()*150;
+let wxB=0,wxTimer=150+Math.random()*150,windK=0;
 const wxP={fog:700,sun:1,hemi:1,rain:0,snow:0},wxCloud=new T.Color('#ffffff');
 function setWx(n,manual){wxB=n;wxTimer=manual?600:wxTimer;$('wth').innerHTML=WX_SVG[n]+'<span>'+WXN[n]+'</span>'}
 function wxTex(sz,draw){const c=document.createElement('canvas');c.width=c.height=sz;draw(c.getContext('2d'));return new T.CanvasTexture(c)}
@@ -266,6 +268,8 @@ const add=(g,c,x,y,z)=>{const m=new T.Mesh(g,new T.MeshPhongMaterial({color:c,fl
 add(new T.CylinderGeometry(.5,1.1,7,8).rotateX(Math.PI/2),0xfff1dc,0,0,0);
 add(new T.BoxGeometry(14,.25,2.6),0xfff1dc,0,.1,-.3);
 add(new T.BoxGeometry(14.2,.27,.8),0xe5675a,0,.11,-.9);
+const flapGeo=new T.BoxGeometry(4.2,.18,1.1);flapGeo.translate(0,0,.55);
+const flapL=add(flapGeo,0xe5675a,-2.6,.02,.35),flapR=add(flapGeo,0xe5675a,2.6,.02,.35);
 add(new T.BoxGeometry(5,.2,1.4),0xfff1dc,0,.3,3.1);
 add(new T.BoxGeometry(.2,2,1.5),0xe5675a,0,1.2,3.1);
 add(new T.SphereGeometry(1.25,8,6),0xe5675a,0,0,-3.4);
@@ -302,6 +306,7 @@ const up=()=>{ptr=null;ix=iy=0};cv.addEventListener('pointerup',up);cv.addEventL
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 $('go').onclick=()=>{started=true;document.body.classList.add('playing');audio();if(AC.resume)AC.resume();const i=$('intro');i.style.opacity=0;setTimeout(()=>i.remove(),900);const h=$('hint');h.style.opacity=1;setTimeout(()=>h.style.opacity=0,6000)};
 $('mood').onclick=()=>setMood(mi=(mi+1)%3);
+$('flap').onclick=()=>{flapT=(flapT+1)%3;$('flap').innerHTML=SVG_FLAP+'<span>'+FLAPN[flapT]+'</span>'};
 $('wth').onclick=()=>setWx((wxB+1)%3,true);
 $('snd').onclick=()=>{muted=!muted;$('snd').innerHTML=muted?SVG_MUTE:SVG_SND;if(mg)mg.gain.setTargetAtTime(muted?0:.55,AC.currentTime,.1)};
 function rs(){ren.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.fov=cam.aspect<1?84:62;cam.updateProjectionMatrix()}
@@ -315,13 +320,26 @@ function frame(now){
  if(!ptr){ax=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);ay=(keys.ArrowUp||keys.KeyW?1:0)-(keys.ArrowDown||keys.KeyS?1:0)}
  if(!started){ax=.22;ay=Math.sin(t*.3)*.15}
  sx+=(ax-sx)*Math.min(1,dt*4);sy+=(ay-sy)*Math.min(1,dt*3);
- hd-=sx*dt*.85;rol+=(-sx*.75-rol)*Math.min(1,dt*3);pit+=(sy*.5-pit)*Math.min(1,dt*2.5);
- const fx=-Math.sin(hd)*Math.cos(pit),fy=Math.sin(pit),fz=-Math.cos(hd)*Math.cos(pit),sp=40;
- P.x+=fx*sp*dt;P.y+=fy*sp*dt;P.z+=fz*sp*dt;
+ // feel physics: drag-x commands bank (2B), drag-y commands pitch; airspeed is energy (1A), auto-throttle holds cruise (3A)
+ bank+=(sx*.9-bank)*Math.min(1,dt*3);pit+=(sy*.55-pit)*Math.min(1,dt*2.5);
+ flaps+=(flapT/2-flaps)*Math.min(1,dt*2.5);flapL.rotation.x=flapR.rotation.x=flaps*.6;
+ const vCruise=40-8*flaps,gravK=14*(1-.4*flaps);
+ v+=(-gravK*Math.sin(pit)-(v-vCruise)*.6)*dt;v=cl(v,18-8*flaps,72-10*flaps);
+ hd-=22*Math.tan(bank)/Math.max(v,20)*dt;rol=-bank;
+ const vy=v*Math.sin(pit)-6*(1-Math.cos(bank))*(1-.45*flaps);
+ const fx=-Math.sin(hd)*Math.cos(pit),fz=-Math.cos(hd)*Math.cos(pit);
+ P.x+=fx*v*dt;P.y+=vy*dt;P.z+=fz*v*dt;
  const gnd=Math.max(H(P.x,P.z),0),fl=gnd+10;
  if(P.y<fl)P.y+=(fl-P.y)*Math.min(1,dt*4);
  if(P.y>320)P.y+=(320-P.y)*Math.min(1,dt*2);
- plane.position.copy(P);plane.rotation.set(pit,hd,rol,'YXZ');prop.rotation.z+=dt*35;
+ // weather flies the plane: rain = wandering gusts, snow = light steady wind, clear = calm
+ windK+=((wxB===0?0:1)-windK)*Math.min(1,dt*.4);
+ let wx=0,wz=0;
+ if(wxB===1){wx=(Math.sin(t*.23+1)*.7+Math.sin(t*.9)*.3)*7;wz=(Math.cos(t*.31)*.7+Math.sin(t*1.13+2)*.3)*7}
+ else if(wxB===2){wx=3.5+Math.sin(t*.4)*1.2;wz=1.5+Math.cos(t*.33)*1.2}
+ P.x+=wx*windK*dt;P.z+=wz*windK*dt;
+ const wob=(wxB===1?Math.sin(t*3.1)*.05+Math.sin(t*5.3+1)*.03:wxB===2?Math.sin(t*1.7)*.02:0)*windK;
+ plane.position.copy(P);plane.rotation.set(pit+wob,hd,rol+wob*.7,'YXZ');prop.rotation.z+=dt*(14+v*.55);
  const bx=Math.sin(hd),bz=Math.cos(hd);
  tgt.set(P.x+bx*24,P.y+8-pit*10,P.z+bz*24);cam.position.lerp(tgt,1-Math.exp(-dt*3.2));
  cam.position.y=Math.max(cam.position.y,Math.max(H(cam.position.x,cam.position.z),0)+4);
