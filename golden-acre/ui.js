@@ -92,6 +92,19 @@ function popFx(x, y, txt, color) {
   G.fx.push({ kind: 'pop', x: x * u + u / 2, y: y * u, txt: txt, color: color, born: G.time });
 }
 function squashFx(x, y) { G.fx.push({ kind: 'squash', x: x, y: y, born: G.time }); }
+function dustFx(x, y) {
+  var u = R.tileSize();
+  G.fx.push({ kind: 'dust', x: x * u + u / 2, y: y * u + u / 2, born: G.time, seed: Math.random() * 9 });
+}
+function sparkleFx(x, y) {
+  var u = R.tileSize();
+  G.fx.push({ kind: 'sparkle', x: x * u + u / 2, y: y * u + u / 2, born: G.time, seed: Math.random() * 9 });
+}
+var CHAFF_COLORS = { corn: '#e8c53a', wheat: '#d9a441', cotton: '#f7f4ec', soy: '#86b04e', potato: '#5d8a3c', orange: '#e07b2a' };
+function chaffFx(x, y, crop) {
+  var u = R.tileSize();
+  G.fx.push({ kind: 'chaff', x: x * u + u / 2, y: y * u + u / 2, born: G.time, seed: Math.random() * 9, color: CHAFF_COLORS[crop] || '#8fbf6a' });
+}
 function confetti(n) {
   if (G.calm) n = Math.min(n, 20);
   var wpx = $('game').width, hpx = $('game').height;
@@ -142,6 +155,7 @@ function handleEvents(evs) {
     else if (e.t === 'harvest') {
       popFx(e.x, e.y, '+' + e.units, '#ffd75e');
       squashFx(e.x, e.y);
+      chaffFx(e.x, e.y, e.crop);
       AU.pop();
     }
     else if (e.t === 'tornado') {
@@ -240,18 +254,19 @@ function evTile(ev) {
 }
 function applyTool(x, y) {
   var st = G.st, r;
-  if (G.tool === 'plow') { r = GA.plowAt(st, x, y); if (r.ok) AU.plowSnd(); }
-  else if (G.tool === 'plant') { r = GA.plantAt(st, x, y, G.cropSel); if (r.ok) { AU.tick(); squashFx(x, y); } }
-  else if (G.tool === 'water') { r = GA.waterAt(st, x, y); if (r.ok) AU.waterSnd(); }
+  if (G.tool === 'plow') { r = GA.plowAt(st, x, y); if (r.ok) { AU.plowSnd(); dustFx(x, y); } }
+  else if (G.tool === 'plant') { r = GA.plantAt(st, x, y, G.cropSel); if (r.ok) { AU.tick(); squashFx(x, y); dustFx(x, y); } }
+  else if (G.tool === 'water') { r = GA.waterAt(st, x, y); if (r.ok) { AU.waterSnd(); sparkleFx(x, y); } }
   else if (G.tool === 'fert') { r = GA.fertAt(st, x, y); if (r.ok) AU.tick(); }
-  else if (G.tool === 'spray') { r = GA.sprayAt(st, x, y); if (r.ok) AU.waterSnd(); }
+  else if (G.tool === 'spray') { r = GA.sprayAt(st, x, y); if (r.ok) { AU.waterSnd(); sparkleFx(x, y); } }
   else if (G.tool === 'harvest') {
+    var hc = GA.tileAt(st, x, y).crop;
     r = GA.harvestAt(st, x, y);
-    if (r.ok) { popFx(x, y, '+' + r.units, '#ffd75e'); squashFx(x, y); AU.pop(); tickCash(); }
+    if (r.ok) { popFx(x, y, '+' + r.units, '#ffd75e'); squashFx(x, y); chaffFx(x, y, hc); AU.pop(); tickCash(); }
   }
   else if (G.tool === 'bulldoze') {
     r = GA.bulldozeAt(st, x, y);
-    if (r.ok) { AU.tick(); if (r.refund) toast('Cleared — salvaged ' + fmt(r.refund) + '.'); }
+    if (r.ok) { AU.tick(); dustFx(x, y); if (r.refund) toast('Cleared — salvaged ' + fmt(r.refund) + '.'); }
   }
   else if (G.tool === 'build') { r = GA.buildAt(st, G.buildSel, x, y); if (r.ok) AU.coin(); }
   if (!r.ok && r.why) { toast(r.why); AU.error(); }
