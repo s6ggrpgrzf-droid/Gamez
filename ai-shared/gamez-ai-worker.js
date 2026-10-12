@@ -372,6 +372,20 @@ var KINDS = {
     sys: "You invent cozy train passengers for Emberline, a gentle storybook train game. Warm, whimsical, family-friendly voice. Each passenger: a full name and one evocative sentence about why they're traveling. No politics, no real people, nothing sad or scary.",
     prompt: function (c) { return ""; }
   },
+  skypax: {
+    max: 90,
+    tokens: 400,
+    custom: true, // handled by skyPax(): date-keyed KV cache, structured list
+    sys: "You invent cozy air passengers for Skylark, a gentle storybook bush-pilot game. Warm, whimsical, family-friendly voice. Each passenger: a full name and one evocative sentence about why they're flying — small airfields, big skies. No politics, no real people, nothing sad or scary.",
+    prompt: function (c) { return ""; }
+  },
+  skyvista: {
+    max: 400,
+    tokens: 500,
+    custom: true, // handled by skyVista(): date-keyed KV cache, structured scenery
+    sys: "You are the art director for Skylark, a cozy storybook bush-pilot game with a vintage golden-hour postcard look. You design each day's valley scenery: layered ridgelines, sky palettes, landmarks. Warm, painterly, family-friendly. Output ONLY the JSON object, nothing else.",
+    prompt: function (c) { return ""; }
+  },
   trainlog: {
     max: 220,
     tokens: 160,
@@ -535,6 +549,123 @@ var TRAINPASSENGER_SCHEMA = {
     }
   }
 };
+/* skyvista: one scenery generation per date, cached in KV, served to every
+   pilot. Structured {ridges, palette, sun, landmarks, clouds, birds}. */
+var SKYVISTA_SCHEMA = {
+  type: "json_schema",
+  json_schema: {
+    name: "SkyVista",
+    schema: {
+      type: "object",
+      properties: {
+        ridges: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              seed: { type: "number" },
+              height: { type: "number" },
+              haze: { type: "number" }
+            },
+            required: ["seed", "height", "haze"]
+          }
+        },
+        palette: {
+          type: "object",
+          properties: {
+            top: { type: "string" }, mid: { type: "string" }, bot: { type: "string" },
+            sun: { type: "string" }, cloud: { type: "string" },
+            hill1: { type: "string" }, hill2: { type: "string" },
+            mtn: { type: "string" }, ground: { type: "string" }
+          },
+          required: ["top", "mid", "bot", "sun", "cloud"]
+        },
+        sun: {
+          type: "object",
+          properties: { x: { type: "number" }, y: { type: "number" } },
+          required: ["x", "y"]
+        },
+        landmarks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string" },
+              x: { type: "number" }
+            },
+            required: ["type", "x"]
+          }
+        },
+        clouds: {
+          type: "object",
+          properties: { count: { type: "number" }, tint: { type: "string" } },
+          required: ["count", "tint"]
+        },
+        birds: {
+          type: "object",
+          properties: { flocks: { type: "number" } },
+          required: ["flocks"]
+        }
+      },
+      required: ["ridges", "palette", "sun", "landmarks", "clouds", "birds"]
+    }
+  }
+};
+var SKYVISTA_LANDMARKS = ["water tower", "barn", "lighthouse", "radio mast", "windmill", "church steeple"];
+async function skyVista(env, ctx, body, ip) {
+  if (!(await checkRate(env, ip, "skyvista", 10))) return json({ error: "slow down" }, 429);
+  var date = String((body.ctx && body.ctx.date) || "").replace(/[^0-9-]/g, "").slice(0, 10) || "daily";
+  var key = "g/skyvista/" + date;
+  var cached = await env.STORE.get(key, "json");
+  if (cached && cached.ridges && cached.palette) return json(cached);
+  var aiTxt;
+  try {
+    aiTxt = await runAi(env, [
+      { role: "system", content: KINDS.skyvista.sys },
+      { role: "user", content: "Design today's valley for Skylark. " +
+        "ridges: 2-3 layers, each {seed: 1-99999, height: 40-140, haze: 0-0.7}. " +
+        "palette: warm golden-hour sky {top, mid, bot, sun, cloud} as hex colors, plus hill1, hill2, mtn, ground greens. " +
+        "sun: {x: 0.5-0.85, y: 0.15-0.4} position. " +
+        "landmarks: 2-4 of [water tower, barn, lighthouse, radio mast, windmill, church steeple], each {type, x: 0.05-0.95 along the route}. " +
+        "clouds: {count: 8-20, tint: warm|cool|rose}. birds: {flocks: 0-3}. " +
+        "Output ONLY the JSON object, nothing else." }
+    ], 500, 0.9, SKYVISTA_SCHEMA);
+  } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 120) }, 502); }
+  var d = extractJson(aiTxt || "");
+  if (!d || !d.ridges || !d.palette || !d.ridges.length) return json({ error: "bad generation" }, 502);
+  // sanitize
+  var out = { date: date };
+  out.ridges = d.ridges.slice(0, 3).map(function (r) {
+    return { seed: Math.abs(Math.round(r.seed || 1)) % 100000,
+             height: Math.max(30, Math.min(160, +r.height || 80)),
+             haze: Math.max(0, Math.min(0.8, +r.haze || 0.3)) };
+  });
+  var pal = d.palette || {}, hx = function (s) {
+    s = String(s || "").trim();
+    return /^#[0-9a-fA-F]{6}$/.test(s) ? s : "#888888";
+  };
+  out.palette = {
+    top: hx(pal.top), mid: hx(pal.mid), bot: hx(pal.bot),
+    sun: hx(pal.sun), cloud: hx(pal.cloud),
+    hill1: hx(pal.hill1 || "#8fae6e"), hill2: hx(pal.hill2 || "#6d9154"),
+    mtn: hx(pal.mtn || "#a8bdd0"), ground: hx(pal.ground || "#a8c686"),
+  };
+  var sn = d.sun || {};
+  out.sun = { x: Math.max(0.4, Math.min(0.9, +sn.x || 0.72)),
+              y: Math.max(0.1, Math.min(0.45, +sn.y || 0.22)) };
+  out.landmarks = (d.landmarks || []).slice(0, 4).map(function (l) {
+    var t = String(l.type || "").toLowerCase();
+    if (SKYVISTA_LANDMARKS.indexOf(t) < 0) t = "barn";
+    return { type: t, x: Math.max(0.03, Math.min(0.97, +l.x || 0.5)) };
+  });
+  var cl = d.clouds || {};
+  out.clouds = { count: Math.max(6, Math.min(24, Math.round(+cl.count || 14))),
+                 tint: /^(warm|cool|rose)$/.test(cl.tint) ? cl.tint : "warm" };
+  var br = d.birds || {};
+  out.birds = { flocks: Math.max(0, Math.min(4, Math.round(+br.flocks || 1))) };
+  ctx.waitUntil(env.STORE.put(key, JSON.stringify(out), { expirationTtl: 86400 * 3 }));
+  return json(out);
+}
 async function trainPassenger(env, ctx, body, ip) {
   if (!(await checkRate(env, ip, "trainpassenger", 10))) return json({ error: "slow down" }, 429);
   var date = String((body.ctx && body.ctx.date) || "").replace(/[^0-9-]/g, "").slice(0, 10) || "daily";
@@ -564,6 +695,38 @@ async function trainPassenger(env, ctx, body, ip) {
   return json(out);
 }
 
+/* skypax: one generation per date, cached in KV, served to every pilot.
+   Structured {passengers:[{name,story}]}. */
+async function skyPax(env, ctx, body, ip) {
+  if (!(await checkRate(env, ip, "skypax", 10))) return json({ error: "slow down" }, 429);
+  var date = String((body.ctx && body.ctx.date) || "").replace(/[^0-9-]/g, "").slice(0, 10) || "daily";
+  var dest = String((body.ctx && body.ctx.dest) || "the next valley").slice(0, 60);
+  var key = "g/skypax/" + date;
+  var cached = await env.STORE.get(key, "json");
+  if (cached && cached.passengers && cached.passengers.length >= 8) return json(cached);
+  var aiTxt;
+  try {
+    aiTxt = await runAi(env, [
+      { role: "system", content: KINDS.skypax.sys + " Output ONLY the JSON object, nothing else." },
+      { role: "user", content: "Invent 12 cozy air passengers for today's bush flights to " + dest + ". " +
+        "Each: a full name (varied, storybook) and one sentence (max 18 words) about why they're flying — warm, specific, charming. " +
+        "Output ONLY this JSON, nothing else: {\"passengers\":[{\"name\":\"...\",\"story\":\"...\"}, ... 12 total]}." }
+    ], 600, 0.9, TRAINPASSENGER_SCHEMA);
+  } catch (e) { return json({ error: "ai unavailable", detail: String(e.message || e).slice(0, 120) }, 502); }
+  var d = extractJson(aiTxt || ""), list = [];
+  if (d && Array.isArray(d.passengers)) {
+    for (var i = 0; i < d.passengers.length && list.length < 12; i++) {
+      var p = d.passengers[i] || {};
+      var nm = cleanWord(p.name || "", 40), st = cleanWord(p.story || "", 120);
+      if (nm.length > 2 && st.length > 8) list.push({ name: nm, story: st });
+    }
+  }
+  if (list.length < 8) return json({ error: "bad generation" }, 502);
+  var out2 = { date: date, passengers: list };
+  ctx.waitUntil(env.STORE.put(key, JSON.stringify(out2), { expirationTtl: 86400 * 3 }));
+  return json(out2);
+}
+
 export default {
   async fetch(request, env, ctx) {
     var url = new URL(request.url);
@@ -581,6 +744,8 @@ export default {
       if (body.kind === "shipstory") return await shipStory(env, ctx, body, game, ip);
       if (body.kind === "arcadeeditorial") return await arcadeEditorial(env, ctx, body, ip);
       if (body.kind === "trainpassenger") return await trainPassenger(env, ctx, body, ip);
+      if (body.kind === "skypax") return await skyPax(env, ctx, body, ip);
+      if (body.kind === "skyvista") return await skyVista(env, ctx, body, ip);
       var key = "g/" + body.kind + "/" + game + "/" + ctxHash(body.ctx);
       var cached = await env.STORE.get(key, "json");
       if (cached && (cached.text || (kind.fields && cached[kind.fields[0]]))) return json(cached);
