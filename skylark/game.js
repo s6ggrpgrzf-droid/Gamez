@@ -178,12 +178,13 @@ function renderHangar() {
     var b = document.createElement('button');
     b.className = 'route-card';
     var wicon = r.weather === 'night' ? 'night' : r.weather;
+    var wxicon = r.wx === 'rain' ? ' · rain' : r.wx === 'wind' ? ' · gusty' : r.wx === 'snow' ? ' · snow' : '';
     var mins = Math.max(1, Math.round(r.dist / 210 / 60 * 2) / 2);
     b.innerHTML =
       '<span class="rc-pay">' + money(r.payout) + '</span>' +
       '<div class="rc-route">' + r.from + ' &rarr; ' + r.to + '</div>' +
       '<div class="rc-meta">' + r.paxN + ' passengers &middot; ' + r.cargoN + ' cargo &middot; ' +
-      '~' + mins + ' min &middot; ' + wicon +
+      '~' + mins + ' min &middot; ' + wicon + wxicon +
       (r.wind ? ' &middot; wind ' + Math.abs(r.wind) + 'kts' : '') + '</div>' +
       '<span class="rc-go">FLY THIS ROUTE &rsaquo;</span>';
     b.addEventListener('click', function () { AU.click(); showManifest(i); });
@@ -391,8 +392,36 @@ function makeDecor(seed, destX) {
   var houses = [];
   for (var hI = 0; hI < 5; hI++)
     houses.push({ x: 900 + rnd() * (destX - 1800), s: 0.9 + rnd() * 0.4 });
+  // patchwork fields — irregular quilt of greens/golds/browns, not stamped
+  var fields = [];
+  var fx = -400;
+  while (fx < destX + 1200) {
+    var fw = 260 + rnd() * 520;
+    if (Math.abs(fx + fw / 2) > 600 && Math.abs(fx + fw / 2 - destX) > 800) {
+      var ft = rnd();
+      fields.push({ x: fx, w: fw,
+        c: ft < 0.3 ? 'g1' : (ft < 0.55 ? 'g2' : (ft < 0.75 ? 'gold' : 'brown')),
+        skew: (rnd() - 0.5) * 60 });
+    }
+    fx += fw + rnd() * 120;
+  }
+  // forest clusters — dark green blobs that read as woods from the air
+  var forests = [];
+  for (var fi2 = 0; fi2 < Math.floor(destX / 1400); fi2++) {
+    var fx2 = 700 + rnd() * (destX - 1400);
+    if (Math.abs(fx2 - destX) < 800) continue;
+    forests.push({ x: fx2, w: 300 + rnd() * 500, s: seed + fi2 * 77 });
+  }
+  // a winding river — blue ribbon threading the valley
+  var river = { x0: 1200 + rnd() * (destX - 2400), amp: 60 + rnd() * 80,
+                per: 900 + rnd() * 700, ph: rnd() * 6.28, w: 26 + rnd() * 18 };
+  // barn with windsock near home strip
+  var barn = { x: 1050 + rnd() * 300, s: 0.9 + rnd() * 0.3 };
+  // far-off aircraft — occasionally crosses the distant sky
+  var distant = { next: 20 + rnd() * 40, x: 0, y: 0, v: 0, on: false, seed: rnd() * 100 };
   return {
     trees: trees, clouds: clouds, stars: stars, houses: houses,
+    fields: fields, forests: forests, river: river, barn: barn, distant: distant,
     p1: rnd() * 6.28, p2: rnd() * 6.28, p3: rnd() * 6.28,
     q1: rnd() * 6.28, q2: rnd() * 6.28,
   };
@@ -488,8 +517,8 @@ function stopFlightLoop() {
 
 function setThrottleUI(v) {
   var knob = $('thr-knob'), track = $('thr-track');
-  var h = track.clientHeight || 200;
-  knob.style.top = ((1 - v) * (h - 38)) + 'px';
+  var h = track.clientHeight || 160;
+  knob.style.top = ((1 - v) * (h - 30)) + 'px';
   track.setAttribute('aria-valuenow', Math.round(v * 100));
 }
 
@@ -576,7 +605,7 @@ function updateYoke() {
   if (!F) return;
   var st = F.st;
   var yoke = $('yoke'), wheel = $('yoke-wheel');
-  var dy = F.input.pitch * -22; // pull (+1) = yoke down toward you
+  var dy = F.input.pitch * -11; // pull (+1) = yoke down toward you (mini yoke)
   yoke.style.transform = 'translateY(' + dy.toFixed(1) + 'px)';
   wheel.style.transform = 'rotate(' + (st.bank * 0.9).toFixed(1) + 'deg)';
 }
@@ -628,7 +657,7 @@ function flapTo(clientY) {
   }
   F.input.flaps = v;
   // knob position: top = UP (0), bottom = FULL (1)
-  flapKnob.style.top = (8 + v * (r.height - 50)) + 'px';
+  flapKnob.style.top = (4 + v * (r.height - 34)) + 'px';
 }
 function thrTo(clientY) {
   var r = thrTrack.getBoundingClientRect();
@@ -660,7 +689,7 @@ $('skip-final').addEventListener('click', function (e) {
 });
 
 /* ---------- particles: pooled, zero per-frame allocation ---------- */
-var PMAX = 90;
+var PMAX = 160; // room for weather (rain/snow need many)
 function initParts(F) {
   F.parts = [];
   for (var i = 0; i < PMAX; i++)
@@ -687,6 +716,8 @@ function stepParts(F, dt) {
     if (p.kind === 1) { p.vy += 60 * dt; p.vx *= (1 - dt * 1.5); } // dust settles
     if (p.kind === 2) { p.vx -= 300 * dt; } // wind streaks stream back
     if (p.kind === 3) { p.vy += 140 * dt; p.vx *= (1 - dt * 2); } // gold sparkles fall gently
+    if (p.kind === 5) { p.x += Math.sin(p.life * 6 + p.sz * 9) * 22 * dt; } // snowflakes sway
+    if (p.kind === 6) { p.vy += 30 * dt; p.x += Math.sin(p.life * 9) * 40 * dt; } // leaves tumble
   }
 }
 function drawParts(F, camX) {
@@ -710,6 +741,16 @@ function drawParts(F, camX) {
       ctx2d.fillRect(sx - gs / 2, p.y - gs / 2, gs, gs);
       ctx2d.fillStyle = 'rgba(255,240,180,' + (a * tw * 0.8).toFixed(3) + ')';
       ctx2d.fillRect(sx - gs / 4, p.y - gs / 4, gs / 2, gs / 2);
+    } else if (p.kind === 4) { // rain: fast diagonal streak, blue-grey
+      ctx2d.strokeStyle = 'rgba(170,190,210,' + (a * 0.55).toFixed(3) + ')';
+      ctx2d.lineWidth = 1.4;
+      ctx2d.beginPath(); ctx2d.moveTo(sx, p.y); ctx2d.lineTo(sx - 7 * a, p.y + 26 * a); ctx2d.stroke();
+    } else if (p.kind === 5) { // snowflake: soft white dot, drifts
+      ctx2d.fillStyle = 'rgba(255,255,255,' + (a * 0.85).toFixed(3) + ')';
+      ctx2d.beginPath(); ctx2d.arc(sx, p.y, p.sz, 0, 6.29); ctx2d.fill();
+    } else if (p.kind === 6) { // leaf in the wind: small amber fleck
+      ctx2d.fillStyle = 'rgba(200,150,70,' + (a * 0.8).toFixed(3) + ')';
+      ctx2d.fillRect(sx, p.y, p.sz, p.sz * 0.6);
     } else { // wind streak: thin white line
       ctx2d.strokeStyle = 'rgba(255,255,255,' + (a * 0.35).toFixed(3) + ')';
       ctx2d.lineWidth = 1.5;
@@ -745,6 +786,24 @@ function frame(now) {
   if (st.speed > 110 && st.alt > 5 && Math.random() < dt * (st.speed - 100) * 0.12) {
     spawnPart(F, F.camXS + W * 0.2 + Math.random() * W * 0.7,
       Math.random() * H * 0.6, 0, 0, 0.5, 2, 2);
+  }
+  // weather: rain streaks / snowfall / gust streaks + leaves — pooled, cheap
+  var wx = st.wx || 'clear';
+  if (wx === 'rain' && Math.random() < dt * 55) {
+    spawnPart(F, F.camXS + Math.random() * (W + 80) - 40, -20,
+      -60, 520 + Math.random() * 160, 1.6, 2, 4);
+  } else if (wx === 'snow' && Math.random() < dt * 30) {
+    spawnPart(F, F.camXS + Math.random() * (W + 60) - 30, -12,
+      -25 - Math.random() * 30, 55 + Math.random() * 45, 7, 1.6 + Math.random() * 1.8, 5);
+  } else if (wx === 'wind') {
+    if (Math.random() < dt * 22) {
+      spawnPart(F, F.camXS + W + 30, Math.random() * H * 0.75,
+        -380 - Math.random() * 220, 12, 1.1, 2, 2);
+    }
+    if (Math.random() < dt * 7) {
+      spawnPart(F, F.camXS + W + 20, Math.random() * H * 0.6,
+        -260 - Math.random() * 140, -30, 2.2, 3 + Math.random() * 2, 6);
+    }
   }
   // touchdown dust burst + camera settle (+ gold burst for butter)
   if (st.done && !F.dustBurst) {
@@ -947,6 +1006,15 @@ function render(st, d, t, dt) {
   g.addColorStop(0, pal.top); g.addColorStop(0.55, pal.mid); g.addColorStop(1, pal.bot);
   ctx2d.fillStyle = g;
   ctx2d.fillRect(0, 0, W, H);
+  // weather atmosphere: rain haze, snow pallor
+  var wx = st.wx || 'clear';
+  if (wx === 'rain') {
+    ctx2d.fillStyle = 'rgba(110,130,150,0.16)';
+    ctx2d.fillRect(0, 0, W, H);
+  } else if (wx === 'snow') {
+    ctx2d.fillStyle = 'rgba(220,230,240,0.10)';
+    ctx2d.fillRect(0, 0, W, H);
+  }
 
   // atmosphere: warm haze band above horizon (expensive feel)
   var hz = ctx2d.createLinearGradient(0, gy - 160, 0, gy + 20);
@@ -1152,9 +1220,171 @@ function render(st, d, t, dt) {
     ctx2d.drawImage(spr, hx2 - spr.width * hs.s / 2, hy - spr.height * hs.s + 6, spr.width * hs.s, spr.height * hs.s);
   }
 
+  // patchwork fields — quilted farmland, drawn into the ground
+  var fieldCols = { g1: 'rgba(140,170,90,.5)', g2: 'rgba(120,155,80,.5)',
+                    gold: 'rgba(210,180,100,.45)', brown: 'rgba(150,120,85,.45)' };
+  for (var fdi = 0; fdi < d.fields.length; fdi++) {
+    var fd = d.fields[fdi];
+    var fx0 = fd.x - camX, fx1 = fx0 + fd.w;
+    if (fx1 < -50 || fx0 > W + 50) continue;
+    var fy = gy - hillH(d, fd.x + fd.w / 2) * (1 - flat(fd.x + fd.w / 2));
+    ctx2d.fillStyle = fieldCols[fd.c] || fieldCols.g1;
+    ctx2d.beginPath();
+    ctx2d.moveTo(fx0, fy + fd.skew * 0.3);
+    ctx2d.lineTo(fx1, fy - fd.skew * 0.3);
+    ctx2d.lineTo(fx1, fy + 46);
+    ctx2d.lineTo(fx0, fy + 46);
+    ctx2d.closePath(); ctx2d.fill();
+    // hedgerow line
+    ctx2d.fillStyle = 'rgba(80,110,60,.5)';
+    ctx2d.fillRect(fx0, fy + fd.skew * 0.3 - 2, fd.w, 3);
+  }
+
+  // forest clusters — dark canopy blobs
+  for (var foi = 0; foi < d.forests.length; foi++) {
+    var fo = d.forests[foi];
+    var fox0 = fo.x - camX;
+    if (fox0 + fo.w < -60 || fox0 > W + 60) continue;
+    var foy = gy - hillH(d, fo.x + fo.w / 2) * (1 - flat(fo.x + fo.w / 2));
+    var frnd = SK.rng(fo.s);
+    for (var fb2 = 0; fb2 < 14; fb2++) {
+      var bx3 = fox0 + frnd() * fo.w;
+      var by3 = foy - 4 - frnd() * 26;
+      var br = 10 + frnd() * 16;
+      ctx2d.fillStyle = frnd() < 0.5 ? 'rgba(70,100,60,.55)' : 'rgba(85,115,70,.55)';
+      ctx2d.beginPath(); ctx2d.arc(bx3, by3, br, 0, 6.29); ctx2d.fill();
+    }
+  }
+
+  // river — winding blue ribbon
+  (function () {
+    var rv = d.river;
+    ctx2d.strokeStyle = isNight ? 'rgba(90,120,160,.6)' : 'rgba(120,170,200,.65)';
+    ctx2d.lineWidth = rv.w * 0.5;
+    ctx2d.lineCap = 'round';
+    ctx2d.beginPath();
+    var started = false;
+    for (var rx = -100; rx <= W + 100; rx += 24) {
+      var rwx = camX + rx;
+      var ry = gy - hillH(d, rwx) * (1 - flat(rwx)) + 18 +
+               Math.sin(rwx / rv.per * 6.28 + rv.ph) * rv.amp * 0.4;
+      // only where the river exists in world space
+      var inRiver = rwx > rv.x0 - 800 && rwx < rv.x0 + 800;
+      if (!inRiver) { started = false; continue; }
+      if (!started) { ctx2d.moveTo(rx, ry); started = true; }
+      else ctx2d.lineTo(rx, ry);
+    }
+    ctx2d.stroke();
+  })();
+
+  // barn with windsock near home
+  (function () {
+    var bn = d.barn;
+    var bnx = bn.x - camX;
+    if (bnx > -120 && bnx < W + 120) {
+      var bny = gy - hillH(d, bn.x) * (1 - flat(bn.x));
+      var bw = 64 * bn.s, bh = 40 * bn.s;
+      // red barn body
+      ctx2d.fillStyle = isNight ? '#5a2e28' : '#a03d2e';
+      ctx2d.fillRect(bnx - bw / 2, bny - bh + 8, bw, bh - 8);
+      // gambrel roof
+      ctx2d.fillStyle = isNight ? '#3d3a40' : '#6e6a63';
+      ctx2d.beginPath();
+      ctx2d.moveTo(bnx - bw / 2 - 6, bny - bh + 8);
+      ctx2d.lineTo(bnx - bw * 0.22, bny - bh - 10 * bn.s);
+      ctx2d.lineTo(bnx + bw * 0.22, bny - bh - 10 * bn.s);
+      ctx2d.lineTo(bnx + bw / 2 + 6, bny - bh + 8);
+      ctx2d.closePath(); ctx2d.fill();
+      // white trim: door X
+      ctx2d.strokeStyle = 'rgba(245,240,225,.85)'; ctx2d.lineWidth = 2.5;
+      var dw2 = bw * 0.3, dh2 = bh * 0.55, dx2 = bnx - dw2 / 2, dy2 = bny - dh2;
+      ctx2d.strokeRect(dx2, dy2, dw2, dh2);
+      ctx2d.beginPath();
+      ctx2d.moveTo(dx2, dy2); ctx2d.lineTo(dx2 + dw2, dy2 + dh2);
+      ctx2d.moveTo(dx2 + dw2, dy2); ctx2d.lineTo(dx2, dy2 + dh2);
+      ctx2d.stroke();
+      // windsock: pole + sock pointing downwind, fluttering with gusts
+      var wx2 = st.wx || 'clear';
+      var gustF = 1 + (st.gust || 0) * 0.12 + (wx2 === 'wind' ? 0.6 : 0);
+      var sockLen = 26 * Math.min(1.4, gustF);
+      var px2 = bnx + bw * 0.5 + 10, py2 = bny - bh - 10 * bn.s - 6;
+      ctx2d.strokeStyle = '#5a4028'; ctx2d.lineWidth = 3;
+      ctx2d.beginPath(); ctx2d.moveTo(px2, py2 + 40); ctx2d.lineTo(px2, py2); ctx2d.stroke();
+      var flutter = Math.sin(t * 9) * 3 * gustF;
+      var dir = (st.wind || 0) >= 0 ? 1 : -1; // sock streams downwind
+      ctx2d.fillStyle = '#c94f38';
+      ctx2d.beginPath();
+      ctx2d.moveTo(px2, py2);
+      ctx2d.lineTo(px2 + dir * sockLen, py2 + 5 + flutter);
+      ctx2d.lineTo(px2 + dir * sockLen, py2 + 11 + flutter);
+      ctx2d.lineTo(px2, py2 + 7);
+      ctx2d.closePath(); ctx2d.fill();
+      ctx2d.fillStyle = '#f5e9d0';
+      ctx2d.fillRect(px2 + dir * sockLen * 0.45, py2 + 3 + flutter * 0.45, dir * 6, 5);
+    }
+  })();
+
+  // far-off aircraft — a tiny silhouette crossing the distant sky now and then
+  (function () {
+    var di = d.distant;
+    if (!di.on) {
+      di.next -= dt;
+      if (di.next <= 0) {
+        di.on = true; di.x = -60; di.y = H * (0.12 + (di.seed % 30) / 100);
+        di.v = 26 + (di.seed % 20);
+      }
+    } else {
+      di.x += di.v * dt;
+      ctx2d.fillStyle = isNight ? 'rgba(200,200,210,.5)' : 'rgba(90,80,90,.45)';
+      var dx2 = di.x, dy2 = di.y + Math.sin(t * 0.8 + di.seed) * 6;
+      // tiny plane silhouette: fuselage + wings
+      ctx2d.fillRect(dx2 - 9, dy2 - 1, 18, 2.5);
+      ctx2d.fillRect(dx2 - 2, dy2 - 6, 4, 12);
+      ctx2d.fillRect(dx2 + 6, dy2 - 4, 3, 8);
+      if (di.x > W + 80) { di.on = false; di.next = 40 + (di.seed % 50); }
+    }
+  })();
+
   // airstrips
   drawStrip(st.runwayX, st.runwayLen, camX, gy, d, true, st);
   drawStrip(st.destX, st.destLen, camX, gy, d, false, st);
+
+  // descent path: faint dashed 3° profile from cruise down to the aim point.
+  // Visible in cruise + final so you can see at a glance if you're high or low.
+  if (!st.done && (st.phase === 'cruise' || st.phase === 'final')) {
+    var aimX2 = st.destX + st.destLen * 0.18;
+    var dAim2 = aimX2 - st.x;
+    var profAlt2 = dAim2 > 0 ? dAim2 * 0.052 : 0;
+    var high2 = st.alt > profAlt2 + 250 && dAim2 > 0 && dAim2 < 9000;
+    ctx2d.save();
+    ctx2d.setLineDash([10, 12]);
+    ctx2d.strokeStyle = high2 ? 'rgba(220,90,70,.6)' : 'rgba(255,240,190,.5)';
+    ctx2d.lineWidth = 3;
+    ctx2d.beginPath();
+    var firstP2 = true;
+    for (var pxx = -20; pxx <= W + 20; pxx += 20) {
+      var worldX = camX + pxx;
+      if (worldX > aimX2 + 50) continue; // beyond the runway
+      var pAlt = Math.max(0, (aimX2 - worldX) * 0.052);
+      var pyy = altToY(pAlt);
+      if (firstP2) { ctx2d.moveTo(pxx, pyy); firstP2 = false; }
+      else ctx2d.lineTo(pxx, pyy);
+    }
+    ctx2d.stroke();
+    ctx2d.setLineDash([]);
+    // your marker: small diamond showing where YOU are vs the path
+    var mxs2 = st.x - camX;
+    if (mxs2 > -20 && mxs2 < W + 20 && dAim2 > 0) {
+      var mys2 = Math.max(24, Math.min(H - 24, altToY(st.alt)));
+      ctx2d.fillStyle = high2 ? 'rgba(220,90,70,.95)' : 'rgba(255,240,190,.9)';
+      ctx2d.beginPath();
+      ctx2d.moveTo(mxs2, mys2 - 8); ctx2d.lineTo(mxs2 + 8, mys2);
+      ctx2d.lineTo(mxs2, mys2 + 8); ctx2d.lineTo(mxs2 - 8, mys2);
+      ctx2d.closePath(); ctx2d.fill();
+    }
+    ctx2d.restore();
+  }
+
 
   // vista landmarks — procedural silhouettes in the mid-ground
   if (vista && vista.landmarks) drawLandmarks(st, vista, camX, gy, d, flat);
@@ -1316,10 +1546,18 @@ function drawStrip(x0, len, camX, gy, d, isHome, st) {
   var sx = x0 - camX;
   if (sx + len < -140 || sx > W + 140) return;
   var night = st && st.route.weather === 'night';
+  var wx = st && st.wx ? st.wx : 'clear';
 
-  // paved strip — asphalt with warm tint
+  // paved strip — asphalt with warm tint (rain: dark wet; snow: dusted white)
   ctx2d.fillStyle = night ? '#3d3a45' : '#6e6a63';
   ctx2d.fillRect(sx, gy - 6, len, 14);
+  if (wx === 'rain') {
+    ctx2d.fillStyle = 'rgba(40,50,60,0.35)';
+    ctx2d.fillRect(sx, gy - 6, len, 14);
+  } else if (wx === 'snow') {
+    ctx2d.fillStyle = 'rgba(235,240,248,0.55)';
+    ctx2d.fillRect(sx, gy - 6, len, 14);
+  }
   // subtle wear bands
   ctx2d.fillStyle = night ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.07)';
   ctx2d.fillRect(sx, gy - 6, len, 3);
