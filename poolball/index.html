@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0908">
+<title>Poolball — 2am Pool Hall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20261012a">
+</head>
+<body>
+<div id="stage">
+  <div id="frame">
+    <canvas id="game" width="480" height="800"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="hud-top">
+        <div class="hud-cell"><span class="hud-k">SCORE</span><span class="hud-v" id="hud-score">0</span></div>
+        <div class="hud-cell"><span class="hud-k" id="hud-table">TABLE 1</span><span class="hud-v small" id="hud-shots">0 / 10</span></div>
+        <div class="hud-cell btns">
+          <button id="mute-btn" class="icon-btn" aria-label="mute">🔊</button>
+          <button id="menu-btn" class="icon-btn" aria-label="menu">☰</button>
+        </div>
+      </div>
+      <div id="hud-bottom">
+        <div id="deck">
+          <div id="deck-btns">
+            <button id="spin-btn" class="ctl-btn" aria-label="spin">
+              <span class="spin-face"><span id="spin-dot"></span></span>SPIN
+            </button>
+            <button id="precise-btn" class="ctl-btn" aria-label="precise aim">PRECISE</button>
+          </div>
+          <div id="deck-tip">DRAG ANYWHERE TO PULL &nbsp;·&nbsp; SIDE POCKETS PAY ×2</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- spin picker -->
+    <div id="spin-picker" class="hidden">
+      <div id="spin-card">
+        <div class="spin-title">ENGLISH</div>
+        <div id="spin-face"><span id="spin-pdot"></span></div>
+        <div class="spin-row">
+          <button id="spin-reset" class="mini-btn">CENTER</button>
+          <button id="spin-close" class="mini-btn gold">DONE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- table clear -->
+    <div id="clear" class="hidden">
+      <div id="clear-card">
+        <div id="clear-title" class="clear-title">TABLE 1 CLEAR</div>
+        <div id="clear-stars"></div>
+        <div id="clear-score" class="clear-score">0</div>
+        <div id="clear-detail" class="clear-detail"></div>
+        <div id="arc-box"></div>
+        <button id="next-btn" class="big-btn gold">NEXT TABLE</button>
+      </div>
+    </div>
+
+    <!-- title -->
+    <div id="title">
+      <div class="wordmark">POOLBALL</div>
+      <div class="tagline">it's 2am in an empty pool hall</div>
+      <div class="title-btns">
+        <button id="btn-play" class="big-btn gold">RACK 'EM</button>
+        <button id="btn-daily" class="big-btn"><span id="daily-streak">DAILY TABLE</span></button>
+      </div>
+      <div class="title-foot">
+        <button id="mute-btn-t" class="link-btn">SOUND ON</button>
+        <span id="build-tag">v20261012a</span>
+      </div>
+    </div>
+  </div>
+</div>
+<noscript><p style="color:#f5e9d0;font-family:sans-serif;text-align:center">Poolball needs JavaScript to run the tables.</p></noscript>
+<script src="config.js?v=20261012a"></script>
+<script src="sim.js?v=20261012a"></script>
+<script src="art.js?v=20261012a"></script>
+<script src="audio.js?v=20261012a"></script>
+<script src="game.js?v=20261012a"></script>
+</body>
+</html>
