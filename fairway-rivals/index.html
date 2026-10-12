@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Fairway Rivals</title>
+<link rel="stylesheet" href="style.css?v=20261012a">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="chrome"></div>
+<div id="loading">
+  <div class="wordmark">FAIRWAY<br><span class="gold">RIVALS</span></div>
+  <div class="wordmark-sub">FRN Sports</div>
+  <div class="load-bar"><i></i></div>
+  <div class="load-hint">Tuning the broadcast&hellip;</div>
+</div>
+<div id="buildtag">FR&middot;20261012a</div>
+<script src="config.js?v=20261012a"></script>
+<script src="sim.js?v=20261012a"></script>
+<script src="art.js?v=20261012a"></script>
+<script src="audio.js?v=20261012a"></script>
+<script src="game.js?v=20261012a"></script>
+<script src="duel.js?v=20261012a"></script>
+<script>
+// Hide the loader once the game shell has booted (game.js sets window.__fr).
+(function () {
+  var tries = 0;
+  function tick() {
+    if (window.__fr) {
+      var l = document.getElementById('loading');
+      if (l) l.classList.add('hidden');
+      return;
+    }
+    if (++tries < 120) setTimeout(tick, 100); // 12s failsafe
+    else {
+      var l2 = document.getElementById('loading');
+      if (l2) l2.classList.add('hidden');
+    }
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
