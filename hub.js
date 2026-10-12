@@ -145,7 +145,8 @@
     { id: 'emberline', name: 'Emberline', cls: 'art-emberline' },
     { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
     { id: 'poolball', name: 'Poolball', cls: 'art-poolball' },
-    { id: 'fairway-rivals', name: 'Fairway Rivals', cls: 'art-fairway-rivals' }
+    { id: 'fairway-rivals', name: 'Fairway Rivals', cls: 'art-fairway-rivals' },
+    { id: 'night-market', name: 'Night Market', cls: 'art-night-market' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
