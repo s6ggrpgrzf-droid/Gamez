@@ -358,7 +358,14 @@ function drawShip(sh,sc){
   ctx.globalAlpha=alpha;
   ctx.drawImage(spr,-iw/2,-ih+ih*0.28,iw,ih);
   // night: sink hull and sails into silhouette (portholes/signals drawn later stay lit)
-  if(sc.nf>0.25){ ctx.fillStyle='rgba(7,11,22,'+(0.68*sc.nf).toFixed(3)+')'; ctx.fillRect(-iw/2,-ih+ih*0.28,iw,ih); }
+  // soft radial overlay — no hard box edges
+  if(sc.nf>0.25){
+    var ng=ctx.createRadialGradient(0,-ih*0.3,8,0,-ih*0.3,iw*0.62);
+    ng.addColorStop(0,'rgba(7,11,22,'+(0.72*sc.nf).toFixed(3)+')');
+    ng.addColorStop(1,'rgba(7,11,22,0)');
+    ctx.fillStyle=ng;
+    ctx.fillRect(-iw*0.7,-ih*1.2,iw*1.4,ih*1.7);
+  }
   // hull reflection
   ctx.globalAlpha=alpha*0.16;
   ctx.fillStyle='#0a1626';
