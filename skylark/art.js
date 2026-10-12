@@ -59,7 +59,7 @@ var PX = (function () {
 
   /* ---------------- planes (facing right) ---------------- */
 
-  /* Kite — little bush Cub, high wing, amber */
+  /* Kite — little bush Cub, high wing, amber (prop drawn separately, animated) */
   var KITE = [
     '............KKKK..............',
     '..........KKWWWWKK............',
@@ -68,9 +68,9 @@ var PX = (function () {
     '......KKKKKKKKKKKKKK..........',
     '....KKBBBBBBBBBBBBBBKK........',
     '..KKBBBBBKWWBBBBBBBBBBKK......',
-    '.KBBBBBBBBBWWBBBBBBBBBBBPK....',
-    '.KBBBBBBBBBBBBBBBBBBBBBPPPK...',
-    '.KBBBBBBBBBBBBBBBBBBBBBPK.....',
+    '.KBBBBBBBBBWWBBBBBBBBBBBK.....',
+    '.KBBBBBBBBBBBBBBBBBBBBBBK.....',
+    '.KBBBBBBBBBBBBBBBBBBBBBBK.....',
     '..KKBBBBBBBBBBBBBBBBBBKK......',
     '....KKBBBBBBBBBBBBBBKK........',
     '......KKKKKKKKKKKKKK..........',
@@ -79,7 +79,7 @@ var PX = (function () {
     '.......KDDDK....KDDDK.........',
   ];
 
-  /* Kestrel — twin-prop, teal, bigger */
+  /* Kestrel — twin-prop, teal, bigger (props drawn separately, animated) */
   var KESTREL = [
     '..............KKKKKK................',
     '............KKWWWWWWKK..............',
@@ -88,10 +88,10 @@ var PX = (function () {
     '........KKKKKKKKKKKKKKKKKK..........',
     '......KKTTTTTTTTTTTTTTTTTTKK........',
     '....KKTTTTKWWWTTTTTTTTTTTTTTKK......',
-    '..PKTTTTTTTTWWWTTTTTTTTTTTTTTTK.....',
-    '.PPPKTTTTTTTTTTTTTTTTTTTTTTTTTKP....',
-    '..PKTTTTTTTTTTTTTTTTTTTTTTTTTKPP....',
-    '....KKTTTTTTTTTTTTTTTTTTTKTTKKP.....',
+    '..KKTTTTTTTTWWWTTTTTTTTTTTTTTK......',
+    '..KKTTTTTTTTTTTTTTTTTTTTTTTTTK......',
+    '..KKTTTTTTTTTTTTTTTTTTTTTTTTTK......',
+    '....KKTTTTTTTTTTTTTTTTTTTKTTKK......',
     '......KKTTTTTTTTTTTTTTTTTTKK........',
     '........KKKKKKKKKKKKKKKKKK..........',
     '..........KKK........KKK...........',
@@ -212,10 +212,81 @@ var PX = (function () {
   var BIRD1 = ['K..K', 'KKKK'];
   var BIRD2 = ['....', 'KKKK'];
 
+  /* propeller frames — side-view disc. 0=vertical, 1=diagonal, 2=edge-on */
+  var PROP0 = [
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+    '...KK...',
+  ];
+  var PROP1 = [
+    'KK.....K',
+    '.KK...K.',
+    '..KK.K..',
+    '...KK...',
+    '...KK...',
+    '..K.KK..',
+    '.K...KK.',
+    'K.....KK',
+    '......KK',
+    '.....KK.',
+    '....KK..',
+    '...KK...',
+  ];
+  var PROP2 = [
+    '.........',
+    '.........',
+    '.........',
+    '.........',
+    '.........',
+    'KKKKKKKKK',
+    '.........',
+    '.........',
+    '.........',
+    '.........',
+    '.........',
+    '.........',
+  ];
+  /* prop blur disc — drawn translucent */
+  var PROPBLUR = [
+    '..KKKKK..',
+    '.KKKKKKK.',
+    'KKKKKKKKK',
+    'KKKKKKKKK',
+    'KKKKKKKKK',
+    'KKKKKKKKK',
+    'KKKKKKKKK',
+    '.KKKKKKK.',
+    '..KKKKK..',
+  ];
+  /* jet intake fan blur (Merlin) — subtle */
+  var FANBLUR = [
+    '.KKKKK.',
+    'KKKKKKK',
+    'KKKKKKK',
+    'KKKKKKK',
+    'KKKKKKK',
+    'KKKKKKK',
+    '.KKKKK.',
+  ];
+
   function init() {
     compile('kite', KITE);
     compile('kestrel', KESTREL);
     compile('merlin', MERLIN);
+    compile('prop0', PROP0);
+    compile('prop1', PROP1);
+    compile('prop2', PROP2);
+    compile('propblur', PROPBLUR);
+    compile('fanblur', FANBLUR);
     compile('pine', PINE);
     compile('round', ROUND_TREE);
     compile('birch', BIRCH);

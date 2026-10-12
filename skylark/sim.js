@@ -19,13 +19,16 @@ var SK = (function () {
   var PLANES = [
     { id: 'kite', name: 'Kite', desc: 'A ragged little bush Cub. Forgiving, lands anywhere.',
       maxSpeed: 95, cruiseSpeed: 70, climb: 55, vr: 42, pax: 2, cargo: 1,
-      stripNeed: 300, price: 0, fuelUse: 1.0, forgive: 1.35 },
+      stripNeed: 300, price: 0, fuelUse: 1.0, forgive: 1.35,
+      stall: 38, maxTW: 0.34, cd0: 0.346, ki: 0.025, ponder: 0.85 },
     { id: 'kestrel', name: 'Kestrel', desc: 'A honest twin-prop. Faster, roomier, thirstier.',
       maxSpeed: 150, cruiseSpeed: 115, climb: 80, vr: 62, pax: 4, cargo: 3,
-      stripNeed: 520, price: 2400, fuelUse: 1.8, forgive: 1.0 },
+      stripNeed: 520, price: 2400, fuelUse: 1.8, forgive: 1.0,
+      stall: 55, maxTW: 0.38, cd0: 0.159, ki: 0.048, ponder: 1.0 },
     { id: 'merlin', name: 'Merlin', desc: 'A regional jet with manners. Long strips only.',
       maxSpeed: 230, cruiseSpeed: 180, climb: 120, vr: 95, pax: 6, cargo: 6,
-      stripNeed: 800, price: 9800, fuelUse: 3.0, forgive: 0.8 },
+      stripNeed: 800, price: 9800, fuelUse: 3.0, forgive: 0.8,
+      stall: 88, maxTW: 0.44, cd0: 0.080, ki: 0.086, ponder: 1.35 },
   ];
 
   var STRIP_NAMES = ['Meadowlark Field', 'Cinder Hollow', 'Pebblebrook', 'Foxglove Meadows',
@@ -118,9 +121,11 @@ var SK = (function () {
       route: route, plane: plane,
       pilot: pilot || { name: 'Pilot', xp: 0, money: 300, planes: ['kite'], rank: 0 },
       pax: pax,
-      // physics
-      x: 0, alt: 0, speed: 0, vspeed: 0,
-      throttle: 0, targetAlt: 0,
+      // physics — real lift/drag/thrust/weight. Units: kts, ft, ft/s, deg.
+      x: 0, lat: 0, alt: 0, speed: 0, vspeed: 0,
+      pitch: 0, bank: 0, aoa: 0, stalled: false,
+      throttle: 0,
+      massF: 1.0, // 1.0 full → ~0.93 empty (fuel burn lightens)
       phase: 'takeoff', // takeoff | cruise | final | done
       runwayX: 0, runwayLen: 850, destX: route.dist, destLen: 850,
       wind: route.wind,
@@ -137,48 +142,97 @@ var SK = (function () {
     };
   }
 
-  /* input: {throttle 0..1, targetAlt} — logical actions */
+  /* input: {throttle 0..1, pitch -1..1, lateral -1..1} — logical actions.
+     pitch: -1 push (nose down) … +1 pull (nose up). lateral: -1 left … +1 right. */
+  var G = 32.2; // ft/s^2
   function step(st, inp, dt) {
     dt = Math.min(dt, 0.05);
     st.time += dt;
     var P = st.plane;
 
+    // smooth the inputs (heavier planes feel ponderous)
+    var resp = 3.2 / P.ponder;
     if (inp && typeof inp.throttle === 'number')
       st.throttle += (Math.max(0, Math.min(1, inp.throttle)) - st.throttle) * Math.min(1, dt * 3);
-    if (inp && typeof inp.targetAlt === 'number')
-      st.targetAlt = Math.max(0, Math.min(900, inp.targetAlt));
+    var pitchIn = (inp && typeof inp.pitch === 'number') ? Math.max(-1, Math.min(1, inp.pitch)) : 0;
+    var latIn = (inp && typeof inp.lateral === 'number') ? Math.max(-1, Math.min(1, inp.lateral)) : 0;
+    var sloppy = st.stalled ? 0.45 : 1; // stalled controls get mushy
+    st.pitch += (pitchIn * 15 * sloppy - st.pitch) * Math.min(1, dt * resp);
+    st.bank += (latIn * 28 * sloppy - st.bank) * Math.min(1, dt * resp * 0.8);
 
+    // weight: fuel burn lightens the plane
+    st.massF = 1 - (100 - st.fuel) / 100 * 0.07;
+
+    var vFps = Math.max(0, st.speed * 1.688); // kts → ft/s
     var onGround = st.alt <= 0.5 && st.phase === 'takeoff';
-    var targetSpeed = st.throttle * P.maxSpeed;
 
     if (onGround) {
-      // takeoff roll: accelerate, slight headwind help
-      var accel = (targetSpeed - st.speed) * 0.9 + st.throttle * 22 - (st.wind > 0 ? st.wind * 0.4 : 0);
-      st.speed = Math.max(0, st.speed + accel * dt);
-      st.x += st.speed * dt * 3; // world px per sec (scaled)
-      st.vspeed = 0;
-      if (st.speed >= P.vr && st.targetAlt > 30) {
+      // takeoff roll
+      var twRoll = st.throttle * P.maxTW;
+      var dwRoll = 0.03 + 0.0004 * st.speed * st.speed / 100;
+      var accelKts = (twRoll - dwRoll) * G / 1.688 - (st.wind > 0 ? st.wind * 0.02 : 0);
+      st.speed = Math.max(0, st.speed + accelKts * dt);
+      st.x += st.speed * dt * 3;
+      st.vspeed = 0; st.lat = 0;
+      // rotate: at Vr with back-pressure, she flies
+      if (st.speed >= P.vr && st.pitch > 2.5) {
         st.phase = 'cruise';
-        st.alt = 2;
+        st.alt = 3;
+        st.vspeed = 6;
         pushMsg(st, 'Tower: Rotate! You\'re flying.');
       } else if (st.x > st.runwayX + st.runwayLen + 400 && st.speed < P.vr) {
-        // ran out of runway, gently: tower talks you through it
         pushMsg(st, 'Tower: Ease off, taxi back. No hurry.');
         st.x = st.runwayX; st.speed = 0;
       }
     } else {
-      // airborne
-      st.speed += (targetSpeed - st.speed) * Math.min(1, dt * 0.8);
-      var effSpeed = Math.max(0, st.speed + st.wind * 0.3);
-      st.x += effSpeed * dt * 3;
+      // ---- airborne: lift / drag / thrust / weight ----
+      var bankRad = st.bank * Math.PI / 180;
 
-      // climb toward targetAlt, limited by plane + speed (mush when slow)
-      var speedFactor = Math.min(1, st.speed / (P.vr * 1.15));
-      var maxClimb = P.climb * (0.35 + 0.65 * speedFactor);
-      var want = (st.targetAlt - st.alt) * 1.4;
-      want = Math.max(-P.climb * 1.2, Math.min(maxClimb, want));
-      st.vspeed += (want - st.vspeed) * Math.min(1, dt * 2.2);
+      // flight path angle from current vspeed
+      var fpa = Math.atan2(st.vspeed, Math.max(vFps, 30)); // radians
+      st.aoa = st.pitch - fpa * 57.3;
+
+      // stall: gentle mush, never a spin
+      var stallAoA = 12.5 + P.forgive * 2.5;
+      var slowFactor = Math.max(0, Math.min(1, (st.speed - P.stall * 0.92) / (P.stall * 0.25)));
+      if (!st.stalled && st.aoa > stallAoA && slowFactor < 0.9) {
+        st.stalled = true;
+        pushMsg(st, 'Tower: She\'s mushing — ease the nose down, add a breath of power.');
+      } else if (st.stalled && (st.aoa < stallAoA - 4 || slowFactor >= 1)) {
+        st.stalled = false;
+        pushMsg(st, 'Tower: There she is — flying again. Nicely handled.');
+      }
+      if (st.stalled) st.pitch -= 9 * dt; // nose mushes down on its own
+
+      // load factor n = L/W
+      var vStall = P.stall * 1.688;
+      var nBase = (vFps * vFps) / (vStall * vStall) * Math.max(0, Math.min(1.45, st.aoa / 6));
+      nBase /= st.massF; // lighter = floatier
+      var n = st.stalled ? nBase * 0.60 : nBase;
+
+      // vertical: lift (banked) vs weight
+      var ay = (n * Math.cos(bankRad) - 1) * G;
+      st.vspeed += ay * dt;
+      st.vspeed *= (1 - 0.12 * dt); // damping
+      st.vspeed = Math.max(-90, Math.min(90, st.vspeed));
       st.alt = Math.max(0, st.alt + st.vspeed * dt);
+
+      // drag: parasitic + induced (ground effect eases induced < 50ft)
+      var v100 = Math.max(vFps / 100, 0.35);
+      var induced = P.ki * n * n / (v100 * v100);
+      if (st.alt < 50) induced *= 0.45 + 0.55 * (st.alt / 50);
+      var dw = P.cd0 * v100 * v100 + induced;
+      var tw = st.throttle * P.maxTW;
+      var ax = (tw - dw) * G - G * Math.sin(fpa) * 0.9;
+      st.speed = Math.max(0, st.speed + ax / 1.688 * dt);
+
+      // lateral: banked turn + crosswind drift on final
+      st.lat += Math.sin(bankRad) * vFps * dt;
+      if (st.phase === 'final' || st.alt < 120) st.lat += st.wind * -0.9 * dt;
+
+      // along-track: wind affects ground speed
+      var gndKts = Math.max(0, st.speed + st.wind * 0.35);
+      st.x += gndKts * dt * 3;
 
       // fuel burn
       st.fuel = Math.max(0, st.fuel - dt * (0.25 + st.throttle * 0.55) * P.fuelUse * 0.35);
@@ -191,16 +245,38 @@ var SK = (function () {
           (st.wind >= 0 ? 'calm' : 'light') + '. Runway is yours.');
       }
 
+      // landing procedure: tower talks you down the final
+      if (st.phase === 'final' && !st.done) {
+        var dFinal = st.destX + st.destLen * 0.18 - st.x; // to aim point
+        if (!st._proc1 && dFinal < 1900) {
+          st._proc1 = true;
+          pushMsg(st, 'Tower: Line up on final. Follow the beacon needle.');
+        } else if (st._proc1 && !st._proc2 && dFinal < 1100) {
+          st._proc2 = true;
+          var p = papi(st);
+          var hint = p.white === 2 ? 'Two white, two red — right on the slope.'
+            : p.white > 2 ? 'Mostly white — ease her down a touch.'
+            : 'Mostly red — you\'re low, add a breath of power.';
+          pushMsg(st, 'Tower: Check the lights by the runway. ' + hint);
+        } else if (st._proc2 && !st._proc3 && dFinal < 420) {
+          st._proc3 = true;
+          pushMsg(st, 'Tower: Easy… flare! Nose up, let her settle.');
+        }
+      }
+
       // touchdown check
       if (st.alt <= 0.5 && st.vspeed <= 0) {
+        var centerLat = 0;
+        var latOff = Math.abs(st.lat) / 260; // 0 = centerline
         var overRunway = st.x >= st.destX - 150 && st.x <= st.destX + st.destLen + 150;
         if (overRunway && st.phase !== 'done') {
+          st.touchdownLat = latOff;
           land(st);
         } else if (st.x > st.destX + st.destLen + 600) {
           // flew past everything: gentle go-around
           st.goArounds++;
           pushMsg(st, 'Tower: Go around, line up again. Easy does it.');
-          st.x = st.destX - 2200; st.alt = Math.max(st.alt, 350); st.targetAlt = 350;
+          st.x = st.destX - 2200; st.alt = Math.max(st.alt, 350); st.lat = 0;
           st.phase = 'final';
         } else if (!overRunway && st.x > st.runwayX + 500 && st.phase === 'cruise' && st.alt <= 0.5) {
           // mushy meadow landing (never a crash)
@@ -213,7 +289,7 @@ var SK = (function () {
       st.ribbonT += dt;
       if (st.ribbonT > 0.12) {
         st.ribbonT = 0;
-        var smooth = Math.abs(st.vspeed) < 40 ? 1 : 0;
+        var smooth = Math.abs(st.vspeed) < 12 && !st.stalled ? 1 : 0;
         st.ribbon.push({ x: st.x, alt: st.alt, s: smooth });
         if (st.ribbon.length > 600) st.ribbon.shift();
       }
@@ -237,12 +313,36 @@ var SK = (function () {
     if (st.messages.length > 4) st.messages.shift();
   }
 
+  /* PAPI glideslope: 4 lights — 2W2R on path, more white=high, more red=low.
+     Returns {white:0..4, red:0..4} for the approach to destX. */
+  function papi(st) {
+    var touchX = st.destX + st.destLen * 0.18; // aim point: just past threshold
+    var dx = touchX - st.x;
+    if (dx <= 50 || st.phase === 'done') return { white: 2, red: 2 };
+    var ang = Math.atan2(st.alt, dx) * 180 / Math.PI; // degrees above horizon
+    var w;
+    if (ang >= 4.2) w = 4; else if (ang >= 3.4) w = 3;
+    else if (ang >= 2.6) w = 2; else if (ang >= 1.8) w = 1; else w = 0;
+    return { white: w, red: 4 - w };
+  }
+
+  /* landing verdict tiers — cozy words, never a fail */
+  function landingVerdict(vsFpm, forgive) {
+    var v = vsFpm / forgive; // normalize by plane forgiveness
+    if (v < 100) return { word: 'butter', praise: 'Buttery. The tires barely whispered.' };
+    if (v < 190) return { word: 'a soft one', praise: 'A soft one — nice and easy.' };
+    if (v < 300) return { word: 'a firm arrival', praise: 'A firm arrival! The landing gear forgives you.' };
+    return { word: 'an exciting arrival', praise: 'An exciting arrival! The tower felt that one and grinned.' };
+  }
+
   function land(st, meadow) {
     var P = st.plane;
     st.alt = 0;
-    var vsFpm = Math.abs(st.vspeed) * 12; // cosmetic fpm
+    var vsFpm = Math.abs(st.vspeed) * 60; // vspeed is ft/s → fpm
     var centerX = st.destX + st.destLen / 2;
-    var off = Math.abs(st.x - centerX) / (st.destLen / 2); // 0=center
+    var offX = Math.abs(st.x - centerX) / (st.destLen / 2); // 0=center
+    var offLat = Math.min(1, (st.touchdownLat || 0)); // 0=centerline
+    var off = Math.max(offX, offLat);
     st.touchdownVs = vsFpm;
     st.touchdownOff = off;
     st.phase = 'done'; st.done = true; st.landed = true;
@@ -265,10 +365,11 @@ var SK = (function () {
     for (var i = 0; i < st.pax.length; i++)
       st.pax[i].mood = Math.max(0.3, Math.min(1.2, 0.55 + landingScore / 130));
 
-    var word = landingScore >= 85 ? 'a greaser' : landingScore >= 65 ? 'a soft one' :
-               landingScore >= 40 ? 'a firm arrival' : 'an exciting arrival';
+    var word = landingVerdict(vsFpm, P.forgive).word;
+    var praise = landingVerdict(vsFpm, P.forgive).praise;
     pushMsg(st, 'Tower: ' + (meadow ? 'Meadow landing! The sheep applaud.' :
-      'Touchdown — ' + word + '. Welcome to ' + r.to + '.'));
+      'Touchdown — ' + praise + ' Welcome to ' + r.to + '.'));
+    st.verdict = word;
   }
 
   function ribbonSmooth(st) {
@@ -277,11 +378,13 @@ var SK = (function () {
     return st.ribbon.length ? s / st.ribbon.length : 0.5;
   }
 
-  /* skip-to-final: jump to short final, keep altitude energy */
+  /* skip-to-final: jump to short final with approach energy */
   function skipToFinal(st) {
     if (st.phase !== 'cruise' || st.skipped) return false;
     st.x = st.destX - 2400;
-    st.alt = Math.max(st.alt, 420); st.targetAlt = 420;
+    st.alt = Math.max(st.alt, 420);
+    st.speed = Math.max(st.speed, st.plane.cruiseSpeed * 0.75);
+    st.vspeed = -8; st.pitch = -2; st.bank = 0; st.lat = 0;
     st.throttle = Math.min(st.throttle, 0.45);
     st.phase = 'final'; st.skipped = true;
     pushMsg(st, 'Tower: Skipping ahead — final approach, ' + st.route.to + '.');
@@ -330,34 +433,62 @@ var SK = (function () {
   }
 
   function selfTest() {
-    // headless sanity: full flight must complete without errors
+    // headless sanity: full flight must complete without errors (new physics model)
     var pilot = newPilot('Test');
     var route = makeRoute(rng(7), pilot.home);
-    route.dist = 6000;
+    route.dist = 6000; route.wind = 0;
     var st = newFlight(7, route, 'kite', pilot);
-    var inp = { throttle: 1, targetAlt: 0 };
-    var steps = 0;
-    while (!st.done && steps < 20000) {
-      if (st.phase === 'takeoff' && st.speed > 50) inp.targetAlt = 400;
-      if (st.phase === 'cruise') {
-        inp.targetAlt = 400;
-        if (st.destX - st.x < 1500) inp.targetAlt = 60;
-      }
-      if (st.phase === 'final') {
-        var d = st.destX + st.destLen / 2 - st.x;
-        inp.targetAlt = Math.max(0, d * 0.12);
-        inp.throttle = d > 400 ? 0.35 : 0.15;
+    var inp = { throttle: 1, pitch: 0, lateral: 0 };
+    var steps = 0, stalledOnce = false;
+    while (!st.done && steps < 30000) {
+      if (st.stalled) stalledOnce = true;
+      if (st.phase === 'takeoff') {
+        inp.throttle = 1;
+        inp.pitch = st.speed > 44 ? 0.55 : 0; // rotate at Vr
+      } else if (st.phase === 'cruise') {
+        // hold ~400ft: pitch to correct altitude gently
+        var altErr = 400 - st.alt;
+        inp.pitch = Math.max(-0.5, Math.min(0.6, altErr / 300));
+        inp.throttle = 0.62;
+        if (st.destX - st.x < 1500) { inp.pitch = -0.35; inp.throttle = 0.3; }
+      } else if (st.phase === 'final') {
+        // fly the glideslope: aim for ~3deg to the aim point
+        var d = st.destX + st.destLen * 0.18 - st.x;
+        var wantVs = -Math.max(4, Math.min(16, d * 0.012)); // ft/s
+        var vsErr = wantVs - st.vspeed;
+        inp.pitch = Math.max(-0.6, Math.min(0.5, vsErr / 22));
+        inp.throttle = d > 500 ? 0.32 : 0.18;
+        inp.lateral = Math.max(-0.4, Math.min(0.4, -st.lat / 400)); // line up
+        if (d < 250) inp.pitch = 0.45; // flare
       }
       step(st, inp, 1 / 60);
       steps++;
+      // sanity: never NaN, never absurd
+      if (!isFinite(st.alt) || !isFinite(st.speed) || st.alt > 2000)
+        return 'FAIL: non-physical state at step ' + steps;
     }
     if (!st.done) return 'FAIL: flight did not complete in ' + steps + ' steps';
     if (!(st.score >= 0 && st.score <= 100)) return 'FAIL: score out of range ' + st.score;
     if (!(st.payout > 0)) return 'FAIL: no payout';
+    if (st.touchdownVs == null) return 'FAIL: no touchdown recorded';
+    // stall recovery path: yank back at low speed, must recover without crash
+    var st3 = newFlight(11, route, 'kite', pilot);
+    st3.phase = 'cruise'; st3.x = 1000; st3.alt = 500; st3.speed = 55;
+    var inp3 = { throttle: 0.25, pitch: 1, lateral: 0 };
+    var recSteps = 0, sawStall = false;
+    while (recSteps < 3000) {
+      step(st3, inp3, 1 / 60);
+      if (st3.stalled) sawStall = true;
+      if (sawStall && !st3.stalled) break; // recovered
+      if (sawStall && st3.aoa < 5) { inp3.pitch = 0.1; inp3.throttle = 0.8; } // recover: nose down + power
+      recSteps++;
+    }
+    if (!sawStall) return 'FAIL: stall never triggered in stall test';
+    if (st3.stalled) return 'FAIL: stall did not recover';
     // skip-to-final path
     var st2 = newFlight(9, route, 'kite', pilot);
-    step(st2, { throttle: 1, targetAlt: 400 }, 1 / 60);
-    st2.phase = 'cruise'; st2.x = 1000; st2.alt = 400;
+    step(st2, { throttle: 1, pitch: 0.3, lateral: 0 }, 1 / 60);
+    st2.phase = 'cruise'; st2.x = 1000; st2.alt = 400; st2.speed = 70;
     if (!skipToFinal(st2)) return 'FAIL: skipToFinal refused';
     if (st2.phase !== 'final') return 'FAIL: skip did not set final';
     // career
@@ -372,7 +503,8 @@ var SK = (function () {
     newFlight: newFlight, step: step, skipToFinal: skipToFinal,
     newPilot: newPilot, applyFlightResult: applyFlightResult,
     dailyRoutes: dailyRoutes, buyPlane: buyPlane, rankFor: rankFor,
-    ribbonSmooth: ribbonSmooth, selfTest: selfTest, rng: rng,
+    ribbonSmooth: ribbonSmooth, papi: papi, landingVerdict: landingVerdict,
+    selfTest: selfTest, rng: rng,
   };
 })();
 

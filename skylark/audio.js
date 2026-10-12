@@ -84,6 +84,7 @@ var AU = (function () {
   }
   function towerBlip() { blip(1180, 0.07, 'square', 0.03); }
   function click() { blip(440, 0.05, 'square', 0.05); }
+  function tick() { blip(660, 0.03, 'square', 0.04); }
   function coin() {
     blip(990, 0.09, 'square', 0.07);
     setTimeout(function () { blip(1320, 0.14, 'square', 0.07); }, 80);
@@ -95,7 +96,7 @@ var AU = (function () {
     return muted;
   }
 
-  return { ensure: ensure, engine: engine, chime: chime, thud: thud,
+  return { ensure: ensure, engine: engine, chime: chime, thud: thud, tick: tick,
            towerBlip: towerBlip, click: click, coin: coin, toggleMute: toggleMute };
 })();
 
