@@ -1,0 +1,270 @@
+/* Skylark — vintage aviation postcard identity.
+ * Paper, brass, ink. The world is the UI.
+ */
+:root {
+  --paper: #f5e9d0;
+  --paper-dark: #e8d5ae;
+  --ink: #3a2c1c;
+  --ink-soft: #6b5638;
+  --brass: #b98a2f;
+  --brass-hi: #e8c25a;
+  --red: #c94f38;
+  --sky-amber: #f9d976;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  height: 100%; overflow: hidden; background: #1a1410;
+  font-family: 'Special Elite', 'Courier New', monospace;
+  color: var(--ink);
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+#app { position: fixed; inset: 0; overflow: hidden; }
+#sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.hidden { display: none !important; }
+
+/* ---------- HUD: woven into the world ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+
+/* brass beacon compass, top-left */
+#compass {
+  position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px;
+  width: 64px; height: 64px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 55%, #7a5a1e);
+  box-shadow: 0 3px 10px rgba(0,0,0,.35), inset 0 2px 4px rgba(255,255,255,.4);
+  pointer-events: none;
+}
+#compass-face {
+  position: absolute; inset: 8px; border-radius: 50%;
+  background: radial-gradient(circle, #f8efdc 0%, #e8d5ae 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Serif Display', serif; font-size: 13px; color: var(--ink-soft);
+}
+#needle {
+  position: absolute; left: 50%; top: 50%; width: 4px; height: 26px;
+  background: linear-gradient(to top, var(--red) 50%, var(--ink) 50%);
+  border-radius: 2px; transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotate(90deg);
+  z-index: 2;
+}
+
+/* flight data, top-right, vintage type */
+#flightdata {
+  position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 86px;
+  font-family: 'DM Serif Display', serif; color: #fff8e8;
+  text-shadow: 0 2px 6px rgba(0,0,0,.55); text-align: right;
+  font-size: 22px; line-height: 1.15; pointer-events: none;
+}
+.fd-unit { font-size: 11px; opacity: .8; margin: 0 8px 0 2px; font-family: 'Special Elite', monospace; }
+
+/* throttle: wooden quadrant, right edge */
+#throttle {
+  position: absolute; right: 8px; top: 26%; height: 32%; width: 38px;
+  pointer-events: auto;
+}
+#thr-track {
+  position: absolute; inset: 0; border-radius: 19px;
+  background: linear-gradient(to right, #6b4a26, #8a6234 50%, #6b4a26);
+  box-shadow: inset 0 3px 8px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3);
+  touch-action: none; cursor: pointer;
+}
+#thr-knob {
+  position: absolute; left: 4px; right: 4px; height: 34px; border-radius: 15px;
+  background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 60%, #6e5018);
+  box-shadow: 0 3px 8px rgba(0,0,0,.45);
+  top: calc(100% - 38px);
+}
+#thr-track::before {
+  content: 'THR'; position: absolute; top: -20px; left: 0; right: 0; text-align: center;
+  font-size: 10px; letter-spacing: 2px; color: #fff8e8; text-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
+
+/* pitch target marker */
+#pitch-marker {
+  position: absolute; width: 46px; height: 2px; pointer-events: none;
+  border-top: 2px dashed rgba(255,248,232,.85);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.5));
+}
+#pitch-marker::after {
+  content: ''; position: absolute; right: -5px; top: -5px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #fff8e8; box-shadow: 0 1px 3px rgba(0,0,0,.5);
+}
+
+/* skip-to-final paper tab */
+#skip-final {
+  position: absolute; bottom: calc(88px + env(safe-area-inset-bottom)); left: 50%;
+  transform: translateX(-50%) rotate(-1.5deg);
+  background: var(--paper); color: var(--ink);
+  border: 1px solid #d8c49a; border-radius: 3px;
+  font-family: 'Special Elite', monospace; font-size: 14px;
+  padding: 10px 18px; cursor: pointer; pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+#skip-final:active { transform: translateX(-50%) rotate(-1.5deg) scale(.96); }
+
+/* tower telegrams, bottom */
+#telegrams {
+  position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 12px; right: 80px;
+  pointer-events: none;
+}
+.telegram {
+  display: inline-block; background: rgba(245,233,208,.94);
+  color: var(--ink); font-size: 13px; padding: 8px 14px; margin-top: 6px;
+  border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  transform: rotate(-.6deg);
+  animation: tg-in .35s ease-out;
+  max-width: 100%;
+}
+@keyframes tg-in { from { opacity: 0; transform: translateY(8px) rotate(-.6deg); } }
+
+#hud-mute {
+  position: absolute; top: calc(86px + env(safe-area-inset-top)); left: 22px;
+  width: 44px; height: 44px; border-radius: 50%; border: none;
+  background: rgba(245,233,208,.85); font-size: 18px; cursor: pointer;
+  pointer-events: auto; box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+
+/* ---------- title ---------- */
+#title {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 120%, rgba(26,20,16,.15), rgba(26,20,16,.55));
+  transition: opacity .8s ease;
+}
+#title.hide { opacity: 0; pointer-events: none; }
+.t-inner { text-align: center; padding: 0 24px; }
+.t-kicker {
+  font-size: 12px; letter-spacing: 4px; color: #ffe9b8;
+  text-shadow: 0 2px 8px rgba(0,0,0,.6); margin-bottom: 10px;
+}
+.t-name {
+  font-family: 'DM Serif Display', serif; font-size: 76px; line-height: 1;
+  color: #fff6e0; text-shadow: 0 4px 24px rgba(0,0,0,.5);
+  letter-spacing: 2px;
+}
+.t-sub {
+  font-family: 'DM Serif Display', serif; font-style: italic;
+  font-size: 20px; color: #ffe9b8; margin: 6px 0 26px;
+  text-shadow: 0 2px 8px rgba(0,0,0,.6);
+}
+#begin {
+  font-family: 'DM Serif Display', serif; font-size: 20px;
+  background: linear-gradient(to bottom, var(--brass-hi), var(--brass));
+  color: #2b1d12; border: none; border-radius: 40px;
+  padding: 15px 42px; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4), inset 0 1px 2px rgba(255,255,255,.5);
+}
+#begin:active { transform: scale(.96); }
+.t-hint { margin-top: 18px; font-size: 12px; color: #ffe9b8; opacity: .85; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+
+/* ---------- hangar: the corkboard ---------- */
+#hangar {
+  position: absolute; inset: 0; z-index: 15; overflow-y: auto;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(255,255,255,.06), transparent 50%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,.03) 0 2px, transparent 2px 4px),
+    linear-gradient(to bottom, #8a6a42, #75552f);
+  padding: calc(18px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom));
+}
+.board { max-width: 520px; margin: 0 auto; }
+.board-head { text-align: center; margin-bottom: 14px; }
+.board-head h2 {
+  font-family: 'DM Serif Display', serif; font-size: 34px; color: #f8efdc;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5); letter-spacing: 1px;
+}
+.pilot-line { color: #f0dfbc; font-size: 14px; margin-top: 4px; }
+.board-h {
+  font-family: 'DM Serif Display', serif; font-size: 20px; color: #f8efdc;
+  margin: 20px 4px 10px; text-shadow: 0 2px 6px rgba(0,0,0,.5);
+}
+#route-cards { display: flex; flex-direction: column; gap: 12px; }
+.route-card {
+  position: relative; background: var(--paper); border-radius: 3px;
+  padding: 14px 16px 14px; color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  transform: rotate(-.5deg); cursor: pointer; border: none; text-align: left;
+  font-family: 'Special Elite', monospace; width: 100%;
+}
+.route-card:nth-child(2) { transform: rotate(.7deg); }
+.route-card:nth-child(3) { transform: rotate(-.3deg); }
+.route-card::before {
+  content: ''; position: absolute; top: -8px; left: 50%; width: 16px; height: 16px;
+  border-radius: 50%; transform: translateX(-50%);
+  background: radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 60%, #6e5018);
+  box-shadow: 0 2px 4px rgba(0,0,0,.4);
+}
+.route-card:active { transform: scale(.98); }
+.rc-route { font-family: 'DM Serif Display', serif; font-size: 19px; margin-bottom: 4px; }
+.rc-meta { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+.rc-pay { float: right; font-family: 'DM Serif Display', serif; font-size: 22px; color: #2e7d4f; }
+.rc-go {
+  display: inline-block; margin-top: 8px; font-size: 13px; letter-spacing: 1px;
+  color: var(--red); border-bottom: 2px solid var(--red);
+}
+
+#plane-row { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 10px; }
+.plane-card {
+  flex: 0 0 150px; background: var(--paper); border-radius: 3px; padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3); border: 2px solid transparent;
+  cursor: pointer; font-family: 'Special Elite', monospace;
+}
+.plane-card.owned { border-color: var(--brass); }
+.plane-card.active { border-color: var(--red); }
+.plane-card.locked { opacity: .75; }
+.pc-name { font-family: 'DM Serif Display', serif; font-size: 17px; }
+.pc-desc { font-size: 11px; color: var(--ink-soft); margin: 4px 0; line-height: 1.4; min-height: 44px; }
+.pc-foot { font-size: 12px; }
+.pc-buy { color: #2e7d4f; font-weight: bold; }
+.pc-owned { color: var(--brass); }
+
+#logbook {
+  background: var(--paper); border-radius: 3px; padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3); font-size: 13px; line-height: 1.7;
+  transform: rotate(.4deg);
+}
+#logbook b { font-family: 'DM Serif Display', serif; }
+.link-btn {
+  display: block; margin: 22px auto 0; background: none; border: none;
+  color: #f0dfbc; font-family: 'Special Elite', monospace; font-size: 14px;
+  text-decoration: underline; cursor: pointer;
+}
+
+/* ---------- summary: flight log card ---------- */
+#summary {
+  position: absolute; inset: 0; z-index: 18;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(26,20,16,.45);
+}
+.log-card {
+  background: var(--paper); border-radius: 4px; padding: 26px 24px;
+  max-width: 380px; width: 100%; text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5); transform: rotate(-.8deg);
+  animation: tg-in .4s ease-out; color: var(--ink);
+  max-height: 88vh; overflow-y: auto;
+}
+.log-kicker { font-size: 11px; letter-spacing: 5px; color: var(--ink-soft); }
+.log-route { font-family: 'DM Serif Display', serif; font-size: 21px; margin: 8px 0 4px; }
+.log-score #sum-num {
+  font-family: 'DM Serif Display', serif; font-size: 64px; color: var(--red); line-height: 1;
+}
+.log-sub { display: block; font-style: italic; font-size: 14px; color: var(--ink-soft); margin-bottom: 12px; }
+.log-rows { text-align: left; font-size: 14px; border-top: 1px dashed #c9b586; padding-top: 10px; }
+.log-rows div { display: flex; justify-content: space-between; padding: 5px 0; }
+.log-rows b { font-family: 'DM Serif Display', serif; }
+.log-pax { font-size: 12.5px; font-style: italic; color: var(--ink-soft); margin: 12px 0 4px; line-height: 1.6; }
+.log-btns { display: flex; gap: 10px; margin-top: 16px; }
+.log-btns button {
+  flex: 1; font-family: 'DM Serif Display', serif; font-size: 17px;
+  padding: 12px; border-radius: 30px; cursor: pointer; border: none;
+}
+#b-again { background: linear-gradient(to bottom, var(--brass-hi), var(--brass)); color: #2b1d12; }
+#b-hangar { background: none; border: 2px solid var(--ink-soft) !important; color: var(--ink); }
+#b-again:active, #b-hangar:active { transform: scale(.96); }
+
+#toast {
+  position: absolute; top: 40%; left: 50%; transform: translateX(-50%);
+  background: rgba(26,20,16,.85); color: #ffe9b8; padding: 12px 22px;
+  border-radius: 24px; font-size: 14px; z-index: 30; pointer-events: none;
+  opacity: 0; transition: opacity .3s;
+}
+#toast.show { opacity: 1; }

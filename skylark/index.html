@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Skylark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="app">
+  <canvas id="sky"></canvas>
+
+  <!-- flight HUD: woven into the world, not a panel -->
+  <div id="hud" class="hidden">
+    <div id="compass" aria-label="Beacon compass">
+      <div id="needle"></div>
+      <div id="compass-face">N</div>
+    </div>
+    <div id="flightdata">
+      <span id="fd-speed">0</span><span class="fd-unit">kts</span>
+      <span id="fd-alt">0</span><span class="fd-unit">ft</span>
+    </div>
+    <div id="throttle" aria-label="Throttle">
+      <div id="thr-track" role="slider" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+        <div id="thr-knob"></div>
+      </div>
+    </div>
+    <div id="pitch-marker" class="hidden"></div>
+    <button id="skip-final" class="hidden">skip to final &rsaquo;</button>
+    <div id="telegrams" aria-live="polite"></div>
+    <button id="hud-mute" aria-label="Mute">&#x266A;</button>
+  </div>
+
+  <!-- title -->
+  <div id="title">
+    <div class="t-inner">
+      <div class="t-kicker">Workman Designs presents</div>
+      <div class="t-name">Skylark</div>
+      <div class="t-sub">a bush pilot&rsquo;s tale</div>
+      <button id="begin">Take to the sky</button>
+      <div class="t-hint">drag the sky to climb &amp; descend &middot; mind the throttle &middot; grease the landing</div>
+    </div>
+  </div>
+
+  <!-- hangar: the corkboard -->
+  <div id="hangar" class="hidden">
+    <div class="board">
+      <div class="board-head">
+        <h2>Flight Board</h2>
+        <div class="pilot-line"><span id="pilot-name">Pilot</span> &middot; <span id="pilot-rank">Student</span> &middot; <span id="pilot-money">$350</span></div>
+      </div>
+      <div id="route-cards"></div>
+      <h3 class="board-h">Aircraft</h3>
+      <div id="plane-row"></div>
+      <h3 class="board-h">Logbook</h3>
+      <div id="logbook"></div>
+      <button id="to-title" class="link-btn">back to title</button>
+    </div>
+  </div>
+
+  <!-- flight summary: the flight log card -->
+  <div id="summary" class="hidden">
+    <div class="log-card">
+      <div class="log-kicker">FLIGHT LOG</div>
+      <div class="log-route" id="sum-route">Meadowlark Field &rarr; Pebblebrook</div>
+      <div class="log-score"><span id="sum-num">0</span><span class="log-sub" id="sum-word">a greaser</span></div>
+      <div class="log-rows">
+        <div><span>Payout</span><b id="sum-pay">$0</b></div>
+        <div><span>Experience</span><b id="sum-xp">+0 XP</b></div>
+        <div><span>Passengers</span><b id="sum-pax">0</b></div>
+      </div>
+      <div class="log-pax" id="sum-paxsay"></div>
+      <div class="log-btns">
+        <button id="b-again">Fly again</button>
+        <button id="b-hangar">Hangar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="sim.js?v=1"></script>
+<script src="art.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
