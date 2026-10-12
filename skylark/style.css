@@ -106,6 +106,41 @@ html, body {
   content: 'THR'; position: absolute; top: -22px; left: 0; right: 0; text-align: center;
   font-size: 11px; letter-spacing: 3px; color: #fff8e8; text-shadow: 0 1px 4px rgba(0,0,0,.6);
 }
+.ctl-label {
+  position: absolute; bottom: -20px; left: 0; right: 0; text-align: center;
+  font-size: 10px; letter-spacing: 2px; color: #fff8e8; text-shadow: 0 1px 4px rgba(0,0,0,.6);
+  font-family: 'Special Elite', monospace;
+}
+/* flaps lever: smaller, 3 detents (UP / 1 / FULL) */
+#flaps {
+  position: absolute; right: 76px; top: 30%; height: 26%; width: 44px;
+  pointer-events: auto;
+}
+#flap-track {
+  position: absolute; inset: 0; border-radius: 22px;
+  background: linear-gradient(to right, #3d2a12, #5a3f20 30%, #75532c 50%, #5a3f20 70%, #3d2a12);
+  box-shadow: inset 0 4px 10px rgba(0,0,0,.6), 0 3px 8px rgba(0,0,0,.35),
+    inset 0 1px 0 rgba(255,220,150,.2);
+  touch-action: none; cursor: pointer;
+  border: 2px solid #32200c;
+}
+.flap-detents { position: absolute; left: 5px; right: 5px; top: 12px; bottom: 12px; pointer-events: none; }
+.flap-detents i {
+  position: absolute; left: 0; right: 0; height: 3px; border-radius: 2px;
+  background: rgba(255,230,170,.6);
+}
+.flap-detents i:nth-child(1) { top: 0; }
+.flap-detents i:nth-child(2) { top: calc(50% - 1.5px); }
+.flap-detents i:nth-child(3) { bottom: 0; }
+#flap-knob {
+  position: absolute; left: 4px; right: 4px; height: 34px; border-radius: 15px;
+  background: radial-gradient(circle at 35% 25%, var(--brass-hi), var(--brass) 55%, #6e5018 90%), var(--brass);
+  box-shadow: 0 3px 8px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.5),
+    inset 0 -3px 6px rgba(80,50,10,.4);
+  top: 8px;
+  border: 1px solid #5a3f14;
+  transition: top .18s ease-out;
+}
 
 /* yoke: wooden control yoke, bottom-center — mirrors your drag */
 #yoke {
