@@ -19,16 +19,16 @@ var SK = (function () {
   var PLANES = [
     { id: 'kite', name: 'Kite', desc: 'A ragged little bush Cub. Forgiving, lands anywhere.',
       maxSpeed: 95, cruiseSpeed: 70, climb: 55, vr: 42, pax: 2, cargo: 1,
-      stripNeed: 300, price: 0, fuelUse: 1.0, forgive: 1.35,
-      stall: 38, maxTW: 0.34, cd0: 0.346, ki: 0.025, ponder: 0.85 },
+      stripNeed: 300, price: 0, fuelUse: 1.0, forgive: 1.5,
+      stall: 36, maxTW: 0.34, cd0: 0.133, ki: 0.025, ponder: 0.85, stab: 1.5 },
     { id: 'kestrel', name: 'Kestrel', desc: 'A honest twin-prop. Faster, roomier, thirstier.',
       maxSpeed: 150, cruiseSpeed: 115, climb: 80, vr: 62, pax: 4, cargo: 3,
       stripNeed: 520, price: 2400, fuelUse: 1.8, forgive: 1.0,
-      stall: 55, maxTW: 0.38, cd0: 0.159, ki: 0.048, ponder: 1.0 },
+      stall: 55, maxTW: 0.38, cd0: 0.059, ki: 0.048, ponder: 1.0, stab: 1.0 },
     { id: 'merlin', name: 'Merlin', desc: 'A regional jet with manners. Long strips only.',
       maxSpeed: 230, cruiseSpeed: 180, climb: 120, vr: 95, pax: 6, cargo: 6,
       stripNeed: 800, price: 9800, fuelUse: 3.0, forgive: 0.8,
-      stall: 88, maxTW: 0.44, cd0: 0.080, ki: 0.086, ponder: 1.35 },
+      stall: 88, maxTW: 0.44, cd0: 0.029, ki: 0.086, ponder: 1.35, stab: 0.8 },
   ];
 
   var STRIP_NAMES = ['Meadowlark Field', 'Cinder Hollow', 'Pebblebrook', 'Foxglove Meadows',
@@ -159,6 +159,15 @@ var SK = (function () {
     var sloppy = st.stalled ? 0.45 : 1; // stalled controls get mushy
     st.pitch += (pitchIn * 15 * sloppy - st.pitch) * Math.min(1, dt * resp);
     st.bank += (latIn * 28 * sloppy - st.bank) * Math.min(1, dt * resp * 0.8);
+    // self-leveling: truly hands off the yoke and she settles toward a gentle trim.
+    // Only engages near zero input — small corrective pressures are respected.
+    // Friendlier planes (higher stab) level out faster — the Kite practically flies herself.
+    if (Math.abs(pitchIn) < 0.05 && !onGround && !st.stalled) {
+      st.pitch += (1.5 - st.pitch) * Math.min(1, dt * 0.7 * (P.stab || 1));
+    }
+    if (Math.abs(latIn) < 0.05 && !onGround && !st.stalled) {
+      st.bank += (0 - st.bank) * Math.min(1, dt * 0.9 * (P.stab || 1));
+    }
 
     // weight: fuel burn lightens the plane
     st.massF = 1 - (100 - st.fuel) / 100 * 0.07;
@@ -192,9 +201,16 @@ var SK = (function () {
       var fpa = Math.atan2(st.vspeed, Math.max(vFps, 30)); // radians
       st.aoa = st.pitch - fpa * 57.3;
 
-      // stall: gentle mush, never a spin
-      var stallAoA = 12.5 + P.forgive * 2.5;
+      // stall: gentle mush with plenty of warning, never a spin
+      var stallAoA = 14 + P.forgive * 3;
       var slowFactor = Math.max(0, Math.min(1, (st.speed - P.stall * 0.92) / (P.stall * 0.25)));
+      // pre-stall buffet: tower warns you before she lets go
+      if (!st.stalled && !st._buffet && st.aoa > stallAoA - 3.5 && slowFactor < 0.95) {
+        st._buffet = true;
+        pushMsg(st, 'Tower: Easy — she\'s getting heavy. Nose down a touch, add power.', 'mabel');
+      } else if (st._buffet && (st.aoa < stallAoA - 5 || slowFactor >= 1)) {
+        st._buffet = false;
+      }
       if (!st.stalled && st.aoa > stallAoA && slowFactor < 0.9) {
         st.stalled = true;
         pushMsg(st, 'Tower: She\'s mushing — ease the nose down, add a breath of power.', 'mabel');
@@ -202,13 +218,13 @@ var SK = (function () {
         st.stalled = false;
         pushMsg(st, 'Tower: There she is — flying again. Nicely handled.', 'mabel');
       }
-      if (st.stalled) st.pitch -= 9 * dt; // nose mushes down on its own
+      if (st.stalled) st.pitch -= 5.5 * dt; // nose mushes down slowly on its own
 
       // load factor n = L/W
       var vStall = P.stall * 1.688;
       var nBase = (vFps * vFps) / (vStall * vStall) * Math.max(0, Math.min(1.45, st.aoa / 6));
       nBase /= st.massF; // lighter = floatier
-      var n = st.stalled ? nBase * 0.60 : nBase;
+      var n = st.stalled ? nBase * 0.68 : nBase;
 
       // vertical: lift (banked) vs weight
       var ay = (n * Math.cos(bankRad) - 1) * G;
@@ -220,7 +236,7 @@ var SK = (function () {
       // drag: parasitic + induced (ground effect eases induced < 50ft)
       var v100 = Math.max(vFps / 100, 0.35);
       var induced = P.ki * n * n / (v100 * v100);
-      if (st.alt < 50) induced *= 0.45 + 0.55 * (st.alt / 50);
+      if (st.alt < 50) induced *= 0.35 + 0.65 * (st.alt / 50); // ground effect: flares float
       var dw = P.cd0 * v100 * v100 + induced;
       var tw = st.throttle * P.maxTW;
       var ax = (tw - dw) * G - G * Math.sin(fpa) * 0.9;
@@ -507,20 +523,32 @@ var SK = (function () {
         inp.throttle = 1;
         inp.pitch = st.speed > 44 ? 0.55 : 0; // rotate at Vr
       } else if (st.phase === 'cruise') {
-        // hold ~400ft: pitch to correct altitude gently
-        var altErr = 400 - st.alt;
+        // hold ~400ft, then descend to pattern when approaching
+        var distC = st.destX - st.x;
+        var targetAlt = distC < 5000 ? 150 : 400;
+        var altErr = targetAlt - st.alt;
         inp.pitch = Math.max(-0.5, Math.min(0.6, altErr / 300));
         inp.throttle = 0.62;
-        if (st.destX - st.x < 1500) { inp.pitch = -0.35; inp.throttle = 0.3; }
+        if (distC < 1500) { inp.pitch = -0.35; inp.throttle = 0.3; }
       } else if (st.phase === 'final') {
-        // fly the glideslope: aim for ~3deg to the aim point
+        // stabilized approach: 50kts, gentle descent to the aim point
+        // (if high, descend to intercept; if low, just ease down — never climb on final)
         var d = st.destX + st.destLen * 0.18 - st.x;
-        var wantVs = -Math.max(4, Math.min(16, d * 0.012)); // ft/s
-        var vsErr = wantVs - st.vspeed;
-        inp.pitch = Math.max(-0.6, Math.min(0.5, vsErr / 22));
-        inp.throttle = d > 500 ? 0.32 : 0.18;
+        var gsAlt = Math.max(0, d * 0.052); // 3° glideslope altitude
+        var targetSpd = 50;
+        var spdErr = targetSpd - st.speed;
+        inp.throttle = Math.max(0.08, Math.min(0.6, 0.28 + spdErr * 0.02));
+        if (st.alt > gsAlt + 30) {
+          // above glideslope: 800fpm descent to intercept
+          var vsErr2 = -13 - st.vspeed;
+          inp.pitch = Math.max(-0.45, Math.min(0.3, vsErr2 / 25));
+        } else {
+          // at or below glideslope: gentle -400fpm down to the runway
+          var vsErr3 = -6.5 - st.vspeed;
+          inp.pitch = Math.max(-0.4, Math.min(0.4, vsErr3 / 25));
+        }
         inp.lateral = Math.max(-0.4, Math.min(0.4, -st.lat / 400)); // line up
-        if (d < 250) inp.pitch = 0.45; // flare
+        if (d < 200 && st.alt < 30) inp.pitch = 0.5; // flare
       }
       step(st, inp, 1 / 60);
       steps++;
