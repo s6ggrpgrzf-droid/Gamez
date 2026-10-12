@@ -136,7 +136,7 @@ function postScore(score) {
 /* ---------------- screens ---------------- */
 var screen = 'title';
 function show(id) {
-  ['title', 'hangar', 'summary'].forEach(function (s) { $(s).classList.add('hidden'); });
+  ['title', 'hangar', 'summary', 'manifest'].forEach(function (s) { $(s).classList.add('hidden'); });
   $('hud').classList.add('hidden');
   if (id) $(id).classList.remove('hidden');
   screen = id || 'flight';
@@ -169,7 +169,7 @@ function renderHangar() {
       '~' + mins + ' min &middot; ' + wicon +
       (r.wind ? ' &middot; wind ' + Math.abs(r.wind) + 'kts' : '') + '</div>' +
       '<span class="rc-go">FLY THIS ROUTE &rsaquo;</span>';
-    b.addEventListener('click', function () { AU.click(); startFlight(i); });
+    b.addEventListener('click', function () { AU.click(); showManifest(i); });
     rc.appendChild(b);
   });
 
@@ -209,6 +209,24 @@ function renderHangar() {
     '<br>Flights: ' + pilot.flights + ' &middot; XP: ' + pilot.xp +
     '<br>Fleet: ' + pilot.planes.length + ' aircraft &middot; Hangar: ' + pilot.home +
     (pilot.best != null ? '<br>Best landing: ' + pilot.best : '');
+
+  // training challenges
+  var tr = $('training');
+  tr.innerHTML = '';
+  if (!pilot.training) { var np0 = SK.newPilot('x'); pilot.training = np0.training; pilot.trainingDone = np0.trainingDone; }
+  SK.CHALLENGES.forEach(function (ch) {
+    var cur = ch.id === 'greasers' ? Math.min(3, pilot.training.greasers) : Math.min(5, pilot.training.circuits);
+    var done = !!pilot.trainingDone[ch.id];
+    var d = document.createElement('div');
+    d.className = 'train-card' + (done ? ' done' : '');
+    var pips = '';
+    for (var pi = 0; pi < ch.goal; pi++) pips += '<span class="pip' + (pi < cur ? ' on' : '') + '"></span>';
+    d.innerHTML =
+      '<div class="tc-name">' + ch.name + (done ? ' <span class="tc-stamp">CLEARED</span>' : '') + '</div>' +
+      '<div class="tc-desc">' + ch.desc + '</div>' +
+      '<div class="tc-pips">' + pips + '<span class="tc-xp">+' + ch.xp + ' XP</span></div>';
+    tr.appendChild(d);
+  });
 }
 
 /* hangar plane previews: tiny canvases with spinning props */
@@ -263,6 +281,13 @@ function showSummary(st, feeInfo) {
     (st.score >= 65 ? 'smoother than my morning coffee.' :
      st.score >= 40 ? 'I\'ve had worse. Barely.' : 'I\'m walking the last mile.') + '\u201D' : '';
   $('sum-paxsay').textContent = say;
+  var award = $('sum-award');
+  if (st.trainingAward) {
+    award.textContent = 'Training cleared: ' + st.trainingAward.name + ' (+' + st.trainingAward.xp + ' XP)';
+    award.classList.remove('hidden');
+  } else {
+    award.classList.add('hidden');
+  }
   show('summary');
 }
 
@@ -283,12 +308,22 @@ $('to-title').addEventListener('click', function () {
   requestAnimationFrame(function () { $('title').classList.remove('hide'); });
   show('title');
 });
-$('b-again').addEventListener('click', function () { AU.click(); startFlight(selectedRoute); });
+$('b-again').addEventListener('click', function () { AU.click(); showManifest(selectedRoute); });
+$('b-board').addEventListener('click', function () { AU.click(); AU.ensure(); startFlight(); });
+$('b-manifest-back').addEventListener('click', function () { AU.click(); pendingFlight = null; renderHangar(); show('hangar'); });
 $('b-hangar').addEventListener('click', function () { AU.click(); renderHangar(); show('hangar'); });
 $('hud-mute').addEventListener('click', function (e) {
   e.stopPropagation();
   var m = AU.toggleMute();
   $('hud-mute').innerHTML = m ? '&#x266A;' : '&#x266B;';
+});
+$('view-toggle').addEventListener('click', function (e) {
+  e.stopPropagation();
+  AU.click();
+  if (!F) return;
+  F.view = (F.view === 'cockpit') ? 'side' : 'cockpit';
+  $('view-toggle').textContent = (F.view === 'cockpit') ? 'outside' : 'cockpit';
+  $('view-toggle').classList.toggle('on', F.view === 'cockpit');
 });
 
 document.addEventListener('visibilitychange', function () {
@@ -356,16 +391,65 @@ function mtnH(d, x) {
 /* flight session */
 var F = null;
 
-function startFlight(i) {
+/* manifest: passport-style boarding docs, shown before each flight */
+var pendingFlight = null;
+function showManifest(i) {
   selectedRoute = i;
   var route = routes[i];
   if (pilot.planes.indexOf(pilot.activePlane) < 0) pilot.activePlane = pilot.planes[0];
   var st = SK.newFlight(hashStr('skylark-' + dateKey() + '-r' + i), route, pilot.activePlane, pilot);
   var decor = makeDecor(st.seed, route.dist + 700);
+  pendingFlight = { st: st, decor: decor };
+  enrichPassengers(st);
+  // render passports
+  $('mani-route').textContent = route.from + ' → ' + route.to;
+  $('mani-plane').textContent = st.plane.name + ' · ' + st.pax.length + ' passenger' + (st.pax.length > 1 ? 's' : '');
+  var list = $('mani-pax');
+  list.innerHTML = '';
+  st.pax.forEach(function (p, idx) {
+    var d = document.createElement('div');
+    d.className = 'passport';
+    var cv = document.createElement('canvas');
+    cv.className = 'pp-photo'; cv.width = 60; cv.height = 72;
+    var g = cv.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(PX.face(hashStr(p.name) + idx * 7), 0, 0, 60, 72);
+    var info = document.createElement('div');
+    info.className = 'pp-info';
+    info.innerHTML =
+      '<div class="pp-name">' + p.name + '</div>' +
+      '<div class="pp-story">' + (p.story || '') + '</div>' +
+      '<div class="pp-dest">&rarr; ' + route.to.toUpperCase() + '</div>' +
+      '<div class="pp-mrz">SKY&gt;&gt;&gt;' + p.name.replace(/[^A-Z]/gi, '').toUpperCase().slice(0, 12) +
+      '&gt;&gt;' + dateKey().replace(/-/g, '') + '</div>';
+    var stamp = document.createElement('div');
+    stamp.className = 'pp-stamp';
+    stamp.textContent = 'BOARDED';
+    d.appendChild(cv); d.appendChild(info); d.appendChild(stamp);
+    list.appendChild(d);
+  });
+  if (!st.pax.length) {
+    list.innerHTML = '<div class="pp-empty">Cargo run — no passengers, just the hum of the engine.</div>';
+  }
+  show('manifest');
+}
+
+function startFlight(i) {
+  selectedRoute = (typeof i === 'number') ? i : selectedRoute;
+  var route = routes[selectedRoute];
+  var st, decor;
+  if (pendingFlight && pendingFlight.st.route === route) {
+    st = pendingFlight.st; decor = pendingFlight.decor;
+    pendingFlight = null;
+  } else {
+    if (pilot.planes.indexOf(pilot.activePlane) < 0) pilot.activePlane = pilot.planes[0];
+    st = SK.newFlight(hashStr('skylark-' + dateKey() + '-r' + selectedRoute), route, pilot.activePlane, pilot);
+    decor = makeDecor(st.seed, route.dist + 700);
+    enrichPassengers(st);
+  }
   F = { st: st, decor: decor, input: { throttle: 0, pitch: 0, lateral: 0 },
         lastT: 0, running: false, lastMsg: 0, landPlayed: false, endT: 0,
-        pitchTouch: null, thrTouch: false, lastDetent: 0 };
-  enrichPassengers(st);
+        pitchTouch: null, thrTouch: false, lastDetent: 0, view: 'side', vista: null };
   fetchVista(st);
   initParts(F);
   F.camXS = 0; // smoothed camera x
@@ -377,7 +461,8 @@ function startFlight(i) {
   // throttle UI reset
   setThrottleUI(0);
   startLoop();
-  say(st.messages[st.messages.length - 1].text);
+  var lm = st.messages[st.messages.length - 1];
+  say(lm.text, lm.who);
 }
 
 function stopFlightLoop() {
@@ -391,19 +476,42 @@ function setThrottleUI(v) {
   track.setAttribute('aria-valuenow', Math.round(v * 100));
 }
 
-/* tower telegrams */
-function say(text) {
+/* tower telegrams — with character portraits */
+var CREW = {
+  mabel: { name: 'Mabel', role: 'Tower · 30 yrs', spr: 'mabel' },
+  kit: { name: 'Kit', role: 'Tower · rookie', spr: 'kit' },
+  rudy: { name: 'Rudy “Wrench”', role: 'Mechanic', spr: 'rudy' },
+};
+function say(text, who) {
   var box = $('telegrams');
   var d = document.createElement('div');
   d.className = 'telegram';
-  d.textContent = text;
+  var c = CREW[who] || CREW.mabel;
+  var clean = String(text).replace(/^Tower:\s*/, '');
+  var cv = document.createElement('canvas');
+  cv.className = 'tg-face';
+  cv.width = 60; cv.height = 72;
+  var g = cv.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  var spr = PX.get(c.spr);
+  if (spr) g.drawImage(spr, 0, 0, 60, 72);
+  var nm = document.createElement('div');
+  nm.className = 'tg-name';
+  nm.textContent = c.name + ' · ' + c.role;
+  var tx = document.createElement('div');
+  tx.className = 'tg-text';
+  tx.textContent = clean;
+  var body = document.createElement('div');
+  body.className = 'tg-body';
+  body.appendChild(nm); body.appendChild(tx);
+  d.appendChild(cv); d.appendChild(body);
   box.appendChild(d);
   AU.towerBlip();
   while (box.children.length > 2) box.removeChild(box.firstChild);
   setTimeout(function () {
     d.style.transition = 'opacity .8s'; d.style.opacity = '0';
     setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 850);
-  }, 5200);
+  }, 6200);
 }
 
 /* ---------- input ---------- */
@@ -527,6 +635,7 @@ function stepParts(F, dt) {
     p.x += p.vx * dt; p.y += p.vy * dt;
     if (p.kind === 1) { p.vy += 60 * dt; p.vx *= (1 - dt * 1.5); } // dust settles
     if (p.kind === 2) { p.vx -= 300 * dt; } // wind streaks stream back
+    if (p.kind === 3) { p.vy += 140 * dt; p.vx *= (1 - dt * 2); } // gold sparkles fall gently
   }
 }
 function drawParts(F, camX) {
@@ -543,6 +652,13 @@ function drawParts(F, camX) {
       var gr = p.sz * (1.6 - a * 0.6);
       ctx2d.fillStyle = 'rgba(214,186,140,' + (a * 0.55).toFixed(3) + ')';
       ctx2d.beginPath(); ctx2d.arc(sx, p.y, gr, 0, 6.29); ctx2d.fill();
+    } else if (p.kind === 3) { // gold payoff burst: bright sparkles
+      var tw = 0.6 + 0.4 * Math.sin(p.life * 25);
+      ctx2d.fillStyle = 'rgba(255,215,90,' + (a * tw).toFixed(3) + ')';
+      var gs = p.sz * (0.5 + a * 0.8);
+      ctx2d.fillRect(sx - gs / 2, p.y - gs / 2, gs, gs);
+      ctx2d.fillStyle = 'rgba(255,240,180,' + (a * tw * 0.8).toFixed(3) + ')';
+      ctx2d.fillRect(sx - gs / 4, p.y - gs / 4, gs / 2, gs / 2);
     } else { // wind streak: thin white line
       ctx2d.strokeStyle = 'rgba(255,255,255,' + (a * 0.35).toFixed(3) + ')';
       ctx2d.lineWidth = 1.5;
@@ -579,7 +695,7 @@ function frame(now) {
     spawnPart(F, F.camXS + W * 0.2 + Math.random() * W * 0.7,
       Math.random() * H * 0.6, 0, 0, 0.5, 2, 2);
   }
-  // touchdown dust burst + camera settle
+  // touchdown dust burst + camera settle (+ gold burst for butter)
   if (st.done && !F.dustBurst) {
     F.dustBurst = true;
     F.camSettle = 1;
@@ -590,6 +706,17 @@ function frame(now) {
       spawnPart(F, gx + (Math.random() - 0.5) * 60, gy2 - Math.random() * 8,
         Math.cos(ang) * sp, Math.sin(ang) * sp * 0.5 - 30,
         0.7 + Math.random() * 0.8, 5 + Math.random() * 7, 1);
+    }
+    if (st.butter) {
+      // golden payoff burst — butter landing reward
+      for (var gi = 0; gi < 40; gi++) {
+        var ga = Math.random() * Math.PI * 2;
+        var gs = 60 + Math.random() * 200;
+        spawnPart(F, gx + (Math.random() - 0.5) * 40, gy2 - 20 - Math.random() * 30,
+          Math.cos(ga) * gs, Math.sin(ga) * gs * 0.7 - 90,
+          1.1 + Math.random() * 1.2, 3 + Math.random() * 5, 3);
+      }
+      setTimeout(function () { say('Butter. Absolute butter. The runway sends its regards.', 'kit'); }, 900);
     }
   }
   // camera: buttery horizontal ease + landing settle dip
@@ -602,7 +729,7 @@ function frame(now) {
   if (latest.t !== F.lastMsgT) {
     F.lastMsgT = latest.t;
     // the initial briefing was already shown; say everything after
-    if (F.saidInit) say(latest.text);
+    if (F.saidInit) say(latest.text, latest.who);
     else F.saidInit = true;
   }
 
@@ -618,7 +745,13 @@ function frame(now) {
   var airborne = st.alt > 1 || st.phase !== 'takeoff';
   AU.engine(st.throttle, st.speed * 3, airborne);
 
-  render(st, F.decor, now / 1000);
+  if (F.view === 'cockpit' && typeof CKPT !== 'undefined') {
+    var pp = SK.papi(st);
+    st.papiW = pp.white;
+    CKPT.render(ctx2d, W, H, st, F.input, F.vista);
+  } else {
+    render(st, F.decor, now / 1000);
+  }
 
   if (st.done && !F.landPlayed) {
     F.landPlayed = true;

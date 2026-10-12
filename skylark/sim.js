@@ -179,9 +179,9 @@ var SK = (function () {
         st.phase = 'cruise';
         st.alt = 3;
         st.vspeed = 6;
-        pushMsg(st, 'Tower: Rotate! You\'re flying.');
+        pushMsg(st, 'Tower: Rotate! You\'re flying.', 'kit');
       } else if (st.x > st.runwayX + st.runwayLen + 400 && st.speed < P.vr) {
-        pushMsg(st, 'Tower: Ease off, taxi back. No hurry.');
+        pushMsg(st, 'Tower: Ease off, taxi back. No hurry.', 'mabel');
         st.x = st.runwayX; st.speed = 0;
       }
     } else {
@@ -197,10 +197,10 @@ var SK = (function () {
       var slowFactor = Math.max(0, Math.min(1, (st.speed - P.stall * 0.92) / (P.stall * 0.25)));
       if (!st.stalled && st.aoa > stallAoA && slowFactor < 0.9) {
         st.stalled = true;
-        pushMsg(st, 'Tower: She\'s mushing — ease the nose down, add a breath of power.');
+        pushMsg(st, 'Tower: She\'s mushing — ease the nose down, add a breath of power.', 'mabel');
       } else if (st.stalled && (st.aoa < stallAoA - 4 || slowFactor >= 1)) {
         st.stalled = false;
-        pushMsg(st, 'Tower: There she is — flying again. Nicely handled.');
+        pushMsg(st, 'Tower: There she is — flying again. Nicely handled.', 'mabel');
       }
       if (st.stalled) st.pitch -= 9 * dt; // nose mushes down on its own
 
@@ -242,7 +242,7 @@ var SK = (function () {
       if (st.phase === 'cruise' && distToDest < 2600) {
         st.phase = 'final';
         pushMsg(st, 'Tower: ' + st.route.to + ' in sight. Wind ' +
-          (st.wind >= 0 ? 'calm' : 'light') + '. Runway is yours.');
+          (st.wind >= 0 ? 'calm' : 'light') + '. Runway is yours.', 'kit');
       }
 
       // landing procedure: tower talks you down the final
@@ -250,17 +250,17 @@ var SK = (function () {
         var dFinal = st.destX + st.destLen * 0.18 - st.x; // to aim point
         if (!st._proc1 && dFinal < 1900) {
           st._proc1 = true;
-          pushMsg(st, 'Tower: Line up on final. Follow the beacon needle.');
+          pushMsg(st, 'Tower: Line up on final. Follow the beacon needle.', 'mabel');
         } else if (st._proc1 && !st._proc2 && dFinal < 1100) {
           st._proc2 = true;
           var p = papi(st);
           var hint = p.white === 2 ? 'Two white, two red — right on the slope.'
             : p.white > 2 ? 'Mostly white — ease her down a touch.'
             : 'Mostly red — you\'re low, add a breath of power.';
-          pushMsg(st, 'Tower: Check the lights by the runway. ' + hint);
+          pushMsg(st, 'Tower: Check the lights by the runway. ' + hint, 'mabel');
         } else if (st._proc2 && !st._proc3 && dFinal < 420) {
           st._proc3 = true;
-          pushMsg(st, 'Tower: Easy… flare! Nose up, let her settle.');
+          pushMsg(st, 'Tower: Easy… flare! Nose up, let her settle.', 'kit');
         }
       }
 
@@ -275,7 +275,7 @@ var SK = (function () {
         } else if (st.x > st.destX + st.destLen + 600) {
           // flew past everything: gentle go-around
           st.goArounds++;
-          pushMsg(st, 'Tower: Go around, line up again. Easy does it.');
+          pushMsg(st, 'Tower: Go around, line up again. Easy does it.', 'mabel');
           st.x = st.destX - 2200; st.alt = Math.max(st.alt, 350); st.lat = 0;
           st.phase = 'final';
         } else if (!overRunway && st.x > st.runwayX + 500 && st.phase === 'cruise' && st.alt <= 0.5) {
@@ -301,16 +301,32 @@ var SK = (function () {
     // fuel empty: glide, tower cheers you on (no failure)
     if (st.fuel <= 0 && st.throttle > 0 && !st._fuelMsg) {
       st._fuelMsg = true;
-      pushMsg(st, 'Tower: She\'s gliding! You\'ve got this.');
+      pushMsg(st, 'Tower: She\'s gliding! You\'ve got this.', 'kit');
     }
     if (st.fuel <= 0) st.throttle = Math.max(0, st.throttle - dt * 0.5);
 
     return st;
   }
 
-  function pushMsg(st, text) {
-    st.messages.push({ t: st.time, text: text });
+  function pushMsg(st, text, who) {
+    st.messages.push({ t: st.time, text: text, who: who || 'mabel' });
     if (st.messages.length > 4) st.messages.shift();
+  }
+
+  /* Rudy "Wrench" Kowalski — the mechanic. Shows up after rough landings
+     with a joke instead of a punishment. */
+  var RUDY_LINES = [
+    'Rudy here. I\'ve seen smoother landings on a trampoline. She\'ll fly again, don\'t worry.',
+    'That one rearranged the luggage AND my spine. Ha! The Kite forgives you.',
+    'I felt that in the hangar. On the plus side, the tires are now perfectly round.',
+    'Firm! I like a pilot who commits. The gear does too, mostly.',
+    'Whoa. Let\'s check the struts, check your pride, and go again.',
+    'I\'ve landed worse. Once. In a simulator. That I built. It doesn\'t count.',
+  ];
+  function rudyLine(st) {
+    // seeded-ish pick so it varies per flight
+    var i = Math.floor(((st.seed || 1) * 7 + st.pilot.flights * 13) % RUDY_LINES.length);
+    return RUDY_LINES[i];
   }
 
   /* PAPI glideslope: 4 lights — 2W2R on path, more white=high, more red=low.
@@ -338,6 +354,7 @@ var SK = (function () {
   function land(st, meadow) {
     var P = st.plane;
     st.alt = 0;
+    st.meadow = !!meadow;
     var vsFpm = Math.abs(st.vspeed) * 60; // vspeed is ft/s → fpm
     var centerX = st.destX + st.destLen / 2;
     var offX = Math.abs(st.x - centerX) / (st.destLen / 2); // 0=center
@@ -367,9 +384,18 @@ var SK = (function () {
 
     var word = landingVerdict(vsFpm, P.forgive).word;
     var praise = landingVerdict(vsFpm, P.forgive).praise;
-    pushMsg(st, 'Tower: ' + (meadow ? 'Meadow landing! The sheep applaud.' :
-      'Touchdown — ' + praise + ' Welcome to ' + r.to + '.'));
+    var rough = (word === 'a firm arrival' || word === 'an exciting arrival') && !meadow;
+    if (meadow) {
+      pushMsg(st, 'Tower: Meadow landing! The sheep applaud.', 'kit');
+    } else if (rough) {
+      pushMsg(st, 'Tower: Touchdown — ' + praise + ' Welcome to ' + r.to + '.', 'mabel');
+      pushMsg(st, rudyLine(st), 'rudy');
+    } else {
+      pushMsg(st, 'Tower: Touchdown — ' + praise + ' Welcome to ' + r.to + '.',
+        word === 'butter' ? 'kit' : 'mabel');
+    }
     st.verdict = word;
+    st.butter = (word === 'butter' && !meadow);
   }
 
   function ribbonSmooth(st) {
@@ -387,14 +413,38 @@ var SK = (function () {
     st.vspeed = -8; st.pitch = -2; st.bank = 0; st.lat = 0;
     st.throttle = Math.min(st.throttle, 0.45);
     st.phase = 'final'; st.skipped = true;
-    pushMsg(st, 'Tower: Skipping ahead — final approach, ' + st.route.to + '.');
+    pushMsg(st, 'Tower: Skipping ahead — final approach, ' + st.route.to + '.', 'kit');
     return true;
   }
 
   /* ---------- hangar / career ---------- */
   function newPilot(name) {
     return { name: name || 'Pilot', xp: 0, money: 350, planes: ['kite'], activePlane: 'kite',
-             rank: 0, flights: 0, upgrades: {}, home: 'Meadowlark Field' };
+             rank: 0, flights: 0, upgrades: {}, home: 'Meadowlark Field',
+             training: { greasers: 0, circuits: 0 }, trainingDone: {} };
+  }
+
+  /* Named training challenges — formalized practice, LP-style.
+     "Three Greasers": 3 butter landings (touchdown < 150fpm normalized).
+     "Touch and Goes": 5 completed flights (pattern work). */
+  var CHALLENGES = [
+    { id: 'greasers', name: 'Three Greasers', desc: 'Grease three landings — touchdown under 150 fpm.',
+      goal: 3, xp: 60 },
+    { id: 'circuits', name: 'Touch and Goes', desc: 'Complete five full flights, takeoff to touchdown.',
+      goal: 5, xp: 40 },
+  ];
+  function trainingProgress(pilot, st) {
+    var t = pilot.training, done = pilot.trainingDone, newly = [];
+    if (st.landed && !st.meadow) {
+      var normVs = st.touchdownVs / (st.plane.forgive || 1);
+      if (normVs < 150) {
+        t.greasers++;
+        if (t.greasers >= 3 && !done.greasers) { done.greasers = true; newly.push('greasers'); }
+      }
+      t.circuits++;
+      if (t.circuits >= 5 && !done.circuits) { done.circuits = true; newly.push('circuits'); }
+    }
+    return newly;
   }
 
   function rankFor(xp) {
@@ -406,6 +456,17 @@ var SK = (function () {
     pilot.money += st.payout;
     pilot.xp += st.xpGain;
     pilot.flights++;
+    // training challenges
+    if (!pilot.training) { var np = newPilot('x'); pilot.training = np.training; pilot.trainingDone = np.trainingDone; }
+    var newlyDone = trainingProgress(pilot, st);
+    for (var i = 0; i < newlyDone.length; i++) {
+      for (var j = 0; j < CHALLENGES.length; j++) {
+        if (CHALLENGES[j].id === newlyDone[i]) {
+          pilot.xp += CHALLENGES[j].xp;
+          st.trainingAward = CHALLENGES[j];
+        }
+      }
+    }
     // hangar fee: scales gently with fleet (the LP tax joke, kept light)
     var fee = Math.round(8 * Math.pow(pilot.planes.length, 1.6));
     pilot.money = Math.max(0, pilot.money - fee);
@@ -504,6 +565,7 @@ var SK = (function () {
     newPilot: newPilot, applyFlightResult: applyFlightResult,
     dailyRoutes: dailyRoutes, buyPlane: buyPlane, rankFor: rankFor,
     ribbonSmooth: ribbonSmooth, papi: papi, landingVerdict: landingVerdict,
+    CHALLENGES: CHALLENGES, trainingProgress: trainingProgress, rudyLine: rudyLine,
     selfTest: selfTest, rng: rng,
   };
 })();
