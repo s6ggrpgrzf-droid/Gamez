@@ -33,6 +33,21 @@ var PX = (function () {
     'o': '#e08a2d',
     'V': '#cfe3ef', // pale sky blue (birch)
     'Y': '#ffd94d', // sun yellow
+    // portraits
+    '1': '#f2c9a0', // skin light
+    '2': '#d9a066', // skin medium
+    '3': '#8a5a30', // skin deep
+    '4': '#c98f5f', // skin shadow
+    '5': '#b8b0a8', // gray hair
+    '6': '#4a2f1a', // brown hair
+    '7': '#1c1a18', // black hair
+    '8': '#a34a2a', // mouth
+    '9': '#3a3f4a', // headset dark
+    '0': '#c94f38', // headset accent
+    'Q': '#2e8b8b', // mabel teal blouse
+    'q': '#e07b39', // kit orange shirt
+    'Z': '#4a6b8a', // rudy denim
+    'z': '#d94f30', // rudy cap red
   };
 
   var SCALE = 3;
@@ -296,9 +311,158 @@ var PX = (function () {
     compile('cloud1', CLOUD1);
     compile('bird1', BIRD1);
     compile('bird2', BIRD2);
+    compile('mabel', MABEL);
+    compile('kit', KIT);
+    compile('rudy', RUDY);
   }
 
-  return { init: init, get: get, SCALE: SCALE };
+  /* ---------------- tower crew portraits (20x24) ---------------- */
+  // Mabel — senior tower op. Warm, unflappable, 30 years on the radio.
+  var MABEL = [
+    '........5555........',
+    '.......555555.......',
+    '.......555555.......',
+    '......55555555......',
+    '.....9555555559.....',
+    '.....9533333359.....',
+    '....995333333599....',
+    '....993333333399....',
+    '....993EE33EE399....',
+    '....993Ee33eE399....',
+    '....993333333399....',
+    '....993338833399....',
+    '.....9334444339.....',
+    '.....9333888339.....',
+    '.....9333333339.....',
+    '......933333339.....',
+    '......533333335.....',
+    '.......333333.......',
+    '......QQQQQQQQ......',
+    '.....QQQQQQQQQQ.....',
+    '.....QQQQQQQQQQ.....',
+    '.....QQQQQQQQQQ.....',
+    '.....QQQQQQQQQQ.....',
+    '.....QQQQQQQQQQ.....',
+  ];
+  // Kit — junior tower op. Excitable, big grin, learning from Mabel.
+  var KIT = [
+    '.....77777777.......',
+    '....7777777777......',
+    '...777777777777.....',
+    '...777111111777.....',
+    '...791111111197.....',
+    '....91111111119.....',
+    '....91111111119.....',
+    '....911EE11EE119....',
+    '....911Ee11eE119....',
+    '....911111111119....',
+    '....911144111119....',
+    '....911188881119....',
+    '.....9118888119.....',
+    '.....9111111119.....',
+    '......911111119.....',
+    '......711111117.....',
+    '.......111111.......',
+    '.......111111.......',
+    '......qqqqqqqq......',
+    '.....qqqqqqqqqq.....',
+    '.....qqqqqqqqqq.....',
+    '.....qqqqqqqqqq.....',
+    '.....qqqqqqqqqq.....',
+    '.....qqqqqqqqqq.....',
+  ];
+  // Rudy "Wrench" Kowalski — mechanic. Beard, cap, big heart, bigger jokes.
+  var RUDY = [
+    '......zzzzzzzz......',
+    '.....zzzzzzzzzz.....',
+    '.....zzzzzzzzzz.....',
+    '.....6666666666.....',
+    '.....6222222226.....',
+    '.....6222222226.....',
+    '.....62EE22EE26.....',
+    '.....62Ee22eE26.....',
+    '.....6222222226.....',
+    '.....6224422226.....',
+    '.....6266666626.....',
+    '.....6666688666.....',
+    '.....6666888866.....',
+    '.....6666666666.....',
+    '......66666666......',
+    '......66666666......',
+    '.......222222.......',
+    '.......222222.......',
+    '......ZZZZZZZZ......',
+    '.....ZZZZZZZZZZ.....',
+    '.....ZZZZZZZZZZ.....',
+    '.....ZZZZZZZZZZ.....',
+    '.....ZZZZZZZZZZ.....',
+    '.....ZZZZZZZZZZ.....',
+  ];
+
+  /* ---------------- generated passenger faces (passport photos) ---------------- */
+  // Seeded variations: skin x4, hair color x4, hair style x4 = 64 faces
+  var FACE_SKINS = ['1', '2', '3', '4'];
+  var FACE_HAIR = ['5', '6', '7', 'K'];
+  var faceCache = {};
+  function face(seed) {
+    var key = 'face' + (seed % 64);
+    if (faceCache[key]) return faceCache[key];
+    var s = seed;
+    function rnd() { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }
+    var skin = FACE_SKINS[Math.floor(rnd() * 4)];
+    var hair = FACE_HAIR[Math.floor(rnd() * 4)];
+    var style = Math.floor(rnd() * 4); // 0 short, 1 long, 2 bald-ish, 3 curly
+    var rows = [];
+    for (var y = 0; y < 24; y++) {
+      var row = '';
+      for (var x = 0; x < 20; x++) row += '.';
+      rows.push(row);
+    }
+    function px(x, y, c) {
+      if (x < 0 || x > 19 || y < 0 || y > 23) return;
+      rows[y] = rows[y].substring(0, x) + c + rows[y].substring(x + 1);
+    }
+    function rect(x0, y0, x1, y1, c) {
+      for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) px(x, y, c);
+    }
+    // photo background
+    rect(0, 0, 19, 23, 'V');
+    // shoulders/shirt
+    var shirt = ['Q', 'q', 'Z', 'T'][Math.floor(rnd() * 4)];
+    rect(3, 19, 16, 23, shirt);
+    // neck + face
+    rect(8, 16, 11, 18, skin);
+    rect(6, 6, 13, 17, skin);
+    rect(6, 12, 13, 14, '4'); // cheek shading band (subtle)
+    rect(6, 6, 13, 17, skin); // re-fill (keeps shading light)
+    // hair by style
+    if (style === 0) { rect(5, 3, 14, 6, hair); rect(5, 6, 6, 10, hair); rect(13, 6, 14, 10, hair); }
+    else if (style === 1) { rect(5, 3, 14, 7, hair); rect(4, 7, 5, 16, hair); rect(14, 7, 15, 16, hair); }
+    else if (style === 2) { rect(6, 4, 13, 5, hair); }
+    else { rect(5, 2, 14, 6, hair); rect(4, 5, 5, 8, hair); rect(14, 5, 15, 8, hair); rect(6, 2, 13, 3, hair); }
+    // eyes
+    rect(7, 9, 8, 10, 'E'); rect(11, 9, 12, 10, 'E');
+    px(8, 10, 'e'); px(11, 10, 'e');
+    // nose + mouth (smile varies)
+    px(9, 12, '4'); px(10, 12, '4');
+    var smile = Math.floor(rnd() * 3);
+    if (smile === 0) { rect(8, 14, 11, 14, '8'); }
+    else if (smile === 1) { rect(7, 14, 12, 14, '8'); px(7, 13, '8'); px(12, 13, '8'); }
+    else { px(8, 14, '8'); px(9, 15, '8'); px(10, 15, '8'); px(11, 14, '8'); }
+    var cv = document.createElement('canvas');
+    cv.width = 20 * SCALE; cv.height = 24 * SCALE;
+    var g = cv.getContext('2d');
+    for (var yy = 0; yy < 24; yy++) for (var xx = 0; xx < 20; xx++) {
+      var c = PAL[rows[yy][xx]];
+      if (!c) continue;
+      g.fillStyle = c;
+      g.fillRect(xx * SCALE, yy * SCALE, SCALE, SCALE);
+    }
+    faceCache[key] = cv;
+    return cv;
+  }
+
+  return { init: init, get: get, face: face, SCALE: SCALE };
 })();
 
 if (typeof module !== 'undefined') module.exports = PX;
