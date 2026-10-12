@@ -1,7 +1,7 @@
 /* Poolball — ALL tunables live here. Nothing gameplay-related is hardcoded
  * anywhere else. Tweak by playing, not by guessing. */
 var PBC = {
-  BUILD: '20261012a',            // bump on every change (cache-bust + menu build tag)
+  BUILD: '20261012b',            // bump on every change (cache-bust + menu build tag)
   GAME_ID: 'poolball',           // gamez-arcade leaderboard slot
   ARCADE_BASE: 'https://gamez-arcade.chaoticutopia84.workers.dev',
   NAME_KEY: 'arcade_name',       // shared arcade name in localStorage
@@ -22,7 +22,7 @@ var PBC = {
   SINK_T: 0.30,                  // drop-in animation seconds
 
   /* ---------- pull / shot ---------- */
-  MAX_PULL: 230,                 // px of drag = full power
+  MAX_PULL: 189,                 // px of finger drag = full power (230 sim-px * VIEW_S 0.82)
   MIN_POWER: 0.07,              // below this, release cancels (no misfires)
   SHOT_MIN_V: 260,               // px/s at min power
   SHOT_MAX_V: 1450,              // px/s at full power

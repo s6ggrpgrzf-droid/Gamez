@@ -12,6 +12,18 @@ var DPR = Math.min(2, window.devicePixelRatio || 1);
 canvas.width = C.W * DPR; canvas.height = C.H * DPR;
 ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 PBArt.init(DPR);
+/* Table view: the sim runs in 480x800 space, but the table (rails, pockets,
+ * drop shadow) spans nearly the full canvas width, so it rendered clipped
+ * at the screen edges. Scale the table about its center so the whole thing
+ * fits with breathing room. Render maps sim->screen through tableView();
+ * input maps screen->sim back through toSim(). */
+var VIEW_S = 0.82;
+var VIEW_CX = 240, VIEW_CY = 278; // table center (sim == canvas coords)
+function tableView() {
+  ctx.translate(VIEW_CX, VIEW_CY);
+  ctx.scale(VIEW_S, VIEW_S);
+  ctx.translate(-VIEW_CX, -VIEW_CY);
+}
 var SPR = PBArt.sprites();
 
 function $(id) { return document.getElementById(id); }
@@ -175,11 +187,13 @@ function updateHUD() {
 }
 
 /* ================= input ================= */
-function toLogical(e) {
+function toSim(e) {
   var r = canvas.getBoundingClientRect();
+  var lx = (e.clientX - r.left) / r.width * C.W;
+  var ly = (e.clientY - r.top) / r.height * C.H;
   return {
-    x: (e.clientX - r.left) / r.width * C.W,
-    y: (e.clientY - r.top) / r.height * C.H,
+    x: VIEW_CX + (lx - VIEW_CX) / VIEW_S,
+    y: VIEW_CY + (ly - VIEW_CY) / VIEW_S,
   };
 }
 
@@ -188,7 +202,7 @@ canvas.addEventListener('pointerdown', function (e) {
   if (G.scene !== 'play' || G.spinOpen) return;
   if (!e.isPrimary) return;
   if (!G.sim || G.sim.phase !== 'aim' || G.clearShown) return;
-  var p = toLogical(e);
+  var p = toSim(e);
   G.pull = { id: e.pointerId, ax: p.x, ay: p.y, cx: p.x, cy: p.y, angle: null, power: 0 };
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   e.preventDefault();
@@ -196,7 +210,7 @@ canvas.addEventListener('pointerdown', function (e) {
 
 canvas.addEventListener('pointermove', function (e) {
   if (!G.pull || e.pointerId !== G.pull.id) return;
-  var pl = G.pull, p = toLogical(e);
+  var pl = G.pull, p = toSim(e);
   pl.cx = p.x; pl.cy = p.y;
   var raw = PBSim.aimFromPull(pl.ax, pl.ay, pl.cx, pl.cy);
   if (!raw) { pl.power = 0; return; }
@@ -506,8 +520,11 @@ function render(dt) {
     var sh = G.trauma * G.trauma * 12;
     ctx.translate((Math.random() * 2 - 1) * sh, (Math.random() * 2 - 1) * sh);
   }
-  // room + table shadow
+  // room backdrop: full canvas, unscaled
   ctx.drawImage(SPR.room, 0, 0, C.W, C.H);
+  // table view on: everything table-related draws in sim coords
+  ctx.save();
+  tableView();
   ctx.drawImage(SPR.tshadow.c, SPR.tshadow.ox, SPR.tshadow.oy);
   // felt + pockets + rails
   ctx.drawImage(SPR.felt.c, SPR.felt.ox, SPR.felt.oy);
@@ -597,6 +614,8 @@ function render(dt) {
     ctx.globalAlpha = 1;
   }
 
+  ctx.restore(); // table view off -> canvas coords for fullscreen overlays
+
   // 8-ball drama: lights dim
   if (G.dramaK > 0.01) {
     ctx.globalAlpha = Math.min(0.8, G.dramaK * 0.8);
@@ -610,8 +629,10 @@ function render(dt) {
     }
   }
 
-  // first-shot hint: ghost finger pulls back and releases, looping
+  // first-shot hint in table coords: ghost finger pulls back and releases, looping
   if (G.scene === 'play' && !G.hintDone && G.sim.phase === 'aim' && !G.pull && !G.clearShown) {
+    ctx.save();
+    tableView();
     var ht = (G.time % 2.4) / 2.4;
     var hx = cue.x, hy = cue.y + 60;
     var pullD = ht < 0.55 ? (ht / 0.55) : Math.max(0, 1 - (ht - 0.55) / 0.2);
@@ -637,6 +658,7 @@ function render(dt) {
       render._hintTxt = ho;
     }
     ctx.drawImage(render._hintTxt, C.W / 2 - 150, p.y + p.h + 66, 300, 30);
+    ctx.restore();
   }
 
   // menu: lamp glow + the moth
