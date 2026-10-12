@@ -498,8 +498,11 @@ function drawIsland(sc){
 function drawCat(sc){
   var c=st.cat, pose=c.state==='sleep'?'loaf':'sit', spr=ART.cat(pose);
   var x,y,s;
-  if(c.spot==='gallery'){ x=L.lampX-48; y=L.lampY+26; s=0.5; }
-  else if(c.spot==='lamp'){ x=L.lampX-44; y=L.lampY+26; s=0.5; }
+  // gallery deck geometry, derived from the lighthouse sprite (deck: x 26..114, top y 54 of 140x380)
+  var deckTop=L.lhTop+54*(L.lhH/380);
+  var deckL=L.islandX-L.lhW/2+26*(L.lhW/140), deckR=L.islandX-L.lhW/2+114*(L.lhW/140);
+  if(c.spot==='gallery'){ x=deckL+(deckR-deckL)*0.25; y=deckTop-4; s=0.5; }
+  else if(c.spot==='lamp'){ x=deckL+(deckR-deckL)*0.75; y=deckTop-4; s=0.5; }
   else{ x=L.islandX+44; y=L.islandPeakY+14; s=0.85; } // on the rock terrace by the tower — grounded
   ctx.save();
   if(sc.nf>0.4){ ctx.globalAlpha=0.92; }
