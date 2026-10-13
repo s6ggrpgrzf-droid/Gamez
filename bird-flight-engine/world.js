@@ -101,7 +101,7 @@
      * seam). Exp2's long-tail falloff gives layered aerial perspective:
      * near ground crisp, mid slopes soft, far ridges fully dissolved. */
     var HAZE = new THREE.Vector3(1.0, 0.702, 0.451); // == 0xffb373
-    scene.fog = new THREE.FogExp2(0xffb373, 0.00095);
+    scene.fog = new THREE.FogExp2(0xffb373, 0.0007);
     /* real-time shadows: tight ortho box that follows the bird (engine.js
      * repositions sun+target every frame). Small box + small map = crisp
      * shadows on mobile. Golden-hour sun is low (~11.5°), so the bird's
