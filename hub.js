@@ -133,11 +133,8 @@
     { id: 'word-well', name: 'Word Well', cls: 'art-word-well' },
     { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
     { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' },
-    { id: 'castaway-cove', name: 'Castaway Cove', cls: 'art-castaway-cove' },
     { id: 'neon-drift', name: 'Neon Drift', cls: 'art-neon-drift' },
-    { id: 'dead-mans-hand', name: "Dead Man's Hand", cls: 'art-dead-mans-hand' },
     { id: 'skyhook', name: 'Skyhook', cls: 'art-skyhook' },
-    { id: 'dead-corridor', name: "Dead Man's Corridor", cls: 'art-dead-corridor' },
     { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' },
     { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' },
     { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' },
@@ -172,10 +169,6 @@
       if (id === 'skyhook') {
         var sh = +(read('skyhook_best') || 0); if (!sh) return null;
         return { label: 'Best ' + sh, frac: Math.min(1, sh / 50) };
-      }
-      if (id === 'dead-corridor') {
-        var dc = +(read('dc_best') || 0); if (!dc) return null;
-        return { label: 'Best ' + dc.toLocaleString(), frac: Math.min(1, dc / 9000) };
       }
       if (id === 'fernwild') {
         var fw = +(read('fw_best') || 0); if (!fw) return null;
@@ -246,23 +239,10 @@
         var tst = tf.stars || 0, th = tf.holes;
         return { label: '⛳ best ' + tf.strokes + ' strokes · ★' + tst, frac: Math.min(1, tst / (th * 3)) };
       }
-      if (id === 'castaway-cove') {
-        var ccv = readJSON('castaway_cove_v1');
-        if (!ccv) return null;
-        var jc = ccv.journal ? Object.keys(ccv.journal).length : 0;
-        var cs = (ccv.streak && ccv.streak.count) || 0;
-        if (!jc && !cs) return null;
-        return { label: '📖 ' + jc + '/40 · 🔥' + cs, frac: Math.min(1, jc / 40) };
-      }
       if (id === 'neon-drift') {
         var nd = readJSON('nd_save_v1');
         if (!nd || !nd.tokens) return null;
         return { label: '🏎️ ' + nd.tokens + ' ◈ · ' + (nd.cupsUnlocked || 1) + '/4 cups', frac: Math.min(1, (nd.cupsUnlocked || 1) / 4) };
-      }
-      if (id === 'dead-mans-hand') {
-        var dmh = readJSON('dmh_progress_v1');
-        if (!dmh) return null;
-        return { label: '🃏 Best ' + (dmh.best || 0) + ' · ' + (dmh.rooms || 0) + '/5 rooms', frac: Math.min(1, (dmh.rooms || 0) / 5) };
       }
     } catch (e) { return null; }
     return null;
@@ -297,7 +277,7 @@
     var FALLBACK = [
       { game: 'greywater', blurb: 'Fog on the water tonight and ships standing into the narrows. They need their keeper.' },
       { game: 'neon-void', blurb: 'Turn it up, thread the gravity wells, and try not to blink. The swarm is waiting.' },
-      { game: 'castaway-cove', blurb: 'One cast, one fish, one quiet dawn. The heron will judge your form regardless.' }
+      { game: 'skylark', blurb: 'Golden hour over the valley. Load up the Kite and chase the 25% same-destination bonus.' }
     ];
     function cardFor(id) {
       return document.querySelector('.card[data-game="' + id + '"]');
@@ -370,7 +350,7 @@
   if (wcEl) wcEl.textContent = WORDS[cardEls.length] || String(cardEls.length);
 
   /* spotlight: driven by the live card grid — change SPOTLIGHT_ID to swap */
-  var SPOTLIGHT_ID = 'unfold';
+  var SPOTLIGHT_ID = 'night-market';
   (function () {
     var sc = document.querySelector('.card[data-game="' + SPOTLIGHT_ID + '"]');
     var sp = document.getElementById('spotlight');
