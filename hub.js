@@ -133,7 +133,6 @@
     { id: 'word-well', name: 'Word Well', cls: 'art-word-well' },
     { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
     { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' },
-    { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' },
     { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
   ];
   function progressFor(id) {
@@ -158,10 +157,6 @@
       if (id === 'bloom-defense') {
         var bb = +(read('bloom2_best') || 0); if (!bb) return null;
         return { label: 'Best ' + bb.toLocaleString(), frac: Math.min(1, bb / 50000) };
-      }
-      if (id === 'fernwild') {
-        var fw = +(read('fw_best') || 0); if (!fw) return null;
-        return { label: 'Richest ' + fw.toLocaleString(), frac: Math.min(1, fw / 2000) };
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;
