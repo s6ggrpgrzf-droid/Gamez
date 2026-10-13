@@ -133,15 +133,8 @@
     { id: 'word-well', name: 'Word Well', cls: 'art-word-well' },
     { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
     { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' },
-    { id: 'neon-drift', name: 'Neon Drift', cls: 'art-neon-drift' },
-    { id: 'skyhook', name: 'Skyhook', cls: 'art-skyhook' },
     { id: 'fernwild', name: 'Fernwild', cls: 'art-fernwild' },
-    { id: 'golden-acre', name: 'Golden Acre', cls: 'art-golden-acre' },
-    { id: 'greywater', name: 'Greywater Light', cls: 'art-greywater' },
-    { id: 'skyline-sparrow', name: 'Skyline Sparrow', cls: 'art-skyline-sparrow' },
     { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
-    { id: 'poolball', name: 'Poolball', cls: 'art-poolball' },
-    { id: 'night-market', name: 'Night Market', cls: 'art-night-market' }
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -166,28 +159,9 @@
         var bb = +(read('bloom2_best') || 0); if (!bb) return null;
         return { label: 'Best ' + bb.toLocaleString(), frac: Math.min(1, bb / 50000) };
       }
-      if (id === 'skyhook') {
-        var sh = +(read('skyhook_best') || 0); if (!sh) return null;
-        return { label: 'Best ' + sh, frac: Math.min(1, sh / 50) };
-      }
       if (id === 'fernwild') {
         var fw = +(read('fw_best') || 0); if (!fw) return null;
         return { label: 'Richest ' + fw.toLocaleString(), frac: Math.min(1, fw / 2000) };
-      }
-      if (id === 'golden-acre') {
-        var ga = readJSON('ga_arcade'); if (!ga || !ga.value) return null;
-        return { label: 'Worth $' + (+ga.value).toLocaleString(), frac: Math.min(1, ga.value / 50000) };
-      }
-      if (id === 'greywater') {
-        var gw = readJSON('greywater-save-v1'); if (!gw || !gw.sim) return null;
-        try {
-          var gs = JSON.parse(gw.sim);
-          return { label: 'Day ' + gs.day + ' · ' + (+gs.stats.guided || 0) + ' guided', frac: Math.min(1, gs.day / 60) };
-        } catch (e) { return null; }
-      }
-      if (id === 'skyline-sparrow') {
-        var ss = readJSON('ss_save_v1'); if (!ss || !ss.best || !ss.best.score) return null;
-        return { label: 'Best ' + (+ss.best.score).toLocaleString() + ' pts', frac: Math.min(1, ss.best.score / 5000) };
       }
       if (id === 'neon-void') {
         var nv = +(read('nv_best') || 0); if (!nv) return null;
@@ -239,11 +213,6 @@
         var tst = tf.stars || 0, th = tf.holes;
         return { label: '⛳ best ' + tf.strokes + ' strokes · ★' + tst, frac: Math.min(1, tst / (th * 3)) };
       }
-      if (id === 'neon-drift') {
-        var nd = readJSON('nd_save_v1');
-        if (!nd || !nd.tokens) return null;
-        return { label: '🏎️ ' + nd.tokens + ' ◈ · ' + (nd.cupsUnlocked || 1) + '/4 cups', frac: Math.min(1, (nd.cupsUnlocked || 1) / 4) };
-      }
     } catch (e) { return null; }
     return null;
   }
@@ -275,7 +244,7 @@
     if (!wrap) return;
     var picksEl = document.getElementById('edPicks');
     var FALLBACK = [
-      { game: 'greywater', blurb: 'Fog on the water tonight and ships standing into the narrows. They need their keeper.' },
+      { game: 'skylark', blurb: 'Golden hour over the valley. Load up the Kite and chase the 25% same-destination bonus.' },
       { game: 'neon-void', blurb: 'Turn it up, thread the gravity wells, and try not to blink. The swarm is waiting.' },
       { game: 'skylark', blurb: 'Golden hour over the valley. Load up the Kite and chase the 25% same-destination bonus.' }
     ];
@@ -350,7 +319,7 @@
   if (wcEl) wcEl.textContent = WORDS[cardEls.length] || String(cardEls.length);
 
   /* spotlight: driven by the live card grid — change SPOTLIGHT_ID to swap */
-  var SPOTLIGHT_ID = 'night-market';
+  var SPOTLIGHT_ID = 'skylark';
   (function () {
     var sc = document.querySelector('.card[data-game="' + SPOTLIGHT_ID + '"]');
     var sp = document.getElementById('spotlight');
