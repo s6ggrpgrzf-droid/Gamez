@@ -46,6 +46,7 @@ function initInput(canvas) {
   });
 
   canvas.style.touchAction = 'none';
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); }); // iOS long-press menu killer
   canvas.addEventListener('pointerdown', function (e) {
     if (Input.pid !== -1) return;
     Input.pid = e.pointerId; Input.sx = e.clientX; Input.sy = e.clientY;

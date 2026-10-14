@@ -2,7 +2,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; overflow: hidden; background: #2a1a10; }
 body { font-family: Georgia, 'Times New Roman', serif; color: #f5e7c8; }
-#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 .hidden { display: none !important; }
 
