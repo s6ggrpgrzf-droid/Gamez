@@ -156,8 +156,12 @@ button{font-family:inherit}
 .title-kicker{font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:#d8b96a;margin-bottom:10px}
 .title-logo{font-size:64px;font-weight:normal;color:#ffe9b0;letter-spacing:.1em;
   text-shadow:0 3px 0 #7a5a22,0 6px 24px rgba(0,0,0,.7);margin-bottom:6px}
-.title-sub{font-size:14px;letter-spacing:.14em;opacity:.75;margin-bottom:24px}
-.diff-label{font-size:10px;letter-spacing:.34em;text-transform:uppercase;opacity:.55;margin-bottom:8px}
+.sub-pill{display:inline-block;font-size:13.5px;letter-spacing:.1em;color:#ffe9b0;
+  background:rgba(10,20,14,.6);border:1px solid rgba(255,220,150,.35);border-radius:999px;
+  padding:9px 20px;margin-bottom:22px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.diff-label{display:inline-block;font-size:10.5px;letter-spacing:.22em;color:#d8c48f;
+  background:rgba(10,20,14,.45);border:1px solid rgba(255,220,150,.22);border-radius:999px;
+  padding:6px 15px;margin-bottom:9px}
 #diff-seg{display:inline-flex;background:rgba(10,20,14,.65);border:1px solid rgba(255,220,150,.3);
   border-radius:999px;padding:4px;margin-bottom:28px}
 #diff-seg button{background:none;border:none;color:#f3ead6;font-size:13.5px;letter-spacing:.14em;
@@ -180,10 +184,14 @@ button{font-family:inherit}
   padding:16%;gap:3%}
 #play-tile .pt-half i{border-radius:50%;background:radial-gradient(circle at 35% 30%,#565664,#1b1b21 72%)}
 #play-tile .pt-div{height:3px;background:linear-gradient(90deg,transparent,rgba(120,95,60,.6),transparent);margin:0 14%}
-#play-tile .pt-label{position:absolute;left:0;right:0;bottom:-34px;font-size:19px;letter-spacing:.3em;
-  text-transform:uppercase;color:#ffe9b0;text-shadow:0 2px 8px #000}
-#title-rules{background:none;border:none;color:#d8b96a;font-size:14px;letter-spacing:.12em;
-  text-decoration:underline;cursor:pointer;margin-top:44px;opacity:.85}
+#play-tile .pt-label{position:absolute;left:50%;transform:translateX(-50%);bottom:-40px;
+  font-size:14px;letter-spacing:.24em;color:#ffe9b0;white-space:nowrap;
+  background:rgba(10,20,14,.65);border:1px solid rgba(255,220,150,.5);border-radius:999px;
+  padding:8px 24px 8px 28px;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.pill-btn{background:rgba(10,20,14,.5);border:1px solid rgba(216,185,106,.55);color:#ecd9a0;
+  font-size:13.5px;letter-spacing:.14em;border-radius:999px;padding:11px 26px;
+  cursor:pointer;margin-top:52px;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.pill-btn:active{transform:scale(.95)}
 
 .hidden{display:none !important}
 
