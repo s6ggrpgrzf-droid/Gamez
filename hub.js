@@ -401,6 +401,22 @@
   }
   revealInit();
 
+  /* ---------- cards: 3D pointer tilt (hover devices only) ---------- */
+  (function () {
+    if (!window.matchMedia('(hover:hover) and (prefers-reduced-motion:no-preference)').matches) return;
+    cardEls.forEach(function (card) {
+      card.addEventListener('pointermove', function (e) {
+        var r = card.getBoundingClientRect();
+        var px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
+        card.style.transform = 'perspective(950px) rotateX(' + ((0.5 - py) * 9).toFixed(2) +
+          'deg) rotateY(' + ((px - 0.5) * 11).toFixed(2) + 'deg) translateY(-4px)';
+        card.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+        card.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+      });
+      card.addEventListener('pointerleave', function () { card.style.transform = ''; });
+    });
+  })();
+
   /* tap tick + sound toggle (subtle; stored preference) */
   var hubSnd = true;
   try { hubSnd = localStorage.getItem('hub_sound') !== 'off'; } catch (e) {}

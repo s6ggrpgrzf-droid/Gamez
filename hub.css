@@ -290,3 +290,20 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
   .js .feat-sheen{animation:none;opacity:0}
   .feat3d:hover .feat-screen,.feat3d:active .feat-screen{transform:rotateX(7deg)}
 }
+
+/* ---------- cards: 3D poster treatment ---------- */
+.card{--mx:50%;--my:50%}
+.card::before{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;
+  transition:opacity .25s;border-radius:inherit;
+  background:radial-gradient(560px circle at var(--mx) var(--my),rgba(255,255,255,.15),transparent 46%)}
+@media (hover:hover){.card:hover::before{opacity:1}}
+.card .body h3{position:relative;padding-bottom:10px}
+.card .body h3::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:46px;border-radius:2px;
+  background:linear-gradient(90deg,var(--glow,#ffd34d),transparent);
+  box-shadow:0 0 10px var(--glow,#ffd34d)}
+@media (hover:hover){
+  .card:hover{box-shadow:0 30px 64px rgba(0,0,0,.6),0 0 34px color-mix(in srgb,var(--glow,#ffd34d) 22%,transparent)}
+}
+@media (prefers-reduced-motion:reduce){
+  .card::before{display:none}
+}
