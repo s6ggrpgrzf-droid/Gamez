@@ -528,3 +528,122 @@ html, body {
   border: 1px solid #e8c86a; color: #e8c86a;
   font-family: 'DM Serif Display', serif; font-size: 15px; text-align: center;
 }
+
+/* ---------- airline management ---------- */
+.map-cta {
+  display: block; width: 100%; margin: 0 0 14px; padding: 14px;
+  font-family: 'DM Serif Display', serif; font-size: 19px; letter-spacing: 1px;
+  background: linear-gradient(to bottom, var(--brass-hi), var(--brass));
+  color: #2b1d12; border: none; border-radius: 10px; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.map-cta:active { transform: scale(.98); }
+
+#fleet-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.fleet-card {
+  background: rgba(245,233,208,.07); border: 1px solid rgba(232,200,106,.25);
+  border-radius: 8px; padding: 10px 12px;
+}
+.fleet-card.enroute { border-color: var(--brass); }
+.fc-name { font-family: 'DM Serif Display', serif; font-size: 16px; color: #f5e9d0; }
+.fc-status { font-size: 12px; color: #b8a67e; margin-top: 2px; }
+.inbox { margin-top: 4px; }
+.inbox-msg {
+  font-size: 12px; color: #e8c86a; font-style: italic;
+  padding: 6px 10px; border-left: 2px solid var(--brass); margin-top: 6px;
+}
+
+/* valley map */
+#valleymap {
+  position: absolute; inset: 0; z-index: 15; overflow-y: auto;
+  background: linear-gradient(to bottom, #2b2135, #1a1410);
+  padding: calc(18px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom));
+}
+.map-wrap { max-width: 520px; margin: 0 auto; }
+.map-head { text-align: center; margin-bottom: 12px; }
+.map-head h2 {
+  font-family: 'DM Serif Display', serif; font-size: 30px; color: #f8efdc;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+#map-canvas-wrap {
+  background: #e8d5ae; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4); border: 3px solid #8a6a42;
+}
+#map-canvas { width: 100%; display: block; touch-action: manipulation; }
+#map-legend {
+  text-align: center; font-size: 11px; color: #b8a67e; margin: 10px 0;
+  font-style: italic;
+}
+
+/* strip detail */
+#stripdetail {
+  position: absolute; inset: 0; z-index: 16; overflow-y: auto;
+  background: linear-gradient(to bottom, #2b2135, #1a1410);
+  padding: calc(18px + env(safe-area-inset-top)) 14px calc(30px + env(safe-area-inset-bottom));
+}
+.strip-card { max-width: 520px; margin: 0 auto; }
+.strip-kicker {
+  font-size: 11px; letter-spacing: 4px; color: #e8c86a; text-align: center;
+}
+.strip-name {
+  font-family: 'DM Serif Display', serif; font-size: 32px; color: #f8efdc;
+  text-align: center; margin: 4px 0; text-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+.strip-desc {
+  text-align: center; font-size: 13px; color: #b8a67e; font-style: italic;
+  margin-bottom: 14px;
+}
+.buy-strip-btn {
+  display: block; width: 100%; padding: 14px; margin-bottom: 14px;
+  font-family: 'DM Serif Display', serif; font-size: 17px;
+  background: linear-gradient(to bottom, var(--brass-hi), var(--brass));
+  color: #2b1d12; border: none; border-radius: 10px; cursor: pointer;
+}
+#sd-jobs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.job-card {
+  background: var(--paper); border-radius: 6px; padding: 12px 14px;
+  cursor: pointer; border: 2px solid transparent; color: var(--ink);
+  box-shadow: 0 3px 10px rgba(0,0,0,.3);
+}
+.job-card.sel { border-color: var(--brass); background: #fdf6e0; }
+.job-top { display: flex; justify-content: space-between; align-items: baseline; }
+.job-name { font-family: 'DM Serif Display', serif; font-size: 16px; }
+.job-pay { font-family: 'DM Serif Display', serif; font-size: 17px; color: #2e7d4f; }
+.job-story { font-size: 12px; font-style: italic; color: var(--ink-soft); margin: 3px 0; }
+.job-dest { font-size: 12px; color: #2e6b4f; }
+.job-lock { color: #c94f38; }
+.job-empty {
+  text-align: center; color: #b8a67e; font-style: italic; padding: 16px;
+}
+.bonus-note {
+  background: rgba(232,200,106,.12); border: 1px solid #e8c86a; border-radius: 8px;
+  padding: 10px 14px; color: #e8c86a; font-size: 13px; text-align: center;
+  margin-bottom: 12px;
+}
+#sd-fleet { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.send-plane {
+  flex: 1 1 30%; min-width: 100px; background: rgba(245,233,208,.07);
+  border: 1px solid rgba(232,200,106,.25); border-radius: 8px; padding: 10px;
+  cursor: pointer; text-align: center;
+}
+.send-plane.sel { border-color: var(--brass); background: rgba(232,200,106,.12); }
+.sp-name { font-family: 'DM Serif Display', serif; font-size: 15px; color: #f5e9d0; }
+.sp-cap { font-size: 11px; color: #b8a67e; }
+.send-btn {
+  display: block; width: 100%; padding: 14px; margin-bottom: 10px;
+  font-family: 'DM Serif Display', serif; font-size: 17px;
+  background: linear-gradient(to bottom, #7fb069, #5a8a48); color: #fff;
+  border: none; border-radius: 10px; cursor: pointer;
+}
+.send-btn:disabled { opacity: .5; }
+.send-btn:active { transform: scale(.98); }
+.strip-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+#b-sd-fly {
+  padding: 14px; font-family: 'DM Serif Display', serif; font-size: 17px;
+  background: linear-gradient(to bottom, var(--brass-hi), var(--brass));
+  color: #2b1d12; border: none; border-radius: 10px; cursor: pointer;
+}
+.hangar-hint {
+  margin: 10px 4px 2px; font-style: italic; font-size: 13px;
+  color: rgba(60, 42, 24, 0.75); line-height: 1.45;
+}

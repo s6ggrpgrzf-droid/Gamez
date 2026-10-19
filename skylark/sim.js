@@ -35,6 +35,198 @@ var SK = (function () {
     'Tern Point', 'Alder Flats', 'Wrenwick', 'Harebell Downs', 'Duskmere', 'Larkspur Vale',
     'Briar Patch', 'Cloudcroft', 'Mothlight', 'Sedgewick', 'Poppyfield', 'Owler\'s Roost'];
 
+  /* ---------- airline management: the valley network ----------
+     10 strips, each with a class (grass/dirt/paved) gating which planes can land.
+     Own strips, run jobs between them, assign background flights. */
+  var STRIPS = [
+    { id: 'meadowlark', name: 'Meadowlark Field', cls: 'grass', cost: 0,
+      mx: 50, my: 62, desc: 'Home. A ragged grass strip with a windsock and big sky.' },
+    { id: 'pebblebrook', name: 'Pebblebrook', cls: 'grass', cost: 600,
+      mx: 22, my: 38, desc: 'A brook-side meadow. Geese on short final.' },
+    { id: 'cinder', name: 'Cinder Hollow', cls: 'dirt', cost: 1400,
+      mx: 74, my: 30, desc: 'Old cinder pit, graded flat. Smells of rain.' },
+    { id: 'foxglove', name: 'Foxglove Meadows', cls: 'grass', cost: 900,
+      mx: 38, my: 78, desc: 'Wildflower meadows. Land long — the far end is soft.' },
+    { id: 'tern', name: 'Tern Point', cls: 'dirt', cost: 2200,
+      mx: 85, my: 58, desc: 'A point over the water. Crosswinds off the lake.' },
+    { id: 'alder', name: 'Alder Flats', cls: 'dirt', cost: 2600,
+      mx: 60, my: 82, desc: 'Wide flats by the alders. Room to breathe.' },
+    { id: 'wrenwick', name: 'Wrenwick', cls: 'paved', cost: 5200,
+      mx: 30, my: 18, desc: 'The valley\'s one paved strip. Proper lights, proper tea.' },
+    { id: 'harebell', name: 'Harebell Downs', cls: 'grass', cost: 1200,
+      mx: 68, my: 72, desc: 'Rolling downs. Sheep have right of way.' },
+    { id: 'duskmere', name: 'Duskmere', cls: 'dirt', cost: 3400,
+      mx: 15, my: 58, desc: 'By the dark mere. Mist on the mornings.' },
+    { id: 'larkspur', name: 'Larkspur Vale', cls: 'paved', cost: 7800,
+      mx: 52, my: 12, desc: 'The far vale. Long paved strip, big payouts.' },
+  ];
+  function stripById(id) {
+    for (var i = 0; i < STRIPS.length; i++) if (STRIPS[i].id === id) return STRIPS[i];
+    return STRIPS[0];
+  }
+  // can this plane land at this strip class?
+  function planeCanLand(planeId, stripCls) {
+    if (stripCls === 'paved') return true;
+    if (stripCls === 'dirt') return planeId !== 'merlin';
+    return planeId === 'kite'; // grass: Kite only
+  }
+
+  /* jobs board: passengers + cargo waiting at a strip, seeded per time bucket.
+     Each job: {id, kind:'pax'|'cargo', name, story, dest, payout} */
+  var CARGO_KINDS = ['a crate of', 'a parcel of', 'a sack of', 'a bundle of'];
+  var CARGO_WHAT = ['apples', 'honey jars', 'wool', 'letters', 'spare parts', 'seed packets',
+    'pies', 'fiddle strings', 'lamp oil', 'tea', 'bluebells', 'wrenches'];
+  function jobBucket() { return Math.floor(Date.now() / (3 * 3600 * 1000)); } // new board every 3h
+  function genJobs(stripId, bucket) {
+    var rnd = rng(hashStr(stripId) + bucket * 7919);
+    var jobs = [];
+    var n = 3 + Math.floor(rnd() * 3); // 3-5 jobs
+    var others = [];
+    for (var i = 0; i < STRIPS.length; i++) if (STRIPS[i].id !== stripId) others.push(STRIPS[i].id);
+    for (var j = 0; j < n; j++) {
+      var dest = others[Math.floor(rnd() * others.length)];
+      var isPax = rnd() < 0.6;
+      var dist = Math.abs(stripById(stripId).mx - stripById(dest).mx) +
+                 Math.abs(stripById(stripId).my - stripById(dest).my);
+      var payout = Math.round(40 + dist * 2.2 + rnd() * 40);
+      if (isPax) {
+        jobs.push({ id: stripId + '-' + bucket + '-p' + j, kind: 'pax',
+          name: PAX_FIRST[Math.floor(rnd() * PAX_FIRST.length)] + ' ' +
+                PAX_LAST[Math.floor(rnd() * PAX_LAST.length)],
+          story: FALLBACK_STORIES[Math.floor(rnd() * FALLBACK_STORIES.length)],
+          dest: dest, payout: payout });
+      } else {
+        jobs.push({ id: stripId + '-' + bucket + '-c' + j, kind: 'cargo',
+          name: CARGO_KINDS[Math.floor(rnd() * CARGO_KINDS.length)] + ' ' +
+                CARGO_WHAT[Math.floor(rnd() * CARGO_WHAT.length)],
+          story: 'bound for ' + stripById(dest).name,
+          dest: dest, payout: payout });
+      }
+    }
+    return jobs;
+  }
+  function hashStr(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return (h >>> 0) || 1;
+  }
+
+  /* airline state lives on the pilot object:
+     pilot.strips = ['meadowlark', ...]            owned strip ids
+     pilot.fleet = [{plane:'kite', at:'meadowlark', status:'idle'|'enroute',
+                     dest:null, jobs:[], departAt:0, arriveAt:0}]
+     pilot.jobsTaken = {jobId: true}               jobs already loaded (per bucket)
+     pilot.inbox = [{t, text, who}]                 arrived-flight messages for the tower feed
+  */
+  function ensureAirline(pilot) {
+    if (!pilot.strips) pilot.strips = ['meadowlark'];
+    if (!pilot.fleet) {
+      pilot.fleet = [];
+      for (var i = 0; i < pilot.planes.length; i++)
+        pilot.fleet.push({ plane: pilot.planes[i], at: 'meadowlark', status: 'idle',
+                           dest: null, jobs: [], departAt: 0, arriveAt: 0 });
+    } else {
+      // sync: new planes bought get fleet entries; sold/removed planes drop out
+      var have = {};
+      for (var f = 0; f < pilot.fleet.length; f++) have[pilot.fleet[f].plane] = true;
+      for (var p = 0; p < pilot.planes.length; p++)
+        if (!have[pilot.planes[p]])
+          pilot.fleet.push({ plane: pilot.planes[p], at: pilot.strips[0], status: 'idle',
+                             dest: null, jobs: [], departAt: 0, arriveAt: 0 });
+    }
+    if (!pilot.jobsTaken) pilot.jobsTaken = {};
+    if (!pilot.inbox) pilot.inbox = [];
+    if (!pilot.jobBucket) pilot.jobBucket = jobBucket();
+    return pilot;
+  }
+
+  function buyStrip(pilot, stripId) {
+    ensureAirline(pilot);
+    var s = stripById(stripId);
+    if (pilot.strips.indexOf(stripId) >= 0) return { ok: false, why: 'owned' };
+    if (pilot.money < s.cost) return { ok: false, why: 'money' };
+    pilot.money -= s.cost;
+    pilot.strips.push(stripId);
+    pilot.xp += 25;
+    pilot.rank = rankFor(pilot.xp);
+    return { ok: true };
+  }
+
+  // flight time: 10-30 min by map distance (cozy, not Pocket Planes hours)
+  function legMinutes(fromId, toId, planeId) {
+    var a = stripById(fromId), b = stripById(toId);
+    var d = Math.sqrt(Math.pow(a.mx - b.mx, 2) + Math.pow(a.my - b.my, 2)); // 0-~100
+    var speed = planeId === 'merlin' ? 1.6 : planeId === 'kestrel' ? 1.2 : 1.0;
+    return Math.round(10 + (d / 100) * 20 / speed);
+  }
+
+  /* assign a background flight: plane must be idle at fromId, dest must be owned,
+     plane must be able to land at dest. jobs: array of job objects (already validated).
+     Returns {ok} or {ok:false, why}. */
+  function assignFlight(pilot, fleetIdx, destId, jobs) {
+    ensureAirline(pilot);
+    var f = pilot.fleet[fleetIdx];
+    if (!f || f.status !== 'idle') return { ok: false, why: 'busy' };
+    if (pilot.strips.indexOf(destId) < 0) return { ok: false, why: 'strip' };
+    if (!planeCanLand(f.plane, stripById(destId).cls)) return { ok: false, why: 'class' };
+    var now = Date.now();
+    var mins = legMinutes(f.at, destId, f.plane);
+    f.status = 'enroute';
+    f.dest = destId;
+    f.jobs = jobs || [];
+    f.departAt = now;
+    f.arriveAt = now + mins * 60000;
+    // mark jobs taken
+    for (var i = 0; i < f.jobs.length; i++) pilot.jobsTaken[f.jobs[i].id] = true;
+    return { ok: true, mins: mins };
+  }
+
+  // 25% same-destination bonus: all jobs share one dest → +25% each
+  function flightPayout(jobs) {
+    if (!jobs || !jobs.length) return 0;
+    var same = true, d0 = jobs[0].dest;
+    for (var i = 1; i < jobs.length; i++) if (jobs[i].dest !== d0) { same = false; break; }
+    var total = 0;
+    for (var j = 0; j < jobs.length; j++) total += jobs[j].payout;
+    if (same && jobs.length > 1) total = Math.round(total * 1.25);
+    return { total: total, bonus: same && jobs.length > 1 };
+  }
+
+  /* tick: resolve arrived background flights. Call on load and periodically.
+     Returns array of arrival events for the tower feed. */
+  function tickAirline(pilot) {
+    ensureAirline(pilot);
+    var now = Date.now();
+    var arrivals = [];
+    // new jobs bucket?
+    var b = jobBucket();
+    if (b !== pilot.jobBucket) { pilot.jobBucket = b; pilot.jobsTaken = {}; }
+    for (var i = 0; i < pilot.fleet.length; i++) {
+      var f = pilot.fleet[i];
+      if (f.status === 'enroute' && now >= f.arriveAt) {
+        var pay = flightPayout(f.jobs);
+        pilot.money += pay.total;
+        pilot.xp += 8 + f.jobs.length * 3;
+        var pn = planeName(f.plane);
+        var msg = pay.bonus
+          ? pn + ' landed at ' + stripById(f.dest).name + ' — full load, one stop! +' + money(pay.total)
+          : pn + ' landed at ' + stripById(f.dest).name + ' +' + money(pay.total);
+        arrivals.push({ t: now, text: msg, who: 'kit' });
+        pilot.inbox.push({ t: now, text: msg, who: 'kit' });
+        if (pilot.inbox.length > 12) pilot.inbox.shift();
+        f.at = f.dest; f.dest = null; f.jobs = []; f.status = 'idle';
+        f.departAt = 0; f.arriveAt = 0;
+      }
+    }
+    pilot.rank = rankFor(pilot.xp);
+    return arrivals;
+  }
+  function planeName(id) {
+    for (var i = 0; i < PLANES.length; i++) if (PLANES[i].id === id) return PLANES[i].name;
+    return id;
+  }
+  function money(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
+
   var PAX_FIRST = ['Mara', 'Theo', 'June', 'Silas', 'Wren', 'Otto', 'Lena', 'Pippa', 'Hugo',
     'Iris', 'Felix', 'Nora', 'Emmett', 'Clara', 'Rufus', 'Tilda', 'Amos', 'Bea', 'Casper', 'Della'];
   var PAX_LAST = ['Bramble', 'Nettle', 'Thistledown', 'Fernhill', 'Cloud', 'Marsh', 'Alder',
@@ -576,6 +768,46 @@ var SK = (function () {
       var r = flyOnce(wxs[wi]);
       if (r !== 'PASS') return 'FAIL[' + wxs[wi] + ']: ' + r;
     }
+    // airline management sim
+    var m = mgmtTest();
+    if (m !== 'PASS') return 'FAIL[mgmt]: ' + m;
+    return 'PASS';
+  }
+
+  function mgmtTest() {
+    var pilot = newPilot('Test');
+    pilot.money = 20000;
+    ensureAirline(pilot);
+    if (pilot.strips.length !== 1 || pilot.strips[0] !== 'meadowlark') return 'home strip missing';
+    if (pilot.fleet.length !== 1 || pilot.fleet[0].plane !== 'kite') return 'fleet init wrong';
+    // buy a strip
+    var b = buyStrip(pilot, 'pebblebrook');
+    if (!b.ok) return 'buyStrip failed';
+    if (pilot.strips.indexOf('pebblebrook') < 0) return 'strip not owned';
+    // class gating: Kite can land grass, Merlin cannot
+    if (!planeCanLand('kite', 'grass')) return 'kite should land grass';
+    if (planeCanLand('merlin', 'grass')) return 'merlin should not land grass';
+    if (!planeCanLand('merlin', 'paved')) return 'merlin should land paved';
+    // jobs
+    var jobs = genJobs('meadowlark', 12345);
+    if (!jobs.length || jobs.length > 6) return 'jobs count wrong: ' + jobs.length;
+    // bonus: same dest
+    var j1 = { dest: 'pebblebrook', payout: 100 }, j2 = { dest: 'pebblebrook', payout: 100 };
+    var p1 = flightPayout([j1, j2]);
+    if (p1.total !== 250 || !p1.bonus) return 'same-dest bonus wrong: ' + p1.total;
+    var j3 = { dest: 'cinder', payout: 100 };
+    var p2 = flightPayout([j1, j3]);
+    if (p2.total !== 200 || p2.bonus) return 'mixed-dest should not bonus';
+    // assign + instant arrival (hack arriveAt to past)
+    var a = assignFlight(pilot, 0, 'pebblebrook', [j1, j2]);
+    if (!a.ok) return 'assignFlight failed: ' + a.why;
+    if (pilot.fleet[0].status !== 'enroute') return 'not enroute';
+    pilot.fleet[0].arriveAt = Date.now() - 1000;
+    var before = pilot.money;
+    var arr = tickAirline(pilot);
+    if (!arr.length) return 'no arrival';
+    if (pilot.fleet[0].status !== 'idle' || pilot.fleet[0].at !== 'pebblebrook') return 'not arrived';
+    if (pilot.money !== before + 250) return 'payout wrong: ' + (pilot.money - before);
     return 'PASS';
   }
 
@@ -657,13 +889,17 @@ var SK = (function () {
   }
 
   return {
-    PLANES: PLANES, RANKS: RANKS,
+    PLANES: PLANES, RANKS: RANKS, STRIPS: STRIPS,
     newFlight: newFlight, step: step, skipToFinal: skipToFinal,
     newPilot: newPilot, applyFlightResult: applyFlightResult,
     dailyRoutes: dailyRoutes, buyPlane: buyPlane, rankFor: rankFor,
     ribbonSmooth: ribbonSmooth, papi: papi, landingVerdict: landingVerdict,
     CHALLENGES: CHALLENGES, trainingProgress: trainingProgress, rudyLine: rudyLine,
     selfTest: selfTest, rng: rng,
+    // airline management
+    stripById: stripById, planeCanLand: planeCanLand, genJobs: genJobs, jobBucket: jobBucket,
+    ensureAirline: ensureAirline, buyStrip: buyStrip, legMinutes: legMinutes,
+    assignFlight: assignFlight, flightPayout: flightPayout, tickAirline: tickAirline,
   };
 })();
 
