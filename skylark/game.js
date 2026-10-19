@@ -58,16 +58,16 @@ function seededVista(seed) {
   // local fallback: seeded, always works offline. AI enriches when reachable.
   var rnd = SK.rng(seed);
   var palettes = [
-    { top: '#5aa9dd', mid: '#9fd4e8', bot: '#f9d976', sun: '#fff3c4', cloud: '255,255,255',
-      hill1: '#8fae6e', hill2: '#6d9154', mtn: '#a8bdd0', far: '#c3d4e2', ground: '#a8c686' },
-    { top: '#6a5f9e', mid: '#e08a6d', bot: '#ffcf7d', sun: '#ffe9b8', cloud: '255,235,220',
-      hill1: '#7d8a68', hill2: '#5f7050', mtn: '#9a8ba8', far: '#b8a9c0', ground: '#93a06f' },
-    { top: '#3d2f5e', mid: '#c65f4a', bot: '#ff9e4f', sun: '#ffdf9e', cloud: '255,220,200',
-      hill1: '#6e7a5c', hill2: '#54604a', mtn: '#8d7390', far: '#a894a8', ground: '#86915f' },
-    { top: '#4a90c4', mid: '#a8d8e8', bot: '#fdf6d8', sun: '#fffbe8', cloud: '255,255,255',
-      hill1: '#9ab878', hill2: '#7a9c5e', mtn: '#b0c4d8', far: '#ccdcec', ground: '#b0cc8e' },
-    { top: '#7b6ba8', mid: '#f0a080', bot: '#ffd8a0', sun: '#fff0c8', cloud: '255,240,225',
-      hill1: '#8a9468', hill2: '#6a7452', mtn: '#a898b0', far: '#c4b4c8', ground: '#9aa878' },
+    { top: '#4aa8ef', mid: '#8fcef8', bot: '#c9ebfd', sun: '#ffd94d', cloud: '255,255,255',
+      hill1: '#7cc46a', hill2: '#5da24a', mtn: '#a8c8e2', far: '#c2dcee', ground: '#93d36e' },
+    { top: '#3f9ff0', mid: '#7cc4f7', bot: '#bfe6fd', sun: '#ffd94d', cloud: '255,255,255',
+      hill1: '#84cc70', hill2: '#63a854', mtn: '#a2c4e4', far: '#bcd8ec', ground: '#9ad674' },
+    { top: '#5fb8f5', mid: '#a8dcf8', bot: '#fef3c8', sun: '#ffdf5e', cloud: '255,255,255',
+      hill1: '#7cc46a', hill2: '#5da24a', mtn: '#accbe6', far: '#c6e0ee', ground: '#93d36e' },
+    { top: '#4fb0f0', mid: '#96d4f5', bot: '#d4f0c8', sun: '#ffd94d', cloud: '255,255,255',
+      hill1: '#8ad476', hill2: '#68ac58', mtn: '#a8c8e2', far: '#c2dcee', ground: '#9ad674' },
+    { top: '#45a5ee', mid: '#88cbf8', bot: '#cfeafd', sun: '#ffd94d', cloud: '255,255,255',
+      hill1: '#7cc46a', hill2: '#5da24a', mtn: '#a4c6e6', far: '#bee0f0', ground: '#93d36e' },
   ];
   var pal = palettes[Math.floor(rnd() * palettes.length)];
   var lmTypes = ['water tower', 'barn', 'radio mast', 'windmill', 'church', 'lighthouse'];
@@ -89,7 +89,7 @@ function seededVista(seed) {
   return {
     date: dateKey(),
     ridges: [
-      { seed: 1000 + Math.floor(rnd() * 90000), height: 110 + rnd() * 80, haze: 0.55 + rnd() * 0.2, snow: rnd() < 0.6 },
+      { seed: 1000 + Math.floor(rnd() * 90000), height: 110 + rnd() * 80, haze: 0.55 + rnd() * 0.2, snow: false },
       { seed: 1000 + Math.floor(rnd() * 90000), height: 70 + rnd() * 60, haze: 0.35 + rnd() * 0.2, snow: false },
       { seed: 1000 + Math.floor(rnd() * 90000), height: 40 + rnd() * 50, haze: 0.15 + rnd() * 0.2, snow: false },
     ],
@@ -345,10 +345,10 @@ sizeCanvas();
 
 /* weather palettes */
 var SKIES = {
-  day:   { top: '#5aa9dd', mid: '#9fd4e8', bot: '#f9d976', sun: '#fff3c4', cloud: '255,255,255', hill1: '#8fae6e', hill2: '#6d9154', mtn: '#a8bdd0', ground: '#a8c686' },
-  dawn:  { top: '#6a5f9e', mid: '#e08a6d', bot: '#ffcf7d', sun: '#ffe9b8', cloud: '255,235,220', hill1: '#7d8a68', hill2: '#5f7050', mtn: '#9a8ba8', ground: '#93a06f' },
-  dusk:  { top: '#3d2f5e', mid: '#c65f4a', bot: '#ff9e4f', sun: '#ffdf9e', cloud: '255,220,200', hill1: '#6e7a5c', hill2: '#54604a', mtn: '#8d7390', ground: '#86915f' },
-  night: { top: '#0b1526', mid: '#16294a', bot: '#2c4a6e', sun: '#f4ead8', cloud: '120,140,180', hill1: '#2c3d33', hill2: '#223028', mtn: '#2c3a55', ground: '#31453a' },
+  day:   { top: '#4aa8ef', mid: '#8fcef8', bot: '#c9ebfd', sun: '#ffd94d', cloud: '255,255,255', hill1: '#7cc46a', hill2: '#5da24a', mtn: '#a8c8e2', ground: '#93d36e' },
+  dawn:  { top: '#5fb8f5', mid: '#a8dcf8', bot: '#fef3c8', sun: '#ffdf5e', cloud: '255,255,255', hill1: '#7cc46a', hill2: '#5da24a', mtn: '#accbe6', ground: '#93d36e' },
+  dusk:  { top: '#4aa8ef', mid: '#9fd4e8', bot: '#ffd9a0', sun: '#ffdf5e', cloud: '255,250,240', hill1: '#7cc46a', hill2: '#5da24a', mtn: '#a8c8e2', ground: '#93d36e' },
+  night: { top: '#1a2f5a', mid: '#24407a', bot: '#2f5290', sun: '#f4ead8', cloud: '140,160,200', hill1: '#3a5a48', hill2: '#2c4638', mtn: '#33456a', ground: '#3a5a48' },
 };
 
 function makeDecor(seed, destX) {
