@@ -101,7 +101,7 @@ section::before,main.collection::before{content:"";display:block;height:1px;marg
   box-shadow:0 0 14px rgba(77,166,255,.3)}
 main.collection::before{margin:34px 20px 30px}
 /* the feature banner is its own stage — no beam, it carries its own frame */
-section.feature::before{display:none}
+section.featured::before{display:none}
 .collection{width:100%;max-width:1100px;position:relative;z-index:1}
 .kicker{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;
   color:var(--ice);margin-bottom:12px;padding:8px 16px 8px 19px;border-radius:999px;
@@ -304,7 +304,7 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
 /* Moss & Stone key art: in-game screenshot, baked as data URI */
 
 /* ---------- feature presentation: Six-Shooter Cinema (obsidian 3D) ---------- */
-.feature{width:100%;max-width:1100px;padding:30px 20px 0;position:relative;z-index:1;perspective:1600px}
+.featured{width:100%;max-width:1100px;padding:30px 20px 0;position:relative;z-index:1;perspective:1600px}
 .feat3d{display:block;text-decoration:none;color:#fff}
 .feat-kicker{display:block;font-size:10px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;
   color:var(--accent);margin:0 4px 12px}
@@ -397,3 +397,7 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
 @media (prefers-reduced-motion:reduce){
   .card::before{display:none}
 }
+
+/* ---------- featured zone: banner + tonight picks under one roof ---------- */
+.featured .ed-picks { margin-top: 26px; }
+.featured .shead { margin-bottom: 6px; }

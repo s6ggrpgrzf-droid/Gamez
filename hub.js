@@ -235,9 +235,8 @@
   });
   /* ---------- tonight at the arcade: daily curator picks ---------- */
   (function () {
-    var wrap = document.getElementById('editorial');
-    if (!wrap) return;
     var picksEl = document.getElementById('edPicks');
+    if (!picksEl) return;
     var FALLBACK = [
       { game: 'skylark', blurb: 'Golden hour over the valley. Load up the Kite and chase the 25% same-destination bonus.' },
       { game: 'neon-void', blurb: 'Turn it up, thread the gravity wells, and try not to blink. The swarm is waiting.' },
@@ -331,40 +330,13 @@
     }
     els.forEach(function (el) { revealIO.observe(el); });
   }
-  document.querySelectorAll('.card,.daily,.chip,.shead,.feature').forEach(function (el) { el.classList.add('rv'); });
+  document.querySelectorAll('.card,.chip,.shead,.feature,.featured').forEach(function (el) { el.classList.add('rv'); });
   observeReveals();
   var WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
   var cardEls = document.querySelectorAll('.card');
   var wcEl = document.getElementById('worldcount');
   if (wcEl) wcEl.textContent = WORDS[cardEls.length] || String(cardEls.length);
-
-  /* spotlight: driven by the live card grid — change SPOTLIGHT_ID to swap */
-  var SPOTLIGHT_ID = 'skylark';
-  (function () {
-    var sc = document.querySelector('.card[data-game="' + SPOTLIGHT_ID + '"]');
-    var sp = document.getElementById('spotlight');
-    if (!sc || !sp) return;
-    sp.href = './' + SPOTLIGHT_ID + '/';
-    var sart = sc.querySelector('.art'), acls = '';
-    if (sart) sart.className.split(/\s+/).forEach(function (k) {
-      if (k.indexOf('art-') === 0) acls = k;
-    });
-    var spArt = document.getElementById('spArt');
-    if (spArt && acls) spArt.className = 'sp-art ' + acls;
-    /* clone the card's art scene (glyph, CSS scene, or key art) minus chrome */
-    var artSrc = sc.querySelector('.art');
-    if (spArt && artSrc) {
-      var ac = artSrc.cloneNode(true);
-      ac.querySelectorAll('.badge,.pbar,.shine').forEach(function (x) { x.remove(); });
-      ac.removeAttribute('id');
-      while (ac.firstChild) spArt.appendChild(ac.firstChild);
-    }
-    var sh3 = sc.querySelector('h3');
-    if (sh3) document.getElementById('spName').textContent = sh3.textContent.replace(/^(\p{Extended_Pictographic}\uFE0F?\s+)+/u, '');
-    var spp = sc.querySelector('.body p');
-    if (spp) document.getElementById('spBlurb').textContent = spp.textContent.trim();
-  })();
 
   /* shine sweep element per card art */
   cardEls.forEach(function (card, ci) {
@@ -449,7 +421,7 @@
       to.start(); to.stop(tickAC.currentTime + 0.07);
     } catch (e) {}
   }
-  document.querySelectorAll('.card,.daily,.chip,.spotlight,.namepill').forEach(function (el) {
+  document.querySelectorAll('.card,.chip,.ed-pick,.namepill,.feat3d').forEach(function (el) {
     el.addEventListener('pointerdown', tick);
   });
   var sndbtn = document.getElementById('sndbtn');
