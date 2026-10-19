@@ -574,6 +574,7 @@
     clearBoard();
     $('banner').classList.add('hidden');
     $('title').classList.add('hidden');
+    $('table').classList.remove('title-mode');
     dealRound();
   }
 
@@ -690,31 +691,49 @@
   $('title-rules').addEventListener('click', () => { AU.uiTap(); $('rules-modal').classList.remove('hidden'); });
 
   /* ---------------- title ---------------- */
-  document.querySelectorAll('.diff').forEach((b) => {
-    if (+b.dataset.d === difficulty) { document.querySelectorAll('.diff').forEach((x) => x.classList.remove('sel')); b.classList.add('sel'); }
+  const diffBtns = Array.from(document.querySelectorAll('#diff-seg button'));
+  diffBtns.forEach((b) => {
+    if (+b.dataset.d === difficulty) {
+      diffBtns.forEach((x) => { x.classList.remove('sel'); x.setAttribute('aria-checked', 'false'); });
+      b.classList.add('sel'); b.setAttribute('aria-checked', 'true');
+    }
     b.addEventListener('click', () => {
       AU.uiTap();
       difficulty = +b.dataset.d;
       try { localStorage.setItem(LS_DIFF, String(difficulty)); } catch (e) {}
-      document.querySelectorAll('.diff').forEach((x) => x.classList.remove('sel'));
-      b.classList.add('sel');
+      diffBtns.forEach((x) => { x.classList.remove('sel'); x.setAttribute('aria-checked', 'false'); });
+      b.classList.add('sel'); b.setAttribute('aria-checked', 'true');
     });
   });
   $('play-tile').addEventListener('click', () => { AU.ensure(); AU.uiTap(); startMatch(); });
 
-  // decorative scatter on the title
+  // title dressing: a short chain arcing across the top (tiles share values,
+  // like a real line) plus two quiet accents low on the table.
   (function scatter() {
     const box = $('title-scatter');
-    const spots = [
-      [8, 12, -18], [82, 8, 14], [12, 68, 22], [80, 72, -12],
-      [68, 30, 38], [24, 40, -32], [45, 82, 8],
+    const chain = [
+      { a: 6, b: 6, x: 5,  y: 6.5, r: -20 },
+      { a: 6, b: 4, x: 23, y: 3,   r: -9 },
+      { a: 4, b: 2, x: 42, y: 1.5, r: 3 },
+      { a: 2, b: 5, x: 61, y: 3,   r: 13 },
+      { a: 5, b: 5, x: 78, y: 6.5, r: 21 },
     ];
-    const vals = [[6, 6], [5, 3], [2, 4], [1, 1], [6, 2], [0, 5], [3, 3]];
-    spots.forEach((sp, i) => {
-      const t = makeTile(vals[i][0], vals[i][1], false);
-      t.style.left = sp[0] + '%'; t.style.top = sp[1] + '%';
-      t.style.transform = 'rotate(' + sp[2] + 'deg)';
-      t.style.opacity = 0.55 + (i % 3) * 0.15;
+    const accents = [
+      { a: 3, b: 4, x: 9,  y: 74, r: 18 },
+      { a: 1, b: 2, x: 79, y: 80, r: -14 },
+    ];
+    chain.forEach((s) => {
+      const t = makeTile(s.a, s.b, false);
+      t.style.left = s.x + '%'; t.style.top = s.y + '%';
+      t.style.transform = 'rotate(' + s.r + 'deg)';
+      t.style.opacity = 0.92;
+      box.appendChild(t);
+    });
+    accents.forEach((s) => {
+      const t = makeTile(s.a, s.b, false);
+      t.style.left = s.x + '%'; t.style.top = s.y + '%';
+      t.style.transform = 'rotate(' + s.r + 'deg)';
+      t.style.opacity = 0.6;
       box.appendChild(t);
     });
   })();

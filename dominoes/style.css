@@ -156,18 +156,26 @@ button{font-family:inherit}
 .title-kicker{font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:#d8b96a;margin-bottom:10px}
 .title-logo{font-size:64px;font-weight:normal;color:#ffe9b0;letter-spacing:.1em;
   text-shadow:0 3px 0 #7a5a22,0 6px 24px rgba(0,0,0,.7);margin-bottom:6px}
-.title-sub{font-size:14px;letter-spacing:.14em;opacity:.75;margin-bottom:26px}
-#diff-row{display:flex;gap:10px;justify-content:center;margin-bottom:30px}
-.diff{background:rgba(12,24,16,.7);border:1px solid rgba(255,220,150,.3);border-radius:12px;
-  color:#f3ead6;padding:10px 14px;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:96px}
-.diff .diff-name{font-size:15px;letter-spacing:.1em;color:#ffe9b0}
-.diff .diff-hint{font-size:10.5px;opacity:.6;font-style:italic}
-.diff.sel{border-color:#ffe9b0;box-shadow:0 0 16px rgba(255,220,150,.35);background:rgba(30,48,28,.85)}
+.title-sub{font-size:14px;letter-spacing:.14em;opacity:.75;margin-bottom:24px}
+.diff-label{font-size:10px;letter-spacing:.34em;text-transform:uppercase;opacity:.55;margin-bottom:8px}
+#diff-seg{display:inline-flex;background:rgba(10,20,14,.65);border:1px solid rgba(255,220,150,.3);
+  border-radius:999px;padding:4px;margin-bottom:28px}
+#diff-seg button{background:none;border:none;color:#f3ead6;font-size:13.5px;letter-spacing:.14em;
+  padding:9px 20px;border-radius:999px;cursor:pointer;opacity:.65}
+#diff-seg button.sel{background:rgba(255,233,176,.18);color:#ffe9b0;opacity:1;
+  box-shadow:inset 0 0 0 1px rgba(255,220,150,.55)}
+/* title mode: HUD, AI bar and restart hide until the first deal */
+#table.title-mode #hud,#table.title-mode #ai-bar,#table.title-mode #btn-restart{display:none}
 #play-tile{position:relative;width:104px;height:190px;margin:0 auto 18px;cursor:pointer;border:none;
   background:linear-gradient(160deg,#faf5e9 0%,#f1e8d2 55%,#dfd0ac 100%);
   border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.65),inset 0 0 0 1px rgba(122,100,64,.4);
   display:flex;flex-direction:column;align-items:stretch;transition:transform .12s}
 #play-tile:active{transform:scale(.94)}
+#play-tile{animation:playPulse 2.8s ease-in-out infinite}
+@keyframes playPulse{
+  0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.65),inset 0 0 0 1px rgba(122,100,64,.4),0 0 0 0 rgba(255,220,150,0)}
+  50%{box-shadow:0 10px 30px rgba(0,0,0,.65),inset 0 0 0 1px rgba(122,100,64,.4),0 0 28px 5px rgba(255,220,150,.35)}
+}
 #play-tile .pt-half{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
   padding:16%;gap:3%}
 #play-tile .pt-half i{border-radius:50%;background:radial-gradient(circle at 35% 30%,#565664,#1b1b21 72%)}
@@ -181,6 +189,7 @@ button{font-family:inherit}
 
 @media (prefers-reduced-motion:reduce){
   #lamp{animation:none}
+  #play-tile{animation:none}
   .endzone.lit{animation:none}
   #ai-thinking span{animation:none}
   #boneyard.need{animation:none}

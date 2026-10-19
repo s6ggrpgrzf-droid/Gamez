@@ -8,11 +8,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dominoes">
 <title>Dominoes</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div id="app">
-  <div id="table">
+  <div id="table" class="title-mode">
     <div id="felt"></div>
     <div id="coffee-ring" aria-hidden="true"></div>
     <div id="lamp" aria-hidden="true"></div>
@@ -82,10 +82,11 @@
         <div class="title-kicker">the café table classic</div>
         <h1 class="title-logo">Dominoes</h1>
         <div class="title-sub">you versus the house · first to 100</div>
-        <div id="diff-row" role="radiogroup" aria-label="Difficulty">
-          <button class="diff" data-d="0" role="radio"><span class="diff-name">Casual</span><span class="diff-hint">a friendly game</span></button>
-          <button class="diff sel" data-d="1" role="radio"><span class="diff-name">Sharp</span><span class="diff-hint">it pays attention</span></button>
-          <button class="diff" data-d="2" role="radio"><span class="diff-name">Shark</span><span class="diff-hint">no mercy</span></button>
+        <div class="diff-label">the house plays</div>
+        <div id="diff-seg" role="radiogroup" aria-label="Difficulty">
+          <button data-d="0" role="radio" aria-checked="false">Casual</button>
+          <button data-d="1" role="radio" aria-checked="true" class="sel">Sharp</button>
+          <button data-d="2" role="radio" aria-checked="false">Shark</button>
         </div>
         <button id="play-tile" aria-label="Play">
           <span class="pt-half"><i></i><i></i><i></i><i></i><i></i><i></i></span>
@@ -100,6 +101,6 @@
 </div>
 <script src="sim.js?v=1"></script>
 <script src="audio.js?v=1"></script>
-<script src="game.js?v=1"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>
