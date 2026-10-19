@@ -288,6 +288,32 @@
     } catch (e) { /* fallback stays */ }
   })();
 
+  /* ---------- feature presentation: tonight's double feature ---------- */
+  (function () {
+    var el = document.getElementById('featShows');
+    if (!el) return;
+    var SHOWS = [
+      { title: 'Wagon Train', meta: '1957–1965 · 269 episodes', accent: '#e8a33d' },
+      { title: 'The Cisco Kid', meta: '1950–1956 · 40 episodes', accent: '#d0523c' },
+      { title: 'Annie Oakley', meta: '1954–1957 · 32 episodes', accent: '#5aa9a0' },
+      { title: 'The Range Rider', meta: '1951–1953 · 27 episodes', accent: '#9a7b4f' },
+      { title: 'Judge Roy Bean', meta: '1955–1957 · 19 episodes', accent: '#c9a227' }
+    ];
+    var day = Math.floor(Date.now() / 86400000);
+    var a = day % SHOWS.length, b = (day * 7 + 3) % SHOWS.length;
+    if (b === a) b = (b + 2) % SHOWS.length;
+    var times = ['7:00 PM', '8:45 PM'];
+    [a, b].forEach(function (si, i) {
+      var s = SHOWS[si];
+      var d = document.createElement('div');
+      d.className = 'feat-show';
+      d.style.setProperty('--sac', s.accent);
+      d.innerHTML = '<span class="t">' + times[i] + '</span><b>' +
+        escapeHtml(s.title) + '</b><span>' + escapeHtml(s.meta) + '</span>';
+      el.appendChild(d);
+    });
+  })();
+
   /* ---------- scroll reveals: cards rise in, staggered ---------- */
   var revealIO = null;
   function observeReveals() {
@@ -305,7 +331,7 @@
     }
     els.forEach(function (el) { revealIO.observe(el); });
   }
-  document.querySelectorAll('.card,.daily,.chip,.shead').forEach(function (el) { el.classList.add('rvl'); });
+  document.querySelectorAll('.card,.daily,.chip,.shead,.feature').forEach(function (el) { el.classList.add('rvl'); });
   observeReveals();
   var WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];

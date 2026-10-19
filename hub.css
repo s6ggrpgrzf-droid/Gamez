@@ -218,3 +218,75 @@ footer{position:relative;z-index:1;color:rgba(255,255,255,.4);font-size:13px;
 
 
 /* Moss & Stone key art: in-game screenshot, baked as data URI */
+
+/* ---------- feature presentation: Six-Shooter Cinema (modern 3D) ---------- */
+.feature{width:100%;max-width:1100px;padding:30px 20px 0;position:relative;z-index:1;perspective:1400px}
+.feat3d{display:block;text-decoration:none;color:#fff}
+.feat-kicker{display:block;font-size:10px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;
+  color:var(--gold);margin:0 4px 12px}
+.feat-screen{
+  position:relative;border-radius:24px;overflow:hidden;min-height:330px;
+  transform:rotateX(7deg);transform-origin:50% 100%;transform-style:preserve-3d;
+  border:1px solid rgba(255,255,255,.16);
+  background:linear-gradient(180deg,#0a1224 0%,#101c36 38%,#1d3260 58%,#6b4a26 76%,#3a2a16 88%,#1c1409 100%);
+  box-shadow:0 34px 80px rgba(0,0,0,.65),0 0 70px rgba(90,169,160,.10),inset 0 1px 0 rgba(255,255,255,.28);
+  transition:transform .25s var(--ease);
+}
+.feat3d:hover .feat-screen{transform:rotateX(3deg)}
+.feat3d:active .feat-screen{transform:rotateX(7deg) scale(.985)}
+.feat-stars{position:absolute;inset:0;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%,#fff,transparent),
+    radial-gradient(1.2px 1.2px at 32% 8%,#fff,transparent),
+    radial-gradient(1.8px 1.8px at 48% 24%,#fff,transparent),
+    radial-gradient(1.2px 1.2px at 64% 12%,#fff,transparent),
+    radial-gradient(1.6px 1.6px at 78% 28%,#fff,transparent),
+    radial-gradient(1.2px 1.2px at 88% 8%,#fff,transparent),
+    radial-gradient(1.4px 1.4px at 22% 38%,#fff,transparent),
+    radial-gradient(1.2px 1.2px at 56% 36%,#fff,transparent),
+    radial-gradient(1.6px 1.6px at 40% 14%,#cfe8ff,transparent),
+    radial-gradient(1.2px 1.2px at 70% 42%,#cfe8ff,transparent);
+  opacity:.85}
+.feat-moon{position:absolute;top:5%;right:7%;width:76px;height:76px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fffbe8,#f5e6bd 58%,#e2c98f);
+  box-shadow:0 0 28px 8px rgba(245,230,189,.35),0 0 90px 32px rgba(245,230,189,.12)}
+.feat-mesa{position:absolute;left:-2%;right:-2%;bottom:-1%}
+.feat-mesa.far{height:44%;background:#141126;opacity:.95;
+  clip-path:polygon(0 100%,0 52%,7% 52%,11% 30%,19% 30%,23% 52%,36% 52%,41% 38%,55% 38%,60% 52%,74% 52%,79% 34%,88% 34%,92% 52%,100% 52%,100% 100%)}
+.feat-mesa.near{height:32%;background:#0a0705;
+  clip-path:polygon(0 100%,0 42%,6% 42%,10% 18%,18% 18%,22% 42%,34% 42%,39% 26%,52% 26%,57% 42%,70% 42%,75% 20%,86% 20%,90% 42%,100% 42%,100% 100%)}
+.feat-sheen{position:absolute;top:-30%;bottom:-30%;left:0;width:45%;pointer-events:none;
+  transform:rotate(16deg) translateX(-350%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent)}
+.js .feat-sheen{animation:featSheen 9s ease-in-out infinite}
+@keyframes featSheen{0%,72%{transform:rotate(16deg) translateX(-350%)}95%,100%{transform:rotate(16deg) translateX(650%)}}
+.feat-copy{position:absolute;top:24px;left:24px;right:24px;transform:translateZ(34px)}
+.feat-copy h2{margin:0;font-family:var(--font-display);font-weight:800;
+  font-size:clamp(30px,6.6vw,48px);letter-spacing:-.01em;
+  text-shadow:0 4px 26px rgba(0,0,0,.65),0 2px 6px rgba(0,0,0,.5)}
+.feat-copy p{margin:8px 0 0;color:rgba(255,255,255,.78);font-size:14px;
+  text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.feat-shows{position:absolute;left:18px;right:18px;bottom:18px;display:flex;gap:10px;
+  transform:translateZ(46px)}
+.feat-show{flex:1;min-width:0;background:rgba(12,10,20,.55);
+  border:1px solid rgba(255,255,255,.16);border-top-color:rgba(255,255,255,.3);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-radius:16px;padding:12px 14px;
+  box-shadow:0 18px 36px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.22)}
+.feat-show .t{display:block;font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--sac,#e8a33d)}
+.feat-show b{display:block;font-family:var(--font-display);font-weight:700;font-size:17px;margin:3px 0 2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feat-show span{font-size:12px;color:rgba(255,255,255,.62)}
+.feat-cta{display:flex;align-items:center;justify-content:space-between;margin:14px 6px 0;
+  font-weight:800;font-size:15px;color:var(--gold)}
+.feat-cta span:last-child{font-size:20px}
+@media (max-width:560px){
+  .feat-screen{min-height:370px;transform:rotateX(4deg)}
+  .feat-shows{flex-direction:column}
+  .feat-moon{width:54px;height:54px;top:4%;right:6%}
+  .feat-copy{padding-right:66px}
+}
+@media (prefers-reduced-motion:reduce){
+  .js .feat-sheen{animation:none;opacity:0}
+  .feat3d:hover .feat-screen,.feat3d:active .feat-screen{transform:rotateX(7deg)}
+}
