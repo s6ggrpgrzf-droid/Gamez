@@ -54,70 +54,144 @@ var MGMT = (function () {
     }
   }
 
-  /* ---------- valley map ---------- */
+  /* ---------- valley map: Pocket-Planes-style flat cartoon ---------- */
+  // tiny white top-down plane silhouette, facing -y, rotated by `ang`
+  function miniPlane(g, x, y, ang, s) {
+    g.save(); g.translate(x, y); g.rotate(ang); g.scale(s, s);
+    g.fillStyle = '#ffffff'; g.strokeStyle = '#7a6238'; g.lineWidth = 1.6;
+    g.lineJoin = 'round';
+    // main wings
+    g.beginPath();
+    g.moveTo(-13, -1); g.lineTo(-3, -4); g.lineTo(-3, 2); g.lineTo(-13, 4);
+    g.closePath(); g.fill(); g.stroke();
+    g.beginPath();
+    g.moveTo(13, -1); g.lineTo(3, -4); g.lineTo(3, 2); g.lineTo(13, 4);
+    g.closePath(); g.fill(); g.stroke();
+    // tail wings
+    g.beginPath();
+    g.moveTo(-7, 7); g.lineTo(-2, 6); g.lineTo(-2, 9); g.lineTo(-7, 10);
+    g.closePath(); g.fill(); g.stroke();
+    g.beginPath();
+    g.moveTo(7, 7); g.lineTo(2, 6); g.lineTo(2, 9); g.lineTo(7, 10);
+    g.closePath(); g.fill(); g.stroke();
+    // fuselage
+    g.beginPath();
+    if (g.roundRect) g.roundRect(-3, -11, 6, 22, 3); else g.rect(-3, -11, 6, 22);
+    g.fill(); g.stroke();
+    // red tail tip (airline livery)
+    g.fillStyle = '#d94f3d';
+    g.beginPath(); g.arc(0, 9, 2.4, 0, 6.29); g.fill();
+    g.restore();
+  }
+  // dark rounded label with white text, centered at (x, y)
+  function mapLabel(g, x, y, text, bg) {
+    g.font = '700 9px ui-rounded, "SF Pro Rounded", system-ui, sans-serif';
+    var w = g.measureText(text).width + 12;
+    g.fillStyle = bg || '#2e3d4d';
+    g.beginPath();
+    if (g.roundRect) g.roundRect(x - w / 2, y - 8, w, 16, 8); else g.rect(x - w / 2, y - 8, w, 16);
+    g.fill();
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, x, y + 0.5);
+    g.textBaseline = 'alphabetic';
+  }
   function renderMap() {
     SK.ensureAirline(pilot);
     $('map-money').textContent = money(pilot.money);
     var cv = $('map-canvas'), g = cv.getContext('2d');
     var W = cv.width, H = cv.height;
-    // parchment background
-    g.fillStyle = '#e8d5ae'; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#dfc89a';
-    for (var i = 0; i < 40; i++) {
-      var rx = (i * 97) % W, ry = (i * 61) % H;
-      g.fillRect(rx, ry, 3, 3);
+    // meadow-green land base
+    g.fillStyle = '#a3c96e'; g.fillRect(0, 0, W, H);
+    // tan field patches (seeded, stable)
+    g.fillStyle = '#d8bf7c';
+    var fields = [[28, 90, 64, 40, 0.3], [250, 60, 70, 44, -0.2], [40, 330, 76, 42, 0.15],
+                  [260, 340, 60, 40, -0.3], [150, 180, 56, 36, 0.2], [300, 180, 52, 60, 0.1]];
+    fields.forEach(function (f) {
+      g.save(); g.translate(f[0], f[1]); g.rotate(f[4]);
+      g.beginPath();
+      if (g.roundRect) g.roundRect(-f[2] / 2, -f[3] / 2, f[2], f[3], 10); else g.rect(-f[2] / 2, -f[3] / 2, f[2], f[3]);
+      g.fill(); g.restore();
+    });
+    // winding river
+    g.strokeStyle = '#5fb2e8'; g.lineWidth = 16; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(232, -10);
+    g.bezierCurveTo(250, 80, 252, 140, 228, 200);
+    g.bezierCurveTo(206, 258, 176, 300, 158, 360);
+    g.bezierCurveTo(150, 392, 146, 410, 144, 430);
+    g.stroke();
+    g.strokeStyle = '#8fd4f5'; g.lineWidth = 5;
+    g.beginPath(); g.moveTo(232, -10);
+    g.bezierCurveTo(250, 80, 252, 140, 228, 200);
+    g.bezierCurveTo(206, 258, 176, 300, 158, 360);
+    g.bezierCurveTo(150, 392, 146, 410, 144, 430);
+    g.stroke();
+    // little lake
+    g.fillStyle = '#5fb2e8';
+    g.beginPath(); g.ellipse(72, 312, 26, 18, 0.4, 0, 6.29); g.fill();
+    g.fillStyle = '#8fd4f5';
+    g.beginPath(); g.ellipse(66, 308, 12, 8, 0.4, 0, 6.29); g.fill();
+    // pine clusters (seeded)
+    g.fillStyle = '#5da24a';
+    for (var pi = 0; pi < 46; pi++) {
+      var px = (pi * 137 + 41) % W, py = (pi * 89 + 173) % H;
+      // keep the river corridor mostly clear
+      if (Math.abs(px - (232 - py * 0.22)) < 26) continue;
+      g.beginPath(); g.arc(px, py, 3 + (pi % 3), 0, 6.29); g.fill();
+      g.beginPath(); g.arc(px + 5, py + 3, 2.5, 0, 6.29); g.fill();
     }
-    // enroute lines
     var now = Date.now();
+    // enroute flights: dotted red route + white plane + label
     pilot.fleet.forEach(function (f) {
       if (f.status !== 'enroute') return;
       var a = SK.stripById(f.at), b = SK.stripById(f.dest);
       var ax = a.mx / 100 * W, ay = a.my / 100 * H;
       var bx = b.mx / 100 * W, by = b.my / 100 * H;
-      // progress
       var total = f.arriveAt - f.departAt, done = now - f.departAt;
       var t = Math.max(0, Math.min(1, done / total));
-      var px = ax + (bx - ax) * t, py = ay + (by - ay) * t;
-      g.strokeStyle = 'rgba(180,140,60,.5)'; g.lineWidth = 2;
-      g.setLineDash([5, 4]);
+      var ex = ax + (bx - ax) * t, ey = ay + (by - ay) * t;
+      g.strokeStyle = '#c25a44'; g.lineWidth = 2.5;
+      g.setLineDash([2, 7]); g.lineCap = 'round';
       g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
       g.setLineDash([]);
-      // plane dot
-      g.fillStyle = '#c94f38';
-      g.beginPath(); g.arc(px, py, 6, 0, 6.29); g.fill();
-      g.fillStyle = '#fff'; g.font = '9px sans-serif'; g.textAlign = 'center';
+      var ang = Math.atan2(by - ay, bx - ax) + Math.PI / 2;
+      miniPlane(g, ex, ey, ang, 0.85);
       var mins = Math.max(1, Math.round((f.arriveAt - now) / 60000));
-      g.fillText(mins + 'm', px, py - 10);
+      var pname = (SK.PLANES.filter(function (p) { return p.id === f.plane; })[0] || { name: 'Plane' }).name;
+      mapLabel(g, ex, ey - 20, pname.toUpperCase() + ' · ' + mins + 'M');
     });
     // strips
     SK.STRIPS.forEach(function (s) {
       var x = s.mx / 100 * W, y = s.my / 100 * H;
       var owned = pilot.strips.indexOf(s.id) >= 0;
-      // dot
-      g.fillStyle = owned ? '#b98a2f' : '#9a8a70';
-      g.strokeStyle = owned ? '#7a5a1e' : '#6a5a40';
-      g.lineWidth = 2;
-      g.beginPath(); g.arc(x, y, owned ? 11 : 9, 0, 6.29); g.fill(); g.stroke();
-      // class tick: grass=green ring, dirt=brown, paved=grey
-      g.strokeStyle = s.cls === 'paved' ? '#666' : s.cls === 'dirt' ? '#8a6234' : '#5a8a3c';
+      // marker
+      g.fillStyle = owned ? '#ffffff' : '#b9b3a6';
+      g.strokeStyle = owned ? '#8a6d3b' : '#8a8478';
       g.lineWidth = 3;
-      g.beginPath(); g.arc(x, y, 14, 0, 6.29); g.stroke();
-      // label
-      g.fillStyle = '#3a2c1c'; g.font = '10px "DM Serif Display", serif'; g.textAlign = 'center';
-      g.fillText(s.name, x, y + 28);
+      g.beginPath(); g.arc(x, y, 11, 0, 6.29); g.fill(); g.stroke();
+      // runway stripe
+      g.strokeStyle = owned ? '#d94f3d' : '#a09a8c'; g.lineWidth = 3; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x - 5, y + 5); g.lineTo(x + 5, y - 5); g.stroke();
+      // name label (small caps, PP style)
+      g.font = '700 10px ui-rounded, "SF Pro Rounded", system-ui, sans-serif';
+      g.fillStyle = '#4a3b28'; g.textAlign = 'center';
+      var nm = s.name.toUpperCase();
+      // soft halo for readability
+      g.fillStyle = 'rgba(255,255,255,.65)';
+      g.fillText(nm, x + 1, y + 29);
+      g.fillStyle = '#4a3b28';
+      g.fillText(nm, x, y + 28);
       if (!owned) {
-        g.fillStyle = '#7a5c2e'; g.font = '9px sans-serif';
-        g.fillText(money(s.cost), x, y + 40);
+        g.font = '700 10px ui-rounded, system-ui, sans-serif';
+        g.fillStyle = '#2e7d32';
+        g.fillText(money(s.cost), x, y + 42);
       }
-      // idle planes at this strip
+      // idle planes at this strip: tiny white planes
       var n = 0;
       pilot.fleet.forEach(function (f) {
         if (f.status === 'idle' && f.at === s.id) n++;
       });
-      if (n) {
-        g.fillStyle = '#2e6b4f'; g.font = 'bold 10px sans-serif';
-        g.fillText('✈'.replace('✈', n + ' plane' + (n > 1 ? 's' : '')), x, y - 18);
-      }
+      for (var k = 0; k < Math.min(n, 3); k++) miniPlane(g, x - 20 + k * 20, y - 24, 0.5, 0.55);
+      if (n > 3) mapLabel(g, x, y - 24, '+' + (n - 3));
     });
     // tap handling
     cv.onclick = function (e) {

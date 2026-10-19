@@ -1,5 +1,6 @@
 /* Skylark art — chunky pixel sprites, pre-rendered once to offscreen canvases.
- * Warm golden-hour palette. Our style: storybook pixel diorama, NOT LP's 3D.
+ * Flat toy-box cartoon palette. Our style: cheerful pocket-planes-like pixel
+ * diorama — original art, not borrowed.
  */
 'use strict';
 var PX = (function () {
