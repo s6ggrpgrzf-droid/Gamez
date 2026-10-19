@@ -293,7 +293,7 @@ function showSummary(st, feeInfo) {
 PX.init();
 
 $('begin').addEventListener('click', function () {
-  AU.ensure(); AU.click();
+  AU.ensure(); AU.click(); lockLandscape();
   $('title').classList.add('hide');
   setTimeout(function () { $('title').style.display = 'none'; }, 850);
   renderHangar();
@@ -342,6 +342,30 @@ function sizeCanvas() {
 }
 window.addEventListener('resize', sizeCanvas);
 sizeCanvas();
+
+/* landscape gate: Skylark flies sideways, like Pocket Planes.
+   Portrait shows a rotate prompt; a running flight pauses until landscape. */
+var orientMQ = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+function applyOrientation() {
+  var p = !!(orientMQ && orientMQ.matches);
+  document.body.classList.toggle('portrait', p);
+  if (typeof F !== 'undefined' && F) {
+    if (p) { if (F.running) { F.rotPaused = true; stopFlightLoop(); } }
+    else if (F.rotPaused) { F.rotPaused = false; startLoop(); }
+  }
+  sizeCanvas();
+}
+if (orientMQ) {
+  if (orientMQ.addEventListener) orientMQ.addEventListener('change', applyOrientation);
+  else if (orientMQ.addListener) orientMQ.addListener(applyOrientation);
+}
+applyOrientation();
+function lockLandscape() {
+  try {
+    if (screen.orientation && screen.orientation.lock)
+      screen.orientation.lock('landscape').catch(function () {});
+  } catch (e) {}
+}
 
 /* weather palettes */
 var SKIES = {
@@ -451,14 +475,18 @@ function stopFlightLoop() {
 }
 
 /* fly a jobs-board flight yourself: from strip A to strip B with selected jobs.
-   Payout = jobs total (+25% same-dest bonus), baked into a synthetic route. */
-function startFlightWithJobs(fromId, destId, jobs) {
+   Payout = jobs total (+25% same-dest bonus), baked into a synthetic route.
+   fleetIdx/remStops/remJobs: when this leg is the first of a plotted multi-stop
+   route, the rest of the route continues as background flights after landing. */
+function startFlightWithJobs(fromId, destId, jobs, fleetIdx, remStops, remJobs) {
   var pay = SK.flightPayout(jobs);
   var paxJobs = jobs.filter(function (j) { return j.kind === 'pax'; });
   var cargoJobs = jobs.filter(function (j) { return j.kind === 'cargo'; });
   var from = SK.stripById(fromId), to = SK.stripById(destId);
+  remStops = remStops || []; remJobs = remJobs || [];
   var route = {
-    from: from.name, to: to.name,
+    from: from.name,
+    to: to.name + (remStops.length ? ' → ' + remStops.map(function (id) { return SK.stripById(id).name; }).join(' → ') : ''),
     dist: 9000 + Math.floor(Math.abs(from.mx - to.mx) * 120),
     paxN: paxJobs.length, cargoN: cargoJobs.length,
     weather: 'day', wind: 0, wx: 'clear',
@@ -466,7 +494,9 @@ function startFlightWithJobs(fromId, destId, jobs) {
     jobFlight: true, jobs: jobs, bonus: pay.bonus,
   };
   if (pilot.planes.indexOf(pilot.activePlane) < 0) pilot.activePlane = pilot.planes[0];
-  var st = SK.newFlight(hashStr('skylark-job-' + Date.now()), route, pilot.activePlane, pilot);
+  var planeId = (fleetIdx != null && pilot.fleet[fleetIdx]) ? pilot.fleet[fleetIdx].plane : pilot.activePlane;
+  var st = SK.newFlight(hashStr('skylark-job-' + Date.now()), route, planeId, pilot);
+  st.routeMeta = { fleetIdx: fleetIdx, destId: destId, remStops: remStops, remJobs: remJobs };
   // override pax with the actual job passengers
   st.pax = paxJobs.map(function (j) { return { name: j.name, story: j.story, mood: 1.0 }; });
   var decor = makeDecor(st.seed, route.dist + 700);
@@ -1628,6 +1658,24 @@ function drawRibbon(st, camX, as, gy) {
 function finishFlight(st) {
   var feeInfo = SK.applyFlightResult(pilot, st);
   if (pilot.best == null || st.score > pilot.best) pilot.best = st.score;
+  // hybrid handoff: a hand-flown route leg moves the fleet plane to the stop,
+  // then the remaining route continues as background flights
+  if (st.routeMeta && st.routeMeta.fleetIdx != null) {
+    SK.ensureAirline(pilot);
+    var f = pilot.fleet[st.routeMeta.fleetIdx];
+    if (f && f.status === 'idle') {
+      f.at = st.routeMeta.destId;
+      f.jobs = []; f.dest = null;
+      var rs = st.routeMeta.remStops || [];
+      if (rs.length) {
+        var rr = SK.assignRoute(pilot, st.routeMeta.fleetIdx,
+          [st.routeMeta.destId].concat(rs), st.routeMeta.remJobs || []);
+        if (rr.ok) setTimeout(function () {
+          toast('Continuing on to ' + rs.map(function (id) { return SK.stripById(id).name; }).join(' → '));
+        }, 1200);
+      }
+    }
+  }
   savePilot();
   postScore(st.score + st.payout / 50);
   showSummary(st, feeInfo);
