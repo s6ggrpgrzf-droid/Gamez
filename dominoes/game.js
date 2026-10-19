@@ -282,7 +282,15 @@
     });
     // keep selection valid
     if (selected >= rackTiles.length) selected = -1;
+    fitRack();
   }
+  // Size rack tiles so the whole hand always fits on screen — never cut off.
+  function rackTileW() {
+    const n = Math.max(1, S.hands[0].length);
+    const avail = window.innerWidth - 28 - (n - 1) * 8; // rack side padding + gaps
+    return Math.min(54, Math.floor(avail / n));
+  }
+  function fitRack() { $('rack').style.setProperty('--tw', rackTileW() + 'px'); }
   function clearEndzones() {
     $('ez-head').className = 'endzone hidden';
     $('ez-tail').className = 'endzone hidden';
@@ -351,7 +359,8 @@
     // ghost flight from boneyard to rack
     const bp = tileScreenPos($('bone-stack'));
     const ghost = makeTile(0, 0, true);
-    ghost.style.cssText = 'position:fixed;left:' + (bp.x - 27) + 'px;top:' + (bp.y - 52) + 'px;width:54px;height:104px;z-index:65;transition:transform .34s ease';
+    const gtw = rackTileW(), gth = Math.round(gtw * 1.9259);
+    ghost.style.cssText = 'position:fixed;left:' + (bp.x - gtw / 2) + 'px;top:' + (bp.y - gth / 2) + 'px;width:' + gtw + 'px;height:' + gth + 'px;z-index:65;transition:transform .34s ease';
     document.body.appendChild(ghost);
     const rack = $('rack').getBoundingClientRect();
     const dx = rack.left + rack.width / 2 - bp.x, dy = rack.top + 40 - bp.y;
@@ -739,7 +748,7 @@
   })();
 
   /* ---------------- boot ---------------- */
-  function onResize() { sizeFx(); if (uiPhase !== 'title') layout(false); }
+  function onResize() { sizeFx(); if (uiPhase !== 'title') { layout(false); fitRack(); } }
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => setTimeout(onResize, 200));
   sizeFx();
