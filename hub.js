@@ -241,7 +241,7 @@
     var FALLBACK = [
       { game: 'skylark', blurb: 'Golden hour over the valley. Load up the Kite and chase the 25% same-destination bonus.' },
       { game: 'neon-void', blurb: 'Turn it up, thread the gravity wells, and try not to blink. The swarm is waiting.' },
-      { game: 'skylark', blurb: 'Golden hour over the valley. Load up the Kite and chase the 25% same-destination bonus.' }
+      { game: 'tiny-fairway', blurb: 'One hole, worldwide. Drag back anywhere and let fly — the turtle is judging your bogeys.' }
     ];
     function cardFor(id) {
       return document.querySelector('.card[data-game="' + id + '"]');
@@ -253,7 +253,7 @@
         var card = cardFor(p.game);
         if (!card) return;
         var a = document.createElement('a');
-        a.className = 'ed-pick rvl';
+        a.className = 'ed-pick rv';
         a.href = card.getAttribute('href');
         a.style.setProperty('--glow', card.style.getPropertyValue('--glow') || '#4de3ff');
         a.style.transitionDelay = (i * 90) + 'ms';
@@ -317,7 +317,7 @@
   /* ---------- scroll reveals: cards rise in, staggered ---------- */
   var revealIO = null;
   function observeReveals() {
-    var els = document.querySelectorAll('.rvl:not(.in)');
+    var els = document.querySelectorAll('.rv:not(.in)');
     if (!('IntersectionObserver' in window) || !els.length) {
       els.forEach(function (el) { el.classList.add('in'); });
       return;
@@ -331,7 +331,7 @@
     }
     els.forEach(function (el) { revealIO.observe(el); });
   }
-  document.querySelectorAll('.card,.daily,.chip,.shead,.feature').forEach(function (el) { el.classList.add('rvl'); });
+  document.querySelectorAll('.card,.daily,.chip,.shead,.feature').forEach(function (el) { el.classList.add('rv'); });
   observeReveals();
   var WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
