@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Skylark</title>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div id="app">
@@ -97,8 +97,15 @@
         <h2>Valley Network</h2>
         <div class="pilot-line"><span id="map-money">$0</span></div>
       </div>
-      <div id="map-canvas-wrap"><canvas id="map-canvas" width="360" height="420"></canvas></div>
+      <div id="map-canvas-wrap"><canvas id="map-canvas" width="640" height="400"></canvas></div>
       <div id="map-legend">white = yours &middot; grey = for sale &middot; tap a strip</div>
+      <div id="route-bar" class="hidden">
+        <div id="route-info">Tap stops in order</div>
+        <button id="route-undo" class="route-btn" title="undo last stop">&#x21A9;</button>
+        <button id="route-flyme" class="route-btn" title="fly the first leg yourself">Fly leg 1</button>
+        <button id="route-fly" class="route-btn" title="send the plane">FLY</button>
+        <button id="route-cancel" class="route-btn" title="cancel">&#x2715;</button>
+      </div>
       <button id="b-map-back" class="link-btn">back to hangar</button>
     </div>
   </div>
@@ -157,13 +164,22 @@
   </div>
 
   <div id="toast"></div>
+
+  <!-- landscape gate: Skylark flies sideways, like the big iron -->
+  <div id="rotate" aria-hidden="true">
+    <div class="rot-card">
+      <div class="rot-icon"><span class="rot-phone"></span></div>
+      <div class="rot-title">Rotate your device</div>
+      <div class="rot-sub">Skylark flies in landscape.</div>
+    </div>
+  </div>
 </div>
 
-<script src="sim.js?v=7"></script>
+<script src="sim.js?v=8"></script>
 <script src="art.js?v=5"></script>
 <script src="audio.js?v=2"></script>
 <script src="cockpit.js?v=1"></script>
-<script src="game.js?v=11"></script>
-<script src="mgmt.js?v=3"></script>
+<script src="game.js?v=12"></script>
+<script src="mgmt.js?v=4"></script>
 </body>
 </html>
