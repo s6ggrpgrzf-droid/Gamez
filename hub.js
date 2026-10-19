@@ -134,6 +134,7 @@
     { id: 'blood-moon', name: 'Blood Moon', cls: 'art-blood-moon' },
     { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' },
     { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
+    { id: 'dominoes', name: 'Dominoes', cls: 'art-dominoes' },
   ];
   function progressFor(id) {
     // returns {label, frac} or null

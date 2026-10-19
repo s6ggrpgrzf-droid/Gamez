@@ -1,0 +1,49 @@
+/* Dominoes hub key art — pure CSS: ivory tiles on café felt.
+ * (Uses ::before + .dm2; ::after is the hub's shared grade.) */
+.art-dominoes{position:relative;overflow:hidden;
+  background:radial-gradient(130% 110% at 50% 18%, #2f8452 0%, #1d5c36 55%, #0e2c19 100%);}
+.art-dominoes::before{content:'';position:absolute;width:46px;height:92px;left:15%;top:8%;
+  transform:rotate(-14deg);border-radius:8px;
+  box-shadow:0 8px 18px rgba(0,0,0,.55), inset 0 0 0 1px rgba(122,100,64,.45), inset 0 2px 2px rgba(255,255,255,.45);
+  background-repeat:no-repeat;
+  background-image:
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    radial-gradient(circle, #24242d 3.4px, transparent 4.4px),
+    linear-gradient(180deg, transparent calc(50% - 1px), rgba(110,85,50,.65) calc(50% - 1px), rgba(110,85,50,.65) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(160deg,#faf5e9 0%,#f1e8d2 60%,#e0cfa9 100%);
+  background-position:
+    28% 7%, 72% 7%, 28% 19%, 72% 19%, 28% 31%, 72% 31%,
+    28% 61%, 72% 61%, 50% 73%, 28% 86%, 72% 86%,
+    0 0, 0 0;
+  background-size:
+    13px 13px, 13px 13px, 13px 13px, 13px 13px, 13px 13px, 13px 13px,
+    13px 13px, 13px 13px, 13px 13px, 13px 13px, 13px 13px,
+    100% 100%, 100% 100%;}
+.art-dominoes .dm2{position:absolute;width:40px;height:80px;right:16%;bottom:6%;
+  transform:rotate(11deg);border-radius:7px;
+  box-shadow:0 8px 18px rgba(0,0,0,.55), inset 0 0 0 1px rgba(122,100,64,.45), inset 0 2px 2px rgba(255,255,255,.45);
+  background-repeat:no-repeat;
+  background-image:
+    radial-gradient(circle, #24242d 3.2px, transparent 4.2px),
+    radial-gradient(circle, #24242d 3.2px, transparent 4.2px),
+    radial-gradient(circle, #24242d 3.2px, transparent 4.2px),
+    radial-gradient(circle, #24242d 3.2px, transparent 4.2px),
+    radial-gradient(circle, #24242d 3.2px, transparent 4.2px),
+    linear-gradient(180deg, transparent calc(50% - 1px), rgba(110,85,50,.65) calc(50% - 1px), rgba(110,85,50,.65) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(160deg,#faf5e9 0%,#f1e8d2 60%,#e0cfa9 100%);
+  background-position:
+    28% 10%, 72% 10%, 28% 34%, 72% 34%,
+    50% 72%,
+    0 0, 0 0;
+  background-size:
+    12px 12px, 12px 12px, 12px 12px, 12px 12px, 12px 12px,
+    100% 100%, 100% 100%;}

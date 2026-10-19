@@ -1,0 +1,254 @@
+/* Dominoes sim — pure game logic, no DOM.
+ * Classic Draw rules: double-six, 2 players, 7 tiles each, boneyard draws,
+ * highest double opens, race to 100. Seeded PRNG (mulberry32) throughout.
+ */
+'use strict';
+
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function newSet() {
+  const tiles = [];
+  for (let a = 0; a <= 6; a++)
+    for (let b = a; b <= 6; b++) tiles.push({ a, b });
+  return tiles; // 28 tiles, a <= b
+}
+
+function pips(t) { return t.a + t.b; }
+function handPips(hand) { return hand.reduce((s, t) => s + pips(t), 0); }
+function tileKey(t) { return t.a + '-' + t.b; }
+
+function shuffled(set, rng) {
+  const d = set.slice();
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+/* Board node: {id, a, b, headVal} — headVal is the pip value of the half
+ * facing the head (left) end of the chain. Tail value = a + b - headVal.
+ * board[0] is the head-most tile, board[n-1] the tail-most. */
+let _nextId = 1;
+function nodeId() { return _nextId++; }
+
+function exposed(state) {
+  const b = state.board;
+  if (!b.length) return { head: -1, tail: -1 };
+  const h = b[0], t = b[b.length - 1];
+  return { head: h.headVal, tail: t.a + t.b - t.headVal };
+}
+
+function legalMoves(hand, ends) {
+  const moves = [];
+  for (let i = 0; i < hand.length; i++) {
+    const t = hand[i];
+    if (t.a === ends.head || t.b === ends.head) moves.push({ tileIdx: i, end: 'head' });
+    if (t.a === ends.tail || t.b === ends.tail) moves.push({ tileIdx: i, end: 'tail' });
+  }
+  return moves;
+}
+
+function canPlay(state, player) {
+  return legalMoves(state.hands[player], exposed(state)).length > 0;
+}
+
+function newGame(seed, target) {
+  _nextId = 1;
+  const rng = mulberry32(seed == null ? (Date.now() % 2147483647) : seed);
+  const st = {
+    rng, target: target || 100, round: 1,
+    scores: [0, 0],           // [you, house]
+    hands: [[], []], boneyard: [], board: [],
+    turn: 0, phase: 'play', passes: 0,
+    winner: null, roundPts: 0, roundReason: null,
+    knockSuits: { player: -1, suits: [] }, // last knocker + values they couldn't match
+    lastEvents: [],
+  };
+  dealRound(st);
+  return st;
+}
+
+function highestOpener(hands) {
+  // returns {player, tileIdx} — highest double, else highest tile
+  let best = null;
+  for (let p = 0; p < 2; p++) {
+    for (let i = 0; i < hands[p].length; i++) {
+      const t = hands[p][i];
+      const score = (t.a === t.b ? 100 : 0) + t.a + t.b;
+      const tiebreak = Math.max(t.a, t.b);
+      if (!best || score > best.score || (score === best.score && tiebreak > best.tiebreak))
+        best = { player: p, tileIdx: i, score, tiebreak };
+    }
+  }
+  return best;
+}
+
+function dealRound(st) {
+  const deck = shuffled(newSet(), st.rng);
+  st.hands = [[], []];
+  for (let i = 0; i < 7; i++) { st.hands[0].push(deck.pop()); st.hands[1].push(deck.pop()); }
+  st.boneyard = deck;
+  st.board = [];
+  st.passes = 0;
+  st.winner = null; st.roundPts = 0; st.roundReason = null;
+  st.knockSuits = { player: -1, suits: [] };
+  st.phase = 'play';
+  // Opening play: highest double (or highest tile) to the center.
+  const op = highestOpener(st.hands);
+  const tile = st.hands[op.player].splice(op.tileIdx, 1)[0];
+  st.board.push({ id: nodeId(), a: tile.a, b: tile.b, headVal: tile.a, opener: true });
+  st.turn = 1 - op.player;
+  st.lastEvents = [{ t: 'open', player: op.player, tile: { a: tile.a, b: tile.b }, nodeId: st.board[0].id }];
+}
+
+function playTile(st, player, tileIdx, end) {
+  st.lastEvents = [];
+  if (st.phase !== 'play') return { ok: false, err: 'not-playing' };
+  if (player !== st.turn) return { ok: false, err: 'not-your-turn' };
+  const hand = st.hands[player];
+  if (tileIdx < 0 || tileIdx >= hand.length) return { ok: false, err: 'bad-tile' };
+  const ends = exposed(st);
+  const t = hand[tileIdx];
+  const ev = end === 'head' ? ends.head : end === 'tail' ? ends.tail : -1;
+  if (ev < 0 || (t.a !== ev && t.b !== ev)) return { ok: false, err: 'no-match' };
+  hand.splice(tileIdx, 1);
+  // matching half faces the existing chain; the other half faces outward.
+  const headVal = end === 'tail' ? ev : (t.a + t.b - ev);
+  const node = { id: nodeId(), a: t.a, b: t.b, headVal };
+  if (end === 'tail') st.board.push(node); else st.board.unshift(node);
+  st.passes = 0;
+  st.lastEvents.push({ t: 'play', player, tile: { a: t.a, b: t.b }, end, nodeId: node.id });
+  if (hand.length === 0) { endRound(st, 'domino', player); }
+  else st.turn = 1 - player;
+  return { ok: true, events: st.lastEvents };
+}
+
+function drawTile(st, player) {
+  st.lastEvents = [];
+  if (st.phase !== 'play') return { ok: false, err: 'not-playing' };
+  if (player !== st.turn) return { ok: false, err: 'not-your-turn' };
+  if (!st.boneyard.length) return { ok: false, err: 'boneyard-empty' };
+  if (canPlay(st, player)) return { ok: false, err: 'has-move' };
+  const t = st.boneyard.pop();
+  st.hands[player].push(t);
+  st.lastEvents.push({ t: 'draw', player, tile: { a: t.a, b: t.b }, boneyard: st.boneyard.length });
+  return { ok: true, events: st.lastEvents };
+}
+
+function knock(st, player) {
+  st.lastEvents = [];
+  if (st.phase !== 'play') return { ok: false, err: 'not-playing' };
+  if (player !== st.turn) return { ok: false, err: 'not-your-turn' };
+  if (st.boneyard.length) return { ok: false, err: 'boneyard-not-empty' };
+  if (canPlay(st, player)) return { ok: false, err: 'has-move' };
+  const ends = exposed(st);
+  st.knockSuits = { player, suits: [ends.head, ends.tail] };
+  st.passes++;
+  st.lastEvents.push({ t: 'knock', player });
+  if (st.passes >= 2) endRound(st, 'blocked', -1);
+  else st.turn = 1 - player;
+  return { ok: true, events: st.lastEvents };
+}
+
+function endRound(st, reason, dominoPlayer) {
+  st.phase = 'roundEnd';
+  st.roundReason = reason;
+  const p0 = handPips(st.hands[0]), p1 = handPips(st.hands[1]);
+  const bone = st.boneyard.reduce((s, t) => s + pips(t), 0);
+  if (reason === 'domino') {
+    st.winner = dominoPlayer;
+    st.roundPts = (dominoPlayer === 0 ? p1 : p0) + bone;
+  } else {
+    if (p0 === p1) { st.winner = null; st.roundPts = 0; }
+    else { st.winner = p0 < p1 ? 0 : 1; st.roundPts = Math.abs(p0 - p1); }
+  }
+  if (st.winner != null) {
+    st.scores[st.winner] += st.roundPts;
+    st.lastEvents.push({
+      t: 'roundEnd', reason, winner: st.winner, pts: st.roundPts,
+      handPips: [p0, p1], scores: st.scores.slice(),
+    });
+    if (st.scores[st.winner] >= st.target) {
+      st.phase = 'matchEnd';
+      st.lastEvents.push({ t: 'matchEnd', winner: st.winner, scores: st.scores.slice() });
+    }
+  } else {
+    st.lastEvents.push({ t: 'roundEnd', reason, winner: null, pts: 0, handPips: [p0, p1], scores: st.scores.slice() });
+  }
+}
+
+function nextRound(st) {
+  if (st.phase !== 'roundEnd') return { ok: false, err: 'not-round-end' };
+  st.round++;
+  dealRound(st);
+  return { ok: true, events: st.lastEvents };
+}
+
+/* ---------------- AI ---------------- */
+function scoreMove(st, player, mv) {
+  const hand = st.hands[player];
+  const t = hand[mv.tileIdx];
+  const ends = exposed(st);
+  const ev = mv.end === 'head' ? ends.head : ends.tail;
+  const other = t.a + t.b - ev; // the new exposed value after this play
+  let s = 0;
+  if (t.a === t.b) s += 3 + (st.board.length < 8 ? 2 : 0); // doubles early
+  s += pips(t) * 0.35;                                    // dump heavy tiles
+  // attack the suit the *opponent* just knocked on
+  if (st.knockSuits.player !== player && st.knockSuits.suits.includes(other)) s += 3;
+  // keep future options: tiles matching the new ends
+  const newEnds = mv.end === 'head'
+    ? { head: other, tail: ends.tail } : { head: ends.head, tail: other };
+  let future = 0;
+  for (let i = 0; i < hand.length; i++) {
+    if (i === mv.tileIdx) continue;
+    const h = hand[i];
+    if (h.a === newEnds.head || h.b === newEnds.head || h.a === newEnds.tail || h.b === newEnds.tail) future++;
+  }
+  s += future * 0.6;
+  // endgame push
+  if (hand.length - 1 <= 2) s += 5;
+  if (hand.length - 1 === 0) s += 50;
+  return s;
+}
+
+// difficulty: 0 casual, 1 sharp, 2 shark
+function aiChoose(st, player, difficulty) {
+  const moves = legalMoves(st.hands[player], exposed(st));
+  if (!moves.length) {
+    if (st.boneyard.length) return { type: 'draw' };
+    return { type: 'knock' };
+  }
+  if (difficulty === 0) {
+    const mv = moves[Math.floor(st.rng() * moves.length)];
+    return { type: 'play', tileIdx: mv.tileIdx, end: mv.end };
+  }
+  let best = null, bestS = -1e9;
+  for (const mv of moves) {
+    let s = scoreMove(st, player, mv);
+    if (difficulty === 1) s += (st.rng() - 0.5) * 3; // noise
+    if (difficulty === 2) {
+      // shark: extra endgame discipline, no noise
+      const hand = st.hands[player];
+      if (hand.length <= 4) s += pips(hand[mv.tileIdx]) * 0.3;
+    }
+    if (s > bestS) { bestS = s; best = mv; }
+  }
+  return { type: 'play', tileIdx: best.tileIdx, end: best.end };
+}
+
+const api = {
+  mulberry32, newSet, newGame, dealRound, playTile, drawTile, knock,
+  nextRound, legalMoves, canPlay, exposed, aiChoose, pips, handPips, tileKey,
+};
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+if (typeof window !== 'undefined') window.DomSim = api;
