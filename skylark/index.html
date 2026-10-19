@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div id="app">
@@ -80,7 +80,9 @@
         <h2>Flight Board</h2>
         <div class="pilot-line"><span id="pilot-name">Pilot</span> &middot; <span id="pilot-rank">Student</span> &middot; <span id="pilot-money">$350</span></div>
       </div>
-      <div id="route-cards"></div>
+      <button id="b-map" class="map-cta">Valley Map &rsaquo;</button>
+      <div id="fleet-row"></div>
+      <div class="hangar-hint">Pick up jobs at your strips on the Valley Map — or send your fleet out while you fly.</div>
       <h3 class="board-h">Aircraft</h3>
       <div id="plane-row"></div>
       <h3 class="board-h">Training</h3>
@@ -88,6 +90,38 @@
       <h3 class="board-h">Logbook</h3>
       <div id="logbook"></div>
       <button id="to-title" class="link-btn">back to title</button>
+    </div>
+  </div>
+
+  <!-- valley map: your airline network -->
+  <div id="valleymap" class="hidden">
+    <div class="map-wrap">
+      <div class="map-head">
+        <h2>Valley Network</h2>
+        <div class="pilot-line"><span id="map-money">$0</span></div>
+      </div>
+      <div id="map-canvas-wrap"><canvas id="map-canvas" width="360" height="420"></canvas></div>
+      <div id="map-legend">gold = yours &middot; grey = for sale &middot; tap a strip</div>
+      <button id="b-map-back" class="link-btn">back to hangar</button>
+    </div>
+  </div>
+
+  <!-- strip detail: jobs board + assign flights -->
+  <div id="stripdetail" class="hidden">
+    <div class="strip-card">
+      <div class="strip-kicker" id="sd-kicker">AIRSTRIP</div>
+      <div class="strip-name" id="sd-name">—</div>
+      <div class="strip-desc" id="sd-desc">—</div>
+      <div id="sd-buywrap"></div>
+      <h3 class="board-h">Waiting jobs</h3>
+      <div id="sd-jobs"></div>
+      <div id="sd-bonus" class="bonus-note hidden"></div>
+      <h3 class="board-h">Send a plane</h3>
+      <div id="sd-fleet"></div>
+      <div class="strip-btns">
+        <button id="b-sd-fly" class="hidden">Fly it yourself &rsaquo;</button>
+        <button id="b-sd-back" class="link-btn">back to map</button>
+      </div>
     </div>
   </div>
 
@@ -128,10 +162,11 @@
   <div id="toast"></div>
 </div>
 
-<script src="sim.js?v=6"></script>
+<script src="sim.js?v=7"></script>
 <script src="art.js?v=4"></script>
 <script src="audio.js?v=2"></script>
 <script src="cockpit.js?v=1"></script>
-<script src="game.js?v=8"></script>
+<script src="game.js?v=10"></script>
+<script src="mgmt.js?v=1"></script>
 </body>
 </html>

@@ -153,7 +153,7 @@ function postScore(score) {
 /* ---------------- screens ---------------- */
 var screen = 'title';
 function show(id) {
-  ['title', 'hangar', 'summary', 'manifest'].forEach(function (s) { $(s).classList.add('hidden'); });
+  ['title', 'hangar', 'summary', 'manifest', 'valleymap', 'stripdetail'].forEach(function (s) { $(s).classList.add('hidden'); });
   $('hud').classList.add('hidden');
   if (id) $(id).classList.remove('hidden');
   screen = id || 'flight';
@@ -161,9 +161,6 @@ function show(id) {
 }
 
 /* ---------------- hangar ---------------- */
-var routes = [];
-var selectedRoute = 0;
-
 function money(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
 
 function renderHangar() {
@@ -171,25 +168,8 @@ function renderHangar() {
   $('pilot-rank').textContent = SK.RANKS[pilot.rank] || 'Student';
   $('pilot-money').textContent = money(pilot.money);
 
-  // route cards
-  var rc = $('route-cards');
-  rc.innerHTML = '';
-  routes.forEach(function (r, i) {
-    var b = document.createElement('button');
-    b.className = 'route-card';
-    var wicon = r.weather === 'night' ? 'night' : r.weather;
-    var wxicon = r.wx === 'rain' ? ' · rain' : r.wx === 'wind' ? ' · gusty' : r.wx === 'snow' ? ' · snow' : '';
-    var mins = Math.max(1, Math.round(r.dist / 210 / 60 * 2) / 2);
-    b.innerHTML =
-      '<span class="rc-pay">' + money(r.payout) + '</span>' +
-      '<div class="rc-route">' + r.from + ' &rarr; ' + r.to + '</div>' +
-      '<div class="rc-meta">' + r.paxN + ' passengers &middot; ' + r.cargoN + ' cargo &middot; ' +
-      '~' + mins + ' min &middot; ' + wicon + wxicon +
-      (r.wind ? ' &middot; wind ' + Math.abs(r.wind) + 'kts' : '') + '</div>' +
-      '<span class="rc-go">FLY THIS ROUTE &rsaquo;</span>';
-    b.addEventListener('click', function () { AU.click(); showManifest(i); });
-    rc.appendChild(b);
-  });
+  // fleet status (management layer)
+  if (typeof MGMT !== 'undefined') MGMT.renderFleetRow();
 
   // planes
   var pr = $('plane-row');
@@ -311,7 +291,6 @@ function showSummary(st, feeInfo) {
 
 /* ---------------- boot ---------------- */
 PX.init();
-routes = SK.dailyRoutes(hashStr('skylark-' + dateKey()), pilot.home);
 
 $('begin').addEventListener('click', function () {
   AU.ensure(); AU.click();
@@ -326,7 +305,7 @@ $('to-title').addEventListener('click', function () {
   requestAnimationFrame(function () { $('title').classList.remove('hide'); });
   show('title');
 });
-$('b-again').addEventListener('click', function () { AU.click(); showManifest(selectedRoute); });
+$('b-again').addEventListener('click', function () { AU.click(); if (typeof MGMT !== 'undefined') MGMT.renderMap(); show('valleymap'); });
 $('b-board').addEventListener('click', function () { AU.click(); AU.ensure(); startFlight(); });
 $('b-manifest-back').addEventListener('click', function () { AU.click(); pendingFlight = null; renderHangar(); show('hangar'); });
 $('b-hangar').addEventListener('click', function () { AU.click(); renderHangar(); show('hangar'); });
@@ -439,59 +418,15 @@ var F = null;
 
 /* manifest: passport-style boarding docs, shown before each flight */
 var pendingFlight = null;
-function showManifest(i) {
-  selectedRoute = i;
-  var route = routes[i];
-  if (pilot.planes.indexOf(pilot.activePlane) < 0) pilot.activePlane = pilot.planes[0];
-  var st = SK.newFlight(hashStr('skylark-' + dateKey() + '-r' + i), route, pilot.activePlane, pilot);
-  var decor = makeDecor(st.seed, route.dist + 700);
-  pendingFlight = { st: st, decor: decor };
-  enrichPassengers(st);
-  // render passports
-  $('mani-route').textContent = route.from + ' → ' + route.to;
-  $('mani-plane').textContent = st.plane.name + ' · ' + st.pax.length + ' passenger' + (st.pax.length > 1 ? 's' : '');
-  var list = $('mani-pax');
-  list.innerHTML = '';
-  st.pax.forEach(function (p, idx) {
-    var d = document.createElement('div');
-    d.className = 'passport';
-    var cv = document.createElement('canvas');
-    cv.className = 'pp-photo'; cv.width = 60; cv.height = 72;
-    var g = cv.getContext('2d');
-    g.imageSmoothingEnabled = false;
-    g.drawImage(PX.face(hashStr(p.name) + idx * 7), 0, 0, 60, 72);
-    var info = document.createElement('div');
-    info.className = 'pp-info';
-    info.innerHTML =
-      '<div class="pp-name">' + p.name + '</div>' +
-      '<div class="pp-story">' + (p.story || '') + '</div>' +
-      '<div class="pp-dest">&rarr; ' + route.to.toUpperCase() + '</div>' +
-      '<div class="pp-mrz">SKY&gt;&gt;&gt;' + p.name.replace(/[^A-Z]/gi, '').toUpperCase().slice(0, 12) +
-      '&gt;&gt;' + dateKey().replace(/-/g, '') + '</div>';
-    var stamp = document.createElement('div');
-    stamp.className = 'pp-stamp';
-    stamp.textContent = 'BOARDED';
-    d.appendChild(cv); d.appendChild(info); d.appendChild(stamp);
-    list.appendChild(d);
-  });
-  if (!st.pax.length) {
-    list.innerHTML = '<div class="pp-empty">Cargo run — no passengers, just the hum of the engine.</div>';
-  }
-  show('manifest');
-}
 
-function startFlight(i) {
-  selectedRoute = (typeof i === 'number') ? i : selectedRoute;
-  var route = routes[selectedRoute];
+function startFlight() {
   var st, decor;
-  if (pendingFlight && pendingFlight.st.route === route) {
+  if (pendingFlight) {
     st = pendingFlight.st; decor = pendingFlight.decor;
     pendingFlight = null;
   } else {
-    if (pilot.planes.indexOf(pilot.activePlane) < 0) pilot.activePlane = pilot.planes[0];
-    st = SK.newFlight(hashStr('skylark-' + dateKey() + '-r' + selectedRoute), route, pilot.activePlane, pilot);
-    decor = makeDecor(st.seed, route.dist + 700);
-    enrichPassengers(st);
+    // nothing queued — back to the hangar
+    renderHangar(); show('hangar'); return;
   }
   F = { st: st, decor: decor, input: { throttle: 0, pitch: 0, lateral: 0, flaps: 0 },
         lastT: 0, running: false, lastMsg: 0, landPlayed: false, endT: 0,
@@ -513,6 +448,52 @@ function startFlight(i) {
 
 function stopFlightLoop() {
   if (F) F.running = false;
+}
+
+/* fly a jobs-board flight yourself: from strip A to strip B with selected jobs.
+   Payout = jobs total (+25% same-dest bonus), baked into a synthetic route. */
+function startFlightWithJobs(fromId, destId, jobs) {
+  var pay = SK.flightPayout(jobs);
+  var paxJobs = jobs.filter(function (j) { return j.kind === 'pax'; });
+  var cargoJobs = jobs.filter(function (j) { return j.kind === 'cargo'; });
+  var from = SK.stripById(fromId), to = SK.stripById(destId);
+  var route = {
+    from: from.name, to: to.name,
+    dist: 9000 + Math.floor(Math.abs(from.mx - to.mx) * 120),
+    paxN: paxJobs.length, cargoN: cargoJobs.length,
+    weather: 'day', wind: 0, wx: 'clear',
+    payout: pay.total,
+    jobFlight: true, jobs: jobs, bonus: pay.bonus,
+  };
+  if (pilot.planes.indexOf(pilot.activePlane) < 0) pilot.activePlane = pilot.planes[0];
+  var st = SK.newFlight(hashStr('skylark-job-' + Date.now()), route, pilot.activePlane, pilot);
+  // override pax with the actual job passengers
+  st.pax = paxJobs.map(function (j) { return { name: j.name, story: j.story, mood: 1.0 }; });
+  var decor = makeDecor(st.seed, route.dist + 700);
+  pendingFlight = { st: st, decor: decor };
+  // mark jobs taken
+  SK.ensureAirline(pilot);
+  jobs.forEach(function (j) { pilot.jobsTaken[j.id] = true; });
+  savePilot();
+  // render passports
+  $('mani-route').textContent = route.from + ' → ' + route.to;
+  $('mani-plane').textContent = st.plane.name + ' · ' + st.pax.length + ' passenger' +
+    (st.pax.length > 1 ? 's' : '') + (pay.bonus ? ' · 25% bonus!' : '');
+  var list = $('mani-pax');
+  list.innerHTML = '';
+  st.pax.forEach(function (p, idx) {
+    var d = document.createElement('div');
+    d.className = 'passport';
+    d.innerHTML = '<div class="pp-info"><div class="pp-name">' + p.name + '</div>' +
+      '<div class="pp-story">' + (p.story || '') + '</div>' +
+      '<div class="pp-dest">&rarr; ' + route.to.toUpperCase() + '</div></div>' +
+      '<div class="pp-stamp">BOARDED</div>';
+    list.appendChild(d);
+  });
+  if (!st.pax.length) {
+    list.innerHTML = '<div class="pp-empty">Cargo run — ' + cargoJobs.length + ' loads, no passengers.</div>';
+  }
+  show('manifest');
 }
 
 function setThrottleUI(v) {
