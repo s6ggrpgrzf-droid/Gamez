@@ -449,3 +449,22 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
 }
 .surprise:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(120,180,255,.45),inset 0 1px 0 rgba(255,255,255,.8)}
 .surprise:active{transform:scale(.96)}
+
+/* ---------- opendoor: word rise-in, slow sheen, phase crossfade ---------- */
+.opendoor{transition:opacity .3s ease,transform .3s ease}
+.opendoor .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.08em;margin-bottom:-.08em}
+.opendoor .w > span{display:inline-block;transform:translateY(110%);animation:wordRise .7s cubic-bezier(.2,.7,.2,1) forwards;will-change:transform}
+@keyframes wordRise{to{transform:translateY(0)}}
+.opendoor.shimmer{
+  background:linear-gradient(100deg,#ffffff 35%,#b9d9ff 48%,#ffffff 62%);
+  background-size:230% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  text-shadow:none;
+  animation:sheen 7s ease-in-out infinite;
+}
+@keyframes sheen{0%,100%{background-position:115% 0}50%{background-position:-15% 0}}
+@media (prefers-reduced-motion:reduce){
+  .opendoor .w > span{animation:none;transform:none}
+  .opendoor.shimmer{animation:none;background:none;-webkit-text-fill-color:currentcolor}
+}

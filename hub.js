@@ -72,7 +72,7 @@
     }
   });
 
-  /* ---------- open door: one living line, time-aware ---------- */
+  /* ---------- open door: one living line, time-aware, animated ---------- */
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -81,12 +81,52 @@
   (function () {
     var el = document.getElementById('opendoor');
     if (!el) return;
-    var h = new Date().getHours();
-    el.textContent =
-      h >= 5 && h < 11 ? 'Good morning. The machines are warming up.' :
-      h >= 11 && h < 17 ? 'Good afternoon. The arcade is open.' :
-      h >= 17 && h < 22 ? 'Good evening. The arcade is open.' :
-      'Up late? The arcade never closes.';
+    var LINES = [
+      'Good morning. The machines are warming up.',
+      'Good afternoon. The arcade is open.',
+      'Good evening. The arcade is open.',
+      'Up late? The arcade never closes.'
+    ];
+    function phase(h) {
+      return h >= 5 && h < 11 ? 0 : h >= 11 && h < 17 ? 1 : h >= 17 && h < 22 ? 2 : 3;
+    }
+    function render(line) {
+      /* word masks for the rise-in */
+      el.classList.remove('shimmer');
+      el.innerHTML = '';
+      var words = line.split(' ');
+      words.forEach(function (word, i) {
+        var mask = document.createElement('span'); mask.className = 'w';
+        var inner = document.createElement('span');
+        inner.textContent = word;
+        inner.style.animationDelay = (i * 0.055).toFixed(3) + 's';
+        mask.appendChild(inner);
+        el.appendChild(mask);
+        el.appendChild(document.createTextNode(' '));
+      });
+      /* sheen sweep once the rise settles: flatten first, so no transformed
+         descendants break background-clip:text */
+      setTimeout(function () {
+        el.textContent = line;
+        el.classList.add('shimmer');
+      }, 400 + words.length * 55);
+    }
+    var cur = phase(new Date().getHours());
+    render(LINES[cur]);
+    /* keep it honest all day: re-check the clock, crossfade on phase change */
+    setInterval(function () {
+      var p = phase(new Date().getHours());
+      if (p === cur) return;
+      cur = p;
+      el.classList.remove('shimmer');
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(10px)';
+      setTimeout(function () {
+        render(LINES[cur]);
+        el.style.opacity = '';
+        el.style.transform = '';
+      }, 320);
+    }, 30000);
   })();
 
   /* ---------- surprise me: wander to a random cabinet ---------- */
