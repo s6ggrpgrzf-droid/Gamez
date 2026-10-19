@@ -408,13 +408,25 @@
       card.addEventListener('pointermove', function (e) {
         var r = card.getBoundingClientRect();
         var px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-        card.style.transform = 'perspective(950px) rotateX(' + ((0.5 - py) * 9).toFixed(2) +
-          'deg) rotateY(' + ((px - 0.5) * 11).toFixed(2) + 'deg) translateY(-4px)';
+        card.style.transform = 'perspective(780px) rotateX(' + ((0.5 - py) * 13).toFixed(2) +
+          'deg) rotateY(' + ((px - 0.5) * 16).toFixed(2) + 'deg) translateY(-6px)';
         card.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
         card.style.setProperty('--my', (py * 100).toFixed(1) + '%');
       });
       card.addEventListener('pointerleave', function () { card.style.transform = ''; });
     });
+    /* hero parallax: masthead drifts against the marquee for 3D depth */
+    var mq = document.querySelector('.marquee');
+    if (mq) {
+      var hero = document.querySelector('.hero');
+      hero.addEventListener('pointermove', function (e) {
+        var r = hero.getBoundingClientRect();
+        var px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5;
+        mq.style.transform = 'perspective(900px) rotateX(' + (-py * 5).toFixed(2) +
+          'deg) rotateY(' + (px * 8).toFixed(2) + 'deg)';
+      });
+      hero.addEventListener('pointerleave', function () { mq.style.transform = ''; });
+    }
   })();
 
   /* tap tick + sound toggle (subtle; stored preference) */
