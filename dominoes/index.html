@@ -3,104 +3,1554 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0e2a1a">
+<meta name="theme-color" content="#1a0f06">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dominoes">
-<title>Dominoes</title>
-<link rel="stylesheet" href="style.css?v=4">
+<title>Dominoes — The Café Table Classic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt1:#14472f; --felt2:#09231a;
+  --walnut:#3a2113; --brass:#d6b25e; --brass-d:#a67c2e;
+  --ivory1:#fdf8ec; --ivory2:#e6d5ae;
+  --ink:#2b251c; --gold:#e9c86a; --cream:#f3ead6;
+  --font-d:'Fraunces',Georgia,'Times New Roman',serif;
+  --font-b:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{background:#0b0705;font-family:var(--font-b);color:var(--cream);
+  overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;}
+button{font-family:var(--font-b);}
+
+/* walnut rim + brass inlay: the screen IS the table */
+#rim{min-height:100dvh;padding:10px;
+  background:linear-gradient(150deg,#4a2c15 0%,#3a2113 32%,#29160a 68%,#1a0e05 100%);
+  box-shadow:inset 0 0 0 1px rgba(214,178,94,.28), inset 0 2px 14px rgba(0,0,0,.65);}
+#table{position:relative;height:calc(100dvh - 20px);border-radius:14px;overflow:hidden;
+  border:2px solid var(--brass);outline:1px solid rgba(0,0,0,.65);outline-offset:-6px;
+  display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--felt1) 0%,#0e3a26 48%,var(--felt2) 100%);}
+#table::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");}
+#felt{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(130% 90% at 50% 0%, rgba(255,236,190,.13), transparent 55%),
+    radial-gradient(125% 105% at 50% 46%, transparent 50%, rgba(0,0,0,.62) 100%);}
+#lamp{position:absolute;left:50%;top:-80px;width:360px;height:210px;transform:translateX(-50%);
+  background:radial-gradient(50% 50% at 50% 50%, rgba(255,214,140,.22), transparent 70%);
+  animation:sway 7s ease-in-out infinite;pointer-events:none;}
+@keyframes sway{0%,100%{transform:translateX(-50%) rotate(-2.5deg);}50%{transform:translateX(-50%) rotate(2.5deg);}}
+#fx{position:absolute;inset:0;z-index:40;pointer-events:none;}
+
+/* ---------- tiles ---------- */
+.tile{--tw:44px;position:relative;width:var(--tw);height:calc(var(--tw)*2);flex:0 0 auto;
+  border-radius:calc(var(--tw)*0.18);
+  background:linear-gradient(165deg,var(--ivory1) 0%,#f4e9d0 45%,var(--ivory2) 100%);
+  box-shadow:0 5px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -2px 5px rgba(122,95,58,.30);
+  display:flex;flex-direction:column;}
+.tile .half{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  padding:17%;place-items:center;}
+.tile .pip{width:72%;aspect-ratio:1/1;border-radius:50%;}
+.tile .pip.on{background:radial-gradient(circle at 35% 30%,#5a5343,#1e1912 72%);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.65), 0 1px 0 rgba(255,255,255,.42);}
+.tile .div{position:relative;height:2px;margin:0 12%;
+  background:linear-gradient(90deg,transparent,rgba(110,88,55,.6),transparent);}
+.tile .div::after{content:'';position:absolute;left:50%;top:50%;width:8px;height:8px;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#f6e2a0,var(--brass-d) 78%);
+  box-shadow:0 1px 2px rgba(0,0,0,.55), inset 0 0 0 1px rgba(90,64,20,.55);}
+.tile.back{background:linear-gradient(160deg,#10402a 0%,#07200f 100%);
+  box-shadow:inset 0 0 0 2px var(--brass), inset 0 0 0 4px rgba(0,0,0,.5),
+    inset 0 0 18px rgba(0,0,0,.5), 0 6px 14px rgba(0,0,0,.5);}
+#board .tile{position:absolute;left:0;top:0;}
+
+/* ---------- HUD ---------- */
+#hud{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 4px;}
+.score{display:flex;flex-direction:column;align-items:center;min-width:76px;}
+.score .who{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass);opacity:.9;}
+.score .pts{font-family:var(--font-d);font-weight:700;font-size:32px;color:var(--gold);
+  text-shadow:0 2px 10px rgba(0,0,0,.6);line-height:1.1;}
+.score.right{align-items:center;}
+.hud-mid{text-align:center;}
+#round-label{font-family:var(--font-d);font-weight:600;font-size:17px;color:var(--cream);}
+.hud-mid .target{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);opacity:.85;}
+
+/* ---------- house row ---------- */
+#house-row{display:flex;align-items:center;justify-content:space-between;padding:4px 20px;min-height:66px;}
+#house-hand-wrap{display:flex;align-items:center;gap:10px;}
+#ai-hand{display:flex;align-items:center;}
+#ai-hand .tile{--tw:24px;margin-left:-13px;box-shadow:inset 0 0 0 2px var(--brass),
+  inset 0 0 0 4px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.45);}
+#ai-hand .tile:first-child{margin-left:0;}
+#house-count{font-family:var(--font-d);font-size:15px;color:var(--cream);opacity:.85;min-width:20px;}
+#ai-thinking{display:flex;gap:5px;align-items:center;height:24px;}
+#ai-thinking span{width:7px;height:7px;border-radius:50%;background:var(--brass);opacity:.4;animation:th 1s infinite;}
+#ai-thinking span:nth-child(2){animation-delay:.18s;} #ai-thinking span:nth-child(3){animation-delay:.36s;}
+@keyframes th{0%,100%{opacity:.25;transform:translateY(0);}50%{opacity:1;transform:translateY(-4px);}}
+#boneyard{display:flex;align-items:center;gap:9px;background:none;border:none;cursor:pointer;
+  padding:8px 10px;border-radius:12px;}
+#bone-stack{position:relative;width:34px;height:60px;}
+#bone-stack .tile{--tw:28px;position:absolute;left:0;top:0;}
+#bone-stack .tile:nth-child(2){transform:translate(3px,-3px) rotate(3deg);}
+#bone-stack .tile:nth-child(3){transform:translate(6px,-6px) rotate(-2deg);}
+#bone-count{font-family:var(--font-d);font-weight:700;font-size:22px;color:var(--gold);min-width:30px;text-align:left;}
+#boneyard .bone-hint{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);opacity:0;}
+#boneyard.need .bone-hint{opacity:.95;animation:ezpulse 1.2s ease-in-out infinite;}
+#boneyard.need #bone-stack{filter:drop-shadow(0 0 10px rgba(214,178,94,.8));}
+#boneyard.dead{opacity:.35;pointer-events:none;}
+
+/* ---------- board ---------- */
+#board-layer{position:relative;flex:1;min-height:0;overflow:hidden;}
+#board{position:absolute;left:0;top:0;transform-origin:0 0;}
+.endzone{position:absolute;width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:50%;
+  border:2px dashed transparent;pointer-events:none;z-index:5;}
+.endzone.lit{border-color:rgba(233,200,106,.95);
+  box-shadow:0 0 20px rgba(214,178,94,.55), inset 0 0 20px rgba(214,178,94,.28);
+  animation:ezpulse 1.1s ease-in-out infinite;}
+.endzone.hot{background:rgba(214,178,94,.22);}
+@keyframes ezpulse{0%,100%{transform:scale(1);opacity:.85;}50%{transform:scale(1.08);opacity:1;}}
+
+/* ---------- status / rack / action bar ---------- */
+#status{font-style:italic;text-align:center;color:#e9dcc0;font-size:14.5px;
+  min-height:24px;padding:2px 16px;opacity:.92;}
+#rack-wrap{padding:8px 12px 2px;}
+#rack{--tw:52px;display:flex;gap:8px;justify-content:center;align-items:center;
+  min-height:calc(var(--tw)*2 + 14px);padding-top:10px;}
+#rack .tile{transition:transform .16s ease, box-shadow .16s ease, filter .16s ease;cursor:pointer;}
+#rack .tile.playable{transform:translateY(-9px);
+  box-shadow:0 12px 22px rgba(0,0,0,.5), 0 0 0 2px var(--brass), 0 0 20px rgba(214,178,94,.6),
+    inset 0 1px 0 rgba(255,255,255,.75);}
+#rack .tile:not(.playable){filter:brightness(.78) saturate(.9);}
+#rack.locked .tile{filter:brightness(.66) saturate(.85);cursor:default;}
+#rack.locked .tile.playable{transform:none;box-shadow:0 5px 12px rgba(0,0,0,.45),
+  inset 0 1px 0 rgba(255,255,255,.75), inset 0 -2px 5px rgba(122,95,58,.30);}
+#rack .tile.dragging{z-index:60;pointer-events:none;filter:none;}
+#actionbar{display:flex;gap:10px;justify-content:center;padding:8px 16px calc(12px + env(safe-area-inset-bottom));}
+.abtn{flex:1;max-width:160px;font-weight:600;font-size:14px;letter-spacing:.05em;
+  padding:13px 0;border-radius:14px;cursor:pointer;color:var(--cream);
+  background:rgba(8,18,12,.55);border:1px solid rgba(214,178,94,.38);
+  box-shadow:0 4px 12px rgba(0,0,0,.35);}
+.abtn:disabled{opacity:.32;}
+.abtn:not(:disabled):active{transform:scale(.96);}
+#btn-knock:not(:disabled){border-color:var(--brass);color:var(--gold);
+  box-shadow:0 4px 12px rgba(0,0,0,.35), 0 0 14px rgba(214,178,94,.35);}
+
+/* ---------- title screen ---------- */
+#title{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(120% 100% at 50% 20%, rgba(10,26,18,.55), rgba(4,10,7,.9));
+  overflow:hidden;}
+#title-scatter{position:absolute;inset:0;pointer-events:none;}
+#title-scatter .tile{--tw:40px;position:absolute;}
+#title-inner{position:relative;text-align:center;padding:20px;max-width:420px;width:100%;
+  max-height:100%;overflow-y:auto;}
+.title-kicker{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:var(--brass);margin-bottom:8px;}
+.game-title{font-family:var(--font-d);font-weight:700;font-size:64px;line-height:1;
+  background:linear-gradient(180deg,#f7e3a1 0%,var(--gold) 55%,#b28c3a 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 3px 0 rgba(90,64,20,.9)) drop-shadow(0 10px 26px rgba(0,0,0,.6));
+  margin-bottom:10px;}
+.tagline-pill{display:inline-block;font-size:13px;letter-spacing:.08em;color:var(--gold);
+  background:rgba(8,18,12,.6);border:1px solid rgba(214,178,94,.4);border-radius:999px;
+  padding:9px 20px;margin-bottom:20px;}
+.diff-label{display:inline-block;font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;
+  color:#d8c48f;background:rgba(8,18,12,.5);border:1px solid rgba(214,178,94,.25);
+  border-radius:999px;padding:6px 15px;margin-bottom:10px;}
+#diff-cards{display:flex;gap:10px;justify-content:center;margin-bottom:24px;}
+.diffcard{flex:1;max-width:128px;background:rgba(8,18,12,.62);border:1px solid rgba(214,178,94,.3);
+  border-radius:14px;color:var(--cream);padding:12px 8px;cursor:pointer;
+  display:flex;flex-direction:column;gap:6px;align-items:center;
+  box-shadow:0 6px 16px rgba(0,0,0,.4);}
+.diffcard .dc-name{font-weight:700;font-size:15px;letter-spacing:.06em;color:var(--gold);}
+.diffcard .dc-desc{font-size:11px;line-height:1.35;opacity:.72;font-style:italic;}
+.diffcard.sel{border-color:var(--brass);background:rgba(24,40,26,.85);
+  box-shadow:0 6px 16px rgba(0,0,0,.4), 0 0 18px rgba(214,178,94,.4);}
+.brass-btn{font-weight:700;font-size:19px;letter-spacing:.12em;color:#2a1c08;cursor:pointer;
+  background:linear-gradient(180deg,#f4dc96 0%,var(--brass) 55%,#ad8737 100%);
+  border:none;border-radius:999px;padding:16px 66px;
+  box-shadow:0 10px 26px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.65),
+    inset 0 -3px 6px rgba(90,64,20,.4);}
+.brass-btn:active{transform:scale(.96);}
+#play-tile{animation:playPulse 2.8s ease-in-out infinite;margin-bottom:16px;}
+@keyframes playPulse{0%,100%{box-shadow:0 10px 26px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.65),
+  inset 0 -3px 6px rgba(90,64,20,.4), 0 0 0 0 rgba(214,178,94,0);}
+  50%{box-shadow:0 10px 26px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.65),
+  inset 0 -3px 6px rgba(90,64,20,.4), 0 0 30px 6px rgba(214,178,94,.45);}}
+.ghost-btn{display:block;margin:0 auto;background:rgba(8,18,12,.5);
+  border:1px solid rgba(216,185,106,.55);color:#ecd9a0;font-size:13.5px;letter-spacing:.1em;
+  border-radius:999px;padding:11px 28px;cursor:pointer;}
+.ghost-btn:active{transform:scale(.95);}
+
+/* ---------- cards (round end / match end / rules) ---------- */
+.card{position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,10,7,.74);padding:22px;}
+.slip{background:linear-gradient(170deg,#fdf8ec 0%,#eee0bf 100%);border-radius:16px;
+  padding:26px 24px;width:100%;max-width:350px;max-height:92%;overflow-y:auto;color:var(--ink);
+  text-align:center;box-shadow:0 26px 70px rgba(0,0,0,.65), inset 0 0 0 1px rgba(120,95,60,.4);
+  animation:slipIn .38s cubic-bezier(.2,1.4,.4,1);}
+@keyframes slipIn{from{transform:translateY(26px) scale(.96);opacity:0;}to{transform:none;opacity:1;}}
+.slip-kicker{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#8a6f3c;margin-bottom:6px;}
+.slip h2{font-family:var(--font-d);font-weight:700;font-size:30px;color:#3a2a10;margin-bottom:4px;}
+.slip-points{font-family:var(--font-d);font-weight:700;font-size:44px;color:#7a5a1e;margin:6px 0 12px;}
+.slip-row{margin:10px 0;}
+.slip-row .lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8a6f3c;margin-bottom:6px;}
+.mini-tiles{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:4px;min-height:20px;}
+.mini-tiles .tile{--tw:23px;}
+.slip-row .pips{font-family:var(--font-d);font-weight:600;font-size:15px;color:#5a451f;}
+.slip .brass-btn{margin-top:14px;padding:14px 44px;font-size:16px;}
+.slip ul{text-align:left;font-size:14px;line-height:1.65;margin:12px 4px 6px 20px;color:#3a2f1d;}
+.slip .fine{font-size:12px;font-style:italic;color:#8a6f3c;margin-top:10px;}
+
+.hidden{display:none !important;}
+#table.title-mode #hud,#table.title-mode #house-row,#table.title-mode #actionbar,
+#table.title-mode #status,#table.title-mode #btn-knockbar{display:none;}
+@media (prefers-reduced-motion:reduce){
+  #lamp,#play-tile,.endzone.lit,#ai-thinking span{animation:none;}
+}
+</style>
 </head>
 <body>
-<div id="app">
+<div id="rim">
   <div id="table" class="title-mode">
     <div id="felt"></div>
-    <div id="coffee-ring" aria-hidden="true"></div>
-    <div id="lamp" aria-hidden="true"></div>
-    <canvas id="fx" aria-hidden="true"></canvas>
+    <div id="lamp"></div>
+    <canvas id="fx"></canvas>
 
     <header id="hud">
-      <div class="score you"><span class="who">You</span><span class="pts" id="score-you">0</span></div>
-      <div class="mid">
-        <span id="round-label">Round 1</span>
-        <span class="target">first to 100</span>
-      </div>
-      <div class="score house"><span class="pts" id="score-house">0</span><span class="who">House</span></div>
+      <div class="score"><span class="who">You</span><span class="pts" id="score-you">0</span></div>
+      <div class="hud-mid"><div id="round-label">Round 1</div><div class="target">First to 100</div></div>
+      <div class="score right"><span class="who">House</span><span class="pts" id="score-house">0</span></div>
     </header>
 
-    <div id="ai-bar">
-      <div id="ai-hand" aria-label="House hand"></div>
+    <div id="house-row">
+      <div id="house-hand-wrap">
+        <div id="ai-hand" aria-label="House hand"></div>
+        <div id="house-count"></div>
+      </div>
       <div id="ai-thinking" class="hidden"><span></span><span></span><span></span></div>
+      <button id="boneyard" aria-label="Draw from boneyard">
+        <div id="bone-stack"></div>
+        <div id="bone-count">14</div>
+        <div class="bone-hint">Draw</div>
+      </button>
     </div>
 
     <div id="board-layer">
       <div id="board"></div>
       <div id="ez-head" class="endzone hidden"></div>
       <div id="ez-tail" class="endzone hidden"></div>
-      <div id="boneyard" class="hidden" role="button" aria-label="Draw from boneyard" tabindex="0">
-        <div id="bone-stack"></div>
-        <div id="bone-count">14</div>
-      </div>
     </div>
 
-    <div id="toast" class="hidden"></div>
+    <div id="status"></div>
     <div id="rack-wrap"><div id="rack"></div></div>
-    <button id="knock-btn" class="hidden">Knock</button>
 
-    <div id="corner-btns">
-      <button id="btn-rules" aria-label="How to play">?</button>
-      <button id="btn-restart" aria-label="Restart match">↺</button>
-      <button id="btn-mute" aria-label="Mute">♪</button>
-    </div>
-
-    <div id="banner" class="hidden">
-      <div id="banner-card">
-        <div id="banner-title"></div>
-        <div id="banner-sub"></div>
-        <button id="banner-btn">Next round</button>
-      </div>
-    </div>
-
-    <div id="rules-modal" class="hidden">
-      <div id="rules-card">
-        <h2>How to play</h2>
-        <ul>
-          <li>Match a tile to either open end of the chain.</li>
-          <li>Stuck? Draw from the boneyard until you can play.</li>
-          <li>Boneyard empty and still stuck? Knock.</li>
-          <li>Empty your hand to take the round — you score every pip
-              left in the House's hand, plus the boneyard.</li>
-          <li>If both players knock, fewest pips wins the difference.</li>
-          <li>First to <b>100</b> takes the match.</li>
-        </ul>
-        <button id="rules-close">Back to the table</button>
-      </div>
+    <div id="actionbar">
+      <button id="btn-knock" class="abtn" disabled>Knock</button>
+      <button id="btn-restart" class="abtn" aria-label="Restart match">↺</button>
+      <button id="btn-sound" class="abtn" aria-label="Toggle sound">♪</button>
+      <button id="btn-help" class="abtn" aria-label="How to play">?</button>
     </div>
 
     <div id="title">
       <div id="title-scatter" aria-hidden="true"></div>
       <div id="title-inner">
         <div class="title-kicker">The Café Table Classic</div>
-        <h1 class="title-logo">Dominoes</h1>
-        <div class="sub-pill">You vs the House · First to 100</div>
-        <div class="diff-label">The House Plays</div>
-        <div id="diff-seg" role="radiogroup" aria-label="Difficulty">
-          <button data-d="0" role="radio" aria-checked="false">Casual</button>
-          <button data-d="1" role="radio" aria-checked="true" class="sel">Sharp</button>
-          <button data-d="2" role="radio" aria-checked="false">Shark</button>
+        <h1 class="game-title">Dominoes</h1>
+        <div><span class="tagline-pill">You vs the House · First to 100</span></div>
+        <div><span class="diff-label">The House Plays</span></div>
+        <div id="diff-cards" role="radiogroup" aria-label="Difficulty">
+          <button class="diffcard" data-d="0" role="radio" aria-checked="false">
+            <span class="dc-name">Casual</span>
+            <span class="dc-desc">Plays for fun — loose and beatable.</span>
+          </button>
+          <button class="diffcard sel" data-d="1" role="radio" aria-checked="true">
+            <span class="dc-name">Sharp</span>
+            <span class="dc-desc">Dumps heavy tiles early, watches the board.</span>
+          </button>
+          <button class="diffcard" data-d="2" role="radio" aria-checked="false">
+            <span class="dc-name">Shark</span>
+            <span class="dc-desc">Remembers what you drew on. Blocks it.</span>
+          </button>
         </div>
-        <button id="play-tile" aria-label="Play">
-          <span class="pt-half"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-          <span class="pt-div"></span>
-          <span class="pt-half"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-          <span class="pt-label">Play</span>
-        </button>
-        <button id="title-rules" class="pill-btn">How to Play</button>
+        <button id="play-tile" class="brass-btn">Play</button>
+        <button id="title-rules" class="ghost-btn">How to Play</button>
       </div>
     </div>
+
+    <div id="round-card" class="card hidden">
+      <div class="slip">
+        <div class="slip-kicker" id="rc-kicker">Round 1</div>
+        <h2 id="rc-title">Domino!</h2>
+        <div class="slip-points" id="rc-points">+0</div>
+        <div class="slip-row">
+          <div class="lbl">House Held</div>
+          <div class="mini-tiles" id="rc-house-tiles"></div>
+          <div class="pips" id="rc-house-pips"></div>
+        </div>
+        <div class="slip-row">
+          <div class="lbl">You Held</div>
+          <div class="mini-tiles" id="rc-you-tiles"></div>
+          <div class="pips" id="rc-you-pips"></div>
+        </div>
+        <button id="rc-next" class="brass-btn">Next Round</button>
+      </div>
+    </div>
+
+    <div id="match-card" class="card hidden">
+      <div class="slip">
+        <div class="slip-kicker">Match Over</div>
+        <h2 id="mc-title">You Take the Match!</h2>
+        <div class="slip-points" id="mc-score">0 · 0</div>
+        <div class="fine" id="mc-sub">First to 100.</div>
+        <button id="mc-again" class="brass-btn">Play Again</button>
+      </div>
+    </div>
+
+    <div id="rules-modal" class="card hidden">
+      <div class="slip">
+        <div class="slip-kicker">House Rules</div>
+        <h2>How to Play</h2>
+        <ul>
+          <li>Match a tile to either open end of the chain.</li>
+          <li>Stuck? Tap the boneyard and draw until you can play.</li>
+          <li>Boneyard empty and still stuck? Knock.</li>
+          <li>Empty your hand to take the round — you score every pip left in the House's hand, plus the boneyard.</li>
+          <li>If both sides knock, fewest pips wins the difference.</li>
+          <li>First to <b>100</b> takes the match.</li>
+        </ul>
+        <button id="rules-close" class="brass-btn">Back to the Table</button>
+      </div>
+    </div>
+
   </div>
 </div>
-<script src="sim.js?v=1"></script>
-<script src="audio.js?v=1"></script>
-<script src="game.js?v=3"></script>
+<script id="sim">
+/* Dominoes sim — pure game logic, no DOM.
+ * Classic Draw rules: double-six, 2 players, 7 tiles each, boneyard draws,
+ * highest double opens, race to 100. Seeded PRNG (mulberry32) throughout.
+ * (Also kept verbatim at ../sim.js so node tests run against this code.) */
+'use strict';
+
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function newSet() {
+  const tiles = [];
+  for (let a = 0; a <= 6; a++)
+    for (let b = a; b <= 6; b++) tiles.push({ a, b });
+  return tiles; // 28 tiles, a <= b
+}
+
+function pips(t) { return t.a + t.b; }
+function handPips(hand) { return hand.reduce((s, t) => s + pips(t), 0); }
+function tileKey(t) { return t.a + '-' + t.b; }
+
+function shuffled(set, rng) {
+  const d = set.slice();
+  for (let i = d.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [d[i], d[j]] = [d[j], d[i]];
+  }
+  return d;
+}
+
+/* Board node: {id, a, b, headVal} — headVal is the pip value of the half
+ * facing the head (left) end of the chain. Tail value = a + b - headVal.
+ * board[0] is the head-most tile, board[n-1] the tail-most. */
+let _nextId = 1;
+function nodeId() { return _nextId++; }
+
+function exposed(state) {
+  const b = state.board;
+  if (!b.length) return { head: -1, tail: -1 };
+  const h = b[0], t = b[b.length - 1];
+  return { head: h.headVal, tail: t.a + t.b - t.headVal };
+}
+
+function legalMoves(hand, ends) {
+  const moves = [];
+  for (let i = 0; i < hand.length; i++) {
+    const t = hand[i];
+    if (t.a === ends.head || t.b === ends.head) moves.push({ tileIdx: i, end: 'head' });
+    if (t.a === ends.tail || t.b === ends.tail) moves.push({ tileIdx: i, end: 'tail' });
+  }
+  return moves;
+}
+
+function canPlay(state, player) {
+  return legalMoves(state.hands[player], exposed(state)).length > 0;
+}
+
+function newGame(seed, target) {
+  _nextId = 1;
+  const rng = mulberry32(seed == null ? (Date.now() % 2147483647) : seed);
+  const st = {
+    rng, target: target || 100, round: 1,
+    scores: [0, 0],           // [you, house]
+    hands: [[], []], boneyard: [], board: [],
+    turn: 0, phase: 'play', passes: 0,
+    winner: null, roundPts: 0, roundReason: null,
+    knockSuits: { player: -1, suits: [] },
+    drawnOn: [[], []],        // pip values each player has drawn on (Shark's memory)
+    lastEvents: [],
+  };
+  dealRound(st);
+  return st;
+}
+
+function highestOpener(hands) {
+  let best = null;
+  for (let p = 0; p < 2; p++) {
+    for (let i = 0; i < hands[p].length; i++) {
+      const t = hands[p][i];
+      const score = (t.a === t.b ? 100 : 0) + t.a + t.b;
+      const tiebreak = Math.max(t.a, t.b);
+      if (!best || score > best.score || (score === best.score && tiebreak > best.tiebreak))
+        best = { player: p, tileIdx: i, score, tiebreak };
+    }
+  }
+  return best;
+}
+
+function dealRound(st) {
+  const deck = shuffled(newSet(), st.rng);
+  st.hands = [[], []];
+  for (let i = 0; i < 7; i++) { st.hands[0].push(deck.pop()); st.hands[1].push(deck.pop()); }
+  st.boneyard = deck;
+  st.board = [];
+  st.passes = 0;
+  st.winner = null; st.roundPts = 0; st.roundReason = null;
+  st.knockSuits = { player: -1, suits: [] };
+  st.drawnOn = [[], []];
+  st.phase = 'play';
+  const op = highestOpener(st.hands);
+  const tile = st.hands[op.player].splice(op.tileIdx, 1)[0];
+  st.board.push({ id: nodeId(), a: tile.a, b: tile.b, headVal: tile.a, opener: true });
+  st.turn = 1 - op.player;
+  st.lastEvents = [{ t: 'open', player: op.player, tile: { a: tile.a, b: tile.b }, nodeId: st.board[0].id }];
+}
+
+function playTile(st, player, tileIdx, end) {
+  st.lastEvents = [];
+  if (st.phase !== 'play') return { ok: false, err: 'not-playing' };
+  if (player !== st.turn) return { ok: false, err: 'not-your-turn' };
+  const hand = st.hands[player];
+  if (tileIdx < 0 || tileIdx >= hand.length) return { ok: false, err: 'bad-tile' };
+  const ends = exposed(st);
+  const t = hand[tileIdx];
+  const ev = end === 'head' ? ends.head : end === 'tail' ? ends.tail : -1;
+  if (ev < 0 || (t.a !== ev && t.b !== ev)) return { ok: false, err: 'no-match' };
+  hand.splice(tileIdx, 1);
+  const headVal = end === 'tail' ? ev : (t.a + t.b - ev);
+  const node = { id: nodeId(), a: t.a, b: t.b, headVal };
+  if (end === 'tail') st.board.push(node); else st.board.unshift(node);
+  st.passes = 0;
+  st.lastEvents.push({ t: 'play', player, tile: { a: t.a, b: t.b }, end, nodeId: node.id });
+  if (hand.length === 0) { endRound(st, 'domino', player); }
+  else st.turn = 1 - player;
+  return { ok: true, events: st.lastEvents };
+}
+
+function drawTile(st, player) {
+  st.lastEvents = [];
+  if (st.phase !== 'play') return { ok: false, err: 'not-playing' };
+  if (player !== st.turn) return { ok: false, err: 'not-your-turn' };
+  if (!st.boneyard.length) return { ok: false, err: 'boneyard-empty' };
+  if (canPlay(st, player)) return { ok: false, err: 'has-move' };
+  const ends = exposed(st);
+  // remember the suits this player was stuck on (Shark uses this)
+  if (!st.drawnOn[player].includes(ends.head)) st.drawnOn[player].push(ends.head);
+  if (!st.drawnOn[player].includes(ends.tail)) st.drawnOn[player].push(ends.tail);
+  const t = st.boneyard.pop();
+  st.hands[player].push(t);
+  st.lastEvents.push({ t: 'draw', player, tile: { a: t.a, b: t.b }, boneyard: st.boneyard.length });
+  return { ok: true, events: st.lastEvents };
+}
+
+function knock(st, player) {
+  st.lastEvents = [];
+  if (st.phase !== 'play') return { ok: false, err: 'not-playing' };
+  if (player !== st.turn) return { ok: false, err: 'not-your-turn' };
+  if (st.boneyard.length) return { ok: false, err: 'boneyard-not-empty' };
+  if (canPlay(st, player)) return { ok: false, err: 'has-move' };
+  const ends = exposed(st);
+  st.knockSuits = { player, suits: [ends.head, ends.tail] };
+  st.passes++;
+  st.lastEvents.push({ t: 'knock', player });
+  if (st.passes >= 2) endRound(st, 'blocked', -1);
+  else st.turn = 1 - player;
+  return { ok: true, events: st.lastEvents };
+}
+
+function endRound(st, reason, dominoPlayer) {
+  st.phase = 'roundEnd';
+  st.roundReason = reason;
+  const p0 = handPips(st.hands[0]), p1 = handPips(st.hands[1]);
+  const bone = st.boneyard.reduce((s, t) => s + pips(t), 0);
+  if (reason === 'domino') {
+    st.winner = dominoPlayer;
+    st.roundPts = (dominoPlayer === 0 ? p1 : p0) + bone;
+  } else {
+    if (p0 === p1) { st.winner = null; st.roundPts = 0; }
+    else { st.winner = p0 < p1 ? 0 : 1; st.roundPts = Math.abs(p0 - p1); }
+  }
+  if (st.winner != null) {
+    st.scores[st.winner] += st.roundPts;
+    st.lastEvents.push({
+      t: 'roundEnd', reason, winner: st.winner, pts: st.roundPts,
+      handPips: [p0, p1], scores: st.scores.slice(),
+    });
+    if (st.scores[st.winner] >= st.target) {
+      st.phase = 'matchEnd';
+      st.lastEvents.push({ t: 'matchEnd', winner: st.winner, scores: st.scores.slice() });
+    }
+  } else {
+    st.lastEvents.push({ t: 'roundEnd', reason, winner: null, pts: 0, handPips: [p0, p1], scores: st.scores.slice() });
+  }
+}
+
+function nextRound(st) {
+  if (st.phase !== 'roundEnd') return { ok: false, err: 'not-round-end' };
+  st.round++;
+  dealRound(st);
+  return { ok: true, events: st.lastEvents };
+}
+
+/* ---------------- AI ----------------
+ * 0 Casual: pure random legal move — loose and beatable.
+ * 1 Sharp:  dumps heavy tiles early, keeps future options.
+ * 2 Shark:  Sharp's brain plus a memory — it remembers the suits you drew
+ *            on and prefers to leave those values exposed, blocking you. */
+function scoreMove(st, player, mv, difficulty) {
+  const hand = st.hands[player];
+  const t = hand[mv.tileIdx];
+  const ends = exposed(st);
+  const ev = mv.end === 'head' ? ends.head : ends.tail;
+  const other = t.a + t.b - ev; // the new exposed value after this play
+  const early = st.board.length < 10;
+  let s = 0;
+  if (t.a === t.b) s += 3 + (early ? 2 : 0);
+  s += pips(t) * (difficulty === 1 && early ? 0.55 : 0.35); // Sharp dumps heavy early
+  if (st.knockSuits.player !== player && st.knockSuits.suits.includes(other)) s += 3;
+  if (difficulty === 2) {
+    const opp = 1 - player;
+    if (st.drawnOn[opp].includes(other)) s += 4.5; // block suits they drew on
+    if (hand.length <= 4) s += pips(t) * 0.3;      // endgame discipline
+  }
+  const newEnds = mv.end === 'head'
+    ? { head: other, tail: ends.tail } : { head: ends.head, tail: other };
+  let future = 0;
+  for (let i = 0; i < hand.length; i++) {
+    if (i === mv.tileIdx) continue;
+    const h = hand[i];
+    if (h.a === newEnds.head || h.b === newEnds.head || h.a === newEnds.tail || h.b === newEnds.tail) future++;
+  }
+  s += future * 0.6;
+  if (hand.length - 1 <= 2) s += 5;
+  if (hand.length - 1 === 0) s += 50;
+  return s;
+}
+
+function aiChoose(st, player, difficulty) {
+  const moves = legalMoves(st.hands[player], exposed(st));
+  if (!moves.length) {
+    if (st.boneyard.length) return { type: 'draw' };
+    return { type: 'knock' };
+  }
+  if (difficulty === 0) {
+    const mv = moves[Math.floor(st.rng() * moves.length)];
+    return { type: 'play', tileIdx: mv.tileIdx, end: mv.end };
+  }
+  let best = null, bestS = -1e9;
+  for (const mv of moves) {
+    let s = scoreMove(st, player, mv, difficulty);
+    if (difficulty === 1) s += (st.rng() - 0.5) * 2.5; // Sharp: a little looseness
+    if (s > bestS) { bestS = s; best = mv; }
+  }
+  return { type: 'play', tileIdx: best.tileIdx, end: best.end };
+}
+
+const api = {
+  mulberry32, newSet, newGame, dealRound, playTile, drawTile, knock,
+  nextRound, legalMoves, canPlay, exposed, aiChoose, pips, handPips, tileKey,
+};
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+if (typeof window !== 'undefined') window.DomSim = api;
+</script>
+<script>
+/* Dominoes audio — all synthesized with WebAudio, no assets. */
+'use strict';
+(function () {
+  const LS_MUTE = 'dominoes.mute';
+  let ctx = null, master = null, sfxBus = null;
+  let muted = false;
+  try { muted = localStorage.getItem(LS_MUTE) === '1'; } catch (e) {}
+
+  function ensure() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return true; }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : 0.9;
+      master.connect(ctx.destination);
+      sfxBus = ctx.createGain();
+      sfxBus.gain.value = 0.9;
+      sfxBus.connect(master);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function noiseBuffer(dur) {
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    return buf;
+  }
+
+  function clack(weight) {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    const w = weight == null ? 0.5 : weight;
+    const n = ctx.createBufferSource();
+    n.buffer = noiseBuffer(0.09);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 2600 - w * 1200;
+    bp.Q.value = 1.1;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.9, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    n.connect(bp); bp.connect(ng); ng.connect(sfxBus);
+    n.start(t);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(210 - w * 70, t);
+    o.frequency.exponentialRampToValueAtTime(90, t + 0.08);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.5, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    o.connect(og); og.connect(sfxBus);
+    o.start(t); o.stop(t + 0.1);
+  }
+
+  function flip() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    const n = ctx.createBufferSource();
+    n.buffer = noiseBuffer(0.07);
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 3000;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.25, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    n.connect(hp); hp.connect(g); g.connect(sfxBus);
+    n.start(t);
+  }
+
+  function shuffleTick(when, pitch) {
+    const t = ctx.currentTime + when;
+    const o = ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.value = pitch;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    o.connect(g); g.connect(sfxBus);
+    o.start(t); o.stop(t + 0.08);
+  }
+  function shuffle() {
+    if (!ensure()) return;
+    for (let i = 0; i < 9; i++) shuffleTick(i * 0.055, 1400 + Math.random() * 900);
+  }
+
+  function knock() {
+    if (!ensure()) return;
+    clack(0.9);
+    setTimeout(() => clack(0.9), 130);
+  }
+
+  function tick() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'square'; o.frequency.value = 1900;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.08, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    o.connect(g); g.connect(sfxBus);
+    o.start(t); o.stop(t + 0.04);
+  }
+
+  function chime(win) {
+    if (!ensure()) return;
+    const notes = win ? [523.25, 659.25, 783.99, 1046.5] : [392, 440, 523.25];
+    notes.forEach((f, i) => {
+      const t = ctx.currentTime + i * 0.11;
+      const o = ctx.createOscillator();
+      o.type = 'sine'; o.frequency.value = f;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      o.connect(g); g.connect(sfxBus);
+      o.start(t); o.stop(t + 0.55);
+    });
+  }
+
+  function uiTap() {
+    if (!ensure()) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sine'; o.frequency.value = 660;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.12, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    o.connect(g); g.connect(sfxBus);
+    o.start(t); o.stop(t + 0.06);
+  }
+
+  function setMuted(m) {
+    muted = !!m;
+    try { localStorage.setItem(LS_MUTE, muted ? '1' : '0'); } catch (e) {}
+    if (master) master.gain.value = muted ? 0 : 0.9;
+  }
+  function isMuted() { return muted; }
+
+  window.addEventListener('pointerdown', ensure, { passive: true });
+  window.addEventListener('keydown', ensure);
+
+  window.DomAudio = {
+    clack, flip, shuffle, knock, tick, chime, uiTap,
+    setMuted, isMuted, ensure,
+  };
+})();
+</script>
+<script>
+/* Dominoes table UI — DOM tiles, serpentine board, drag/tap, juice.
+ * Sim: window.DomSim (pure, above). Audio: window.DomAudio (synth, above). */
+'use strict';
+(function () {
+  const Sim = window.DomSim, AU = window.DomAudio;
+  const $ = (id) => document.getElementById(id);
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const TW = 44, TH = 88, GAP = 10;
+  const ROWLEN = 6 * (TH + GAP);
+  const LS_DIFF = 'dominoes.diff';
+
+  const PIPS = { 0: [], 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
+
+  let S = null;
+  let difficulty = 1;
+  try { difficulty = parseInt(localStorage.getItem(LS_DIFF) || '1', 10); if (!(difficulty >= 0 && difficulty <= 2)) difficulty = 1; } catch (e) {}
+  let uiPhase = 'title';        // title|dealing|play|roundEnd|matchEnd
+  let busy = false;
+  const boardEls = new Map();
+  let rackTiles = [];
+  let selected = -1;
+  let lastSlots = null;
+
+  function buzz(p) {
+    try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {}
+  }
+
+  /* ---------------- tile DOM ---------------- */
+  function halfHTML(v) {
+    let s = '';
+    for (let i = 1; i <= 9; i++) s += '<span class="pip' + (PIPS[v].indexOf(i) >= 0 ? ' on' : '') + '"></span>';
+    return '<div class="half">' + s + '</div>';
+  }
+  function makeTile(a, b, faceDown) {
+    const el = document.createElement('div');
+    el.className = 'tile' + (faceDown ? ' back' : '');
+    if (!faceDown) el.innerHTML = halfHTML(a) + '<div class="div"></div>' + halfHTML(b);
+    return el;
+  }
+  function faceFor(node, slot) {
+    const tailVal = node.a + node.b - node.headVal;
+    const H = node.headVal;
+    if (slot.dx === 1) return [tailVal, H];
+    if (slot.dx === -1) return [H, tailVal];
+    if (slot.dy === 1) return [H, tailVal];
+    return [tailVal, H];
+  }
+
+  /* ---------------- serpentine layout ---------------- */
+  function computeSlots() {
+    const wps = [{ x: 0, y: 0 }];
+    for (let k = 0; k < 16; k++) {
+      const y = k * (TH + GAP);
+      if (k % 2 === 0) wps.push({ x: ROWLEN, y });
+      else wps.push({ x: 0, y });
+      if (k < 15) {
+        const ny = (k + 1) * (TH + GAP);
+        wps.push({ x: k % 2 === 0 ? ROWLEN : 0, y: ny });
+      }
+    }
+    let wp = 0, px = 0, py = 0;
+    function dir() {
+      const a = wps[wp], b = wps[wp + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const l = Math.hypot(dx, dy) || 1;
+      return { dx: dx / l, dy: dy / l, len: l };
+    }
+    let remain = dir().len;
+    function advance(d) {
+      while (d > 0) {
+        if (d <= remain) { const v = dir(); px += v.dx * d; py += v.dy * d; remain -= d; d = 0; }
+        else { const v = dir(); px = wps[wp + 1].x; py = wps[wp + 1].y; d -= remain; wp++; remain = dir().len; }
+      }
+    }
+    const slots = [];
+    let firstDir = null;
+    for (const n of S.board) {
+      const dbl = n.a === n.b;
+      const adv = (dbl ? TW : TH) + GAP;
+      let v = dir();
+      if (!firstDir) firstDir = v;
+      if (remain < adv && wp < wps.length - 2) {
+        const skip = remain;
+        advance(skip);
+        v = dir();
+        if (!firstDir) firstDir = v;
+      }
+      const cx = px + v.dx * adv / 2, cy = py + v.dy * adv / 2;
+      let ang = v.dx !== 0 ? 90 : 0;
+      if (dbl) ang += 90;
+      slots.push({ id: n.id, node: n, cx, cy, ang, dbl, dx: v.dx, dy: v.dy });
+      advance(adv);
+    }
+    const headPos = { x: 0 - firstDir.dx * (TH / 2 + 30), y: 0 - firstDir.dy * (TH / 2 + 30) };
+    const lv = dir();
+    const tailPos = { x: px + lv.dx * 30, y: py + lv.dy * 30 };
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (const s of slots) {
+      const along = (s.dbl ? TW : TH) / 2, perp = (s.dbl ? TH : TW) / 2;
+      const longHoriz = (s.ang % 180 !== 0);
+      const hx = longHoriz ? along : perp, hy = longHoriz ? perp : along;
+      minX = Math.min(minX, s.cx - hx); maxX = Math.max(maxX, s.cx + hx);
+      minY = Math.min(minY, s.cy - hy); maxY = Math.max(maxY, s.cy + hy);
+    }
+    if (!slots.length) { minX = minY = -50; maxX = maxY = 50; }
+    return { slots, headPos, tailPos, bbox: { minX, minY, maxX, maxY } };
+  }
+
+  function fitBoard(slots, animate) {
+    const layer = $('board-layer');
+    const areaW = layer.clientWidth, areaH = layer.clientHeight;
+    const bb = slots.bbox;
+    const bw = bb.maxX - bb.minX, bh = bb.maxY - bb.minY;
+    const pad = 30;
+    const s = Math.min(1, (areaW - pad * 2) / bw, (areaH - pad * 2) / bh);
+    const bcx = (bb.minX + bb.maxX) / 2, bcy = (bb.minY + bb.maxY) / 2;
+    const tx = areaW / 2 - bcx * s, ty = (areaH - 40) / 2 - bcy * s;
+    const board = $('board');
+    board.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
+    for (const sl of slots.slots) {
+      let el = boardEls.get(sl.id);
+      if (!el) {
+        el = makeTile(sl.node.a, sl.node.b, false);
+        boardEls.set(sl.id, el);
+        $('board').appendChild(el);
+      }
+      const [lead, trail] = faceFor(sl.node, sl);
+      const want = halfHTML(lead) + '<div class="div"></div>' + halfHTML(trail);
+      if (!el._facedown && el._face !== lead + '-' + trail) { el.innerHTML = want; el._face = lead + '-' + trail; }
+      const t = 'translate(' + sl.cx + 'px,' + sl.cy + 'px) rotate(' + sl.ang + 'deg) translate(' + (-TW / 2) + 'px,' + (-TH / 2) + 'px)';
+      if (!animate) { el.style.transition = 'none'; }
+      el.style.transform = t;
+      if (!animate) { void el.offsetWidth; el.style.transition = ''; }
+    }
+    const live = new Set(slots.slots.map((x) => x.id));
+    for (const [id, el] of boardEls) {
+      if (!live.has(id)) { el.remove(); boardEls.delete(id); }
+    }
+    placeEndzone($('ez-head'), slots.headPos, tx, ty, s);
+    placeEndzone($('ez-tail'), slots.tailPos, tx, ty, s);
+    lastSlots = { slots, tx, ty, s };
+    return lastSlots;
+  }
+
+  function placeEndzone(el, p, tx, ty, s) {
+    el.style.left = (tx + p.x * s) + 'px';
+    el.style.top = (ty + p.y * s) + 'px';
+  }
+
+  function layout(animate) {
+    if (!S) return;
+    fitBoard(computeSlots(), animate !== false && !REDUCED);
+  }
+
+  /* ---------------- particles + shake ---------------- */
+  const fx = $('fx'), fctx = fx.getContext('2d');
+  let parts = [], shakeT = 0, fxRunning = false;
+  function sizeFx() {
+    const r = $('table').getBoundingClientRect();
+    fx.width = r.width; fx.height = r.height;
+  }
+  function dust(x, y, n, big) {
+    if (REDUCED) return;
+    for (let i = 0; i < n; i++) {
+      if (parts.length > 90) break;
+      const a = Math.random() * Math.PI * 2, sp = 20 + Math.random() * (big ? 130 : 70);
+      parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+        life: 0.5 + Math.random() * 0.4, age: 0,
+        r: 1.5 + Math.random() * (big ? 4 : 2.5),
+      });
+    }
+    kickFx();
+  }
+  function addShake(amount) {
+    if (REDUCED) return;
+    shakeT = Math.min(1, shakeT + amount);
+    kickFx();
+  }
+  function kickFx() {
+    if (fxRunning) return;
+    fxRunning = true;
+    requestAnimationFrame(fxTick);
+  }
+  let lastT = 0;
+  function fxTick(t) {
+    const dt = Math.min(0.05, (t - lastT) / 1000 || 0.016);
+    lastT = t;
+    fctx.clearRect(0, 0, fx.width, fx.height);
+    if (parts.length) {
+      for (const p of parts) {
+        p.age += dt;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vx *= 0.96; p.vy *= 0.96;
+        const k = 1 - p.age / p.life;
+        if (k <= 0) continue;
+        fctx.globalAlpha = k * 0.7;
+        fctx.fillStyle = '#e8d9b0';
+        fctx.beginPath(); fctx.arc(p.x, p.y, p.r * k + 0.5, 0, 7); fctx.fill();
+      }
+      parts = parts.filter((p) => p.age < p.life);
+      fctx.globalAlpha = 1;
+    }
+    if (shakeT > 0.003) {
+      shakeT = Math.max(0, shakeT - dt * 2.4);
+      const m = shakeT * shakeT * 9;
+      const ox = Math.sin(t * 0.091) * m, oy = Math.cos(t * 0.113) * m;
+      $('table').style.transform = 'translate(' + ox.toFixed(1) + 'px,' + oy.toFixed(1) + 'px)';
+    } else if ($('table').style.transform) {
+      $('table').style.transform = '';
+    }
+    if (parts.length || shakeT > 0.003) requestAnimationFrame(fxTick);
+    else fxRunning = false;
+  }
+
+  /* ---------------- HUD / chrome ---------------- */
+  function renderScores() {
+    $('score-you').textContent = S.scores[0];
+    $('score-house').textContent = S.scores[1];
+    $('round-label').textContent = 'Round ' + S.round;
+  }
+  function renderAiHand() {
+    const h = $('ai-hand');
+    h.innerHTML = '';
+    for (let i = 0; i < S.hands[1].length; i++) h.appendChild(makeTile(0, 0, true));
+    $('house-count').textContent = S.hands[1].length ? '×' + S.hands[1].length : '';
+  }
+  function renderBoneyard() {
+    const n = S.boneyard.length;
+    const by = $('boneyard');
+    const st = $('bone-stack');
+    st.innerHTML = '';
+    const show = Math.min(3, n);
+    for (let i = 0; i < show; i++) st.appendChild(makeTile(0, 0, true));
+    $('bone-count').textContent = n;
+    const mustDraw = uiPhase === 'play' && S.turn === 0 && !busy && !Sim.canPlay(S, 0) && n > 0;
+    by.classList.toggle('need', mustDraw);
+    by.classList.toggle('dead', n === 0);
+  }
+  function setStatus(msg) {
+    $('status').textContent = msg || '';
+  }
+  function mustKnock() {
+    return uiPhase === 'play' && S && S.turn === 0 && !busy &&
+      S.boneyard.length === 0 && !Sim.canPlay(S, 0);
+  }
+  function updateTurnUI() {
+    const yourTurn = uiPhase === 'play' && S.turn === 0 && !busy;
+    $('rack').classList.toggle('locked', !yourTurn);
+    $('btn-knock').disabled = !mustKnock();
+    renderBoneyard();
+    renderRack();
+  }
+
+  /* ---------------- rack ---------------- */
+  function renderRack() {
+    const rack = $('rack');
+    rack.innerHTML = '';
+    const moves = (uiPhase === 'play' && S.turn === 0) ? Sim.legalMoves(S.hands[0], Sim.exposed(S)) : [];
+    const playable = new Set(moves.map((m) => m.tileIdx));
+    rackTiles = S.hands[0].map((t) => ({ a: t.a, b: t.b }));
+    rackTiles.forEach((t, i) => {
+      const el = makeTile(t.a, t.b, false);
+      el.dataset.idx = i;
+      if (playable.has(i)) el.classList.add('playable');
+      if (i === selected) el.classList.add('sel');
+      rack.appendChild(el);
+    });
+    if (selected >= rackTiles.length) selected = -1;
+    fitRack();
+  }
+  function rackTileW() {
+    const n = Math.max(1, S.hands[0].length);
+    const avail = window.innerWidth - 28 - (n - 1) * 8;
+    return Math.min(52, Math.floor(avail / n));
+  }
+  function fitRack() { $('rack').style.setProperty('--tw', rackTileW() + 'px'); }
+  function clearEndzones() {
+    $('ez-head').className = 'endzone hidden';
+    $('ez-tail').className = 'endzone hidden';
+  }
+  function showEndzones(moves) {
+    clearEndzones();
+    const ends = new Set(moves.map((m) => m.end));
+    if (ends.has('head')) { $('ez-head').classList.remove('hidden'); $('ez-head').classList.add('lit'); }
+    if (ends.has('tail')) { $('ez-tail').classList.remove('hidden'); $('ez-tail').classList.add('lit'); }
+  }
+  function endzoneScreen(which) {
+    const el = which === 'head' ? $('ez-head') : $('ez-tail');
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  /* ---------------- play flow ---------------- */
+  function tileScreenPos(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  async function doPlayerPlay(tileIdx, end) {
+    if (busy || uiPhase !== 'play' || S.turn !== 0) return;
+    busy = true;
+    selected = -1;
+    clearEndzones();
+    const rackEl = $('rack').children[tileIdx];
+    const from = rackEl ? tileScreenPos(rackEl) : { x: innerWidth / 2, y: innerHeight - 120 };
+    const r = Sim.playTile(S, 0, tileIdx, end);
+    if (!r.ok) { busy = false; updateTurnUI(); return; }
+    const ev = r.events[0];
+    AU.clack((ev.tile.a + ev.tile.b) / 12);
+    buzz(16);
+    const el = makeTile(ev.tile.a, ev.tile.b, false);
+    el._face = '';
+    boardEls.set(ev.nodeId, el);
+    $('board').appendChild(el);
+    if (lastSlots) {
+      const bx = (from.x - lastSlots.tx) / lastSlots.s, by = (from.y - lastSlots.ty) / lastSlots.s;
+      el.style.transition = 'none';
+      el.style.transform = 'translate(' + bx + 'px,' + by + 'px) rotate(0deg) translate(' + (-TW / 2) + 'px,' + (-TH / 2) + 'px)';
+      void el.offsetWidth;
+      el.style.transition = '';
+    }
+    renderRack();
+    layout(true);
+    const zc = endzoneScreen(end);
+    dust(zc.x, zc.y, ev.tile.a === ev.tile.b ? 14 : 8, ev.tile.a === ev.tile.b);
+    addShake(ev.tile.a === ev.tile.b ? 0.55 : 0.32);
+    await wait(REDUCED ? 30 : 420);
+    busy = false;
+    await afterMove();
+  }
+
+  async function doPlayerDraw() {
+    if (busy || uiPhase !== 'play' || S.turn !== 0) return;
+    if (Sim.canPlay(S, 0) || !S.boneyard.length) return;
+    busy = true;
+    const r = Sim.drawTile(S, 0);
+    busy = false;
+    if (!r.ok) { updateTurnUI(); return; }
+    AU.flip();
+    buzz(10);
+    const bp = tileScreenPos($('bone-stack'));
+    const ghost = makeTile(0, 0, true);
+    const gtw = rackTileW(), gth = Math.round(gtw * 2);
+    ghost.style.cssText = 'position:fixed;left:' + (bp.x - gtw / 2) + 'px;top:' + (bp.y - gth / 2) + 'px;width:' + gtw + 'px;height:' + gth + 'px;z-index:65;transition:transform .34s ease';
+    document.body.appendChild(ghost);
+    const rack = $('rack').getBoundingClientRect();
+    const dx = rack.left + rack.width / 2 - bp.x, dy = rack.top + 40 - bp.y;
+    requestAnimationFrame(() => { ghost.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (Math.random() * 30 - 15) + 'deg)'; });
+    await wait(REDUCED ? 30 : 360);
+    ghost.remove();
+    renderRack(); renderBoneyard();
+    if (Sim.canPlay(S, 0)) setStatus('Your move — tap a glowing tile.');
+    else if (!S.boneyard.length) setStatus('Boneyard empty.');
+    updateTurnUI();
+  }
+
+  async function doPlayerKnock() {
+    if (busy || uiPhase !== 'play' || S.turn !== 0) return;
+    const r = Sim.knock(S, 0);
+    if (!r.ok) return;
+    AU.knock();
+    buzz(25);
+    setStatus('You knock.');
+    clearEndzones();
+    await wait(500);
+    await afterMove();
+  }
+
+  async function afterMove() {
+    renderScores(); renderAiHand(); renderBoneyard();
+    const evs = S.lastEvents;
+    const rend = evs.find((e) => e.t === 'roundEnd');
+    if (rend) { await showRoundEnd(rend, evs.find((e) => e.t === 'matchEnd')); return; }
+    updateTurnUI();
+    if (S.turn === 1 && S.phase === 'play') aiTakeTurn();
+    else if (S.turn === 0 && S.phase === 'play' && !Sim.canPlay(S, 0)) {
+      if (S.boneyard.length) setStatus('No match — tap the boneyard to draw.');
+      updateTurnUI();
+    }
+  }
+
+  async function aiTakeTurn() {
+    if (S.phase !== 'play' || S.turn !== 1) return;
+    busy = true;
+    updateTurnUI();
+    setStatus('House is thinking…');
+    $('ai-thinking').classList.remove('hidden');
+    await wait(700 + difficulty * 260 + Math.random() * 320);
+    $('ai-thinking').classList.add('hidden');
+    while (S.phase === 'play' && S.turn === 1 && !Sim.canPlay(S, 1) && S.boneyard.length) {
+      Sim.drawTile(S, 1);
+      AU.flip();
+      renderAiHand(); renderBoneyard();
+      await wait(REDUCED ? 30 : 380);
+    }
+    if (S.phase !== 'play' || S.turn !== 1) { busy = false; await afterMove(); return; }
+    const choice = Sim.aiChoose(S, 1, difficulty);
+    if (choice.type === 'knock') {
+      Sim.knock(S, 1);
+      AU.knock();
+      buzz(25);
+      setStatus('House knocks.');
+      await wait(600);
+    } else {
+      const hand = $('ai-hand').getBoundingClientRect();
+      const from = { x: hand.left + hand.width / 2, y: hand.top + hand.height / 2 };
+      const r = Sim.playTile(S, 1, choice.tileIdx, choice.end);
+      if (r.ok) {
+        const ev = r.events[0];
+        AU.clack((ev.tile.a + ev.tile.b) / 12);
+        renderAiHand();
+        const el = makeTile(ev.tile.a, ev.tile.b, true);
+        el._face = '';
+        el._facedown = true;
+        boardEls.set(ev.nodeId, el);
+        $('board').appendChild(el);
+        if (lastSlots) {
+          const bx = (from.x - lastSlots.tx) / lastSlots.s, by = (from.y - lastSlots.ty) / lastSlots.s;
+          el.style.transition = 'none';
+          el.style.transform = 'translate(' + bx + 'px,' + by + 'px) rotate(0deg) translate(' + (-TW / 2) + 'px,' + (-TH / 2) + 'px)';
+          void el.offsetWidth;
+          el.style.transition = '';
+        }
+        layout(true);
+        setTimeout(() => {
+          el.classList.remove('back');
+          el._facedown = false;
+          const sl = lastSlots && lastSlots.slots.slots.find((x) => x.id === ev.nodeId);
+          if (sl) { const [lead, trail] = faceFor(sl.node, sl); el.innerHTML = halfHTML(lead) + '<div class="div"></div>' + halfHTML(trail); el._face = lead + '-' + trail; }
+        }, REDUCED ? 0 : 200);
+        const zc = endzoneScreen(choice.end);
+        setTimeout(() => {
+          dust(zc.x, zc.y, ev.tile.a === ev.tile.b ? 14 : 8, ev.tile.a === ev.tile.b);
+          addShake(ev.tile.a === ev.tile.b ? 0.55 : 0.32);
+        }, REDUCED ? 0 : 300);
+        await wait(REDUCED ? 30 : 480);
+      }
+    }
+    busy = false;
+    await afterMove();
+  }
+
+  /* ---------------- round / match cards ---------------- */
+  function miniTiles(el, hand) {
+    el.innerHTML = '';
+    const sorted = hand.slice().sort((x, y) => (y.a + y.b) - (x.a + x.b));
+    for (const t of sorted) el.appendChild(makeTile(t.a, t.b, false));
+    if (!sorted.length) el.innerHTML = '<span style="font-style:italic;color:#8a6f3c;font-size:12px;">empty hand</span>';
+  }
+
+  async function showRoundEnd(rend, mend) {
+    uiPhase = 'roundEnd';
+    clearEndzones();
+    setStatus('');
+    await wait(650);
+    renderScores();
+    const youWon = rend.winner === 0;
+    buzz(youWon ? [20, 50, 20] : [40]);
+    $('rc-kicker').textContent = 'Round ' + S.round;
+    if (rend.winner == null) {
+      $('rc-title').textContent = 'Dead Heat';
+      $('rc-points').textContent = '+0';
+    } else if (rend.reason === 'domino') {
+      $('rc-title').textContent = youWon ? 'Domino!' : 'House Takes It';
+      $('rc-points').textContent = '+' + rend.pts;
+    } else {
+      $('rc-title').textContent = youWon ? 'Blocked — You Take It' : 'Blocked — House Takes It';
+      $('rc-points').textContent = '+' + rend.pts;
+    }
+    miniTiles($('rc-house-tiles'), S.hands[1]);
+    $('rc-house-pips').textContent = Sim.handPips(S.hands[1]) + ' pips';
+    miniTiles($('rc-you-tiles'), S.hands[0]);
+    $('rc-you-pips').textContent = Sim.handPips(S.hands[0]) + ' pips';
+    AU.chime(youWon);
+    $('round-card').classList.remove('hidden');
+    busy = false;
+    updateTurnUI();
+    if (mend) {
+      // let the round card breathe, then swap to the match card
+      await wait(REDUCED ? 200 : 2400);
+      $('round-card').classList.add('hidden');
+      const matchWon = mend.winner === 0;
+      $('mc-title').textContent = matchWon ? 'You Take the Match!' : 'House Takes the Match';
+      $('mc-score').textContent = S.scores[0] + ' · ' + S.scores[1];
+      $('mc-sub').textContent = matchWon
+        ? 'The table is yours. The House will want revenge.'
+        : 'The House keeps the felt warm. Run it back?';
+      uiPhase = 'matchEnd';
+      $('match-card').classList.remove('hidden');
+    }
+  }
+
+  /* ---------------- deal / match start ---------------- */
+  function clearBoard() {
+    $('board').innerHTML = '';
+    boardEls.clear();
+    lastSlots = null;
+    clearEndzones();
+  }
+
+  async function dealRound() {
+    uiPhase = 'dealing';
+    busy = true;
+    clearBoard();
+    $('round-card').classList.add('hidden');
+    $('match-card').classList.add('hidden');
+    renderScores(); renderAiHand(); renderBoneyard(); renderRack();
+    setStatus('Dealing…');
+    AU.shuffle();
+    const cx = innerWidth / 2, cy = innerHeight * 0.42;
+    const ghosts = [];
+    for (let i = 0; i < 7; i++) {
+      for (const who of [0, 1]) {
+        const g = makeTile(0, 0, true);
+        g.style.cssText = 'position:fixed;left:' + (cx - 22) + 'px;top:' + (cy - 44) + 'px;width:44px;height:88px;z-index:65;transition:transform .3s ease';
+        document.body.appendChild(g);
+        ghosts.push(g);
+        const target = who === 0
+          ? { x: innerWidth / 2 + (i - 3) * 62, y: innerHeight - 90 }
+          : { x: innerWidth / 2 + (i - 3) * 38, y: 96 };
+        requestAnimationFrame(() => {
+          g.style.transform = 'translate(' + (target.x - cx) + 'px,' + (target.y - cy) + 'px) rotate(' + (Math.random() * 24 - 12) + 'deg)';
+        });
+        await wait(REDUCED ? 0 : 55);
+      }
+    }
+    await wait(REDUCED ? 30 : 320);
+    ghosts.forEach((g) => g.remove());
+    layout(false);
+    const op = S.board[0];
+    const el = boardEls.get(op.id);
+    if (el && !REDUCED) {
+      el.style.transition = 'none';
+      el.style.transform += ' scale(1.6)';
+      void el.offsetWidth;
+      el.style.transition = '';
+      el.style.transform = el.style.transform.replace(' scale(1.6)', '');
+      AU.clack(1);
+      const p = tileScreenPos(el);
+      dust(p.x, p.y, 12, true);
+    } else if (el) { AU.clack(1); }
+    const opener = S.lastEvents.find((e) => e.t === 'open');
+    const who = opener && opener.player === 0 ? 'You' : 'House';
+    setStatus(who + ' open' + (who === 'You' ? '' : 's') + ' with [' + op.a + '|' + op.b + ']');
+    buzz(12);
+    uiPhase = 'play';
+    busy = false;
+    updateTurnUI();
+    if (S.turn === 1) aiTakeTurn();
+    else if (!Sim.canPlay(S, 0) && S.boneyard.length) setStatus('No match — tap the boneyard to draw.');
+    else if (S.turn === 0) setStatus('Your move — tap a glowing tile.');
+  }
+
+  function startMatch() {
+    const seed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+    startMatchSeeded(seed);
+  }
+
+  function startMatchSeeded(seed) {
+    S = Sim.newGame(seed, 100);
+    clearBoard();
+    $('round-card').classList.add('hidden');
+    $('match-card').classList.add('hidden');
+    $('title').classList.add('hidden');
+    $('table').classList.remove('title-mode');
+    dealRound();
+  }
+
+  /* ---------------- input: drag + tap ---------------- */
+  function rackTileFromEvent(e) {
+    return e.target.closest ? e.target.closest('#rack .tile') : null;
+  }
+  let pdown = null;
+  $('rack').addEventListener('pointerdown', (e) => {
+    if (uiPhase !== 'play' || S.turn !== 0 || busy) return;
+    const el = rackTileFromEvent(e);
+    if (!el) return;
+    const idx = +el.dataset.idx;
+    const moves = Sim.legalMoves(S.hands[0], Sim.exposed(S));
+    const my = moves.filter((m) => m.tileIdx === idx);
+    if (!my.length) {
+      el.animate(
+        [{ transform: 'translateX(0)' }, { transform: 'translateX(-7px)' },
+         { transform: 'translateX(7px)' }, { transform: 'translateX(0)' }],
+        { duration: 220 });
+      AU.uiTap();
+      return;
+    }
+    pdown = { idx, el, x0: e.clientX, y0: e.clientY, dragging: false, moves: my };
+    try { if (el.setPointerCapture && e.pointerId != null) el.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  $('rack').addEventListener('pointermove', (e) => {
+    if (!pdown) return;
+    const dx = e.clientX - pdown.x0, dy = e.clientY - pdown.y0;
+    if (!pdown.dragging && Math.hypot(dx, dy) > 10) {
+      pdown.dragging = true;
+      pdown.el.classList.add('dragging');
+      pdown.el.style.position = 'fixed';
+      pdown.el.style.left = '0'; pdown.el.style.top = '0';
+      pdown.el.style.margin = '0';
+      showEndzones(pdown.moves);
+    }
+    if (pdown.dragging) {
+      const hw = pdown.el.offsetWidth / 2, hh = pdown.el.offsetHeight / 2;
+      pdown.el.style.transform = 'translate(' + (e.clientX - hw) + 'px,' + (e.clientY - hh) + 'px) rotate(4deg) scale(1.08)';
+      let best = null, bestD = 52;
+      for (const m of pdown.moves) {
+        const z = endzoneScreen(m.end);
+        const d = Math.hypot(e.clientX - z.x, e.clientY - z.y);
+        if (d < bestD) { bestD = d; best = m.end; }
+      }
+      $('ez-head').classList.toggle('hot', best === 'head');
+      $('ez-tail').classList.toggle('hot', best === 'tail');
+      pdown.hot = best;
+    }
+  });
+  async function endPointer(e) {
+    if (!pdown) return;
+    const pd = pdown; pdown = null;
+    if (pd.dragging) {
+      pd.el.classList.remove('dragging');
+      pd.el.style.cssText = '';
+      if (pd.hot) {
+        clearEndzones();
+        await doPlayerPlay(pd.idx, pd.hot);
+      } else {
+        clearEndzones();
+        renderRack();
+      }
+    } else {
+      if (selected === pd.idx) { selected = -1; clearEndzones(); }
+      else {
+        selected = pd.idx;
+        buzz(8);
+        if (pd.moves.length === 1) {
+          const mv = pd.moves[0];
+          selected = -1;
+          await doPlayerPlay(mv.tileIdx, mv.end);
+          return;
+        }
+        showEndzones(pd.moves);
+        setStatus('Tap a glowing end.');
+      }
+      renderRack();
+    }
+  }
+  $('rack').addEventListener('pointerup', endPointer);
+  $('rack').addEventListener('pointercancel', () => {
+    if (pdown && pdown.dragging) { pdown.el.classList.remove('dragging'); pdown.el.style.cssText = ''; }
+    pdown = null; clearEndzones(); renderRack();
+  });
+  $('board-layer').addEventListener('pointerup', async (e) => {
+    if (selected < 0 || uiPhase !== 'play' || S.turn !== 0 || busy) return;
+    const moves = Sim.legalMoves(S.hands[0], Sim.exposed(S)).filter((m) => m.tileIdx === selected);
+    let best = null, bestD = 60;
+    for (const m of moves) {
+      const z = endzoneScreen(m.end);
+      const d = Math.hypot(e.clientX - z.x, e.clientY - z.y);
+      if (d < bestD) { bestD = d; best = m; }
+    }
+    if (best) { const idx = selected; selected = -1; clearEndzones(); await doPlayerPlay(idx, best.end); }
+  });
+
+  $('boneyard').addEventListener('click', () => { AU.ensure(); doPlayerDraw(); });
+  $('boneyard').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') doPlayerDraw(); });
+  $('btn-knock').addEventListener('click', () => { AU.uiTap(); doPlayerKnock(); });
+
+  /* ---------------- chrome buttons ---------------- */
+  function syncSound() {
+    $('btn-sound').textContent = AU.isMuted() ? '✕' : '♪';
+    $('btn-sound').style.opacity = AU.isMuted() ? 0.55 : 1;
+  }
+  $('btn-sound').addEventListener('click', () => { AU.ensure(); AU.setMuted(!AU.isMuted()); syncSound(); AU.uiTap(); });
+  $('btn-restart').addEventListener('click', () => { AU.uiTap(); if (uiPhase !== 'title') startMatch(); });
+  $('btn-help').addEventListener('click', () => { AU.uiTap(); $('rules-modal').classList.remove('hidden'); });
+  $('rules-close').addEventListener('click', () => { AU.uiTap(); $('rules-modal').classList.add('hidden'); });
+  $('title-rules').addEventListener('click', () => { AU.uiTap(); $('rules-modal').classList.remove('hidden'); });
+  $('rc-next').addEventListener('click', () => {
+    AU.uiTap();
+    $('round-card').classList.add('hidden');
+    Sim.nextRound(S); dealRound();
+  });
+  $('mc-again').addEventListener('click', () => {
+    AU.uiTap();
+    $('match-card').classList.add('hidden');
+    startMatch();
+  });
+
+  /* ---------------- title ---------------- */
+  const diffBtns = Array.from(document.querySelectorAll('#diff-cards .diffcard'));
+  diffBtns.forEach((b) => {
+    if (+b.dataset.d === difficulty) {
+      diffBtns.forEach((x) => { x.classList.remove('sel'); x.setAttribute('aria-checked', 'false'); });
+      b.classList.add('sel'); b.setAttribute('aria-checked', 'true');
+    }
+    b.addEventListener('click', () => {
+      AU.uiTap();
+      buzz(8);
+      difficulty = +b.dataset.d;
+      try { localStorage.setItem(LS_DIFF, String(difficulty)); } catch (e) {}
+      diffBtns.forEach((x) => { x.classList.remove('sel'); x.setAttribute('aria-checked', 'false'); });
+      b.classList.add('sel'); b.setAttribute('aria-checked', 'true');
+    });
+  });
+  $('play-tile').addEventListener('click', () => { AU.ensure(); AU.uiTap(); buzz(15); startMatch(); });
+
+  // title dressing: two hero tiles tilted each side of the title,
+  // plus a quiet chain arcing across the top.
+  (function scatter() {
+    const box = $('title-scatter');
+    const heroes = [
+      { a: 6, b: 6, x: 4, y: 30, r: -14, tw: 58 },
+      { a: 5, b: 3, x: 80, y: 34, r: 12, tw: 58 },
+    ];
+    const chain = [
+      { a: 6, b: 4, x: 20, y: 4, r: -9 },
+      { a: 4, b: 2, x: 40, y: 2.5, r: 3 },
+      { a: 2, b: 5, x: 60, y: 4, r: 13 },
+    ];
+    heroes.forEach((s) => {
+      const t = makeTile(s.a, s.b, false);
+      t.style.setProperty('--tw', s.tw + 'px');
+      t.style.left = s.x + '%'; t.style.top = s.y + '%';
+      t.style.transform = 'rotate(' + s.r + 'deg)';
+      t.style.opacity = 0.95;
+      box.appendChild(t);
+    });
+    chain.forEach((s) => {
+      const t = makeTile(s.a, s.b, false);
+      t.style.left = s.x + '%'; t.style.top = s.y + '%';
+      t.style.transform = 'rotate(' + s.r + 'deg)';
+      t.style.opacity = 0.55;
+      box.appendChild(t);
+    });
+  })();
+
+  /* ---------------- boot ---------------- */
+  function onResize() { sizeFx(); if (uiPhase !== 'title') { layout(false); fitRack(); } }
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', () => setTimeout(onResize, 200));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { pdown = null; } });
+  sizeFx();
+  syncSound();
+
+  /* test hook for the smoke harness */
+  window.__dominoes = {
+    get state() { return S; },
+    get phase() { return uiPhase; },
+    get busy() { return busy; },
+    refresh() { layout(true); renderRack(); renderAiHand(); renderBoneyard(); renderScores(); updateTurnUI(); },
+    start(d, seed) {
+      if (d != null) difficulty = d;
+      if (seed != null) startMatchSeeded(seed); else startMatch();
+    },
+    autoStep() {
+      if (uiPhase !== 'play' || busy) return 'busy';
+      const p = S.turn;
+      if (Sim.canPlay(S, p)) {
+        const mv = Sim.legalMoves(S.hands[p], Sim.exposed(S))[0];
+        if (p === 0) { doPlayerPlay(mv.tileIdx, mv.end); return 'play'; }
+        const r = Sim.playTile(S, p, mv.tileIdx, mv.end);
+        return r.ok ? 'play' : 'err';
+      }
+      if (S.boneyard.length) { const r = Sim.drawTile(S, p); return r.ok ? 'draw' : 'err'; }
+      const r = Sim.knock(S, p); return r.ok ? 'knock' : 'err';
+    },
+    uiStep() {
+      if (uiPhase !== 'play' || busy || S.turn !== 0) return 'wait';
+      if (Sim.canPlay(S, 0)) {
+        const m = Sim.legalMoves(S.hands[0], Sim.exposed(S))[0];
+        doPlayerPlay(m.tileIdx, m.end);
+        return 'play';
+      }
+      if (S.boneyard.length) { doPlayerDraw(); return 'draw'; }
+      doPlayerKnock();
+      return 'knock';
+    },
+    ensurePlayable() {
+      let n = 0;
+      while (uiPhase === 'play' && !busy && S.turn === 0 && !Sim.canPlay(S, 0) && S.boneyard.length && n++ < 14) {
+        Sim.drawTile(S, 0);
+      }
+      renderRack(); renderBoneyard(); updateTurnUI();
+      return Sim.canPlay(S, 0);
+    },
+    async autoRound(maxSteps) {
+      let n = 0;
+      while (S.phase === 'play' && n++ < (maxSteps || 200)) {
+        const p = S.turn;
+        if (Sim.canPlay(S, p)) {
+          const mv = Sim.legalMoves(S.hands[p], Sim.exposed(S))[0];
+          Sim.playTile(S, p, mv.tileIdx, mv.end);
+        } else if (S.boneyard.length) Sim.drawTile(S, p);
+        else Sim.knock(S, p);
+        layout(false); renderRack(); renderAiHand(); renderBoneyard();
+      }
+      return S.phase;
+    },
+    showEnd() {
+      // test only: display the round/match card after a sim-driven autoRound
+      const evs = S.lastEvents;
+      const rend = evs.find((e) => e.t === 'roundEnd');
+      if (rend) return showRoundEnd(rend, evs.find((e) => e.t === 'matchEnd'));
+      return Promise.resolve();
+    },
+  };
+})();
+</script>
 </body>
 </html>
