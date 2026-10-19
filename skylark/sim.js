@@ -166,19 +166,73 @@ var SK = (function () {
   function assignFlight(pilot, fleetIdx, destId, jobs) {
     ensureAirline(pilot);
     var f = pilot.fleet[fleetIdx];
+    if (!f) return { ok: false, why: 'busy' };
+    return assignRoute(pilot, fleetIdx, [f.at, destId], jobs);
+  }
+
+  function planeById(id) {
+    for (var i = 0; i < PLANES.length; i++) if (PLANES[i].id === id) return PLANES[i];
+    return PLANES[0];
+  }
+
+  /* multi-stop routing (the Pocket Planes signature): stops[0] is the origin
+     (must be where the plane sits), stops[1..] are destinations in order.
+     Jobs ride along and auto-deliver when their dest stop is reached. */
+  function assignRoute(pilot, fleetIdx, stops, jobs) {
+    ensureAirline(pilot);
+    var f = pilot.fleet[fleetIdx];
     if (!f || f.status !== 'idle') return { ok: false, why: 'busy' };
-    if (pilot.strips.indexOf(destId) < 0) return { ok: false, why: 'strip' };
-    if (!planeCanLand(f.plane, stripById(destId).cls)) return { ok: false, why: 'class' };
+    if (!stops || stops.length < 2) return { ok: false, why: 'route' };
+    if (stops[0] !== f.at) return { ok: false, why: 'position' };
+    var pl = planeById(f.plane);
+    var paxN = 0, cargoN = 0, i;
+    jobs = jobs || [];
+    for (i = 0; i < jobs.length; i++) {
+      if (jobs[i].kind === 'cargo') cargoN++; else paxN++;
+    }
+    if (paxN > pl.pax || cargoN > pl.cargo) return { ok: false, why: 'capacity' };
+    for (i = 1; i < stops.length; i++) {
+      if (pilot.strips.indexOf(stops[i]) < 0) return { ok: false, why: 'strip' };
+      if (!planeCanLand(f.plane, stripById(stops[i]).cls)) return { ok: false, why: 'class' };
+    }
+    // every job must be deliverable on this route
+    for (i = 0; i < jobs.length; i++) {
+      if (stops.indexOf(jobs[i].dest) < 1) return { ok: false, why: 'miss' };
+    }
     var now = Date.now();
-    var mins = legMinutes(f.at, destId, f.plane);
     f.status = 'enroute';
-    f.dest = destId;
-    f.jobs = jobs || [];
+    f.route = stops.slice();
+    f.leg = 1;
+    f.dest = stops[1];
+    f.jobs = jobs;
     f.departAt = now;
-    f.arriveAt = now + mins * 60000;
-    // mark jobs taken
-    for (var i = 0; i < f.jobs.length; i++) pilot.jobsTaken[f.jobs[i].id] = true;
-    return { ok: true, mins: mins };
+    f.arriveAt = now + legMinutes(stops[0], stops[1], f.plane) * 60000;
+    for (i = 0; i < f.jobs.length; i++) pilot.jobsTaken[f.jobs[i].id] = true;
+    return { ok: true, mins: totalRouteMinutes(stops, f.plane) };
+  }
+
+  function totalRouteMinutes(stops, planeId) {
+    var t = 0;
+    for (var i = 0; i < stops.length - 1; i++) t += legMinutes(stops[i], stops[i + 1], planeId);
+    return t;
+  }
+
+  /* total profit for a route: jobs grouped by dest, 25% bonus per same-dest group */
+  function routeProfit(jobs) {
+    var byDest = {}, total = 0, bonus = false, k, i;
+    jobs = jobs || [];
+    for (i = 0; i < jobs.length; i++) {
+      var d = jobs[i].dest;
+      if (!byDest[d]) byDest[d] = [];
+      byDest[d].push(jobs[i]);
+    }
+    for (k in byDest) {
+      if (!byDest.hasOwnProperty(k)) continue;
+      var p = flightPayout(byDest[k]);
+      total += p.total;
+      if (p.bonus) bonus = true;
+    }
+    return { total: total, bonus: bonus };
   }
 
   // 25% same-destination bonus: all jobs share one dest → +25% each
@@ -204,18 +258,33 @@ var SK = (function () {
     for (var i = 0; i < pilot.fleet.length; i++) {
       var f = pilot.fleet[i];
       if (f.status === 'enroute' && now >= f.arriveAt) {
-        var pay = flightPayout(f.jobs);
+        // which stop did we just reach? (old saves: single-leg, no route array)
+        var stop = (f.route && f.route.length) ? f.route[f.leg] : f.dest;
+        var batch = [], rest = [], b;
+        for (b = 0; b < f.jobs.length; b++) {
+          if (f.jobs[b].dest === stop) batch.push(f.jobs[b]); else rest.push(f.jobs[b]);
+        }
+        var pay = flightPayout(batch);
         pilot.money += pay.total;
-        pilot.xp += 8 + f.jobs.length * 3;
+        pilot.xp += 8 + batch.length * 3;
         var pn = planeName(f.plane);
+        var more = f.route && f.leg < f.route.length - 1;
         var msg = pay.bonus
-          ? pn + ' landed at ' + stripById(f.dest).name + ' — full load, one stop! +' + money(pay.total)
-          : pn + ' landed at ' + stripById(f.dest).name + ' +' + money(pay.total);
+          ? pn + ' landed at ' + stripById(stop).name + ' — full load, one stop! +' + money(pay.total)
+          : pn + ' landed at ' + stripById(stop).name + ' +' + money(pay.total);
+        if (more) msg += ' → ' + stripById(f.route[f.leg + 1]).name + ' next';
         arrivals.push({ t: now, text: msg, who: 'kit' });
         pilot.inbox.push({ t: now, text: msg, who: 'kit' });
         if (pilot.inbox.length > 12) pilot.inbox.shift();
-        f.at = f.dest; f.dest = null; f.jobs = []; f.status = 'idle';
-        f.departAt = 0; f.arriveAt = 0;
+        f.at = stop; f.jobs = rest; f.leg++;
+        if (!more) {
+          f.dest = null; f.route = null; f.leg = 0; f.status = 'idle';
+          f.departAt = 0; f.arriveAt = 0;
+        } else {
+          f.dest = f.route[f.leg];
+          f.departAt = now;
+          f.arriveAt = now + legMinutes(f.at, f.dest, f.plane) * 60000;
+        }
       }
     }
     pilot.rank = rankFor(pilot.xp);
@@ -808,6 +877,32 @@ var SK = (function () {
     if (!arr.length) return 'no arrival';
     if (pilot.fleet[0].status !== 'idle' || pilot.fleet[0].at !== 'pebblebrook') return 'not arrived';
     if (pilot.money !== before + 250) return 'payout wrong: ' + (pilot.money - before);
+    // multi-stop routing: pebblebrook -> meadowlark -> foxglove
+    var b2 = buyStrip(pilot, 'foxglove');
+    if (!b2.ok) return 'buyStrip foxglove failed';
+    var m1 = { kind: 'pax', dest: 'meadowlark', payout: 100, id: 't-m1' };
+    var m2 = { kind: 'pax', dest: 'foxglove', payout: 100, id: 't-m2' };
+    var ar = assignRoute(pilot, 0, ['pebblebrook', 'meadowlark', 'foxglove'], [m1, m2]);
+    if (!ar.ok) return 'assignRoute failed: ' + ar.why;
+    pilot.fleet[0].arriveAt = Date.now() - 1000;
+    var before2 = pilot.money;
+    var arr2 = tickAirline(pilot);
+    if (!arr2.length) return 'no leg1 arrival';
+    if (pilot.fleet[0].status !== 'enroute') return 'should continue leg 2, got ' + pilot.fleet[0].status;
+    if (pilot.fleet[0].at !== 'meadowlark') return 'leg1 at wrong: ' + pilot.fleet[0].at;
+    if (pilot.money !== before2 + 100) return 'leg1 payout wrong: ' + (pilot.money - before2);
+    pilot.fleet[0].arriveAt = Date.now() - 1000;
+    var before3 = pilot.money;
+    tickAirline(pilot);
+    if (pilot.fleet[0].status !== 'idle' || pilot.fleet[0].at !== 'foxglove') return 'not finished at foxglove';
+    if (pilot.money !== before3 + 100) return 'leg2 payout wrong: ' + (pilot.money - before3);
+    // job dest not on route must be rejected
+    var bad = assignRoute(pilot, 0, ['foxglove', 'meadowlark'],
+      [{ kind: 'pax', dest: 'pebblebrook', payout: 50, id: 't-x' }]);
+    if (bad.ok || bad.why !== 'miss') return 'miss validation failed';
+    // route profit: grouped bonuses
+    var rp = routeProfit([m1, m1, m2]);
+    if (rp.total !== 350 || !rp.bonus) return 'routeProfit wrong: ' + rp.total;
     return 'PASS';
   }
 
@@ -899,7 +994,8 @@ var SK = (function () {
     // airline management
     stripById: stripById, planeCanLand: planeCanLand, genJobs: genJobs, jobBucket: jobBucket,
     ensureAirline: ensureAirline, buyStrip: buyStrip, legMinutes: legMinutes,
-    assignFlight: assignFlight, flightPayout: flightPayout, tickAirline: tickAirline,
+    assignFlight: assignFlight, assignRoute: assignRoute, flightPayout: flightPayout,
+    routeProfit: routeProfit, totalRouteMinutes: totalRouteMinutes, tickAirline: tickAirline,
   };
 })();
 
