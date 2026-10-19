@@ -23,20 +23,96 @@
     });
   }
   var shoot = null;
+  var RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function phaseOf(h) { return h >= 5 && h < 11 ? 0 : h >= 11 && h < 17 ? 1 : h >= 17 && h < 22 ? 2 : 3; }
+  function hx(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+  function rgba(c, a) { return 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')'; }
+  /* celestial body: one sun/moon that re-casts itself per phase —
+     creeps up at dawn, hangs high at noon, sinks ember at dusk, moon at night */
+  var cel = {
+    x: -200, y: -200, r: 30, a: 0, disc: hx('#ffd97a'), glow: hx('#ffbe5a'),
+    tx: 0, ty: 0, tr: 30, tdisc: hx('#ffd97a'), tglow: hx('#ffbe5a'), moon: false, tmoon: false
+  };
+  var lastPhase = -1;
+  function aimCel(p) {
+    var cx = W * 0.78;
+    cel.tmoon = (p === 3);
+    if (p === 0)      { cel.tx = cx; cel.ty = H * 0.70; cel.tr = 30; cel.tdisc = hx('#ffd97a'); cel.tglow = hx('#ffbe5a'); }
+    else if (p === 1) { cel.tx = W - 54; cel.ty = 54; cel.tr = 24; cel.tdisc = hx('#fff6e0'); cel.tglow = hx('#ffe9b8'); }
+    else if (p === 2) { cel.tx = cx; cel.ty = H * 0.78; cel.tr = 40; cel.tdisc = hx('#ff9a52'); cel.tglow = hx('#ff7a3c'); }
+    else              { cel.tx = W - 50; cel.ty = 50; cel.tr = 22; cel.tdisc = hx('#e9f1ff'); cel.tglow = hx('#a9c6ff'); }
+    if (p !== lastPhase) {
+      if (p === 0) { cel.x = cel.tx; cel.y = H + 100; }        /* creep up from below */
+      else if (p === 2) { cel.x = cel.tx; cel.y = -100; }     /* sink down from above */
+      else { cel.x = cel.tx; cel.y = cel.ty; cel.a = 0; }     /* fade in place */
+      cel.disc = cel.tdisc.slice(); cel.glow = cel.tglow.slice();
+      cel.moon = cel.tmoon;
+      lastPhase = p;
+    }
+  }
+  function drawCel() {
+    if (cel.a < 0.01) return;
+    var i, c;
+    /* ambient wash */
+    var washR = cel.r * 7;
+    var wash = ctx.createRadialGradient(cel.x, cel.y, 0, cel.x, cel.y, washR);
+    wash.addColorStop(0, rgba(cel.glow, (0.13 * cel.a).toFixed(3)));
+    wash.addColorStop(1, rgba(cel.glow, 0));
+    ctx.fillStyle = wash;
+    ctx.beginPath(); ctx.arc(cel.x, cel.y, washR, 0, 6.283); ctx.fill();
+    /* halo */
+    var halo = ctx.createRadialGradient(cel.x, cel.y, cel.r * 0.3, cel.x, cel.y, cel.r * 3.2);
+    halo.addColorStop(0, rgba(cel.glow, (0.5 * cel.a).toFixed(3)));
+    halo.addColorStop(1, rgba(cel.glow, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(cel.x, cel.y, cel.r * 3.2, 0, 6.283); ctx.fill();
+    /* disc */
+    ctx.beginPath(); ctx.arc(cel.x, cel.y, cel.r, 0, 6.283);
+    var dg = ctx.createLinearGradient(cel.x, cel.y - cel.r, cel.x, cel.y + cel.r);
+    dg.addColorStop(0, rgba([255, 255, 255], cel.a.toFixed(3)));
+    dg.addColorStop(0.45, rgba(cel.disc, cel.a.toFixed(3)));
+    var dk = [];
+    for (i = 0; i < 3; i++) dk[i] = cel.disc[i] * 0.7;
+    dg.addColorStop(1, rgba(dk, cel.a.toFixed(3)));
+    ctx.fillStyle = dg; ctx.fill();
+    if (cel.moon) {
+      ctx.fillStyle = rgba([150, 170, 205], (0.28 * cel.a).toFixed(3));
+      var craters = [[-0.3, -0.12, 0.22], [0.28, 0.3, 0.15], [0.02, -0.38, 0.12]];
+      for (c = 0; c < craters.length; c++) {
+        ctx.beginPath();
+        ctx.arc(cel.x + craters[c][0] * cel.r, cel.y + craters[c][1] * cel.r, craters[c][2] * cel.r, 0, 6.283);
+        ctx.fill();
+      }
+    }
+  }
   function frame(myGid) {
     if (myGid !== gid || !running) return;
     ctx.clearRect(0, 0, W, H);
     var t = performance.now() / 1000;
-    for (var i = 0; i < parts.length; i++) {
-      var p = parts[i];
+    var ph = phaseOf(new Date().getHours());
+    aimCel(ph);
+    /* ease toward the phase targets — the creep itself */
+    var k = RM ? 1 : 0.028, i;
+    cel.x += (cel.tx - cel.x) * k;
+    cel.y += (cel.ty - cel.y) * k;
+    cel.r += (cel.tr - cel.r) * k;
+    cel.a += (1 - cel.a) * k;
+    for (i = 0; i < 3; i++) {
+      cel.disc[i] += (cel.tdisc[i] - cel.disc[i]) * k;
+      cel.glow[i] += (cel.tglow[i] - cel.glow[i]) * k;
+    }
+    drawCel();
+    var dustA = ph === 3 ? 1 : (ph === 1 ? 0.22 : 0.45);
+    for (var j = 0; j < parts.length; j++) {
+      var p = parts[j];
       p.x += p.vx; p.y -= p.vy;
       if (p.y < -6) { p.y = H + 6; p.x = Math.random() * W; }
       if (p.x < -6) p.x = W + 6; if (p.x > W + 6) p.x = -6;
-      var a = .25 + .45 * Math.abs(Math.sin(t * 1.4 + p.tw));
+      var a = (.25 + .45 * Math.abs(Math.sin(t * 1.4 + p.tw))) * dustA;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283);
       ctx.fillStyle = 'rgba(' + p.hue + ',' + a.toFixed(2) + ')'; ctx.fill();
     }
-    if (!shoot && Math.random() < .006)
+    if (ph !== 1 && !shoot && Math.random() < .006)
       shoot = { x: Math.random() * W * .7 + W * .15, y: -20, vx: -5, vy: 5, life: 1 };
     if (shoot) {
       shoot.x += shoot.vx; shoot.y += shoot.vy; shoot.life -= .02;
