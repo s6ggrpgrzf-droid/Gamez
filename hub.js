@@ -72,44 +72,50 @@
     }
   });
 
-  /* ---------- player name pill (shared arcade_name) ---------- */
-  var pill = document.getElementById('namepill');
-  function getName() {
-    try { return localStorage.getItem('arcade_name') || ''; } catch (e) { return ''; }
-  }
-  function renderName() {
-    var n = getName();
-    pill.innerHTML = '<b>' + (n ? escapeHtml(n) : 'Guest') + '</b> &#9998;';
-  }
+  /* ---------- open door: one living line, time-aware ---------- */
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  pill.addEventListener('click', function () {
-    var cur = getName();
-    pill.innerHTML = '🎟️ <input id="nameedit" maxlength="16" value="' + escapeHtml(cur) + '" placeholder="your name">';
-    var inp = document.getElementById('nameedit');
-    inp.focus(); inp.select();
-    function done(save) {
-      if (save) {
-        var v = inp.value.trim().slice(0, 16);
-        try {
-          if (v) localStorage.setItem('arcade_name', v);
-          else localStorage.removeItem('arcade_name');
-        } catch (e) {}
-      }
-      renderName();
-    }
-    inp.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') done(true);
-      if (e.key === 'Escape') done(false);
-      e.stopPropagation();
+  (function () {
+    var el = document.getElementById('opendoor');
+    if (!el) return;
+    var h = new Date().getHours();
+    el.textContent =
+      h >= 5 && h < 11 ? 'Good morning. The machines are warming up.' :
+      h >= 11 && h < 17 ? 'Good afternoon. The arcade is open.' :
+      h >= 17 && h < 22 ? 'Good evening. The arcade is open.' :
+      'Up late? The arcade never closes.';
+  })();
+
+  /* ---------- surprise me: wander to a random cabinet ---------- */
+  (function () {
+    var btn = document.getElementById('surprise');
+    if (!btn) return;
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.card[href]'));
+    if (!cards.length) return;
+    var names = cards.map(function (c) {
+      var h = c.querySelector('h3');
+      return h ? h.textContent : 'a mystery game';
     });
-    inp.addEventListener('blur', function () { done(true); });
-    inp.addEventListener('click', function (e) { e.stopPropagation(); });
-  });
-  renderName();
+    var busy = false;
+    btn.addEventListener('click', function () {
+      if (busy) return;
+      busy = true;
+      var pick = Math.floor(Math.random() * cards.length);
+      var ticks = 0, label = btn.innerHTML;
+      var iv = setInterval(function () {
+        btn.textContent = names[Math.floor(Math.random() * names.length)] + '…';
+        if (++ticks > 7) {
+          clearInterval(iv);
+          btn.innerHTML = label;
+          busy = false;
+          window.location.href = cards[pick].getAttribute('href');
+        }
+      }, 70);
+    });
+  })();
 
   /* ---------- continue playing rail ---------- */
   function read(key) {
@@ -422,7 +428,7 @@
       to.start(); to.stop(tickAC.currentTime + 0.07);
     } catch (e) {}
   }
-  document.querySelectorAll('.card,.chip,.ed-pick,.namepill,.feat3d').forEach(function (el) {
+  document.querySelectorAll('.card,.chip,.ed-pick,.feat3d,#surprise').forEach(function (el) {
     el.addEventListener('pointerdown', tick);
   });
   var sndbtn = document.getElementById('sndbtn');

@@ -425,3 +425,27 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
     background:linear-gradient(rgba(14,24,42,.97),rgba(14,24,42,.97)) padding-box,
     linear-gradient(160deg,rgba(220,240,255,.5),rgba(220,240,255,.12) 42%,rgba(77,166,255,.32)) border-box}
 }
+
+/* ---------- header: quiet wordmark, one living line, surprise button ---------- */
+.hero{padding-bottom:34px}
+.wordmark{
+  position:relative;z-index:1;margin:6px 0 16px;
+  font-size:13px;font-weight:600;letter-spacing:.58em;text-indent:.58em;
+  text-transform:lowercase;color:rgba(205,228,255,.72);
+}
+.opendoor{
+  position:relative;z-index:1;margin:0 0 24px;padding:0 12px;
+  font-size:clamp(30px,7vw,46px);font-weight:650;letter-spacing:-.015em;line-height:1.15;
+  color:#fff;text-wrap:balance;
+  text-shadow:0 2px 24px rgba(80,150,255,.25);
+}
+.surprise{
+  position:relative;z-index:1;cursor:pointer;
+  font:inherit;font-size:13px;font-weight:800;letter-spacing:.16em;text-indent:.06em;text-transform:uppercase;
+  color:#0a1526;background:linear-gradient(180deg,#d7ebff,#a3ccff);
+  border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:14px 28px;
+  box-shadow:0 12px 32px rgba(120,180,255,.35),inset 0 1px 0 rgba(255,255,255,.8);
+  transition:transform .16s var(--ease),box-shadow .16s var(--ease);
+}
+.surprise:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(120,180,255,.45),inset 0 1px 0 rgba(255,255,255,.8)}
+.surprise:active{transform:scale(.96)}
