@@ -33,7 +33,10 @@ button{font-family:var(--font-b);}
 #table{position:relative;height:calc(100dvh - 20px);border-radius:14px;overflow:hidden;
   border:2px solid var(--brass);outline:1px solid rgba(0,0,0,.65);outline-offset:-6px;
   display:flex;flex-direction:column;
-  background:linear-gradient(180deg,var(--felt1) 0%,#0e3a26 48%,var(--felt2) 100%);}
+  background:linear-gradient(180deg,var(--felt1) 0%,var(--feltM) 48%,var(--felt2) 100%);}
+#table[data-felt="emerald"]{--felt1:#14472f;--feltM:#0e3a26;--felt2:#09231a;}
+#table[data-felt="burgundy"]{--felt1:#5e2129;--feltM:#451722;--felt2:#2a0d13;}
+#table[data-felt="midnight"]{--felt1:#20315f;--feltM:#182449;--felt2:#0d1530;}
 #table::before{content:'';position:absolute;inset:0;z-index:90;pointer-events:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");}
 #felt{position:absolute;inset:0;pointer-events:none;
@@ -68,6 +71,23 @@ button{font-family:var(--font-b);}
   box-shadow:inset 0 0 0 2px var(--brass), inset 0 0 0 4px rgba(0,0,0,.5),
     inset 0 0 18px rgba(0,0,0,.5), 0 6px 14px rgba(0,0,0,.5);}
 #board .tile{position:absolute;left:0;top:0;}
+/* alternate tile styles */
+#table[data-tiles="ebony"] .tile:not(.back){
+  background:linear-gradient(165deg,#4a4136 0%,#2e2820 50%,#1a1510 100%);
+  box-shadow:0 5px 12px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.16),
+    inset 0 -2px 5px rgba(0,0,0,.55);}
+#table[data-tiles="ebony"] .tile:not(.back) .pip.on{
+  background:radial-gradient(circle at 35% 30%,#f8e5a8,#a67c2e 72%);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.14);}
+#table[data-tiles="ebony"] .tile:not(.back) .div{
+  background:linear-gradient(90deg,transparent,rgba(214,178,94,.55),transparent);}
+#table[data-tiles="jade"] .tile:not(.back){
+  background:linear-gradient(165deg,#3fa78a 0%,#2a7f66 50%,#195c46 100%);
+  box-shadow:0 5px 12px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.4),
+    inset 0 -2px 5px rgba(0,0,0,.3);}
+#table[data-tiles="jade"] .tile:not(.back) .pip.on{
+  background:radial-gradient(circle at 35% 30%,#fffdf4,#cfc3a4 72%);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3);}
 
 /* ---------- HUD ---------- */
 #hud{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 4px;}
@@ -130,15 +150,21 @@ button{font-family:var(--font-b);}
 #rack.locked .tile.playable{transform:none;box-shadow:0 5px 12px rgba(0,0,0,.45),
   inset 0 1px 0 rgba(255,255,255,.75), inset 0 -2px 5px rgba(122,95,58,.30);}
 #rack .tile.dragging{z-index:60;pointer-events:none;filter:none;}
-#actionbar{display:flex;gap:10px;justify-content:center;padding:8px 16px calc(12px + env(safe-area-inset-bottom));}
-.abtn{flex:1;max-width:160px;font-weight:600;font-size:14px;letter-spacing:.05em;
-  padding:13px 0;border-radius:14px;cursor:pointer;color:var(--cream);
+#actionbar{display:flex;gap:7px;justify-content:center;padding:8px 12px calc(12px + env(safe-area-inset-bottom));}
+.abtn{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:1px;
+  font-weight:600;padding:8px 2px 7px;border-radius:13px;cursor:pointer;color:var(--cream);
   background:rgba(8,18,12,.55);border:1px solid rgba(214,178,94,.38);
   box-shadow:0 4px 12px rgba(0,0,0,.35);}
+.ab-ic{font-size:16px;line-height:1.25;}
+.ab-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;opacity:.72;font-weight:600;}
 .abtn:disabled{opacity:.32;}
-.abtn:not(:disabled):active{transform:scale(.96);}
+.abtn:not(:disabled):active{transform:scale(.95);}
+#btn-knock .ab-ic{font-size:14px;letter-spacing:.05em;}
 #btn-knock:not(:disabled){border-color:var(--brass);color:var(--gold);
   box-shadow:0 4px 12px rgba(0,0,0,.35), 0 0 14px rgba(214,178,94,.35);}
+#rack .tile.hint-glow{animation:hintPulse 1s ease-in-out 3;}
+@keyframes hintPulse{0%,100%{box-shadow:0 5px 12px rgba(0,0,0,.45), 0 0 0 rgba(214,178,94,0);}
+  50%{box-shadow:0 5px 16px rgba(0,0,0,.5), 0 0 22px rgba(214,178,94,.95);transform:translateY(-10px);}}
 
 /* ---------- title screen ---------- */
 #title{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
@@ -161,6 +187,19 @@ button{font-family:var(--font-b);}
   color:#d8c48f;background:rgba(8,18,12,.5);border:1px solid rgba(214,178,94,.25);
   border-radius:999px;padding:6px 15px;margin-bottom:10px;}
 #diff-cards{display:flex;gap:10px;justify-content:center;margin-bottom:24px;}
+#mode-seg,#players-seg{display:inline-flex;background:rgba(8,18,12,.62);border:1px solid rgba(214,178,94,.3);
+  border-radius:999px;padding:4px;margin-bottom:14px;}
+#mode-seg button,#players-seg button{background:none;border:none;color:var(--cream);font-size:13.5px;font-weight:600;
+  letter-spacing:.06em;padding:10px 22px;border-radius:999px;cursor:pointer;opacity:.65;}
+#mode-seg button.sel,#players-seg button.sel{background:rgba(214,178,94,.22);color:var(--gold);opacity:1;
+  box-shadow:inset 0 0 0 1px rgba(214,178,94,.6);}
+.fives-tally{font-size:11px;letter-spacing:.14em;color:var(--gold);opacity:.9;margin-top:2px;}
+.fives-pop{position:absolute;z-index:75;font-family:var(--font-d);font-weight:700;font-size:28px;
+  color:var(--gold);text-shadow:0 2px 10px rgba(0,0,0,.7), 0 0 18px rgba(214,178,94,.6);
+  pointer-events:none;transform:translate(-50%,-50%);animation:riseFade 1.35s ease-out forwards;}
+@keyframes riseFade{0%{opacity:0;transform:translate(-50%,-20%) scale(.8);}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}
+  100%{opacity:0;transform:translate(-50%,-160%) scale(1);}}
 .diffcard{flex:1;max-width:128px;background:rgba(8,18,12,.62);border:1px solid rgba(214,178,94,.3);
   border-radius:14px;color:var(--cream);padding:12px 8px;cursor:pointer;
   display:flex;flex-direction:column;gap:6px;align-items:center;
@@ -184,6 +223,47 @@ button{font-family:var(--font-b);}
   border:1px solid rgba(216,185,106,.55);color:#ecd9a0;font-size:13.5px;letter-spacing:.1em;
   border-radius:999px;padding:11px 28px;cursor:pointer;}
 .ghost-btn:active{transform:scale(.95);}
+#btn-settings{position:absolute;top:14px;right:14px;z-index:5;width:46px;height:46px;border-radius:50%;
+  background:rgba(8,18,12,.62);border:1px solid rgba(214,178,94,.55);color:var(--gold);
+  font-size:21px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.4);}
+#btn-settings:active{transform:scale(.93);}
+#tut-bubble{position:absolute;z-index:78;max-width:270px;background:#fbf3df;color:#3a2a10;
+  border:1px solid var(--brass);border-radius:14px;padding:13px 17px;font-size:14.5px;line-height:1.5;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:none;text-align:center;
+  animation:tutIn .35s ease-out;}
+#tut-bubble b{color:#7a5a1e;}
+#tut-bubble .tut-btn{pointer-events:auto;margin-top:11px;display:inline-block;background:#3a2a10;color:#f3ead6;
+  border:none;border-radius:999px;padding:10px 26px;font-weight:700;font-size:14px;cursor:pointer;}
+#tut-bubble.tut-rack{left:50%;bottom:205px;transform:translateX(-50%);}
+#tut-bubble.tut-board{left:50%;top:36%;transform:translate(-50%,-50%);}
+#tut-bubble.tut-center{left:50%;top:44%;transform:translate(-50%,-50%);}
+@keyframes tutIn{from{opacity:0;}to{opacity:1;}}
+
+/* ---------- settings ---------- */
+.set-row{margin:15px 0;text-align:left;}
+.set-lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#8a6f3c;margin-bottom:8px;}
+.seg{display:inline-flex;background:#e2d2a8;border-radius:999px;padding:3px;gap:2px;}
+.seg button{border:none;background:none;padding:9px 20px;border-radius:999px;font-weight:600;
+  font-size:14px;color:#5a451f;cursor:pointer;letter-spacing:.04em;}
+.seg button.sel{background:#3a2a10;color:#f3ead6;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+#set-volume{width:100%;accent-color:#a67c2e;height:32px;cursor:pointer;}
+.swatches{display:flex;gap:8px;}
+.swatches button{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 4px;
+  border-radius:12px;border:2px solid transparent;background:#e2d2a8;color:#5a451f;
+  font-size:12px;font-weight:600;cursor:pointer;}
+.swatches button.sel{border-color:#7a5a1e;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.sw{width:26px;height:50px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.35), inset 0 0 0 1px rgba(0,0,0,.15);}
+.sw.ivory{background:linear-gradient(165deg,#fdf8ec,#e6d5ae);}
+.sw.ebony{background:linear-gradient(165deg,#4a4136,#1a1510);}
+.sw.jade{background:linear-gradient(165deg,#3fa78a,#195c46);}
+.sw.emerald{background:linear-gradient(165deg,#14472f,#09231a);}
+.sw.burgundy{background:linear-gradient(165deg,#5e2129,#2a0d13);}
+.sw.midnight{background:linear-gradient(165deg,#20315f,#0d1530);}
+.set-stats{display:flex;gap:8px;margin:16px 0 4px;}
+.stat{flex:1;background:#e2d2a8;border-radius:12px;padding:10px 4px;}
+.stat .v{font-family:var(--font-d);font-weight:700;font-size:20px;color:#3a2a10;}
+.stat .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8a6f3c;margin-top:2px;}
+.stat-diff{text-align:center;font-size:12px;font-style:italic;color:#8a6f3c;margin:2px 0 6px;}
 
 /* ---------- cards (round end / match end / rules) ---------- */
 .card{position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
@@ -207,7 +287,7 @@ button{font-family:var(--font-b);}
 
 .hidden{display:none !important;}
 #table.title-mode #hud,#table.title-mode #house-row,#table.title-mode #actionbar,
-#table.title-mode #status,#table.title-mode #btn-knockbar{display:none;}
+#table.title-mode #status,#table.title-mode #actionbar{display:none;}
 @media (prefers-reduced-motion:reduce){
   #lamp,#play-tile,.endzone.lit,#ai-thinking span{animation:none;}
 }
@@ -215,14 +295,15 @@ button{font-family:var(--font-b);}
 </head>
 <body>
 <div id="rim">
-  <div id="table" class="title-mode">
+  <div id="table" class="title-mode" data-felt="emerald" data-tiles="ivory">
     <div id="felt"></div>
     <div id="lamp"></div>
     <canvas id="fx"></canvas>
+    <div id="tut-bubble" class="hidden"></div>
 
     <header id="hud">
       <div class="score"><span class="who">You</span><span class="pts" id="score-you">0</span></div>
-      <div class="hud-mid"><div id="round-label">Round 1</div><div class="target">First to 100</div></div>
+      <div class="hud-mid"><div id="round-label">Round 1</div><div class="target">First to 100</div><div class="fives-tally hidden" id="fives-tally"></div></div>
       <div class="score right"><span class="who">House</span><span class="pts" id="score-house">0</span></div>
     </header>
 
@@ -249,19 +330,32 @@ button{font-family:var(--font-b);}
     <div id="rack-wrap"><div id="rack"></div></div>
 
     <div id="actionbar">
-      <button id="btn-knock" class="abtn" disabled>Knock</button>
-      <button id="btn-restart" class="abtn" aria-label="Restart match">↺</button>
-      <button id="btn-sound" class="abtn" aria-label="Toggle sound">♪</button>
-      <button id="btn-help" class="abtn" aria-label="How to play">?</button>
+      <button id="btn-knock" class="abtn knock" disabled><span class="ab-ic">Knock</span></button>
+      <button id="btn-hint" class="abtn" aria-label="Hint"><span class="ab-ic">💡</span><span class="ab-lbl">Hint</span></button>
+      <button id="btn-undo" class="abtn" aria-label="Undo"><span class="ab-ic">↩</span><span class="ab-lbl" id="undo-lbl">Undo 2</span></button>
+      <button id="btn-restart" class="abtn" aria-label="Restart match"><span class="ab-ic">↺</span><span class="ab-lbl">New</span></button>
+      <button id="btn-sound" class="abtn" aria-label="Toggle sound"><span class="ab-ic" id="sound-ic">♪</span><span class="ab-lbl">Sound</span></button>
+      <button id="btn-help" class="abtn" aria-label="How to play"><span class="ab-ic">?</span><span class="ab-lbl">Help</span></button>
     </div>
 
     <div id="title">
+      <button id="btn-settings" aria-label="Settings">⚙</button>
       <div id="title-scatter" aria-hidden="true"></div>
       <div id="title-inner">
         <div class="title-kicker">The Café Table Classic</div>
         <h1 class="game-title">Dominoes</h1>
-        <div><span class="tagline-pill">You vs the House · First to 100</span></div>
-        <div><span class="diff-label">The House Plays</span></div>
+        <div><span class="tagline-pill" id="tagline">You vs the House · First to 100</span></div>
+        <div><span class="diff-label">Players</span></div>
+        <div id="players-seg" role="radiogroup" aria-label="Players">
+          <button data-p="1" role="radio" aria-checked="true" class="sel">Vs House</button>
+          <button data-p="2" role="radio" aria-checked="false">2 Players</button>
+        </div>
+        <div><span class="diff-label">Game Mode</span></div>
+        <div id="mode-seg" role="radiogroup" aria-label="Game mode">
+          <button data-m="draw" role="radio" aria-checked="true" class="sel">Classic Draw</button>
+          <button data-m="fives" role="radio" aria-checked="false">All Fives</button>
+        </div>
+        <div><span class="diff-label" id="diff-label">The House Plays</span></div>
         <div id="diff-cards" role="radiogroup" aria-label="Difficulty">
           <button class="diffcard" data-d="0" role="radio" aria-checked="false">
             <span class="dc-name">Casual</span>
@@ -286,13 +380,17 @@ button{font-family:var(--font-b);}
         <div class="slip-kicker" id="rc-kicker">Round 1</div>
         <h2 id="rc-title">Domino!</h2>
         <div class="slip-points" id="rc-points">+0</div>
+        <div class="slip-row hidden" id="rc-fives-row">
+          <div class="lbl">Fives Points This Round</div>
+          <div class="pips" id="rc-fives"></div>
+        </div>
         <div class="slip-row">
-          <div class="lbl">House Held</div>
+          <div class="lbl" id="rc-house-lbl">House Held</div>
           <div class="mini-tiles" id="rc-house-tiles"></div>
           <div class="pips" id="rc-house-pips"></div>
         </div>
         <div class="slip-row">
-          <div class="lbl">You Held</div>
+          <div class="lbl" id="rc-you-lbl">You Held</div>
           <div class="mini-tiles" id="rc-you-tiles"></div>
           <div class="pips" id="rc-you-pips"></div>
         </div>
@@ -310,6 +408,15 @@ button{font-family:var(--font-b);}
       </div>
     </div>
 
+    <div id="pass-card" class="card hidden">
+      <div class="slip">
+        <div class="slip-kicker">Pass &amp; Play</div>
+        <h2 id="pass-title">Hand the phone to Player 2</h2>
+        <div class="fine">Your tiles are hidden until you're ready.<br>No peeking.</div>
+        <button id="pass-ready" class="brass-btn">I'm Player 2 — Ready</button>
+      </div>
+    </div>
+
     <div id="rules-modal" class="card hidden">
       <div class="slip">
         <div class="slip-kicker">House Rules</div>
@@ -320,9 +427,59 @@ button{font-family:var(--font-b);}
           <li>Boneyard empty and still stuck? Knock.</li>
           <li>Empty your hand to take the round — you score every pip left in the House's hand, plus the boneyard.</li>
           <li>If both sides knock, fewest pips wins the difference.</li>
-          <li>First to <b>100</b> takes the match.</li>
+          <li>First to <b id="rules-target">100</b> takes the match.</li>
+        </ul>
+        <ul id="rules-fives" class="hidden">
+          <li><b>All Fives:</b> when the two open ends add up to a multiple of 5, you score that sum on the spot.</li>
+          <li>Round-end pips are rounded to the nearest 5.</li>
         </ul>
         <button id="rules-close" class="brass-btn">Back to the Table</button>
+      </div>
+    </div>
+
+    <div id="settings-modal" class="card hidden">
+      <div class="slip">
+        <div class="slip-kicker">Table Settings</div>
+        <h2>Settings</h2>
+        <div class="set-row">
+          <div class="set-lbl">Target Score</div>
+          <div class="seg" id="set-target">
+            <button data-v="50">50</button><button data-v="100">100</button><button data-v="150">150</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="set-lbl">Volume</div>
+          <input type="range" id="set-volume" min="0" max="100" value="90" aria-label="Volume">
+        </div>
+        <div class="set-row">
+          <div class="set-lbl">Haptics</div>
+          <div class="seg" id="set-haptics">
+            <button data-v="1">On</button><button data-v="0">Off</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="set-lbl">Tile Style</div>
+          <div class="swatches" id="set-tiles">
+            <button data-v="ivory"><span class="sw ivory"></span>Ivory</button>
+            <button data-v="ebony"><span class="sw ebony"></span>Ebony</button>
+            <button data-v="jade"><span class="sw jade"></span>Jade</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="set-lbl">Table Felt</div>
+          <div class="swatches" id="set-felt">
+            <button data-v="emerald"><span class="sw emerald"></span>Emerald</button>
+            <button data-v="burgundy"><span class="sw burgundy"></span>Burgundy</button>
+            <button data-v="midnight"><span class="sw midnight"></span>Midnight</button>
+          </div>
+        </div>
+        <div class="set-stats" id="set-stats">
+          <div class="stat"><div class="v" id="stat-wins">0</div><div class="k">Match Wins</div></div>
+          <div class="stat"><div class="v" id="stat-rate">–</div><div class="k">Win Rate</div></div>
+          <div class="stat"><div class="v" id="stat-streak">0</div><div class="k">Best Streak</div></div>
+        </div>
+        <div class="stat-diff" id="stat-byDiff"></div>
+        <button id="settings-close" class="brass-btn">Back to the Table</button>
       </div>
     </div>
 
@@ -392,17 +549,19 @@ function canPlay(state, player) {
   return legalMoves(state.hands[player], exposed(state)).length > 0;
 }
 
-function newGame(seed, target) {
+function newGame(seed, target, mode) {
   _nextId = 1;
   const rng = mulberry32(seed == null ? (Date.now() % 2147483647) : seed);
   const st = {
     rng, target: target || 100, round: 1,
+    mode: mode === 'fives' ? 'fives' : 'draw',
     scores: [0, 0],           // [you, house]
     hands: [[], []], boneyard: [], board: [],
     turn: 0, phase: 'play', passes: 0,
     winner: null, roundPts: 0, roundReason: null,
     knockSuits: { player: -1, suits: [] },
     drawnOn: [[], []],        // pip values each player has drawn on (Shark's memory)
+    fives: [0, 0],            // points scored from multiples of 5 this round
     lastEvents: [],
   };
   dealRound(st);
@@ -433,12 +592,18 @@ function dealRound(st) {
   st.winner = null; st.roundPts = 0; st.roundReason = null;
   st.knockSuits = { player: -1, suits: [] };
   st.drawnOn = [[], []];
+  st.fives = [0, 0];
   st.phase = 'play';
   const op = highestOpener(st.hands);
   const tile = st.hands[op.player].splice(op.tileIdx, 1)[0];
   st.board.push({ id: nodeId(), a: tile.a, b: tile.b, headVal: tile.a, opener: true });
   st.turn = 1 - op.player;
-  st.lastEvents = [{ t: 'open', player: op.player, tile: { a: tile.a, b: tile.b }, nodeId: st.board[0].id }];
+  const openEv = { t: 'open', player: op.player, tile: { a: tile.a, b: tile.b }, nodeId: st.board[0].id };
+  if (st.mode === 'fives' && (tile.a + tile.b) % 5 === 0) {
+    st.fives[op.player] += tile.a + tile.b;
+    openEv.fives = tile.a + tile.b;
+  }
+  st.lastEvents = [openEv];
 }
 
 function playTile(st, player, tileIdx, end) {
@@ -456,7 +621,16 @@ function playTile(st, player, tileIdx, end) {
   const node = { id: nodeId(), a: t.a, b: t.b, headVal };
   if (end === 'tail') st.board.push(node); else st.board.unshift(node);
   st.passes = 0;
-  st.lastEvents.push({ t: 'play', player, tile: { a: t.a, b: t.b }, end, nodeId: node.id });
+  const pEv = { t: 'play', player, tile: { a: t.a, b: t.b }, end, nodeId: node.id };
+  if (st.mode === 'fives') {
+    const e2 = exposed(st);
+    const sum = e2.head + e2.tail;
+    if (sum > 0 && sum % 5 === 0) {
+      st.fives[player] += sum;
+      pEv.fives = sum;
+    }
+  }
+  st.lastEvents.push(pEv);
   if (hand.length === 0) { endRound(st, 'domino', player); }
   else st.turn = 1 - player;
   return { ok: true, events: st.lastEvents };
@@ -496,27 +670,35 @@ function knock(st, player) {
 function endRound(st, reason, dominoPlayer) {
   st.phase = 'roundEnd';
   st.roundReason = reason;
+  const round5 = (n) => Math.round(n / 5) * 5;
   const p0 = handPips(st.hands[0]), p1 = handPips(st.hands[1]);
   const bone = st.boneyard.reduce((s, t) => s + pips(t), 0);
   if (reason === 'domino') {
     st.winner = dominoPlayer;
-    st.roundPts = (dominoPlayer === 0 ? p1 : p0) + bone;
+    const base = dominoPlayer === 0 ? p1 : p0;
+    st.roundPts = st.mode === 'fives' ? round5(base + bone) : base + bone;
   } else {
     if (p0 === p1) { st.winner = null; st.roundPts = 0; }
-    else { st.winner = p0 < p1 ? 0 : 1; st.roundPts = Math.abs(p0 - p1); }
+    else {
+      st.winner = p0 < p1 ? 0 : 1;
+      st.roundPts = st.mode === 'fives' ? round5(Math.abs(p0 - p1)) : Math.abs(p0 - p1);
+    }
   }
   if (st.winner != null) {
-    st.scores[st.winner] += st.roundPts;
+    st.scores[st.winner] += st.roundPts + st.fives[st.winner];
+    st.scores[1 - st.winner] += st.fives[1 - st.winner];
     st.lastEvents.push({
       t: 'roundEnd', reason, winner: st.winner, pts: st.roundPts,
-      handPips: [p0, p1], scores: st.scores.slice(),
+      fives: st.fives.slice(), handPips: [p0, p1], scores: st.scores.slice(),
     });
     if (st.scores[st.winner] >= st.target) {
       st.phase = 'matchEnd';
       st.lastEvents.push({ t: 'matchEnd', winner: st.winner, scores: st.scores.slice() });
     }
   } else {
-    st.lastEvents.push({ t: 'roundEnd', reason, winner: null, pts: 0, handPips: [p0, p1], scores: st.scores.slice() });
+    st.scores[0] += st.fives[0];
+    st.scores[1] += st.fives[1];
+    st.lastEvents.push({ t: 'roundEnd', reason, winner: null, pts: 0, fives: st.fives.slice(), handPips: [p0, p1], scores: st.scores.slice() });
   }
 }
 
@@ -550,6 +732,10 @@ function scoreMove(st, player, mv, difficulty) {
   }
   const newEnds = mv.end === 'head'
     ? { head: other, tail: ends.tail } : { head: ends.head, tail: other };
+  if (st.mode === 'fives') {
+    const sum = newEnds.head + newEnds.tail;
+    if (sum > 0 && sum % 5 === 0) s += sum * 1.2; // chase multiples of 5
+  }
   let future = 0;
   for (let i = 0; i < hand.length; i++) {
     if (i === mv.tileIdx) continue;
@@ -581,9 +767,23 @@ function aiChoose(st, player, difficulty) {
   return { type: 'play', tileIdx: best.tileIdx, end: best.end };
 }
 
+// Snapshots for undo: the whole state is plain data except rng (a closure),
+// so we persist the node-id counter and re-seed rng on restore (a new timeline).
+function snapshot(st) {
+  return JSON.stringify({ nextId: _nextId, st });
+}
+function restore(snap) {
+  const o = JSON.parse(snap);
+  _nextId = o.nextId;
+  const st = o.st;
+  st.rng = mulberry32((Date.now() % 2147483647) || 1);
+  return st;
+}
+
 const api = {
   mulberry32, newSet, newGame, dealRound, playTile, drawTile, knock,
   nextRound, legalMoves, canPlay, exposed, aiChoose, pips, handPips, tileKey,
+  snapshot, restore, scoreMove,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof window !== 'undefined') window.DomSim = api;
@@ -595,6 +795,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
   const LS_MUTE = 'dominoes.mute';
   let ctx = null, master = null, sfxBus = null;
   let muted = false;
+  let volume = 0.9;
   try { muted = localStorage.getItem(LS_MUTE) === '1'; } catch (e) {}
 
   function ensure() {
@@ -604,7 +805,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
       if (!AC) return false;
       ctx = new AC();
       master = ctx.createGain();
-      master.gain.value = muted ? 0 : 0.9;
+      master.gain.value = muted ? 0 : volume;
       master.connect(ctx.destination);
       sfxBus = ctx.createGain();
       sfxBus.gain.value = 0.9;
@@ -727,16 +928,20 @@ if (typeof window !== 'undefined') window.DomSim = api;
   function setMuted(m) {
     muted = !!m;
     try { localStorage.setItem(LS_MUTE, muted ? '1' : '0'); } catch (e) {}
-    if (master) master.gain.value = muted ? 0 : 0.9;
+    if (master) master.gain.value = muted ? 0 : volume;
   }
   function isMuted() { return muted; }
+  function setVolume(v) {
+    volume = Math.max(0, Math.min(1, +v || 0));
+    if (master) master.gain.value = muted ? 0 : volume;
+  }
 
   window.addEventListener('pointerdown', ensure, { passive: true });
   window.addEventListener('keydown', ensure);
 
   window.DomAudio = {
     clack, flip, shuffle, knock, tick, chime, uiTap,
-    setMuted, isMuted, ensure,
+    setMuted, isMuted, setVolume, ensure,
   };
 })();
 </script>
@@ -753,21 +958,147 @@ if (typeof window !== 'undefined') window.DomSim = api;
   const TW = 44, TH = 88, GAP = 10;
   const ROWLEN = 6 * (TH + GAP);
   const LS_DIFF = 'dominoes.diff';
+  const LS_SET = 'dominoes.settings.v1';
+
+  /* ---------------- settings ---------------- */
+  const DEF_SET = { target: 100, volume: 90, haptics: true, tiles: 'ivory', felt: 'emerald' };
+  let SET = (function () {
+    try {
+      const s = JSON.parse(localStorage.getItem(LS_SET));
+      if (s && typeof s === 'object') return Object.assign({}, DEF_SET, s);
+    } catch (e) {}
+    return Object.assign({}, DEF_SET);
+  })();
+  function saveSettings() {
+    try { localStorage.setItem(LS_SET, JSON.stringify(SET)); } catch (e) {}
+  }
+  function applySettings() {
+    const t = $('table');
+    t.dataset.felt = SET.felt;
+    t.dataset.tiles = SET.tiles;
+    AU.setVolume(SET.volume / 100);
+    const lbl = document.querySelector('.hud-mid .target');
+    if (lbl) lbl.textContent = 'First to ' + SET.target;
+    const rt = $('rules-target');
+    if (rt) rt.textContent = SET.target;
+    const tg = $('tagline');
+    if (tg) tg.textContent = PLAYERS === 2
+      ? 'Two Players · One Phone · First to ' + SET.target
+      : 'You vs the House · First to ' + SET.target;
+    syncSettingsUI();
+  }
+  function syncSettingsUI() {
+    [['set-target', 'target'], ['set-haptics', 'haptics'], ['set-tiles', 'tiles'], ['set-felt', 'felt']]
+      .forEach(([id, key]) => {
+        const seg = $(id);
+        if (!seg) return;
+        seg.querySelectorAll('button').forEach((b) => {
+          b.classList.toggle('sel', String(SET[key]) === b.dataset.v);
+        });
+      });
+    const vs = $('set-volume');
+    if (vs) vs.value = SET.volume;
+  }
+  function wireSettings() {
+    const defs = [
+      ['set-target', 'target', (v) => parseInt(v, 10)],
+      ['set-haptics', 'haptics', (v) => v === '1'],
+      ['set-tiles', 'tiles', null],
+      ['set-felt', 'felt', null],
+    ];
+    defs.forEach(([id, key, parse]) => {
+      const seg = $(id);
+      seg.querySelectorAll('button').forEach((b) => {
+        b.addEventListener('click', () => {
+          AU.uiTap(); buzz(8);
+          SET[key] = parse ? parse(b.dataset.v) : b.dataset.v;
+          saveSettings(); applySettings();
+        });
+      });
+    });
+    $('set-volume').addEventListener('input', (e) => {
+      SET.volume = +e.target.value;
+      saveSettings(); AU.setVolume(SET.volume / 100);
+    });
+    $('set-volume').addEventListener('change', () => AU.uiTap());
+    $('btn-settings').addEventListener('click', () => {
+      AU.uiTap(); syncSettingsUI(); renderStats();
+      $('settings-modal').classList.remove('hidden');
+    });
+    $('settings-close').addEventListener('click', () => {
+      AU.uiTap(); $('settings-modal').classList.add('hidden');
+    });
+  }
 
   const PIPS = { 0: [], 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
 
   let S = null;
   let difficulty = 1;
   try { difficulty = parseInt(localStorage.getItem(LS_DIFF) || '1', 10); if (!(difficulty >= 0 && difficulty <= 2)) difficulty = 1; } catch (e) {}
+  const LS_MODE = 'dominoes.mode';
+  let MODE = 'draw';
+  try { const m = localStorage.getItem(LS_MODE); if (m === 'fives' || m === 'draw') MODE = m; } catch (e) {}
+  const LS_PLAYERS = 'dominoes.players';
+  let PLAYERS = 1;
+  try { const p = localStorage.getItem(LS_PLAYERS); if (p === '2') PLAYERS = 2; } catch (e) {}
+  let viewPlayer = 0;   // whose hand the rack shows (2P: follows the turn via the pass card)
+  let passOpen = false;
+  function me() { return (PLAYERS === 2 && S) ? S.turn : 0; }
+  function opp() { return (PLAYERS === 2 && S) ? 1 - viewPlayer : 1; }
+  function pName(n) { return PLAYERS === 2 ? 'Player ' + (n + 1) : (n === 0 ? 'You' : 'House'); }
   let uiPhase = 'title';        // title|dealing|play|roundEnd|matchEnd
   let busy = false;
   const boardEls = new Map();
   let rackTiles = [];
   let selected = -1;
+  const UNDOS_PER_ROUND = 2;
+  let undoStack = [];
+  let undosLeft = UNDOS_PER_ROUND;
   let lastSlots = null;
 
   function buzz(p) {
+    if (!SET.haptics) return;
     try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {}
+  }
+
+  /* ---------------- stats: wins, win rate by difficulty, best streak ---------------- */
+  const LS_STATS = 'dominoes.stats.v1';
+  let STATS = (function () {
+    const def = { w: 0, l: 0, byDiff: { 0: { w: 0, l: 0 }, 1: { w: 0, l: 0 }, 2: { w: 0, l: 0 } }, streak: 0, best: 0 };
+    try {
+      const s = JSON.parse(localStorage.getItem(LS_STATS));
+      if (s && typeof s === 'object') {
+        const m = Object.assign({}, def, s);
+        m.byDiff = Object.assign({}, def.byDiff, s.byDiff);
+        return m;
+      }
+    } catch (e) {}
+    return def;
+  })();
+  function saveStats() {
+    try { localStorage.setItem(LS_STATS, JSON.stringify(STATS)); } catch (e) {}
+  }
+  function recordMatch(won, diff) {
+    if (won) { STATS.w++; STATS.streak++; STATS.best = Math.max(STATS.best, STATS.streak); }
+    else { STATS.l++; STATS.streak = 0; }
+    const d = STATS.byDiff[diff] || (STATS.byDiff[diff] = { w: 0, l: 0 });
+    if (won) d.w++; else d.l++;
+    saveStats();
+  }
+  const DIFF_NAMES = ['Casual', 'Sharp', 'Shark'];
+  function renderStats() {
+    $('stat-wins').textContent = STATS.w;
+    const tot = STATS.w + STATS.l;
+    $('stat-rate').textContent = tot ? Math.round(100 * STATS.w / tot) + '%' : '–';
+    $('stat-streak').textContent = STATS.best;
+    const el = $('stat-byDiff');
+    if (el) {
+      el.textContent = [0, 1, 2].map((d) => {
+        const s = STATS.byDiff[d] || { w: 0, l: 0 };
+        const t = s.w + s.l;
+        return DIFF_NAMES[d] + ' ' + (t ? Math.round(100 * s.w / t) + '%' : '–');
+      }).join(' · ');
+    }
   }
 
   /* ---------------- tile DOM ---------------- */
@@ -922,6 +1253,32 @@ if (typeof window !== 'undefined') window.DomSim = api;
     shakeT = Math.min(1, shakeT + amount);
     kickFx();
   }
+  function confettiBurst() {
+    if (REDUCED) return;
+    const colors = ['#d6b25e', '#f7e3a1', '#fff8e7', '#b28c3a', '#e8d9b0', '#a8c686'];
+    const W = fx.width;
+    for (let i = 0; i < 130; i++) {
+      parts.push({
+        x: Math.random() * W, y: -20 - Math.random() * 200,
+        vx: (Math.random() - 0.5) * 60, vy: 110 + Math.random() * 150,
+        life: 2.6 + Math.random() * 1.6, age: 0,
+        r: 3 + Math.random() * 4, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 10,
+        color: colors[(Math.random() * colors.length) | 0],
+        shape: 'rect', sway: Math.random() * 6.28,
+      });
+    }
+    kickFx();
+  }
+  function countUp(el, to, dur) {
+    if (REDUCED || !el) { if (el) el.textContent = '+' + to; return; }
+    const t0 = performance.now(), D = dur || 850;
+    (function fr(t) {
+      const p = Math.min(1, (t - t0) / D);
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = '+' + Math.round(to * e);
+      if (p < 1) requestAnimationFrame(fr);
+    })(t0);
+  }
   function kickFx() {
     if (fxRunning) return;
     fxRunning = true;
@@ -935,6 +1292,23 @@ if (typeof window !== 'undefined') window.DomSim = api;
     if (parts.length) {
       for (const p of parts) {
         p.age += dt;
+        if (p.shape === 'rect') {
+          p.sway += dt * 3;
+          p.x += (p.vx + Math.sin(p.sway) * 42) * dt;
+          p.y += p.vy * dt;
+          p.vy = Math.min(p.vy + 130 * dt, 280);
+          p.rot += p.vr * dt;
+          const k = 1 - p.age / p.life;
+          if (k <= 0) continue;
+          fctx.globalAlpha = Math.min(1, k * 1.6);
+          fctx.fillStyle = p.color;
+          fctx.save();
+          fctx.translate(p.x, p.y);
+          fctx.rotate(p.rot);
+          fctx.fillRect(-p.r, -p.r * 0.6, p.r * 2, p.r * 1.2);
+          fctx.restore();
+          continue;
+        }
         p.x += p.vx * dt; p.y += p.vy * dt;
         p.vx *= 0.96; p.vy *= 0.96;
         const k = 1 - p.age / p.life;
@@ -963,12 +1337,28 @@ if (typeof window !== 'undefined') window.DomSim = api;
     $('score-you').textContent = S.scores[0];
     $('score-house').textContent = S.scores[1];
     $('round-label').textContent = 'Round ' + S.round;
+    const ft = $('fives-tally');
+    if (S.mode === 'fives') {
+      ft.classList.remove('hidden');
+      ft.textContent = 'Fives · You ' + S.fives[0] + ' — House ' + S.fives[1];
+    } else ft.classList.add('hidden');
+  }
+  function fivesPopup(x, y, pts) {
+    if (REDUCED) return;
+    const d = document.createElement('div');
+    d.className = 'fives-pop';
+    d.textContent = '+' + pts;
+    d.style.left = x + 'px';
+    d.style.top = y + 'px';
+    $('table').appendChild(d);
+    setTimeout(() => d.remove(), 1450);
   }
   function renderAiHand() {
     const h = $('ai-hand');
     h.innerHTML = '';
-    for (let i = 0; i < S.hands[1].length; i++) h.appendChild(makeTile(0, 0, true));
-    $('house-count').textContent = S.hands[1].length ? '×' + S.hands[1].length : '';
+    const oh = S.hands[opp()];
+    for (let i = 0; i < oh.length; i++) h.appendChild(makeTile(0, 0, true));
+    $('house-count').textContent = oh.length ? '×' + oh.length : '';
   }
   function renderBoneyard() {
     const n = S.boneyard.length;
@@ -978,7 +1368,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
     const show = Math.min(3, n);
     for (let i = 0; i < show; i++) st.appendChild(makeTile(0, 0, true));
     $('bone-count').textContent = n;
-    const mustDraw = uiPhase === 'play' && S.turn === 0 && !busy && !Sim.canPlay(S, 0) && n > 0;
+    const mustDraw = uiPhase === 'play' && S && S.turn === me() && !busy && !passOpen && !Sim.canPlay(S, me()) && n > 0;
     by.classList.toggle('need', mustDraw);
     by.classList.toggle('dead', n === 0);
   }
@@ -986,24 +1376,82 @@ if (typeof window !== 'undefined') window.DomSim = api;
     $('status').textContent = msg || '';
   }
   function mustKnock() {
-    return uiPhase === 'play' && S && S.turn === 0 && !busy &&
-      S.boneyard.length === 0 && !Sim.canPlay(S, 0);
+    return uiPhase === 'play' && S && S.turn === me() && !busy && !passOpen &&
+      S.boneyard.length === 0 && !Sim.canPlay(S, me());
   }
   function updateTurnUI() {
-    const yourTurn = uiPhase === 'play' && S.turn === 0 && !busy;
+    const yourTurn = uiPhase === 'play' && S && S.turn === me() && !busy && !passOpen;
     $('rack').classList.toggle('locked', !yourTurn);
     $('btn-knock').disabled = !mustKnock();
+    $('btn-hint').disabled = !yourTurn || !S || !Sim.canPlay(S, me());
+    const canUndo = yourTurn && undosLeft > 0 && undoStack.length > 0;
+    $('btn-undo').disabled = !canUndo;
+    $('undo-lbl').textContent = 'Undo ' + undosLeft;
     renderBoneyard();
     renderRack();
+  }
+
+  /* ---------------- hint + undo ---------------- */
+  function pushUndo() {
+    if (uiPhase === 'play' && S.phase === 'play') {
+      undoStack.push(Sim.snapshot(S));
+      if (undoStack.length > 10) undoStack.shift();
+    }
+  }
+  function rebuildFromState() {
+    clearBoard();
+    for (const n of S.board) {
+      const el = makeTile(n.a, n.b, false, n);
+      boardEls.set(n.id, el);
+      $('board').appendChild(el);
+    }
+    layout(false);
+    renderRack(); renderAiHand(); renderBoneyard(); renderScores();
+  }
+  function doUndo() {
+    if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
+    if (undosLeft <= 0 || !undoStack.length) return;
+    AU.uiTap(); buzz(12);
+    S = Sim.restore(undoStack.pop());
+    undosLeft--;
+    if (PLAYERS === 2) viewPlayer = S.turn;
+    selected = -1;
+    clearEndzones();
+    rebuildFromState();
+    setStatus('Undone — ' + undosLeft + (undosLeft === 1 ? ' undo' : ' undos') + ' left this round.');
+    updateTurnUI();
+  }
+  function doHint() {
+    if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
+    const who = me();
+    const moves = Sim.legalMoves(S.hands[who], Sim.exposed(S));
+    if (!moves.length) {
+      setStatus(S.boneyard.length ? 'No playable tile — draw from the boneyard.' : 'No playable tile — you must knock.');
+      return;
+    }
+    let best = moves[0], bs = -1e9;
+    for (const mv of moves) {
+      const s = Sim.scoreMove(S, who, mv, 1);
+      if (s > bs) { bs = s; best = mv; }
+    }
+    AU.uiTap(); buzz(10);
+    selected = best.tileIdx;
+    showEndzones(moves.filter((m) => m.tileIdx === best.tileIdx));
+    const bt = S.hands[who][best.tileIdx];
+    setStatus('Try the [' + bt.a + '|' + bt.b + '] — tap a glowing end.');
+    renderRack();
+    const glow = $('rack').children[best.tileIdx];
+    if (glow) glow.classList.add('hint-glow');
   }
 
   /* ---------------- rack ---------------- */
   function renderRack() {
     const rack = $('rack');
     rack.innerHTML = '';
-    const moves = (uiPhase === 'play' && S.turn === 0) ? Sim.legalMoves(S.hands[0], Sim.exposed(S)) : [];
+    const vp = viewPlayer;
+    const moves = (uiPhase === 'play' && S && S.turn === me() && !passOpen) ? Sim.legalMoves(S.hands[me()], Sim.exposed(S)) : [];
     const playable = new Set(moves.map((m) => m.tileIdx));
-    rackTiles = S.hands[0].map((t) => ({ a: t.a, b: t.b }));
+    rackTiles = S.hands[vp].map((t) => ({ a: t.a, b: t.b }));
     rackTiles.forEach((t, i) => {
       const el = makeTile(t.a, t.b, false);
       el.dataset.idx = i;
@@ -1015,7 +1463,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
     fitRack();
   }
   function rackTileW() {
-    const n = Math.max(1, S.hands[0].length);
+    const n = Math.max(1, S.hands[viewPlayer].length);
     const avail = window.innerWidth - 28 - (n - 1) * 8;
     return Math.min(52, Math.floor(avail / n));
   }
@@ -1043,13 +1491,15 @@ if (typeof window !== 'undefined') window.DomSim = api;
   }
 
   async function doPlayerPlay(tileIdx, end) {
-    if (busy || uiPhase !== 'play' || S.turn !== 0) return;
+    if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
     busy = true;
     selected = -1;
     clearEndzones();
+    pushUndo();
     const rackEl = $('rack').children[tileIdx];
     const from = rackEl ? tileScreenPos(rackEl) : { x: innerWidth / 2, y: innerHeight - 120 };
-    const r = Sim.playTile(S, 0, tileIdx, end);
+    const who = me();
+    const r = Sim.playTile(S, who, tileIdx, end);
     if (!r.ok) { busy = false; updateTurnUI(); return; }
     const ev = r.events[0];
     AU.clack((ev.tile.a + ev.tile.b) / 12);
@@ -1068,18 +1518,22 @@ if (typeof window !== 'undefined') window.DomSim = api;
     renderRack();
     layout(true);
     const zc = endzoneScreen(end);
+    if (ev.fives) { fivesPopup(zc.x, zc.y - 40, ev.fives); renderScores(); }
     dust(zc.x, zc.y, ev.tile.a === ev.tile.b ? 14 : 8, ev.tile.a === ev.tile.b);
     addShake(ev.tile.a === ev.tile.b ? 0.55 : 0.32);
     await wait(REDUCED ? 30 : 420);
     busy = false;
+    if (TUT.active && S.phase === 'play') tutAdvance(2);
     await afterMove();
   }
 
   async function doPlayerDraw() {
-    if (busy || uiPhase !== 'play' || S.turn !== 0) return;
-    if (Sim.canPlay(S, 0) || !S.boneyard.length) return;
+    if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
+    const who = me();
+    if (Sim.canPlay(S, who) || !S.boneyard.length) return;
     busy = true;
-    const r = Sim.drawTile(S, 0);
+    pushUndo();
+    const r = Sim.drawTile(S, who);
     busy = false;
     if (!r.ok) { updateTurnUI(); return; }
     AU.flip();
@@ -1095,18 +1549,21 @@ if (typeof window !== 'undefined') window.DomSim = api;
     await wait(REDUCED ? 30 : 360);
     ghost.remove();
     renderRack(); renderBoneyard();
-    if (Sim.canPlay(S, 0)) setStatus('Your move — tap a glowing tile.');
+    if (TUT.active && TUT.step === 0) tutShowStep();
+    if (Sim.canPlay(S, who)) setStatus(PLAYERS === 2 ? pName(who) + ' — tap a glowing tile.' : 'Your move — tap a glowing tile.');
     else if (!S.boneyard.length) setStatus('Boneyard empty.');
     updateTurnUI();
   }
 
   async function doPlayerKnock() {
-    if (busy || uiPhase !== 'play' || S.turn !== 0) return;
-    const r = Sim.knock(S, 0);
+    if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
+    pushUndo();
+    const who = me();
+    const r = Sim.knock(S, who);
     if (!r.ok) return;
     AU.knock();
     buzz(25);
-    setStatus('You knock.');
+    setStatus(pName(who) + (PLAYERS === 2 || who === 1 ? ' knocks.' : ' knock.'));
     clearEndzones();
     await wait(500);
     await afterMove();
@@ -1117,12 +1574,45 @@ if (typeof window !== 'undefined') window.DomSim = api;
     const evs = S.lastEvents;
     const rend = evs.find((e) => e.t === 'roundEnd');
     if (rend) { await showRoundEnd(rend, evs.find((e) => e.t === 'matchEnd')); return; }
+    if (PLAYERS === 2) {
+      if (S.phase === 'play' && S.turn !== viewPlayer) { openPassCard(); return; }
+      updateTurnUI();
+      if (S.phase === 'play' && !Sim.canPlay(S, me()) && S.boneyard.length) {
+        setStatus('No match — tap the boneyard to draw.');
+        updateTurnUI();
+      }
+      return;
+    }
     updateTurnUI();
     if (S.turn === 1 && S.phase === 'play') aiTakeTurn();
     else if (S.turn === 0 && S.phase === 'play' && !Sim.canPlay(S, 0)) {
       if (S.boneyard.length) setStatus('No match — tap the boneyard to draw.');
       updateTurnUI();
     }
+  }
+
+  function openPassCard() {
+    passOpen = true;
+    undoStack = []; // a new holder can't take back the other's move
+    const n = S.turn + 1;
+    $('pass-title').textContent = 'Hand the phone to Player ' + n;
+    $('pass-ready').textContent = "I'm Player " + n + ' — Ready';
+    $('pass-card').classList.remove('hidden');
+    AU.uiTap(); buzz(20);
+    updateTurnUI();
+  }
+  function closePassCard() {
+    AU.uiTap(); buzz(12);
+    $('pass-card').classList.add('hidden');
+    passOpen = false;
+    viewPlayer = S.turn;
+    selected = -1;
+    clearEndzones();
+    renderRack(); renderAiHand(); renderBoneyard(); renderScores();
+    updateTurnUI();
+    const who = me();
+    if (!Sim.canPlay(S, who) && S.boneyard.length) setStatus(pName(who) + ' — no match, tap the boneyard to draw.');
+    else setStatus(pName(who) + ' — tap a glowing tile.');
   }
 
   async function aiTakeTurn() {
@@ -1179,6 +1669,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
           dust(zc.x, zc.y, ev.tile.a === ev.tile.b ? 14 : 8, ev.tile.a === ev.tile.b);
           addShake(ev.tile.a === ev.tile.b ? 0.55 : 0.32);
         }, REDUCED ? 0 : 300);
+        if (ev.fives) setTimeout(() => { fivesPopup(zc.x, zc.y - 40, ev.fives); renderScores(); }, REDUCED ? 0 : 500);
         await wait(REDUCED ? 30 : 480);
       }
     }
@@ -1186,7 +1677,60 @@ if (typeof window !== 'undefined') window.DomSim = api;
     await afterMove();
   }
 
-  /* ---------------- round / match cards ---------------- */
+  /* ---------------- first-launch tutorial ---------------- */
+  const LS_TUT = 'dominoes.tutorial';
+  let TUT = { active: false, step: 0 };
+  function tutDone() {
+    try { return localStorage.getItem(LS_TUT) === '1'; } catch (e) { return true; }
+  }
+  function maybeStartTutorial() {
+    if (tutDone() || PLAYERS === 2 || !S || S.turn !== me() || uiPhase !== 'play') return;
+    TUT.active = true; TUT.step = 0;
+    tutShowStep();
+  }
+  function tutClearGlow() {
+    document.querySelectorAll('#rack .tile.hint-glow').forEach((x) => x.classList.remove('hint-glow'));
+  }
+  function tutShowStep() {
+    if (!TUT.active) return;
+    const b = $('tut-bubble');
+    b.classList.remove('hidden', 'tut-rack', 'tut-board', 'tut-center');
+    tutClearGlow();
+    const who = me();
+    if (TUT.step === 0) {
+      b.classList.add('tut-rack');
+      if (Sim.canPlay(S, who)) {
+        b.innerHTML = 'Your hand. <b>Glowing tiles</b> match an open end — tap one.';
+        const moves = Sim.legalMoves(S.hands[who], Sim.exposed(S));
+        const el = $('rack').children[moves[0].tileIdx];
+        if (el) el.classList.add('hint-glow');
+      } else if (S.boneyard.length) {
+        b.innerHTML = 'Nothing matches — <b>tap the boneyard</b> to draw a tile.';
+      } else {
+        b.innerHTML = 'Nothing matches and the boneyard is empty — tap <b>Knock</b>.';
+      }
+    } else if (TUT.step === 1) {
+      b.classList.add('tut-board');
+      b.innerHTML = 'Now <b>tap a glowing end</b> of the chain to place your tile.';
+    } else {
+      b.classList.add('tut-center');
+      b.innerHTML = 'That\'s the game! Match either end each turn.<br>Stuck with an empty boneyard? <b>Knock</b>.<br><button class="tut-btn" id="tut-gotit">Got it</button>';
+      $('tut-gotit').addEventListener('click', () => { AU.uiTap(); endTutorial(); });
+      setTimeout(() => { if (TUT.active && TUT.step === 2) endTutorial(); }, 9000);
+    }
+  }
+  function tutAdvance(n) {
+    if (!TUT.active) return;
+    TUT.step = n;
+    tutShowStep();
+  }
+  function endTutorial() {
+    if (!TUT.active) return;
+    TUT.active = false;
+    $('tut-bubble').classList.add('hidden');
+    tutClearGlow();
+    try { localStorage.setItem(LS_TUT, '1'); } catch (e) {}
+  }
   function miniTiles(el, hand) {
     el.innerHTML = '';
     const sorted = hand.slice().sort((x, y) => (y.a + y.b) - (x.a + x.b));
@@ -1196,6 +1740,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
 
   async function showRoundEnd(rend, mend) {
     uiPhase = 'roundEnd';
+    endTutorial();
     clearEndzones();
     setStatus('');
     await wait(650);
@@ -1203,20 +1748,36 @@ if (typeof window !== 'undefined') window.DomSim = api;
     const youWon = rend.winner === 0;
     buzz(youWon ? [20, 50, 20] : [40]);
     $('rc-kicker').textContent = 'Round ' + S.round;
-    if (rend.winner == null) {
-      $('rc-title').textContent = 'Dead Heat';
-      $('rc-points').textContent = '+0';
-    } else if (rend.reason === 'domino') {
-      $('rc-title').textContent = youWon ? 'Domino!' : 'House Takes It';
-      $('rc-points').textContent = '+' + rend.pts;
+    if (PLAYERS === 2) {
+      const wName = rend.winner == null ? null : pName(rend.winner);
+      $('rc-title').textContent = wName == null ? 'Dead Heat'
+        : (rend.reason === 'domino' ? 'Domino! — ' + wName : 'Blocked — ' + wName + ' Takes It');
+      countUp($('rc-points'), rend.pts);
+      $('rc-house-lbl').textContent = 'Player 2 Held';
+      $('rc-you-lbl').textContent = 'Player 1 Held';
     } else {
-      $('rc-title').textContent = youWon ? 'Blocked — You Take It' : 'Blocked — House Takes It';
-      $('rc-points').textContent = '+' + rend.pts;
+      if (rend.winner == null) {
+        $('rc-title').textContent = 'Dead Heat';
+        $('rc-points').textContent = '+0';
+      } else if (rend.reason === 'domino') {
+        $('rc-title').textContent = youWon ? 'Domino!' : 'House Takes It';
+        countUp($('rc-points'), rend.pts);
+      } else {
+        $('rc-title').textContent = youWon ? 'Blocked — You Take It' : 'Blocked — House Takes It';
+        countUp($('rc-points'), rend.pts);
+      }
+      $('rc-house-lbl').textContent = 'House Held';
+      $('rc-you-lbl').textContent = 'You Held';
     }
     miniTiles($('rc-house-tiles'), S.hands[1]);
     $('rc-house-pips').textContent = Sim.handPips(S.hands[1]) + ' pips';
     miniTiles($('rc-you-tiles'), S.hands[0]);
     $('rc-you-pips').textContent = Sim.handPips(S.hands[0]) + ' pips';
+    const fivesRow = $('rc-fives-row');
+    if (S.mode === 'fives' && rend.fives) {
+      fivesRow.classList.remove('hidden');
+      $('rc-fives').textContent = 'You ' + rend.fives[0] + ' · House ' + rend.fives[1];
+    } else fivesRow.classList.add('hidden');
     AU.chime(youWon);
     $('round-card').classList.remove('hidden');
     busy = false;
@@ -1226,13 +1787,21 @@ if (typeof window !== 'undefined') window.DomSim = api;
       await wait(REDUCED ? 200 : 2400);
       $('round-card').classList.add('hidden');
       const matchWon = mend.winner === 0;
-      $('mc-title').textContent = matchWon ? 'You Take the Match!' : 'House Takes the Match';
+      if (PLAYERS === 1) recordMatch(matchWon, difficulty);
+      if (PLAYERS === 2) {
+        $('mc-title').textContent = pName(mend.winner) + ' Takes the Match!';
+        $('mc-sub').textContent = 'First to ' + SET.target + '. Run it back?';
+      } else {
+        $('mc-title').textContent = matchWon ? 'You Take the Match!' : 'House Takes the Match';
+        $('mc-sub').textContent = matchWon
+          ? 'The table is yours. The House will want revenge.'
+          : 'The House keeps the felt warm. Run it back?';
+      }
       $('mc-score').textContent = S.scores[0] + ' · ' + S.scores[1];
-      $('mc-sub').textContent = matchWon
-        ? 'The table is yours. The House will want revenge.'
-        : 'The House keeps the felt warm. Run it back?';
       uiPhase = 'matchEnd';
       $('match-card').classList.remove('hidden');
+      confettiBurst();
+      buzz([30, 60, 30, 60, 80]);
     }
   }
 
@@ -1247,6 +1816,12 @@ if (typeof window !== 'undefined') window.DomSim = api;
   async function dealRound() {
     uiPhase = 'dealing';
     busy = true;
+    undoStack = [];
+    undosLeft = UNDOS_PER_ROUND;
+    passOpen = false;
+    $('pass-card').classList.add('hidden');
+    viewPlayer = PLAYERS === 2 ? S.turn : 0;
+    selected = -1;
     clearBoard();
     $('round-card').classList.add('hidden');
     $('match-card').classList.add('hidden');
@@ -1286,15 +1861,22 @@ if (typeof window !== 'undefined') window.DomSim = api;
       dust(p.x, p.y, 12, true);
     } else if (el) { AU.clack(1); }
     const opener = S.lastEvents.find((e) => e.t === 'open');
-    const who = opener && opener.player === 0 ? 'You' : 'House';
-    setStatus(who + ' open' + (who === 'You' ? '' : 's') + ' with [' + op.a + '|' + op.b + ']');
+    const opName = opener ? pName(opener.player) : 'You';
+    setStatus(opName + ' open' + (PLAYERS === 2 || (opener && opener.player === 1) ? 's' : '') + ' with [' + op.a + '|' + op.b + ']');
     buzz(12);
     uiPhase = 'play';
     busy = false;
     updateTurnUI();
+    if (PLAYERS === 2) {
+      const who = me();
+      if (!Sim.canPlay(S, who) && S.boneyard.length) setStatus(pName(who) + ' — no match, tap the boneyard to draw.');
+      else setStatus(pName(who) + ' — tap a glowing tile.');
+      return;
+    }
     if (S.turn === 1) aiTakeTurn();
     else if (!Sim.canPlay(S, 0) && S.boneyard.length) setStatus('No match — tap the boneyard to draw.');
     else if (S.turn === 0) setStatus('Your move — tap a glowing tile.');
+    maybeStartTutorial();
   }
 
   function startMatch() {
@@ -1303,7 +1885,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
   }
 
   function startMatchSeeded(seed) {
-    S = Sim.newGame(seed, 100);
+    S = Sim.newGame(seed, SET.target, MODE);
     clearBoard();
     $('round-card').classList.add('hidden');
     $('match-card').classList.add('hidden');
@@ -1318,11 +1900,11 @@ if (typeof window !== 'undefined') window.DomSim = api;
   }
   let pdown = null;
   $('rack').addEventListener('pointerdown', (e) => {
-    if (uiPhase !== 'play' || S.turn !== 0 || busy) return;
+    if (uiPhase !== 'play' || !S || S.turn !== me() || busy || passOpen) return;
     const el = rackTileFromEvent(e);
     if (!el) return;
     const idx = +el.dataset.idx;
-    const moves = Sim.legalMoves(S.hands[0], Sim.exposed(S));
+    const moves = Sim.legalMoves(S.hands[me()], Sim.exposed(S));
     const my = moves.filter((m) => m.tileIdx === idx);
     if (!my.length) {
       el.animate(
@@ -1386,6 +1968,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
         }
         showEndzones(pd.moves);
         setStatus('Tap a glowing end.');
+        tutAdvance(1);
       }
       renderRack();
     }
@@ -1396,8 +1979,8 @@ if (typeof window !== 'undefined') window.DomSim = api;
     pdown = null; clearEndzones(); renderRack();
   });
   $('board-layer').addEventListener('pointerup', async (e) => {
-    if (selected < 0 || uiPhase !== 'play' || S.turn !== 0 || busy) return;
-    const moves = Sim.legalMoves(S.hands[0], Sim.exposed(S)).filter((m) => m.tileIdx === selected);
+    if (selected < 0 || uiPhase !== 'play' || !S || S.turn !== me() || busy || passOpen) return;
+    const moves = Sim.legalMoves(S.hands[me()], Sim.exposed(S)).filter((m) => m.tileIdx === selected);
     let best = null, bestD = 60;
     for (const m of moves) {
       const z = endzoneScreen(m.end);
@@ -1413,14 +1996,21 @@ if (typeof window !== 'undefined') window.DomSim = api;
 
   /* ---------------- chrome buttons ---------------- */
   function syncSound() {
-    $('btn-sound').textContent = AU.isMuted() ? '✕' : '♪';
+    $('sound-ic').textContent = AU.isMuted() ? '✕' : '♪';
     $('btn-sound').style.opacity = AU.isMuted() ? 0.55 : 1;
   }
   $('btn-sound').addEventListener('click', () => { AU.ensure(); AU.setMuted(!AU.isMuted()); syncSound(); AU.uiTap(); });
   $('btn-restart').addEventListener('click', () => { AU.uiTap(); if (uiPhase !== 'title') startMatch(); });
-  $('btn-help').addEventListener('click', () => { AU.uiTap(); $('rules-modal').classList.remove('hidden'); });
+  $('btn-help').addEventListener('click', () => { AU.uiTap(); showRules(); });
+  $('btn-hint').addEventListener('click', () => { doHint(); });
+  $('btn-undo').addEventListener('click', () => { doUndo(); });
   $('rules-close').addEventListener('click', () => { AU.uiTap(); $('rules-modal').classList.add('hidden'); });
-  $('title-rules').addEventListener('click', () => { AU.uiTap(); $('rules-modal').classList.remove('hidden'); });
+  $('title-rules').addEventListener('click', () => { AU.uiTap(); showRules(); });
+  function showRules() {
+    $('rules-fives').classList.toggle('hidden', MODE !== 'fives');
+    $('rules-modal').classList.remove('hidden');
+  }
+  $('pass-ready').addEventListener('click', () => { closePassCard(); });
   $('rc-next').addEventListener('click', () => {
     AU.uiTap();
     $('round-card').classList.add('hidden');
@@ -1446,6 +2036,51 @@ if (typeof window !== 'undefined') window.DomSim = api;
       try { localStorage.setItem(LS_DIFF, String(difficulty)); } catch (e) {}
       diffBtns.forEach((x) => { x.classList.remove('sel'); x.setAttribute('aria-checked', 'false'); });
       b.classList.add('sel'); b.setAttribute('aria-checked', 'true');
+    });
+  });
+  const playerBtns = Array.from(document.querySelectorAll('#players-seg button'));
+  function syncPlayersSeg() {
+    playerBtns.forEach((b) => {
+      const on = +b.dataset.p === PLAYERS;
+      b.classList.toggle('sel', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+    const twoP = PLAYERS === 2;
+    $('diff-cards').style.display = twoP ? 'none' : '';
+    $('diff-label').style.display = twoP ? 'none' : '';
+    $('tagline').textContent = twoP
+      ? 'Two Players · One Phone · First to ' + SET.target
+      : 'You vs the House · First to ' + SET.target;
+    const whos = document.querySelectorAll('#hud .who');
+    if (whos.length === 2) {
+      whos[0].textContent = twoP ? 'Player 1' : 'You';
+      whos[1].textContent = twoP ? 'Player 2' : 'House';
+    }
+  }
+  syncPlayersSeg();
+  playerBtns.forEach((b) => {
+    b.addEventListener('click', () => {
+      AU.uiTap(); buzz(8);
+      PLAYERS = +b.dataset.p;
+      try { localStorage.setItem(LS_PLAYERS, String(PLAYERS)); } catch (e) {}
+      syncPlayersSeg();
+    });
+  });
+  const modeBtns = Array.from(document.querySelectorAll('#mode-seg button'));
+  function syncModeSeg() {
+    modeBtns.forEach((b) => {
+      const on = b.dataset.m === MODE;
+      b.classList.toggle('sel', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+  }
+  syncModeSeg();
+  modeBtns.forEach((b) => {
+    b.addEventListener('click', () => {
+      AU.uiTap(); buzz(8);
+      MODE = b.dataset.m;
+      try { localStorage.setItem(LS_MODE, MODE); } catch (e) {}
+      syncModeSeg();
     });
   });
   $('play-tile').addEventListener('click', () => { AU.ensure(); AU.uiTap(); buzz(15); startMatch(); });
@@ -1487,6 +2122,8 @@ if (typeof window !== 'undefined') window.DomSim = api;
   document.addEventListener('visibilitychange', () => { if (document.hidden) { pdown = null; } });
   sizeFx();
   syncSound();
+  wireSettings();
+  applySettings();
 
   /* test hook for the smoke harness */
   window.__dominoes = {
@@ -1511,9 +2148,10 @@ if (typeof window !== 'undefined') window.DomSim = api;
       const r = Sim.knock(S, p); return r.ok ? 'knock' : 'err';
     },
     uiStep() {
-      if (uiPhase !== 'play' || busy || S.turn !== 0) return 'wait';
-      if (Sim.canPlay(S, 0)) {
-        const m = Sim.legalMoves(S.hands[0], Sim.exposed(S))[0];
+      if (uiPhase !== 'play' || busy || !S || S.turn !== me() || passOpen) return 'wait';
+      const who = me();
+      if (Sim.canPlay(S, who)) {
+        const m = Sim.legalMoves(S.hands[who], Sim.exposed(S))[0];
         doPlayerPlay(m.tileIdx, m.end);
         return 'play';
       }
@@ -1521,13 +2159,19 @@ if (typeof window !== 'undefined') window.DomSim = api;
       doPlayerKnock();
       return 'knock';
     },
+    hint() { doHint(); return document.querySelectorAll('#rack .tile.hint-glow').length; },
+    undo() { const b = S.board.length; doUndo(); return { undosLeft, board: S.board.length, was: b }; },
+    undoState() { return { left: undosLeft, stack: undoStack.length }; },
+    twoP() { return { players: PLAYERS, view: viewPlayer, passOpen, turn: S ? S.turn : -1 }; },
+    passReady() { closePassCard(); },
     ensurePlayable() {
       let n = 0;
-      while (uiPhase === 'play' && !busy && S.turn === 0 && !Sim.canPlay(S, 0) && S.boneyard.length && n++ < 14) {
-        Sim.drawTile(S, 0);
+      const who = me();
+      while (uiPhase === 'play' && !busy && S.turn === who && !Sim.canPlay(S, who) && S.boneyard.length && n++ < 14) {
+        Sim.drawTile(S, who);
       }
       renderRack(); renderBoneyard(); updateTurnUI();
-      return Sim.canPlay(S, 0);
+      return Sim.canPlay(S, who);
     },
     async autoRound(maxSteps) {
       let n = 0;
