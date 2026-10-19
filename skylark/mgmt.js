@@ -175,12 +175,11 @@ var MGMT = (function () {
       var d = document.createElement('div');
       var sel = selJobs.indexOf(j.id) >= 0;
       d.className = 'job-card' + (sel ? ' sel' : '');
-      var destOwned = pilot.strips.indexOf(j.dest) >= 0;
       d.innerHTML =
         '<div class="job-top"><span class="job-name">' + j.name + '</span>' +
         '<span class="job-pay">' + money(j.payout) + '</span></div>' +
         '<div class="job-story">' + j.story + '</div>' +
-        '<div class="job-dest">→ ' + SK.stripById(j.dest).name + (destOwned ? '' : ' <span class="job-lock">(not owned)</span>') + '</div>';
+        '<div class="job-dest">→ ' + SK.stripById(j.dest).name + '</div>';
       d.addEventListener('click', function () {
         AU.click();
         var i = selJobs.indexOf(j.id);
@@ -255,7 +254,9 @@ var MGMT = (function () {
       }
       wrap.insertBefore(btn, $('b-sd-fly'));
     }
-    // fly-yourself button: needs selected jobs to one dest
+    // fly-yourself button: needs selected jobs to one dest.
+    // Bush pilot rules: you can deliver TO any strip — you only need to own
+    // the strip you're flying FROM (where you picked up the jobs).
     var flyBtn = $('b-sd-fly');
     flyBtn.classList.add('hidden');
     if (selJobs.length) {
@@ -263,7 +264,7 @@ var MGMT = (function () {
       var d2 = {};
       jobs2.forEach(function (j) { d2[j.dest] = true; });
       var dl2 = Object.keys(d2);
-      if (dl2.length === 1 && pilot.strips.indexOf(dl2[0]) >= 0) {
+      if (dl2.length === 1 && SK.planeCanLand(f.plane, SK.stripById(dl2[0]).cls)) {
         flyBtn.classList.remove('hidden');
         flyBtn.onclick = function () {
           AU.click();
