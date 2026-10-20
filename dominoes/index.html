@@ -311,6 +311,26 @@ button{font-family:var(--font-b);}
 .hidden{display:none !important;}
 #table.title-mode #hud,#table.title-mode #house-row,#table.title-mode #actionbar,
 #table.title-mode #status,#table.title-mode #actionbar{display:none;}
+/* ---------- landscape compact: keep the rack on the table ---------- */
+@media (orientation:landscape) and (max-height:520px){
+  #hud{padding:6px 12px 2px;}
+  .score{min-width:62px;padding:4px 8px 5px;border-radius:9px;}
+  .score::before,.score::after{display:none;}
+  .score .who{font-size:8px;letter-spacing:.22em;}
+  .score .pts{font-size:21px;}
+  .hud-mid{padding:3px 10px 4px;border-radius:9px;}
+  #round-label{font-size:13px;}
+  .hud-mid .target{font-size:8.5px;}
+  #house-row{padding:2px 12px;min-height:40px;}
+  #ai-hand .tile{--tw:18px;}
+  #house-count{font-size:13px;}
+  #actionbar{padding:4px 12px calc(6px + env(safe-area-inset-bottom));gap:6px;}
+  .abtn{padding:5px 2px 4px;border-radius:10px;gap:0;}
+  .ab-lbl{display:none;}
+  .ab-ic{font-size:15px;}
+  #rack{padding:2px 14px;}
+}
+
 @media (prefers-reduced-motion:reduce){
   #lamp,#play-tile,.endzone.lit,#ai-thinking span{animation:none;}
 }
@@ -1850,7 +1870,10 @@ if (typeof window !== 'undefined') window.DomSim = api;
   function rackTileW() {
     const n = Math.max(1, S.hands[viewPlayer].length);
     const avail = window.innerWidth - 28 - (n - 1) * 8;
-    return Math.min(52, Math.floor(avail / n));
+    let tw = Math.min(52, Math.floor(avail / n));
+    // landscape on a short screen: cap height so the rack stays on the table
+    if (window.innerWidth > window.innerHeight && window.innerHeight <= 520) tw = Math.min(tw, 32);
+    return tw;
   }
   function fitRack() { $('rack').style.setProperty('--tw', rackTileW() + 'px'); }
   function clearEndzones() {
