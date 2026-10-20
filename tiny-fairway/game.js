@@ -2466,7 +2466,8 @@
     muteState = (muteState + 1) % 3;
     AU.setWindMuted(muteState >= 1);
     AU.setMuted(muteState === 2);
-    $('btn-mute').textContent = muteState === 2 ? '🔇' : (muteState === 1 ? '🔈' : '🔊');
+    $('btn-mute').classList.toggle('wind-off', muteState === 1);
+    $('btn-mute').classList.toggle('muted', muteState === 2);
     AU.click();
     toast(muteState === 0 ? 'Sound on' : (muteState === 1 ? 'Wind bed off' : 'All sound off'));
   });
