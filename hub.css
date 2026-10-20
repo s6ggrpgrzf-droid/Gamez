@@ -404,9 +404,19 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   background:none;border:none;cursor:pointer;padding:0;z-index:2;
   display:flex;align-items:center;justify-content:center;
   transition:opacity .35s ease}
+/* Atlas 2: one spherical recipe for every core — light from upper-left, a
+   color-rich mid-band, a shaded base; the disc is solid like a tiny planet,
+   the halo (box-shadow) is what makes it a star. Pale colors no longer wash
+   flat, because white survives only at the highlight. */
 .star .core{display:block;width:var(--s,10px);height:var(--s,10px);border-radius:50%;
-  background:radial-gradient(circle at 42% 38%,#ffffff 0%,var(--glow) 52%,transparent 78%);
-  box-shadow:0 0 14px 3px color-mix(in srgb,var(--glow) 55%,transparent),
+  background:radial-gradient(circle at 36% 30%,
+    #ffffff 0%,
+    color-mix(in srgb,var(--glow) 42%,#ffffff) 26%,
+    var(--glow) 58%,
+    color-mix(in srgb,var(--glow) 60%,#000000) 92%,
+    color-mix(in srgb,var(--glow) 52%,#000000) 100%);
+  box-shadow:inset -1px -2px 3px rgba(0,0,0,.5),inset 1px 2px 2px rgba(255,255,255,.45),
+             0 0 14px 3px color-mix(in srgb,var(--glow) 55%,transparent),
              0 0 44px 12px color-mix(in srgb,var(--glow) 22%,transparent);
   animation:twinkle 3.6s ease-in-out infinite;animation-delay:var(--td,0s)}
 @keyframes twinkle{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.8);opacity:.72}}
