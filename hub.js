@@ -489,6 +489,135 @@
     });
   })();
 
+  /* ---------- Living Sky step 2: the constellation field ---------- */
+  (function () {
+    var main = document.querySelector('main.collection');
+    var gamesEl = document.getElementById('games');
+    if (!main || !gamesEl) return;
+    /* hand-placed star map: x/y portrait, xd/yd wide — two skies, one field */
+    var POS = {
+      'candy-cascade': [20, 9, 10, 18, 2], 'bubble-hex': [63, 5, 30, 8, 1],
+      'bloom-defense': [82, 19, 88, 12, 1], 'neon-void': [32, 25, 52, 24, 2],
+      'maze-trace': [70, 33, 72, 36, 1], 'word-well': [13, 41, 14, 46, 1],
+      'pdawg': [47, 49, 38, 54, 1], 'life-story': [84, 53, 64, 60, 1],
+      'reel-empire': [24, 63, 88, 54, 1], 'tiny-fairway': [58, 71, 48, 82, 3],
+      'skylark': [85, 84, 17, 84, 2], 'dominoes': [30, 87, 76, 86, 1]
+    };
+    var LINKS = [['candy-cascade', 'bubble-hex'], ['bubble-hex', 'maze-trace'],
+      ['maze-trace', 'word-well'], ['word-well', 'pdawg'], ['candy-cascade', 'neon-void'],
+      ['neon-void', 'bloom-defense'], ['bloom-defense', 'life-story'],
+      ['pdawg', 'tiny-fairway'], ['reel-empire', 'tiny-fairway'],
+      ['tiny-fairway', 'skylark'], ['tiny-fairway', 'dominoes']];
+    var SIZES = { 1: 9, 2: 11, 3: 14 };
+    var field = document.createElement('div');
+    field.className = 'field';
+    field.setAttribute('aria-label', 'The Collection, as a constellation');
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'field-lines');
+    svg.setAttribute('aria-hidden', 'true');
+    field.appendChild(svg);
+    var stars = {}, order = [];
+    document.querySelectorAll('.card[data-game]').forEach(function (card) {
+      var id = card.getAttribute('data-game');
+      var p = POS[id];
+      if (!p) return;
+      var wide = window.innerWidth >= 700;
+      var b = document.createElement('button');
+      b.className = 'star';
+      b.type = 'button';
+      b.dataset.game = id;
+      b.setAttribute('aria-label', 'Open ' + card.querySelector('h3').textContent.trim());
+      b.style.left = (wide ? p[2] : p[0]) + '%';
+      b.style.top = (wide ? p[3] : p[1]) + '%';
+      b.style.setProperty('--glow', card.style.getPropertyValue('--glow') || '#4da6ff');
+      b.style.setProperty('--s', SIZES[p[4]] + 'px');
+      b.style.setProperty('--td', (-Math.random() * 3).toFixed(2) + 's');
+      b.innerHTML = '<span class="core"></span><span class="lab">' +
+        escapeHtml(card.querySelector('h3').textContent.replace(/^(\p{Extended_Pictographic}\uFE0F?\s+)+/u, '')) + '</span>';
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); openBloom(id, b); });
+      field.appendChild(b);
+      stars[id] = b; order.push(id);
+    });
+    if (!order.length) return;
+    LINKS.forEach(function (pair) {
+      if (!stars[pair[0]] || !stars[pair[1]]) return;
+      var ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      ln.dataset.a = pair[0]; ln.dataset.b = pair[1];
+      svg.appendChild(ln);
+    });
+    var bloom = document.createElement('div');
+    bloom.className = 'card bloom';
+    bloom.setAttribute('role', 'dialog');
+    bloom.innerHTML = '<button class="bclose" type="button" aria-label="Close">&times;</button>' +
+      '<div class="art"><span class="badge"></span><div class="pbar"><i></i></div></div>' +
+      '<div class="body"><h3></h3><p></p><div class="meta"><a class="play" href="#">Play</a><span class="prog"></span></div></div>';
+    field.appendChild(bloom);
+    main.insertBefore(field, gamesEl);
+    main.classList.add('has-field');
+    var openId = null, openBtn = null;
+    function drawLines() {
+      var fr = field.getBoundingClientRect();
+      svg.querySelectorAll('line').forEach(function (ln) {
+        var a = stars[ln.dataset.a], b = stars[ln.dataset.b];
+        if (!a || !b) return;
+        var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+        ln.setAttribute('x1', ra.left + ra.width / 2 - fr.left);
+        ln.setAttribute('y1', ra.top + ra.height / 2 - fr.top);
+        ln.setAttribute('x2', rb.left + rb.width / 2 - fr.left);
+        ln.setAttribute('y2', rb.top + rb.height / 2 - fr.top);
+      });
+    }
+    function layout() {
+      var wide = window.innerWidth >= 700;
+      order.forEach(function (id) {
+        var p = POS[id];
+        stars[id].style.left = (wide ? p[2] : p[0]) + '%';
+        stars[id].style.top = (wide ? p[3] : p[1]) + '%';
+      });
+      drawLines();
+    }
+    function openBloom(id, btn) {
+      var card = document.querySelector('.card[data-game="' + id + '"]');
+      if (!card) return;
+      if (openBtn) openBtn.classList.remove('open');
+      openId = id; openBtn = btn;
+      btn.classList.add('open');
+      var art = card.querySelector('.art');
+      var ba = bloom.querySelector('.art');
+      ba.className = 'art';
+      if (art) art.classList.forEach(function (k) { if (k.indexOf('art-') === 0) ba.classList.add(k); });
+      bloom.style.setProperty('--glow', card.style.getPropertyValue('--glow') || '#4da6ff');
+      var badge = card.querySelector('.badge');
+      bloom.querySelector('.badge').textContent = badge ? badge.textContent : '';
+      bloom.querySelector('h3').textContent = card.querySelector('h3').textContent;
+      bloom.querySelector('p').textContent = card.querySelector('p').textContent;
+      var play = bloom.querySelector('.play');
+      play.href = card.getAttribute('href');
+      var prog = card.querySelector('.prog');
+      bloom.querySelector('.prog').textContent = prog ? prog.textContent : '';
+      var bar = card.querySelector('.pbar i');
+      bloom.querySelector('.pbar i').style.width = bar ? bar.style.width : '0';
+      field.classList.add('blooming');
+    }
+    function closeBloom() {
+      if (openBtn) { openBtn.classList.remove('open'); openBtn.focus({ preventScroll: true }); }
+      openId = null; openBtn = null;
+      field.classList.remove('blooming');
+    }
+    bloom.querySelector('.bclose').addEventListener('click', function (ev) { ev.stopPropagation(); closeBloom(); });
+    field.addEventListener('click', function () { if (openId) closeBloom(); });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && openId) closeBloom(); });
+    window.addEventListener('resize', layout);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawLines);
+    requestAnimationFrame(drawLines);
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting) { field.classList.add('lit'); drawLines(); io.disconnect(); } });
+      }, { threshold: 0.15 });
+      io.observe(field);
+    } else field.classList.add('lit');
+  })();
+
   /* ---------- scroll reveals: cards rise in, staggered ---------- */
   var revealIO = null;
   function observeReveals() {
@@ -506,11 +635,11 @@
     }
     els.forEach(function (el) { revealIO.observe(el); });
   }
-  document.querySelectorAll('.card,.chip,.shead,.feature,.featured').forEach(function (el) { el.classList.add('rv'); });
+  document.querySelectorAll('.card:not(.bloom),.chip,.shead,.feature,.featured').forEach(function (el) { el.classList.add('rv'); });
   observeReveals();
   var WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'];
-  var cardEls = document.querySelectorAll('.card');
+  var cardEls = document.querySelectorAll('.card:not(.bloom)');
   var wcEl = document.getElementById('worldcount');
   if (wcEl) wcEl.textContent = WORDS[cardEls.length] || String(cardEls.length);
 
