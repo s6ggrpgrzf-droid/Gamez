@@ -484,6 +484,7 @@ var Game = {
     }
     if (list.length) {
       this.glide = { list: list, t0: performance.now() };
+      sfx('deal');
       this.markDirty();
     }
   },
@@ -1115,6 +1116,7 @@ Game.rotateSelection = function () {
   var gid = this.selection && S.groups[this.selection] ? this.selection : null;
   if (!gid) { toast('Tap a piece first, then rotate'); return; }
   rotateGroup(S, gid);
+  sfx('rotate');
   this.scheduleSave();
   this.markDirty();
 };
@@ -1653,10 +1655,12 @@ function snapCurve(t) {
 function resolveDrop(S, gid) {
   var before = groupMembers(S, gid);   // dragged group's pieces (pre-merge)
   var res = snapAfterDrop(S, gid);
-  if (res.placed) {
+  if (res.placedWhimsy && res.placedWhimsy.length) {
+    sfx('whimsy');
+  } else if (res.placed) {
     sfx('snap');
   } else if (res.merged) {
-    sfx('click');
+    sfx('merge');
   }
   if ((res.merged || res.placed) && typeof Game !== 'undefined' && Game.snapPop) {
     // pop the pieces that just joined: the merged group, or the placed ones
@@ -2161,6 +2165,7 @@ var UI = {
       Game.saveNow();
       UI.renderThemeRow();
       try { $('#haptToggle').checked = window.PDAWG_SFX && PDAWG_SFX.hapticsOn(); } catch (e) {}
+      try { $('#sndToggle').checked = window.PDAWG_SFX && PDAWG_SFX.soundOn(); } catch (e) {}
       openModal('#pauseModal');
     };
     /* light haptic tick on every UI button press (no-op where unsupported, e.g. iOS) */
@@ -2261,6 +2266,12 @@ var UI = {
     if (ht) ht.addEventListener('change', function () {
       try { if (window.PDAWG_SFX) PDAWG_SFX.setHaptics(ht.checked); } catch (e) {}
       sfx('click');
+    });
+    // sound setting (pause modal)
+    var stg = $('#sndToggle');
+    if (stg) stg.addEventListener('change', function () {
+      try { if (window.PDAWG_SFX) PDAWG_SFX.setSound(stg.checked); } catch (e) {}
+      if (stg.checked) sfx('click');
     });
     // AI studio
     $('#aiGenBtn').onclick = function () {      var v = $('#aiPrompt').value.trim();
