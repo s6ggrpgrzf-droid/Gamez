@@ -422,6 +422,17 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   opacity:0;transition:opacity 1.4s ease .15s}
 .field.lit .field-lines{opacity:1}
 .field-lines line{stroke:rgba(160,205,255,.18);stroke-width:1}
+/* Observatory 2: the milky wash — a band of unresolved starlight behind
+   the figure, in the ambient dust's own two colors (ice + warm white),
+   leaning with the chart's NW-SE energy. It lives inside the field (so
+   it scrolls with the chart) and below the lines: depth, never fog */
+.field::before{content:"";position:absolute;inset:-18% -12%;z-index:0;pointer-events:none;
+  transform:rotate(-19deg);
+  background:
+    radial-gradient(ellipse 62% 15% at 58% 58%,rgba(255,240,214,.05),transparent 68%),
+    radial-gradient(ellipse 78% 19% at 50% 47%,rgba(226,236,255,.075),transparent 66%),
+    radial-gradient(ellipse 96% 34% at 50% 52%,rgba(190,205,240,.04),transparent 72%)}
+.field-lines{position:relative;z-index:1}
 .star{position:absolute;transform:translate(-50%,-50%);width:64px;height:64px;
   background:none;border:none;cursor:pointer;padding:0;z-index:2;
   display:flex;align-items:center;justify-content:center;
