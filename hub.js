@@ -531,23 +531,26 @@
     var gamesEl = document.getElementById('games');
     if (!main || !gamesEl) return;
     /* hand-placed star map: x/y portrait, xd/yd wide — two skies, one field */
-    /* Atlas 4 re-plot (wide map): neon drops, arrow rises, word sinks —
-       the two long near-horizontal rungs become diagonals; life + reel
-       descend into the empty lower third; cathedral joins the figure */
+    /* Re-plot (2026-10-20): the field now traces one classic chart figure —
+       positions computed from real star-chart coordinates (dense body in the
+       upper middle, a handle west, a spout east, two outliers trailing to
+       the low-left), lightly nudged only where labels would collide. The
+       figure is deliberately unnamed anywhere in the product. */
     var POS = {
-      'candy-cascade': [20, 9, 10, 18, 2], 'bubble-hex': [63, 5, 30, 8, 1],
-      'bloom-defense': [82, 19, 88, 12, 1], 'neon-void': [32, 25, 50, 30, 2],
-      'maze-trace': [70, 33, 74, 28, 1], 'word-well': [13, 41, 16, 50, 1],
-      'pdawg': [47, 49, 36, 58, 1], 'life-story': [84, 53, 66, 68, 1],
-      'reel-empire': [24, 63, 86, 64, 1], 'tiny-fairway': [58, 71, 48, 82, 3],
-      'skylark': [85, 84, 15, 88, 2], 'dominoes': [30, 87, 78, 88, 1],
-      'cathedral': [56, 89, 58, 90, 1]
+      'candy-cascade': [37, 24, 38, 25, 2], 'bubble-hex': [52, 30, 54, 31, 1],
+      'bloom-defense': [30, 37, 30, 37, 1], 'neon-void': [72, 37, 75, 37, 2],
+      'maze-trace': [23, 31, 23, 32, 1], 'word-well': [13, 76, 11, 76, 1],
+      'pdawg': [20, 4, 19, 5, 1], 'life-story': [12, 91, 10, 91, 1],
+      'reel-empire': [76, 61, 79, 62, 1], 'tiny-fairway': [69, 53, 72, 53, 3],
+      'skylark': [65, 21, 68, 22, 2], 'dominoes': [88, 40, 92, 39, 1],
+      'cathedral': [30, 9, 29, 10, 1]
     };
-    var LINKS = [['candy-cascade', 'bubble-hex'], ['bubble-hex', 'maze-trace'],
-      ['maze-trace', 'word-well'], ['word-well', 'pdawg'], ['candy-cascade', 'neon-void'],
-      ['neon-void', 'bloom-defense'], ['bloom-defense', 'life-story'],
-      ['pdawg', 'tiny-fairway'], ['reel-empire', 'tiny-fairway'],
-      ['tiny-fairway', 'skylark'], ['tiny-fairway', 'dominoes'], ['tiny-fairway', 'cathedral'], ['cathedral', 'dominoes']];
+    var LINKS = [['dominoes', 'neon-void'], ['neon-void', 'tiny-fairway'],
+      ['tiny-fairway', 'bloom-defense'], ['bloom-defense', 'maze-trace'],
+      ['maze-trace', 'candy-cascade'], ['candy-cascade', 'bubble-hex'],
+      ['bubble-hex', 'neon-void'], ['neon-void', 'skylark'],
+      ['tiny-fairway', 'reel-empire'], ['pdawg', 'cathedral'],
+      ['cathedral', 'maze-trace'], ['bloom-defense', 'word-well'], ['word-well', 'life-story']];
     var SIZES = { 1: 9, 2: 11, 3: 14 };
     var field = document.createElement('div');
     field.className = 'field';
