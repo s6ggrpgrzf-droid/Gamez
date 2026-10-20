@@ -1463,16 +1463,40 @@
       var bz = db.z || 0;
       var br = Math.max(3.5, TF.BALL_R * sc) * (1 + bz * 0.05);
       var bx = X(db.x), by = Y(db.y);
+      // roll phase: accumulate ground travel so the dimples crawl as it rolls
+      if (db._rx === undefined) { db._rx = 0; db._ry = 0; db._px = db.x; db._py = db.y; }
+      db._rx += (db.x - db._px); db._ry += (db.y - db._py); db._px = db.x; db._py = db.y;
       var shR = br * (1 + bz * 0.22);
-      ctx.fillStyle = 'rgba(0,0,0,' + Math.max(0.08, 0.25 - bz * 0.02).toFixed(3) + ')';
+      ctx.fillStyle = 'rgba(0,0,0,' + Math.max(0.08, 0.28 - bz * 0.02).toFixed(3) + ')';
       ctx.beginPath(); ctx.ellipse(bx + 1.5, by + 2.5, shR * 0.95, shR * 0.8, 0, 0, 6.2832); ctx.fill();
       var airY = by - bz * sc;   // the ball lifts off the ground plane
+      // body: base colour, then a dimple field that scrolls with the roll,
+      // lit from the upper-left and shaded toward the lower rim
       ctx.fillStyle = db.color || '#ffffff';
       ctx.beginPath(); ctx.arc(bx, airY, br, 0, 6.2832); ctx.fill();
+      ctx.save();
+      ctx.beginPath(); ctx.arc(bx, airY, br, 0, 6.2832); ctx.clip();
+      var dsp = br * 0.46, doff = br * 0.13;
+      var phx = ((db._rx * sc) % dsp + dsp) % dsp, phy = ((db._ry * sc) % dsp + dsp) % dsp;
+      ctx.fillStyle = 'rgba(28,38,28,.17)';
+      for (var dyy = -1; dyy <= 1; dyy++) {
+        for (var dxx = -1; dxx <= 1; dxx++) {
+          var dcx = bx + dxx * dsp + phx + ((dyy & 1) ? dsp * 0.5 : 0);
+          var dcy = airY + dyy * dsp + phy;
+          ctx.beginPath(); ctx.arc(dcx, dcy, doff, 0, 6.2832); ctx.fill();
+        }
+      }
+      var lg = ctx.createRadialGradient(bx - br * 0.38, airY - br * 0.42, br * 0.1, bx, airY, br * 1.15);
+      lg.addColorStop(0, 'rgba(255,255,255,.48)');
+      lg.addColorStop(0.45, 'rgba(255,255,255,0)');
+      lg.addColorStop(0.8, 'rgba(0,0,0,0)');
+      lg.addColorStop(1, 'rgba(0,0,0,.22)');
+      ctx.fillStyle = lg; ctx.fillRect(bx - br, airY - br, br * 2, br * 2);
+      ctx.restore();
       ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(bx, airY, br, 0, 6.2832); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.9)';
-      ctx.beginPath(); ctx.arc(bx - br * 0.3, airY - br * 0.3, br * 0.28, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.beginPath(); ctx.arc(bx - br * 0.32, airY - br * 0.34, br * 0.2, 0, 6.2832); ctx.fill();
       // sticky armed: amber ring
       if (db.sticky) {
         ctx.strokeStyle = 'rgba(232,176,75,.95)'; ctx.lineWidth = 2;
