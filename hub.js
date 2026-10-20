@@ -179,6 +179,11 @@
       if (Math.abs(drift - driftApplied) > 0.05) {
         driftApplied = drift;
         fieldEl.style.transform = 'translate3d(0,' + drift.toFixed(2) + 'px,0)';
+        /* Depth pass: publish the same eased drift as a variable — each
+           depth tier's stars ride an extra slice of it (CSS translate), so
+           the plate stays rigid for the lines while the stars separate
+           into layers against it */
+        fieldEl.style.setProperty('--pdrift', drift.toFixed(2) + 'px');
       }
     }
     drawCel();
@@ -567,6 +572,8 @@
       var wide = window.innerWidth >= 700;
       var b = document.createElement('button');
       b.className = 'star';
+      /* Depth pass: magnitude doubles as a depth tier (t3 nearest, t1 far) */
+      b.classList.add('t' + p[4]);
       b.type = 'button';
       b.dataset.game = id;
       b.setAttribute('aria-label', 'Open ' + card.querySelector('h3').textContent.trim());
@@ -591,9 +598,21 @@
     if (!order.length) return;
     LINKS.forEach(function (pair) {
       if (!stars[pair[0]] || !stars[pair[1]]) return;
-      var ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      ln.dataset.a = pair[0]; ln.dataset.b = pair[1];
-      svg.appendChild(ln);
+      /* Depth pass: every link is a filament — a wide faint glow pass with a
+         crisp core line over it; the core's brightness follows the depths of
+         the two stars it joins (near-to-near burns brightest). drawLines
+         already updates every line carrying data-a/data-b, so both passes
+         stay glued with no extra bookkeeping. */
+      var mk = function (cls) {
+        var l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        l.setAttribute('class', cls);
+        l.dataset.a = pair[0]; l.dataset.b = pair[1];
+        svg.appendChild(l); return l;
+      };
+      mk('lg');
+      var lc = mk('lc');
+      var avg = (POS[pair[0]][4] + POS[pair[1]][4]) / 2;
+      lc.style.opacity = (0.16 + 0.13 * avg).toFixed(2);
     });
     var bloom = document.createElement('div');
     bloom.className = 'card bloom';

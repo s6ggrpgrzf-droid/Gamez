@@ -422,6 +422,10 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   opacity:0;transition:opacity 1.4s ease .15s}
 .field.lit .field-lines{opacity:1}
 .field-lines line{stroke:rgba(160,205,255,.18);stroke-width:1}
+/* Depth pass: filament lines — a wide, faint glow pass under a crisp core.
+   The core line's opacity is set per link in JS from its stars' depths. */
+.field-lines line.lg{stroke:rgba(150,200,255,.09);stroke-width:4}
+.field-lines line.lc{stroke:rgba(196,226,255,.9);stroke-width:1}
 /* Observatory 2: the milky wash — a band of unresolved starlight behind
    the figure, in the ambient dust's own two colors (ice + warm white),
    leaning with the chart's NW-SE energy. It lives inside the field (so
@@ -484,6 +488,29 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
               0 0 14px color-mix(in srgb,var(--glow) 35%,transparent);
   pointer-events:none;transition:color .25s}
 .star:active .core{transform:scale(1.35)}
+/* ---------- Depth pass (2026-10-20): the chart gains relief ----------
+   Magnitude is depth: t3 nearest, t1 farthest. A contact shadow pools
+   beneath each core, offset down-right (the light in this sky is upper-left),
+   darkest under the nearest planets — that shadow is what lifts the sphere
+   off the chart. The sky loop publishes its eased plate drift as --pdrift;
+   each tier's core, glint, label and shadow ride an extra slice of it via
+   the independent translate property, which composes with (never fights)
+   the twinkle and glint animations — so scrolling separates the layers:
+   near stars travel farthest, far stars least. Reduced motion never sets
+   --pdrift, so the field simply stays flat and still. */
+.star::after{content:"";position:absolute;left:50%;top:50%;z-index:0;pointer-events:none;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(closest-side,rgba(0,0,0,.55),rgba(0,0,0,0));
+  width:34px;height:13px;opacity:0}
+.t3::after{opacity:.85;translate:5px calc(11px + var(--pdrift,0px)*.5)}
+.t2::after{opacity:.5;width:29px;height:11px;translate:4px 9px}
+.t1::after{opacity:.26;width:24px;height:9px;translate:3px calc(8px - var(--pdrift,0px)*.4)}
+.t3 .core,.t3 .glint,.t3 .lab{translate:0 calc(var(--pdrift,0px)*.5)}
+.t1 .core,.t1 .glint,.t1 .lab{translate:0 calc(var(--pdrift,0px)*-.4)}
+/* the touch: a pressed star lifts and flares, like it has weight and a hinge */
+.star .core{transition:scale .16s ease,filter .16s ease}
+.star:active .core{scale:1.16;filter:brightness(1.22)}
+@media (prefers-reduced-motion:reduce){.star .core{transition:none}.star:active .core{scale:1;filter:none}}
 .field.blooming .star{opacity:.32}
 .field.blooming .star.open{opacity:1}
 .star.open .core{animation:none;transform:scale(1.45);
@@ -492,15 +519,18 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 .star.open .lab{color:#fff}
 /* the bloom: a star opens into its poster, centered over the field */
 .bloom{position:absolute;left:50%;top:50%;z-index:6;width:min(340px,88%);
-  transform:translate(-50%,-50%) scale(.9);opacity:0;pointer-events:none;
-  transition:opacity .28s ease,transform .38s var(--ease);
+  transform:translate(-50%,-43%) scale(.92);opacity:0;pointer-events:none;
+  transition:opacity .28s ease,transform .38s var(--ease),box-shadow .38s ease;
   /* Atlas 5: rim + shadow tinted by the star that opened it (--glow set in JS) */
   border-color:color-mix(in srgb,var(--glow,#4da6ff) 42%,transparent);
   box-shadow:0 34px 90px rgba(0,0,0,.72),
              0 0 46px color-mix(in srgb,var(--glow,#4da6ff) 16%,transparent),
              inset 0 1px 0 rgba(255,255,255,.28)}
 .card.bloom h3::after{background:linear-gradient(90deg,var(--glow,#4da6ff),transparent)}
-.field.blooming .bloom{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+.field.blooming .bloom{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto;
+  box-shadow:0 52px 120px rgba(0,0,0,.82),
+             0 0 64px color-mix(in srgb,var(--glow,#4da6ff) 22%,transparent),
+             inset 0 1px 0 rgba(255,255,255,.28)}
 .bloom a.play{text-decoration:none}
 /* a detail view shows the whole description — no clamp in the bloom */
 .bloom .body p{display:block;-webkit-line-clamp:unset;overflow:visible}
