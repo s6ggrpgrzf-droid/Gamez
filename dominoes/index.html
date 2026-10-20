@@ -284,6 +284,18 @@ button{font-family:var(--font-b);}
 .slip .brass-btn{margin-top:14px;padding:14px 44px;font-size:16px;}
 .slip ul{text-align:left;font-size:14px;line-height:1.65;margin:12px 4px 6px 20px;color:#3a2f1d;}
 .slip .fine{font-size:12px;font-style:italic;color:#8a6f3c;margin-top:10px;}
+#lobby-code{font-family:var(--font-d);font-weight:700;font-size:52px;letter-spacing:.35em;color:#7a5a1e;margin:4px 0 2px;text-indent:.35em;}
+.lobby-input{display:block;width:100%;box-sizing:border-box;margin:10px 0 2px;padding:13px 14px;font-size:17px;
+  font-family:var(--font-b);text-align:center;color:#3a2a10;background:#fffdf6;border:1.5px solid rgba(120,95,60,.5);
+  border-radius:12px;outline:none;}
+.lobby-input:focus{border-color:#a8842f;box-shadow:0 0 0 3px rgba(214,178,94,.3);}
+#lobby-join{text-transform:uppercase;letter-spacing:.3em;text-indent:.3em;}
+#lobby-join-row .brass-btn{margin-top:10px;}
+#lobby-create{margin-top:6px;}
+#lobby-status{min-height:18px;}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(138,111,60,.35);border-top-color:#8a6f3c;
+  border-radius:50%;animation:spin 0.9s linear infinite;vertical-align:-2px;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 .hidden{display:none !important;}
 #table.title-mode #hud,#table.title-mode #house-row,#table.title-mode #actionbar,
@@ -349,6 +361,7 @@ button{font-family:var(--font-b);}
         <div id="players-seg" role="radiogroup" aria-label="Players">
           <button data-p="1" role="radio" aria-checked="true" class="sel">Vs House</button>
           <button data-p="2" role="radio" aria-checked="false">2 Players</button>
+          <button data-p="3" role="radio" aria-checked="false">Online</button>
         </div>
         <div><span class="diff-label">Game Mode</span></div>
         <div id="mode-seg" role="radiogroup" aria-label="Game mode">
@@ -414,6 +427,25 @@ button{font-family:var(--font-b);}
         <h2 id="pass-title">Hand the phone to Player 2</h2>
         <div class="fine">Your tiles are hidden until you're ready.<br>No peeking.</div>
         <button id="pass-ready" class="brass-btn">I'm Player 2 — Ready</button>
+      </div>
+    </div>
+
+    <div id="lobby-card" class="card hidden">
+      <div class="slip">
+        <div class="slip-kicker">Online · Room</div>
+        <h2 id="lobby-title">Play a Friend</h2>
+        <input id="lobby-name" class="lobby-input" maxlength="16" placeholder="Your name" autocomplete="off">
+        <div id="lobby-code-row" class="hidden">
+          <div class="fine">Share this code with your friend</div>
+          <div id="lobby-code">––––</div>
+        </div>
+        <div id="lobby-join-row">
+          <input id="lobby-join" class="lobby-input" maxlength="4" placeholder="Room code" autocomplete="off" autocapitalize="characters">
+          <button id="lobby-join-btn" class="brass-btn">Join Room</button>
+        </div>
+        <button id="lobby-create" class="brass-btn">Create Room</button>
+        <div id="lobby-status" class="fine"></div>
+        <button id="lobby-cancel" class="ghost-btn">Cancel</button>
       </div>
     </div>
 
@@ -1040,12 +1072,351 @@ if (typeof window !== 'undefined') window.DomSim = api;
   try { const m = localStorage.getItem(LS_MODE); if (m === 'fives' || m === 'draw') MODE = m; } catch (e) {}
   const LS_PLAYERS = 'dominoes.players';
   let PLAYERS = 1;
-  try { const p = localStorage.getItem(LS_PLAYERS); if (p === '2') PLAYERS = 2; } catch (e) {}
+  try { const p = localStorage.getItem(LS_PLAYERS); if (p === '2' || p === '3') PLAYERS = +p; } catch (e) {}
   let viewPlayer = 0;   // whose hand the rack shows (2P: follows the turn via the pass card)
   let passOpen = false;
-  function me() { return (PLAYERS === 2 && S) ? S.turn : 0; }
-  function opp() { return (PLAYERS === 2 && S) ? 1 - viewPlayer : 1; }
-  function pName(n) { return PLAYERS === 2 ? 'Player ' + (n + 1) : (n === 0 ? 'You' : 'House'); }
+  function me() { return PLAYERS === 3 ? NETG.seat : (PLAYERS === 2 && S ? S.turn : 0); }
+  function opp() { return PLAYERS === 3 ? 1 - NETG.seat : (PLAYERS === 2 && S ? 1 - viewPlayer : 1); }
+  function pName(n) {
+    if (PLAYERS === 3) return NETG.names[n] || ('Player ' + (n + 1));
+    return PLAYERS === 2 ? 'Player ' + (n + 1) : (n === 0 ? 'You' : 'House');
+  }
+
+  /* ---------------- online multiplayer ---------------- */
+  const NET_DEFAULT = 'wss://dominoes-rooms.chaoticutopia84.workers.dev';
+  const LS_NETNAME = 'dominoes.netname';
+  const NETG = {
+    ws: null, code: null, seat: 0, names: ['Player 1', 'Player 2'],
+    state: null, pending: null, endShown: null, wantSeat: -1, name: 'Player',
+  };
+  try { const nm = localStorage.getItem(LS_NETNAME); if (nm) NETG.name = nm; } catch (e) {}
+  function netUrl() {
+    try { return localStorage.getItem('dominoes.neturl') || NET_DEFAULT; }
+    catch (e) { return NET_DEFAULT; }
+  }
+  function netHttp() { return netUrl().replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'); }
+  function netSend(m) {
+    if (NETG.ws && NETG.ws.readyState === 1) { try { NETG.ws.send(JSON.stringify(m)); } catch (e) {} }
+  }
+  function netStatus(html) { $('lobby-status').innerHTML = html; }
+  function netConnect(code, seat, onFail) {
+    netDisconnect();
+    NETG.code = code;
+    NETG.wantSeat = seat;
+    NETG.welcomed = false;
+    let ws;
+    try { ws = new WebSocket(netUrl() + '/room/' + code); }
+    catch (e) { if (onFail) onFail(); return; }
+    NETG.ws = ws;
+    setTimeout(() => {
+      if (NETG.ws === ws && !NETG.welcomed && uiPhase === 'title') {
+        netStatus('Could not reach the game server. Check your connection and try again.');
+        try { ws.close(); } catch (e) {}
+      }
+    }, 12000);
+    ws.onopen = () => { netSend({ t: 'hello', code, seat, name: NETG.name }); };
+    ws.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      onNetMsg(m);
+    };
+    ws.onclose = () => {
+      if (NETG.ws === ws) {
+        NETG.ws = null;
+        if (uiPhase !== 'title') netDropped();
+      }
+    };
+    ws.onerror = () => { try { ws.close(); } catch (e) {} };
+  }
+  function netDisconnect() {
+    if (NETG.ws) { try { NETG.ws.close(); } catch (e) {} NETG.ws = null; }
+  }
+  // Build a client-side S from the server's public snapshot. Opponent tiles
+  // stay hidden: their hand is count-only dummies.
+  function netStateToSim(st) {
+    const my = st.you;
+    const hands = [[], []];
+    hands[my] = st.hand.map((t) => ({ a: t.a, b: t.b }));
+    for (let i = 0; i < st.oppCount; i++) hands[1 - my].push({ a: -1, b: -1 });
+    return {
+      phase: st.simPhase, turn: st.turn, round: st.round || 1,
+      hands, boneyard: new Array(st.bone),
+      board: st.board.map((n) => ({ id: n.id, a: n.a, b: n.b, headVal: n.headVal, opener: !!n.opener })),
+      scores: st.scores.slice(), fives: st.fives.slice(),
+      mode: st.mode, target: st.target,
+      roundPts: st.roundPts, roundReason: st.roundReason, winner: st.winner,
+      oppHand: st.oppHand ? st.oppHand.map((t) => ({ a: t.a, b: t.b })) : null,
+      lastEvents: st.events || [],
+    };
+  }
+  function onNetMsg(m) {
+    if (m.t === 'welcome') {
+      NETG.seat = m.you;
+      NETG.wantSeat = -1;
+      NETG.welcomed = true;
+      netStatus('<span class="spin"></span>Waiting for your friend…');
+      return;
+    }
+    if (m.t === 'state') { onNetState(m.state); return; }
+    if (m.t === 'error') {
+      busy = false;
+      NETG.pending = null;
+      AU.uiTap();
+      setStatus(m.msg || 'Server rejected that move.');
+      renderRack(); updateTurnUI();
+      return;
+    }
+  }
+
+  function syncHudNames(st) {
+    const whos = document.querySelectorAll('#hud .who');
+    if (whos.length === 2) {
+      whos[0].textContent = st.names[0] || 'Player 1';
+      whos[1].textContent = st.names[1] || 'Player 2';
+    }
+    const tgt = document.querySelector('#hud .target');
+    if (tgt) tgt.textContent = 'First to ' + st.target;
+  }
+
+  // Rebuild the board; fly in any fresh node like a real play (the
+  // doPlayerPlay transform trick, in board coordinates). Note: fitBoard()
+  // auto-creates missing tile elements, so the fresh node is included in the
+  // rebuild and its flight starts from an overridden transform instead.
+  function renderNetBoard(st, prevIds, ev) {
+    const fresh = S.board.find((n) => !prevIds.has(n.id));
+    const mine = !!(fresh && ev && ev.t === 'play' && ev.player === st.you);
+    const theirs = !!(fresh && ev && ev.t === 'play' && ev.player !== st.you);
+    clearBoard();
+    for (const n of S.board) {
+      const isFresh = fresh && fresh.id === n.id;
+      const el = makeTile(n.a, n.b, isFresh && theirs);
+      el._face = '';
+      if (isFresh && theirs) el._facedown = true;
+      boardEls.set(n.id, el);
+      $('board').appendChild(el);
+    }
+    layout(false);
+    if (!fresh || !ev || ev.t !== 'play') return null;
+    const from = mine
+      ? (NETG.pending && NETG.pending.from)
+      : (() => { const h = $('ai-hand').getBoundingClientRect(); return { x: h.left + h.width / 2, y: h.top + h.height / 2 }; })();
+    const el = boardEls.get(fresh.id);
+    if (from && lastSlots && el) {
+      const bx = (from.x - lastSlots.tx) / lastSlots.s, by = (from.y - lastSlots.ty) / lastSlots.s;
+      el.style.transition = 'none';
+      el.style.transform = 'translate(' + bx + 'px,' + by + 'px) rotate(0deg) translate(' + (-TW / 2) + 'px,' + (-TH / 2) + 'px)';
+      void el.offsetWidth;
+      el.style.transition = '';
+    }
+    layout(true);
+    if (theirs) {
+      setTimeout(() => {
+        el.classList.remove('back');
+        el._facedown = false;
+        const sl = lastSlots && lastSlots.slots.slots.find((x) => x.id === fresh.id);
+        if (sl) {
+          const fr = faceFor(sl.node, sl);
+          el.innerHTML = halfHTML(fr[0]) + '<div class="div"></div>' + halfHTML(fr[1]);
+          el._face = fr[0] + '-' + fr[1];
+        }
+      }, REDUCED ? 0 : 220);
+    }
+    return fresh;
+  }
+
+  async function onNetState(st) {
+    const prev = NETG.state;
+    NETG.state = st;
+    NETG.names = [st.names[0] || 'Player 1', st.names[1] || 'Player 2'];
+    NETG.seat = st.you;
+    const prevIds = new Set(prev ? prev.board.map((n) => n.id) : []);
+    S = netStateToSim(st);
+    viewPlayer = st.you;
+    syncHudNames(st);
+
+    if (!prev) {
+      // first snapshot: entering the table
+      $('lobby-card').classList.add('hidden');
+      restoreLobbyUI();
+      $('title').classList.add('hidden');
+      $('table').classList.remove('title-mode');
+      $('round-card').classList.add('hidden');
+      $('match-card').classList.add('hidden');
+      NETG.endShown = null;
+      uiPhase = 'dealing';
+      busy = true;
+      clearBoard();
+      renderScores(); renderAiHand(); renderBoneyard(); renderRack();
+      setStatus('Dealing…');
+      AU.shuffle();
+      await wait(REDUCED ? 60 : 700);
+    }
+
+    // rebuild the board, then fly in any fresh node
+    const ev = (st.events || []).filter((e) => e.t === 'play' || e.t === 'draw' || e.t === 'knock').slice(-1)[0];
+    const fresh = renderNetBoard(st, prevIds, ev);
+    if (fresh && ev && ev.t === 'play') {
+      const mine = ev.player === st.you;
+      AU.clack((fresh.a + fresh.b) / 12);
+      buzz(mine ? 16 : 10);
+      const zc = endzoneScreen(ev.end);
+      dust(zc.x, zc.y, fresh.a === fresh.b ? 14 : 8, fresh.a === fresh.b);
+      addShake(fresh.a === fresh.b ? 0.55 : 0.32);
+      if (ev.fives) { fivesPopup(zc.x, zc.y - 40, ev.fives); }
+    } else if (ev && ev.t === 'draw' && ev.player === st.you) {
+      AU.flip();
+    } else if (ev && ev.t === 'knock') {
+      AU.knock();
+      buzz(25);
+    }
+    NETG.pending = null;
+    busy = false;
+
+    renderRack(); renderAiHand(); renderBoneyard(); renderScores();
+    uiPhase = st.simPhase === 'play' ? 'play' : uiPhase;
+    updateTurnUI();
+
+    if (st.simPhase === 'play') {
+      if ($('round-card') && !$('round-card').classList.contains('hidden')) {
+        $('round-card').classList.add('hidden');
+        const nx = $('rc-next');
+        nx.disabled = false; nx.textContent = 'Next Round';
+      }
+      if ($('match-card') && !$('match-card').classList.contains('hidden')) {
+        $('match-card').classList.add('hidden');
+        const ag = $('mc-again');
+        ag.disabled = false; ag.textContent = 'Play Again';
+      }
+      if (st.turn === st.you) {
+        if (Sim.canPlay(S, st.you)) setStatus('Your move — tap a glowing tile.');
+        else if (S.boneyard.length) setStatus('No match — tap the boneyard to draw.');
+        else setStatus('Boneyard empty — you must knock.');
+      } else {
+        setStatus('Waiting for ' + pName(st.turn) + '…');
+      }
+      // a knock deserves its moment before the generic status
+      if (ev && ev.t === 'knock') setStatus(pName(ev.player) + ' knocks.');
+      return;
+    }
+    if (st.simPhase === 'roundEnd') { showOnlineRoundEnd(st); return; }
+    if (st.simPhase === 'matchEnd') { showOnlineMatchEnd(st); return; }
+  }
+
+  async function showOnlineRoundEnd(st) {
+    const key = 'r' + st.round;
+    if (NETG.endShown === key) { syncOnlineVotes(st); return; }
+    NETG.endShown = key;
+    uiPhase = 'roundEnd';
+    busy = false;
+    clearEndzones();
+    setStatus('');
+    await wait(650);
+    renderScores();
+    const you = st.you, youWon = st.winner === you;
+    buzz(youWon ? [20, 50, 20] : [40]);
+    $('rc-kicker').textContent = 'Round ' + st.round;
+    if (st.winner == null) {
+      $('rc-title').textContent = 'Dead Heat';
+      $('rc-points').textContent = '+0';
+    } else if (st.roundReason === 'domino') {
+      $('rc-title').textContent = youWon ? 'Domino!' : pName(st.winner) + ' Wins the Round';
+      countUp($('rc-points'), st.roundPts || 0);
+    } else {
+      $('rc-title').textContent = youWon ? 'Blocked — You Take It' : 'Blocked — ' + pName(st.winner) + ' Takes It';
+      countUp($('rc-points'), st.roundPts || 0);
+    }
+    $('rc-house-lbl').textContent = pName(1 - you) + ' Held';
+    $('rc-you-lbl').textContent = pName(you) + ' Held';
+    miniTiles($('rc-house-tiles'), (st.oppHand || []).map((t) => ({ a: t.a, b: t.b })));
+    $('rc-house-pips').textContent = Sim.handPips((st.oppHand || []).map((t) => ({ a: t.a, b: t.b }))) + ' pips';
+    miniTiles($('rc-you-tiles'), st.hand.map((t) => ({ a: t.a, b: t.b })));
+    $('rc-you-pips').textContent = Sim.handPips(st.hand.map((t) => ({ a: t.a, b: t.b }))) + ' pips';
+    const fivesRow = $('rc-fives-row');
+    if (st.mode === 'fives') {
+      fivesRow.classList.remove('hidden');
+      $('rc-fives').textContent = pName(0) + ' ' + st.fives[0] + ' · ' + pName(1) + ' ' + st.fives[1];
+    } else fivesRow.classList.add('hidden');
+    AU.chime(youWon);
+    const nx = $('rc-next');
+    nx.disabled = false; nx.textContent = 'Next Round';
+    $('round-card').classList.remove('hidden');
+    updateTurnUI();
+    syncOnlineVotes(st);
+  }
+
+  function syncOnlineVotes(st) {
+    const you = st.you;
+    const nx = $('rc-next'), ag = $('mc-again');
+    if (!$('round-card').classList.contains('hidden')) {
+      if (st.votes[you]) { nx.disabled = true; nx.textContent = 'Waiting for ' + pName(1 - you) + '…'; }
+      else if (st.votes[1 - you]) { nx.disabled = false; nx.textContent = pName(1 - you) + ' Is Ready — Next Round'; }
+    }
+    if (!$('match-card').classList.contains('hidden')) {
+      if (st.votes[you]) { ag.disabled = true; ag.textContent = 'Waiting for ' + pName(1 - you) + '…'; }
+      else if (st.votes[1 - you]) { ag.disabled = false; ag.textContent = pName(1 - you) + ' Is Ready — Rematch'; }
+    }
+  }
+
+  async function showOnlineMatchEnd(st) {
+    const key = 'm' + st.round;
+    if (NETG.endShown === key) { syncOnlineVotes(st); return; }
+    NETG.endShown = key;
+    uiPhase = 'matchEnd';
+    busy = false;
+    await wait(1200);
+    $('round-card').classList.add('hidden');
+    const youWon = st.winner === st.you;
+    $('mc-title').textContent = pName(st.winner) + (youWon ? ' — You Take the Match!' : ' Takes the Match!');
+    $('mc-sub').textContent = 'First to ' + st.target + '. Run it back?';
+    $('mc-score').textContent = st.scores[0] + ' · ' + st.scores[1];
+    const ag = $('mc-again');
+    ag.disabled = false; ag.textContent = 'Play Again';
+    $('match-card').classList.remove('hidden');
+    if (youWon) { confettiBurst(); buzz([30, 60, 30, 60, 80]); }
+    else buzz([40]);
+    AU.chime(youWon);
+    updateTurnUI();
+    syncOnlineVotes(st);
+  }
+
+  function netDropped() {
+    if (uiPhase === 'title' || PLAYERS !== 3) return;
+    setStatus('Connection lost.');
+    NETG.wantSeat = NETG.seat;
+    $('lobby-title').textContent = 'Connection Lost';
+    $('lobby-join').value = NETG.code || '';
+    $('lobby-join-btn').textContent = 'Reconnect';
+    $('lobby-create').classList.add('hidden');
+    $('lobby-join-row').classList.remove('hidden');
+    $('lobby-code-row').classList.add('hidden');
+    netStatus('');
+    openLobby();
+  }
+
+  function openLobby() {
+    $('lobby-name').value = NETG.name;
+    $('lobby-card').classList.remove('hidden');
+  }
+  function restoreLobbyUI() {
+    $('lobby-title').textContent = 'Play a Friend';
+    $('lobby-join-btn').textContent = 'Join Room';
+    $('lobby-join').value = '';
+    $('lobby-create').classList.remove('hidden');
+    $('lobby-join-row').classList.remove('hidden');
+    $('lobby-code-row').classList.add('hidden');
+    netStatus('');
+  }
+  function netLeave() {
+    netDisconnect();
+    NETG.state = null; NETG.code = null; NETG.pending = null; NETG.endShown = null;
+    S = null; busy = false;
+    uiPhase = 'title';
+    $('lobby-card').classList.add('hidden');
+    $('round-card').classList.add('hidden');
+    $('match-card').classList.add('hidden');
+    $('title').classList.remove('hidden');
+    $('table').classList.add('title-mode');
+    restoreLobbyUI();
+  }
   let uiPhase = 'title';        // title|dealing|play|roundEnd|matchEnd
   let busy = false;
   const boardEls = new Map();
@@ -1340,7 +1711,9 @@ if (typeof window !== 'undefined') window.DomSim = api;
     const ft = $('fives-tally');
     if (S.mode === 'fives') {
       ft.classList.remove('hidden');
-      ft.textContent = 'Fives · You ' + S.fives[0] + ' — House ' + S.fives[1];
+      ft.textContent = PLAYERS === 3
+        ? 'Fives · ' + pName(0) + ' ' + S.fives[0] + ' — ' + pName(1) + ' ' + S.fives[1]
+        : 'Fives · You ' + S.fives[0] + ' — House ' + S.fives[1];
     } else ft.classList.add('hidden');
   }
   function fivesPopup(x, y, pts) {
@@ -1384,7 +1757,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
     $('rack').classList.toggle('locked', !yourTurn);
     $('btn-knock').disabled = !mustKnock();
     $('btn-hint').disabled = !yourTurn || !S || !Sim.canPlay(S, me());
-    const canUndo = yourTurn && undosLeft > 0 && undoStack.length > 0;
+    const canUndo = yourTurn && undosLeft > 0 && undoStack.length > 0 && PLAYERS !== 3;
     $('btn-undo').disabled = !canUndo;
     $('undo-lbl').textContent = 'Undo ' + undosLeft;
     renderBoneyard();
@@ -1393,6 +1766,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
 
   /* ---------------- hint + undo ---------------- */
   function pushUndo() {
+    if (PLAYERS === 3) return; // no take-backs against a human
     if (uiPhase === 'play' && S.phase === 'play') {
       undoStack.push(Sim.snapshot(S));
       if (undoStack.length > 10) undoStack.shift();
@@ -1492,6 +1866,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
 
   async function doPlayerPlay(tileIdx, end) {
     if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
+    if (PLAYERS === 3) { netPlay(tileIdx, end); return; }
     busy = true;
     selected = -1;
     clearEndzones();
@@ -1527,10 +1902,36 @@ if (typeof window !== 'undefined') window.DomSim = api;
     await afterMove();
   }
 
+  /* online: send the move; the server's state snapshot drives the animation */
+  function netPlay(tileIdx, end) {
+    busy = true;
+    selected = -1;
+    clearEndzones();
+    const t = S.hands[me()][tileIdx];
+    const rackEl = $('rack').children[tileIdx];
+    NETG.pending = { a: t.a, b: t.b, end, from: rackEl ? tileScreenPos(rackEl) : null };
+    netSend({ t: 'move', tileIdx, end });
+    AU.uiTap();
+    updateTurnUI();
+  }
+  function netDraw() {
+    busy = true;
+    netSend({ t: 'draw' });
+    updateTurnUI();
+  }
+  function netKnock() {
+    busy = true;
+    netSend({ t: 'knock' });
+    AU.knock();
+    buzz(25);
+    updateTurnUI();
+  }
+
   async function doPlayerDraw() {
     if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
     const who = me();
     if (Sim.canPlay(S, who) || !S.boneyard.length) return;
+    if (PLAYERS === 3) { netDraw(); return; }
     busy = true;
     pushUndo();
     const r = Sim.drawTile(S, who);
@@ -1557,8 +1958,10 @@ if (typeof window !== 'undefined') window.DomSim = api;
 
   async function doPlayerKnock() {
     if (busy || uiPhase !== 'play' || !S || S.turn !== me() || passOpen) return;
-    pushUndo();
     const who = me();
+    if (Sim.canPlay(S, who) || S.boneyard.length) return;
+    if (PLAYERS === 3) { netKnock(); return; }
+    pushUndo();
     const r = Sim.knock(S, who);
     if (!r.ok) return;
     AU.knock();
@@ -1684,7 +2087,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
     try { return localStorage.getItem(LS_TUT) === '1'; } catch (e) { return true; }
   }
   function maybeStartTutorial() {
-    if (tutDone() || PLAYERS === 2 || !S || S.turn !== me() || uiPhase !== 'play') return;
+    if (tutDone() || PLAYERS !== 1 || !S || S.turn !== me() || uiPhase !== 'play') return;
     TUT.active = true; TUT.step = 0;
     tutShowStep();
   }
@@ -2000,7 +2403,11 @@ if (typeof window !== 'undefined') window.DomSim = api;
     $('btn-sound').style.opacity = AU.isMuted() ? 0.55 : 1;
   }
   $('btn-sound').addEventListener('click', () => { AU.ensure(); AU.setMuted(!AU.isMuted()); syncSound(); AU.uiTap(); });
-  $('btn-restart').addEventListener('click', () => { AU.uiTap(); if (uiPhase !== 'title') startMatch(); });
+  $('btn-restart').addEventListener('click', () => {
+    AU.uiTap();
+    if (PLAYERS === 3) { netLeave(); return; }
+    if (uiPhase !== 'title') startMatch();
+  });
   $('btn-help').addEventListener('click', () => { AU.uiTap(); showRules(); });
   $('btn-hint').addEventListener('click', () => { doHint(); });
   $('btn-undo').addEventListener('click', () => { doUndo(); });
@@ -2013,11 +2420,23 @@ if (typeof window !== 'undefined') window.DomSim = api;
   $('pass-ready').addEventListener('click', () => { closePassCard(); });
   $('rc-next').addEventListener('click', () => {
     AU.uiTap();
+    if (PLAYERS === 3) {
+      netSend({ t: 'next' });
+      $('rc-next').disabled = true;
+      $('rc-next').textContent = 'Waiting for ' + pName(1 - NETG.seat) + '…';
+      return;
+    }
     $('round-card').classList.add('hidden');
     Sim.nextRound(S); dealRound();
   });
   $('mc-again').addEventListener('click', () => {
     AU.uiTap();
+    if (PLAYERS === 3) {
+      netSend({ t: 'next' });
+      $('mc-again').disabled = true;
+      $('mc-again').textContent = 'Waiting for ' + pName(1 - NETG.seat) + '…';
+      return;
+    }
     $('match-card').classList.add('hidden');
     startMatch();
   });
@@ -2046,13 +2465,16 @@ if (typeof window !== 'undefined') window.DomSim = api;
       b.setAttribute('aria-checked', String(on));
     });
     const twoP = PLAYERS === 2;
-    $('diff-cards').style.display = twoP ? 'none' : '';
-    $('diff-label').style.display = twoP ? 'none' : '';
-    $('tagline').textContent = twoP
-      ? 'Two Players · One Phone · First to ' + SET.target
-      : 'You vs the House · First to ' + SET.target;
+    const online = PLAYERS === 3;
+    $('diff-cards').style.display = (twoP || online) ? 'none' : '';
+    $('diff-label').style.display = (twoP || online) ? 'none' : '';
+    $('tagline').textContent = online
+      ? 'Online · Room Code · First to ' + SET.target
+      : twoP
+        ? 'Two Players · One Phone · First to ' + SET.target
+        : 'You vs the House · First to ' + SET.target;
     const whos = document.querySelectorAll('#hud .who');
-    if (whos.length === 2) {
+    if (whos.length === 2 && !online) {
       whos[0].textContent = twoP ? 'Player 1' : 'You';
       whos[1].textContent = twoP ? 'Player 2' : 'House';
     }
@@ -2083,7 +2505,49 @@ if (typeof window !== 'undefined') window.DomSim = api;
       syncModeSeg();
     });
   });
-  $('play-tile').addEventListener('click', () => { AU.ensure(); AU.uiTap(); buzz(15); startMatch(); });
+  $('play-tile').addEventListener('click', () => {
+    AU.ensure(); AU.uiTap(); buzz(15);
+    if (PLAYERS === 3) { restoreLobbyUI(); openLobby(); }
+    else startMatch();
+  });
+
+  /* ---------------- online lobby wiring ---------------- */
+  $('lobby-create').addEventListener('click', async () => {
+    AU.ensure(); AU.uiTap();
+    NETG.name = $('lobby-name').value.trim().slice(0, 16) || 'Player';
+    try { localStorage.setItem(LS_NETNAME, NETG.name); } catch (e) {}
+    netStatus('<span class="spin"></span>Creating room…');
+    try {
+      const r = await fetch(netHttp() + '/create?mode=' + MODE + '&target=' + SET.target);
+      const j = await r.json();
+      if (!j || !j.code) throw new Error('no code');
+      $('lobby-code').textContent = j.code;
+      $('lobby-code-row').classList.remove('hidden');
+      $('lobby-join-row').classList.add('hidden');
+      $('lobby-create').classList.add('hidden');
+      netStatus('<span class="spin"></span>Waiting for your friend…');
+      netConnect(j.code, -1);
+    } catch (e) {
+      netStatus('Could not reach the game server. Check your connection and try again.');
+    }
+  });
+  $('lobby-join-btn').addEventListener('click', () => {
+    AU.ensure(); AU.uiTap();
+    NETG.name = $('lobby-name').value.trim().slice(0, 16) || 'Player';
+    try { localStorage.setItem(LS_NETNAME, NETG.name); } catch (e) {}
+    const code = $('lobby-join').value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{4}$/.test(code)) { netStatus('Enter the 4-letter room code.'); return; }
+    netStatus('<span class="spin"></span>Joining room ' + code + '…');
+    netConnect(code, NETG.wantSeat);
+  });
+  $('lobby-cancel').addEventListener('click', () => {
+    AU.uiTap();
+    netDisconnect();
+    NETG.wantSeat = -1;
+    if (PLAYERS === 3 && uiPhase !== 'title') { netLeave(); return; }
+    $('lobby-card').classList.add('hidden');
+    restoreLobbyUI();
+  });
 
   // title dressing: two hero tiles tilted each side of the title,
   // plus a quiet chain arcing across the top.
@@ -2130,6 +2594,11 @@ if (typeof window !== 'undefined') window.DomSim = api;
     get state() { return S; },
     get phase() { return uiPhase; },
     get busy() { return busy; },
+    get net() { return NETG; },
+    netStateToSim,
+    netSend,
+    netPlay, netDraw, netKnock,
+    onNetState,
     refresh() { layout(true); renderRack(); renderAiHand(); renderBoneyard(); renderScores(); updateTurnUI(); },
     start(d, seed) {
       if (d != null) difficulty = d;
