@@ -162,7 +162,10 @@
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283);
       ctx.fillStyle = 'rgba(' + p.hue + ',' + a.toFixed(2) + ')'; ctx.fill();
     }
-    if (!shoot && (shootForced || (ph !== 1 && Math.random() < .006))) {
+    /* Atlas 8: ambient streaks belong to the upper sky — once the hero has
+       scrolled away they read as scratches on the chart, so they stop
+       spawning (the deliberate Surprise streak is exempt: shootForced) */
+    if (!shoot && (shootForced || (ph !== 1 && syNow < hbNow && Math.random() < .006))) {
       shoot = shootForced
         ? { x: W * .78, y: H * .1, vx: -6.2, vy: 4.4, life: 1 }
         : { x: Math.random() * W * .7 + W * .15, y: -20, vx: -5, vy: 5, life: 1 };
