@@ -151,6 +151,19 @@
       this.blip(880, 840, 0.55, 0.14);
       var self = this;
       setTimeout(function () { self.blip(1174.7, 1170, 0.7, 0.10); }, 90);
+      // the rattle: the ball knocks around the cup walls and settles
+      setTimeout(function () {
+        self.noise(0.04, 0.20, 2600, 900, 'lowpass');
+        self.blip(210, 90, 0.06, 0.22, 'triangle');
+      }, 130);
+      setTimeout(function () {
+        self.noise(0.03, 0.12, 2400, 1000, 'lowpass');
+        self.blip(170, 80, 0.05, 0.13, 'triangle');
+      }, 205);
+    },
+    rimTick: function () {   // the ball shaves the cup's edge: a tiny pin tick
+      this.noise(0.03, 0.15, 4200, 2600, 'bandpass');
+      this.blip(2093, 1900, 0.05, 0.055);
     },
     setMuted: function (m) {
       this.muted = m;
@@ -213,6 +226,7 @@
   var slowT = 0, timeScale = 1, acc = 0, last = 0, running = false;
   var flagKick = 0;    // flag rattle impulse on a hole-out (decays in the loop)
   var lipFar = false;  // near-miss slow-mo: ball has been well clear of the cup this shot
+  var rimArmed = false;  // rim tick arms only once the ball has been far out this shot
   var simTime = 0;   // sim seconds; drives windmill blades + gusts (deterministic)
   var wtime = 0;
   var dailyInfo = null;
@@ -593,12 +607,14 @@
     if (state === 'play' && inFlight && !ball.inCup && !ball.inWater && ball.z < 0.4) {
       var ldx = ball.x - hole.cup.x, ldy = ball.y - hole.cup.y;
       var ld = Math.sqrt(ldx * ldx + ldy * ldy);
-      if (ld > TF.CUP_R * 3.4) lipFar = true;
+      if (ld > TF.CUP_R * 3.4) { lipFar = true; rimArmed = true; }
       else if (lipFar && ld < TF.CUP_R * 2.3 && Math.hypot(ball.vx, ball.vy) > 2.5) {
         lipFar = false;
         if (!RM) slowT = Math.max(slowT, 0.5);
         HAP.buzz(12);
       }
+      // a true graze of the rim gets the pin tick, once per approach
+      if (rimArmed && ld < TF.CUP_R * 1.5) { rimArmed = false; AU.rimTick(); }
     }
     if (ball.pickup) { pickupJuice(ball.pickup); ball.pickup = null; }
     if (ball.tevent && typeof TPR !== 'undefined') { TPR.event(ball.tevent); ball.tevent = null; }
@@ -607,7 +623,7 @@
     if (ball.resting) {
       if (wasInFlight && state === 'play') ghost = { x: ball.x, y: ball.y };  // last-shot ghost
       lastRest.x = ball.x; lastRest.y = ball.y; inFlight = false;
-      lipFar = false;
+      lipFar = false; rimArmed = false;
       refreshButtons();
     }
   }
