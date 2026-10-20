@@ -582,6 +582,9 @@
     function openBloom(id, btn) {
       var card = document.querySelector('.card[data-game="' + id + '"]');
       if (!card) return;
+      /* Atlas 5: the panel wears the tapped star's color */
+      bloom.style.setProperty('--glow',
+        btn.style.getPropertyValue('--glow') || card.style.getPropertyValue('--glow') || '#4da6ff');
       if (openBtn) openBtn.classList.remove('open');
       openId = id; openBtn = btn;
       btn.classList.add('open');
