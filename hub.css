@@ -482,7 +482,7 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
    regardless of magnitude; type gets presence: brighter, a touch larger,
    wider tracking, and a whisper of the star's own color in its shadow */
 .star .lab{position:absolute;top:calc(50% + var(--s,10px) * .5 + 10px);left:50%;transform:translateX(-50%);
-  white-space:nowrap;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
   color:rgba(228,240,255,.82);
   text-shadow:0 1px 8px rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.7),
               0 0 14px color-mix(in srgb,var(--glow) 35%,transparent);
