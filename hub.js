@@ -291,6 +291,7 @@
     { id: 'tiny-fairway', name: 'Tiny Fairway', cls: 'art-tiny-fairway' },
     { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
     { id: 'dominoes', name: 'Dominoes', cls: 'art-dominoes' },
+    { id: 'cathedral', name: 'Cathedral', cls: 'art-cathedral' },
   ];
   function progressFor(id) {
     // returns {label, frac} or null

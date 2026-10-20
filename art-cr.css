@@ -1,0 +1,42 @@
+/* Cathedral hub key art — pure CSS: a cathedral radio with its dial lit.
+ * (Uses ::before + .cr2; ::after is the hub's shared grade.) */
+.art-cathedral{position:relative;overflow:hidden;
+  background:radial-gradient(120% 100% at 50% 30%, #1a1209 0%, #0d0906 70%, #050302 100%);}
+.art-cathedral::before{content:'';position:absolute;left:50%;top:8%;width:76%;height:88%;
+  transform:translateX(-50%);
+  border-radius:50% 50% 10px 10px / 36% 36% 10px 10px;
+  background-repeat:no-repeat;
+  background-image:
+    /* the dial glass: an arched window of lamplight */
+    radial-gradient(62% 46% at 50% 22%, #ffdf9e 0%, #f4bd55 52%, #d18a29 78%, rgba(209,138,41,0) 99%),
+    /* station ticks under the needle */
+    repeating-linear-gradient(90deg, rgba(74,44,8,.9) 0 1.5px, transparent 1.5px 10px),
+    /* the needle */
+    linear-gradient(90deg, transparent calc(31% - 1px), #a01818 calc(31% - 1px), #a01818 calc(31% + 1.5px), transparent calc(31% + 1.5px)),
+    /* the magic eye */
+    radial-gradient(circle 7px at 50% 55%, #3fe373 0%, #1a6b35 60%, rgba(26,107,53,0) 99%),
+    /* grille bars */
+    repeating-linear-gradient(90deg, transparent 0 9px, rgba(10,5,2,.9) 9px 12px),
+    /* the wood */
+    linear-gradient(180deg,#57371b 0%,#33200e 58%,#1c0e04 100%);
+  background-size:
+    86% 55%,
+    62% 4%,
+    76% 30%,
+    60% 40%,
+    100% 24%,
+    100% 100%;
+  background-position:
+    50% 6%,
+    50% 40%,
+    50% 6%,
+    50% 62%,
+    0 100%,
+    0 0;
+  box-shadow:0 10px 26px rgba(0,0,0,.65), inset 0 0 0 2px rgba(20,10,4,.6),
+    inset 0 2px 0 rgba(255,225,175,.14);}
+/* the brass badge on the grille */
+.art-cathedral .cr2{position:absolute;left:50%;top:82%;width:16px;height:16px;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 38% 32%, #d9b267 0%, #a37c34 55%, #6b4a1c 100%);
+  box-shadow:0 2px 6px rgba(0,0,0,.6), inset 0 1px 2px rgba(255,240,200,.6);}
