@@ -6,7 +6,7 @@
  */
 importScripts('icons/icon-data.js');
 
-const CACHE = 'word-well-v5';
+const CACHE = 'word-well-v6';
 const SHELL = [
   './',
   'index.html',
@@ -20,7 +20,7 @@ const SHELL = [
   'dict-6.js?v=9',
   'wwf.js?v=10',
   'audio.js?v=10',
-  'game.js?v=13',
+  'game.js?v=14',
   'icons/icon.svg',
 ];
 

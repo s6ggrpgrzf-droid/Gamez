@@ -159,7 +159,7 @@ function renderMenuBoard() {
   arcadeFetch('/scores?game=' + GAME_KEY + '&board=daily-' + todayStr(), null, function (err, data) {
     if (err || !data || !data.top || !data.top.length) {
       el.classList.add('bare');
-      el.innerHTML = '<div class="lb-empty">the well is quiet today — be the first to cast a score</div>';
+      el.innerHTML = '<div class="lb-empty">The well is quiet today — be the first to cast a score</div>';
       return;
     }
     el.classList.remove('bare');
@@ -180,7 +180,7 @@ function boot() {
   bindMenu();
   bindOnline();
   var st = dailyStreak();
-  $('menu-streak').textContent = st > 0 ? st + '-day daily streak' : 'the daily well resets each dawn';
+  $('menu-streak').textContent = st > 0 ? st + '-day daily streak' : 'The daily well resets each dawn.';
   renderMenuBoard();
   show('scr-menu');
   /* poll when the tab comes back into view */
@@ -194,7 +194,7 @@ function boot() {
     catch (e) { location.hash = ''; }
     var code = m[1].toUpperCase();
     showOnline(code);
-    toast('code ' + code + ' is ready — tap join the game');
+    toast('Code ' + code + ' is ready — tap Join the Game');
   }
 }
 function bindMenu() {
@@ -236,7 +236,7 @@ function startDaily() {
   G.names = ['You', WARDEN_NAME];
   var seed = WWF.hashSeed('word-well|' + todayStr());
   newEngineGame(seed);
-  toast('Daily well: same stones for everyone today');
+  toast('Daily Well: same stones for everyone today');
 }
 function newEngineGame(seed) {
   G.st = WWF.newGame(seed);
@@ -396,19 +396,19 @@ function oppName() {
 }
 function setTurnBanner() {
   var st = G.st, el = $('turn-banner');
-  if (st.over) { el.textContent = 'the well is still'; el.classList.remove('thinking'); return; }
+  if (st.over) { el.textContent = 'The well is still'; el.classList.remove('thinking'); return; }
   if (G.mode === 'online') {
     var mine = st.turn === OL.seat;
-    el.textContent = mine ? 'your turn — cast your stones' : 'waiting on ' + oppName() + '…';
+    el.textContent = mine ? 'Your turn — cast your stones' : 'Waiting on ' + oppName() + '…';
     el.classList.toggle('thinking', !mine);
     return;
   }
   if (G.mode === 'solo' || G.mode === 'daily') {
     var warden = st.turn === 1;
-    el.textContent = warden ? 'the Well Warden is thinking' : 'your turn — cast your stones';
+    el.textContent = warden ? 'The Well Warden is thinking' : 'Your turn — cast your stones';
     el.classList.toggle('thinking', warden);
   } else {
-    el.textContent = G.names[st.turn] + ' — cast your stones';
+    el.textContent = G.names[st.turn] + ' — Cast your stones';
     el.classList.remove('thinking');
   }
 }
@@ -446,12 +446,12 @@ function renderPreview() {
   var el = $('preview');
   if (!G.st || G.st.over) { el.textContent = ''; return; }
   if (G.mode === 'online' && !isHumanTurn()) {
-    el.textContent = 'waiting on ' + oppName() + ' — the well will ripple when they play';
+    el.textContent = 'Waiting on ' + oppName() + ' — the well will ripple when they play';
     el.className = 'preview idle';
     return;
   }
   if (!G.tent.length) {
-    el.textContent = G.st.firstDone ? 'tap a stone, then tap the board' : 'first word must cover the glowing star ✦';
+    el.textContent = G.st.firstDone ? 'Tap a stone, then tap the board' : 'First word must cover the glowing star ✦';
     el.className = 'preview idle';
     return;
   }
@@ -467,15 +467,15 @@ function renderPreview() {
 }
 function friendlyError(v) {
   switch (v.error) {
-    case 'star': return 'first word must cover the glowing star';
-    case 'crooked': return 'stones must form one straight line';
-    case 'gap': return 'stones must connect without gaps';
-    case 'loose': return 'words must touch the well';
+    case 'star': return 'First word must cover the glowing star';
+    case 'crooked': return 'Stones must form one straight line';
+    case 'gap': return 'Stones must connect without gaps';
+    case 'loose': return 'Words must touch the well';
     case 'word': return v.message;
-    case 'short': return 'words need at least 2 letters';
-    case 'occupied': return 'that cell is taken';
-    case 'blank': return 'choose a letter for the blank stone';
-    default: return 'that placement will not hold';
+    case 'short': return 'Words need at least 2 letters';
+    case 'occupied': return 'That cell is taken';
+    case 'blank': return 'Choose a letter for the blank stone';
+    default: return 'That placement will not hold';
   }
 }
 
@@ -519,11 +519,11 @@ function tapCell(r, c) {
   /* keep placements in one line */
   if (G.tent.length === 1) {
     var a = G.tent[0];
-    if (a.r !== r && a.c !== c) { toast('stones must form one straight line'); return; }
+    if (a.r !== r && a.c !== c) { toast('Stones must form one straight line'); return; }
     G.dir = (a.r === r) ? 'across' : 'down';
   } else if (G.tent.length > 1) {
     var okLine = G.dir === 'across' ? (r === G.tent[0].r) : (c === G.tent[0].c);
-    if (!okLine) { toast('stones must form one straight line'); return; }
+    if (!okLine) { toast('Stones must form one straight line'); return; }
   }
   var tile = G.sel;
   if (tile.blank) {
@@ -580,7 +580,7 @@ function bindGame() {
     if (!isHumanTurn()) return;
     G.dir = (G.dir === 'across') ? 'down' : 'across';
     WWAU.tap(); renderPreview();
-    toast(G.dir === 'across' ? 'placing across' : 'placing down');
+    toast(G.dir === 'across' ? 'Placing across' : 'Placing down');
   };
   $('btn-menu2').onclick = function () { WWAU.tap(); olStopPoll(); show('scr-menu'); renderMenuBoard(); };
   document.querySelector('#scr-game .boosts').style.display = (G.mode === 'online') ? 'none' : '';
@@ -597,7 +597,7 @@ function onPlay() {
   if (!isHumanTurn()) return;
   var st = G.st, player = st.turn;
   if (G.swapMode) { exitSwapMode(); return; }
-  if (!G.tent.length) { toast('place some stones first'); return; }
+  if (!G.tent.length) { toast('Place some stones first'); return; }
   if (G.mode === 'online') {
     var pv = WWF.validatePlacement(G.st, placementsFromTent(), G.dir);
     if (!pv.ok) { WWAU.error(); toast(friendlyError(pv)); return; }
@@ -638,7 +638,7 @@ function afterHumanMove(player, v, hindBest) {
   } else {
     G.rackView = G.st.racks[G.st.turn].slice();
     renderAll(); setTurnBanner();
-    toast(G.names[G.st.turn] + ' — pass the phone');
+    toast(G.names[G.st.turn] + ' — Pass the phone');
   }
 }
 function showHindsight(best) {
@@ -658,10 +658,10 @@ function onSwap() {
   var st = G.st;
   if (G.mode === 'online') {
     if (!G.swapMode) {
-      if (st.bag.length < 7) { toast('the well is too low to swap (needs 7 stones)'); return; }
+      if (st.bag.length < 7) { toast('The well is too low to swap (needs 7 stones)'); return; }
       G.swapMode = true; G.swapSel = [];
       WWAU.tap(); renderRack(); renderSwapBtn();
-      toast('tap stones to swap, then tap swap again');
+      toast('Tap stones to swap, then tap Swap again');
       return;
     }
     if (!G.swapSel.length) { exitSwapMode(); return; }
@@ -672,10 +672,10 @@ function onSwap() {
     return;
   }
   if (!G.swapMode) {
-    if (st.bag.length < 7) { toast('the well is too low to swap (needs 7 stones)'); return; }
+    if (st.bag.length < 7) { toast('The well is too low to swap (needs 7 stones)'); return; }
     G.swapMode = true; G.swapSel = [];
     WWAU.tap(); renderRack(); renderSwapBtn();
-    toast('tap stones to swap, then tap swap again');
+    toast('Tap stones to swap, then tap Swap again');
     return;
   }
   /* commit */
@@ -683,16 +683,16 @@ function onSwap() {
   var idxs = G.swapSel.map(function (t) { return G.rackView.indexOf(t); }).filter(function (i) { return i >= 0; });
   var keep = G.swapPlus;
   if (keep) {
-    if (BOOSTS.swapp <= 0) { toast('no swap+ stones left'); exitSwapMode(); return; }
+    if (BOOSTS.swapp <= 0) { toast('No Swap+ stones left'); exitSwapMode(); return; }
     BOOSTS.swapp--; saveBoosts();
   }
   var r = WWF.swapTiles(st, st.turn, idxs, keep);
   exitSwapMode();
-  if (!r.ok) { toast('the swap slipped'); return; }
+  if (!r.ok) { toast('The swap slipped'); return; }
   WWAU.play();
   G.rackView = st.racks[st.turn].slice();
   renderAll(); setTurnBanner();
-  if (keep) toast('swapped without losing your turn');
+  if (keep) toast('Swapped without losing your turn');
   else afterSwapOrPass();
 }
 function exitSwapMode() {
@@ -707,7 +707,7 @@ function afterSwapOrPass() {
   } else {
     G.rackView = G.st.racks[G.st.turn].slice();
     renderAll(); setTurnBanner();
-    if (G.mode === 'pass') toast(G.names[G.st.turn] + ' — pass the phone');
+    if (G.mode === 'pass') toast(G.names[G.st.turn] + ' — Pass the phone');
   }
 }
 function onPass() {
@@ -759,10 +759,10 @@ function needHuman() { return isHumanTurn(); }
 function onRadar() {
   if (G.mode === 'online') return; /* no boosts in friend games */
   if (!needHuman()) return;
-  if (BOOSTS.radar <= 0) { toast('no radar stones left — win games to earn more'); return; }
+  if (BOOSTS.radar <= 0) { toast('No Radar stones left — win games to earn more'); return; }
   var st = G.st;
   var moves = WWF.findMoves(st, st.turn, { wordCap: 900, placeCap: 30000 });
-  if (!moves.length) { toast('the radar finds nothing'); return; }
+  if (!moves.length) { toast('The radar finds nothing'); return; }
   moves.sort(function (a, b) { return b.score - a.score; });
   var best = moves[0];
   BOOSTS.radar--; saveBoosts(); renderBoosts();
@@ -774,27 +774,27 @@ function onRadar() {
 function onHindsight() {
   if (G.mode === 'online') return; /* no boosts in friend games */
   if (!needHuman()) return;
-  if (G.hindsightArmed) { G.hindsightArmed = false; renderBoosts(); toast('hindsight stood down'); return; }
-  if (BOOSTS.hindsight <= 0) { toast('no hindsight stones left — win games to earn more'); return; }
+  if (G.hindsightArmed) { G.hindsightArmed = false; renderBoosts(); toast('Hindsight stood down'); return; }
+  if (BOOSTS.hindsight <= 0) { toast('No Hindsight stones left — win games to earn more'); return; }
   BOOSTS.hindsight--; saveBoosts();
   G.hindsightArmed = true; renderBoosts();
   WWAU.turn();
-  toast('hindsight armed — play, and the well will show what you missed');
+  toast('Hindsight armed — play, and the well will show what you missed');
 }
 function onSwapPlus() {
   if (G.mode === 'online') return; /* no boosts in friend games */
   if (!needHuman()) return;
-  if (G.st.bag.length < 7) { toast('the well is too low to swap (needs 7 stones)'); return; }
-  if (BOOSTS.swapp <= 0) { toast('no swap+ stones left — win games to earn more'); return; }
+  if (G.st.bag.length < 7) { toast('The well is too low to swap (needs 7 stones)'); return; }
+  if (BOOSTS.swapp <= 0) { toast('No Swap+ stones left — win games to earn more'); return; }
   G.swapMode = true; G.swapPlus = true; G.swapSel = [];
   WWAU.tap(); renderRack(); renderSwapBtn();
-  toast('tap stones to swap — your turn continues after');
+  toast('Tap stones to swap — your turn continues after');
 }
 function onTilePile() {
   if (G.mode === 'online') return; /* no boosts in friend games */
   if (!G.st) return;
   if (BOOSTS.pile <= 0 && !$('ov-pile').classList.contains('hidden')) { $('ov-pile').classList.add('hidden'); return; }
-  if (BOOSTS.pile <= 0) { toast('no tile-pile stones left — win games to earn more'); return; }
+  if (BOOSTS.pile <= 0) { toast('No Tile-Pile stones left — win games to earn more'); return; }
   BOOSTS.pile--; saveBoosts(); renderBoosts();
   var counts = {}, i;
   G.st.bag.forEach(function (t) {
@@ -807,7 +807,7 @@ function onTilePile() {
     html += '<div class="pile-cell"><b>' + L + '</b><span>' + (counts[L] || 0) + '</span></div>';
   });
   html += '<div class="pile-cell"><b title="blank stone">·</b><span>' + (counts.blank || 0) + '</span></div></div>';
-  html += '<div class="pile-note">' + G.st.bag.length + ' stones remain in the well</div>';
+  html += '<div class="pile-note">' + G.st.bag.length + ' Stones remain in the well</div>';
   $('ov-pile-body').innerHTML = html;
   $('ov-pile').classList.remove('hidden');
   WWAU.tap();
@@ -863,7 +863,7 @@ function olStopPoll() { if (OL.pollTimer) { clearInterval(OL.pollTimer); OL.poll
 function showOnline(prefill) {
   olStopPoll();
   G.mode = null;
-  $('ol-who').textContent = 'playing as ' + olName();
+  $('ol-who').textContent = 'Playing as ' + olName();
   $('ol-waiting').classList.add('hidden');
   $('ol-joinbox').classList.remove('hidden');
   OL.codeEntry = prefill || '';
@@ -900,11 +900,11 @@ function olRenderGames() {
   var el = $('ol-games');
   var list = olMyGames();
   if (!list.length) {
-    el.innerHTML = '<div class="lb-empty">no friend games yet — start one above</div>';
+    el.innerHTML = '<div class="lb-empty">No friend games yet — start one above</div>';
     return;
   }
   el.innerHTML = list.map(function (g, i) {
-    var badge = g.over ? 'done' : (g.myTurn ? 'your turn' : (g.waiting ? 'waiting' : 'their turn'));
+    var badge = g.over ? 'Done' : (g.myTurn ? 'Your turn' : (g.waiting ? 'Waiting' : 'Their turn'));
     return '<div class="lb-row ol-game" data-i="' + i + '"><span>vs ' + esc(g.vs) +
       ' <span class="ol-code-sm">' + esc(g.code) + '</span></span><b class="ol-badge' +
       (g.myTurn && !g.over ? ' hot' : '') + '">' + badge + '</b></div>';
@@ -931,7 +931,7 @@ function olNewGame() {
   G.busy = true;
   roomsFetch('/create', { name: olName() }, function (err, d) {
     G.busy = false;
-    if (err || !d || !d.ok) { toast('the well could not be reached — try again'); return; }
+    if (err || !d || !d.ok) { toast('The well could not be reached — try again'); return; }
     olUpsertGame({
       code: d.code, token: d.token, seat: d.seat, vs: 'a friend',
       myTurn: true, waiting: true, over: false, updated: Date.now()
@@ -963,23 +963,23 @@ function olShare() {
     navigator.share({ title: 'Word Well', text: text, url: url }).catch(function () {});
   } else if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(
-      function () { toast('link copied — send it to your friend'); },
-      function () { toast('code: ' + OL.code); });
+      function () { toast('Link copied — send it to your friend'); },
+      function () { toast('Code: ' + OL.code); });
   } else {
-    toast('code: ' + OL.code);
+    toast('Code: ' + OL.code);
   }
 }
 function olJoin(code, token) {
   if (G.busy) return;
   code = (code || '').toUpperCase();
-  if (code.length !== 6) { toast('codes are 6 letters'); return; }
+  if (code.length !== 6) { toast('Codes are 6 letters'); return; }
   G.busy = true;
   var body = { code: code, name: olName() };
   if (token) body.token = token;
   roomsFetch('/join', body, function (err, d) {
     G.busy = false;
     if (err || !d || !d.ok) {
-      toast((d && d.message) || 'the well could not be reached — try again');
+      toast((d && d.message) || 'The well could not be reached — try again');
       return;
     }
     olEnterGame(d, false);
@@ -1022,8 +1022,8 @@ function olEnterGame(d, isNew) {
   olTouchMyGame(!!d.state.over);
   if (d.state.over) { gameOver(); return; }
   olStartPoll(20000, olPollGame);
-  if (isNew) toast('your friend joined — cast the first stones');
-  else if (d.rejoin) toast('welcome back to the well');
+  if (isNew) toast('Your friend joined — cast the first stones');
+  else if (d.rejoin) toast('Welcome back to the well');
 }
 function olPollGame() {
   if (G.mode !== 'online' || G.over || !OL.code || G.busy) return;
@@ -1057,7 +1057,7 @@ function olSubmitMove() {
   for (i = 0; i < placements.length; i++) {
     p = placements[i];
     ix = OL.rackAuth.indexOf(p.tile);
-    if (ix < 0) { toast('those stones slipped — syncing'); olPollGame(); return; }
+    if (ix < 0) { toast('Those stones slipped — syncing'); olPollGame(); return; }
     pls.push({ r: p.r, c: p.c, i: ix, b: p.tile.blank ? (p.blankCh || '') : '' });
   }
   var bingo = pls.length === 7;
@@ -1067,7 +1067,7 @@ function olSubmitMove() {
     function (err, d) {
       G.busy = false;
       if (err || !d || !d.ok) {
-        toast((d && d.message) || 'the well could not be reached — try again');
+        toast((d && d.message) || 'The well could not be reached — try again');
         return;
       }
       applyServerState(d.state);
@@ -1086,14 +1086,14 @@ function olSubmitSwap(idxs) {
   roomsFetch('/swap', { code: OL.code, token: OL.token, idxs: idxs }, function (err, d) {
     G.busy = false;
     if (err || !d || !d.ok) {
-      toast((d && d.message) || 'the swap slipped — try again');
+      toast((d && d.message) || 'The swap slipped — try again');
       return;
     }
     WWAU.play();
     applyServerState(d.state);
     OL.lastJson = olSig(d.state);
     renderAll(); setTurnBanner();
-    toast('stones swapped');
+    toast('Stones swapped');
     olTouchMyGame(!!d.state.over);
     if (d.state.over) gameOver();
   });
@@ -1103,14 +1103,14 @@ function olSubmitPass() {
   roomsFetch('/pass', { code: OL.code, token: OL.token }, function (err, d) {
     G.busy = false;
     if (err || !d || !d.ok) {
-      toast((d && d.message) || 'the well could not be reached — try again');
+      toast((d && d.message) || 'The well could not be reached — try again');
       return;
     }
     WWAU.tap();
     applyServerState(d.state);
     OL.lastJson = olSig(d.state);
     renderAll(); setTurnBanner();
-    toast('you passed');
+    toast('You passed');
     olTouchMyGame(!!d.state.over);
     if (d.state.over) gameOver();
   });
@@ -1123,14 +1123,14 @@ function gameOver() {
   olStopPoll();
   if (G.mode === 'online') {
     var w = st.winner;
-    $('over-title').textContent = w < 0 ? 'a tied descent' :
-      (w === OL.seat ? 'you win the well' : oppName() + ' wins the well');
+    $('over-title').textContent = w < 0 ? 'A tied descent' :
+      (w === OL.seat ? 'You win the well' : oppName() + ' Wins the Well');
     $('over-sub').textContent = '';
     $('over-s0').textContent = G.names[0] + ': ' + st.scores[0];
     $('over-s1').textContent = G.names[1] + ': ' + st.scores[1];
     $('over-earn').textContent = '';
-    $('over-daily').textContent = 'a friend game — no boosts, just glory';
-    $('btn-again').textContent = 'back to the lobby';
+    $('over-daily').textContent = 'A friend game — no boosts, just glory';
+    $('btn-again').textContent = 'Back to the Lobby';
     $('btn-again').onclick = function () { WWAU.tap(); showOnline(); };
     $('btn-over-menu').onclick = function () { WWAU.tap(); show('scr-menu'); renderMenuBoard(); };
     renderBoard(); renderHUD();
@@ -1138,22 +1138,22 @@ function gameOver() {
     return;
   }
   /* restore over-screen buttons for local modes */
-  $('btn-again').textContent = 'descend again';
+  $('btn-again').textContent = 'Descend Again';
   $('btn-again').onclick = function () { location.reload(); };
   $('btn-over-menu').onclick = function () { location.reload(); };
   var w = st.winner;
   var title, sub;
   if (G.mode === 'pass') {
-    title = w < 0 ? 'a tied descent' : G.names[w] + ' wins the well';
+    title = w < 0 ? 'A tied descent' : G.names[w] + ' Wins the Well';
   } else if (w === 0) {
-    title = 'you win the well';
+    title = 'You win the well';
     sub = pick(WARDEN_LOSE);
     WWAU.win();
   } else if (w === 1) {
-    title = 'the Well Warden wins';
+    title = 'The Well Warden wins';
     sub = pick(WARDEN_WIN);
   } else {
-    title = 'a tied descent';
+    title = 'A tied descent';
   }
   var best = null;
   /* best word this game */
@@ -1165,13 +1165,13 @@ function gameOver() {
   var humanWon = (G.mode !== 'pass' && w === 0);
   earnBoost(humanWon ? 2 : 1);
   renderBoosts();
-  $('over-earn').textContent = humanWon ? '+2 boost stones earned' : '+1 boost stone earned';
+  $('over-earn').textContent = humanWon ? '+2 Boost Stones Earned' : '+1 Boost Stone Earned';
   /* daily: streak + leaderboard */
   if (G.mode === 'daily') {
     updateDailyStreak();
     var name = arcadeName() || 'wanderer';
     arcadeFetch('/score', { game: GAME_KEY, board: 'daily-' + todayStr(), name: name, score: st.scores[0] }, function () {});
-    $('over-daily').textContent = 'daily score cast into the well' + (arcadeName() ? ' as ' + arcadeName() : '');
+    $('over-daily').textContent = 'Daily score cast into the well' + (arcadeName() ? ' as ' + arcadeName() : '');
   } else {
     $('over-daily').textContent = '';
   }
