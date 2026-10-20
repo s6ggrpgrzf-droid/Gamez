@@ -330,3 +330,14 @@ body.playing{overflow:hidden;position:fixed;width:100%;height:100dvh}
 .lb-medal.m1{background:linear-gradient(145deg,#ffd968,#f2a007)}
 .lb-medal.m2{background:linear-gradient(145deg,#eef1f5,#b9c0cb)}
 .lb-medal.m3{background:linear-gradient(145deg,#f0b27a,#c97b3f);color:#3a1e00}
+
+/* Pass 6: home finish — daily depth, gallery state language */
+.hero-art::after{content:'';position:absolute;left:0;right:0;bottom:0;height:46%;
+  background:linear-gradient(180deg,rgba(10,8,20,0),rgba(10,8,20,.28));pointer-events:none;z-index:1}
+.hero-ring{z-index:2}
+.hero-date{position:absolute;top:10px;left:10px;z-index:2;background:rgba(16,14,10,.55);color:#ffe9bd;
+  font-size:10.5px;font-weight:800;letter-spacing:1.4px;padding:5px 9px;border-radius:99px;backdrop-filter:blur(3px)}
+.gal-prog{position:absolute;top:6px;left:6px;z-index:2;background:rgba(20,16,8,.72);color:#ffd98a;
+  font-size:9.5px;font-weight:800;letter-spacing:.2px;padding:4px 7px;border-radius:99px;backdrop-filter:blur(3px);white-space:nowrap}
+.gal-best{font-size:11px;font-weight:700;color:var(--amber-deep);padding:0 2px 2px;font-variant-numeric:tabular-nums}
+.ic.flame{fill:#e8860b}
