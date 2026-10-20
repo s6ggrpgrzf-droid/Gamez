@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./hub.css?v=20">
+<link rel="stylesheet" href="./hub.css?v=21">
 <link rel="stylesheet" href="./art-a.css?v=1">
 <link rel="stylesheet" href="./art-b.css?v=1">
 <link rel="stylesheet" href="./art-c.css?v=1">
@@ -39,6 +39,7 @@
   <a class="feat3d" href="https://s6ggrpgrzf-droid.github.io/Jaw/">
     <span class="feat-kicker">Feature Presentation</span>
     <div class="feat-screen">
+      <div class="bulbs top feat-bulbs" aria-hidden="true"></div>
       <div class="feat-stars" aria-hidden="true"></div>
       <div class="feat-moon" aria-hidden="true"></div>
       <div class="feat-mesa far" aria-hidden="true"></div>
@@ -56,18 +57,18 @@
 </section>
 
 <section id="continue" aria-label="Continue playing">
-  <div class="shead rvx"><h2>Continue playing</h2></div>
+  <div class="shead rvx"><h2>Continue playing</h2><p class="sub">Pick up right where you left off.</p></div>
   <div class="rail" id="rail"></div>
 </section>
 
 <main class="collection">
-  <div class="shead rvx"><h2>The Collection</h2></div>
+  <div class="shead rvx"><h2>The Collection</h2><p class="sub">Every machine on the floor.</p></div>
   <div class="games" id="games">
   <a class="card" data-game="candy-cascade" href="./candy-cascade/" style="--glow:#ff5fa2">
     <div class="art art-candy-cascade" role="img" aria-label="Candy Cascade key art"><span class="badge">25 LEVELS</span><div class="pbar"><i></i></div></div>
     <div class="body">
       <h3>Candy Cascade</h3>
-      <p>Swap, match and chain candy combos across 25 levels. Swipe-directed stripes, the Lollipop Hammer, falling cherries and Sugar Crush finales.</p>
+      <p>Swap, match and chain candy combos across 25 levels: swipe-directed stripes, the Lollipop Hammer, falling cherries.</p>
       <div class="meta"><span class="play">Play</span><span class="prog"></span></div>
     </div>
   </a>
@@ -80,7 +81,7 @@
     </div>
   </a>
   <a class="card" data-game="bloom-defense" href="./bloom-defense/" style="--glow:#7ee06a">
-    <div class="art art-bloom-defense" role="img" aria-label="Bloom Defense key art"><span class="badge">DAILY MODE</span><div class="pbar"><i></i></div></div>
+    <div class="art art-bloom-defense" role="img" aria-label="Bloom Defense key art"><span class="badge">DAILY &middot; DEFENSE</span><div class="pbar"><i></i></div></div>
     <div class="body">
       <h3>Bloom Defense</h3>
       <p>Hold the lawn through 10 waves of weeds: sunflowers, wall-nuts, cherry bombs, lawnmowers — and a daily bloom for everyone.</p>
@@ -163,6 +164,6 @@
     
 </main>
 <footer class="studio-footer"><span class="made-by">Made by</span><span class="wordmark">Workman Designs</span><span class="tagline">more games coming</span><button id="sndbtn" class="sndbtn" aria-label="Toggle hub sounds">&#x1F50A;</button></footer>
-<script src="./hub.js?v=30"></script>
+<script src="./hub.js?v=31"></script>
 </body>
 </html>

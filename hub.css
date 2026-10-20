@@ -25,12 +25,10 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
     radial-gradient(60% 32% at 50% 52%,rgba(77,166,255,.08),transparent 70%),
     radial-gradient(46% 28% at 86% 84%,rgba(122,110,255,.11),transparent 70%),
     radial-gradient(42% 26% at 10% 90%,rgba(77,166,255,.09),transparent 70%);}
-body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
-  background:
-    repeating-linear-gradient(90deg,rgba(120,180,255,.05) 0 1px,transparent 1px 72px),
-    repeating-linear-gradient(0deg,rgba(120,180,255,.05) 0 1px,transparent 1px 72px);
-  mask-image:radial-gradient(80% 60% at 50% 40%,#000 30%,transparent 100%);
-  -webkit-mask-image:radial-gradient(80% 60% at 50% 40%,#000 30%,transparent 100%);}
+/* no grid: a repeating rule reads as wallpaper/banding behind glass.
+   just a vignette — the room falls off to black at the edges */
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%,transparent 55%,rgba(0,0,0,.5) 100%);}
 main{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center}
 /* ---------- hero ---------- */
 .hero{position:relative;z-index:1;width:100%;overflow:hidden;text-align:center;flex-shrink:0;
@@ -95,11 +93,17 @@ h1.masthead{
 .sp-go{font-size:22px;color:var(--accent);flex:0 0 auto}
 /* ---------- sections ---------- */
 /* ---------- section architecture: glowing beam dividers give every section a room ---------- */
-section{width:100%;max-width:1100px;padding:34px 20px 0;position:relative;z-index:1}
-section::before,main.collection::before{content:"";display:block;height:1px;margin:0 2px 30px;
+/* one spacing rhythm: every room on the floor gets the same air above it */
+section{width:100%;max-width:1100px;padding:44px 20px 0;position:relative;z-index:1}
+@media(min-width:900px){section{padding-top:60px}}
+section::before,main.collection::before{content:"";display:block;height:1px;margin:0 2px 32px;
   background:linear-gradient(90deg,transparent,rgba(140,200,255,.4) 18%,rgba(140,200,255,.4) 82%,transparent);
   box-shadow:0 0 14px rgba(77,166,255,.3)}
-main.collection::before{margin:34px 20px 30px}
+main.collection::before{margin:44px 20px 32px}
+@media(min-width:900px){main.collection::before{margin-top:60px}}
+/* the collection lives in a centering flex column — stretch its header so it
+   aligns left like every other section: one header system everywhere */
+main.collection>.shead{align-self:stretch}
 /* the feature banner is its own stage — no beam, it carries its own frame */
 section.featured::before{display:none}
 .collection{width:100%;max-width:1100px;position:relative;z-index:1}
@@ -164,10 +168,11 @@ section.featured::before{display:none}
   display:flex;align-items:center;gap:14px;text-decoration:none;color:#fff;
   border-radius:18px;padding:12px 16px 12px 12px;position:relative;overflow:hidden;
   border:1px solid transparent;
-  background:linear-gradient(rgba(170,210,255,.13),rgba(170,210,255,.04)) padding-box,
-    linear-gradient(160deg,rgba(220,240,255,.42),rgba(220,240,255,.1) 42%,rgba(77,166,255,.3)) border-box;
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  box-shadow:0 18px 42px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.3),0 0 22px rgba(77,166,255,.09);
+  /* identical glass recipe to .card — one material for everything on the floor */
+  background:linear-gradient(rgba(170,210,255,.14),rgba(170,210,255,.045)) padding-box,
+    linear-gradient(160deg,rgba(220,240,255,.5),rgba(220,240,255,.12) 42%,rgba(77,166,255,.32)) border-box;
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  box-shadow:0 18px 42px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.34),0 0 22px rgba(77,166,255,.09);
   transition:transform .18s var(--ease),box-shadow .18s var(--ease);
   transform:translateZ(0);
 }
@@ -230,13 +235,16 @@ section.featured::before{display:none}
 .card .body{padding:16px 18px 18px;flex:1;display:flex;flex-direction:column;transform:translateZ(12px)}
 .card .body h3{margin:0 0 6px;font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.015em;
   text-shadow:0 2px 10px rgba(0,0,0,.45)}
-.card .body p{margin:0;color:rgba(220,235,255,.62);font-size:13.5px;line-height:1.5;flex:1}
-.card .meta{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+/* uniform copy block (3 lines max) + meta pinned to one shared baseline:
+   no more canyon of dead air under short descriptions */
+.card .body p{margin:0;color:rgba(220,235,255,.62);font-size:13.5px;line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card .meta{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:14px}
 @media (max-width:640px){.card.featured{grid-column:span 1}}
 .play{
   display:inline-block;padding:10px 24px;border-radius:999px;font-weight:800;font-size:15px;color:#04101f;
   background:linear-gradient(180deg,#a8d4ff,#4da6ff);
-  box-shadow:0 6px 0 rgba(20,70,130,.9),0 10px 24px rgba(77,166,255,.35),inset 0 1px 0 rgba(255,255,255,.5);
+  box-shadow:0 6px 0 rgba(20,70,130,.9),0 12px 26px rgba(77,166,255,.35),inset 0 1px 0 rgba(255,255,255,.5);
   transition:transform .12s,box-shadow .12s;
 }
 .play:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
@@ -265,6 +273,10 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
   .namepill,.card,.ed-pick,.daily,.spotlight{backdrop-filter:none;-webkit-backdrop-filter:none}
   .card,.ed-pick,.daily,.spotlight{background:rgba(10,18,32,.96)}
 }
+
+/* keyboard focus: a visible ring on everything tappable, in the accent */
+a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outline-offset:3px}
+.card:focus-visible,.ed-pick:focus-visible,.feat3d:focus-visible,.chip:focus-visible,.daily:focus-visible{outline-offset:5px}
 
 /* ---------- motion: choreographed load + reveal-once ---------- */
 /* base (no-JS): everything visible. .js gates all hidden states. */
@@ -305,18 +317,25 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
 
 /* ---------- feature presentation: Six-Shooter Cinema (obsidian 3D) ---------- */
 .featured{width:100%;max-width:1100px;padding:30px 20px 0;position:relative;z-index:1;perspective:1600px}
-.feat3d{display:block;text-decoration:none;color:#fff}
+.feat3d{display:block;text-decoration:none;color:#fff;position:relative}
 .feat-kicker{display:block;font-size:10px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;
-  color:var(--accent);margin:0 4px 12px}
+  color:#d9b877;margin:0 4px 12px;text-shadow:0 0 18px rgba(217,184,119,.4)}
 .feat-screen{
-  position:relative;border-radius:24px;overflow:hidden;min-height:330px;
+  position:relative;border-radius:24px;overflow:hidden;min-height:300px;
   transform:rotateX(9deg);transform-origin:50% 100%;transform-style:preserve-3d;
-  border:1px solid rgba(200,230,255,.2);
-  /* blue-night desert: cooled palette */
-  background:linear-gradient(180deg,#060b18 0%,#0b1428 38%,#16294a 58%,#3d3a55 76%,#232030 88%,#100d14 100%);
-  box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 80px rgba(77,166,255,.14),inset 0 1px 0 rgba(255,255,255,.3);
+  border:1px solid transparent;
+  /* the marquee frame: warm brass around a blue-night desert — the one warm
+     object on the page, exactly what makes it read as a theater */
+  background:
+    linear-gradient(180deg,#060b18 0%,#0b1428 38%,#16294a 58%,#3d3a55 76%,#232030 88%,#100d14 100%) padding-box,
+    linear-gradient(135deg,#8a6b3f,#e3c37c 28%,#8a6b3f 55%,#e3c37c 82%,#8a6b3f) border-box;
+  box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 80px rgba(77,166,255,.14),
+    inset 0 1px 0 rgba(255,255,255,.3),inset 0 0 90px rgba(0,0,0,.55);
   transition:transform .25s var(--ease);
 }
+/* marquee bulbs: warm chasing row riding the top of the tilted screen */
+.feat-bulbs{top:10px;left:16px;right:16px;z-index:6}
+.feat-bulbs i{background:#ffe2a3;box-shadow:0 0 8px 2px rgba(255,205,120,.85)}
 .feat3d:hover .feat-screen{transform:rotateX(4deg)}
 .feat3d:active .feat-screen{transform:rotateX(9deg) scale(.985)}
 .feat-stars{position:absolute;inset:0;
@@ -332,9 +351,13 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
     radial-gradient(1.6px 1.6px at 40% 14%,#cfe8ff,transparent),
     radial-gradient(1.2px 1.2px at 70% 42%,#cfe8ff,transparent);
   opacity:.9}
-.feat-moon{position:absolute;top:5%;right:7%;width:76px;height:76px;border-radius:50%;
-  background:radial-gradient(circle at 35% 35%,#ffffff,#dcecff 58%,#aecdf5);
-  box-shadow:0 0 28px 8px rgba(180,215,255,.35),0 0 90px 32px rgba(180,215,255,.12);
+.feat-moon{position:absolute;top:5%;right:9%;width:64px;height:64px;border-radius:50%;
+  /* waning crescent: a dark bite taken out of the lit disc, so it never reads
+     as the same sticker moon as the hero sky */
+  background:
+    radial-gradient(circle at 74% 28%, #0a1326 0 30px, transparent 31px),
+    radial-gradient(circle at 35% 35%,#ffffff,#dcecff 58%,#aecdf5);
+  box-shadow:0 0 18px 4px rgba(180,215,255,.3),0 0 60px 20px rgba(180,215,255,.1);
   transform:translateZ(20px)}
 .feat-mesa{position:absolute;left:-2%;right:-2%;bottom:-1%}
 .feat-mesa.far{height:44%;background:#101a30;opacity:.95;
@@ -346,7 +369,7 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
   background:linear-gradient(90deg,transparent,rgba(210,235,255,.12),transparent)}
 .js .feat-sheen{animation:featSheen 9s ease-in-out infinite}
 @keyframes featSheen{0%,72%{transform:rotate(16deg) translateX(-350%)}95%,100%{transform:rotate(16deg) translateX(650%)}}
-.feat-copy{position:absolute;top:24px;left:24px;right:24px;transform:translateZ(44px)}
+.feat-copy{position:absolute;top:34px;left:24px;right:24px;transform:translateZ(44px)}
 .feat-copy h2{margin:0;font-family:var(--font-display);font-weight:800;
   font-size:clamp(30px,6.6vw,48px);letter-spacing:-.015em;
   text-shadow:0 2px 0 rgba(10,25,50,.9),0 4px 0 rgba(8,20,42,.9),0 12px 30px rgba(0,0,0,.7),0 0 40px rgba(77,166,255,.25)}
@@ -371,9 +394,12 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
 .feat3d:active .feat-cta{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
 .feat-cta span:last-child{font-size:18px}
 @media (max-width:560px){
-  .feat-screen{min-height:370px;transform:rotateX(5deg)}
+  .feat-screen{min-height:404px;transform:rotateX(5deg)}
   .feat-shows{flex-direction:column}
-  .feat-moon{width:54px;height:54px;top:4%;right:6%}
+  .feat-moon{width:46px;height:46px;top:4%;right:8%;
+    background:
+      radial-gradient(circle at 74% 28%, #0a1326 0 23px, transparent 24px),
+      radial-gradient(circle at 35% 35%,#ffffff,#dcecff 58%,#aecdf5)}
   .feat-copy{padding-right:66px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -400,7 +426,6 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
 
 /* ---------- featured zone: banner + tonight picks under one roof ---------- */
 .featured .ed-picks { margin-top: 26px; }
-.featured .shead { margin-bottom: 6px; }
 
 /* ---------- collection carousel: native snap strip, GPU-cheap ---------- */
 .games{
@@ -421,7 +446,7 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
 /* the blur is the frame-killer inside a scroller on touch: swap it for a
    solid frosted fill (same gradient border, zero per-frame cost) */
 @media (pointer:coarse){
-  .games .card{backdrop-filter:none;-webkit-backdrop-filter:none;
+  .games .card,.ed-pick{backdrop-filter:none;-webkit-backdrop-filter:none;
     background:linear-gradient(rgba(14,24,42,.97),rgba(14,24,42,.97)) padding-box,
     linear-gradient(160deg,rgba(220,240,255,.5),rgba(220,240,255,.12) 42%,rgba(77,166,255,.32)) border-box}
 }
@@ -439,16 +464,17 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
   color:#fff;text-wrap:balance;
   text-shadow:0 2px 24px rgba(80,150,255,.25);
 }
+/* ONE button material everywhere: machined ice-blue, hard extrusion, presses in.
+   Hierarchy comes from typography and size — never from a different material. */
 .surprise{
   position:relative;z-index:1;cursor:pointer;
   font:inherit;font-size:13px;font-weight:800;letter-spacing:.16em;text-indent:.06em;text-transform:uppercase;
-  color:#0a1526;background:linear-gradient(180deg,#d7ebff,#a3ccff);
-  border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:14px 28px;
-  box-shadow:0 12px 32px rgba(120,180,255,.35),inset 0 1px 0 rgba(255,255,255,.8);
-  transition:transform .16s var(--ease),box-shadow .16s var(--ease);
+  color:#04101f;background:linear-gradient(180deg,#a8d4ff,#4da6ff);
+  border-radius:999px;padding:14px 28px;
+  box-shadow:0 6px 0 rgba(20,70,130,.9),0 12px 26px rgba(77,166,255,.35),inset 0 1px 0 rgba(255,255,255,.5);
+  transition:transform .12s,box-shadow .12s;
 }
-.surprise:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(120,180,255,.45),inset 0 1px 0 rgba(255,255,255,.8)}
-.surprise:active{transform:scale(.96)}
+.surprise:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
 
 /* ---------- opendoor: word rise-in, slow sheen, phase crossfade ---------- */
 .opendoor{transition:opacity .3s ease,transform .3s ease}

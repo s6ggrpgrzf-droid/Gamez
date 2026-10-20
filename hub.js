@@ -34,6 +34,30 @@
     tx: 0, ty: 0, tr: 30, tdisc: hx('#ffd97a'), tglow: hx('#ffbe5a'), moon: false, tmoon: false
   };
   var lastPhase = -1;
+  /* the celestial disc must never sit on the words: measure the hero's
+     content rects (headline, surprise button) in canvas coords and let
+     aimCel steer the disc clear of them at narrow widths */
+  var clearRects = [];
+  function measureHero() {
+    var hr = cv.getBoundingClientRect();
+    var out = [];
+    ['opendoor', 'surprise'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      out.push({ l: r.left - hr.left, t: r.top - hr.top, r: r.right - hr.left, b: r.bottom - hr.top });
+    });
+    clearRects = out;
+  }
+  function circleHits(cx, cy, rad) {
+    for (var i = 0; i < clearRects.length; i++) {
+      var q = clearRects[i];
+      var nx = Math.max(q.l, Math.min(cx, q.r)), ny = Math.max(q.t, Math.min(cy, q.b));
+      var dx = cx - nx, dy = cy - ny;
+      if (dx * dx + dy * dy < rad * rad) return true;
+    }
+    return false;
+  }
   function aimCel(p) {
     var cx = W * 0.78;
     cel.tmoon = (p === 3);
@@ -41,6 +65,13 @@
     else if (p === 1) { cel.tx = W - 54; cel.ty = 54; cel.tr = 24; cel.tdisc = hx('#fff6e0'); cel.tglow = hx('#ffe9b8'); }
     else if (p === 2) { cel.tx = cx; cel.ty = H * 0.78; cel.tr = 40; cel.tdisc = hx('#ff9a52'); cel.tglow = hx('#ff7a3c'); }
     else              { cel.tx = W - 50; cel.ty = 50; cel.tr = 22; cel.tdisc = hx('#e9f1ff'); cel.tglow = hx('#a9c6ff'); }
+    /* steer clear of the headline/button: drop the disc below the content */
+    var need = cel.tr + 14;
+    if (clearRects.length && circleHits(cel.tx, cel.ty, need)) {
+      var low = 0;
+      for (var i = 0; i < clearRects.length; i++) low = Math.max(low, clearRects[i].b);
+      cel.ty = Math.min(low + need + 2, H - cel.tr - 8);
+    }
     if (p !== lastPhase) {
       if (p === 0) { cel.x = cel.tx; cel.y = H + 100; }        /* creep up from below */
       else if (p === 2) { cel.x = cel.tx; cel.y = -100; }     /* sink down from above */
@@ -132,7 +163,10 @@
     if (running) requestAnimationFrame(function () { frame(my); });
   }
   start();
-  window.addEventListener('resize', start);
+  measureHero();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureHero);
+  setTimeout(measureHero, 1500);
+  window.addEventListener('resize', function () { start(); measureHero(); });
   document.addEventListener('visibilitychange', function () {
     running = !document.hidden;
     if (running) start();
@@ -361,12 +395,23 @@
     var picksEl = document.getElementById('edPicks');
     if (!picksEl) return;
     var FALLBACK = [
-      { game: 'skylark', blurb: 'Golden hour over the valley. Load up the Kite and chase the 25% same-destination bonus.' },
-      { game: 'neon-void', blurb: 'Turn it up, thread the gravity wells, and try not to blink. The swarm is waiting.' },
-      { game: 'tiny-fairway', blurb: 'One hole, worldwide. Drag back anywhere and let fly — the turtle is judging your bogeys.' }
+      { game: 'skylark', blurb: 'Golden hour over the valley. Load the Kite, chase the route bonus.' },
+      { game: 'neon-void', blurb: 'Thread the gravity wells. Don\u2019t blink \u2014 the swarm is waiting.' },
+      { game: 'tiny-fairway', blurb: 'One hole, worldwide. Drag back, let fly. The turtle judges.' }
     ];
     function cardFor(id) {
       return document.querySelector('.card[data-game="' + id + '"]');
+    }
+    /* picks render in ~2 lines: never let a blurb (curated or AI-written)
+       get ellipsized mid-word by the clamp — trim at a sentence or word edge */
+    function fitBlurb(s) {
+      s = String(s || '');
+      if (s.length <= 84) return s;
+      var cut = s.slice(0, 84);
+      var sent = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+      if (sent > 40) return cut.slice(0, sent + 1);
+      var sp = cut.lastIndexOf(' ');
+      return (sp > 40 ? cut.slice(0, sp) : cut).replace(/[.,;:!?—-]+$/, '') + '\u2026';
     }
     function render(picks) {
       if (!picksEl) return;
@@ -384,7 +429,7 @@
         if (art) art.className.split(/\s+/).forEach(function (k) { if (k.indexOf('art-') === 0 && k !== 'art') acls = k; });
         a.innerHTML = '<span class="ed-art ' + acls + '" aria-hidden="true"></span>' +
           '<span class="ed-body"><b>' + escapeHtml(card.querySelector('h3').textContent.replace(/^(\p{Extended_Pictographic}\uFE0F?\s+)+/u, '')) + '</b>' +
-          '<i>' + escapeHtml(p.blurb) + '</i></span>' +
+          '<i>' + escapeHtml(fitBlurb(p.blurb)) + '</i></span>' +
           '<span class="ed-go" aria-hidden="true">&rarr;</span>';
         picksEl.appendChild(a);
       });
