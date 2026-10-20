@@ -23,6 +23,8 @@
     });
   }
   var shoot = null;
+  var shootForced = false;
+  document.addEventListener('sky-shoot', function () { shootForced = true; });
   var RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function phaseOf(h) { return h >= 5 && h < 11 ? 0 : h >= 11 && h < 17 ? 1 : h >= 17 && h < 22 ? 2 : 3; }
   function hx(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
@@ -150,8 +152,12 @@
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283);
       ctx.fillStyle = 'rgba(' + p.hue + ',' + a.toFixed(2) + ')'; ctx.fill();
     }
-    if (ph !== 1 && !shoot && Math.random() < .006)
-      shoot = { x: Math.random() * W * .7 + W * .15, y: -20, vx: -5, vy: 5, life: 1 };
+    if (!shoot && (shootForced || (ph !== 1 && Math.random() < .006))) {
+      shoot = shootForced
+        ? { x: W * .78, y: H * .1, vx: -6.2, vy: 4.4, life: 1 }
+        : { x: Math.random() * W * .7 + W * .15, y: -20, vx: -5, vy: 5, life: 1 };
+      shootForced = false;
+    }
     if (shoot) {
       shoot.x += shoot.vx; shoot.y += shoot.vy; shoot.life -= .02;
       var g = ctx.createLinearGradient(shoot.x, shoot.y, shoot.x - shoot.vx * 12, shoot.y - shoot.vy * 12);
@@ -236,31 +242,27 @@
     }, 30000);
   })();
 
-  /* ---------- surprise me: wander to a random cabinet ---------- */
+  /* ---------- surprise me: a shooting star picks a random star ---------- */
   (function () {
     var btn = document.getElementById('surprise');
     if (!btn) return;
-    var cards = Array.prototype.slice.call(document.querySelectorAll('.card[href]'));
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.card[data-game][href]'));
     if (!cards.length) return;
-    var names = cards.map(function (c) {
-      var h = c.querySelector('h3');
-      return h ? h.textContent : 'a mystery game';
-    });
+    var RMQ = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var busy = false;
     btn.addEventListener('click', function () {
       if (busy) return;
+      var pick = cards[Math.floor(Math.random() * cards.length)];
+      var id = pick.getAttribute('data-game');
+      var star = id && document.querySelector('.star[data-game="' + id + '"]');
+      if (!star) { window.location.href = pick.getAttribute('href'); return; }
       busy = true;
-      var pick = Math.floor(Math.random() * cards.length);
-      var ticks = 0, label = btn.innerHTML;
-      var iv = setInterval(function () {
-        btn.textContent = names[Math.floor(Math.random() * names.length)] + '…';
-        if (++ticks > 7) {
-          clearInterval(iv);
-          btn.innerHTML = label;
-          busy = false;
-          window.location.href = cards[pick].getAttribute('href');
-        }
-      }, 70);
+      document.dispatchEvent(new CustomEvent('sky-shoot'));
+      star.scrollIntoView({ behavior: RMQ ? 'auto' : 'smooth', block: 'center' });
+      setTimeout(function () {
+        document.dispatchEvent(new CustomEvent('bloom-star', { detail: id }));
+        busy = false;
+      }, RMQ ? 80 : 850);
     });
   })();
 
@@ -594,6 +596,10 @@
       openId = null; openBtn = null;
       field.classList.remove('blooming');
     }
+    document.addEventListener('bloom-star', function (ev) {
+      var btn = stars[ev.detail];
+      if (btn) openBloom(ev.detail, btn);
+    });
     bloom.querySelector('.bclose').addEventListener('click', function (ev) { ev.stopPropagation(); closeBloom(); });
     field.addEventListener('click', function () { if (openId) closeBloom(); });
     document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && openId) closeBloom(); });
