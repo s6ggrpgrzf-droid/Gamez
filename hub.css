@@ -420,9 +420,15 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
              0 0 44px 12px color-mix(in srgb,var(--glow) 22%,transparent);
   animation:twinkle 3.6s ease-in-out infinite;animation-delay:var(--td,0s)}
 @keyframes twinkle{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.8);opacity:.72}}
-.star .lab{position:absolute;top:calc(50% + 15px);left:50%;transform:translateX(-50%);
-  white-space:nowrap;font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-  color:rgba(220,235,255,.66);text-shadow:0 1px 8px rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.7);
+/* Atlas 3: one label system — the gap is measured from the core's EDGE
+   (scaled by the star's own --s), so every label breathes the same 10px
+   regardless of magnitude; type gets presence: brighter, a touch larger,
+   wider tracking, and a whisper of the star's own color in its shadow */
+.star .lab{position:absolute;top:calc(50% + var(--s,10px) * .5 + 10px);left:50%;transform:translateX(-50%);
+  white-space:nowrap;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  color:rgba(228,240,255,.82);
+  text-shadow:0 1px 8px rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.7),
+              0 0 14px color-mix(in srgb,var(--glow) 35%,transparent);
   pointer-events:none;transition:color .25s}
 .star:active .core{transform:scale(1.35)}
 .field.blooming .star{opacity:.32}
