@@ -299,9 +299,22 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 .feat-ring{position:absolute;inset:22px;border-radius:50%;
   border:1px solid rgba(227,195,124,.55);
   box-shadow:0 0 24px rgba(217,184,119,.18),inset 0 0 24px rgba(217,184,119,.1)}
-.feat-core{width:34px;height:34px;border-radius:50%;
-  background:radial-gradient(circle at 42% 38%,#ffffff 0%,#ffd9a0 45%,rgba(255,180,90,.0) 78%);
-  box-shadow:0 0 30px 10px rgba(255,205,120,.5),0 0 90px 34px rgba(255,180,90,.22);
+/* Atlas 6: the ring catches light like metal — a conic gradient overlay
+   (masked to a 2px band on a pseudo-element, so the ring's own glow
+   shadows survive beneath it): bright at upper-left, falling off around */
+.feat-ring::after{content:"";position:absolute;inset:-1px;border-radius:50%;
+  background:conic-gradient(from 215deg,
+    rgba(217,184,119,.1), rgba(250,226,168,.95) 20%, rgba(217,184,119,.4) 46%,
+    rgba(110,82,36,.45) 71%, rgba(250,226,168,.7) 88%, rgba(217,184,119,.1));
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px))}
+/* Atlas 6: the patriarch core — the field stars' spherical recipe at
+   ceremonial scale: lit cap, amber mid-band, bronze base, terminator */
+.feat-core{width:46px;height:46px;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,
+    #ffffff 0%,#ffeec9 24%,#ffc978 54%,#e08e35 84%,#a8641c 100%);
+  box-shadow:inset -3px -5px 8px rgba(90,45,0,.55),inset 2px 3px 5px rgba(255,255,255,.55),
+             0 0 34px 12px rgba(255,205,120,.5),0 0 100px 40px rgba(255,180,90,.22);
   animation:twinkle 4.2s ease-in-out infinite}
 .feat-name{display:block;font-family:var(--font-display);font-weight:800;
   font-size:clamp(27px,6vw,36px);letter-spacing:-.015em;margin-top:10px;
