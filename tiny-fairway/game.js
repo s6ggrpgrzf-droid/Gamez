@@ -56,6 +56,29 @@
   ];
   function biome() { return BIOMES[curBiome]; }
 
+  /* light grade per biome: [top wash, bottom shade] — dawn gold, noon
+   * glare, dusk ember, moonlit blue. Cached per size; one fill per frame. */
+  var GRADE = [
+    ['rgba(255,196,110,0.17)', 'rgba(24,42,80,0.13)'],
+    ['rgba(255,244,205,0.13)', 'rgba(146,90,20,0.09)'],
+    ['rgba(88,52,140,0.15)', 'rgba(255,126,64,0.11)'],
+    ['rgba(140,175,255,0.14)', 'rgba(10,16,48,0.15)']
+  ];
+  var gradeGrad = null, gradeKey = '';
+  function drawGrade() {
+    var key = curBiome + ':' + cw + 'x' + ch;
+    if (key !== gradeKey) {
+      gradeKey = key;
+      var g = ctx.createLinearGradient(0, 0, 0, ch);
+      g.addColorStop(0, GRADE[curBiome][0]);
+      g.addColorStop(0.55, 'rgba(0,0,0,0)');
+      g.addColorStop(1, GRADE[curBiome][1]);
+      gradeGrad = g;
+    }
+    ctx.fillStyle = gradeGrad;
+    ctx.fillRect(0, 0, cw, ch);
+  }
+
   /* ---------------- audio (WebAudio, gesture-gated) ---------------- */
   var AU = {
     ctx: null, master: null, windFilter: null, windGain: null, rollGain: null, rollFilter: null, noiseBuf: null,
@@ -197,6 +220,7 @@
   var particles = [];
   var turtle = null;
   var speckles = [];
+  var dew = [];        // dawn dew / moonlit frost glints (biomes 0 and 3)
   var aimPts = [];
   // revamp state
   var spinVal = 0, spinPointer = null, spinBase = 0, spinStartY = 0;  // Golf-on-Mars spin
@@ -359,6 +383,22 @@
                         y: e.y + Math.sin(a) * rr * e.ry * 0.85,
                         r: 0.5 + rng() * 0.9, a: 0.25 + rng() * 0.25, k: 's' });
       }
+    }
+    // dew: glints scattered on the short grass — along the fairway and on the green
+    dew = [];
+    for (i = 0; i < 46; i++) {
+      var seg = hole.fairway[(rng() * hole.fairway.length) | 0];
+      if (!seg) break;
+      var tt = rng(), off = (rng() * 2 - 1) * seg.r * 0.8;
+      var sdx = seg.x2 - seg.x1, sdy = seg.y2 - seg.y1, sl = Math.hypot(sdx, sdy) || 1;
+      dew.push({ x: seg.x1 + sdx * tt + (-sdy / sl) * off,
+                 y: seg.y1 + sdy * tt + (sdx / sl) * off,
+                 ph: rng() * 6.2832, sp: 0.7 + rng() * 1.6 });
+    }
+    for (i = 0; i < 22; i++) {
+      var ga = rng() * 6.2832, gr = Math.sqrt(rng()) * 13;
+      dew.push({ x: hole.cup.x + Math.cos(ga) * gr, y: hole.cup.y + Math.sin(ga) * gr,
+                 ph: rng() * 6.2832, sp: 0.7 + rng() * 1.6 });
     }
   }
 
@@ -1589,6 +1629,25 @@
       }
     }
 
+    // dew / frost: seeded glints on the short grass, dawn and moonlight only.
+    // Sharp pow() twinkle; under reduced motion they sit faint and still.
+    if ((curBiome === 0 || curBiome === 3) && dew.length) {
+      ctx.fillStyle = curBiome === 3 ? '#dfeaff' : '#ffffff';
+      for (i = 0; i < dew.length; i++) {
+        var dp = dew[i];
+        var da = RM ? 0.22 : Math.pow(Math.max(0, Math.sin(wtime * dp.sp + dp.ph)), 12);
+        if (da < 0.03) continue;
+        ctx.globalAlpha = da * 0.9;
+        var dpx = X(dp.x), dpy = Y(dp.y);
+        ctx.beginPath(); ctx.arc(dpx, dpy, 1.3, 0, 6.2832); ctx.fill();
+        if (da > 0.75) {   // the brightest get a tiny cross flare
+          ctx.fillRect(dpx - 3.4, dpy - 0.6, 6.8, 1.2);
+          ctx.fillRect(dpx - 0.6, dpy - 3.4, 1.2, 6.8);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
     drawParticles();
 
     // wind streaks: the air itself drifts across the hole (read the wind)
@@ -1617,6 +1676,9 @@
         ctx.lineCap = 'butt';
       }
     }
+
+    // light grade over the world (UI stays ungraded and crisp)
+    if (state !== 'menu') drawGrade();
 
     // aim: dotted predicted path (bends with the break) + landing marker + power ring
     if (aiming && drag && aimPts.length) {
