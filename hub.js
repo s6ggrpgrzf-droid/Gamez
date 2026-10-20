@@ -35,6 +35,7 @@
     x: -200, y: -200, r: 30, a: 0, disc: hx('#ffd97a'), glow: hx('#ffbe5a'),
     tx: 0, ty: 0, tr: 30, tdisc: hx('#ffd97a'), tglow: hx('#ffbe5a'), moon: false, tmoon: false
   };
+  var celFade = 1; /* Atlas 1: eased scroll fade, 1 at the hero */
   var lastPhase = -1;
   /* the celestial disc must never sit on the words: measure the hero's
      content rects (headline, surprise button) in canvas coords and let
@@ -91,32 +92,32 @@
     }
   }
   function drawCel() {
-    if (cel.a < 0.01) return;
+    if (cel.a * celFade < 0.01) return;
     var i, c;
     /* ambient wash */
     var washR = cel.r * 7;
     var wash = ctx.createRadialGradient(cel.x, cel.y, 0, cel.x, cel.y, washR);
-    wash.addColorStop(0, rgba(cel.glow, (0.13 * cel.a).toFixed(3)));
+    wash.addColorStop(0, rgba(cel.glow, (0.13 * cel.a * celFade).toFixed(3)));
     wash.addColorStop(1, rgba(cel.glow, 0));
     ctx.fillStyle = wash;
     ctx.beginPath(); ctx.arc(cel.x, cel.y, washR, 0, 6.283); ctx.fill();
     /* halo */
     var halo = ctx.createRadialGradient(cel.x, cel.y, cel.r * 0.3, cel.x, cel.y, cel.r * 3.2);
-    halo.addColorStop(0, rgba(cel.glow, (0.5 * cel.a).toFixed(3)));
+    halo.addColorStop(0, rgba(cel.glow, (0.5 * cel.a * celFade).toFixed(3)));
     halo.addColorStop(1, rgba(cel.glow, 0));
     ctx.fillStyle = halo;
     ctx.beginPath(); ctx.arc(cel.x, cel.y, cel.r * 3.2, 0, 6.283); ctx.fill();
     /* disc */
     ctx.beginPath(); ctx.arc(cel.x, cel.y, cel.r, 0, 6.283);
     var dg = ctx.createLinearGradient(cel.x, cel.y - cel.r, cel.x, cel.y + cel.r);
-    dg.addColorStop(0, rgba([255, 255, 255], cel.a.toFixed(3)));
-    dg.addColorStop(0.45, rgba(cel.disc, cel.a.toFixed(3)));
+    dg.addColorStop(0, rgba([255, 255, 255], (cel.a * celFade).toFixed(3)));
+    dg.addColorStop(0.45, rgba(cel.disc, (cel.a * celFade).toFixed(3)));
     var dk = [];
     for (i = 0; i < 3; i++) dk[i] = cel.disc[i] * 0.7;
-    dg.addColorStop(1, rgba(dk, cel.a.toFixed(3)));
+    dg.addColorStop(1, rgba(dk, (cel.a * celFade).toFixed(3)));
     ctx.fillStyle = dg; ctx.fill();
     if (cel.moon) {
-      ctx.fillStyle = rgba([150, 170, 205], (0.28 * cel.a).toFixed(3));
+      ctx.fillStyle = rgba([150, 170, 205], (0.28 * cel.a * celFade).toFixed(3));
       var craters = [[-0.3, -0.12, 0.22], [0.28, 0.3, 0.15], [0.02, -0.38, 0.12]];
       for (c = 0; c < craters.length; c++) {
         ctx.beginPath();
@@ -141,6 +142,12 @@
       cel.disc[i] += (cel.tdisc[i] - cel.disc[i]) * k;
       cel.glow[i] += (cel.tglow[i] - cel.glow[i]) * k;
     }
+    /* Atlas 1: past the hero the celestial recedes to weather */
+    var syNow = window.scrollY || window.pageYOffset || 0;
+    var hbNow = heroBand || H * 0.9;
+    var fTgt = syNow <= hbNow * 0.3 ? 1 : (syNow >= hbNow ? 0.15 :
+      1 - (syNow - hbNow * 0.3) / (hbNow * 0.7) * 0.85);
+    celFade += (fTgt - celFade) * 0.07;
     drawCel();
     var dustA = ph === 3 ? 1 : (ph === 1 ? 0.22 : 0.45);
     for (var j = 0; j < parts.length; j++) {
