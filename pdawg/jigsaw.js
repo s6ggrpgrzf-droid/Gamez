@@ -1171,7 +1171,7 @@ Game.placeHintPiece = function () {
   this.scheduleSave();
   this.checkWin();
   this.markDirty();
-  toast('✨ One piece, placed with love');
+  toast('One piece, placed with love');
 };
 
 /* ---------------- edge sorting tray ----------------
@@ -1429,12 +1429,11 @@ function arcadeSubmitWin(S) {
     var rows = (!top || !top.length)
       ? '<div class="arc-empty">No times yet — be the first!</div>'
       : top.slice(0, 5).map(function (e, i) {
-          var medals = ['🥇', '🥈', '🥉'];
           return '<div class="arc-row' + (e.name === name ? ' me' : '') + '"><span>' +
-            (medals[i] || (i + 1) + '.') + ' ' + escHtml(e.name) + '</span><b>' + fmtClockSecs(7200 - e.score) + '</b></div>';
+            (i < 3 ? '<span class="lb-medal m' + (i + 1) + '">' + (i + 1) + '</span>' : (i + 1) + '.') + ' ' + escHtml(e.name) + '</span><b>' + fmtClockSecs(7200 - e.score) + '</b></div>';
         }).join('');
-    box.innerHTML = '<div class="arc-title">🏆 ' + title + '</div>' +
-      (rank > 0 ? '<div class="arc-rank">🌍 GLOBAL #' + rank + '</div>' : '') + rows;
+    box.innerHTML = '<div class="arc-title"><svg class="ic"><use href="#i-trophy"/></svg> ' + title + '</div>' +
+      (rank > 0 ? '<div class="arc-rank"><svg class="ic"><use href="#i-globe"/></svg> GLOBAL #' + rank + '</div>' : '') + rows;
   }
   function post(name) {
     fetch(ARCADE_BASE + '/score', {
@@ -1447,7 +1446,7 @@ function arcadeSubmitWin(S) {
   var name = '';
   try { name = (localStorage.getItem(ARCADE_NAME_KEY) || '').trim(); } catch (e) {}
   if (name) { post(name); return; }
-  box.innerHTML = '<div class="arc-title">🏆 ' + title + '</div>' +
+  box.innerHTML = '<div class="arc-title"><svg class="ic"><use href="#i-trophy"/></svg> ' + title + '</div>' +
     '<div class="arc-form"><input id="arc-name" maxlength="12" placeholder="YOUR NAME">' +
     '<button id="arc-go">SAVE</button></div>';
   $('#arc-go').onclick = function () {
@@ -1992,7 +1991,7 @@ var UI = {
       title: 'Mystery Puzzle',
       mystery: true, mysteryTitle: realTitle
     });
-    toast('Shh… no peeking! 🎲');
+    toast('Shh… no peeking!');
   },
 
   startDaily: function () {
@@ -2070,7 +2069,7 @@ var UI = {
     var rev = $('#winReveal');
     rev.style.display = 'none'; rev.innerHTML = '';
     if (S.mystery && S.mysteryTitle) {
-      $('#winSub').textContent = '🎉 It was "' + S.mysteryTitle + '"! ' + S.pieces.length + ' pieces';
+      $('#winSub').textContent = 'It was "' + S.mysteryTitle + '"! ' + S.pieces.length + ' pieces';
       rev.style.display = '';
       var cv = document.createElement('canvas');
       var w = Math.min(420, S.imgW), h = Math.round(w * S.imgH / S.imgW);
@@ -2192,7 +2191,7 @@ var UI = {
     $('#rotBtn').onclick = function () { Game.rotateSelection(); };
     $('#ghostBtn').onclick = function () {
       var S = Game.S;
-      if (!S || S.mystery) { toast('No peeking in Mystery mode! 🎲'); return; }
+      if (!S || S.mystery) { toast('No peeking in Mystery mode!'); return; }
       Game.ghostOn = !Game.ghostOn;
       $('#ghostBtn').classList.toggle('on', Game.ghostOn);
       Game.markDirty();
