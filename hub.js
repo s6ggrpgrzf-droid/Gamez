@@ -179,16 +179,6 @@
     if (running) start();
   });
 
-  /* ---------- marquee bulbs ---------- */
-  document.querySelectorAll('.bulbs').forEach(function (row) {
-    var n = Math.max(14, Math.floor(row.parentElement.clientWidth / 26));
-    for (var i = 0; i < n; i++) {
-      var b = document.createElement('i');
-      b.style.animationDelay = (-i * .13).toFixed(2) + 's';
-      row.appendChild(b);
-    }
-  });
-
   /* ---------- open door: one living line, time-aware, animated ---------- */
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
