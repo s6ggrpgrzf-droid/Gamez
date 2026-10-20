@@ -32,26 +32,59 @@ body[data-biome="3"]{--ink:#eef4ff;--ink-soft:rgba(238,244,255,.66);--card:rgba(
   padding:24px;opacity:0;pointer-events:none;transition:opacity .35s ease;
 }
 .screen.on{opacity:1;pointer-events:auto}
-#menu{background:linear-gradient(180deg,rgba(20,32,18,.28),rgba(20,32,18,.52))}
+#menu{background:linear-gradient(180deg,rgba(8,16,10,.80),rgba(8,16,10,.93))}
 .menu-inner{text-align:center;max-width:340px;width:100%}
-.logo{font-size:64px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35));animation:bob 3.2s ease-in-out infinite}
+.fairway-mark{width:78px;height:78px;border-radius:50%;margin:0 auto;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#a8ddf2 0%,#e2f5e6 60%,#7cc46a 60%,#4c9442 100%);
+  box-shadow:0 10px 24px rgba(0,0,0,.45), inset 0 0 0 3px rgba(255,255,255,.28);
+  animation:bob 3.2s ease-in-out infinite}
+.fairway-mark::before{content:'';position:absolute;left:50%;top:12px;width:3px;height:40px;
+  background:#f2ecd9;transform:translateX(-50%);border-radius:2px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.fairway-mark::after{content:'';position:absolute;left:calc(50% + 2px);top:12px;
+  border-left:17px solid #e0452f;border-top:6px solid transparent;border-bottom:6px solid transparent}
+.fairway-mark .cup{position:absolute;left:50%;bottom:13px;width:9px;height:4px;border-radius:50%;
+  background:rgba(20,40,16,.85);transform:translateX(-50%)}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.menu-inner h1{font-size:38px;font-weight:800;letter-spacing:.01em;margin:8px 0 2px;text-shadow:0 2px 14px rgba(0,0,0,.4)}
-.tagline{font-size:15px;opacity:.85;margin-bottom:26px}
+.menu-inner h1{font-size:38px;font-weight:800;letter-spacing:.01em;margin:10px 0 2px;color:#f7f3e8;
+  text-shadow:0 2px 14px rgba(0,0,0,.5)}
+.tagline{font-size:15px;opacity:.85;margin-bottom:24px}
 .menu-btns{display:flex;flex-direction:column;gap:10px}
 .btn{
   appearance:none;border:0;border-radius:16px;padding:15px 18px;font-size:17px;font-weight:700;
-  background:var(--card);color:var(--ink);cursor:pointer;backdrop-filter:blur(8px);
-  box-shadow:0 4px 18px rgba(0,0,0,.25);transition:transform .12s ease,box-shadow .12s ease;
+  background:#12281a;color:#f7f3e8;cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.4);transition:transform .12s ease,box-shadow .12s ease;
   font-family:inherit;
 }
 .btn:active{transform:scale(.96)}
-.btn.primary{background:var(--btn);color:var(--btn-ink)}
-.btn.ghost{background:rgba(255,255,255,.14);color:#fff;box-shadow:none;font-weight:600;font-size:15px}
+.btn.hero{
+  background:linear-gradient(180deg,#fdfbf2,#f0e8d2);color:#2c3a24;
+  border-top:3px solid #d8b25e;border-radius:18px;padding:17px 18px;font-size:19px;
+  box-shadow:0 12px 26px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.btn.hero .btn-sub{color:rgba(44,58,36,.66);opacity:1}
+.btn.daily{
+  background:#0d2b1c;color:#f3d98b;border:1px solid rgba(216,178,94,.65);
+  box-shadow:0 8px 20px rgba(0,0,0,.45), inset 0 1px 0 rgba(243,217,139,.25);
+}
+.btn.daily .btn-sub{color:rgba(243,217,139,.72);opacity:1}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn.mini{
+  background:#12281a;border:1px solid rgba(247,243,232,.14);border-radius:14px;
+  padding:11px 10px;font-size:14.5px;text-align:center;
+  box-shadow:0 4px 12px rgba(0,0,0,.35);
+}
+.btn.mini .btn-sub{font-size:10.5px;margin-top:1px}
+.menu-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn.text{
+  background:transparent;border:1px solid rgba(247,243,232,.3);color:#f7f3e8;
+  border-radius:999px;padding:9px 10px;font-size:13.5px;font-weight:600;box-shadow:none;
+}
 .btn-sub{display:block;font-size:12px;font-weight:500;opacity:.7;margin-top:2px}
 .howto{
-  margin-top:16px;background:var(--card);color:var(--ink);border-radius:14px;padding:14px 16px;
-  font-size:14px;line-height:1.5;text-align:left;backdrop-filter:blur(8px);
+  margin-top:16px;background:#fdfbf2;color:#2c3a24;border-radius:14px;padding:14px 16px;
+  font-size:14px;line-height:1.5;text-align:left;
+  box-shadow:0 10px 24px rgba(0,0,0,.5);
 }
 .howto[hidden]{display:none}
 .howto p+p{margin-top:8px}
