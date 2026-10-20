@@ -450,6 +450,11 @@ function renderPreview() {
     el.className = 'preview idle';
     return;
   }
+  if (G.swapMode) {
+    el.textContent = G.swapSel.length ? ('Swap ' + G.swapSel.length + ' — tap Swap to cast them back') : 'Tap stones to swap, then tap Swap again';
+    el.className = 'preview idle';
+    return;
+  }
   if (!G.tent.length) {
     el.textContent = G.st.firstDone ? 'Tap a stone, then tap the board' : 'First word must cover the glowing star ✦';
     el.className = 'preview idle';
@@ -558,6 +563,10 @@ function openBlankPicker(r, c, tile) {
 /* ---------------- buttons ---------------- */
 function renderSwapBtn() {
   $('btn-swap').textContent = G.swapMode ? ('Swap ' + G.swapSel.length + ' ✓') : 'Swap';
+  /* in swap mode the truth is on the Swap button — Play steps aside */
+  $('btn-swap').classList.toggle('swap-armed', G.swapMode);
+  $('btn-play').classList.toggle('dim', G.swapMode);
+  renderPreview();
 }
 function bindGame() {
   $('btn-play').onclick = onPlay;
@@ -661,7 +670,6 @@ function onSwap() {
       if (st.bag.length < 7) { toast('The well is too low to swap (needs 7 stones)'); return; }
       G.swapMode = true; G.swapSel = [];
       WWAU.tap(); renderRack(); renderSwapBtn();
-      toast('Tap stones to swap, then tap Swap again');
       return;
     }
     if (!G.swapSel.length) { exitSwapMode(); return; }
@@ -675,7 +683,6 @@ function onSwap() {
     if (st.bag.length < 7) { toast('The well is too low to swap (needs 7 stones)'); return; }
     G.swapMode = true; G.swapSel = [];
     WWAU.tap(); renderRack(); renderSwapBtn();
-    toast('Tap stones to swap, then tap Swap again');
     return;
   }
   /* commit */
@@ -788,7 +795,7 @@ function onSwapPlus() {
   if (BOOSTS.swapp <= 0) { toast('No Swap+ stones left — win games to earn more'); return; }
   G.swapMode = true; G.swapPlus = true; G.swapSel = [];
   WWAU.tap(); renderRack(); renderSwapBtn();
-  toast('Tap stones to swap — your turn continues after');
+  /* the preview line carries the instruction while swap mode lasts */
 }
 function onTilePile() {
   if (G.mode === 'online') return; /* no boosts in friend games */
@@ -895,14 +902,17 @@ function olRenderSlots() {
       esc(OL.codeEntry[i] || '') + '</span>';
   }
   $('ol-slots').innerHTML = html;
+  $('btn-ol-join').disabled = OL.codeEntry.length !== 6;
 }
 function olRenderGames() {
   var el = $('ol-games');
   var list = olMyGames();
   if (!list.length) {
+    el.classList.add('bare');
     el.innerHTML = '<div class="lb-empty">No friend games yet — start one above</div>';
     return;
   }
+  el.classList.remove('bare');
   el.innerHTML = list.map(function (g, i) {
     var badge = g.over ? 'Done' : (g.myTurn ? 'Your turn' : (g.waiting ? 'Waiting' : 'Their turn'));
     return '<div class="lb-row ol-game" data-i="' + i + '"><span>vs ' + esc(g.vs) +
@@ -1129,6 +1139,8 @@ function gameOver() {
     $('over-s0').textContent = G.names[0] + ': ' + st.scores[0];
     $('over-s1').textContent = G.names[1] + ': ' + st.scores[1];
     $('over-earn').textContent = '';
+    $('over-s0').classList.toggle('win', w === OL.seat);
+    $('over-s1').classList.toggle('win', w >= 0 && w !== OL.seat);
     $('over-daily').textContent = 'A friend game — no boosts, just glory';
     $('btn-again').textContent = 'Back to the Lobby';
     $('btn-again').onclick = function () { WWAU.tap(); showOnline(); };
@@ -1161,6 +1173,8 @@ function gameOver() {
   $('over-sub').textContent = sub || '';
   $('over-s0').textContent = G.names[0] + ': ' + st.scores[0];
   $('over-s1').textContent = G.names[1] + ': ' + st.scores[1];
+  $('over-s0').classList.toggle('win', w === 0);
+  $('over-s1').classList.toggle('win', w === 1);
   /* boosts earned */
   var humanWon = (G.mode !== 'pass' && w === 0);
   earnBoost(humanWon ? 2 : 1);

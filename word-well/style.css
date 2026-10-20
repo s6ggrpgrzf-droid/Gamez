@@ -69,6 +69,7 @@ body::before{
 .link-sep{color:var(--edge);opacity:.7}
 .lb.bare{background:none;border:none;text-align:center;box-shadow:none}
 .btn.ghost{background:transparent;box-shadow:none}
+.btn[disabled]{opacity:.45}
 .btn-sub{display:block;font-size:14px;font-weight:400;font-style:italic;color:var(--ink-soft)}
 .depth{display:flex;gap:5px;justify-content:center;margin:0 auto 7px}
 .depth i{width:30px;height:5px;border-radius:3px;background:rgba(58,43,28,.18);box-shadow:inset 0 1px 1px rgba(58,43,28,.25)}
@@ -150,7 +151,7 @@ body::before{
 .cell.tent .tlet{color:var(--gold-hi);animation:dropIn .18s ease-out}
 .cell.wasblank .tlet{color:var(--gold-hi);font-style:italic}
 .cell.hint{outline:3px solid var(--gold-hi);outline-offset:-3px;animation:pulse 1s infinite}
-.cell.ghost{outline:3px dotted #9db8d2;outline-offset:-3px}
+.cell.ghost{outline:3px dotted rgba(201,162,39,.85);outline-offset:-3px}
 @keyframes pulse{0%,100%{outline-color:var(--gold-hi)}50%{outline-color:transparent}}
 
 .preview{
@@ -187,7 +188,7 @@ body::before{
 .rslot.has .tlet,.rslot.has .tval{display:block}
 .rslot.sel{outline:3px solid var(--gold-hi);outline-offset:1px;transform:translateY(-5px);
   box-shadow:inset 0 1px 0 rgba(255,244,214,.35),0 7px 10px rgba(0,0,0,.35)}
-.rslot.swapsel{outline:3px solid var(--tl);outline-offset:1px}
+.rslot.swapsel{outline:3px solid var(--gold);outline-offset:1px;transform:translateY(-3px);box-shadow:inset 0 1px 0 rgba(255,244,214,.35),0 6px 9px rgba(0,0,0,.35)}
 .rslot.used{opacity:.22;filter:saturate(.4)}
 
 .controls{display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
@@ -203,6 +204,8 @@ body::before{
 .cbtn.primary{background:linear-gradient(180deg,#f3e2ac 0%,#e5c76a 55%,#cda435 100%);border-color:#8a6d15;color:#33270e;box-shadow:inset 0 1px 0 rgba(255,250,225,.85), 0 2px 0 #8a6d15, 0 5px 10px rgba(138,109,21,.3)}
 .cbtn.primary:active{transform:translateY(2px);box-shadow:inset 0 1px 0 rgba(255,250,225,.5), 0 1px 0 #8a6d15}
 .cbtn.big{width:100%;font-size:20px;padding:12px;min-height:52px;border-radius:14px}
+.cbtn.dim{opacity:.45}
+.cbtn.swap-armed{background:linear-gradient(180deg,#f3e2ac 0%,#e5c76a 55%,#cda435 100%);border-color:#8a6d15;color:#33270e;box-shadow:inset 0 1px 0 rgba(255,250,225,.85), 0 2px 0 #8a6d15, 0 5px 10px rgba(138,109,21,.3)}
 .cbtn.ghost{background:transparent;box-shadow:none}
 .boosts{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;align-items:center;margin-top:8px;border-top:1px solid rgba(138,115,80,.45);padding-top:9px}
 .boosts-label{width:100%;text-align:center;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-soft);opacity:.85}
@@ -212,7 +215,7 @@ body::before{
   border-radius:10px;font-size:12px;padding:1px 5px;margin-left:4px;
   box-shadow:inset 0 1px 0 rgba(255,250,225,.4);
 }
-.cbtn.boost.armed{outline:3px solid var(--tl)}
+.cbtn.boost.armed{outline:3px solid var(--gold)}
 
 /* ---------- overlays ---------- */
 .overlay{
@@ -234,7 +237,7 @@ body::before{
 }
 .how-body{text-align:left;font-size:16px;line-height:1.45}
 .how-body p{margin:0 0 10px}
-.c-dl{color:#4a6fa5}.c-tl{color:#2c4f80}.c-dw{color:#a5766e}.c-tw{color:#8c2f22}
+.c-dl{color:#54708c}.c-tl{color:#33517a}.c-dw{color:#a5715f}.c-tw{color:#8f3d2c}
 .pile-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:10px}
 .pile-cell{background:rgba(255,255,255,.4);border:1px solid var(--edge);border-radius:8px;padding:6px 2px}
 .pile-cell b{display:block;font-size:17px}
@@ -267,8 +270,12 @@ body::before{
 .ol-badge.hot{color:var(--good);font-style:normal}
 
 /* ---------- game over ---------- */
-.over-scores{margin:10px 0}
-.over-score{font-size:24px;font-weight:600;margin:4px 0}
+#scr-over .menu-wrap{padding-top:8vh}
+.over-mark{margin:0 auto 4px}
+.over-scores{margin:14px 0 4px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.over-score{font-size:21px;font-weight:600;margin:0;background:rgba(255,255,255,.32);border:1.5px solid #99875f;border-radius:999px;padding:6px 22px;min-width:210px;text-align:center}
+.over-score.win{border-color:var(--gold-dk);background:linear-gradient(180deg,#f7ead0,#efe0bd);color:#5e4305;box-shadow:0 2px 8px rgba(138,109,21,.25)}
+#over-earn{color:#8a6d15;font-weight:600}
 
 /* ---------- toast ---------- */
 .toast{

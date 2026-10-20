@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=IM+Fell+English:ital@0;1&display=swap">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 <div class="app">
@@ -105,13 +105,13 @@
         <div id="ol-slots" class="ol-slots" aria-label="game code"></div>
         <div id="ol-pad" class="blank-grid ol-pad"></div>
         <div class="menu-btns">
-          <button class="btn primary" id="btn-ol-join" type="button">Join the Game</button>
+          <button class="btn" id="btn-ol-join" type="button">Join the Game</button>
         </div>
       </div>
       <h2 class="lb-title">My Games</h2>
       <div id="ol-games" class="lb"></div>
       <div class="menu-btns">
-        <button class="btn ghost" id="ol-back" type="button">Back</button>
+        <button class="linklike" id="ol-back" type="button">← Back</button>
       </div>
     </div>
   </section>
@@ -170,6 +170,35 @@
   <!-- GAME OVER -->
   <section id="scr-over" class="screen hidden" aria-label="Game over">
     <div class="menu-wrap">
+      <svg class="well-mark over-mark" viewBox="0 0 140 104" width="120" height="89" aria-hidden="true">
+        <defs>
+          <radialGradient id="ow-water" cx="50%" cy="42%" r="65%">
+            <stop offset="0%" stop-color="#22333d"/><stop offset="55%" stop-color="#101c24"/><stop offset="100%" stop-color="#060b0f"/>
+          </radialGradient>
+          <linearGradient id="ow-rim" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#7d6a4c"/><stop offset="100%" stop-color="#463723"/>
+          </linearGradient>
+          <linearGradient id="ow-stone" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6f5f47"/><stop offset="100%" stop-color="#382b1c"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="70" cy="76" rx="55" ry="19" fill="url(#ow-rim)" stroke="#241c11" stroke-width="2"/>
+        <ellipse cx="70" cy="73" rx="45" ry="14.5" fill="url(#ow-water)"/>
+        <ellipse cx="70" cy="73" rx="45" ry="14.5" fill="none" stroke="#c9a227" stroke-width="1.2" opacity=".45"/>
+        <path d="M40 74 q10 -4.5 20 0 q10 4.5 20 0 q10 -4.5 20 0" stroke="#c9a227" stroke-width="1.4" fill="none" opacity=".4"/>
+        <g stroke="#241c11" stroke-width="1.6">
+          <rect x="24" y="82" width="15" height="9" rx="2.5" fill="#5a4a34" transform="rotate(14 31 86)"/>
+          <rect x="47" y="89" width="16" height="9" rx="2.5" fill="#51422e"/>
+          <rect x="72" y="89" width="16" height="9" rx="2.5" fill="#5a4a34"/>
+          <rect x="96" y="84" width="15" height="9" rx="2.5" fill="#51422e" transform="rotate(-13 103 88)"/>
+        </g>
+        <g transform="rotate(-9 70 26)">
+          <rect x="58" y="12" width="24" height="28" rx="5" fill="url(#ow-stone)" stroke="#241c11" stroke-width="2"/>
+          <text x="70" y="32" font-family="Georgia,serif" font-weight="bold" font-size="17" fill="#f3e8cf" text-anchor="middle">W</text>
+        </g>
+        <path d="M63 46 v7 M77 46 v7" stroke="#8a7350" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+        <path d="M58 62 q3 -3 6 0 M76 62 q3 -3 6 0" stroke="#e8cf7a" stroke-width="1.4" fill="none" opacity=".65"/>
+      </svg>
       <h1 class="game-title small" id="over-title"></h1>
       <p class="tagline" id="over-sub"></p>
       <div class="over-scores">
@@ -230,7 +259,7 @@
 <script src="dict-6.js?v=9"></script>
 <script src="wwf.js?v=10"></script>
 <script src="audio.js?v=10"></script>
-<script src="game.js?v=14"></script>
+<script src="game.js?v=15"></script>
 <script>
   document.getElementById('btn-again').onclick = function () { location.reload(); };
   document.getElementById('btn-over-menu').onclick = function () { location.reload(); };
