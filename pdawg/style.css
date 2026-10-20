@@ -317,3 +317,16 @@ body.playing{overflow:hidden;position:fixed;width:100%;height:100dvh}
   .toast{background:rgba(242,240,234,.95);color:#1e2026;box-shadow:0 8px 24px rgba(0,0,0,.5)}
   .tray-fly{filter:brightness(.92)}
 }
+
+/* Pass 3: one drawn icon set — toolbar/topbar/modal icon sizing */
+.toolbar .tbtn .ic{width:23px;height:23px}
+.topbar .tbtn .ic{width:20px;height:20px}
+#backBtn .ic{width:19px;height:19px}
+.rot-row .ic{width:15px;height:15px;vertical-align:-2px}
+.win-emoji svg{width:56px;height:56px}
+.arc-title .ic{width:14px;height:14px;vertical-align:-2px}
+.arc-rank .ic{width:14px;height:14px;vertical-align:-2px}
+.lb-medal{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;font-size:10.5px;font-weight:800;color:#4a2f00;background:#e8e2d2;vertical-align:-5px}
+.lb-medal.m1{background:linear-gradient(145deg,#ffd968,#f2a007)}
+.lb-medal.m2{background:linear-gradient(145deg,#eef1f5,#b9c0cb)}
+.lb-medal.m3{background:linear-gradient(145deg,#f0b27a,#c97b3f);color:#3a1e00}
