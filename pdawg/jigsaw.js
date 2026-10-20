@@ -192,6 +192,7 @@ var Game = {
   selection: null, edgeHi: false,
   ghostOn: false, hintReadyAt: 0,   // hint system: ghost overlay + place-a-piece (60s cooldown)
   paused: false, confetti: null,
+  winCam: null, winAt: 0,   // win ceremony: camera settle + seam dissolve
   pointers: new Map(), gesture: null, downInfo: null,
   saveTimer: 0,
   tableTheme: 'cardboard', _pats: {},
@@ -321,13 +322,20 @@ var Game = {
   /* Opening frame: the PUZZLE fills the view with a working rim of table
    * around it — like sitting down at the table, not surveying it from the
    * doorway. fitBoard (the Fit button) still shows the whole field. */
+  /* The frame the finished picture deserves: image + a breath of margin */
+  puzzleFrame: function () {
+    var S = this.S;
+    var s = Math.min(this.cw / (S.imgW * 1.22), this.ch / (S.imgH * 1.22));
+    return { x: S.boardW / 2, y: S.boardH / 2, s: clamp(s, this.minZoom(), this.maxZoom()) };
+  },
+
   framePuzzle: function () {
     var S = this.S;
     if (!S) return;
-    var s = Math.min(this.cw / (S.imgW * 1.22), this.ch / (S.imgH * 1.22));
-    this.cam.s = clamp(s, this.minZoom(), this.maxZoom());
-    this.cam.x = S.boardW / 2;
-    this.cam.y = S.boardH / 2;
+    var f = this.puzzleFrame();
+    this.cam.s = f.s;
+    this.cam.x = f.x;
+    this.cam.y = f.y;
     this.clampCam();
     this.dirty = true;
   },
@@ -350,6 +358,8 @@ var Game = {
     this.selection = null;
     this.paused = false;
     this.confetti = null;
+    this.winCam = null;
+    this.winAt = 0;
     this.edgeHi = false;
     this.ghostOn = false;
     this.hintReadyAt = 0;
@@ -430,10 +440,21 @@ var Game = {
     if (this.confetti) this.updateConfetti(dt);
     if (this.dustOn) this.updateDust(dt);
     if (this.glide) this.updateGlide(t);
+    // win ceremony: ease the camera onto the finished picture
+    if (this.winCam) {
+      var wc = this.winCam, wk2 = Math.min(1, (t - wc.t0) / wc.dur);
+      var we = wk2 < 0.5 ? 2 * wk2 * wk2 : 1 - Math.pow(-2 * wk2 + 2, 2) / 2;
+      this.cam.x = wc.fx + (wc.tx - wc.fx) * we;
+      this.cam.y = wc.fy + (wc.ty - wc.fy) * we;
+      this.cam.s = wc.fs + (wc.ts - wc.fs) * we;
+      if (wk2 >= 1) this.winCam = null;
+      this.markDirty();
+    }
     this.pruneSnapFx();
     if (this.settle && t - this.settle.t0 > FEEL.settleMs + 40) this.settle = null;
     // feel animations need continuous frames while alive
-    if (this.confetti || this.dustOn || this.glide || this.snapFx.length || this.carry || this.settle) this.markDirty();
+    if (this.confetti || this.dustOn || this.glide || this.snapFx.length || this.carry || this.settle || this.winCam ||
+        (S && S.won && this.winAt && t - this.winAt < 2800)) this.markDirty();
     if (this.dirty) { this.draw(); this.dirty = false; }
     else if (this.confetti || this.dustOn) { this.draw(); }
   },
@@ -616,6 +637,17 @@ var Game = {
         this.drawPiece(members[j], dim);
       }
       if (lift > 0.001) ctx.restore();
+    }
+    // win ceremony: the seams dissolve — the photograph appears whole
+    if (S.won && this.winAt && this.imgCanvas) {
+      var wk3 = reduceMotion() ? 1 : (performance.now() - this.winAt - 350) / 1200;
+      if (wk3 > 0) {
+        var wa = Math.min(1, wk3);
+        ctx.save();
+        ctx.globalAlpha = wa < 0.5 ? 2 * wa * wa : 1 - Math.pow(-2 * wa + 2, 2) / 2;
+        ctx.drawImage(this.imgCanvas, S.imgOX, S.imgOY, S.imgW, S.imgH);
+        ctx.restore();
+      }
     }
     // gold-dust sparkles (board space)
     this.drawDust();
@@ -1368,8 +1400,18 @@ Game.checkWin = function () {
   this.selection = null;
   this.confetti = [];
   this._confInit = false;
+  // the ceremony: camera settles onto the picture while the seams
+  // dissolve (draw() fades the clean image in), then the card rises
+  this.winAt = performance.now();
+  if (reduceMotion()) {
+    this.framePuzzle();
+  } else {
+    var wf = this.puzzleFrame();
+    this.winCam = { fx: this.cam.x, fy: this.cam.y, fs: this.cam.s,
+                    tx: wf.x, ty: wf.y, ts: wf.s, t0: this.winAt, dur: 950 };
+  }
   // celebratory ease: a warm gold-dust bloom over the finished picture
-  this.spawnDust(S.boardW / 2, S.boardH / 2, FEEL.dustWinCount);
+  this.spawnDust(S.imgOX + S.imgW / 2, S.imgOY + S.imgH / 2, FEEL.dustWinCount);
   sfx('win');
   var key = this.bestKey();
   var prev = bests.get(key);
@@ -1382,7 +1424,7 @@ Game.checkWin = function () {
   }
   statsRecordWin(S);
   var self = this;
-  setTimeout(function () { UI.showWin(isBest, prev); }, 900);
+  setTimeout(function () { if (self.S && self.S.won) UI.showWin(isBest, prev); }, reduceMotion() ? 800 : 1750);
   this.markDirty();
 };
 
