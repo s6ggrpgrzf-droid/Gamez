@@ -38,8 +38,11 @@
      content rects (headline, surprise button) in canvas coords and let
      aimCel steer the disc clear of them at narrow widths */
   var clearRects = [];
+  var heroBand = 0;
   function measureHero() {
     var hr = cv.getBoundingClientRect();
+    var heroEl = document.querySelector('.hero');
+    heroBand = heroEl ? heroEl.offsetHeight : 0;
     var out = [];
     ['opendoor', 'surprise'].forEach(function (id) {
       var el = document.getElementById(id);
@@ -65,7 +68,11 @@
     else if (p === 1) { cel.tx = W - 54; cel.ty = 54; cel.tr = 24; cel.tdisc = hx('#fff6e0'); cel.tglow = hx('#ffe9b8'); }
     else if (p === 2) { cel.tx = cx; cel.ty = H * 0.78; cel.tr = 40; cel.tdisc = hx('#ff9a52'); cel.tglow = hx('#ff7a3c'); }
     else              { cel.tx = W - 50; cel.ty = 50; cel.tr = 22; cel.tdisc = hx('#e9f1ff'); cel.tglow = hx('#a9c6ff'); }
-    /* steer clear of the headline/button: drop the disc below the content */
+    /* the canvas is the whole viewport now, but the body belongs to the
+       hero band at the top of the sky — keep phase targets up there... */
+    if (heroBand) cel.ty = Math.max(cel.tr + 6, Math.min(cel.ty, heroBand - cel.tr - 8));
+    /* ...then steering has the final word: if the disc still lands on the
+       headline/button, drop it below the content, whatever band that takes */
     var need = cel.tr + 14;
     if (clearRects.length && circleHits(cel.tx, cel.ty, need)) {
       var low = 0;
