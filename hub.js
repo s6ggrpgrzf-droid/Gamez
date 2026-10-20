@@ -19,7 +19,10 @@
       r: .6 + Math.random() * 1.8,
       vy: .08 + Math.random() * .3, vx: (Math.random() - .5) * .15,
       tw: Math.random() * Math.PI * 2,
-      hue: ['255,211,77', '255,95,162', '77,227,255', '200,160,255'][i % 4]
+      /* Atlas 7: ambient dust is monochrome — ice and warm-white only.
+         Saturated specks read as dead pixels at chart scale; on this page
+         color is information, and it belongs to the stars alone */
+      hue: ['205,228,255', '255,240,216', '228,238,255', '255,226,178'][i % 4]
     });
   }
   var shoot = null;
