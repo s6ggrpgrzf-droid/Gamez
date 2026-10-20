@@ -1759,6 +1759,11 @@ var UI = {
     var st = statsRead();
     var art = el('div', 'hero-art');
     art.appendChild(el('div', 'gal-thumb-loading'));
+    // the date, worn like a gallery plaque over the art
+    var dd = new Date(dateStr + 'T12:00:00');
+    var DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    var MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    art.appendChild(el('div', 'hero-date', DOW[dd.getDay()] + ' · ' + MON[dd.getMonth()] + ' ' + dd.getDate()));
     if (inProgress) {
       var ring = el('div', 'hero-ring');
       ring.innerHTML = heroRingSVG(pct) + '<b>' + pct + '%</b>';
@@ -1769,7 +1774,7 @@ var UI = {
     wrap.appendChild(el('div', 'card-title', 'Today\'s AI painting'));
     var subBits = [levelForCount(spec.count).name + ' · ' + spec.count + ' pieces'];
     if (done) subBits.push('done in ' + fmtTime(done.ms));
-    else if (st.streak > 1) subBits.push('<svg class="ic"><use href="#i-flame"/></svg> ' + st.streak + '-day streak');
+    else if (st.streak > 1) subBits.push('<svg class="ic flame"><use href="#i-flame"/></svg> ' + st.streak + '-day streak');
     wrap.appendChild(el('div', 'card-sub', subBits.join(' &nbsp;·&nbsp; ')));
     var btn = el('button', 'btn primary big', done ? 'Play again' : (inProgress ? 'Continue' : 'Play today'));
     wrap.appendChild(btn);
@@ -1891,7 +1896,7 @@ var UI = {
     var st = statsRead();
     strip.innerHTML = '';
     function stat(icon, val, label) {
-      var d = el('div', 'stat', '<svg class="ic"><use href="#' + icon + '"/></svg> <b>' + val + '</b> ' + label);
+      var d = el('div', 'stat', '<svg class="ic' + (icon === 'i-flame' ? ' flame' : '') + '"><use href="#' + icon + '"/></svg> <b>' + val + '</b> ' + label);
       strip.appendChild(d);
     }
     stat('i-trophy', st.solved, 'solved');
@@ -1928,23 +1933,43 @@ var UI = {
 
   renderGallery: function () {
     var grid = $('#galleryGrid');
-    if (grid.children.length) return;
     var self = this;
-    var doneMap = {};
+    // solved records per gallery image: best time at the biggest cut beaten
+    var bestMap = {};
     try {
       var bk = bests.read();
       for (var bkey in bk) {
-        var m = /^g(\d+):/.exec(bkey);
-        if (m) doneMap[+m[1]] = true;
+        var m = /^g(\d+):(\d+)x(\d+):/.exec(bkey);
+        if (!m) continue;
+        var gi = +m[1], pcs = (+m[2]) * (+m[3]), ms = bk[bkey];
+        if (!bestMap[gi] || pcs > bestMap[gi].pieces || (pcs === bestMap[gi].pieces && ms < bestMap[gi].ms)) {
+          bestMap[gi] = { pieces: pcs, ms: ms };
+        }
       }
     } catch (e) {}
+    // in-progress runs per gallery image, from the shelf
+    var progMap = {};
+    try {
+      shelf.read().forEach(function (e) {
+        if (!e.done && e.imageKind === 'gallery' && typeof e.galleryIdx === 'number' && !(e.galleryIdx in progMap)) {
+          progMap[e.galleryIdx] = e.pct || 0;
+        }
+      });
+    } catch (e) {}
+    // rebuild only when the state language changes (a fresh win, a new run)
+    var sig = JSON.stringify([bestMap, progMap]);
+    if (grid.children.length && this._galSig === sig) return;
+    this._galSig = sig;
+    grid.innerHTML = '';
     window.PDAWG_GALLERY.GALLERY.forEach(function (g, i) {
       var card = el('div', 'gal-card');
       var th = self.galleryThumbs[i];
       if (th) card.appendChild(canvasCopy(th));
       else if (window.PDAWG_GALLERY.isPhoto(i)) card.appendChild(el('div', 'gal-thumb-loading'));
-      if (doneMap[i]) card.appendChild(el('div', 'gal-done', '<svg class="ic"><use href="#i-check"/></svg>'));
+      if (bestMap[i]) card.appendChild(el('div', 'gal-done', '<svg class="ic"><use href="#i-check"/></svg>'));
+      if (progMap[i] != null) card.appendChild(el('div', 'gal-prog', 'In progress · ' + progMap[i] + '%'));
       card.appendChild(el('div', 'gal-title', g.title));
+      if (bestMap[i]) card.appendChild(el('div', 'gal-best', 'Best ' + fmtTime(bestMap[i].ms) + ' · ' + bestMap[i].pieces + ' pieces'));
       card.onclick = function () { UI.openCountChooser({ imageKind: 'gallery', galleryIdx: i, title: g.title }); };
       grid.appendChild(card);
     });
