@@ -310,7 +310,16 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px))}
 /* Atlas 6: the patriarch core — the field stars' spherical recipe at
    ceremonial scale: lit cap, amber mid-band, bronze base, terminator */
-.feat-core{width:46px;height:46px;border-radius:50%;
+/* Observatory 1: the patriarch's glint — the same optics at ceremonial
+   scale; the spikes ride the core's own twinkle, swelling and settling
+   with it like a slow breath held over the brass rings */
+.feat-core::before,.feat-core::after{content:"";position:absolute;left:50%;top:50%;
+  border-radius:999px;pointer-events:none}
+.feat-core::before{width:2px;height:116px;transform:translate(-50%,-50%);
+  background:linear-gradient(180deg,transparent,rgba(255,242,208,.6) 50%,transparent)}
+.feat-core::after{width:84px;height:2px;transform:translate(-50%,-50%);
+  background:linear-gradient(90deg,transparent,rgba(255,242,208,.48) 50%,transparent)}
+.feat-core{position:relative;width:46px;height:46px;border-radius:50%;
   background:radial-gradient(circle at 36% 30%,
     #ffffff 0%,#ffeec9 24%,#ffc978 54%,#e08e35 84%,#a8641c 100%);
   box-shadow:inset -3px -5px 8px rgba(90,45,0,.55),inset 2px 3px 5px rgba(255,255,255,.55),
@@ -421,7 +430,7 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
    color-rich mid-band, a shaded base; the disc is solid like a tiny planet,
    the halo (box-shadow) is what makes it a star. Pale colors no longer wash
    flat, because white survives only at the highlight. */
-.star .core{display:block;width:var(--s,10px);height:var(--s,10px);border-radius:50%;
+.star .core{display:block;position:relative;z-index:1;width:var(--s,10px);height:var(--s,10px);border-radius:50%;
   background:radial-gradient(circle at 36% 30%,
     #ffffff 0%,
     color-mix(in srgb,var(--glow) 42%,#ffffff) 26%,
@@ -433,6 +442,23 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
              0 0 44px 12px color-mix(in srgb,var(--glow) 22%,transparent);
   animation:twinkle 3.6s ease-in-out infinite;animation-delay:var(--td,0s)}
 @keyframes twinkle{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.8);opacity:.72}}
+/* Observatory 1: diffraction glints — the artifact of seeing itself.
+   Hair-thin spikes, vertical longer than horizontal as human optics
+   makes them; white at the core, the star's own color at the tips;
+   they breathe a fraction out of phase with the core's twinkle */
+.star .glint{position:absolute;left:50%;top:50%;width:var(--gl,46px);height:var(--gl,46px);
+  transform:translate(-50%,-50%);pointer-events:none;z-index:0;
+  animation:glintBreathe 5.4s ease-in-out infinite;animation-delay:var(--gd,0s)}
+.star .glint::before,.star .glint::after{content:"";position:absolute;left:50%;top:50%;border-radius:999px}
+.star .glint::before{width:1.5px;height:100%;transform:translate(-50%,-50%);
+  background:linear-gradient(180deg,transparent 0%,
+    color-mix(in srgb,var(--glow) 38%,#ffffff) 50%,transparent 100%)}
+.star .glint::after{width:66%;height:1.5px;transform:translate(-50%,-50%);
+  background:linear-gradient(90deg,transparent 0%,
+    color-mix(in srgb,var(--glow) 38%,#ffffff) 50%,transparent 100%)}
+@keyframes glintBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.3}
+  50%{transform:translate(-50%,-50%) scale(1.12);opacity:.58}}
+@media (prefers-reduced-motion:reduce){.star .glint{animation:none;opacity:.6}}
 /* Atlas 3: one label system — the gap is measured from the core's EDGE
    (scaled by the star's own --s), so every label breathes the same 10px
    regardless of magnitude; type gets presence: brighter, a touch larger,

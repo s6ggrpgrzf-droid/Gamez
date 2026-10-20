@@ -541,7 +541,14 @@
       b.style.setProperty('--glow', card.style.getPropertyValue('--glow') || '#4da6ff');
       b.style.setProperty('--s', SIZES[p[4]] + 'px');
       b.style.setProperty('--td', (-Math.random() * 3).toFixed(2) + 's');
-      b.innerHTML = '<span class="core"></span><span class="lab">' +
+      /* Observatory 1: stars of magnitude 2+ carry a diffraction glint */
+      if (p[4] >= 2) {
+        b.classList.add('glinted');
+        b.style.setProperty('--gl', (p[4] === 3 ? 58 : 40) + 'px');
+        b.style.setProperty('--gd', (-Math.random() * 5).toFixed(2) + 's');
+      }
+      b.innerHTML = (p[4] >= 2 ? '<span class="glint" aria-hidden="true"></span>' : '') +
+        '<span class="core"></span><span class="lab">' +
         escapeHtml(card.querySelector('h3').textContent.replace(/^(\p{Extended_Pictographic}\uFE0F?\s+)+/u, '')) + '</span>';
       b.addEventListener('click', function (ev) { ev.stopPropagation(); openBloom(id, b); });
       field.appendChild(b);
