@@ -951,6 +951,20 @@ var Game = {
     this.dirty = true;
   },
 
+  /* Opening frame: the PUZZLE fills the view with a working rim of table
+   * around it — like sitting down at the table, not surveying it from the
+   * doorway. fitBoard (the Fit button) still shows the whole field. */
+  framePuzzle: function () {
+    var S = this.S;
+    if (!S) return;
+    var s = Math.min(this.cw / (S.imgW * 1.22), this.ch / (S.imgH * 1.22));
+    this.cam.s = clamp(s, this.minZoom(), this.maxZoom());
+    this.cam.x = S.boardW / 2;
+    this.cam.y = S.boardH / 2;
+    this.clampCam();
+    this.dirty = true;
+  },
+
   toBoard: function (sx, sy) {
     // sx/sy are viewport (client) coords: subtract the canvas's own
     // viewport offset first (topbar sits above the canvas).
@@ -998,7 +1012,8 @@ var Game = {
     $('#previewBtn').style.display = mys ? 'none' : '';
     $('#ghostBtn').style.display = mys ? 'none' : '';
     this.resize();
-    this.fitBoard();
+    this.framePuzzle();
+    this.dealIn(S);
     this.lastT = performance.now();
     $('#timer').textContent = fmtTime(S.elapsed);
     $('#puzzleTitle').textContent = S.title;
@@ -1053,19 +1068,54 @@ var Game = {
     else if (this.confetti || this.dustOn) { this.draw(); }
   },
 
-  /* Eased scatter glide: pieces float to their new spots instead of jumping. */
+  /* Eased glide: pieces float to their new spots instead of jumping.
+   * Entries may carry d (delay ms) and dur (own duration) for staggers;
+   * plain entries behave exactly as the original scatter glide. */
   updateGlide: function (t) {
     var g = this.glide;
     if (!g) return;
-    var k = easeOutCubic(Math.min(1, (t - g.t0) / FEEL.scatterMs));
-    var L = g.list;
+    var gt = t - g.t0, done = true, L = g.list;
     for (var i = 0; i < L.length; i++) {
       var m = L[i];
+      var d = m.d || 0, dur = m.dur || FEEL.scatterMs;
+      var lt = (gt - d) / dur;
+      if (lt < 1) done = false;
+      var k = easeOutCubic(lt < 0 ? 0 : lt > 1 ? 1 : lt);
       m.p.x = m.fx + (m.tx - m.fx) * k;
       m.p.y = m.fy + (m.ty - m.fy) * k;
     }
-    if (k >= 1) { this.glide = null; this.saveNow(); }
+    if (done) { this.glide = null; this.saveNow(); }
     this.markDirty();
+  },
+
+  /* The deal: a fresh puzzle's pieces start as a stack at the puzzle's
+   * heart and fan out to their scatter spots, staggered like a hand
+   * dealing cards. Resumed games open exactly as they were saved. */
+  dealIn: function (S) {
+    if (!S || S.won || S.elapsed > 50) return;
+    var i, p;
+    for (i = 0; i < S.pieces.length; i++) if (S.pieces[i].placed) return;
+    if (reduceMotion()) return;
+    var rng = mulberry32((S.seed ^ 0xDEA1) >>> 0);
+    var cx = S.boardW / 2 - S.cellW / 2, cy = S.boardH / 2 - S.cellH / 2;
+    var order = S.pieces.slice();
+    for (var a = order.length - 1; a > 0; a--) {
+      var b = (rng() * (a + 1)) | 0, t = order[a]; order[a] = order[b]; order[b] = t;
+    }
+    var list = [];
+    for (var k = 0; k < order.length; k++) {
+      p = order[k];
+      if (p.inTray) continue;
+      var fx = cx + (rng() - 0.5) * S.cellW * 0.9;
+      var fy = cy + (rng() - 0.5) * S.cellH * 0.9;
+      list.push({ p: p, fx: fx, fy: fy, tx: p.x, ty: p.y,
+                  d: Math.min(k * 3, 1000), dur: 640 });
+      p.x = fx; p.y = fy;
+    }
+    if (list.length) {
+      this.glide = { list: list, t0: performance.now() };
+      this.markDirty();
+    }
   },
 
   draw: function () {
@@ -1074,7 +1124,16 @@ var Game = {
     var dpr = this.dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, this.cw, this.ch);
-    ctx.fillStyle = '#14161f';
+    // the room around the table: warm dark, faintly lit from above
+    if (!this._voidG || this._voidW !== this.cw || this._voidH !== this.ch) {
+      var vg0 = ctx.createRadialGradient(
+        this.cw / 2, this.ch * 0.38, Math.min(this.cw, this.ch) * 0.2,
+        this.cw / 2, this.ch * 0.5, Math.max(this.cw, this.ch) * 0.85);
+      vg0.addColorStop(0, '#262019');
+      vg0.addColorStop(1, '#0e0c10');
+      this._voidG = vg0; this._voidW = this.cw; this._voidH = this.ch;
+    }
+    ctx.fillStyle = this._voidG;
     ctx.fillRect(0, 0, this.cw, this.ch);
     var s = this.cam.s;
     ctx.setTransform(dpr * s, 0, 0, dpr * s,
@@ -1084,6 +1143,14 @@ var Game = {
     var pat = this.tablePattern(this.tableTheme);
     ctx.fillStyle = pat || '#1c1f2b';
     ctx.fillRect(0, 0, S.boardW, S.boardH);
+    // a pool of warm light resting on the puzzle itself
+    var pool = ctx.createRadialGradient(
+      S.boardW / 2, S.boardH / 2, Math.min(S.imgW, S.imgH) * 0.2,
+      S.boardW / 2, S.boardH / 2, Math.max(S.imgW, S.imgH) * 0.85);
+    pool.addColorStop(0, 'rgba(255,238,205,0.08)');
+    pool.addColorStop(1, 'rgba(255,238,205,0)');
+    ctx.fillStyle = pool;
+    ctx.fillRect(0, 0, S.boardW, S.boardH);
     // soft vignette so the table feels lit from above
     var vg = ctx.createRadialGradient(
       S.boardW / 2, S.boardH / 2, Math.min(S.boardW, S.boardH) * 0.35,
@@ -1092,10 +1159,34 @@ var Game = {
     vg.addColorStop(1, 'rgba(0,0,0,0.28)');
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, S.boardW, S.boardH);
-    // image frame outline
-    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-    ctx.lineWidth = 2 / s;
+    // the board well: the puzzle sits IN the table, not on it — a recessed
+    // panel, shadow pooled along its upper edges, light on its lower lip
+    var D = 16 / s;
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    ctx.fillRect(S.imgOX, S.imgOY, S.imgW, S.imgH);
+    var shT = ctx.createLinearGradient(0, S.imgOY, 0, S.imgOY + D);
+    shT.addColorStop(0, 'rgba(0,0,0,0.34)'); shT.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shT; ctx.fillRect(S.imgOX, S.imgOY, S.imgW, D);
+    var shL = ctx.createLinearGradient(S.imgOX, 0, S.imgOX + D, 0);
+    shL.addColorStop(0, 'rgba(0,0,0,0.26)'); shL.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shL; ctx.fillRect(S.imgOX, S.imgOY, D, S.imgH);
+    var shB = ctx.createLinearGradient(0, S.imgOY + S.imgH, 0, S.imgOY + S.imgH - D);
+    shB.addColorStop(0, 'rgba(0,0,0,0.18)'); shB.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shB; ctx.fillRect(S.imgOX, S.imgOY + S.imgH - D, S.imgW, D);
+    var shR = ctx.createLinearGradient(S.imgOX + S.imgW, 0, S.imgOX + S.imgW - D, 0);
+    shR.addColorStop(0, 'rgba(0,0,0,0.12)'); shR.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shR; ctx.fillRect(S.imgOX + S.imgW - D, S.imgOY, D, S.imgH);
+    ctx.strokeStyle = 'rgba(0,0,0,0.38)';
+    ctx.lineWidth = 1.6 / s;
     ctx.strokeRect(S.imgOX, S.imgOY, S.imgW, S.imgH);
+    ctx.strokeStyle = 'rgba(255,246,225,0.13)';
+    ctx.lineWidth = 1.2 / s;
+    ctx.beginPath();
+    ctx.moveTo(S.imgOX, S.imgOY + S.imgH + 1.6 / s);
+    ctx.lineTo(S.imgOX + S.imgW, S.imgOY + S.imgH + 1.6 / s);
+    ctx.moveTo(S.imgOX + S.imgW + 1.6 / s, S.imgOY);
+    ctx.lineTo(S.imgOX + S.imgW + 1.6 / s, S.imgOY + S.imgH);
+    ctx.stroke();
     // ghost hint: faint full image behind the pieces (never in mystery mode)
     if (this.ghostOn && !S.mystery && this.imgCanvas) {
       ctx.save();
