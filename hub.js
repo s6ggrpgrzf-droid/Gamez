@@ -39,6 +39,16 @@
     tx: 0, ty: 0, tr: 30, tdisc: hx('#ffd97a'), tglow: hx('#ffbe5a'), moon: false, tmoon: false
   };
   var celFade = 1; /* Atlas 1: eased scroll fade, 1 at the hero */
+  /* Observatory 3: parallax state — the field's document position is
+     cached at measure time so the frame loop never forces layout */
+  var fieldEl = document.querySelector('.field');
+  var fieldTopDoc = -1, fieldH = 0, drift = 0, driftApplied = 0;
+  function measureField() {
+    if (!fieldEl) return;
+    var r = fieldEl.getBoundingClientRect();
+    fieldTopDoc = r.top + (window.scrollY || window.pageYOffset || 0) - driftApplied;
+    fieldH = r.height;
+  }
   var lastPhase = -1;
   /* the celestial disc must never sit on the words: measure the hero's
      content rects (headline, surprise button) in canvas coords and let
@@ -151,6 +161,26 @@
     var fTgt = syNow <= hbNow * 0.3 ? 1 : (syNow >= hbNow ? 0.15 :
       1 - (syNow - hbNow * 0.3) / (hbNow * 0.7) * 0.85);
     celFade += (fTgt - celFade) * 0.07;
+    /* Observatory 3: the parallax whisper — the constellation field rides
+       a breath in front of the fixed sky, drifting up to 9px against it
+       as the page scrolls; the field moves as one rigid plate (lines,
+       stars, wash, bloom and all). Eased like everything else on this
+       page; reduced motion never engages it */
+    if (!RM) {
+      /* the field element is built by the collection script, which runs
+         after this one — bind lazily, the first frame it exists */
+      if (!fieldEl) { fieldEl = document.querySelector('.field'); if (fieldEl) fieldTopDoc = -1; }
+      if (fieldEl && fieldTopDoc < 0) measureField();
+    }
+    if (!RM && fieldEl) {
+      var prog = ((syNow + H / 2) - (fieldTopDoc + fieldH / 2)) / (H / 2 + fieldH / 2);
+      if (prog > 1) prog = 1; if (prog < -1) prog = -1;
+      drift += (prog * 9 - drift) * 0.055;
+      if (Math.abs(drift - driftApplied) > 0.05) {
+        driftApplied = drift;
+        fieldEl.style.transform = 'translate3d(0,' + drift.toFixed(2) + 'px,0)';
+      }
+    }
     drawCel();
     var dustA = ph === 3 ? 1 : (ph === 1 ? 0.22 : 0.45);
     for (var j = 0; j < parts.length; j++) {
@@ -190,9 +220,10 @@
   }
   start();
   measureHero();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureHero);
+  measureField();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { measureHero(); measureField(); });
   setTimeout(measureHero, 1500);
-  window.addEventListener('resize', function () { start(); measureHero(); });
+  window.addEventListener('resize', function () { start(); measureHero(); fieldTopDoc = -1; });
   document.addEventListener('visibilitychange', function () {
     running = !document.hidden;
     if (running) start();
