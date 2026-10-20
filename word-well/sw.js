@@ -6,21 +6,21 @@
  */
 importScripts('icons/icon-data.js');
 
-const CACHE = 'word-well-v4';
+const CACHE = 'word-well-v5';
 const SHELL = [
   './',
   'index.html',
   'manifest.webmanifest',
-  'style.css?v=11',
+  'style.css?v=12',
   'dict-1.js?v=9',
   'dict-2.js?v=9',
   'dict-3.js?v=9',
   'dict-4.js?v=9',
   'dict-5.js?v=9',
   'dict-6.js?v=9',
-  'wwf.js?v=9',
-  'audio.js?v=9',
-  'game.js?v=12',
+  'wwf.js?v=10',
+  'audio.js?v=10',
+  'game.js?v=13',
   'icons/icon.svg',
 ];
 

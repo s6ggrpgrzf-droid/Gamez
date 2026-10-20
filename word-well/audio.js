@@ -46,16 +46,17 @@ function noise(dur, vol, freq) {
   src.connect(f); f.connect(g); g.connect(master);
   src.start(t0);
 }
+function jz(base, amt) { return base * (1 + (Math.random() - 0.5) * (amt || 0.14)); }
 var WWAU = {
   ensure: ensure,
-  /* stone tile tapped / selected */
-  tap: function () { tone(660, 0.06, 'triangle', 0.12); },
-  /* tile dropped on the well board */
-  clack: function () { noise(0.07, 0.35, 1800); tone(190, 0.09, 'triangle', 0.2, 120); },
+  /* stone tile tapped / selected — a light wooden tick */
+  tap: function () { tone(jz(540), 0.045, 'triangle', 0.09); },
+  /* tile dropped on the well board — a low stone thock, never twice the same */
+  clack: function () { noise(0.08, 0.4, jz(950)); tone(jz(140), 0.1, 'triangle', 0.24, 76); },
   /* tile recalled */
-  recall: function () { tone(440, 0.07, 'triangle', 0.12, 330); },
-  /* move committed */
-  play: function () { tone(220, 0.12, 'triangle', 0.22, 140); noise(0.09, 0.25, 1200); },
+  recall: function () { tone(400, 0.07, 'triangle', 0.11, 290); },
+  /* move committed — the word settles into the board */
+  play: function () { tone(jz(165), 0.15, 'triangle', 0.24, 92); noise(0.1, 0.22, 760); },
   /* bingo! */
   bingo: function () {
     if (muted || !ensure()) return;

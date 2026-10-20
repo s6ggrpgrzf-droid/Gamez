@@ -27,12 +27,13 @@ function lsGet(k, dflt) {
   try { var v = localStorage.getItem(k); return v == null ? dflt : v; } catch (e) { return dflt; }
 }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+/* haptics — subtle and physical; silence where the platform has none */
+function buzz(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
 
 /* ---------------- constants ---------------- */
 var ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
 var ROOMS = 'https://wordwell-rooms.chaoticutopia84.workers.dev';
 var GAME_KEY = 'word-well';
-var BUILD_TAG = 'build 20261009a';
 var WARDEN_NAME = 'Well Warden';
 
 var WARDEN_THINKING = [
@@ -78,6 +79,7 @@ var G = {
   swapMode: false, swapPlus: false, swapSel: [],
   hindsightArmed: false,
   over: false, busy: false,
+  freshCells: null,
   names: ['You', WARDEN_NAME]
 };
 
@@ -92,7 +94,13 @@ var OL = {
 /* ---------------- screens ---------------- */
 var SCREENS = ['scr-load', 'scr-menu', 'scr-diff', 'scr-game', 'scr-over', 'scr-online'];
 function show(id) {
-  SCREENS.forEach(function (s) { $(s).classList.toggle('hidden', s !== id); });
+  SCREENS.forEach(function (s) {
+    var el = $(s), on = s === id;
+    el.classList.toggle('hidden', !on);
+    el.classList.remove('scr-in');
+    if (on) { void el.offsetWidth; el.classList.add('scr-in'); }
+  });
+  document.body.setAttribute('data-screen', id.replace(/^scr-/, ''));
   window.scrollTo(0, 0);
 }
 
@@ -150,9 +158,11 @@ function renderMenuBoard() {
   var el = $('menu-board');
   arcadeFetch('/scores?game=' + GAME_KEY + '&board=daily-' + todayStr(), null, function (err, data) {
     if (err || !data || !data.top || !data.top.length) {
+      el.classList.add('bare');
       el.innerHTML = '<div class="lb-empty">the well is quiet today — be the first to cast a score</div>';
       return;
     }
+    el.classList.remove('bare');
     el.innerHTML = data.top.slice(0, 5).map(function (e, i) {
       return '<div class="lb-row"><span>' + (i + 1) + '. ' + esc(e.name) + '</span><b>' + (+e.score) + '</b></div>';
     }).join('');
@@ -170,8 +180,7 @@ function boot() {
   bindMenu();
   bindOnline();
   var st = dailyStreak();
-  $('menu-streak').textContent = st > 0 ? st + '-day daily streak' : 'no daily streak yet';
-  $('build-tag').textContent = BUILD_TAG;
+  $('menu-streak').textContent = st > 0 ? st + '-day daily streak' : 'the daily well resets each dawn';
   renderMenuBoard();
   show('scr-menu');
   /* poll when the tab comes back into view */
@@ -197,9 +206,9 @@ function bindMenu() {
   $('ov-how-close').onclick = function () { WWAU.tap(); $('ov-how').classList.add('hidden'); };
   $('btn-mute').onclick = function () {
     var m = WWAU.toggleMute();
-    $('btn-mute').textContent = m ? 'sound off' : 'sound on';
+    $('btn-mute').textContent = m ? 'Sound Off' : 'Sound On';
   };
-  $('btn-mute').textContent = WWAU.isMuted() ? 'sound off' : 'sound on';
+  $('btn-mute').textContent = WWAU.isMuted() ? 'Sound Off' : 'Sound On';
   var diffBtns = document.querySelectorAll('#scr-diff [data-diff]');
   for (var i = 0; i < diffBtns.length; i++) {
     (function (b) {
@@ -239,7 +248,6 @@ function newEngineGame(seed) {
   renderAll();
   show('scr-game');
   setTurnBanner();
-  if (!G.st.firstDone) toast('First word must cover the glowing star');
 }
 
 /* ---------------- board + rack DOM ---------------- */
@@ -302,8 +310,9 @@ function renderBoard() {
     /* seat-relative side colors: your stones vs theirs, WWF-style */
     var isOpp = t && (G.mode === 'online' ? (OL.seat >= 0 && t.own !== OL.seat) : (t.own === 1));
     d.classList.toggle('opp', !!isOpp);
-    d.classList.remove('hint', 'ghost', 'lastmv');
+    d.classList.remove('hint', 'ghost', 'lastmv', 'fresh');
     var tl = d.querySelector('.tlet'), tv = d.querySelector('.tval'), pl = d.querySelector('.plab');
+    tl.style.animationDelay = ''; tv.style.animationDelay = '';
     if (t) {
       tl.textContent = t.ch; tv.textContent = t.v > 0 ? t.v : '';
       pl.style.display = 'none';
@@ -317,12 +326,22 @@ function renderBoard() {
       pl.style.display = '';
     }
   }
-  /* last-move highlight: who played what, WWF-style */
+  /* last-move glow + fresh stones drop in one by one, in play order */
   var lm = st.lastMove;
   if (lm && lm.cells) {
     for (var i = 0; i < lm.cells.length; i++) {
       var cc = lm.cells[i];
-      if (cellEls[cc.r] && cellEls[cc.r][cc.c]) cellEls[cc.r][cc.c].classList.add('lastmv');
+      var el2 = cellEls[cc.r] && cellEls[cc.r][cc.c];
+      if (!el2) continue;
+      el2.classList.add('lastmv');
+      if (G.freshCells) {
+        var fi = G.freshCells.indexOf(cc.r + ',' + cc.c);
+        if (fi >= 0) {
+          el2.classList.add('fresh');
+          el2.querySelector('.tlet').style.animationDelay = (fi * 0.09) + 's';
+          el2.querySelector('.tval').style.animationDelay = (fi * 0.09) + 's';
+        }
+      }
     }
   }
 }
@@ -349,7 +368,7 @@ function renderHUD() {
   $('hud-s1').textContent = G.names[1] + ': ' + st.scores[1];
   $('hud-s0').classList.toggle('turn', st.turn === 0 && !st.over);
   $('hud-s1').classList.toggle('turn', st.turn === 1 && !st.over);
-  $('hud-bag').textContent = 'stones left: ' + st.bag.length;
+  $('hud-bag').textContent = st.bag.length + ' stones';
 }
 function renderBoosts() {
   $('b-radar-n').textContent = BOOSTS.radar;
@@ -360,6 +379,15 @@ function renderBoosts() {
 }
 function renderAll() {
   renderBoard(); renderRack(); renderHUD(); renderBoosts(); renderPreview();
+  /* Flip only means something once stones are on the board */
+  var fb = $('btn-flip');
+  if (fb) fb.classList.toggle('hidden', !G.tent.length);
+}
+/* the just-played word's cells, so its stones can drop in one by one */
+function markFresh() {
+  var lm = G.st && G.st.lastMove;
+  G.freshCells = (lm && lm.cells) ? lm.cells.map(function (cc) { return cc.r + ',' + cc.c; }) : null;
+  if (G.freshCells) setTimeout(function () { G.freshCells = null; renderBoard(); }, 1300);
 }
 function oppName() {
   if (G.mode !== 'online' || OL.seat < 0) return '';
@@ -472,6 +500,7 @@ function tapRack(ix) {
   }
   G.sel = (G.sel === t) ? null : t;
   WWAU.tap();
+  if (G.sel === t) buzz(8);
   renderRack();
 }
 function tapCell(r, c) {
@@ -482,7 +511,7 @@ function tapCell(r, c) {
   if (ex) {
     G.tent.splice(G.tent.indexOf(ex), 1);
     if (G.sel === ex.tile) G.sel = null;
-    WWAU.recall();
+    WWAU.recall(); buzz(8);
     detectDir(); renderAll();
     return;
   }
@@ -503,7 +532,7 @@ function tapCell(r, c) {
   }
   G.tent.push({ r: r, c: c, tile: tile, blankCh: null });
   G.sel = null;
-  WWAU.clack();
+  WWAU.clack(); buzz(12);
   detectDir(); renderAll();
 }
 function openBlankPicker(r, c, tile) {
@@ -514,7 +543,7 @@ function openBlankPicker(r, c, tile) {
     b.className = 'bkey';
     b.textContent = L;
     b.onclick = function () {
-      WWAU.clack();
+      WWAU.clack(); buzz(12);
       G.tent.push({ r: r, c: c, tile: tile, blankCh: L });
       G.sel = null;
       ov.classList.add('hidden');
@@ -528,7 +557,7 @@ function openBlankPicker(r, c, tile) {
 
 /* ---------------- buttons ---------------- */
 function renderSwapBtn() {
-  $('btn-swap').textContent = G.swapMode ? ('swap ' + G.swapSel.length + ' ✓') : 'swap';
+  $('btn-swap').textContent = G.swapMode ? ('Swap ' + G.swapSel.length + ' ✓') : 'Swap';
 }
 function bindGame() {
   $('btn-play').onclick = onPlay;
@@ -551,7 +580,7 @@ function bindGame() {
     if (!isHumanTurn()) return;
     G.dir = (G.dir === 'across') ? 'down' : 'across';
     WWAU.tap(); renderPreview();
-    toast(G.dir === 'across' ? 'placing → across' : 'placing → down');
+    toast(G.dir === 'across' ? 'placing across' : 'placing down');
   };
   $('btn-menu2').onclick = function () { WWAU.tap(); olStopPoll(); show('scr-menu'); renderMenuBoard(); };
   document.querySelector('#scr-game .boosts').style.display = (G.mode === 'online') ? 'none' : '';
@@ -585,17 +614,18 @@ function onPlay() {
     }
   }
   var v = WWF.applyMove(st, placements, G.dir);
-  if (!v.ok) { WWAU.error(); toast(friendlyError(v)); return; }
+  if (!v.ok) { WWAU.error(); buzz(45); toast(friendlyError(v)); return; }
   G.hindsightArmed = false;
   G.tent = []; G.sel = null;
-  if (v.bingo) { WWAU.bingo(); toast('BINGO! +35', 2600, 'big'); }
-  else WWAU.play();
+  if (v.bingo) { WWAU.bingo(); buzz([20, 50, 20, 50, 45]); toast('BINGO! +35', 2600, 'big'); }
+  else { WWAU.play(); buzz(18); }
   popPreview();
   afterHumanMove(player, v, hindBest);
 }
 function afterHumanMove(player, v, hindBest) {
   /* rackView follows whoever's turn it is now */
   G.rackView = G.st.racks[G.st.turn].slice();
+  markFresh();
   renderAll(); setTurnBanner();
   if (hindBest && !G.st.over) showHindsight(hindBest);
   if (G.st.over) { gameOver(); return; }
@@ -701,8 +731,12 @@ function botPlay() {
     if (mv.type === 'play') {
       var v = WWF.applyMove(st, mv.placements, mv.dir);
       if (v.ok) {
+        /* his stones land one by one, in step with the drop-in */
+        var nStones = (st.lastMove && st.lastMove.cells) ? st.lastMove.cells.length : 1;
+        for (var si = 0; si < nStones; si++) {
+          (function (d) { setTimeout(function () { WWAU.clack(); }, d); })(si * 90);
+        }
         if (v.score >= 30 || v.bingo) toast(pick(WARDEN_GOOD) + ' (' + v.score + ')');
-        else WWAU.play();
         if (v.bingo) WWAU.bingo();
         popPreview();
       }
@@ -713,6 +747,7 @@ function botPlay() {
       WWF.passTurn(st);
       toast('The well says: I pass.');
     }
+    if (mv.type === 'play') markFresh();
     G.rackView = st.racks[st.turn].slice();
     renderAll(); setTurnBanner();
     if (st.over) gameOver();
