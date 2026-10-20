@@ -188,6 +188,8 @@
   var inFlight = false, aiming = false, drag = null;
   var lastRest = { x: 0, y: 0 };
   var slowT = 0, timeScale = 1, acc = 0, last = 0, running = false;
+  var flagKick = 0;    // flag rattle impulse on a hole-out (decays in the loop)
+  var lipFar = false;  // near-miss slow-mo: ball has been well clear of the cup this shot
   var simTime = 0;   // sim seconds; drives windmill blades + gusts (deterministic)
   var wtime = 0;
   var dailyInfo = null;
@@ -546,6 +548,18 @@
       HAP.buzz(30);
     }
     if (ball.impact > 1.2) { thudAt(ball.x, ball.y, ball.impact); ball.impact = 0; }
+    // lip-out drama: this shot came from far out and is now skimming the cup
+    // too hot (or too wide) to drop — give it a slow-mo beat, once per approach
+    if (state === 'play' && inFlight && !ball.inCup && !ball.inWater && ball.z < 0.4) {
+      var ldx = ball.x - hole.cup.x, ldy = ball.y - hole.cup.y;
+      var ld = Math.sqrt(ldx * ldx + ldy * ldy);
+      if (ld > TF.CUP_R * 3.4) lipFar = true;
+      else if (lipFar && ld < TF.CUP_R * 2.3 && Math.hypot(ball.vx, ball.vy) > 2.5) {
+        lipFar = false;
+        if (!RM) slowT = Math.max(slowT, 0.5);
+        HAP.buzz(12);
+      }
+    }
     if (ball.pickup) { pickupJuice(ball.pickup); ball.pickup = null; }
     if (ball.tevent && typeof TPR !== 'undefined') { TPR.event(ball.tevent); ball.tevent = null; }
     if (ballHoled(ball)) { onHoled(); return; }
@@ -553,6 +567,7 @@
     if (ball.resting) {
       if (wasInFlight && state === 'play') ghost = { x: ball.x, y: ball.y };  // last-shot ghost
       lastRest.x = ball.x; lastRest.y = ball.y; inFlight = false;
+      lipFar = false;
       refreshButtons();
     }
   }
@@ -590,6 +605,8 @@
     AU.clunk();
     refreshButtons();
     slowT = RM ? 0 : 0.85;                              // slow-mo on the drop (off for reduced motion)
+    flagKick = RM ? 0 : 1;                            // the flag takes the rattle
+    particles.push({ k: 'r', x: hole.cup.x, y: hole.cup.y, t: 0, life: 0.6 });
     HAP.buzz([10, 40, 10]);                             // quiet success pulse on every hole-out
     if (eagle && !RM) petalBurst(hole.cup.x, hole.cup.y);
     if (strokes > par() + 2) turtleJudge();
@@ -1380,7 +1397,8 @@
     var wMag = Math.hypot(wNow.x, wNow.y);
     var wAng = wMag > 0.05 ? Math.atan2(-wNow.y, wNow.x) : Math.PI;  // world -> screen
     var flagLen = sc * (1.6 + Math.min(2.2, wMag * 0.45));
-    var wave = Math.sin(wtime * (3 + wMag * 0.9)) * sc * (0.25 + wMag * 0.08);
+    var wave = Math.sin(wtime * (3 + wMag * 0.9)) * sc * (0.25 + wMag * 0.08)
+             + flagKick * Math.sin(wtime * 46) * sc * 0.55;   // hole-out rattle
     var fx = Math.cos(wAng), fy = Math.sin(wAng);
     var fpx = -fy, fpy = fx;   // perpendicular
     ctx.fillStyle = '#d94f4f';
@@ -1724,6 +1742,7 @@
     var dt = Math.min(((ts - last) / 1000) || 0.016, 0.1);   // clamp
     last = ts;
     if (slowT > 0) { slowT -= dt; timeScale = 0.3; } else timeScale = 1;
+    if (flagKick > 0) flagKick = Math.max(0, flagKick - dt * 1.5);
     wtime += dt;
     if (state === 'race' && hole && ball && race) stepRace(dt * timeScale);
     // hole morph: melt timer, then the queued transition
