@@ -8,18 +8,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div id="stage">
   <canvas id="cv"></canvas>
   <div id="vignette" aria-hidden="true"></div>
+  <button id="sndBtn" class="corner" aria-label="Sound on or off">
+    <svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="currentColor"/><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15.3 9.7a3.6 3.6 0 0 1 0 4.6"/><path d="M17.8 7.2a7.2 7.2 0 0 1 0 9.6"/></g></svg>
+  </button>
   <div id="whisper" aria-hidden="true">
     <div id="whisperMain"></div>
     <div id="whisperSub"></div>
   </div>
 </div>
 <script src="sky.js?v=2"></script>
-<script src="game.js?v=2"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>

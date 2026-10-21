@@ -7,6 +7,14 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 #cv{position:absolute;inset:0;display:block}
 #vignette{position:absolute;inset:0;pointer-events:none;z-index:3;
   background:radial-gradient(118% 92% at 50% 44%, transparent 60%, rgba(1,2,8,.42) 100%)}
+.corner{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:8;
+  width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.13);
+  background:rgba(10,14,32,.42);color:rgba(223,230,255,.85);cursor:pointer;opacity:.55;
+  display:flex;align-items:center;justify-content:center;transition:opacity .3s}
+.corner:active{transform:scale(.92);opacity:.9}
+.corner svg{width:20px;height:20px}
+.corner.off{color:rgba(120,130,165,.8)}
+.corner.off svg g{display:none}
 #whisper{position:absolute;left:0;right:0;z-index:5;pointer-events:none;text-align:center;
   bottom:calc(30px + env(safe-area-inset-bottom));padding:0 28px;
   opacity:0;transform:translateY(6px);transition:opacity 1.6s ease,transform 1.6s ease}

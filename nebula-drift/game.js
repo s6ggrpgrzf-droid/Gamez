@@ -16,6 +16,9 @@
   var whisperSub = document.getElementById('whisperSub');
 
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var AU = window.ND_AUDIO || null;
+  var mutedPref = false;
+  try { mutedPref = !!window.localStorage.getItem('nd-muted'); } catch (e) { /* private mode */ }
 
   /* ---------------- tonight's sky ---------------- */
   var tonight = SKY.tonightSky(new Date(), SKY.HOME);
@@ -245,7 +248,7 @@
   });
 
   /* Pass 2 state: the active figure + the voyage (Earth-viewpoint offset) */
-  var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false };
+  var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false, chimed: false, unravelled: false };
   var hasVoyaged = false;
   try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
 
@@ -313,6 +316,8 @@
   var pointers = new Map();
   var lastTouchAt = -30, downAt = 0, downX = 0, downY = 0, movedPx = 0, downStamp = 0;
   cv.addEventListener('pointerdown', function (e) {
+    /* the first touch wakes the soundscape — a gesture, never a start button */
+    if (AU) { AU.init(mutedPref); if (P2.activeName) AU.setRegion(P2.activeName); }
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 1) { downAt = performance.now(); downStamp = downAt; downX = e.clientX; downY = e.clientY; movedPx = 0; }
     lastTouchAt = perfNow();
@@ -460,7 +465,11 @@
     if (curFig && curAng < 0.61 && !(candFig && candAng < curAng - 0.14)) nextFig = curFig;
     else if (candFig && candAng < 0.47) nextFig = candFig;
     if (nextFig) {
-      if (nextFig.name !== P2.activeName) { P2.activeName = nextFig.name; P2.actT = t; }
+      if (nextFig.name !== P2.activeName) {
+        P2.activeName = nextFig.name; P2.actT = t;
+        P2.chimed = false; P2.unravelled = false;
+        if (AU) AU.setRegion(nextFig.name);   /* the sky retunes to the figure */
+      }
       P2.drawFig = nextFig;
       P2.alpha = Math.min(1, P2.alpha + dt * 0.8);
     } else {
@@ -468,6 +477,18 @@
       if (P2.alpha === 0) { P2.activeName = null; P2.drawFig = null; }
     }
     P2.activeFor = P2.activeName ? t - P2.actT : 0;
+
+    /* sound events: a chime as the last thread lands; a falling tone
+     * as the voyage pulls a figure apart */
+    if (AU && P2.drawFig && !P2.chimed && P2.alpha > 0.6 && P2.voyage < 0.2 &&
+        t - P2.actT > (P2.drawFig.lines.length - 1) * 0.13 + 0.95) {
+      P2.chimed = true;
+      AU.figureComplete(P2.drawFig.name);
+    }
+    if (AU && P2.drawFig && !P2.unravelled && P2.voyage > 0.6) {
+      P2.unravelled = true;
+      AU.unravel(P2.drawFig.name);
+    }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
@@ -647,7 +668,8 @@
     ready: false, frameCount: 0, cam: cam, tonight: tonight,
     visibleUp: upCount, nebulaSprites: nebSprites.length,
     fieldStars: fieldStars.length, catalogue: catStars.length,
-    pass2: P2
+    pass2: P2,
+    audio: AU ? AU.state : null
   };
   /* test/inspection hook: aim the camera at a figure's centre */
   window.__nebula.face = function (name) {
@@ -658,6 +680,19 @@
     lastTouchAt = perfNow();
     return true;
   };
+  /* the one button in the whole game: sound, ghosted in the corner */
+  var sndBtn = document.getElementById('sndBtn');
+  if (mutedPref) sndBtn.classList.add('off');
+  sndBtn.addEventListener('click', function () {
+    mutedPref = !mutedPref;
+    sndBtn.classList.toggle('off', mutedPref);
+    try {
+      if (mutedPref) window.localStorage.setItem('nd-muted', '1');
+      else window.localStorage.removeItem('nd-muted');
+    } catch (e) { /* private mode */ }
+    if (AU) { AU.init(mutedPref); AU.setMuted(mutedPref); }
+  });
+
   resize();
   showWhisper(8000);
   requestAnimationFrame(function (ms) {
@@ -665,7 +700,7 @@
     frame(ms);
   });
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { cancelAnimationFrame(raf); lastT = 0; }
-    else { raf = requestAnimationFrame(frame); }
+    if (document.hidden) { cancelAnimationFrame(raf); lastT = 0; if (AU) AU.suspend(); }
+    else { raf = requestAnimationFrame(frame); if (AU) AU.resume(); }
   });
 })();
