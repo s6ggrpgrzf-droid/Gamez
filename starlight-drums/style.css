@@ -30,7 +30,7 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 .screen{position:absolute;inset:0;z-index:6;display:none;flex-direction:column;
   align-items:center;justify-content:flex-start;pointer-events:none}
 .screen.show{display:flex}
-.screen.dim{background:rgba(4,6,16,.55);pointer-events:auto;justify-content:center}
+.screen.dim{background:rgba(4,6,16,.55);pointer-events:auto;justify-content:flex-start}
 .screen .btn{pointer-events:auto}
 
 .title-block{margin-top:11vh;text-align:center;padding:0 24px}
@@ -46,13 +46,17 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 .best-line{margin-top:20px;display:inline-block;font-size:12.5px;font-weight:800;letter-spacing:1.2px;
   color:#0d1020;background:linear-gradient(145deg,#ffd968,#f2a007);padding:7px 14px;border-radius:99px}
 
-.done-block{text-align:center;padding:0 24px;width:min(92vw,380px)}
-#doneScr{justify-content:center;pointer-events:auto}
+.done-block{text-align:center;padding:0 24px;width:min(92vw,380px);margin-top:auto;margin-bottom:auto}
+#doneScr{justify-content:flex-start;pointer-events:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:26px 0 30px;
+  background:radial-gradient(115% 82% at 50% 40%,rgba(3,4,12,.52),rgba(3,4,12,.30) 55%,rgba(3,4,12,.10) 78%,transparent)}
+#pauseScr{overflow-y:auto;-webkit-overflow-scrolling:touch}
 #gradeLetter{font-family:'Unbounded',sans-serif;font-weight:900;font-size:104px;line-height:1;
   background:linear-gradient(160deg,#fff3cf 10%,#f2a007 55%,#ffdf8a 90%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
   filter:drop-shadow(0 2px 0 rgba(120,66,4,.40)) drop-shadow(0 8px 28px rgba(242,160,7,.35))}
-#gradePct{font-size:16px;font-weight:600;color:#dfe6ff;margin-top:6px}
+#gradePct{font-size:16px;font-weight:600;color:#eef2ff;margin-top:6px;
+  text-shadow:0 1px 10px rgba(3,4,12,.85),0 0 3px rgba(3,4,12,.9)}
 .new-best{margin-top:12px;display:inline-block;font-size:11px;font-weight:800;letter-spacing:2px;
   color:#0d1020;background:linear-gradient(145deg,#a8ffd8,#4ade80);padding:6px 12px;border-radius:99px}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:24px 0 20px}
@@ -103,3 +107,27 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
   border-radius:10px;color:#fff;font:600 13px Inter,system-ui,sans-serif;padding:9px 11px;letter-spacing:1px}
 .arc-form button{background:linear-gradient(180deg,#ffd98a,#f2a007);color:#0b0f24;border:none;border-radius:10px;
   font:800 12.5px Inter,system-ui,sans-serif;padding:9px 14px;cursor:pointer}
+
+/* Short viewports (landscape phones, small screens): compact the stacks so
+ * nothing is pushed off-screen — panels scroll instead of clipping. */
+@media (max-height:560px){
+  #titleScr{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .title-block{margin-top:3.5vh;padding:0 16px}
+  .kicker{margin-bottom:8px}
+  .game-title{font-size:34px}
+  .tag{margin-top:9px;font-size:15px}
+  .mode-row{margin-top:12px}
+  .mode-info{margin-top:8px}
+  .hint{display:none}
+  .song-credit{margin-top:8px;font-size:11px}
+  .best-line{margin-top:10px}
+  #doneScr{padding:14px 0 18px}
+  .done-block{width:min(94vw,520px)}
+  #gradeLetter{font-size:58px}
+  .stat-grid{margin:14px 0 12px;gap:8px}
+  .stat{padding:8px 6px}
+  .arc-box{margin-bottom:10px;padding:10px 14px}
+  .btn{padding:11px 14px;font-size:15px}
+  .pause-title{font-size:24px}
+  #pauseScr .tag{margin-bottom:14px}
+}

@@ -124,7 +124,12 @@ function assignStars(notes, seed) {
   var rng = mulberry32((seed >>> 0) ^ 0x57A2);
   for (var k = 0; k < notes.length; k++) {
     notes[k].sx = 0.07 + 0.86 * ((k * 0.61803 + rng() * 0.05) % 1);
-    notes[k].sy = 0.05 + 0.42 * rng();
+    notes[k].sy = 0.05 + 0.55 * rng();
+    /* depth fade: stars toward the field's lower edge shrink and dim out
+     * smoothly, so the scatter melts into the sky instead of ending on a
+     * visible shelf (audit fix 4) */
+    var fd = (notes[k].sy - 0.38) / 0.22; if (fd < 0) fd = 0; if (fd > 1) fd = 1;
+    notes[k].sf = 1 - 0.78 * (fd * fd * (3 - 2 * fd));
     notes[k].id = k;
     if (notes[k].state == null) notes[k].state = 0;
   }

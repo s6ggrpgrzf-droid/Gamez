@@ -79,6 +79,22 @@ function makeGlowSprite(rgba) {
 }
 var GLOW = [makeGlowSprite('rgba(242,160,7,0.5)'), makeGlowSprite('rgba(120,190,255,0.5)')];
 var FIG_GLOW = makeGlowSprite('rgba(255,236,180,0.55)');
+/* comet streaks: a soft vertical ribbon of light, bright at the head (bottom)
+ * and dissolving upward — drawn stretched behind each falling note so the
+ * trail reads as one smooth streak instead of a dotted chain (audit fix 5) */
+function makeStreakSprite(rgb) {
+  var c = document.createElement('canvas'); c.width = 32; c.height = 128;
+  var g = c.getContext('2d');
+  var lg = g.createLinearGradient(0, 0, 0, 128);
+  lg.addColorStop(0, 'rgba(' + rgb + ',0)');
+  lg.addColorStop(0.55, 'rgba(' + rgb + ',0.20)');
+  lg.addColorStop(0.88, 'rgba(' + rgb + ',0.55)');
+  lg.addColorStop(1, 'rgba(255,255,255,0.85)');
+  g.fillStyle = lg;
+  g.beginPath(); g.ellipse(16, 64, 8, 64, 0, 0, 6.2832); g.fill();
+  return c;
+}
+var STREAK = [makeStreakSprite('242,160,7'), makeStreakSprite('120,190,255')];
 /* The drums as real objects, pre-rendered once: an elliptical skin seen at a
  * slight angle, a brushed-metal rim, and a shell with lugs below — the 3D
  * form is baked here so the frame loop only ever blits it. Sprite space is
@@ -578,7 +594,7 @@ function showResults() {
   $('stMiss').textContent = score.miss;
   $('stStreak').textContent = score.maxStreak;
   var fl = figureLitCount();
-  $('stFigName').textContent = 'Constellation — ' + (figure ? figure.name : '');
+  $('stFigName').textContent = figure ? figure.name : 'Constellation';
   $('stFigure').textContent = fl + ' of ' + (figure ? figure.idxs.length : 0) + (figure && fl === figure.idxs.length ? ' · complete' : '');
   recordResult(g);
   if (playKind === 'daily') submitDaily(g);
@@ -800,6 +816,13 @@ function draw(tNow) {
 
   if (chart) {
     // lit stars resting in the sky + stars in flight
+    // as the sky fills, the scatter politely steps back (smaller, dimmer)
+    // so a full sky reads as depth, not a wall (audit fix 4)
+    var litTaperA = 1, litTaperS = 1;
+    if (chart.notes.length) {
+      var lfNow = Math.min(1, score.lit / chart.notes.length);
+      litTaperA = 1 - 0.22 * lfNow; litTaperS = 1 - 0.12 * lfNow;
+    }
     var i, n;
     for (i = 0; i < chart.notes.length; i++) {
       n = chart.notes[i];
@@ -807,6 +830,7 @@ function draw(tNow) {
       var hx = n.sx * LW, hy = n.sy * LH;
       var pulse = 1 + 0.1 * Math.sin(tNow / 480 + n.id);
       var sz = (26 + 10 * n.lit) * pulse;
+      if (n.fig == null) sz *= litTaperS * (0.72 + 0.28 * (n.sf || 1));
       if (n.fig != null) {
         var fp = 1 + 0.22 * Math.max(0, 1 - (tNow - figPulseAt) / 600);
         if (sweepPosD > -90) fp += 0.3 * Math.max(0, 1 - Math.abs(n.fig - (sweepPosD * 20 / 25)) / 3);
@@ -825,7 +849,7 @@ function draw(tNow) {
       // hierarchy: figure stars burn full; the scatter stays a backdrop,
       // and steps further back during the ceremony so the figure owns it
       ctx.globalAlpha = n.fig != null ? (0.35 + 0.65 * n.lit)
-        : (0.22 + 0.38 * n.lit) * (scene === 'ceremony' ? 0.45 : 1);
+        : (0.22 + 0.38 * n.lit) * (scene === 'ceremony' ? 0.45 : 1) * litTaperA * (n.sf || 1);
       ctx.drawImage(SPR[n.drum], hx - sz / 2, hy - sz / 2, sz, sz);
       ctx.restore();
     }
@@ -912,12 +936,15 @@ function draw(tNow) {
       if (p < 0 || p > 1.12) continue;
       var nx = DRUM_X[nn.drum];
       var ny = -30 + (DRUM_Y + 30) * Math.min(p, 1);
-      // comet trail: five fading ghosts behind the head, additively lit
+      // comet streak: one smooth ribbon of light behind the head, plus two
+      // small shedding sparks for the star-dust character
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      for (var tr = 1; tr <= 5; tr++) {
-        ctx.globalAlpha = 0.20 - tr * 0.028;
-        var tsy = ny - tr * 15, tss = 28 - tr * 3;
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(STREAK[nn.drum], nx - 10, ny - 74, 20, 74);
+      for (var tr = 1; tr <= 2; tr++) {
+        ctx.globalAlpha = 0.16 - tr * 0.05;
+        var tsy = ny - tr * 17, tss = 26 - tr * 5;
         ctx.drawImage(SPR[nn.drum], nx - tss / 2, tsy - tss / 2, tss, tss);
       }
       ctx.restore();
@@ -947,11 +974,11 @@ function draw(tNow) {
     if (wk >= 1) { wv.on = false; continue; }
     var we = 1 - Math.pow(1 - wk, 2);
     ctx.save();
-    ctx.globalAlpha = 0.5 * (1 - wk);
+    ctx.globalAlpha = 0.46 * Math.pow(1 - wk, 1.5);
     ctx.lineWidth = 3.5 * (1 - wk) + 0.8;
     ctx.strokeStyle = 'rgba(' + wv.col + ',1)';
     ctx.translate(wv.x, wv.y); ctx.scale(1, 0.823);
-    ctx.beginPath(); ctx.arc(0, 0, DRUM_R + we * 92, 0, 6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, DRUM_R + we * 68, 0, 6.2832); ctx.stroke();
     ctx.restore();
   }
   // sparks
