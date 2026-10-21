@@ -548,6 +548,7 @@
 
   /* ================= matrices + draw helpers ================= */
   var CW = 0, CH = 0, DPR = 1, projMat = null, scaleH = 1;
+  var FOV_WIDE = 1.187, FOV_IN = 0.977, fovCur = FOV_WIDE, fovApplied = 0;
   function perspectiveMat(fovy, aspect, near, far) {
     var f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
     return new Float32Array([
@@ -556,6 +557,11 @@
       0, 0, (far + near) * nf, -1,
       0, 0, 2 * far * near * nf, 0
     ]);
+  }
+  function applyProj() {
+    projMat = perspectiveMat(fovCur, CW / Math.max(1, CH), 0.5, 12000);
+    scaleH = cv.height / (2 * Math.tan(fovCur / 2));
+    fovApplied = fovCur;
   }
   function rotationMat(rgt, upv, fwd) {
     return new Float32Array([
@@ -571,8 +577,7 @@
     cv.width = Math.round(CW * DPR * renderScale); cv.height = Math.round(CH * DPR * renderScale);
     cv.style.width = CW + 'px'; cv.style.height = CH + 'px';
     gl.viewport(0, 0, cv.width, cv.height);
-    projMat = perspectiveMat(1.187, CW / CH, 0.5, 12000);   /* ~68 deg */
-    scaleH = cv.height / (2 * Math.tan(0.594));
+    applyProj();
   }
   window.addEventListener('resize', resize);
 
@@ -794,6 +799,14 @@
       P2.unravelled = true;
       AU.unravel(P2.drawFig.name);
     }
+
+    /* the lean-in: when a figure has settled and you're not voyaging,
+     * the view breathes from 68 deg toward 56 deg — an arrival, not a
+     * zoom. Skipped under reduced motion. */
+    var fovTgt = (P2.drawFig && P2.alpha > 0.55 && P2.voyage < 0.3 && !reduced) ? FOV_IN : FOV_WIDE;
+    fovCur += (fovTgt - fovCur) * Math.min(1, dt * 0.55);
+    if (Math.abs(fovTgt - fovCur) < 0.001) fovCur = fovTgt;
+    if (Math.abs(fovCur - fovApplied) > 0.0004) applyProj();
 
     /* ================= render ================= */
     var rot = rotationMat(rgt, upv, fwd);
