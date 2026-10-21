@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#070b1e">
+<title>Starlight Drums — Gamez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="prog"><div id="progFill"></div></div>
+  <div id="streak" aria-hidden="true"></div>
+
+  <button id="pauseBtn" class="corner" style="display:none" aria-label="Pause">
+    <svg viewBox="0 0 24 24"><rect x="6" y="4.5" width="4.2" height="15" rx="2.1" fill="currentColor"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="2.1" fill="currentColor"/></svg>
+  </button>
+  <button id="sndBtn" class="corner right" aria-label="Sound on or off">
+    <svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="currentColor"/><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15.3 9.7a3.6 3.6 0 0 1 0 4.6"/><path d="M17.8 7.2a7.2 7.2 0 0 1 0 9.6"/></g></svg>
+  </button>
+
+  <!-- TITLE -->
+  <div id="titleScr" class="screen show">
+    <div class="title-block">
+      <div class="kicker">A GAMEZ RHYTHM</div>
+      <h1 class="game-title">STARLIGHT<br>DRUMS</h1>
+      <p class="tag">Tap the beat. Wake the stars.</p>
+      <p class="hint">Two drums — gold low, ice high.<br>Tap anywhere to begin.</p>
+      <p id="bestLine" class="best-line" style="display:none"></p>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="doneScr" class="screen">
+    <div class="done-block">
+      <div class="kicker">THE SKY YOU LIT</div>
+      <div id="gradeLetter">S</div>
+      <div id="gradePct">0% of the sky</div>
+      <div id="newBest" class="new-best" style="display:none">NEW BEST</div>
+      <div class="stat-grid">
+        <div class="stat"><b id="stPerfect">0</b><span>Perfect</span></div>
+        <div class="stat"><b id="stGood">0</b><span>Good</span></div>
+        <div class="stat"><b id="stMiss">0</b><span>Missed</span></div>
+        <div class="stat"><b id="stStreak">0</b><span>Best streak</span></div>
+      </div>
+      <div class="btn-col">
+        <button id="againBtn" class="btn primary">Play again</button>
+        <button id="homeBtn" class="btn">Back to the sky</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAUSE -->
+  <div id="pauseScr" class="screen dim">
+    <div class="done-block">
+      <h2 class="pause-title">Paused</h2>
+      <p class="tag">The sky is holding its breath.</p>
+      <div class="btn-col">
+        <button id="resumeBtn" class="btn primary">Resume</button>
+        <button id="quitBtn" class="btn">End song</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="sim.js?v=1"></script>
+<script src="audio.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
