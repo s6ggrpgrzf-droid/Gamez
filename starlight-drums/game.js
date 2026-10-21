@@ -12,7 +12,8 @@ var LW = 420, LH = 740;
 var DRUM_Y = 618, DRUM_R = 63;
 var DRUM_X = [112, 308];
 var TRAVEL = 1.75;                       // seconds a note falls
-var GOOD_S = SIM.GOOD_MS / 1000;
+var GOOD_EARLY_S = SIM.GOOD_MS / 1000;
+var GOOD_LATE_S = SIM.GOOD_LATE_MS / 1000;
 var SONG_SEED = 20261021;                // Pass 1 has one song, and it is this one
 var BEST_KEY = 'sd-best-v1';
 
@@ -23,6 +24,10 @@ var skyCv = null;
 var scene = 'title';                     // title | play | done
 var paused = false;
 var chart = null, score = null, t0audio = 0;
+var mode = 'synth';                      // 'track' when the real song plays
+var wantStart = false;                   // a start tap waiting on the track load
+var trackFaded = false;
+var trackLoadT0 = 0;
 var missIdx = 0, loIdx = 0;
 var drumHitAt = [-9999, -9999], drumHitStr = [0, 0];
 var pops = [null, null];                 // per-drum judgment pop {kind, t0}
@@ -169,24 +174,43 @@ function showTitle() {
 /* ---- song flow ------------------------------------------------------------- */
 function startSong() {
   AU.unlock();
-  chart = SIM.makeChart(SONG_SEED);
+  var ts = AU.trackState();
+  if (ts === 'loading' && performance.now() - trackLoadT0 < 6000) { wantStart = true; return; }
+  wantStart = false;
   score = SIM.createScore();
   missIdx = 0; loIdx = 0;
   flights.length = 0; missAnims.length = 0;
   pops[0] = pops[1] = null;
   drumHitAt[0] = drumHitAt[1] = -9999;
+  trackFaded = false;
   $('titleScr').classList.remove('show');
   $('doneScr').classList.remove('show');
   $('pauseBtn').style.display = '';
   scene = 'play'; paused = false;
-  t0audio = AU.now() + 0.4;
-  AU.setBed(chart, t0audio);
+  t0audio = AU.now() + 0.45;
+  var useTrack = (ts === 'ready' && !!window.SD_SONG);
+  if (useTrack) {
+    var notes = window.SD_SONG.notes.map(function (n) { return { t: n.t, drum: n.drum, state: 0 }; });
+    SIM.assignStars(notes, (window.SD_SONG.segStart * 1000) | 0);
+    chart = { bpm: window.SD_SONG.bpm, duration: window.SD_SONG.duration, notes: notes, bed: [] };
+    useTrack = AU.setTrack(t0audio, window.SD_SONG.segStart, window.SD_SONG.duration);
+  }
+  if (useTrack) {
+    mode = 'track';
+  } else {
+    mode = 'synth';
+    chart = SIM.makeChart(SONG_SEED);
+    AU.setBed(chart, t0audio);
+  }
   lastProg = -1; setStreak(0);
 }
-function songNow() { return AU.now() - t0audio; }
+/* The perceptual clock: the audio clock shifted by the output latency the
+ * device reports, so the beat as HEARD is the beat that is drawn and graded. */
+function songNow() { return AU.now() - t0audio - AU.latency(); }
 
 function finishSong() {
   AU.stopBed();
+  AU.stopTrack();
   var g = SIM.gradeFor(score, chart.notes.length);
   var prev = readBest();
   var isBest = !prev || g.pct > prev.pct;
@@ -242,19 +266,23 @@ function onDown(e) {
   if (scene !== 'play' || paused) return;
   var p = toLogical(e);
   var drum = p.x < LW / 2 ? 0 : 1;
-  var now = songNow();
+  /* judge the touch at the moment it happened, not when this handler got to
+   * run: the event's own timestamp walks back the handler delay, and the
+   * perceptual clock shifts for the speaker's output latency. */
+  var ageMs = e.timeStamp ? Math.max(0, performance.now() - e.timeStamp) : 0;
+  var now = songNow() - ageMs / 1000;
   // nearest open note on this drum inside the good window
-  while (loIdx < chart.notes.length && chart.notes[loIdx].t < now - GOOD_S - 0.001) loIdx++;
+  while (loIdx < chart.notes.length && chart.notes[loIdx].t < now - GOOD_EARLY_S - 0.001) loIdx++;
   var best = null, bestAbs = 1e9;
   for (var i = loIdx; i < chart.notes.length; i++) {
     var n = chart.notes[i];
-    if (n.t > now + GOOD_S) break;
+    if (n.t > now + GOOD_LATE_S) break;
     if (n.state !== 0 || n.drum !== drum) continue;
     var a = Math.abs(now - n.t);
     if (a < bestAbs) { bestAbs = a; best = n; }
   }
   if (!best) { tapDrum(drum, 0.4); AU.emptyTap(drum); return; }
-  var res = SIM.judge(bestAbs * 1000);
+  var res = SIM.judge((now - best.t) * 1000);
   best.state = 1;
   SIM.applyJudge(score, res);
   best.lit = res === 'perfect' ? 1 : 0.55;
@@ -290,7 +318,7 @@ $('sndBtn').addEventListener('click', function (e) {
 $('pauseBtn').addEventListener('click', function (e) { e.stopPropagation(); doPause(); });
 $('resumeBtn').addEventListener('click', function () { doResume(); });
 $('quitBtn').addEventListener('click', function () {
-  AU.resume(); AU.stopBed(); $('pauseScr').classList.remove('show'); paused = false; showTitle();
+  AU.resume(); AU.stopBed(); AU.stopTrack(); $('pauseScr').classList.remove('show'); paused = false; showTitle();
 });
 $('againBtn').addEventListener('click', function () { startSong(); });
 $('homeBtn').addEventListener('click', function () { showTitle(); });
@@ -300,7 +328,7 @@ document.addEventListener('visibilitychange', function () { if (document.hidden)
 function processMisses(now) {
   while (missIdx < chart.notes.length) {
     var n = chart.notes[missIdx];
-    if (n.t >= now - GOOD_S) break;
+    if (n.t >= now - GOOD_LATE_S) break;
     if (n.state === 0) {
       n.state = 2; n.lit = 0;
       SIM.applyJudge(score, 'miss');
@@ -484,6 +512,9 @@ function frame(tNow) {
   if (scene === 'play' && !paused && chart) {
     var now = songNow();
     processMisses(now);
+    if (mode === 'track' && !trackFaded && now > chart.duration - 1.6) {
+      trackFaded = true; AU.fadeTrack(1.8);
+    }
     var pr = Math.max(0, Math.min(1, now / chart.duration));
     if (Math.abs(pr - lastProg) > 0.004) {
       lastProg = pr;
@@ -499,10 +530,36 @@ showTitle();
 syncSndBtn();
 requestAnimationFrame(frame);
 
+/* the real song: fetch + decode in the background from first paint. The
+ * title credit fills in when it lands; a start tap during the load waits
+ * politely instead of starting the wrong song. */
+if (window.SD_SONG) {
+  trackLoadT0 = performance.now();
+  AU.loadTrack(window.SD_SONG.url);
+  var creditPoll = setInterval(function () {
+    var ts = AU.trackState();
+    var el = $('songCredit');
+    if (ts === 'ready') {
+      if (el) { el.style.display = 'block'; el.textContent = window.SD_SONG.credit; }
+      clearInterval(creditPoll);
+      if (wantStart && scene === 'title') startSong();
+    } else if (ts === 'failed') {
+      if (el) { el.style.display = 'block'; el.textContent = 'The house band covers tonight — the track couldn’t load.'; }
+      clearInterval(creditPoll);
+      if (wantStart && scene === 'title') startSong();
+    } else if (wantStart && el) {
+      el.style.display = 'block'; el.textContent = 'Loading “' + window.SD_SONG.title + '”…';
+    }
+  }, 400);
+}
+
 /* debug seam for harnesses (mirrors the Pdawg pattern) */
 if (window.__SD_DEBUG) {
   window.__SD = {
     start: startSong, scene: function () { return scene; },
+    mode: function () { return mode; },
+    trackState: function () { return AU.trackState(); },
+    latency: function () { return AU.latency(); },
     chart: function () { return chart; }, score: function () { return score; },
     now: function () { return scene === 'play' ? songNow() : -1; },
     tap: function (drum) { /* synthetic hit on a drum, judged at the current clock */

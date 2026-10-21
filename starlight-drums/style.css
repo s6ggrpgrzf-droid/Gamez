@@ -37,6 +37,7 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
   text-shadow:0 0 34px rgba(140,170,255,.35),0 4px 0 rgba(10,12,30,.55)}
 .tag{margin-top:16px;font-size:17px;font-weight:600;color:#ffd98a}
 .hint{margin-top:26px;font-size:13.5px;line-height:1.55;color:#aebadd}
+.song-credit{margin-top:14px;font-size:11.5px;font-weight:600;letter-spacing:.4px;color:#8fa3d9}
 .best-line{margin-top:20px;display:inline-block;font-size:12.5px;font-weight:800;letter-spacing:1.2px;
   color:#0d1020;background:linear-gradient(145deg,#ffd968,#f2a007);padding:7px 14px;border-radius:99px}
 

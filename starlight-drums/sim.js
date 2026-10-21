@@ -19,12 +19,18 @@ function hashStr(s) {
   return h >>> 0;
 }
 
-/* Judgment: groove first. Windows in milliseconds from the note's true time. */
-var PERFECT_MS = 55;
-var GOOD_MS = 115;
-function judge(absMs) {
-  if (absMs <= PERFECT_MS) return 'perfect';
-  if (absMs <= GOOD_MS) return 'good';
+/* Judgment: groove first. Signed milliseconds from the note's true time —
+ * negative is early, positive is late. The late side runs a little wider:
+ * every input chain (touch, handler, speaker) pushes real taps late, so the
+ * honest window leans that way too. */
+var PERFECT_MS = 55;        // early edge for perfect
+var PERFECT_LATE_MS = 60;
+var GOOD_MS = 115;          // early edge for good
+var GOOD_LATE_MS = 135;
+function judge(dtMs) {
+  var a = Math.abs(dtMs);
+  if (dtMs >= -PERFECT_MS && dtMs <= PERFECT_LATE_MS) return 'perfect';
+  if (dtMs >= -GOOD_MS && dtMs <= GOOD_LATE_MS) return 'good';
   return 'miss';
 }
 
@@ -105,16 +111,24 @@ function makeChart(seed) {
     }
   }
   notes.sort(function (a, b2) { return a.t - b2.t; });
-  // every note owns a star in the sky (stage-relative). x rides the golden
-  // walk for an even spread; y comes from the rng stream itself — walking y
-  // on the conjugate fraction (0.382 = 1 − 0.618) traced a perfect diagonal.
+  assignStars(notes, seed);
+  var duration = barIndex * BAR;
+  return { bpm: BPM, duration: duration, notes: notes, bed: bed, seed: seed >>> 0 };
+}
+
+/* every note owns a star in the sky (stage-relative). x rides the golden
+ * walk for an even spread; y comes from the rng stream itself — walking y on
+ * the conjugate fraction (0.382 = 1 − 0.618) traced a perfect diagonal.
+ * Shared by the synth chart and the real-track chart (song.js). */
+function assignStars(notes, seed) {
+  var rng = mulberry32((seed >>> 0) ^ 0x57A2);
   for (var k = 0; k < notes.length; k++) {
     notes[k].sx = 0.07 + 0.86 * ((k * 0.61803 + rng() * 0.05) % 1);
     notes[k].sy = 0.05 + 0.42 * rng();
     notes[k].id = k;
+    if (notes[k].state == null) notes[k].state = 0;
   }
-  var duration = barIndex * BAR;
-  return { bpm: BPM, duration: duration, notes: notes, bed: bed, seed: seed >>> 0 };
+  return notes;
 }
 
 /* ---- scoring ------------------------------------------------------------- */
@@ -136,9 +150,11 @@ function gradeFor(score, totalNotes) {
 
 var SD_SIM = {
   mulberry32: mulberry32, hashStr: hashStr,
-  PERFECT_MS: PERFECT_MS, GOOD_MS: GOOD_MS, judge: judge,
+  PERFECT_MS: PERFECT_MS, PERFECT_LATE_MS: PERFECT_LATE_MS,
+  GOOD_MS: GOOD_MS, GOOD_LATE_MS: GOOD_LATE_MS, judge: judge,
   BPM: BPM, BEAT: BEAT, BAR: BAR,
-  makeChart: makeChart, createScore: createScore,
+  makeChart: makeChart, assignStars: assignStars,
+  createScore: createScore,
   applyJudge: applyJudge, gradeFor: gradeFor
 };
 global.SD_SIM = SD_SIM;
