@@ -340,6 +340,7 @@
     { id: 'skylark', name: 'Skylark', cls: 'art-skylark' },
     { id: 'dominoes', name: 'Dominoes', cls: 'art-dominoes' },
     { id: 'cathedral', name: 'Cathedral', cls: 'art-cathedral' },
+    { id: 'starlight-drums', name: 'Starlight Drums', cls: 'art-starlight-drums' },
   ];
   function progressFor(id) {
     // returns {label, frac} or null
@@ -413,6 +414,17 @@
         if (!tf || !tf.holes) return null;
         var tst = tf.stars || 0, th = tf.holes;
         return { label: '⛳ best ' + tf.strokes + ' strokes · ★' + tst, frac: Math.min(1, tst / (th * 3)) };
+      }
+      if (id === 'starlight-drums') {
+        var sd = readJSON('sd-records-v1');
+        var best = null;
+        if (sd && sd.songs) Object.keys(sd.songs).forEach(function (k) {
+          if (!best || sd.songs[k].pct > best.pct) best = sd.songs[k];
+        });
+        if (!best) { var ob = readJSON('sd-best-v1'); if (ob && ob.pct != null) best = ob; }
+        if (!best) return null;
+        var stk = (sd && sd.streak && sd.streak.count >= 2) ? ' · 🔥 ' + sd.streak.count + '-day streak' : '';
+        return { label: 'Best ' + best.letter + ' · ' + (+best.pct).toFixed(1) + '%' + stk, frac: Math.min(1, best.pct / 100) };
       }
     } catch (e) { return null; }
     return null;
@@ -548,14 +560,21 @@
       'pdawg': [20, 4, 19, 5, 1], 'life-story': [12, 91, 10, 91, 1],
       'reel-empire': [76, 61, 79, 62, 1], 'tiny-fairway': [69, 53, 72, 53, 3],
       'skylark': [65, 21, 68, 22, 2], 'dominoes': [88, 40, 92, 39, 1],
-      'cathedral': [30, 9, 29, 10, 1]
+      'cathedral': [30, 9, 29, 10, 1],
+      /* a second, younger figure in the lower-right sky: a five-star ram.
+       * Four of its stars are pure asterism; the bright head is a game. */
+      'starlight-drums': [67, 75, 70, 74, 3],
+      'aries-1': [42, 80, 43, 80, 1], 'aries-2': [47, 79, 48, 78, 1],
+      'aries-3': [56, 74, 58, 73, 2], 'aries-4': [62, 64, 64, 63, 1]
     };
     var LINKS = [['dominoes', 'neon-void'], ['neon-void', 'tiny-fairway'],
       ['tiny-fairway', 'bloom-defense'], ['bloom-defense', 'maze-trace'],
       ['maze-trace', 'candy-cascade'], ['candy-cascade', 'bubble-hex'],
       ['bubble-hex', 'neon-void'], ['neon-void', 'skylark'],
       ['tiny-fairway', 'reel-empire'], ['pdawg', 'cathedral'],
-      ['cathedral', 'maze-trace'], ['bloom-defense', 'word-well'], ['word-well', 'life-story']];
+      ['cathedral', 'maze-trace'], ['bloom-defense', 'word-well'], ['word-well', 'life-story'],
+      ['aries-1', 'aries-2'], ['aries-2', 'aries-3'],
+      ['aries-3', 'starlight-drums'], ['aries-3', 'aries-4']];
     var SIZES = { 1: 9, 2: 11, 3: 14 };
     var field = document.createElement('div');
     field.className = 'field';
@@ -594,6 +613,32 @@
       b.addEventListener('click', function (ev) { ev.stopPropagation(); openBloom(id, b); });
       field.appendChild(b);
       stars[id] = b; order.push(id);
+    });
+    /* the ram's minor stars: pure asterism — present so the figure reads,
+     * but no cards behind them, so they are spans, not buttons; they join
+     * the stars map only so the filament lines can find their endpoints. */
+    var decorOrder = [];
+    ['aries-1', 'aries-2', 'aries-3', 'aries-4'].forEach(function (id) {
+      var p = POS[id];
+      if (!p) return;
+      var wide = window.innerWidth >= 700;
+      var s = document.createElement('span');
+      s.className = 'star decor t' + p[4];
+      s.setAttribute('aria-hidden', 'true');
+      s.style.left = (wide ? p[2] : p[0]) + '%';
+      s.style.top = (wide ? p[3] : p[1]) + '%';
+      s.style.setProperty('--glow', '#cfe0ff');
+      s.style.setProperty('--s', SIZES[p[4]] + 'px');
+      s.style.setProperty('--td', (-Math.random() * 3).toFixed(2) + 's');
+      if (p[4] >= 2) {
+        s.classList.add('glinted');
+        s.style.setProperty('--gl', '40px');
+        s.style.setProperty('--gd', (-Math.random() * 5).toFixed(2) + 's');
+      }
+      s.innerHTML = (p[4] >= 2 ? '<span class="glint" aria-hidden="true"></span>' : '') +
+        '<span class="core"></span>';
+      field.appendChild(s);
+      stars[id] = s; decorOrder.push(id);
     });
     if (!order.length) return;
     LINKS.forEach(function (pair) {
@@ -639,6 +684,11 @@
     function layout() {
       var wide = window.innerWidth >= 700;
       order.forEach(function (id) {
+        var p = POS[id];
+        stars[id].style.left = (wide ? p[2] : p[0]) + '%';
+        stars[id].style.top = (wide ? p[3] : p[1]) + '%';
+      });
+      decorOrder.forEach(function (id) {
         var p = POS[id];
         stars[id].style.left = (wide ? p[2] : p[0]) + '%';
         stars[id].style.top = (wide ? p[3] : p[1]) + '%';

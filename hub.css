@@ -511,6 +511,7 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 .star .core{transition:scale .16s ease,filter .16s ease}
 .star:active .core{scale:1.16;filter:brightness(1.22)}
 @media (prefers-reduced-motion:reduce){.star .core{transition:none}.star:active .core{scale:1;filter:none}}
+.star.decor{pointer-events:none;cursor:default}
 .field.blooming .star{opacity:.32}
 .field.blooming .star.open{opacity:1}
 .star.open .core{animation:none;transform:scale(1.45);
