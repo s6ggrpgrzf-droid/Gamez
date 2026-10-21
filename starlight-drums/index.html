@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div id="stage">
@@ -30,6 +30,11 @@
       <div class="kicker">A GAMEZ RHYTHM</div>
       <h1 class="game-title">STARLIGHT<br>DRUMS</h1>
       <p class="tag">Tap the beat. Wake the stars.</p>
+      <div class="mode-row">
+        <button id="mDaily" class="mode-chip on" type="button">Today's Sky</button>
+        <button id="mFree" class="mode-chip" type="button">Endless</button>
+      </div>
+      <p id="modeInfo" class="mode-info"></p>
       <p class="hint">Two drums — gold low, ice high.<br>Tap anywhere to begin.</p>
       <p id="songCredit" class="song-credit" style="display:none"></p>
       <p id="bestLine" class="best-line" style="display:none"></p>
@@ -50,8 +55,10 @@
         <div class="stat"><b id="stStreak">0</b><span>Best streak</span></div>
         <div class="stat wide"><span id="stFigName">Constellation</span><b id="stFigure">–</b></div>
       </div>
+      <div id="arcBox" class="arc-box" style="display:none"></div>
       <div class="btn-col">
         <button id="againBtn" class="btn primary">Play again</button>
+        <button id="nextBtn" class="btn">Next song</button>
         <button id="homeBtn" class="btn">Back to the sky</button>
       </div>
     </div>
@@ -70,9 +77,9 @@
   </div>
 </div>
 
-<script src="sim.js?v=3"></script>
-<script src="audio.js?v=4"></script>
-<script src="song.js?v=2"></script>
-<script src="game.js?v=4"></script>
+<script src="sim.js?v=4"></script>
+<script src="audio.js?v=5"></script>
+<script src="songs.js?v=1"></script>
+<script src="game.js?v=5"></script>
 </body>
 </html>

@@ -124,20 +124,21 @@ function scheduleBed() {
   }
 }
 
-/* the real track: fetched + decoded once, played from the same audio clock */
-var trackBuf = null, trackSrc = null, trackGain = null, trackState = 'idle';
+/* the real tracks: fetched + decoded once each, cached by URL, played from
+ * the same audio clock. The library can rotate songs without re-downloading. */
+var trackBufs = {}, trackStates = {}, trackSrc = null, trackGain = null;
 function loadTrack(url) {
-  if (trackState === 'loading' || trackState === 'ready') return;
-  if (!ac()) { trackState = 'failed'; return; }
-  trackState = 'loading';
+  if (!url || trackStates[url] === 'loading' || trackStates[url] === 'ready') return;
+  if (!ac()) { trackStates[url] = 'failed'; return; }
+  trackStates[url] = 'loading';
   fetch(url).then(function (r) {
     if (!r.ok) throw new Error('http ' + r.status);
     return r.arrayBuffer();
   }).then(function (ab) {
     return ctx.decodeAudioData(ab);
   }).then(function (buf) {
-    trackBuf = buf; trackState = 'ready';
-  }).catch(function () { trackState = 'failed'; });
+    trackBufs[url] = buf; trackStates[url] = 'ready';
+  }).catch(function () { trackStates[url] = 'failed'; });
 }
 
 var AU = {
@@ -151,11 +152,11 @@ var AU = {
     return (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
   },
   loadTrack: loadTrack,
-  trackState: function () { return trackState; },
-  setTrack: function (t0, offset, dur) {
-    if (!trackBuf || !ctx) return false;
+  trackState: function (url) { return trackStates[url] || 'idle'; },
+  setTrack: function (url, t0, offset, dur) {
+    if (!trackBufs[url] || !ctx) return false;
     this.stopTrack();
-    trackSrc = ctx.createBufferSource(); trackSrc.buffer = trackBuf;
+    trackSrc = ctx.createBufferSource(); trackSrc.buffer = trackBufs[url];
     trackGain = ctx.createGain(); trackGain.gain.value = 0.92;
     trackSrc.connect(trackGain); trackGain.connect(master);
     trackSrc.start(t0, offset, dur + 1.5);

@@ -28,6 +28,11 @@ var mode = 'synth';                      // 'track' when the real song plays
 var wantStart = false;                   // a start tap waiting on the track load
 var trackFaded = false;
 var trackLoadT0 = 0;
+/* Pass 3 — the habit: a small library, a daily pick, an endless rotation */
+var LIB = window.SD_SONGS || [];
+var playKind = 'daily';                  // 'daily' | 'free'
+var dailyIdx = 0, selIdx = 0, freeIdxMem = 0, playedIdx = 0;
+var playedSong = null;
 var figure = null;                       // the constellation hidden in the chart
 var linkA = [];                          // per-link animated brightness
 var chorusWin = [];                      // [[t0, t1], ...] answering-sky windows
@@ -162,6 +167,117 @@ window.addEventListener('resize', fit);
 function readBest() {
   try { return JSON.parse(localStorage.getItem(BEST_KEY) || 'null'); } catch (e) { return null; }
 }
+
+/* ---- records: daily results, per-song bests, the streak ------------------- */
+var REC_KEY = 'sd-records-v1';
+function todayStr() {
+  var d = new Date();
+  function p(n) { return (n < 10 ? '0' : '') + n; }
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function dateShift(str, days) {
+  var d = new Date(str + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  function p(n) { return (n < 10 ? '0' : '') + n; }
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function readRecords() {
+  var r = null;
+  try { r = JSON.parse(localStorage.getItem(REC_KEY) || 'null'); } catch (e) {}
+  if (!r || typeof r !== 'object') r = {};
+  if (!r.daily) r.daily = {};
+  if (!r.songs) r.songs = {};
+  if (!r.streak) r.streak = { last: '', count: 0 };
+  return r;
+}
+function saveRecords(r) {
+  try { localStorage.setItem(REC_KEY, JSON.stringify(r)); } catch (e) {}
+}
+function currentSong() { return LIB.length ? LIB[selIdx] : null; }
+
+/* ---- the shared arcade board (same worker + name as the other games) ------ */
+var ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+function arcadeFetch(path, body, cb) {
+  var done = false, timer = null;
+  function fin(e, d) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } }
+  timer = setTimeout(function () { fin(new Error('timeout')); }, 12000);
+  try {
+    fetch(ARCADE + path, body ?
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {})
+      .then(function (r) { return r.json(); })
+      .then(function (d) { fin(null, d); })
+      .catch(function (e) { fin(e); });
+  } catch (e) { fin(e); }
+}
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function renderBoard(top, rank, me, pct) {
+  var box = $('arcBox');
+  box.style.display = 'block';
+  var h = '<div class="arc-title">TODAY\'S SKY — THE BOARD</div>';
+  if (rank > 0) h += '<div class="arc-rank">YOU\'RE #' + rank + ' TODAY</div>';
+  if (top && top.length) {
+    h += top.slice(0, 5).map(function (e, i) {
+      return '<div class="arc-row' + (e.name === me ? ' me' : '') + '"><span>' + (i + 1) + '. ' +
+        escHtml(e.name) + '</span><b>' + (e.score / 10).toFixed(1) + '%</b></div>';
+    }).join('');
+  } else {
+    h += '<div class="arc-empty">The board is out of reach — your ' + pct.toFixed(1) + '% still stands.</div>';
+  }
+  box.innerHTML = h;
+}
+function submitDaily(g) {
+  var box = $('arcBox');
+  if (!box) return;
+  var board = 'daily-' + todayStr();
+  var sc = Math.round(g.pct * 10);
+  var name = '';
+  try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+  function go(n) {
+    box.style.display = 'block';
+    box.innerHTML = '<div class="arc-empty">Sending your sky…</div>';
+    arcadeFetch('/score', { game: 'starlight-drums', board: board, name: n, score: sc }, function (err, res) {
+      if (res && res.top) renderBoard(res.top, res.rank, n, g.pct);
+      else arcadeFetch('/scores?game=starlight-drums&board=' + encodeURIComponent(board), null, function (e2, d2) {
+        renderBoard(d2 && d2.top, 0, n, g.pct);
+      });
+    });
+  }
+  if (name) { go(name); return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="arc-title">TODAY\'S SKY — THE BOARD</div>' +
+    '<div class="arc-form"><input id="arcName" maxlength="12" placeholder="YOUR NAME" autocomplete="off">' +
+    '<button id="arcGo" type="button">JOIN</button></div>';
+  $('arcGo').addEventListener('click', function () {
+    var v = $('arcName').value.trim().slice(0, 12);
+    if (!v) return;
+    try { localStorage.setItem('arcade_name', v); } catch (e) {}
+    go(v);
+  });
+}
+function recordResult(g) {
+  var rec = readRecords();
+  var pct = Math.round(g.pct * 10) / 10;
+  var sid = playedSong ? playedSong.id : 'synth';
+  var fl = figureLitCount();
+  if (!rec.songs[sid] || pct > rec.songs[sid].pct) {
+    rec.songs[sid] = { pct: pct, letter: g.letter, fig: fl };
+  }
+  if (playKind === 'daily') {
+    var td = todayStr();
+    if (!rec.daily[td] || pct > rec.daily[td].pct) {
+      rec.daily[td] = { pct: pct, letter: g.letter, fig: fl, song: sid };
+    }
+    if (rec.streak.last !== td) {
+      rec.streak.count = (rec.streak.last === dateShift(td, -1)) ? rec.streak.count + 1 : 1;
+      rec.streak.last = td;
+    }
+  }
+  saveRecords(rec);
+}
 function showTitle() {
   scene = 'title';
   $('titleScr').classList.add('show');
@@ -169,19 +285,54 @@ function showTitle() {
   $('pauseScr').classList.remove('show');
   $('pauseBtn').style.display = 'none';
   setStreak(-1);
-  var b = readBest();
-  if (b) {
-    var bl = $('bestLine');
-    bl.style.display = 'inline-block';
-    bl.textContent = 'BEST · ' + b.letter + ' · ' + b.pct.toFixed(1) + '% OF THE SKY LIT';
+  refreshTitle();
+}
+function refreshTitle() {
+  var md = $('mDaily'), mf = $('mFree');
+  if (md && mf) {
+    md.classList.toggle('on', playKind === 'daily');
+    mf.classList.toggle('on', playKind === 'free');
   }
+  var s = currentSong();
+  var rec = readRecords();
+  var td = todayStr();
+  var info;
+  if (playKind === 'daily') {
+    var done = rec.daily[td];
+    info = 'Today · “' + (s ? s.title : 'the house song') + '”' +
+      (done ? ' · cleared — ' + done.letter + ' · ' + done.pct.toFixed(1) + '%' : ' · one sky for everyone');
+  } else {
+    info = 'Endless · “' + (s ? s.title : 'the house song') + '” is up';
+  }
+  $('modeInfo').textContent = info;
+  var bl = $('bestLine');
+  if (rec.streak.count >= 2 && rec.streak.last >= dateShift(td, -1)) {
+    bl.style.display = 'inline-block';
+    bl.textContent = 'DAY STREAK · ' + rec.streak.count;
+  } else {
+    var b = readBest();
+    if (b) {
+      bl.style.display = 'inline-block';
+      bl.textContent = 'BEST · ' + b.letter + ' · ' + b.pct.toFixed(1) + '% OF THE SKY LIT';
+    } else bl.style.display = 'none';
+  }
+}
+function setKind(k) {
+  playKind = k;
+  selIdx = (k === 'daily') ? dailyIdx : freeIdxMem;
+  var s = currentSong();
+  if (s && AU.trackState(s.url) === 'idle') { trackLoadT0 = performance.now(); AU.loadTrack(s.url); }
+  refreshTitle();
 }
 
 /* ---- song flow ------------------------------------------------------------- */
 function startSong() {
   AU.unlock();
-  var ts = AU.trackState();
-  if (ts === 'loading' && performance.now() - trackLoadT0 < 6000) { wantStart = true; return; }
+  var song = currentSong();
+  playedSong = song; playedIdx = selIdx;
+  var ts = song ? AU.trackState(song.url) : 'failed';
+  if (song && ts === 'idle') { trackLoadT0 = performance.now(); AU.loadTrack(song.url); ts = 'loading'; }
+  if (song && ts === 'loading' && performance.now() - trackLoadT0 < 6000) { wantStart = true; return; }
   wantStart = false;
   score = SIM.createScore();
   missIdx = 0; loIdx = 0;
@@ -194,31 +345,34 @@ function startSong() {
   $('pauseBtn').style.display = '';
   scene = 'play'; paused = false;
   t0audio = AU.now() + 0.45;
-  var useTrack = (ts === 'ready' && !!window.SD_SONG);
+  var seed = SONG_SEED;
+  var useTrack = (ts === 'ready' && !!song);
   if (useTrack) {
-    var notes = window.SD_SONG.notes.map(function (n) { return { t: n.t, drum: n.drum, state: 0 }; });
-    SIM.assignStars(notes, (window.SD_SONG.segStart * 1000) | 0);
-    chart = { bpm: window.SD_SONG.bpm, duration: window.SD_SONG.duration, notes: notes, bed: [] };
-    useTrack = AU.setTrack(t0audio, window.SD_SONG.segStart, window.SD_SONG.duration);
+    var notes = song.notes.map(function (n) { return { t: n.t, drum: n.drum, state: 0 }; });
+    SIM.assignStars(notes, (song.segStart * 1000) | 0);
+    chart = { bpm: song.bpm, duration: song.duration, notes: notes, bed: [] };
+    useTrack = AU.setTrack(song.url, t0audio, song.segStart, song.duration);
   }
   if (useTrack) {
     mode = 'track';
   } else {
     mode = 'synth';
-    chart = SIM.makeChart(SONG_SEED);
+    seed = song ? SIM.hashStr(song.id + ':' + playKind + ':' + (playKind === 'daily' ? todayStr() : ''))
+                : SONG_SEED;
+    chart = SIM.makeChart(seed);
     AU.setBed(chart, t0audio);
   }
   // the constellation hidden in this chart, and the song's energy shape
-  figure = SIM.makeFigure(chart.notes, mode === 'track' ? (window.SD_SONG.segStart * 1000 | 0) : SONG_SEED);
+  figure = SIM.makeFigure(chart.notes, mode === 'track' ? (song.segStart * 1000 | 0) : seed);
   for (var fk = 0; fk < figure.idxs.length; fk++) {
     var fnote = chart.notes[figure.idxs[fk]];
     fnote.sx = figure.pts[fk][0]; fnote.sy = figure.pts[fk][1]; fnote.fig = fk;
   }
   linkA = figure.links.map(function () { return 0; });
   if (mode === 'track') {
-    chorusWin = window.SD_SONG.chorus || [];
-    barEnergies = window.SD_SONG.bars || [];
-    barLenS = window.SD_SONG.barLen || 2.05;
+    chorusWin = song.chorus || [];
+    barEnergies = song.bars || [];
+    barLenS = song.barLen || 2.05;
   } else {
     chorusWin = [[0.30, 0.46], [0.68, 0.86]].map(function (w) {
       return [w[0] * chart.duration, w[1] * chart.duration];
@@ -236,6 +390,11 @@ function startSong() {
   }
   energyNow = 0; shimmerAt = -9999; figPulseAt = -9999;
   lastProg = -1; setStreak(0);
+  // warm the next rotation song quietly so Endless never waits on a download
+  if (LIB.length > 1) {
+    var nx = LIB[(playedIdx + 1) % LIB.length];
+    if (nx && AU.trackState(nx.url) === 'idle') AU.loadTrack(nx.url);
+  }
 }
 /* The perceptual clock: the audio clock shifted by the output latency the
  * device reports, so the beat as HEARD is the beat that is drawn and graded. */
@@ -279,6 +438,9 @@ function showResults() {
   var fl = figureLitCount();
   $('stFigName').textContent = 'Constellation — ' + (figure ? figure.name : '');
   $('stFigure').textContent = fl + ' of ' + (figure ? figure.idxs.length : 0) + (figure && fl === figure.idxs.length ? ' · complete' : '');
+  recordResult(g);
+  if (playKind === 'daily') submitDaily(g);
+  else { var ab = $('arcBox'); if (ab) { ab.style.display = 'none'; ab.innerHTML = ''; } }
   $('doneScr').classList.add('show');
   // count the sky up
   var el = $('gradePct'), t0 = performance.now(), target = g.pct;
@@ -385,8 +547,18 @@ $('resumeBtn').addEventListener('click', function () { doResume(); });
 $('quitBtn').addEventListener('click', function () {
   AU.resume(); AU.stopBed(); AU.stopTrack(); $('pauseScr').classList.remove('show'); paused = false; showTitle();
 });
-$('againBtn').addEventListener('click', function () { startSong(); });
+$('againBtn').addEventListener('click', function () { selIdx = playedIdx; startSong(); });
+$('nextBtn').addEventListener('click', function () {
+  if (LIB.length) {
+    selIdx = (playedIdx + 1) % LIB.length;
+    freeIdxMem = selIdx;
+    playKind = 'free';
+  }
+  startSong();
+});
 $('homeBtn').addEventListener('click', function () { showTitle(); });
+$('mDaily').addEventListener('click', function () { setKind('daily'); });
+$('mFree').addEventListener('click', function () { setKind('free'); });
 document.addEventListener('visibilitychange', function () { if (document.hidden) doPause(); });
 
 /* ---- per-frame update ------------------------------------------------------- */
@@ -642,31 +814,34 @@ function frame(tNow) {
 }
 
 fit();
+dailyIdx = LIB.length ? SIM.pickDaily(todayStr(), LIB.length) : 0;
+selIdx = dailyIdx; freeIdxMem = dailyIdx;
 showTitle();
 syncSndBtn();
 requestAnimationFrame(frame);
 
-/* the real song: fetch + decode in the background from first paint. The
- * title credit fills in when it lands; a start tap during the load waits
- * politely instead of starting the wrong song. */
-if (window.SD_SONG) {
+/* Title tick: keep the credit line honest about the selected song's load
+ * state, and release a waiting start tap the moment its song lands (or give
+ * up waiting after 6s and let the house band cover). */
+if (LIB.length) {
   trackLoadT0 = performance.now();
-  AU.loadTrack(window.SD_SONG.url);
-  var creditPoll = setInterval(function () {
-    var ts = AU.trackState();
+  AU.loadTrack(currentSong().url);
+  setInterval(function () {
+    if (scene !== 'title') return;
+    var s = currentSong();
     var el = $('songCredit');
-    if (ts === 'ready') {
-      if (el) { el.style.display = 'block'; el.textContent = window.SD_SONG.credit; }
-      clearInterval(creditPoll);
-      if (wantStart && scene === 'title') startSong();
-    } else if (ts === 'failed') {
-      if (el) { el.style.display = 'block'; el.textContent = 'The house band covers tonight — the track couldn’t load.'; }
-      clearInterval(creditPoll);
-      if (wantStart && scene === 'title') startSong();
-    } else if (wantStart && el) {
-      el.style.display = 'block'; el.textContent = 'Loading “' + window.SD_SONG.title + '”…';
+    if (s && el) {
+      var ts = AU.trackState(s.url);
+      el.style.display = 'block';
+      el.textContent = ts === 'ready' ? s.credit
+        : ts === 'failed' ? 'The house band covers tonight — the track couldn’t load.'
+        : 'Loading “' + s.title + '”…';
     }
-  }, 400);
+    if (wantStart) {
+      var ts2 = s ? AU.trackState(s.url) : 'failed';
+      if (ts2 !== 'loading' || performance.now() - trackLoadT0 > 6000) startSong();
+    }
+  }, 450);
 }
 
 /* debug seam for harnesses (mirrors the Pdawg pattern) */
@@ -674,9 +849,16 @@ if (window.__SD_DEBUG) {
   window.__SD = {
     start: startSong, scene: function () { return scene; },
     mode: function () { return mode; },
+    playKind: function () { return playKind; },
+    songId: function () { return playedSong ? playedSong.id : (currentSong() ? currentSong().id : null); },
+    selIdx: function () { return selIdx; },
+    dailyIdx: function () { return dailyIdx; },
+    setKind: function (k) { setKind(k); },
+    next: function () { $('nextBtn').click(); },
+    records: function () { return readRecords(); },
     figLit: function () { return figureLitCount(); },
     inChorusNow: function () { return scene === 'play' && inChorus(songNow()); },
-    trackState: function () { return AU.trackState(); },
+    trackState: function () { var s = currentSong(); return s ? AU.trackState(s.url) : 'none'; },
     latency: function () { return AU.latency(); },
     chart: function () { return chart; }, score: function () { return score; },
     now: function () { return scene === 'play' ? songNow() : -1; },

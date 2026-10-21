@@ -187,6 +187,13 @@ function makeFigure(notes, seed) {
   return { name: FIGURE_NAME, idxs: idxs, pts: pts, links: FIGURE_LINKS };
 }
 
+/* the daily pick: one song for everyone, everywhere, on a given date.
+ * Pure function of the date string — no server, no clock races. */
+function pickDaily(dateStr, count) {
+  if (!count || count < 1) return 0;
+  return hashStr('sd-daily:' + dateStr) % count;
+}
+
 var SD_SIM = {
   mulberry32: mulberry32, hashStr: hashStr,
   PERFECT_MS: PERFECT_MS, PERFECT_LATE_MS: PERFECT_LATE_MS,
@@ -194,6 +201,7 @@ var SD_SIM = {
   BPM: BPM, BEAT: BEAT, BAR: BAR,
   makeChart: makeChart, assignStars: assignStars,
   makeFigure: makeFigure, FIGURE_PTS: FIGURE_PTS, FIGURE_LINKS: FIGURE_LINKS,
+  pickDaily: pickDaily,
   createScore: createScore,
   applyJudge: applyJudge, gradeFor: gradeFor
 };
