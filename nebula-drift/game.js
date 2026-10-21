@@ -697,6 +697,7 @@
 
   /* ================= main loop ================= */
   var raf = 0, lastT = 0, qualityGas = 1, qualityLevel = 0, renderScale = 1, lastRawT = 0, slowTime = 0;
+  var azVel = 0, bankCur = 0;
   var rendCam = [0, 0, 0], voyVec = [0, 0, 0];
 
   function frame(nowMs) {
@@ -705,6 +706,7 @@
     var dt = Math.min(now - (lastT || now), 0.1); lastT = now;
     elapsed += dt;
     var t = elapsed;
+    var prevAz = cam.az;
 
     /* adaptive quality, judged in wall-clock time (not frames — at
      * 2 fps a frame counter takes forever to notice): thin the gas,
@@ -745,11 +747,20 @@
       try { window.localStorage.setItem('nd-voyaged', '1'); } catch (e) { /* private mode */ }
     }
 
-    /* camera basis */
+    /* camera basis, with bank: the horizon leans a few degrees into a
+     * turn (smoothed azimuth rate drives it) and settles back level —
+     * the difference between a tripod head and a body floating */
+    var azDelta = ((cam.az - prevAz + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    if (dt > 0.001) azVel += ((azDelta / dt) - azVel) * Math.min(1, dt * 5);
+    var bankTgt = reduced ? 0 : Math.max(-0.055, Math.min(0.055, -azVel * 0.05));
+    bankCur += (bankTgt - bankCur) * Math.min(1, dt * 3.5);
     var cosA = Math.cos(cam.az), sinA = Math.sin(cam.az), cosH = Math.cos(cam.alt), sinH = Math.sin(cam.alt);
     var fwd = [cosH * sinA, sinH, -cosH * cosA];
     var rgt = [cosA, 0, sinA];
     var upv = [-sinH * sinA, cosH, sinH * cosA];
+    var cb = Math.cos(bankCur), sb = Math.sin(bankCur);
+    var rgtB = [rgt[0] * cb + upv[0] * sb, rgt[1] * cb + upv[1] * sb, rgt[2] * cb + upv[2] * sb];
+    var upvB = [upv[0] * cb - rgt[0] * sb, upv[1] * cb - rgt[1] * sb, upv[2] * cb - rgt[2] * sb];
 
     /* TRAVEL: the camera moves through the world, always, gently */
     if (!reduced) {
@@ -757,7 +768,7 @@
       camPos[1] += fwd[1] * TRAVEL_SPEED * dt;
       camPos[2] += fwd[2] * TRAVEL_SPEED * dt;
     }
-    voyVec = [rgt[0] * P2.voyage * 115, rgt[1] * P2.voyage * 115, rgt[2] * P2.voyage * 115];
+    voyVec = [rgtB[0] * P2.voyage * 115, rgtB[1] * P2.voyage * 115, rgtB[2] * P2.voyage * 115];
     rendCam = [camPos[0] + voyVec[0], camPos[1] + voyVec[1], camPos[2] + voyVec[2]];
 
     /* figure detection (ported) */
@@ -809,7 +820,7 @@
     if (Math.abs(fovCur - fovApplied) > 0.0004) applyProj();
 
     /* ================= render ================= */
-    var rot = rotationMat(rgt, upv, fwd);
+    var rot = rotationMat(rgtB, upvB, fwd);
     var breathe = reduced ? 1 : 0.88 + 0.12 * Math.sin(t * 0.924);
     gl.clearColor(0.008, 0.012, 0.035, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -913,6 +924,7 @@
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
   });
+  window.__nebula.bankNow = function () { return bankCur; };
   window.__nebula.face = function (name) {
     var figT = figuresByName[name];
     if (!figT) return false;
