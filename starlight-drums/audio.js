@@ -168,7 +168,17 @@ var AU = {
     if (judgement === 'perfect') ladderPluck(t, streak);
     try { if (navigator.vibrate) navigator.vibrate(judgement === 'perfect' ? 14 : 7); } catch (e) {}
   },
-  /* a tap that found no note: a soft wooden knock, acknowledged, unjudged */
+  /* the sky answers: at a chorus peak, a perfect sends the ladder note back
+   * a fifth higher, a breath later — the constellation humming your line */
+  answer: function (streak) {
+    if (!ac() || !soundOn) return;
+    var t = ctx.currentTime + 0.28;
+    var idx = Math.min(Math.max(streak - 1, 0), LADDER.length - 1);
+    var f = midiHz(LADDER[idx]) * 1.5;   // a perfect fifth above
+    toneAt(t, f, 0.55, 'sine', 0.11);
+    toneAt(t, f * 2, 0.35, 'sine', 0.035);
+    noiseAt(t, 0.18, 0.02, 5200, 0.7);   // a breath of shimmer under it
+  },
   emptyTap: function (drum) {
     if (!ac() || !soundOn) return;
     var t = ctx.currentTime;

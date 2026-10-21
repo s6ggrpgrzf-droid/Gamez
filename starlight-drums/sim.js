@@ -148,12 +148,52 @@ function gradeFor(score, totalNotes) {
   return { pct: pct, letter: letter };
 }
 
+/* ---- the constellation -----------------------------------------------------
+ * One figure hides in every chart: a swan of twenty stars, spread evenly
+ * across the song's timeline so it assembles as you play. Figure notes take
+ * their star homes from the figure; the rest of the chart scatters around it.
+ * Points are stage-relative; links join figure indices. */
+var FIGURE_NAME = 'The Swan';
+var FIGURE_PTS = [
+  [0.100, 0.300], [0.080, 0.235], [0.110, 0.185],   // 0-2  tail fan
+  [0.175, 0.260],                                   // 3    rear
+  [0.260, 0.238], [0.350, 0.218],                   // 4-5  back
+  [0.305, 0.135], [0.385, 0.088], [0.475, 0.112],   // 6-8  raised wing
+  [0.445, 0.200],                                   // 9    wing root
+  [0.475, 0.238],                                   // 10   front
+  [0.535, 0.228],                                   // 11   neck base
+  [0.570, 0.178], [0.590, 0.128],                   // 12-13 neck
+  [0.620, 0.098], [0.652, 0.108],                   // 14 head · 15 beak
+  [0.550, 0.272],                                   // 16   chest
+  [0.425, 0.283], [0.300, 0.288], [0.205, 0.286]    // 17-19 belly
+];
+var FIGURE_LINKS = [
+  [0, 3], [1, 3], [2, 3], [3, 4], [4, 5], [5, 10],
+  [4, 6], [6, 7], [7, 8], [8, 9], [9, 10],
+  [10, 11], [11, 12], [12, 13], [13, 14], [14, 15],
+  [11, 16], [16, 17], [17, 18], [18, 19], [19, 3]
+];
+function makeFigure(notes, seed) {
+  var F = FIGURE_PTS.length;
+  var rng = mulberry32(((seed >>> 0) || 1) ^ 0xF16);
+  var idxs = [], pts = [];
+  for (var k = 0; k < F; k++) {
+    idxs.push(Math.round(k * (notes.length - 1) / (F - 1)));
+    pts.push([
+      FIGURE_PTS[k][0] + (rng() - 0.5) * 0.016,
+      FIGURE_PTS[k][1] + (rng() - 0.5) * 0.014
+    ]);
+  }
+  return { name: FIGURE_NAME, idxs: idxs, pts: pts, links: FIGURE_LINKS };
+}
+
 var SD_SIM = {
   mulberry32: mulberry32, hashStr: hashStr,
   PERFECT_MS: PERFECT_MS, PERFECT_LATE_MS: PERFECT_LATE_MS,
   GOOD_MS: GOOD_MS, GOOD_LATE_MS: GOOD_LATE_MS, judge: judge,
   BPM: BPM, BEAT: BEAT, BAR: BAR,
   makeChart: makeChart, assignStars: assignStars,
+  makeFigure: makeFigure, FIGURE_PTS: FIGURE_PTS, FIGURE_LINKS: FIGURE_LINKS,
   createScore: createScore,
   applyJudge: applyJudge, gradeFor: gradeFor
 };

@@ -28,6 +28,12 @@ var mode = 'synth';                      // 'track' when the real song plays
 var wantStart = false;                   // a start tap waiting on the track load
 var trackFaded = false;
 var trackLoadT0 = 0;
+var figure = null;                       // the constellation hidden in the chart
+var linkA = [];                          // per-link animated brightness
+var chorusWin = [];                      // [[t0, t1], ...] answering-sky windows
+var barEnergies = [], barLenS = 2.05, energyNow = 0;
+var shimmerAt = -9999, figPulseAt = -9999;
+var ceremonyT0 = 0;
 var missIdx = 0, loIdx = 0;
 var drumHitAt = [-9999, -9999], drumHitStr = [0, 0];
 var pops = [null, null];                 // per-drum judgment pop {kind, t0}
@@ -202,15 +208,59 @@ function startSong() {
     chart = SIM.makeChart(SONG_SEED);
     AU.setBed(chart, t0audio);
   }
+  // the constellation hidden in this chart, and the song's energy shape
+  figure = SIM.makeFigure(chart.notes, mode === 'track' ? (window.SD_SONG.segStart * 1000 | 0) : SONG_SEED);
+  for (var fk = 0; fk < figure.idxs.length; fk++) {
+    var fnote = chart.notes[figure.idxs[fk]];
+    fnote.sx = figure.pts[fk][0]; fnote.sy = figure.pts[fk][1]; fnote.fig = fk;
+  }
+  linkA = figure.links.map(function () { return 0; });
+  if (mode === 'track') {
+    chorusWin = window.SD_SONG.chorus || [];
+    barEnergies = window.SD_SONG.bars || [];
+    barLenS = window.SD_SONG.barLen || 2.05;
+  } else {
+    chorusWin = [[0.30, 0.46], [0.68, 0.86]].map(function (w) {
+      return [w[0] * chart.duration, w[1] * chart.duration];
+    });
+    barLenS = SIM.BAR; barEnergies = [];
+    var nb = Math.ceil(chart.duration / barLenS), mx = 1;
+    for (var bi = 0; bi < nb; bi++) {
+      var c = 0;
+      for (var ni = 0; ni < chart.notes.length; ni++) {
+        if (chart.notes[ni].t >= bi * barLenS && chart.notes[ni].t < (bi + 1) * barLenS) c++;
+      }
+      barEnergies.push(c); if (c > mx) mx = c;
+    }
+    barEnergies = barEnergies.map(function (c) { return c / mx; });
+  }
+  energyNow = 0; shimmerAt = -9999; figPulseAt = -9999;
   lastProg = -1; setStreak(0);
 }
 /* The perceptual clock: the audio clock shifted by the output latency the
  * device reports, so the beat as HEARD is the beat that is drawn and graded. */
 function songNow() { return AU.now() - t0audio - AU.latency(); }
 
+/* The song ends; the sky gets its moment before the grade does.
+ * Ceremony first (the figure sweeps alight), then results. */
 function finishSong() {
   AU.stopBed();
   AU.stopTrack();
+  $('progFill').style.width = '100%';
+  scene = 'ceremony';
+  ceremonyT0 = performance.now();
+  $('pauseBtn').style.display = 'none';
+  setStreak(-1);
+}
+function figureLitCount() {
+  if (!figure || !chart) return 0;
+  var c = 0;
+  for (var i = 0; i < figure.idxs.length; i++) {
+    if (chart.notes[figure.idxs[i]].state === 1) c++;
+  }
+  return c;
+}
+function showResults() {
   var g = SIM.gradeFor(score, chart.notes.length);
   var prev = readBest();
   var isBest = !prev || g.pct > prev.pct;
@@ -226,6 +276,9 @@ function finishSong() {
   $('stGood').textContent = score.good;
   $('stMiss').textContent = score.miss;
   $('stStreak').textContent = score.maxStreak;
+  var fl = figureLitCount();
+  $('stFigName').textContent = 'Constellation — ' + (figure ? figure.name : '');
+  $('stFigure').textContent = fl + ' of ' + (figure ? figure.idxs.length : 0) + (figure && fl === figure.idxs.length ? ' · complete' : '');
   $('doneScr').classList.add('show');
   // count the sky up
   var el = $('gradePct'), t0 = performance.now(), target = g.pct;
@@ -288,6 +341,11 @@ function onDown(e) {
   best.lit = res === 'perfect' ? 1 : 0.55;
   tapDrum(drum, 1);
   AU.hit(drum, res, score.streak);
+  if (res === 'perfect' && inChorus(now)) {
+    AU.answer(score.streak);                 // the sky hums your line back
+    shimmerAt = performance.now();
+    figPulseAt = performance.now();
+  }
   pops[drum] = { kind: res, t0: performance.now() };
   best.inFlight = true;
   flights.push({ note: best, fx: DRUM_X[drum], fy: DRUM_Y, t0: performance.now(), bright: best.lit });
@@ -295,6 +353,13 @@ function onDown(e) {
   setStreak(score.streak);
 }
 $('stage').addEventListener('pointerdown', onDown);
+
+function inChorus(now) {
+  for (var i = 0; i < chorusWin.length; i++) {
+    if (now >= chorusWin[i][0] && now <= chorusWin[i][1]) return true;
+  }
+  return false;
+}
 
 /* streak HUD (DOM, updated on change only) */
 function setStreak(v) {
@@ -374,11 +439,17 @@ function draw(tNow) {
   // stage space
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * ox, dpr * oy);
 
+  // the sky breathes with the song: bar energy drives the lane glow
+  if (scene === 'play' && chart && barEnergies.length) {
+    var bIdx = Math.max(0, Math.min(barEnergies.length - 1, Math.floor(songNow() / barLenS)));
+    energyNow += ((barEnergies[bIdx] || 0) - energyNow) * 0.045;
+  }
   // lane light trails
+  var laneA = 0.08 + 0.13 * energyNow;
   for (var d = 0; d < 2; d++) {
     var lg = ctx.createLinearGradient(0, 30, 0, DRUM_Y);
     lg.addColorStop(0, 'rgba(160,180,255,0)');
-    lg.addColorStop(1, d === 0 ? 'rgba(242,160,7,0.10)' : 'rgba(140,200,255,0.10)');
+    lg.addColorStop(1, d === 0 ? 'rgba(242,160,7,' + laneA + ')' : 'rgba(140,200,255,' + laneA + ')');
     ctx.fillStyle = lg;
     ctx.fillRect(DRUM_X[d] - 52, 30, 104, DRUM_Y - 30);
   }
@@ -394,6 +465,10 @@ function draw(tNow) {
 
   var now = scene === 'play' ? songNow() : -99;
 
+  // ceremony sweep position (shared by the figure stars and their threads)
+  var sweepPosD = -99;
+  if (scene === 'ceremony' && figure) sweepPosD = ((tNow - ceremonyT0) / 1400) * (figure.links.length + 4) - 2;
+
   if (chart) {
     // lit stars resting in the sky + stars in flight
     var i, n;
@@ -403,7 +478,16 @@ function draw(tNow) {
       var hx = n.sx * LW, hy = n.sy * LH;
       var pulse = 1 + 0.1 * Math.sin(tNow / 480 + n.id);
       var sz = (26 + 10 * n.lit) * pulse;
-      ctx.save(); ctx.globalAlpha = 0.35 + 0.65 * n.lit;
+      if (n.fig != null) {
+        var fp = 1 + 0.22 * Math.max(0, 1 - (tNow - figPulseAt) / 600);
+        if (sweepPosD > -90) fp += 0.3 * Math.max(0, 1 - Math.abs(n.fig - (sweepPosD * 20 / 25)) / 3);
+        sz *= 1.55 * fp;
+      }
+      ctx.save();
+      // hierarchy: figure stars burn full; the scatter stays a backdrop,
+      // and steps further back during the ceremony so the figure owns it
+      ctx.globalAlpha = n.fig != null ? (0.35 + 0.65 * n.lit)
+        : (0.22 + 0.38 * n.lit) * (scene === 'ceremony' ? 0.45 : 1);
       ctx.drawImage(SPR[n.drum], hx - sz / 2, hy - sz / 2, sz, sz);
       ctx.restore();
     }
@@ -428,6 +512,37 @@ function draw(tNow) {
       var my = DRUM_Y + mk * 74;
       ctx.drawImage(SPR[ma.note.drum], DRUM_X[ma.note.drum] - 13, my - 13, 26, 26);
       ctx.restore();
+    }
+  }
+
+  // the constellation's threads, drawn OVER the scatter so they read: a link
+  // wakes when both its stars are lit, and only whispers when one end is lit.
+  if (chart && figure) {
+    var shim = Math.max(0, 1 - (tNow - shimmerAt) / 1200);
+    for (var li = 0; li < figure.links.length; li++) {
+      var la2 = figure.links[li];
+      var na2 = chart.notes[figure.idxs[la2[0]]], nb3 = chart.notes[figure.idxs[la2[1]]];
+      var bothLit = na2.state === 1 && nb3.state === 1;
+      var oneLit = na2.state === 1 || nb3.state === 1;
+      var target = bothLit ? 0.8 + 0.2 * shim : (oneLit ? 0.08 : 0);
+      if (sweepPosD > -90) target += Math.max(0, 1 - Math.abs(li - sweepPosD) / 2.5) * 0.55 * (bothLit ? 1 : 0.25);
+      linkA[li] += (Math.min(1, target) - linkA[li]) * 0.09;
+      if (linkA[li] < 0.004) continue;
+      var x1 = na2.sx * LW, y1 = na2.sy * LH, x2 = nb3.sx * LW, y2 = nb3.sy * LH;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = linkA[li] * 0.5; ctx.lineWidth = 5.5; ctx.strokeStyle = '#ffe9b0';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.globalAlpha = linkA[li]; ctx.lineWidth = 2; ctx.strokeStyle = '#eef2ff';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.restore();
+    }
+    if (scene === 'ceremony') {
+      var rk = (tNow - ceremonyT0 - 850) / 750;
+      if (rk > 0 && rk < 1) {
+        ctx.save(); ctx.globalAlpha = (1 - rk) * 0.55; ctx.lineWidth = 2.5; ctx.strokeStyle = '#ffd968';
+        ctx.beginPath(); ctx.arc(0.36 * LW, 0.21 * LH, 26 + rk * 270, 0, 6.2832); ctx.stroke(); ctx.restore();
+      }
     }
   }
 
@@ -522,6 +637,7 @@ function frame(tNow) {
     }
     if (now > chart.duration + 1.1) { finishSong(); }
   }
+  if (scene === 'ceremony' && tNow - ceremonyT0 > 1750) { showResults(); }
   draw(tNow);
 }
 
@@ -558,6 +674,8 @@ if (window.__SD_DEBUG) {
   window.__SD = {
     start: startSong, scene: function () { return scene; },
     mode: function () { return mode; },
+    figLit: function () { return figureLitCount(); },
+    inChorusNow: function () { return scene === 'play' && inChorus(songNow()); },
     trackState: function () { return AU.trackState(); },
     latency: function () { return AU.latency(); },
     chart: function () { return chart; }, score: function () { return score; },
