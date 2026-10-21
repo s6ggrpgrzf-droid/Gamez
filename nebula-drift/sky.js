@@ -103,6 +103,72 @@ var NEBULAE = [
   ['Great Hercules Cluster', 16.695, 36.46, 'cluster', 'pearl', 0.7]
 ];
 
+/* Real distances in light-years (catalogue values, rounded). These are
+ * what make a constellation an illusion: the figure's stars are at
+ * wildly different depths, and only line up from here. */
+var DISTANCES = {
+  'Deneb': 2615, 'Sadr': 1830, 'Albireo': 434, 'Delta Cygni': 165, 'Gienah Cygni': 73,
+  'Vega': 25, 'Sheliak': 960, 'Sulafat': 634, 'Double Double': 162,
+  'Altair': 17, 'Tarazed': 395, 'Alshain': 45,
+  'Caph': 55, 'Schedar': 228, 'Gamma Cassiopeiae': 613, 'Ruchbah': 99, 'Segin': 442,
+  'Markab': 133, 'Scheat': 196, 'Algenib': 391, 'Enif': 670, 'Matar': 167, 'Homam': 204, 'Baham': 93,
+  'Alpheratz': 97, 'Mirach': 199, 'Almach': 355, 'Delta Andromedae': 101,
+  'Mirfak': 510, 'Gamma Persei': 256, 'Delta Persei': 528, 'Algol': 93, 'Epsilon Persei': 540,
+  'Alderamin': 49, 'Alfirk': 690, 'Gamma Cephei': 45, 'Zeta Cephei': 836, 'Delta Cephei': 887,
+  'Polaris': 433, 'Kochab': 131, 'Pherkad': 486, 'Yildun': 183,
+  'Dubhe': 123, 'Merak': 79, 'Phecda': 84, 'Megrez': 81, 'Alioth': 83, 'Mizar': 83, 'Alkaid': 104,
+  'Eltanin': 148, 'Rastaban': 380, 'Thuban': 303,
+  'Hamal': 66, 'Sheratan': 60,
+  'Aldebaran': 65, 'Elnath': 134, 'Alcyone': 444,
+  'Capella': 43, 'Menkalinan': 82,
+  'Sadalsuud': 540, 'Sadalmelik': 520, 'Skat': 160,
+  'Fomalhaut': 25, 'Alrescha': 151, 'Deneb Algedi': 39, 'Dabih': 344,
+  'Rasalhague': 49, 'Cebalrai': 82, 'Sabik': 88,
+  'Kornephoros': 148, 'Rasalgethi': 360, 'Zeta Herculis': 35
+};
+
+/* The figures: stick lines over catalogue stars, plus the one line of
+ * story the sky is allowed to whisper about each. */
+var FIGURES = [
+  { name: 'Cygnus', story: 'The Swan, flying down the river of the Milky Way.',
+    lines: [['Deneb', 'Sadr'], ['Sadr', 'Albireo'], ['Sadr', 'Gienah Cygni'], ['Sadr', 'Delta Cygni']] },
+  { name: 'Lyra', story: 'Orpheus’s lyre — its music could charm stones into listening.',
+    lines: [['Vega', 'Double Double'], ['Vega', 'Sheliak'], ['Sheliak', 'Sulafat'], ['Sulafat', 'Double Double']] },
+  { name: 'Aquila', story: 'The Eagle that carried the thunderbolts of Zeus.',
+    lines: [['Tarazed', 'Altair'], ['Altair', 'Alshain']] },
+  { name: 'Cassiopeia', story: 'The vain queen, set circling the pole in her chair forever.',
+    lines: [['Caph', 'Schedar'], ['Schedar', 'Gamma Cassiopeiae'], ['Gamma Cassiopeiae', 'Ruchbah'], ['Ruchbah', 'Segin']] },
+  { name: 'Pegasus', story: 'The winged horse — this is his Great Square, high in the south.',
+    lines: [['Markab', 'Scheat'], ['Scheat', 'Alpheratz'], ['Alpheratz', 'Algenib'], ['Algenib', 'Markab'],
+            ['Scheat', 'Matar'], ['Markab', 'Homam'], ['Homam', 'Baham'], ['Baham', 'Enif']] },
+  { name: 'Andromeda', story: 'The chained princess, rescued from the sea-monster by Perseus.',
+    lines: [['Alpheratz', 'Delta Andromedae'], ['Delta Andromedae', 'Mirach'], ['Mirach', 'Almach']] },
+  { name: 'Perseus', story: 'The hero — Algol is the Gorgon’s eye, and it winks.',
+    lines: [['Gamma Persei', 'Mirfak'], ['Mirfak', 'Delta Persei'], ['Mirfak', 'Epsilon Persei'], ['Epsilon Persei', 'Algol']] },
+  { name: 'Cepheus', story: 'The king. A whole royal family is set in this corner of sky.',
+    lines: [['Alderamin', 'Alfirk'], ['Alfirk', 'Gamma Cephei'], ['Gamma Cephei', 'Delta Cephei'],
+            ['Delta Cephei', 'Zeta Cephei'], ['Zeta Cephei', 'Alderamin']] },
+  { name: 'Ursa Minor', story: 'The Little Bear — the pole star burns at his tail’s end.',
+    lines: [['Polaris', 'Yildun'], ['Yildun', 'Kochab'], ['Kochab', 'Pherkad']] },
+  { name: 'Ursa Major', story: 'The Great Bear. Five of these stars travel together; Dubhe and Alkaid are strangers passing through.',
+    lines: [['Dubhe', 'Merak'], ['Merak', 'Phecda'], ['Phecda', 'Megrez'], ['Megrez', 'Dubhe'],
+            ['Megrez', 'Alioth'], ['Alioth', 'Mizar'], ['Mizar', 'Alkaid']] },
+  { name: 'Draco', story: 'The dragon that guarded the golden apples of the Hesperides.',
+    lines: [['Eltanin', 'Rastaban'], ['Rastaban', 'Thuban']] },
+  { name: 'Aries', story: 'The golden-fleeced ram, rising in the east.',
+    lines: [['Hamal', 'Sheratan']] },
+  { name: 'Taurus', story: 'The Bull, carrying Europa across the sea on his back.',
+    lines: [['Aldebaran', 'Elnath'], ['Aldebaran', 'Alcyone']] },
+  { name: 'Auriga', story: 'The Charioteer, a goat — Capella — slung over his shoulder.',
+    lines: [['Capella', 'Menkalinan'], ['Capella', 'Elnath']] },
+  { name: 'Aquarius', story: 'The Water Bearer, pouring his stream south toward the Fish.',
+    lines: [['Sadalsuud', 'Sadalmelik'], ['Sadalmelik', 'Skat']] },
+  { name: 'Hercules', story: 'The strongman, kneeling forever in the middle of his labours.',
+    lines: [['Kornephoros', 'Zeta Herculis'], ['Zeta Herculis', 'Rasalgethi']] },
+  { name: 'Ophiuchus', story: 'The Serpent Bearer, the healer who learned to wake the dead.',
+    lines: [['Rasalhague', 'Cebalrai'], ['Rasalhague', 'Sabik']] }
+];
+
 /* ---------- seeded PRNG (mulberry32) — reproducible fields ---------- */
 function mulberry32(seed) {
   var a = seed >>> 0;
@@ -182,6 +248,7 @@ function tonightSky(now, home) {
     var a = altAz(s[1], s[2], home.lat, lst);
     return {
       name: s[0], ra: s[1], dec: s[2], mag: s[3], spec: s[4],
+      dist: DISTANCES[s[0]] || null,
       alt: a.alt, az: a.az, dir: dirFromAltAz(a.alt, a.az), color: spectralColor(s[4])
     };
   });
@@ -196,7 +263,7 @@ function tonightSky(now, home) {
 }
 
 var SKY = {
-  HOME: HOME, STARS: STARS, NEBULAE: NEBULAE,
+  HOME: HOME, STARS: STARS, NEBULAE: NEBULAE, DISTANCES: DISTANCES, FIGURES: FIGURES,
   mulberry32: mulberry32, jdFromDate: jdFromDate, gmstDeg: gmstDeg, lstDeg: lstDeg,
   tonightDate: tonightDate, altAz: altAz, dirFromAltAz: dirFromAltAz, dirFromRaDec: dirFromRaDec,
   spectralColor: spectralColor, fieldSpec: fieldSpec, tonightSky: tonightSky

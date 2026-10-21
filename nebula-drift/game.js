@@ -203,11 +203,51 @@
     }
   })();
 
-  /* catalogue stars, as placed for tonight */
-  var catStars = tonight.stars.map(function (s) {
-    return { dir: s.dir, mag: s.mag, spec: s.spec.charAt(0), name: s.name, ph: rng() * 6.283, tw: 0.25 + rng() * 0.6 };
+  /* catalogue stars, as placed for tonight — each at a depth from its
+   * real distance (log-scaled), so a sideways step shears them truly. */
+  function depthFor(dist) { return 120 + Math.log(dist || 400) * 48; }
+  var catByName = {};
+  var catStars = tonight.stars.map(function (s, sIdx) {
+    var csObj = {
+      dir: s.dir, mag: s.mag, spec: s.spec.charAt(0), name: s.name, dist: s.dist,
+      pos: [s.dir[0] * depthFor(s.dist), s.dir[1] * depthFor(s.dist), s.dir[2] * depthFor(s.dist)],
+      ph: rng() * 6.283, tw: 0.25 + rng() * 0.6, _vis: false, _sx: 0, _sy: 0, fig: null
+    };
+    catByName[s.name] = sIdx;
+    return csObj;
   });
   var upCount = tonight.stars.filter(function (s) { return s.alt > 0; }).length;
+
+  /* figures resolved against tonight's placed stars */
+  var figures = [], figuresByName = {};
+  SKY.FIGURES.forEach(function (fDef) {
+    var idxLines = [], usedSet = {}, centreAcc = [0, 0, 0], upStars = 0, totStars = 0;
+    fDef.lines.forEach(function (ln) {
+      idxLines.push([catByName[ln[0]], catByName[ln[1]]]);
+      [ln[0], ln[1]].forEach(function (nm) { usedSet[nm] = true; });
+    });
+    var nearSt = null, farSt = null;
+    Object.keys(usedSet).forEach(function (nm) {
+      var st = tonight.stars[catByName[nm]];
+      centreAcc[0] += st.dir[0]; centreAcc[1] += st.dir[1]; centreAcc[2] += st.dir[2];
+      totStars++; if (st.alt > -2) upStars++;
+      if (!nearSt || st.dist < nearSt.dist) nearSt = { name: nm, dist: st.dist };
+      if (!farSt || st.dist > farSt.dist) farSt = { name: nm, dist: st.dist };
+    });
+    var cLen = Math.hypot(centreAcc[0], centreAcc[1], centreAcc[2]) || 1;
+    var figObj = {
+      name: fDef.name, story: fDef.story, lines: idxLines,
+      centre: [centreAcc[0] / cLen, centreAcc[1] / cLen, centreAcc[2] / cLen],
+      upFrac: totStars ? upStars / totStars : 0, near: nearSt, far: farSt
+    };
+    Object.keys(usedSet).forEach(function (nm) { catStars[catByName[nm]].fig = figObj; });
+    figures.push(figObj); figuresByName[fDef.name] = figObj;
+  });
+
+  /* Pass 2 state: the active figure + the voyage (Earth-viewpoint offset) */
+  var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false };
+  var hasVoyaged = false;
+  try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
 
   /* nebula complexes: layered sprites along each anchor's real direction */
   var nebSprites = [];
@@ -271,10 +311,10 @@
 
   /* ---------------- input: drag to look, tap for the whisper ---------------- */
   var pointers = new Map();
-  var lastTouchAt = -30, downAt = 0, downX = 0, downY = 0, movedPx = 0;
+  var lastTouchAt = -30, downAt = 0, downX = 0, downY = 0, movedPx = 0, downStamp = 0;
   cv.addEventListener('pointerdown', function (e) {
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 1) { downAt = performance.now(); downX = e.clientX; downY = e.clientY; movedPx = 0; }
+    if (pointers.size === 1) { downAt = performance.now(); downStamp = downAt; downX = e.clientX; downY = e.clientY; movedPx = 0; }
     lastTouchAt = perfNow();
     try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic / already-released pointer */ }
   });
@@ -284,6 +324,7 @@
     var dx = e.clientX - prev.x, dy = e.clientY - prev.y;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size !== 1) return;
+    if (P2.engaged) return;   /* holding still = the voyage; moves do not steer it */
     movedPx += Math.abs(dx) + Math.abs(dy);
     var k = 0.0028;
     cam.az += dx * k; cam.alt += dy * k;
@@ -293,23 +334,52 @@
   function endPointer(e) {
     var wasTap = pointers.size === 1 && (performance.now() - downAt) < 350 && movedPx < 9;
     pointers.delete(e.pointerId);
+    if (P2.engaged) { P2.engaged = false; P2.voyageTarget = 0; }   /* release: glide home */
     lastTouchAt = perfNow();
     if (wasTap) showWhisper(5000);
   }
   cv.addEventListener('pointerup', endPointer);
   cv.addEventListener('pointercancel', endPointer);
-  window.addEventListener('blur', function () { pointers.clear(); cam.vaz = 0; cam.valt = 0; });
+  window.addEventListener('blur', function () {
+    pointers.clear(); cam.vaz = 0; cam.valt = 0;
+    P2.engaged = false; P2.voyageTarget = 0;
+  });
 
-  /* ---------------- whisper ---------------- */
-  var whisperTimer = 0;
-  function showWhisper(ms) {
-    whisperEl.classList.add('show');
-    clearTimeout(whisperTimer);
-    whisperTimer = setTimeout(function () { whisperEl.classList.remove('show'); }, ms);
-  }
+  /* ---------------- whisper ----------------
+   * One quiet line, state-driven: a dissolved figure speaks first, then
+   * a settled figure (its story, or the voyage hint until you've taken
+   * one), then tonight's line at open / on tap. Otherwise, silence. */
   var dateStr = tonight.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  whisperMain.textContent = 'Tonight · ' + dateStr + ' · the sky over ' + SKY.HOME.name;
-  whisperSub.textContent = 'drag to look — it drifts on its own';
+  var tonightMain = 'Tonight · ' + dateStr + ' · the sky over ' + SKY.HOME.name;
+  var tonightSub = 'drag to look — it drifts on its own';
+  var tapFlashUntil = 9;   /* tonight's line greets you, then fades */
+  function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
+  var lastWhisperKey = '__boot';
+  function setWhisper(key, main, sub) {
+    if (key === lastWhisperKey) return;
+    lastWhisperKey = key;
+    if (!main) { whisperEl.classList.remove('show'); return; }
+    whisperMain.textContent = main;
+    whisperSub.textContent = sub || '';
+    whisperEl.classList.add('show');
+  }
+  function fmtDist(d) { return d ? d.toLocaleString('en-US') : ''; }
+  function updateWhisper(t) {
+    var fig = P2.drawFig;
+    if (fig && P2.alpha > 0.3 && P2.voyage > 0.35) {
+      setWhisper('dis:' + fig.name, fig.name + ', dissolved',
+        fig.near.name + ' is ' + fmtDist(fig.near.dist) + ' light-years away · ' +
+        fig.far.name + ' is ' + fmtDist(fig.far.dist) + ' — the shape only exists from home');
+    } else if (fig && P2.alpha > 0.3) {
+      var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
+      setWhisper('fig:' + fig.name + (hintOn ? ':h' : ':s'), fig.name,
+        hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : fig.story);
+    } else if (t < tapFlashUntil) {
+      setWhisper('tonight', tonightMain, tonightSub);
+    } else {
+      setWhisper('none', null);
+    }
+  }
 
   /* ---------------- shooting star (rare, quiet) ---------------- */
   var meteor = null, nextMeteor = 18 + rng() * 25;
@@ -344,6 +414,16 @@
     }
     if (cam.alt > 1.52) cam.alt = 1.52; if (cam.alt < -1.45) cam.alt = -1.45;
 
+    /* the voyage: a still press-and-hold steps the viewpoint sideways;
+     * release glides it home. Slow on purpose — this is a drift, not a dash. */
+    if (pointers.size === 1 && !P2.engaged && movedPx < 10 && performance.now() - downStamp > 450) P2.engaged = true;
+    if (P2.engaged) P2.voyageTarget = 1;
+    P2.voyage += (P2.voyageTarget - P2.voyage) * Math.min(1, dt * 1.05);
+    if (P2.voyage > 0.5 && !hasVoyaged) {
+      hasVoyaged = true;
+      try { window.localStorage.setItem('nd-voyaged', '1'); } catch (e) { /* private mode */ }
+    }
+
     /* the drift: a slow sway inside the nebula, never a journey */
     if (!reduced) {
       camPos = [Math.sin(t * 0.011) * 26, Math.sin(t * 0.0073 + 1.7) * 13, Math.cos(t * 0.0091) * 26];
@@ -358,6 +438,37 @@
     var cxp = CW * DPR / 2, cyp = CH * DPR / 2;
     var breathe = reduced ? 1 : 0.88 + 0.12 * Math.sin(t * 0.924);  /* ~6.8 s breath */
 
+    /* the render viewpoint: sway position + the voyage's sideways step */
+    var voyOff = P2.voyage * 115;
+    var rendCam = [
+      camPos[0] + rgt[0] * voyOff, camPos[1] + rgt[1] * voyOff, camPos[2] + rgt[2] * voyOff
+    ];
+
+    /* figure detection: nearest figure whose centre has settled into
+     * view, with hysteresis so figures don't flicker at the edge */
+    var curFig = P2.activeName ? figuresByName[P2.activeName] : null;
+    var curAng = 9, candFig = null, candAng = 9;
+    for (var fgi = 0; fgi < figures.length; fgi++) {
+      var fgCand = figures[fgi];
+      if (fgCand.upFrac < 0.6) continue;
+      var cosFc = fgCand.centre[0] * fwd[0] + fgCand.centre[1] * fwd[1] + fgCand.centre[2] * fwd[2];
+      var angFc = Math.acos(Math.max(-1, Math.min(1, cosFc)));
+      if (angFc < candAng) { candAng = angFc; candFig = fgCand; }
+      if (fgCand === curFig) curAng = angFc;
+    }
+    var nextFig = null;
+    if (curFig && curAng < 0.61 && !(candFig && candAng < curAng - 0.14)) nextFig = curFig;
+    else if (candFig && candAng < 0.47) nextFig = candFig;
+    if (nextFig) {
+      if (nextFig.name !== P2.activeName) { P2.activeName = nextFig.name; P2.actT = t; }
+      P2.drawFig = nextFig;
+      P2.alpha = Math.min(1, P2.alpha + dt * 0.8);
+    } else {
+      P2.alpha = Math.max(0, P2.alpha - dt * 0.7);
+      if (P2.alpha === 0) { P2.activeName = null; P2.drawFig = null; }
+    }
+    P2.activeFor = P2.activeName ? t - P2.actT : 0;
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
@@ -371,7 +482,7 @@
       return [cxp + focal * cx / cz, cyp - focal * cy / cz, cz];
     }
     function projectPos(p) {
-      var rx = p[0] - camPos[0], ry = p[1] - camPos[1], rz = p[2] - camPos[2];
+      var rx = p[0] - rendCam[0], ry = p[1] - rendCam[1], rz = p[2] - rendCam[2];
       var cz = rx * fwd[0] + ry * fwd[1] + rz * fwd[2];
       if (cz < 6) return null;
       var cx = rx * rgt[0] + ry * rgt[1] + rz * rgt[2];
@@ -402,8 +513,8 @@
 
     /* nebula complexes, far to near */
     nebSprites.sort(function (a, b) {
-      var da = (a.pos[0] - camPos[0]) * fwd[0] + (a.pos[1] - camPos[1]) * fwd[1] + (a.pos[2] - camPos[2]) * fwd[2];
-      var db = (b.pos[0] - camPos[0]) * fwd[0] + (b.pos[1] - camPos[1]) * fwd[1] + (b.pos[2] - camPos[2]) * fwd[2];
+      var da = (a.pos[0] - rendCam[0]) * fwd[0] + (a.pos[1] - rendCam[1]) * fwd[1] + (a.pos[2] - rendCam[2]) * fwd[2];
+      var db = (b.pos[0] - rendCam[0]) * fwd[0] + (b.pos[1] - rendCam[1]) * fwd[1] + (b.pos[2] - rendCam[2]) * fwd[2];
       return db - da;
     });
     for (var ni2 = 0; ni2 < nebSprites.length; ni2++) {
@@ -412,16 +523,21 @@
       if (!np) continue;
       var nsz = focal * ns.size / np[2];
       if (nsz < 8 || nsz > 2600) continue;
+      /* a cloud that fills the sky should read as atmosphere, not as a
+       * lampshade: the bigger it looms, the thinner it gets */
+      var bigFade = nsz > 850 ? Math.max(0.3, 850 / nsz) : 1;
       ctx.globalCompositeOperation = ns.dust ? 'source-over' : 'lighter';
-      ctx.globalAlpha = ns.dust ? ns.alpha : ns.alpha * breathe * (0.9 + 0.1 * Math.sin(t * 0.5 + ns.ph));
+      ctx.globalAlpha = (ns.dust ? ns.alpha : ns.alpha * breathe * (0.9 + 0.1 * Math.sin(t * 0.5 + ns.ph))) * bigFade;
       ctx.drawImage(ns.spr, np[0] - nsz / 2, np[1] - nsz / 2, nsz, nsz);
     }
 
-    /* catalogue stars shine through the gas */
+    /* catalogue stars shine through the gas — now at true finite depth,
+     * so the voyage's sideways step shears them against each other */
     for (var ci = 0; ci < catStars.length; ci++) {
       var cs = catStars[ci];
-      var cp = projectDir(cs.dir);
-      if (!cp) continue;
+      var cp = projectPos(cs.pos);
+      if (!cp) { cs._vis = false; continue; }
+      cs._vis = true; cs._sx = cp[0]; cs._sy = cp[1];
       var csz = (15.5 - cs.mag * 2.6) * DPR;
       if (csz < 3.4) csz = 3.4;
       ctx.globalCompositeOperation = 'lighter';
@@ -432,6 +548,39 @@
         var ssz = csz * 6.4;
         ctx.globalAlpha = 0.5;
         ctx.drawImage(specSpikes[cs.spec], cp[0] - ssz / 2, cp[1] - ssz / 2, ssz, ssz);
+      }
+      if (P2.drawFig && cs.fig === P2.drawFig) {   /* the settled figure's stars breathe brighter —
+          and as the voyage kills the threads, the scattered stars themselves keep the glow */
+        var bsz2 = csz * 2.2;
+        ctx.globalAlpha = (0.16 + P2.voyage * 0.3) * P2.alpha;
+        ctx.drawImage(cspr, cp[0] - bsz2 / 2, cp[1] - bsz2 / 2, bsz2, bsz2);
+      }
+    }
+
+    /* the threads of light: drawn on segment by segment when a figure
+     * settles — and the first casualty of the voyage, thinning to
+     * nothing as the viewpoint leaves home */
+    if (P2.drawFig && P2.alpha > 0.02) {
+      var threadFig = P2.drawFig;
+      var threadA = P2.alpha * Math.max(0, 1 - P2.voyage * 1.5);
+      if (threadA > 0.01) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        for (var sgi = 0; sgi < threadFig.lines.length; sgi++) {
+          var segPair = threadFig.lines[sgi];
+          var segA = catStars[segPair[0]], segB = catStars[segPair[1]];
+          if (!segA._vis || !segB._vis) continue;
+          var segProg = Math.max(0, Math.min(1, (t - P2.actT - sgi * 0.13) / 0.75));
+          if (segProg <= 0) continue;
+          var segEx = segA._sx + (segB._sx - segA._sx) * segProg;
+          var segEy = segA._sy + (segB._sy - segA._sy) * segProg;
+          ctx.strokeStyle = 'rgba(255,238,205,' + (0.10 * threadA * segProg).toFixed(3) + ')';
+          ctx.lineWidth = 3.4 * DPR;
+          ctx.beginPath(); ctx.moveTo(segA._sx, segA._sy); ctx.lineTo(segEx, segEy); ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,246,224,' + (0.6 * threadA * segProg).toFixed(3) + ')';
+          ctx.lineWidth = 1.1 * DPR;
+          ctx.beginPath(); ctx.moveTo(segA._sx, segA._sy); ctx.lineTo(segEx, segEy); ctx.stroke();
+        }
       }
     }
 
@@ -489,6 +638,7 @@
     }
 
     ctx.globalAlpha = 1;
+    updateWhisper(t);
     window.__nebula.frameCount++;
   }
 
@@ -496,7 +646,17 @@
   window.__nebula = {
     ready: false, frameCount: 0, cam: cam, tonight: tonight,
     visibleUp: upCount, nebulaSprites: nebSprites.length,
-    fieldStars: fieldStars.length, catalogue: catStars.length
+    fieldStars: fieldStars.length, catalogue: catStars.length,
+    pass2: P2
+  };
+  /* test/inspection hook: aim the camera at a figure's centre */
+  window.__nebula.face = function (name) {
+    var figT = figuresByName[name];
+    if (!figT) return false;
+    var aaT = dirToAzAlt(figT.centre);
+    cam.az = aaT.az; cam.alt = aaT.alt; cam.vaz = 0; cam.valt = 0;
+    lastTouchAt = perfNow();
+    return true;
   };
   resize();
   showWhisper(8000);

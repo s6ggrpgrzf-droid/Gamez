@@ -53,6 +53,33 @@ ok(near(Math.hypot(d[0], d[1], d[2]), 1, 1e-9), 'dirFromAltAz unit vector');
 const cb = SKY.spectralColor('B8'), cm = SKY.spectralColor('M5');
 ok(cb[2] === 255 && cm[0] === 255 && cb[0] < cm[0], 'spectral colours run blue->red');
 
+/* Figures + distances (Pass 2) */
+const catNames = new Set(SKY.STARS.map(s => s[0]));
+ok(SKY.FIGURES.length >= 15, 'figure count', SKY.FIGURES.length);
+let figStarsOk = true, distOk = true, linesOk = true;
+for (const f of SKY.FIGURES) {
+  if (!f.lines.length) linesOk = false;
+  const used = new Set();
+  for (const [a, b] of f.lines) {
+    if (!catNames.has(a) || !catNames.has(b)) figStarsOk = false;
+    used.add(a); used.add(b);
+  }
+  for (const n of used) {
+    const d = SKY.DISTANCES[n];
+    if (!(d > 0 && d < 10000)) distOk = false;
+  }
+}
+ok(figStarsOk, 'every figure line joins catalogue stars');
+ok(distOk, 'every figure star has a real distance');
+ok(linesOk, 'every figure has at least one line');
+const cyg = SKY.FIGURES.find(f => f.name === 'Cygnus');
+const cygDists = [...new Set(cyg.lines.flat())].map(n => SKY.DISTANCES[n]);
+ok(Math.max(...cygDists) - Math.min(...cygDists) > 2000, 'Cygnus depths really are wildly different',
+   'span ' + (Math.max(...cygDists) - Math.min(...cygDists)));
+ok(SKY.DISTANCES['Vega'] === 25 && SKY.DISTANCES['Deneb'] === 2615, 'anchor distances right (Vega 25, Deneb 2615)');
+const skyFig = SKY.tonightSky(new Date(2026, 9, 21, 15, 25), SKY.HOME);
+ok(skyFig.stars.find(s => s.name === 'Deneb').dist === 2615, 'tonight stars carry distance');
+
 /* Seeded RNG is reproducible */
 const r1 = SKY.mulberry32(42), r2 = SKY.mulberry32(42);
 ok(r1() === r2() && r1() === r2(), 'mulberry32 deterministic');
