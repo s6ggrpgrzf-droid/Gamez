@@ -107,6 +107,7 @@
   var gasProg = makeProgram(
     'attribute vec3 aPos; attribute vec2 aCorner; attribute vec3 aCol;' +
     'attribute float aSize; attribute float aAlpha; attribute float aPhase; attribute float aKind;' +
+    'attribute float aRot; attribute float aAspect;' +
     'uniform mat4 uProj; uniform mat4 uRot;' +
     'uniform vec3 uCamPos; uniform vec3 uOrigin; uniform float uWrap; uniform float uBox;' +
     'uniform float uBreathe;' +
@@ -120,7 +121,10 @@
     '  float depth = max(1.0, -vp.z);' +
     '  float nearFade = smoothstep(6.0, 95.0, depth);' +
     '  float farFade = 1.0 - uWrap * smoothstep(uBox * 0.34, uBox * 0.5, length(wp));' +
-    '  vp.xy += aCorner * (aSize * 0.5);' +
+    '  float crA = cos(aRot), srA = sin(aRot);' +
+    '  vec2 rc = vec2(aCorner.x * crA - aCorner.y * srA, aCorner.x * srA + aCorner.y * crA);' +
+    '  rc.x *= aAspect;' +
+    '  vp.xy += rc * (aSize * 0.5);' +
     '  gl_Position = uProj * vp;' +
     '  vAlpha = aAlpha * nearFade * farFade * uBreathe;' +
     '}',
@@ -131,8 +135,14 @@
     '  if (abs(vKind - uKind) > 0.5) discard;' +
     '  float d = length(vUv);' +
     '  float fall = pow(max(0.0, 1.0 - d), 1.8);' +
-    '  float tex = 0.72 + 0.28 * sin(vUv.x * 7.0 + vPhase) * sin(vUv.y * 6.0 + vPhase * 1.7);' +
-    '  float a = fall * tex * vAlpha;' +
+    '  vec2 np1 = vUv * vec2(5.0, 4.0);' +
+    '  float nz = 0.50 * (0.5 + 0.5 * sin(np1.x + vPhase) * sin(np1.y - vPhase * 1.3));' +
+    '  vec2 np2 = vec2(vUv.x * 0.8 - vUv.y * 0.6, vUv.x * 0.6 + vUv.y * 0.8) * 10.5;' +
+    '  nz += 0.30 * (0.5 + 0.5 * sin(np2.x - vPhase * 2.1) * sin(np2.y + vPhase));' +
+    '  vec2 np3 = vec2(vUv.x * 0.6 + vUv.y * 0.8, -vUv.x * 0.8 + vUv.y * 0.6) * 23.0;' +
+    '  nz += 0.20 * (0.5 + 0.5 * sin(np3.x + vPhase * 3.7) * sin(np3.y - vPhase * 0.7));' +
+    '  float erode = smoothstep(0.16, 0.9, nz + (1.0 - d) * 0.38);' +
+    '  float a = fall * erode * vAlpha * 1.3;' +
     '  if (a < 0.003) discard;' +
     '  gl_FragColor = vec4(vCol, a);' +
     '}'
@@ -307,6 +317,7 @@
     var pos = new Float32Array(n * vertsPer * 3), corner = new Float32Array(n * vertsPer * 2);
     var col = new Float32Array(n * vertsPer * 3), size = new Float32Array(n * vertsPer);
     var alpha = new Float32Array(n * vertsPer), phase = new Float32Array(n * vertsPer), kind = new Float32Array(n * vertsPer);
+    var rot = new Float32Array(n * vertsPer), aspect = new Float32Array(n * vertsPer);
     var idx = new Uint16Array(n * 6);
     var corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
     puffs.forEach(function (p, i) {
@@ -315,6 +326,7 @@
         pos.set(p.pos, vi * 3); col.set(p.col, vi * 3);
         corner.set(corners[v], vi * 2);
         size[vi] = p.size; alpha[vi] = p.alpha; phase[vi] = p.phase; kind[vi] = p.kind;
+        rot[vi] = p.rot || 0; aspect[vi] = p.aspect || 1;
       }
       var io = i * 6, vo = i * 4;
       idx[io] = vo; idx[io + 1] = vo + 1; idx[io + 2] = vo + 2;
@@ -326,6 +338,7 @@
       col: makeBuffer(gl.ARRAY_BUFFER, col), size: makeBuffer(gl.ARRAY_BUFFER, size),
       alpha: makeBuffer(gl.ARRAY_BUFFER, alpha), phase: makeBuffer(gl.ARRAY_BUFFER, phase),
       kind: makeBuffer(gl.ARRAY_BUFFER, kind),
+      rot: makeBuffer(gl.ARRAY_BUFFER, rot), aspect: makeBuffer(gl.ARRAY_BUFFER, aspect),
       index: makeBuffer(gl.ELEMENT_ARRAY_BUFFER, idx)
     };
   }
@@ -337,7 +350,14 @@
     tonight.nebulae.forEach(function (neb, ni) {
       if (neb.alt < -6) return;
       var basis = tangentBasis(neb.dir);
-      var layers = neb.kind === 'cluster' ? 3 : 6;
+      /* shape: galaxies are tilted discs, not discs facing us — M31
+       * most of all; everything else gets a mild individual stretch */
+      var shape = { aspect: 1.1 + rng() * 0.5, rot: rng() * 3.14 };
+      if (neb.name === 'Andromeda Galaxy') { shape.aspect = 2.7; shape.rot = -0.55; }
+      else if (neb.name === 'Triangulum Galaxy') { shape.aspect = 1.8; shape.rot = 0.4; }
+      else if (neb.kind === 'galaxy') { shape.aspect = 1.7; }
+      else if (neb.kind === 'planetary') { shape.aspect = 1.2; }
+      var layers = neb.kind === 'cluster' ? 3 : 7;
       for (var li = 0; li < layers; li++) {
         var dist = 2350 + li * 230 + rng() * 120;
         var j1 = (rng() - 0.5) * neb.size * 190, j2 = (rng() - 0.5) * neb.size * 190;
@@ -347,14 +367,24 @@
             neb.dir[1] * dist + basis.t1[1] * j1 + basis.t2[1] * j2,
             neb.dir[2] * dist + basis.t1[2] * j1 + basis.t2[2] * j2
           ],
-          col: paletteShade(neb.palette, rng), size: neb.size * (300 + rng() * 260),
-          alpha: neb.kind === 'cluster' ? 0.10 : 0.085, phase: rng() * 6.283, kind: 0
+          col: paletteShade(neb.palette, rng), size: neb.size * (270 + rng() * 240),
+          alpha: neb.kind === 'cluster' ? 0.10 : 0.08, phase: rng() * 6.283, kind: 0,
+          rot: shape.rot + (rng() - 0.5) * 0.35, aspect: shape.aspect * (0.9 + rng() * 0.2)
         });
+        if (li === 0 && (neb.kind === 'galaxy' || neb.kind === 'cluster')) {
+          /* a bright core so a galaxy reads as a galaxy */
+          puffs.push({
+            pos: [neb.dir[0] * (dist + 30), neb.dir[1] * (dist + 30), neb.dir[2] * (dist + 30)],
+            col: paletteShade(neb.palette, rng), size: neb.size * 130,
+            alpha: 0.16, phase: rng() * 6.283, kind: 0, rot: shape.rot, aspect: shape.aspect
+          });
+        }
         if (neb.kind === 'emission' && li === 2) {
           puffs.push({
             pos: [neb.dir[0] * (dist + 40), neb.dir[1] * (dist + 40), neb.dir[2] * (dist + 40)],
             col: [0.008, 0.008, 0.02], size: neb.size * 240,
-            alpha: 0.34, phase: rng() * 6.283, kind: 1
+            alpha: 0.34, phase: rng() * 6.283, kind: 1,
+            rot: shape.rot, aspect: 1.5 + rng() * 0.6
           });
         }
       }
@@ -386,7 +416,8 @@
             cl.pos[2] + ((r() + r() + r()) / 3 - 0.5) * 560
           ],
           col: paletteShade(cl.pal, r), size: 95 + r() * 210,
-          alpha: 0.055 + r() * 0.07, phase: r() * 6.283, kind: 0
+          alpha: 0.055 + r() * 0.07, phase: r() * 6.283, kind: 0,
+          rot: r() * 3.14, aspect: 1 + r() * 0.8
         });
       }
     });
@@ -395,7 +426,8 @@
       puffs.push({
         pos: [host.pos[0] + (r() - 0.5) * 90, host.pos[1] + (r() - 0.5) * 90, host.pos[2] + (r() - 0.5) * 90],
         col: [0.008, 0.008, 0.02], size: 120 + r() * 150,
-        alpha: 0.15 + r() * 0.16, phase: r() * 6.283, kind: 1
+        alpha: 0.15 + r() * 0.16, phase: r() * 6.283, kind: 1,
+        rot: r() * 3.14, aspect: 1.5 + r() * 1.1
       });
     }
     localGas = buildGasBuffer(puffs);
@@ -570,6 +602,7 @@
     bindAttr(gasProg, 'aCol', geo.col, 3); bindAttr(gasProg, 'aSize', geo.size, 1);
     bindAttr(gasProg, 'aAlpha', geo.alpha, 1); bindAttr(gasProg, 'aPhase', geo.phase, 1);
     bindAttr(gasProg, 'aKind', geo.kind, 1);
+    bindAttr(gasProg, 'aRot', geo.rot, 1); bindAttr(gasProg, 'aAspect', geo.aspect, 1);
     gl.uniformMatrix4fv(uniformLoc(gasProg, 'uProj'), false, proj);
     gl.uniformMatrix4fv(uniformLoc(gasProg, 'uRot'), false, rot);
     gl.uniform3f(uniformLoc(gasProg, 'uCamPos'), rendCam[0], rendCam[1], rendCam[2]);
