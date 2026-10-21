@@ -1,0 +1,17 @@
+/* Nebula Drift — Pass 1: The Place. Almost no UI at all, on purpose. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#02030a}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#eef1ff;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#stage{position:fixed;inset:0;touch-action:none}
+#cv{position:absolute;inset:0;display:block}
+#vignette{position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:radial-gradient(118% 92% at 50% 44%, transparent 60%, rgba(1,2,8,.42) 100%)}
+#whisper{position:absolute;left:0;right:0;z-index:5;pointer-events:none;text-align:center;
+  bottom:calc(30px + env(safe-area-inset-bottom));padding:0 28px;
+  opacity:0;transform:translateY(6px);transition:opacity 1.6s ease,transform 1.6s ease}
+#whisper.show{opacity:1;transform:translateY(0)}
+#whisperMain{font-size:14.5px;font-weight:600;letter-spacing:.14em;color:rgba(238,242,255,.92);
+  text-shadow:0 1px 16px rgba(0,0,0,.8)}
+#whisperSub{margin-top:7px;font-size:12px;font-weight:400;letter-spacing:.1em;color:rgba(200,212,245,.62);
+  text-shadow:0 1px 12px rgba(0,0,0,.8)}
