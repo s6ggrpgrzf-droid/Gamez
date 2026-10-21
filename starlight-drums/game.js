@@ -11,6 +11,8 @@ var $ = function (id) { return document.getElementById(id); };
 var LW = 420, LH = 740;
 var DRUM_Y = 618, DRUM_R = 63;
 var DRUM_X = [112, 308];
+var FLOOR_Y = 673;                       // the rooftop line the drums sit on
+var ZOOM = 0.9;                          // the whole stage pulled back a touch
 var TRAVEL = 1.75;                       // seconds a note falls
 var GOOD_EARLY_S = SIM.GOOD_MS / 1000;
 var GOOD_LATE_S = SIM.GOOD_LATE_MS / 1000;
@@ -76,6 +78,76 @@ function makeGlowSprite(rgba) {
   return c;
 }
 var GLOW = [makeGlowSprite('rgba(242,160,7,0.5)'), makeGlowSprite('rgba(120,190,255,0.5)')];
+var FIG_GLOW = makeGlowSprite('rgba(255,236,180,0.55)');
+/* The drums as real objects, pre-rendered once: an elliptical skin seen at a
+ * slight angle, a brushed-metal rim, and a shell with lugs below — the 3D
+ * form is baked here so the frame loop only ever blits it. Sprite space is
+ * 300px for 150 logical units; the head centre sits at (150,132), the shell
+ * bottom at y=242, which lands exactly on FLOOR_Y when drawn at DRUM_Y. */
+function makeDrumSprite(d) {
+  var c = document.createElement('canvas'); c.width = c.height = 300;
+  var g = c.getContext('2d');
+  var gold = d === 0;
+  var skin = gold ? ['#ffedc2', '#f9bc40', '#dd8f18'] : ['#ffffff', '#cfe8ff', '#84b6de'];
+  var metal = gold ? ['#f6d894', '#c8932f', '#7c5410', '#543a06'] : ['#e8f1fa', '#9db8cc', '#55748f', '#33475c'];
+  var CX = 150, CY = 132, RX = 124, RY = 102;
+  // shell
+  var sg = g.createLinearGradient(CX - RX, 0, CX + RX, 0);
+  sg.addColorStop(0, metal[3]); sg.addColorStop(0.3, metal[1]); sg.addColorStop(0.58, metal[2]); sg.addColorStop(1, metal[3]);
+  g.fillStyle = sg;
+  g.beginPath();
+  g.moveTo(CX - RX * 0.99, CY + 30);
+  g.lineTo(CX - RX * 0.99, CY + 86);
+  g.ellipse(CX, CY + 86, RX * 0.99, 24, 0, Math.PI, 0, true);
+  g.lineTo(CX + RX * 0.99, CY + 30);
+  g.closePath(); g.fill();
+  // lugs on the shell
+  g.fillStyle = metal[3];
+  [-0.88, -0.45, 0.45, 0.88].forEach(function (fx) {
+    g.beginPath();
+    g.ellipse(CX + fx * RX, CY + 62, 7, 13, 0, 0, 6.2832); g.fill();
+    g.fillStyle = metal[1];
+    g.beginPath(); g.arc(CX + fx * RX, CY + 57, 2.6, 0, 6.2832); g.fill();
+    g.fillStyle = metal[3];
+  });
+  // skin
+  var kg = g.createRadialGradient(CX - 34, CY - 40, 10, CX, CY, RX * 1.05);
+  kg.addColorStop(0, skin[0]); kg.addColorStop(0.55, skin[1]); kg.addColorStop(1, skin[2]);
+  g.fillStyle = kg;
+  g.beginPath(); g.ellipse(CX, CY, RX, RY, 0, 0, 6.2832); g.fill();
+  // inner shadow just inside the rim, then a soft specular bloom top-left
+  g.lineWidth = 15; g.strokeStyle = gold ? 'rgba(120,66,4,0.16)' : 'rgba(30,60,100,0.16)';
+  g.beginPath(); g.ellipse(CX, CY, RX - 9, RY - 9, 0, 0, 6.2832); g.stroke();
+  g.save();
+  g.translate(CX - 40, CY - 44); g.rotate(-0.45); g.scale(1, 0.5);
+  var spec = g.createRadialGradient(0, 0, 2, 0, 0, 52);
+  spec.addColorStop(0, 'rgba(255,255,255,0.34)'); spec.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = spec;
+  g.beginPath(); g.arc(0, 0, 52, 0, 6.2832); g.fill();
+  g.restore();
+  // the rim: brushed metal, lit from the top-left
+  var mg = g.createLinearGradient(CX - RX, CY - RY, CX + RX, CY + RY);
+  mg.addColorStop(0, metal[0]); mg.addColorStop(0.42, metal[1]); mg.addColorStop(0.62, metal[2]); mg.addColorStop(1, metal[3]);
+  g.lineWidth = 13; g.strokeStyle = mg;
+  g.beginPath(); g.ellipse(CX, CY, RX - 5, RY - 5, 0, 0, 6.2832); g.stroke();
+  g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,0.35)';
+  g.beginPath(); g.ellipse(CX, CY, RX - 12, RY - 12, 0, Math.PI * 1.05, Math.PI * 1.55); g.stroke();
+  return c;
+}
+var DRUM_SPR = [makeDrumSprite(0), makeDrumSprite(1)];
+/* lane light, cached: the gradient is fixed, its strength rides globalAlpha */
+var LANE_G = null;
+function laneGrads() {
+  if (LANE_G) return LANE_G;
+  LANE_G = [];
+  for (var d = 0; d < 2; d++) {
+    var lg = ctx.createLinearGradient(0, 30, 0, DRUM_Y);
+    lg.addColorStop(0, 'rgba(160,180,255,0)');
+    lg.addColorStop(1, d === 0 ? 'rgba(242,160,7,0.21)' : 'rgba(140,200,255,0.21)');
+    LANE_G.push(lg);
+  }
+  return LANE_G;
+}
 function makePopSprite(text, color) {
   var c = document.createElement('canvas'); c.width = 300; c.height = 84;
   var g = c.getContext('2d');
@@ -122,22 +194,92 @@ function buildSky() {
   var g = skyCv.getContext('2d');
   g.scale(dpr, dpr);
   var grad = g.createLinearGradient(0, 0, 0, vh);
-  grad.addColorStop(0, '#05081a'); grad.addColorStop(0.45, '#0c1332');
-  grad.addColorStop(0.78, '#1d1a45'); grad.addColorStop(1, '#2e2149');
+  grad.addColorStop(0, '#04061a'); grad.addColorStop(0.38, '#0b1233');
+  grad.addColorStop(0.68, '#1a1747'); grad.addColorStop(0.88, '#2c2150'); grad.addColorStop(1, '#3a2858');
   g.fillStyle = grad; g.fillRect(0, 0, vw, vh);
+  // nebula washes — deep colour sleeping in the sky
+  var neb1 = g.createRadialGradient(vw * 0.16, vh * 0.16, 8, vw * 0.16, vh * 0.16, vw * 0.62);
+  neb1.addColorStop(0, 'rgba(110,80,220,0.15)'); neb1.addColorStop(1, 'rgba(110,80,220,0)');
+  g.fillStyle = neb1; g.fillRect(0, 0, vw, vh);
+  var neb2 = g.createRadialGradient(vw * 0.86, vh * 0.34, 8, vw * 0.86, vh * 0.34, vw * 0.55);
+  neb2.addColorStop(0, 'rgba(50,140,200,0.11)'); neb2.addColorStop(1, 'rgba(50,140,200,0)');
+  g.fillStyle = neb2; g.fillRect(0, 0, vw, vh);
   var warm = g.createRadialGradient(vw / 2, vh * 0.92, 10, vw / 2, vh * 0.92, vw * 0.75);
   warm.addColorStop(0, 'rgba(242,160,7,0.13)'); warm.addColorStop(1, 'rgba(242,160,7,0)');
   g.fillStyle = warm; g.fillRect(0, 0, vw, vh);
   var rng = SIM.mulberry32(7);
-  for (var i = 0; i < 120; i++) {
-    var x = rng() * vw, y = rng() * vh * 0.72, r = 0.5 + rng() * 1.3;
-    g.globalAlpha = 0.18 + rng() * 0.5;
+  // the milky band: a soft diagonal wash with micro-stars clustered along it
+  g.save();
+  g.translate(vw / 2, vh * 0.34); g.rotate(-0.46);
+  var band = g.createLinearGradient(0, -vh * 0.17, 0, vh * 0.17);
+  band.addColorStop(0, 'rgba(190,205,255,0)');
+  band.addColorStop(0.5, 'rgba(190,205,255,0.055)');
+  band.addColorStop(1, 'rgba(190,205,255,0)');
+  g.fillStyle = band; g.fillRect(-vw, -vh * 0.17, vw * 2, vh * 0.34);
+  for (var bi = 0; bi < 110; bi++) {
+    var bx = (rng() - 0.5) * vw * 1.7;
+    var by = (rng() + rng() - 1) * vh * 0.13;
+    g.globalAlpha = 0.10 + rng() * 0.30;
+    g.fillStyle = '#e8eeff';
+    g.beginPath(); g.arc(bx, by, 0.4 + rng() * 0.8, 0, 6.2832); g.fill();
+  }
+  g.restore();
+  g.globalAlpha = 1;
+  // field stars in depth tiers: a few bright with a halo kiss, most quiet
+  for (var i = 0; i < 130; i++) {
+    var x = rng() * vw, y = rng() * vh * 0.74, r = 0.5 + rng() * 1.3;
+    var bright = rng();
+    g.globalAlpha = (bright > 0.93 ? 0.55 + rng() * 0.4 : 0.16 + rng() * 0.45);
     g.fillStyle = rng() < 0.12 ? '#ffd98a' : '#e8eeff';
+    if (bright > 0.93) {
+      var halo = g.createRadialGradient(x, y, 0, x, y, r * 6);
+      halo.addColorStop(0, 'rgba(220,230,255,0.5)'); halo.addColorStop(1, 'rgba(220,230,255,0)');
+      g.fillStyle = halo; g.fillRect(x - r * 6, y - r * 6, r * 12, r * 12);
+      g.fillStyle = '#ffffff';
+    }
     g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill();
   }
   g.globalAlpha = 1;
-  // a small moon, top right of the stage
+  // the rooftop: a floor plane at the stage's floor line, the city beyond it
+  var floorSY = oy + FLOOR_Y * scale;
+  var stageL = ox - 6, stageR = ox + LW * scale + 6;
+  // distant rooftops (seeded so the skyline never changes between resizes)
+  var srng = SIM.mulberry32(41);
+  g.fillStyle = '#080c24';
+  var sx = stageL;
+  while (sx < stageR) {
+    var bw = 22 + srng() * 46, bh = (10 + srng() * 30) * scale + 6;
+    g.fillRect(sx, floorSY - bh, bw, bh);
+    if (srng() < 0.3) { // a water tower on some roofs
+      g.fillRect(sx + bw * 0.32, floorSY - bh - 11 * scale, bw * 0.36, 11 * scale);
+      g.beginPath();
+      g.moveTo(sx + bw * 0.26, floorSY - bh - 11 * scale);
+      g.lineTo(sx + bw * 0.5, floorSY - bh - 19 * scale);
+      g.lineTo(sx + bw * 0.74, floorSY - bh - 11 * scale);
+      g.closePath(); g.fill();
+    }
+    // a few lit windows
+    for (var wnd = 0; wnd < 4; wnd++) {
+      if (srng() < 0.45) continue;
+      g.fillStyle = 'rgba(255,205,120,' + (0.25 + srng() * 0.4) + ')';
+      g.fillRect(sx + 3 + srng() * (bw - 6), floorSY - bh + 4 + srng() * (bh - 8), 1.6, 2.2);
+      g.fillStyle = '#080c24';
+    }
+    sx += bw + 2 + srng() * 10;
+  }
+  g.fillStyle = 'rgba(170,195,255,0.10)';
+  g.fillRect(stageL, floorSY - 1, stageR - stageL, 1);   // the far edge catches light
+  // the floor itself: near-black violet, lighter at the edge, falling away
+  var fg = g.createLinearGradient(0, floorSY, 0, vh);
+  fg.addColorStop(0, '#141233'); fg.addColorStop(0.25, '#0b0a26'); fg.addColorStop(1, '#04050f');
+  g.fillStyle = fg; g.fillRect(0, floorSY, vw, vh - floorSY);
+  g.fillStyle = 'rgba(200,215,255,0.13)';
+  g.fillRect(0, floorSY, vw, 1.2);                        // our roof's edge line
+  // a small moon with a halo, top right of the stage
   var mx = ox + LW * scale * 0.86, my = oy + LH * scale * 0.075, mr = 17 * scale;
+  var mh = g.createRadialGradient(mx, my, mr * 0.4, mx, my, mr * 3.4);
+  mh.addColorStop(0, 'rgba(244,236,210,0.20)'); mh.addColorStop(1, 'rgba(244,236,210,0)');
+  g.fillStyle = mh; g.fillRect(mx - mr * 3.4, my - mr * 3.4, mr * 6.8, mr * 6.8);
   g.fillStyle = '#f4ecd2';
   g.beginPath(); g.arc(mx, my, mr, 0, 6.2832); g.fill();
   g.fillStyle = '#0a0f2c';
@@ -157,7 +299,7 @@ function fit() {
   vw = window.innerWidth; vh = window.innerHeight;
   cv.width = Math.floor(vw * dpr); cv.height = Math.floor(vh * dpr);
   cv.style.width = vw + 'px'; cv.style.height = vh + 'px';
-  scale = Math.min(vw / LW, vh / LH);
+  scale = Math.min(vw / LW, vh / LH) * ZOOM;
   ox = (vw - LW * scale) / 2; oy = (vh - LH * scale) / 2;
   buildSky();
 }
@@ -587,21 +729,24 @@ function drawDrum(d, tNow) {
   var hs = 250 + 40 * sq;
   ctx.drawImage(GLOW[d], x - hs / 2, DRUM_Y - hs / 2, hs, hs);
   ctx.restore();
-  // head
+  // a pool of its light on the rooftop
+  ctx.save();
+  ctx.globalAlpha = 0.10 + 0.26 * sq;
+  ctx.translate(x, FLOOR_Y + 5); ctx.scale(1, 0.30);
+  ctx.drawImage(GLOW[d], -108, -108, 216, 216);
+  ctx.restore();
+  // the drum itself: one baked sprite, squashed by the hit
   ctx.save();
   ctx.translate(x, DRUM_Y);
-  ctx.scale(1 + 0.05 * sq, 1 - 0.1 * sq);
-  var rg = ctx.createRadialGradient(-14, -18, 6, 0, 0, DRUM_R);
-  if (d === 0) { rg.addColorStop(0, '#ffe1a1'); rg.addColorStop(0.65, '#f7b733'); rg.addColorStop(1, '#c47b12'); }
-  else { rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.65, '#bfe0ff'); rg.addColorStop(1, '#6fa8cf'); }
-  ctx.fillStyle = rg;
-  ctx.beginPath(); ctx.arc(0, 0, DRUM_R, 0, 6.2832); ctx.fill();
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = d === 0 ? '#7c4c0d' : '#3d6a8c';
-  ctx.beginPath(); ctx.arc(0, 0, DRUM_R - 2.5, 0, 6.2832); ctx.stroke();
-  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(20,16,40,0.28)';
-  ctx.beginPath(); ctx.arc(0, 0, DRUM_R * 0.76, 0, 6.2832); ctx.stroke();
+  ctx.scale(1 + 0.05 * sq, 1 - 0.10 * sq);
+  ctx.drawImage(DRUM_SPR[d], -75, -66, 150, 150);
   ctx.restore();
+  // the skin flashes where the stick landed
+  if (sq > 0.02) {
+    ctx.save(); ctx.globalAlpha = 0.22 * sq;
+    ctx.drawImage(GLOW[d], x - 55, DRUM_Y - 55, 110, 110);
+    ctx.restore();
+  }
 }
 
 function draw(tNow) {
@@ -616,15 +761,16 @@ function draw(tNow) {
     var bIdx = Math.max(0, Math.min(barEnergies.length - 1, Math.floor(songNow() / barLenS)));
     energyNow += ((barEnergies[bIdx] || 0) - energyNow) * 0.045;
   }
-  // lane light trails
+  // lane light trails (cached gradients; strength rides on globalAlpha)
   var laneA = 0.08 + 0.13 * energyNow;
+  var lgs = laneGrads();
+  ctx.save();
+  ctx.globalAlpha = laneA / 0.21;
   for (var d = 0; d < 2; d++) {
-    var lg = ctx.createLinearGradient(0, 30, 0, DRUM_Y);
-    lg.addColorStop(0, 'rgba(160,180,255,0)');
-    lg.addColorStop(1, d === 0 ? 'rgba(242,160,7,' + laneA + ')' : 'rgba(140,200,255,' + laneA + ')');
-    ctx.fillStyle = lg;
+    ctx.fillStyle = lgs[d];
     ctx.fillRect(DRUM_X[d] - 52, 30, 104, DRUM_Y - 30);
   }
+  ctx.restore();
   // twinkles
   for (var ti = 0; ti < twinkles.length; ti++) {
     var tw = twinkles[ti];
@@ -632,6 +778,17 @@ function draw(tNow) {
     ctx.save(); ctx.globalAlpha = ta;
     var ts = 15 + 5 * Math.sin(tNow / 1000 * tw.sp + tw.ph);
     ctx.drawImage(SPR[tw.spr], tw.x - ts / 2, tw.y - ts / 2, ts, ts);
+    ctx.restore();
+  }
+
+  // the drums' reflections on the rooftop: mirrored about the floor line,
+  // vertically squashed, faint — a glossy surface sells the whole stage
+  for (var rf = 0; rf < 2; rf++) {
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.translate(0, FLOOR_Y * 1.55);
+    ctx.scale(1, -0.55);
+    ctx.drawImage(DRUM_SPR[rf], DRUM_X[rf] - 75, DRUM_Y - 66, 150, 150);
     ctx.restore();
   }
 
@@ -655,6 +812,15 @@ function draw(tNow) {
         if (sweepPosD > -90) fp += 0.3 * Math.max(0, 1 - Math.abs(n.fig - (sweepPosD * 20 / 25)) / 3);
         sz *= 1.55 * fp;
       }
+      if (n.fig != null) {
+        // figure stars breathe inside a halo the scatter never gets
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.24 + 0.10 * Math.sin(tNow / 620 + n.id * 1.7);
+        var hz = sz * 2.3;
+        ctx.drawImage(FIG_GLOW, hx - hz / 2, hy - hz / 2, hz, hz);
+        ctx.restore();
+      }
       ctx.save();
       // hierarchy: figure stars burn full; the scatter stays a backdrop,
       // and steps further back during the ceremony so the figure owns it
@@ -672,9 +838,18 @@ function draw(tNow) {
       var fx = f.fx + (f.note.sx * LW - f.fx) * fe;
       var fy = f.fy + (f.note.sy * LH - f.fy) * fe - Math.sin(fe * Math.PI) * 42;
       var fs = 30 + 8 * Math.sin(fe * Math.PI);
-      ctx.save(); ctx.globalAlpha = 0.5 + 0.5 * f.bright;
-      ctx.drawImage(SPR[f.note.drum], fx - fs / 2, fy - fs / 2, fs, fs);
-      ctx.restore();
+      for (var gh = 2; gh >= 0; gh--) {
+        var fe2 = fe - gh * 0.085;
+        if (fe2 < 0) continue;
+        var gx = f.fx + (f.note.sx * LW - f.fx) * fe2;
+        var gy = f.fy + (f.note.sy * LH - f.fy) * fe2 - Math.sin(fe2 * Math.PI) * 42;
+        var gs2 = (30 + 8 * Math.sin(fe2 * Math.PI)) * (1 - gh * 0.12);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = (0.5 + 0.5 * f.bright) * (gh === 0 ? 1 : gh === 1 ? 0.30 : 0.15);
+        ctx.drawImage(SPR[f.note.drum], gx - gs2 / 2, gy - gs2 / 2, gs2, gs2);
+        ctx.restore();
+      }
     }
     // dimming misses
     for (i = missAnims.length - 1; i >= 0; i--) {
@@ -708,6 +883,16 @@ function draw(tNow) {
       ctx.globalAlpha = linkA[li]; ctx.lineWidth = 2; ctx.strokeStyle = '#eef2ff';
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
       ctx.restore();
+      // a pulse of light rides every completed thread, star to star
+      if (bothLit && linkA[li] > 0.3) {
+        var fu = (tNow * 0.00007 + li * 0.381) % 1;
+        var lx2 = x1 + (x2 - x1) * fu, ly2 = y1 + (y2 - y1) * fu;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = linkA[li] * 0.8;
+        ctx.drawImage(FIG_GLOW, lx2 - 17, ly2 - 17, 34, 34);
+        ctx.restore();
+      }
     }
     if (scene === 'ceremony') {
       var rk = (tNow - ceremonyT0 - 850) / 750;
@@ -727,21 +912,26 @@ function draw(tNow) {
       if (p < 0 || p > 1.12) continue;
       var nx = DRUM_X[nn.drum];
       var ny = -30 + (DRUM_Y + 30) * Math.min(p, 1);
-      // trail
-      for (var tr = 1; tr <= 3; tr++) {
-        ctx.save(); ctx.globalAlpha = 0.16 - tr * 0.04;
-        var tsy = ny - tr * 17, tss = 27 - tr * 4;
-        ctx.drawImage(SPR[nn.drum], nx - tss / 2, tsy - tss / 2, tss, tss);
-        ctx.restore();
-      }
+      // comet trail: five fading ghosts behind the head, additively lit
       ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (var tr = 1; tr <= 5; tr++) {
+        ctx.globalAlpha = 0.20 - tr * 0.028;
+        var tsy = ny - tr * 15, tss = 28 - tr * 3;
+        ctx.drawImage(SPR[nn.drum], nx - tss / 2, tsy - tss / 2, tss, tss);
+      }
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(SPR[nn.drum], nx - 17, ny - 17, 34, 34);
-      // converging ring: meets the rim exactly on the beat
+      // converging ring: an ellipse, like the head it lands on, meeting the
+      // rim exactly on the beat
       var rr = DRUM_R + Math.max(0, 1 - p) * 128;
       ctx.globalAlpha = 0.28 + 0.5 * Math.min(1, p);
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = nn.drum === 0 ? '#ffd98a' : '#bfe0ff';
-      ctx.beginPath(); ctx.arc(nx, DRUM_Y, rr, 0, 6.2832); ctx.stroke();
+      ctx.translate(nx, DRUM_Y); ctx.scale(1, 0.823);
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0, 6.2832); ctx.stroke();
       ctx.restore();
     }
   }
@@ -760,7 +950,8 @@ function draw(tNow) {
     ctx.globalAlpha = 0.5 * (1 - wk);
     ctx.lineWidth = 3.5 * (1 - wk) + 0.8;
     ctx.strokeStyle = 'rgba(' + wv.col + ',1)';
-    ctx.beginPath(); ctx.arc(wv.x, wv.y, DRUM_R + we * 92, 0, 6.2832); ctx.stroke();
+    ctx.translate(wv.x, wv.y); ctx.scale(1, 0.823);
+    ctx.beginPath(); ctx.arc(0, 0, DRUM_R + we * 92, 0, 6.2832); ctx.stroke();
     ctx.restore();
   }
   // sparks
@@ -771,7 +962,8 @@ function draw(tNow) {
     sp.life -= dtS;
     if (sp.life <= 0) { sp.on = false; continue; }
     sp.x += sp.vx * dtS; sp.y += sp.vy * dtS; sp.vy += 190 * dtS;
-    ctx.save(); ctx.globalAlpha = Math.max(0, sp.life / sp.max) * 0.9;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = Math.max(0, sp.life / sp.max) * 0.9;
     ctx.drawImage(SPR[sp.spr], sp.x - sp.size / 2, sp.y - sp.size / 2, sp.size, sp.size);
     ctx.restore();
   }
