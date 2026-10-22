@@ -100,13 +100,15 @@
 
   /* ================= the town's memory ================= */
   var mendedCount = 0, visits = {}, queue = null, cabinet = [];
+  /* each keepsake loads behind its own guard: one corrupt key must
+   * never cost the town the others — least of all the cabinet */
+  try { mendedCount = parseInt(window.localStorage.getItem('mendery-mended') || '0', 10) || 0; } catch (e) { /* private */ }
+  try { visits = JSON.parse(window.localStorage.getItem('mendery-visits') || '{}') || {}; } catch (e) { visits = {}; }
+  try { queue = JSON.parse(window.localStorage.getItem('mendery-queue') || 'null'); } catch (e) { queue = null; }
   try {
-    mendedCount = parseInt(window.localStorage.getItem('mendery-mended') || '0', 10) || 0;
-    visits = JSON.parse(window.localStorage.getItem('mendery-visits') || '{}') || {};
-    queue = JSON.parse(window.localStorage.getItem('mendery-queue') || 'null');
     var cabSaved = JSON.parse(window.localStorage.getItem('mendery-cabinet') || '[]');
     if (Array.isArray(cabSaved)) cabinet = cabSaved;
-  } catch (e) { /* private mode: the town forgets, gently */ }
+  } catch (e) { /* the cabinet stays shut rather than emptying itself */ }
   function saveTown() {
     try {
       window.localStorage.setItem('mendery-mended', String(mendedCount));
@@ -761,6 +763,9 @@
     if (cabAlpha !== cabTarget) {
       cabAlpha = clamp(cabAlpha + (cabTarget ? dt / 0.35 : -dt / 0.35), 0, 1);
     }
+    /* a rotation can shrink the scroll range out from under the
+     * current offset — keep the shelves inside their world */
+    if (view === 'cabinet') cabScroll = clamp(cabScroll, 0, cabMaxScroll());
     if (cabAlpha > 0.01) drawCabinet();
   }
 
@@ -769,6 +774,7 @@
    * the order you mended them. The cabinet is the save file. */
   var view = 'bench', cabAlpha = 0, cabScroll = 0, cabSel = -1, cabTouch = null;
   var miniCache = {};
+  var cabHeaderCv = null, cabHeaderKey = '', cabBoardCv = null, cabBoardKey = 0;
 
   var cabBtn = document.createElement('button');
   cabBtn.id = 'cabBtn';
@@ -865,13 +871,38 @@
     ctx.fillStyle = '#150c06'; ctx.fillRect(0, 0, CW, CH);
     if (benchCv) { ctx.globalAlpha = cabAlpha * 0.45; ctx.drawImage(benchCv, 0, 0, CW, CH); }
     ctx.globalAlpha = cabAlpha;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(246,232,205,0.92)';
-    ctx.font = '600 29px "Cormorant Garamond", Georgia, serif';
-    ctx.fillText('The Cabinet', CW / 2, 50);
-    ctx.font = 'italic 500 15px "Cormorant Garamond", Georgia, serif';
-    ctx.fillStyle = 'rgba(232,209,165,0.55)';
-    ctx.fillText(cabinet.length + (cabinet.length === 1 ? ' piece' : ' pieces') + ' · in the order you mended them', CW / 2, 74);
+    /* the header and the shelf boards are lettered and sawn ONCE,
+     * then blitted — text and gradients have no business being
+     * re-made sixty times a second */
+    var hKey = CW + '|' + cabinet.length;
+    if (!cabHeaderCv || cabHeaderKey !== hKey) {
+      cabHeaderKey = hKey;
+      cabHeaderCv = document.createElement('canvas');
+      cabHeaderCv.width = Math.round(CW * DPR); cabHeaderCv.height = Math.round(92 * DPR);
+      var hg2 = cabHeaderCv.getContext('2d');
+      hg2.setTransform(DPR, 0, 0, DPR, 0, 0);
+      hg2.textAlign = 'center';
+      hg2.fillStyle = 'rgba(246,232,205,0.92)';
+      hg2.font = '600 29px "Cormorant Garamond", Georgia, serif';
+      hg2.fillText('The Cabinet', CW / 2, 50);
+      hg2.font = 'italic 500 15px "Cormorant Garamond", Georgia, serif';
+      hg2.fillStyle = 'rgba(232,209,165,0.55)';
+      hg2.fillText(cabinet.length + (cabinet.length === 1 ? ' piece' : ' pieces') + ' · in the order you mended them', CW / 2, 74);
+    }
+    ctx.drawImage(cabHeaderCv, 0, 0, CW, 92);
+    var bw = CW - 32;
+    if (!cabBoardCv || cabBoardKey !== bw) {
+      cabBoardKey = bw;
+      cabBoardCv = document.createElement('canvas');
+      cabBoardCv.width = Math.round(bw * DPR); cabBoardCv.height = Math.round(18 * DPR);
+      var bg3 = cabBoardCv.getContext('2d');
+      bg3.setTransform(DPR, 0, 0, DPR, 0, 0);
+      var grd0 = bg3.createLinearGradient(0, 0, 0, 12);
+      grd0.addColorStop(0, '#5a4026'); grd0.addColorStop(0.35, '#3d2a16'); grd0.addColorStop(1, '#241608');
+      bg3.fillStyle = grd0; bg3.fillRect(0, 0, bw, 11);
+      bg3.fillStyle = 'rgba(255,205,130,0.13)'; bg3.fillRect(0, 0, bw, 1.5);
+      bg3.fillStyle = 'rgba(0,0,0,0.4)'; bg3.fillRect(0, 11, bw, 7);
+    }
     /* the shelves slide UNDER the header, never across it */
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 92, CW, CH - 92); ctx.clip();
@@ -895,14 +926,7 @@
         ctx.drawImage(m.cv, cxp - m.S / 2, cyp - m.S / 2, m.S, m.S);
         ctx.drawImage(m.label, cxp - m.lw / 2, boardY + 8, m.lw, m.lh);
       }
-      var grd = ctx.createLinearGradient(0, boardY - 5, 0, boardY + 7);
-      grd.addColorStop(0, '#5a4026'); grd.addColorStop(0.35, '#3d2a16'); grd.addColorStop(1, '#241608');
-      ctx.fillStyle = grd;
-      ctx.fillRect(16, boardY - 4, CW - 32, 11);
-      ctx.fillStyle = 'rgba(255,205,130,0.13)';
-      ctx.fillRect(16, boardY - 4, CW - 32, 1.5);
-      ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.fillRect(16, boardY + 7, CW - 32, 7);
+      ctx.drawImage(cabBoardCv, 16, boardY - 4, bw, 18);
     }
     ctx.restore(); /* the header clip */
     ctx.restore();
