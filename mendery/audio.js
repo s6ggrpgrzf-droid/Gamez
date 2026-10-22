@@ -17,7 +17,10 @@
   var lastDragAt = -9; /* when the thumb last reported motion */
   var dragLevel = 0; /* our own note of the drag gain — an AudioParam's
    * .value does not follow its automation events, so it can't be asked */
-  var plays = { tick: 0, bell: 0, knock: 0, drag: 0 };
+  var ringOsc = null, ringOsc2 = null, ringGain = null;
+  var ringLevel = 0, ringFreqNow = 740, lastRingAt = -9;
+  var rainOn = false;
+  var plays = { tick: 0, bell: 0, knock: 0, drag: 0, ring: 0 };
 
   try { muted = window.localStorage.getItem('mendery-muted') === '1'; } catch (e) { /* private */ }
 
@@ -60,16 +63,56 @@
     dragGain = ctx.createGain(); dragGain.gain.value = 0;
     var drag = noiseSrc(); drag.connect(dragF); dragF.connect(dragGain); dragGain.connect(master);
     drag.start();
+    /* the singing rim: two sines, the second at porcelain's
+     * inharmonic 2.76, waiting silent until a moving fingertip
+     * gives the ware a voice */
+    ringOsc = ctx.createOscillator(); ringOsc.type = 'sine'; ringOsc.frequency.value = ringFreqNow;
+    ringOsc2 = ctx.createOscillator(); ringOsc2.type = 'sine'; ringOsc2.frequency.value = ringFreqNow * 2.76;
+    var ringG2 = ctx.createGain(); ringG2.gain.value = 0.22;
+    ringGain = ctx.createGain(); ringGain.gain.value = 0;
+    ringOsc.connect(ringGain); ringOsc2.connect(ringG2); ringG2.connect(ringGain);
+    ringGain.connect(master);
+    ringOsc.start(); ringOsc2.start();
+    /* some evenings it rains in this town — chosen by the date, so
+     * everyone who opens the shop tonight hears the same weather.
+     * Soft water on a roof, behind the room's own air. */
+    rainOn = rainyEvening();
+    if (rainOn) {
+      var rainF = ctx.createBiquadFilter();
+      rainF.type = 'lowpass'; rainF.frequency.value = 760;
+      var rainGain = ctx.createGain(); rainGain.gain.value = 0;
+      var rain = noiseSrc(); rain.connect(rainF); rainF.connect(rainGain); rainGain.connect(master);
+      rain.start();
+      rainGain.gain.setTargetAtTime(0.011, ctx.currentTime, 2.5);
+      var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
+      var lfoG = ctx.createGain(); lfoG.gain.value = 0.0028;
+      lfo.connect(lfoG); lfoG.connect(rainGain.gain); lfo.start();
+    }
     /* a held-still thumb makes no friction sound: if no motion has
      * been reported for a breath, let the drag fall silent on its own
-     * (the pointer stays down; only the sound rests) */
+     * (the pointer stays down; only the sound rests). The ring rests
+     * the same way — a singing glass needs the finger to keep moving. */
     setInterval(function () {
       if (!ctx || !dragGain || muted) return;
       if (ctx.currentTime - lastDragAt > 0.22 && dragLevel > 0.002) {
         dragLevel = 0;
         dragGain.gain.setTargetAtTime(0, ctx.currentTime, 0.06);
       }
+      if (ringGain && ctx.currentTime - lastRingAt > 0.24 && ringLevel > 0.001) {
+        ringLevel = 0;
+        ringGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
+      }
     }, 130);
+  }
+
+  /* the date decides the weather: a hash of the day, so the rain
+   * is the same for everyone and never needs a forecast */
+  function rainyEvening() {
+    var d = new Date();
+    var s = '' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return ((h >>> 0) % 10) < 3;
   }
 
   function wake() {
@@ -107,6 +150,23 @@
     dragLevel = target;
     if (target > 0.004) { plays.drag++; lastDragAt = ctx.currentTime; }
     dragGain.gain.setTargetAtTime(target, ctx.currentTime, 0.07);
+  }
+
+  /* the fingertip reports where it runs: r01 is the distance from
+   * the piece's heart (0) to its rim (1), act is how surely it's
+   * moving. The pitch climbs a full octave from heart to rim —
+   * thin porcelain sings higher — and the voice stays faint,
+   * a halo under the friction and the ticks. */
+  function ring(r01, act) {
+    if (!ctx || !ringGain) return;
+    var r = Math.max(0, Math.min(1, r01 || 0));
+    var target = muted ? 0 : 0.010 * Math.max(0, Math.min(1, act || 0)) * (0.55 + 0.45 * r);
+    ringLevel = target;
+    if (target > 0.0015) { lastRingAt = ctx.currentTime; plays.ring++; }
+    ringFreqNow = 560 * Math.pow(2, r);
+    ringOsc.frequency.setTargetAtTime(ringFreqNow, ctx.currentTime, 0.055);
+    ringOsc2.frequency.setTargetAtTime(ringFreqNow * 2.76, ctx.currentTime, 0.055);
+    ringGain.gain.setTargetAtTime(target, ctx.currentTime, 0.09);
   }
 
   function knock() {
@@ -173,9 +233,12 @@
   });
 
   window.MenderyAudio = {
-    wake: wake, tick: tick, drag: drag, knock: knock, bell: bell,
+    wake: wake, tick: tick, drag: drag, knock: knock, bell: bell, ring: ring,
     plays: plays,
     get muted() { return muted; },
-    get state() { return ctx ? ctx.state : 'none'; }
+    get state() { return ctx ? ctx.state : 'none'; },
+    get rain() { return rainOn; },
+    get ringFreq() { return ringFreqNow; },
+    get ringLevel() { return ringLevel; }
   };
 })();

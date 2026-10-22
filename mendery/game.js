@@ -684,7 +684,7 @@
     if (!bowl || bowl.complete || fadeSwap > 0) return;
     var AU = window.MenderyAudio;
     var p = toBowlSpace(cxPx, cyPx);
-    if (Math.hypot(p.x, p.y) > 1.12) { lastMove = null; if (AU) AU.drag(0); return; }
+    if (Math.hypot(p.x, p.y) > 1.12) { lastMove = null; if (AU) { AU.drag(0); if (AU.ring) AU.ring(0, 0); } return; }
     var speed = 0;
     var fromX = p.x, fromY = p.y;
     if (lastMove) {
@@ -693,7 +693,12 @@
       fromX = lastMove.x; fromY = lastMove.y;
     }
     lastMove = { x: p.x, y: p.y, stamp: stamp };
-    if (AU) AU.drag(speed);
+    if (AU) {
+      AU.drag(speed);
+      /* the porcelain answers the fingertip: a faint ring, pitched
+       * by how near the rim the finger is running */
+      if (AU.ring) AU.ring(Math.min(1, Math.hypot(p.x, p.y)), Math.min(1, speed * 0.8));
+    }
     var TOL = 0.085, batchCare = -1;
     /* The phone reports the finger in stepping stones, not a line —
      * walk the stretch between the last report and this one in small
@@ -801,7 +806,10 @@
   });
   function endTrace() {
     tracing = false; lastMove = null; cabTouch = null; holdCand = null;
-    if (window.MenderyAudio) window.MenderyAudio.drag(0);
+    if (window.MenderyAudio) {
+      window.MenderyAudio.drag(0);
+      if (window.MenderyAudio.ring) window.MenderyAudio.ring(0, 0);
+    }
   }
   cv.addEventListener('pointerup', function (e) {
     if (holdCand) {
