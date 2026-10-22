@@ -440,23 +440,38 @@
     var p = toBowlSpace(cxPx, cyPx);
     if (Math.hypot(p.x, p.y) > 1.12) { lastMove = null; if (AU) AU.drag(0); return; }
     var speed = 0;
+    var fromX = p.x, fromY = p.y;
     if (lastMove) {
       var dtm = Math.max(1, stamp - lastMove.stamp) / 1000;
       speed = Math.hypot(p.x - lastMove.x, p.y - lastMove.y) / dtm;
+      fromX = lastMove.x; fromY = lastMove.y;
     }
     lastMove = { x: p.x, y: p.y, stamp: stamp };
     if (AU) AU.drag(speed);
     var TOL = 0.085, batchCare = -1;
-    for (var i = 0; i < bowl.segs.length; i++) {
-      var s = bowl.segs[i];
-      if (s.filled) continue;
-      var d = segDist(p.x, p.y, s);
-      if (d < TOL) {
-        s.filled = true;
-        s.care = clamp(1.12 - speed * 0.5 - d * 4.5, 0.3, 1);
-        if (s.care > batchCare) batchCare = s.care;
-        bowl.filledCount++;
-        spawnSparkle(bowlC.x + (s.x1 + s.x2) / 2 * bowl.Rv, bowlC.y + (s.y1 + s.y2) / 2 * bowl.Rv, false);
+    /* The phone reports the finger in stepping stones, not a line —
+     * walk the stretch between the last report and this one in small
+     * steps and test along the whole path, so a segment the finger
+     * crossed is never skipped just because no report landed on it.
+     * Speed, and therefore care, is still measured on the real
+     * report-to-report motion: the gold stays honest about how the
+     * hand actually moved. */
+    var span = Math.hypot(p.x - fromX, p.y - fromY);
+    var steps = Math.max(1, Math.min(64, Math.ceil(span / 0.035)));
+    for (var st = 1; st <= steps; st++) {
+      var sx = fromX + (p.x - fromX) * (st / steps);
+      var sy = fromY + (p.y - fromY) * (st / steps);
+      for (var i = 0; i < bowl.segs.length; i++) {
+        var s = bowl.segs[i];
+        if (s.filled) continue;
+        var d = segDist(sx, sy, s);
+        if (d < TOL) {
+          s.filled = true;
+          s.care = clamp(1.12 - speed * 0.5 - d * 4.5, 0.3, 1);
+          if (s.care > batchCare) batchCare = s.care;
+          bowl.filledCount++;
+          spawnSparkle(bowlC.x + (s.x1 + s.x2) / 2 * bowl.Rv, bowlC.y + (s.y1 + s.y2) / 2 * bowl.Rv, false);
+        }
       }
     }
     if (batchCare >= 0 && AU) AU.tick(batchCare);
@@ -505,7 +520,17 @@
       if (cabTouch.moved) cabScroll = clamp(cabTouch.scroll0 + dy, 0, cabMaxScroll());
       return;
     }
-    if (tracing) doTrace(e.clientX, e.clientY, e.timeStamp);
+    if (tracing) {
+      /* where the browser kept the reports it batched into this one
+       * event, trace through every one of them, not just the last */
+      var evs = null;
+      try { evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null; } catch (err) { evs = null; }
+      if (evs && evs.length) {
+        for (var ci = 0; ci < evs.length; ci++) doTrace(evs[ci].clientX, evs[ci].clientY, evs[ci].timeStamp);
+      } else {
+        doTrace(e.clientX, e.clientY, e.timeStamp);
+      }
+    }
   });
   function endTrace() {
     tracing = false; lastMove = null; cabTouch = null;
