@@ -34,49 +34,65 @@
       name: 'Mara', vessel: 'teapot', glaze: 'blue', title: 'Mara\u2019s teapot',
       story: 'It slipped the morning the chair across from her stayed empty for the first time. Thirty years of making two cups out of habit. She only needs the pot to work.',
       closing: 'She made two cups when she got home. Poured one out in the garden. For him.',
-      callback: 'Mara\u2019s teapot, again. The garden gets most of the second cup these days. She doesn\u2019t mind.'
+      callback: 'Mara\u2019s teapot, again. The garden gets most of the second cup these days. She doesn\u2019t mind.',
+      rebreak: 'It broke again in the spring, in almost the same week as the year before. She carried it in with both hands, careful as an egg. \u201cIt knows the way here now,\u201d she said.',
+      rebreakClosing: 'Two cups, as always. The garden gets one. The first gold gets a sibling.'
     },
     {
       name: 'Theo', vessel: 'bowl', glaze: 'celadon', title: 'Theo\u2019s bowl',
       story: 'He made it at camp, lopsided on purpose, he says. It fell off the porch rail in a thunderstorm \u2014 one he was brave about, right up until he wasn\u2019t.',
       closing: 'He says the gold is where the lightning stayed. He likes it better now.',
-      callback: 'Theo\u2019s bowl, again. A different rail this time. A different storm, bravely met.'
+      callback: 'Theo\u2019s bowl, again. A different rail this time. A different storm, bravely met.',
+      rebreak: 'Lightning, he insists, a second time \u2014 off the same rail, under a sky he swears was clear. His mother carried it in wrapped in his hoodie, like evidence.',
+      rebreakClosing: 'He counted the gold lines out loud, twice to be sure. \u201cTwo storms,\u201d he said. \u201cI\u2019m winning.\u201d'
     },
     {
       name: 'June', vessel: 'cup', glaze: 'blush', title: 'June\u2019s cup',
       story: 'Her father\u2019s cup. At the estate sale her brother reached for it like it was nothing, and she grabbed first. The handle lost the argument.',
       closing: 'She holds it by the bowl now, both hands. The way he did.',
-      callback: 'June\u2019s cup. She still grabs first. Some habits are just love with fast hands.'
+      callback: 'June\u2019s cup. She still grabs first. Some habits are just love with fast hands.',
+      rebreak: 'Her brother came for dinner and reached for it again \u2014 slower this time, asking with his eyes. It slipped anyway, later, at the sink. Empty. Light as a shell.',
+      rebreakClosing: 'She dried it herself, inside and out. \u201cHe can hold it next time,\u201d she said. \u201cSupervised.\u201d'
     },
     {
       name: 'Rosa', vessel: 'dish', glaze: 'ivory', title: 'Rosa\u2019s serving dish',
       story: 'Forty-one Thanksgivings it carried. It was the quiet one \u2014 the first after the funeral \u2014 that finally cracked it. Nobody remembers dropping it. Everybody remembers the quiet.',
       closing: '\u201cIt doesn\u2019t have to be perfect,\u201d she said. \u201cIt never was the perfect one. It was the one that showed up.\u201d',
-      callback: 'Rosa\u2019s dish. Another Thanksgiving carried. The quiet ones are rarer now.'
+      callback: 'Rosa\u2019s dish. Another Thanksgiving carried. The quiet ones are rarer now.',
+      rebreak: 'Forty-two Thanksgivings, and then a Tuesday. Not a feast, not a funeral \u2014 a wet counter, a hurried hand, and a dish that had somewhere to be.',
+      rebreakClosing: 'She ran one finger along the old seam, and then the new break. \u201cIt showed up again,\u201d she said. \u201cSo did I.\u201d'
     },
     {
       name: 'Wren', vessel: 'vase', glaze: 'celadon', title: 'Wren\u2019s vase',
       story: 'Her sister sent flowers in it the week Wren moved out alone \u2014 the first thing in the apartment that wasn\u2019t furniture. It tipped mid-laugh, on the phone with that same sister.',
       closing: 'She put one stem in it right here at the bench. It held.',
-      callback: 'Wren\u2019s vase. Her sister sends flowers on purpose now. The note says: for the vase with the gold.'
+      callback: 'Wren\u2019s vase. Her sister sends flowers on purpose now. The note says: for the vase with the gold.',
+      rebreak: 'The cat she swore she wasn\u2019t getting has opinions about shelves. The vase survived the move, the sister, the laughter. It was the cat, in the end, at 3 a.m.',
+      rebreakClosing: 'One stem, as is tradition. The cat watched the whole mending like a supervisor.'
     },
     {
       name: 'Harold', vessel: 'cup', glaze: 'charcoal', title: 'Harold\u2019s mug',
       story: 'The VA gave it to him in \u201971, and he has drunk from worse mornings than this one. It cracked the winter his hands started shaking. He\u2019d rather mend it than say why.',
       closing: 'He turned the seam toward himself. \u201cGood,\u201d he said. \u201cNow we match.\u201d',
-      callback: 'Harold\u2019s mug. His hands shake. His aim with a story doesn\u2019t.'
+      callback: 'Harold\u2019s mug. His hands shake. His aim with a story doesn\u2019t.',
+      rebreak: 'It wasn\u2019t the shaking this time. It was the reaching \u2014 top shelf, one hand, seventy years of habit. He caught it before it fell. It cracked against the counter anyway.',
+      rebreakClosing: 'He turned both seams toward himself. \u201cDecorated twice,\u201d he said. \u201cLike the man.\u201d'
     },
     {
       name: 'Delia', vessel: 'bowl', glaze: 'wheat', title: 'Delia\u2019s mixing bowl',
       story: 'It belonged to the bakery first, then to forty years of birthdays. Cold water on a hot bowl, at the sink \u2014 a grandson\u2019s help, too eager.',
       closing: '\u201cDon\u2019t tell him,\u201d she said. \u201cFar as that boy knows, you fixed it before it broke.\u201d',
-      callback: 'Delia\u2019s bowl. The grandson helps at the sink now, careful as a surgeon. Nobody told him anything.'
+      callback: 'Delia\u2019s bowl. The grandson helps at the sink now, careful as a surgeon. Nobody told him anything.',
+      rebreak: 'The grandson again \u2014 no. This one was her own doing: flour on her hands and a bowl that wouldn\u2019t wait. She told me herself, before anyone could think to blame him.',
+      rebreakClosing: '\u201cTell him it was me,\u201d she said. \u201cHe\u2019s careful enough for the both of us now.\u201d'
     },
     {
       name: 'Ellis', vessel: 'dish', glaze: 'celadon', title: 'Ellis\u2019s plate',
       story: 'He eats off the good china every Sunday since the house went quiet, because she would have hated paper plates. The crack came from the rack, and not looking, and Sundays.',
       closing: 'He set the table for one, on the good plate. Seam side up.',
-      callback: 'Ellis\u2019s plate. Sundays still. The good china, seam side up, like a flag.'
+      callback: 'Ellis\u2019s plate. Sundays still. The good china, seam side up, like a flag.',
+      rebreak: 'A Wednesday this time. He\u2019d started setting the table on Wednesdays too \u2014 the quiet had gotten loud midweek. The rack again. The not-looking again.',
+      rebreakClosing: 'Two seams now, both face-up. \u201cShe\u2019d have called it loved,\u201d he said.'
     }
   ];
 
@@ -109,6 +125,15 @@
     var cabSaved = JSON.parse(window.localStorage.getItem('mendery-cabinet') || '[]');
     if (Array.isArray(cabSaved)) cabinet = cabSaved;
   } catch (e) { /* the cabinet stays shut rather than emptying itself */ }
+  /* a keepsake is a history of mends, not a single seam: pieces
+   * kept before second breaks existed carry one mend, described
+   * the old way — give every entry its list, so the rest of the
+   * game only ever thinks in mends */
+  cabinet.forEach(function (e) {
+    if (!e) return;
+    if (!e.mends) e.mends = [{ seed: e.s, c: e.c || [] }];
+    e.mends.forEach(function (m) { if (!m.c) m.c = []; });
+  });
   function saveTown() {
     try {
       window.localStorage.setItem('mendery-mended', String(mendedCount));
@@ -222,10 +247,7 @@
   /* A piece, described from its seed alone: the crack, the glaze,
    * the handle's angle — everything replays identically, which is
    * what lets the cabinet keep faithful miniatures. */
-  function makeDesc(personIdx, seed) {
-    var person = PEOPLE[personIdx];
-    var vd = VESSELS[person.vessel];
-    var rng = mulberry32(seed);
+  function walkCrack(rng, vd, vesselName) {
     var segs = [];
     /* The crack is walked on the SURFACE, not on the screen. Its
      * coordinates are (s, th): s the distance travelled from the
@@ -244,7 +266,7 @@
         var tn = Math.min(1, Math.max(0, (0.55 - r) / 0.15));
         return 0.92 + (0.55 - 0.92) * Math.sin(tn * Math.PI * 0.5);
       }
-      if (person.vessel === 'teapot') return 0.88; /* one long shoulder to the lid */
+      if (vesselName === 'teapot') return 0.88; /* one long shoulder to the lid */
       var floorR = vd.well * 0.52;
       if (r <= floorR) return 1.0;
       if (r >= vd.well) return 0.95;
@@ -339,6 +361,14 @@
         if (bs >= sStop) break;
       }
     }
+    return segs;
+  }
+
+  function makeDesc(personIdx, seed) {
+    var person = PEOPLE[personIdx];
+    var vd = VESSELS[person.vessel];
+    var rng = mulberry32(seed);
+    var segs = walkCrack(rng, vd, person.vessel);
     return {
       personIdx: personIdx, person: person, vessel: person.vessel, vd: vd,
       glaze: GLAZES[person.glaze], seed: seed, segs: segs,
@@ -346,9 +376,62 @@
     };
   }
 
+  /* do two stretches of seam cross? — plain geometry, unit space */
+  function segsCross(a, b) {
+    var d = (a.x2 - a.x1) * (b.y2 - b.y1) - (a.y2 - a.y1) * (b.x2 - b.x1);
+    if (Math.abs(d) < 1e-9) return false;
+    var t = ((b.x1 - a.x1) * (b.y2 - b.y1) - (b.y1 - a.y1) * (b.x2 - b.x1)) / d;
+    var u = ((b.x1 - a.x1) * (a.y2 - a.y1) - (b.y1 - a.y1) * (a.x2 - a.x1)) / d;
+    return t > 0.02 && t < 0.98 && u > 0.02 && u < 0.98;
+  }
+  /* a returning piece breaks along a NEW line, and the new line
+   * must cross the old gold — that is the whole poetry of a second
+   * break. Try seeds until one crosses; it rarely takes three. */
+  function pickCrossingCrack(vd, vesselName, oldSets, baseSeed) {
+    var last = null;
+    for (var k = 0; k < 14; k++) {
+      var cand = walkCrack(mulberry32(baseSeed + k), vd, vesselName);
+      last = { seed: baseSeed + k, segs: cand };
+      var hit = false;
+      for (var oi = 0; oi < oldSets.length && !hit; oi++) {
+        for (var ni = 0; ni < cand.length && !hit; ni++) {
+          for (var oj = 0; oj < oldSets[oi].length && !hit; oj++) {
+            if (segsCross(cand[ni], oldSets[oi][oj])) hit = true;
+          }
+        }
+      }
+      if (hit) return last;
+    }
+    return last;
+  }
+
   function makePiece(personIdx, seed, countVisit) {
-    var desc = makeDesc(personIdx, seed);
-    var person = desc.person;
+    var person = PEOPLE[personIdx];
+    /* a second break: if this person has been here before and
+     * their piece is in the cabinet, the SAME piece comes back —
+     * same seed, same angles, its old gold still on it — carrying
+     * a new crack that crosses the old seam */
+    var entry = null;
+    if (countVisit && (visits[person.name] || 0) >= 1) {
+      for (var ei = 0; ei < cabinet.length; ei++) {
+        if (cabinet[ei].p === personIdx) { entry = cabinet[ei]; break; }
+      }
+    }
+    var desc, crackSeed = seed, oldSeams = null;
+    if (entry) {
+      desc = makeDesc(personIdx, entry.s);
+      var oldSets = entry.mends.map(function (m) { return walkCrack(mulberry32(m.seed), desc.vd, desc.vessel); });
+      var picked = pickCrossingCrack(desc.vd, desc.vessel, oldSets, (Math.random() * 1e9) | 0);
+      crackSeed = picked.seed;
+      var d2 = {};
+      for (var dk in desc) d2[dk] = desc[dk];
+      d2.segs = picked.segs;
+      desc = d2;
+      oldSeams = entry.mends.map(function (m, mi) { return { segs: oldSets[mi], cares: m.c }; });
+      seed = entry.s;
+    } else {
+      desc = makeDesc(personIdx, seed);
+    }
     if (countVisit) {
       visits[person.name] = (visits[person.name] || 0) + 1;
       saveTown();
@@ -359,6 +442,7 @@
       vessel: desc.vessel, vd: desc.vd, glaze: desc.glaze,
       Rv: bowlR * desc.vd.rf, ext: desc.vd.ext,
       seed: seed, segs: desc.segs, complete: false, completeT: 0, filledCount: 0,
+      rebreak: entry, crackSeed: crackSeed, oldSeams: oldSeams,
       handleAng: desc.handleAng, spoutAng: desc.spoutAng
     };
     settleT = 0; /* the piece is set down, not switched on */
@@ -651,15 +735,22 @@
     mendedCount++;
     /* the cabinet keeps this piece: whose it was, its seed (so the
      * crack and glaze replay exactly), and the care of every stretch
-     * of seam — the miniature shows the seam as it was really laid */
-    cabinet.push({
-      p: bowl.personIdx, s: bowl.seed,
-      c: bowl.segs.map(function (sg) { return Math.round(sg.care * 100) / 100; })
-    });
+     * of seam — the miniature shows the seam as it was really laid.
+     * A second break doesn't add a piece; it adds a mend to the
+     * piece that's already there. */
+    var caresNow = bowl.segs.map(function (sg) { return Math.round(sg.care * 100) / 100; });
+    if (bowl.rebreak) {
+      bowl.rebreak.mends.push({ seed: bowl.crackSeed, c: caresNow });
+    } else {
+      cabinet.push({
+        p: bowl.personIdx, s: bowl.seed, c: caresNow,
+        mends: [{ seed: bowl.seed, c: caresNow }]
+      });
+    }
     saveTown();
     paintCabBtn();
     if (window.MenderyAudio) window.MenderyAudio.bell();
-    setWhisper('mended:' + bowl.id, 'Mended.', bowl.person.closing);
+    setWhisper('mended:' + bowl.id, 'Mended.', bowl.rebreak ? bowl.person.rebreakClosing : bowl.person.closing);
   }
   cv.addEventListener('pointerdown', function (e) {
     if (window.MenderyAudio) window.MenderyAudio.wake();
@@ -766,7 +857,8 @@
   function showPieceWhisper() {
     if (view !== 'bench') return;
     if (!bowl || !bowl.person) return;
-    var sub = (bowl.visit > 1 && bowl.person.callback) ? bowl.person.callback : bowl.person.story;
+    var sub = (bowl.rebreak && bowl.visit === 2 && bowl.person.rebreak) ? bowl.person.rebreak
+      : (bowl.visit > 1 && bowl.person.callback) ? bowl.person.callback : bowl.person.story;
     setWhisper(pieceKey(), bowl.person.title, sub);
   }
 
@@ -833,6 +925,28 @@
       var Rv = bowl.Rv;
       var RvS = Rv * pScale, cyy = bowlC.y + pYOff;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      /* the old gold, if this piece has been here before: settled
+       * seams from earlier mends, drawn with the care they were
+       * laid with then — they sit under everything fresh */
+      if (bowl.oldSeams) {
+        for (var op = 0; op < 3; op++) {
+          for (var osi = 0; osi < bowl.oldSeams.length; osi++) {
+            var oSet = bowl.oldSeams[osi];
+            for (var oi = 0; oi < oSet.segs.length; oi++) {
+              var oseg = oSet.segs[oi];
+              var ocare = (oSet.cares && oSet.cares[oi] != null) ? oSet.cares[oi] : 0.8;
+              var ocw = 0.6 + ocare * 0.65;
+              ctx.beginPath();
+              ctx.moveTo(bowlC.x + oseg.x1 * RvS, cyy + oseg.y1 * RvS);
+              ctx.lineTo(bowlC.x + oseg.x2 * RvS, cyy + oseg.y2 * RvS);
+              if (op === 0) { ctx.strokeStyle = 'rgba(138,90,23,0.85)'; ctx.lineWidth = RvS * 0.021 * ocw * glow; }
+              else if (op === 1) { ctx.strokeStyle = 'rgba(224,164,54,0.95)'; ctx.lineWidth = RvS * 0.012 * ocw * glow; }
+              else { ctx.strokeStyle = 'rgba(255,233,168,' + Math.min(1, (0.30 + ocare * 0.35 + pulse * 0.3) * seamLight(oseg)) + ')'; ctx.lineWidth = RvS * 0.005 * ocw * glow; }
+              ctx.stroke();
+            }
+          }
+        }
+      }
       /* freshly laid gold is wet gold: for a breath after a stretch
        * is filled it carries a bloom of extra light, settling as it
        * dries to the tone it will keep */
@@ -989,6 +1103,27 @@
           ctx.lineWidth = RvS * 0.009 * (0.6 + hs2.care * 0.65);
           ctx.stroke();
         }
+        if (bowl.oldSeams) {
+          for (var osi2 = 0; osi2 < bowl.oldSeams.length; osi2++) {
+            var oSet2 = bowl.oldSeams[osi2];
+            for (var oi2 = 0; oi2 < oSet2.segs.length; oi2++) {
+              var oseg2 = oSet2.segs[oi2];
+              var ocare2 = (oSet2.cares && oSet2.cares[oi2] != null) ? oSet2.cares[oi2] : 0.8;
+              ctx.beginPath();
+              ctx.moveTo(bowlC.x + oseg2.x1 * RvS, cyy + oseg2.y1 * RvS);
+              ctx.lineTo(bowlC.x + oseg2.x2 * RvS, cyy + oseg2.y2 * RvS);
+              ctx.strokeStyle = 'rgba(255,158,54,' + (0.30 * hE) + ')';
+              ctx.lineWidth = RvS * 0.026 * (0.6 + ocare2 * 0.65);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.moveTo(bowlC.x + oseg2.x1 * RvS, cyy + oseg2.y1 * RvS);
+              ctx.lineTo(bowlC.x + oseg2.x2 * RvS, cyy + oseg2.y2 * RvS);
+              ctx.strokeStyle = 'rgba(255,232,175,' + (Math.min(1, 0.35 + ocare2 * 0.5) * hE) + ')';
+              ctx.lineWidth = RvS * 0.009 * (0.6 + ocare2 * 0.65);
+              ctx.stroke();
+            }
+          }
+        }
       }
       if (hE > 0.001) ctx.restore();
       ctx.globalAlpha = 1;
@@ -1125,20 +1260,27 @@
      * same three full passes as the bench so the miniature's vein is
      * continuous too */
     g.lineCap = 'round'; g.lineJoin = 'round';
-    for (var pass = 0; pass < 3; pass++) {
-      for (var i = 0; i < desc.segs.length; i++) {
-        var s = desc.segs[i];
-        var care = (e.c && e.c[i] != null) ? e.c[i] : 0.8;
-        var cw = 0.6 + care * 0.65;
-        g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
-        if (pass === 0) {
-          g.strokeStyle = 'rgba(138,90,23,0.85)'; g.lineWidth = Math.max(0.8, R * 0.021 * cw);
-        } else if (pass === 1) {
-          g.strokeStyle = 'rgba(224,164,54,0.95)'; g.lineWidth = Math.max(0.55, R * 0.012 * cw);
-        } else {
-          g.strokeStyle = 'rgba(255,233,168,' + Math.min(1, (0.30 + care * 0.35) * seamLight(s)) + ')'; g.lineWidth = Math.max(0.3, R * 0.005 * cw);
+    /* every mend the piece has ever had, in the order they were
+     * laid — the miniature keeps the whole history */
+    var mendList = (e.mends && e.mends.length) ? e.mends : [{ seed: e.s, c: e.c || [] }];
+    for (var mi2 = 0; mi2 < mendList.length; mi2++) {
+      var mend = mendList[mi2];
+      var msegs = mi2 === 0 ? desc.segs : walkCrack(mulberry32(mend.seed), desc.vd, desc.vessel);
+      for (var pass = 0; pass < 3; pass++) {
+        for (var i = 0; i < msegs.length; i++) {
+          var s = msegs[i];
+          var care = (mend.c && mend.c[i] != null) ? mend.c[i] : 0.8;
+          var cw = 0.6 + care * 0.65;
+          g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
+          if (pass === 0) {
+            g.strokeStyle = 'rgba(138,90,23,0.85)'; g.lineWidth = Math.max(0.8, R * 0.021 * cw);
+          } else if (pass === 1) {
+            g.strokeStyle = 'rgba(224,164,54,0.95)'; g.lineWidth = Math.max(0.55, R * 0.012 * cw);
+          } else {
+            g.strokeStyle = 'rgba(255,233,168,' + Math.min(1, (0.30 + care * 0.35) * seamLight(s)) + ')'; g.lineWidth = Math.max(0.3, R * 0.005 * cw);
+          }
+          g.stroke();
         }
-        g.stroke();
       }
     }
     /* the name, lettered once onto a small plate */
@@ -1247,7 +1389,9 @@
     if (idx >= 0 && idx < cabinet.length && col >= 0 && col < L.cols) {
       cabSel = idx;
       var person = PEOPLE[cabinet[idx].p];
-      setWhisper('cab:' + idx, person.title, person.closing, 320);
+      var cabEntry = cabinet[idx];
+      var cabLine = (cabEntry.mends && cabEntry.mends.length > 1 && person.rebreakClosing) ? person.rebreakClosing : person.closing;
+      setWhisper('cab:' + idx, person.title, cabLine, 320);
     } else {
       cabSel = -1;
       setWhisper('cab', null, null, 320);
