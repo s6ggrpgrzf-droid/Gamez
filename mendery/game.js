@@ -781,13 +781,16 @@
   document.body.appendChild(cabBtn);
   function paintCabBtn() { cabBtn.style.display = cabinet.length ? 'block' : 'none'; }
   function toggleCabinet() {
-    /* crossings use the whisper's brisk pace (see setWhisper) */
+    /* crossings use the whisper's brisk pace (see setWhisper);
+     * in the cabinet the whisper wears its caption settle (style.css) */
     if (view === 'bench') {
       view = 'cabinet'; cabSel = -1;
+      whisperEl.classList.add('inCab');
       setWhisper('cab', null, null, 320);
       cabBtn.textContent = 'the bench';
     } else {
       view = 'bench';
+      whisperEl.classList.remove('inCab');
       cabBtn.textContent = 'the cabinet';
       restoreBenchWhisper();
     }
@@ -806,7 +809,7 @@
   function cabMaxScroll() {
     var L = cabLayout();
     var rows = Math.ceil(cabinet.length / L.cols);
-    return Math.max(0, L.top + rows * L.cellH + 34 - CH);
+    return Math.max(0, L.top + rows * L.cellH + 150 - CH); /* tail room: the last row can lift clear of the caption */
   }
   function miniFor(idx) {
     if (miniCache[idx]) return miniCache[idx];
@@ -869,6 +872,9 @@
     ctx.font = 'italic 500 15px "Cormorant Garamond", Georgia, serif';
     ctx.fillStyle = 'rgba(232,209,165,0.55)';
     ctx.fillText(cabinet.length + (cabinet.length === 1 ? ' piece' : ' pieces') + ' · in the order you mended them', CW / 2, 74);
+    /* the shelves slide UNDER the header, never across it */
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 92, CW, CH - 92); ctx.clip();
     var rows = Math.ceil(cabinet.length / L.cols);
     for (var r = 0; r < rows; r++) {
       var boardY = L.top + (r + 1) * L.cellH - cabScroll;
@@ -880,6 +886,9 @@
         var cxp = L.cellW * (col + 0.5);
         var cyp = boardY - 8 - m.R * 0.98;
         if (idx === cabSel) {
+          /* the ring is drawn first, so it reads as a halo on the
+           * shelf behind the piece — a spout or handle crossing it
+           * paints over it instead of being struck through */
           ctx.strokeStyle = 'rgba(255,215,130,0.55)'; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.arc(cxp, cyp, m.R * 1.14, 0, 6.2832); ctx.stroke();
         }
@@ -895,6 +904,7 @@
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.fillRect(16, boardY + 7, CW - 32, 7);
     }
+    ctx.restore(); /* the header clip */
     ctx.restore();
   }
   function cabTap(x, y) {

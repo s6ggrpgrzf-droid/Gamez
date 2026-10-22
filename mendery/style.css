@@ -31,6 +31,21 @@ html, body {
   transition: opacity 1.6s ease;
 }
 #whisper.show { opacity: 1; }
+/* In the cabinet the whisper is a caption, not a bench aside: the
+ * shelves run right under where the words sit, so the words get a
+ * soft dark settle behind them. The settle is a full-screen ::before
+ * (isolation keeps it inside the whisper's own layer, fading with
+ * the text) — a background on the text box itself clipped at the
+ * box's edges and showed its seams against pale porcelain */
+#whisper { isolation: isolate; }
+#whisper.inCab::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(12, 7, 3, 0) 58%, rgba(12, 7, 3, 0.88) 80%, rgba(12, 7, 3, 0.95) 100%);
+}
 #whisperMain {
   font-family: "Cormorant Garamond", Georgia, serif;
   font-weight: 600;
@@ -69,4 +84,7 @@ html, body {
    * (Rosa's is thirty-four words) keep headroom above the brush */
   #whisperMain { font-size: 30px; }
   #whisperSub { font-size: 17px; line-height: 1.34; }
+  #whisper.inCab::before {
+    background: radial-gradient(ellipse 32% 58% at 17% 50%, rgba(12, 7, 3, 0.92) 34%, rgba(12, 7, 3, 0) 74%);
+  }
 }
