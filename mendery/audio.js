@@ -238,6 +238,7 @@
     get muted() { return muted; },
     get state() { return ctx ? ctx.state : 'none'; },
     get rain() { return rainOn; },
+    rainy: rainyEvening, /* the same date hash, askable before the first touch builds the audio */
     get ringFreq() { return ringFreqNow; },
     get ringLevel() { return ringLevel; }
   };

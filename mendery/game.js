@@ -502,6 +502,47 @@
     showPieceWhisper();
   }
 
+  /* a mat under the piece, so no glaze has to stand on bare wood alone:
+   * pale linen under the dark mug, deep felt under everything pale */
+  function drawMat(b, P, R) {
+    var linen = P.person.glaze === 'charcoal', mr = R * 1.12;
+    var rng = mulberry32(P.seed * 3 + 5);
+    b.save();
+    /* its own soft shadow on the boards, falling away from the lamp */
+    var ms = b.createRadialGradient(R * 0.03, R * 0.05, mr * 0.8, R * 0.03, R * 0.05, mr * 1.12);
+    ms.addColorStop(0, 'rgba(0,0,0,0.38)'); ms.addColorStop(1, 'rgba(0,0,0,0)');
+    b.fillStyle = ms; b.beginPath(); b.arc(R * 0.03, R * 0.05, mr * 1.12, 0, 6.2832); b.fill();
+    var mg = b.createRadialGradient(-mr * 0.35, -mr * 0.4, mr * 0.1, 0, 0, mr);
+    if (linen) { mg.addColorStop(0, '#e6d8b6'); mg.addColorStop(1, '#bfae88'); }
+    else { mg.addColorStop(0, '#4a2420'); mg.addColorStop(1, '#2e1512'); }
+    b.fillStyle = mg; b.beginPath(); b.arc(0, 0, mr, 0, 6.2832); b.fill();
+    b.save(); b.beginPath(); b.arc(0, 0, mr, 0, 6.2832); b.clip();
+    if (linen) { /* the weave */
+      var step = Math.max(2.5, R * 0.02);
+      b.strokeStyle = 'rgba(90,66,34,0.07)'; b.lineWidth = 1;
+      b.beginPath();
+      for (var wv = -mr; wv < mr; wv += step) { b.moveTo(wv, -mr); b.lineTo(wv, mr); b.moveTo(-mr, wv); b.lineTo(mr, wv); }
+      b.stroke();
+    } else { /* felt fibres */
+      for (var fb = 0; fb < 240; fb++) {
+        var fa = rng() * 6.2832, fr = Math.sqrt(rng()) * mr;
+        b.fillStyle = 'rgba(255,200,160,' + (0.02 + rng() * 0.04) + ')';
+        b.fillRect(Math.cos(fa) * fr, Math.sin(fa) * fr, 1 + rng() * 2, 0.6);
+      }
+    }
+    b.restore();
+    if (linen) { /* hem stitching */
+      b.setLineDash([R * 0.04, R * 0.032]); b.strokeStyle = 'rgba(110,80,40,0.38)'; b.lineWidth = 1;
+      b.beginPath(); b.arc(0, 0, mr * 0.93, 0, 6.2832); b.stroke(); b.setLineDash([]);
+    }
+    /* lamp on the near edge, shade on the far one */
+    b.lineWidth = Math.max(1, R * 0.012);
+    b.strokeStyle = 'rgba(255,230,185,0.20)';
+    b.beginPath(); b.arc(0, 0, mr, Math.PI * 0.95, Math.PI * 1.55); b.stroke();
+    b.strokeStyle = 'rgba(0,0,0,0.30)';
+    b.beginPath(); b.arc(0, 0, mr, Math.PI * 0.05, Math.PI * 0.55); b.stroke();
+    b.restore();
+  }
   function buildVesselBase() {
     if (!bowl) return;
     bowl.Rv = bowlR * bowl.vd.rf;
@@ -511,6 +552,7 @@
     var b = bowlCv.getContext('2d');
     b.setTransform(DPR, 0, 0, DPR, 0, 0);
     b.translate(S / 2, S / 2);
+    drawMat(b, bowl, bowl.Rv);
     renderPiece(b, bowl, bowl.Rv);
     bowl.S = S;
   }
@@ -761,6 +803,23 @@
     return 0.80 + 0.38 * across * across;
   }
 
+  /* Catmull-Rom through the crack's nodes: segment i is drawn as a cubic whose
+   * tangents follow its neighbours, so the polyline reads as one hand-drawn
+   * line. Neighbours only count where they truly continue the segment, so a
+   * branch never bends the run it springs from. c is any 2D context; (cx, cy)
+   * the piece's centre and k its scale in that context. */
+  function seamTo(c, segs, i, cx, cy, k) {
+    var s = segs[i], p = segs[i - 1], n = segs[i + 1];
+    var ax = s.x1, ay = s.y1, bx = s.x2, by = s.y2, px = ax, py = ay, nx = bx, ny = by;
+    if (p && Math.abs(p.x2 - ax) < 1e-6 && Math.abs(p.y2 - ay) < 1e-6) { px = p.x1; py = p.y1; }
+    if (n && Math.abs(n.x1 - bx) < 1e-6 && Math.abs(n.y1 - by) < 1e-6) { nx = n.x2; ny = n.y2; }
+    c.moveTo(cx + ax * k, cy + ay * k);
+    c.bezierCurveTo(
+      cx + (ax + (bx - px) / 6) * k, cy + (ay + (by - py) / 6) * k,
+      cx + (bx - (nx - ax) / 6) * k, cy + (by - (ny - ay) / 6) * k,
+      cx + bx * k, cy + by * k
+    );
+  }
   function segDist(px, py, s) {
     var dx = s.x2 - s.x1, dy = s.y2 - s.y1;
     var l2 = dx * dx + dy * dy || 1e-6;
@@ -1035,6 +1094,41 @@
   })();
 
   /* ================= render ================= */
+  /* ================= rain on the window =================
+   * On the evenings the audio says it rains, a window behind the bench
+   * throws the shadows of drops running down its glass across the boards:
+   * soft, slow, a little wobbly. Same date hash as the sound. */
+  var rainTonight = false;
+  try { rainTonight = !!(window.MenderyAudio && window.MenderyAudio.rainy && window.MenderyAudio.rainy()); } catch (e) { /* quiet */ }
+  var drops = [];
+  (function () {
+    var rr = mulberry32(2718);
+    for (var i = 0; i < 11; i++) {
+      drops.push({ x: rr(), y: rr(), v: 0.05 + rr() * 0.07, len: 0.10 + rr() * 0.16, w: 3 + rr() * 4.5, ph: rr() * 6.283, a: 0.07 + rr() * 0.07 });
+    }
+  })();
+  function drawRain(dt, t) {
+    if (!rainTonight) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (var i = 0; i < drops.length; i++) {
+      var d = drops[i];
+      var run = 0.5 + 0.5 * Math.sin(t * 0.6 + d.ph); /* drops hesitate, then run */
+      d.y += d.v * dt * (0.15 + 0.85 * run * run * run);
+      if (d.y - d.len > 1.05) { d.y = -0.05; d.x = Math.random(); }
+      var hx = d.x * CW + Math.sin(t * 0.9 + d.ph) * 4, hy = d.y * CH;
+      var tx = hx - d.len * CH * 0.18, ty = hy - d.len * CH;
+      var g = ctx.createLinearGradient(tx, ty, hx, hy);
+      g.addColorStop(0, 'rgba(6,3,1,0)'); g.addColorStop(1, 'rgba(6,3,1,' + d.a + ')');
+      ctx.strokeStyle = g; ctx.lineWidth = d.w * 0.55;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.fillStyle = 'rgba(6,3,1,' + (d.a * 0.9) + ')';
+      ctx.beginPath(); ctx.arc(hx, hy, d.w, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = 'rgba(255,214,150,' + (d.a * 0.55) + ')'; /* the drop's own small caustic */
+      ctx.beginPath(); ctx.arc(hx - d.w * 0.25, hy + d.w * 0.2, d.w * 0.32, 0, 6.2832); ctx.fill();
+    }
+    ctx.restore();
+  }
   var elapsed = 0, lastT = 0, raf = 0, bootFade = 1;
   function frame(nowMs) {
     raf = requestAnimationFrame(frame);
@@ -1066,6 +1160,7 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.globalAlpha = 1;
     if (benchCv) ctx.drawImage(benchCv, 0, 0, CW, CH);
+    if (view === 'bench') drawRain(dt, t); /* under the piece, on the boards only */
 
     /* the set-down: a new piece lands a breath high and a touch
      * large, and settles onto the wood over a third of a second —
@@ -1100,8 +1195,8 @@
               var ocare = (oSet.cares && oSet.cares[oi] != null) ? oSet.cares[oi] : 0.8;
               var ocw = 0.6 + ocare * 0.65;
               ctx.beginPath();
-              ctx.moveTo(bowlC.x + oseg.x1 * RvS, cyy + oseg.y1 * RvS);
-              ctx.lineTo(bowlC.x + oseg.x2 * RvS, cyy + oseg.y2 * RvS);
+              var orel = op === 0 ? 0.7 : (op === 2 ? -0.6 : 0);
+              seamTo(ctx, oSet.segs, oi, bowlC.x + orel, cyy + orel, RvS);
               if (op === 0) { ctx.strokeStyle = 'rgba(138,90,23,0.85)'; ctx.lineWidth = RvS * 0.021 * ocw * glow; }
               else if (op === 1) { ctx.strokeStyle = 'rgba(224,164,54,0.95)'; ctx.lineWidth = RvS * 0.012 * ocw * glow; }
               else { ctx.strokeStyle = 'rgba(255,233,168,' + Math.min(1, (0.30 + ocare * 0.35 + pulse * 0.3) * seamLight(oseg)) + ')'; ctx.lineWidth = RvS * 0.005 * ocw * glow; }
@@ -1143,7 +1238,7 @@
           var sx2 = bowlC.x + s.x2 * RvS, sy2 = cyy + s.y2 * RvS;
           /* raised metal: the dark edge slips away from the lamp, the highlight leans toward it */
           var rel = seamPass === 0 ? 0.7 : (seamPass === 2 ? -0.6 : 0);
-          ctx.beginPath(); ctx.moveTo(sx1 + rel, sy1 + rel); ctx.lineTo(sx2 + rel, sy2 + rel);
+          ctx.beginPath(); seamTo(ctx, bowl.segs, i, bowlC.x + rel, cyy + rel, RvS);
           if (seamPass === 0) {
             ctx.strokeStyle = 'rgba(138,90,23,0.85)';
             ctx.lineWidth = RvS * 0.021 * cw * glow;
@@ -1178,8 +1273,7 @@
         var o = bowl.segs[j];
         if (o.filled) continue;
         anyOpen = true;
-        ctx.moveTo(bowlC.x + o.x1 * RvS, cyy + o.y1 * RvS);
-        ctx.lineTo(bowlC.x + o.x2 * RvS, cyy + o.y2 * RvS);
+        seamTo(ctx, bowl.segs, j, bowlC.x, cyy, RvS);
       }
       if (anyOpen) {
         /* a breath of pale under the crack first — where glaze chips,
@@ -1469,7 +1563,7 @@
           var s = msegs[i];
           var care = (mend.c && mend.c[i] != null) ? mend.c[i] : 0.8;
           var cw = 0.6 + care * 0.65;
-          g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
+          g.beginPath(); seamTo(g, msegs, i, 0, 0, R);
           if (pass === 0) {
             g.strokeStyle = 'rgba(138,90,23,0.85)'; g.lineWidth = Math.max(0.8, R * 0.021 * cw);
           } else if (pass === 1) {
@@ -1490,11 +1584,46 @@
     lg2.font = '600 10.5px "Cormorant Garamond", Georgia, serif';
     try { lg2.letterSpacing = '2.5px'; } catch (e) { /* graceful */ }
     lg2.textAlign = 'center'; lg2.textBaseline = 'middle';
-    lg2.fillStyle = 'rgba(238,222,188,0.82)';
+    /* a small brass plate, the name engraved dark on it */
+    var pw = Math.min(lw - 8, lg2.measureText(desc.person.name.toUpperCase()).width + 20), px0 = (lw - pw) / 2;
+    var pgd = lg2.createLinearGradient(0, 3.5, 0, 18.5);
+    pgd.addColorStop(0, '#e8cd82'); pgd.addColorStop(0.5, '#c9a24f'); pgd.addColorStop(1, '#94722c');
+    lg2.fillStyle = 'rgba(0,0,0,0.35)'; lg2.fillRect(px0 + 1, 5, pw, 15);
+    lg2.fillStyle = pgd; lg2.fillRect(px0, 3.5, pw, 15);
+    lg2.fillStyle = 'rgba(255,244,200,0.45)'; lg2.fillRect(px0, 3.5, pw, 1);
+    lg2.fillStyle = '#8a6a28'; /* a tiny screw at each end */
+    lg2.beginPath(); lg2.arc(px0 + 4, 11, 1, 0, 6.2832); lg2.fill();
+    lg2.beginPath(); lg2.arc(px0 + pw - 4, 11, 1, 0, 6.2832); lg2.fill();
+    lg2.fillStyle = 'rgba(52,34,12,0.92)';
     lg2.fillText(desc.person.name.toUpperCase(), lw / 2, lh / 2 + 1);
     var out = { cv: c, S: S, R: R, label: lc, lw: lw, lh: lh };
     miniCache[idx] = out;
     return out;
+  }
+  var cabBayCv = null, cabBayKey = '';
+  /* the recess behind each shelf: dark under the board above, a little warmer
+   * toward the one it rests on, shadowed at both posts, with faint grain */
+  function cabBay(L, bw) {
+    var bh = Math.round(L.cellH - 34), key = bw + '|' + bh;
+    if (cabBayCv && cabBayKey === key) return cabBayCv;
+    cabBayKey = key;
+    cabBayCv = document.createElement('canvas');
+    cabBayCv.width = Math.round(bw * DPR); cabBayCv.height = Math.round(bh * DPR);
+    var g = cabBayCv.getContext('2d');
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var v = g.createLinearGradient(0, 0, 0, bh);
+    v.addColorStop(0, 'rgba(6,3,1,0.62)'); v.addColorStop(0.35, 'rgba(34,21,10,0.34)'); v.addColorStop(1, 'rgba(70,44,22,0.26)');
+    g.fillStyle = v; g.fillRect(0, 0, bw, bh);
+    var h = g.createLinearGradient(0, 0, bw, 0);
+    h.addColorStop(0, 'rgba(0,0,0,0.42)'); h.addColorStop(0.07, 'rgba(0,0,0,0)');
+    h.addColorStop(0.93, 'rgba(0,0,0,0)'); h.addColorStop(1, 'rgba(0,0,0,0.42)');
+    g.fillStyle = h; g.fillRect(0, 0, bw, bh);
+    var rg = mulberry32(bw + bh);
+    for (var gi = 0; gi < 26; gi++) {
+      g.strokeStyle = 'rgba(255,190,120,' + (0.012 + rg() * 0.02) + ')'; g.lineWidth = 1;
+      var gx = rg() * bw; g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + (rg() - 0.5) * 6, bh); g.stroke();
+    }
+    return cabBayCv;
   }
   function drawCabinet() {
     var L = cabLayout();
@@ -1554,10 +1683,16 @@
     /* the shelves slide UNDER the header, never across it */
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 92, CW, CH - 92); ctx.clip();
+    /* the cabinet's two posts, fixed while the shelves slide between them */
+    var post = ctx.createLinearGradient(0, 0, 16, 0);
+    post.addColorStop(0, '#2a1a0c'); post.addColorStop(0.7, '#4a3320'); post.addColorStop(1, '#2b1b0d');
+    ctx.fillStyle = post; ctx.fillRect(0, 92, 16, CH - 92);
+    ctx.save(); ctx.translate(CW, 0); ctx.scale(-1, 1); ctx.fillRect(0, 92, 16, CH - 92); ctx.restore();
     var rows = Math.ceil(cabinet.length / L.cols);
     for (var r = 0; r < rows; r++) {
       var boardY = L.top + (r + 1) * L.cellH - cabScroll;
       if (boardY < -40 || boardY > CH + 60) continue;
+      ctx.drawImage(cabBay(L, bw), 16, boardY - L.cellH + 30, bw, Math.round(L.cellH - 34));
       for (var col = 0; col < L.cols; col++) {
         var idx = r * L.cols + col;
         if (idx >= cabinet.length) break;
