@@ -257,6 +257,7 @@
       handleAng: -0.35 + rng() * 0.7, spoutAng: Math.PI + (rng() - 0.5) * 0.6
     };
     buildVesselBase();
+    if (countVisit && window.MenderyAudio) window.MenderyAudio.knock();
     showPieceWhisper();
   }
 
@@ -410,15 +411,17 @@
   }
   function doTrace(cxPx, cyPx, stamp) {
     if (!bowl || bowl.complete || fadeSwap > 0) return;
+    var AU = window.MenderyAudio;
     var p = toBowlSpace(cxPx, cyPx);
-    if (Math.hypot(p.x, p.y) > 1.12) { lastMove = null; return; }
+    if (Math.hypot(p.x, p.y) > 1.12) { lastMove = null; if (AU) AU.drag(0); return; }
     var speed = 0;
     if (lastMove) {
       var dtm = Math.max(1, stamp - lastMove.stamp) / 1000;
       speed = Math.hypot(p.x - lastMove.x, p.y - lastMove.y) / dtm;
     }
     lastMove = { x: p.x, y: p.y, stamp: stamp };
-    var TOL = 0.085;
+    if (AU) AU.drag(speed);
+    var TOL = 0.085, batchCare = -1;
     for (var i = 0; i < bowl.segs.length; i++) {
       var s = bowl.segs[i];
       if (s.filled) continue;
@@ -426,10 +429,12 @@
       if (d < TOL) {
         s.filled = true;
         s.care = clamp(1.12 - speed * 0.5 - d * 4.5, 0.3, 1);
+        if (s.care > batchCare) batchCare = s.care;
         bowl.filledCount++;
         spawnSparkle(bowlC.x + (s.x1 + s.x2) / 2 * bowl.Rv, bowlC.y + (s.y1 + s.y2) / 2 * bowl.Rv, false);
       }
     }
+    if (batchCare >= 0 && AU) AU.tick(batchCare);
     if (progress() >= 0.985 && !bowl.complete) completeBowl();
   }
   function completeBowl() {
@@ -442,9 +447,11 @@
     }
     mendedCount++;
     saveTown();
+    if (window.MenderyAudio) window.MenderyAudio.bell();
     setWhisper('mended:' + bowl.id, 'Mended.', bowl.person.closing);
   }
   cv.addEventListener('pointerdown', function (e) {
+    if (window.MenderyAudio) window.MenderyAudio.wake();
     bootGreeting = false;
     if (bowl && bowl.complete && fadeSwap === 0) {
       var p = toBowlSpace(e.clientX, e.clientY);
@@ -457,7 +464,10 @@
   cv.addEventListener('pointermove', function (e) {
     if (tracing) doTrace(e.clientX, e.clientY, e.timeStamp);
   });
-  function endTrace() { tracing = false; lastMove = null; }
+  function endTrace() {
+    tracing = false; lastMove = null;
+    if (window.MenderyAudio) window.MenderyAudio.drag(0);
+  }
   cv.addEventListener('pointerup', endTrace);
   cv.addEventListener('pointercancel', endTrace);
   window.addEventListener('blur', endTrace);
@@ -598,6 +608,10 @@
     get personTitle() { return bowl && bowl.person ? bowl.person.title : ''; },
     get vessel() { return bowl ? bowl.vessel : ''; },
     get visit() { return bowl ? bowl.visit : 0; },
+    get audio() {
+      var A = window.MenderyAudio;
+      return A ? { plays: A.plays, muted: A.muted, state: A.state } : null;
+    },
     showRoster: function (i) { bootGreeting = false; makePiece(i, 4000 + i * 131, false); },
     newBowl: function (seed) { makePiece(nextPersonIdx(), seed || ((Math.random() * 1e9) | 0), true); },
     toClient: function (x, y) { return { x: bowlC.x + x * (bowl ? bowl.Rv : bowlR), y: bowlC.y + y * (bowl ? bowl.Rv : bowlR) }; },
