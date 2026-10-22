@@ -562,13 +562,34 @@
 
   /* ================= whisper ================= */
   var whisperKey = '__boot', bootGreeting = false, bootT = 0;
-  function setWhisper(key, main, sub) {
+  var whisperTimer = 0;
+  /* Words arrive and leave like speech, not like signage: when the
+   * text changes while the whisper is up, the old words fade out
+   * first and the new ones take their place in the quiet — the text
+   * never swaps at full opacity. Each moment has its pace: cabinet
+   * crossings are brisk (320), bench moments are calm (650), and
+   * the door greeting is slow (1200, passed by its caller). */
+  function setWhisper(key, main, sub, paceMs) {
     if (key === whisperKey) return;
     whisperKey = key;
+    var pace = paceMs || 650;
+    whisperEl.style.transitionDuration = (pace / 1000) + 's';
+    clearTimeout(whisperTimer);
     if (!main) { whisperEl.classList.remove('show'); return; }
-    whisperMain.textContent = main;
-    whisperSub.textContent = sub || '';
-    whisperEl.classList.add('show');
+    var shown = whisperEl.classList.contains('show');
+    var differs = whisperMain.textContent !== main || whisperSub.textContent !== (sub || '');
+    if (!shown || !differs) {
+      whisperMain.textContent = main;
+      whisperSub.textContent = sub || '';
+      whisperEl.classList.add('show');
+      return;
+    }
+    whisperEl.classList.remove('show');
+    whisperTimer = setTimeout(function () {
+      whisperMain.textContent = main;
+      whisperSub.textContent = sub || '';
+      whisperEl.classList.add('show');
+    }, pace * 0.92);
   }
   function pieceKey() { return 'piece:' + (bowl ? bowl.id : 0); }
   function showPieceWhisper() {
@@ -753,25 +774,22 @@
   cabBtn.id = 'cabBtn';
   cabBtn.textContent = 'the cabinet';
   cabBtn.style.cssText = 'position:fixed;left:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5;' +
-    'background:none;border:none;padding:10px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;' +
+    'background:none;border:none;padding:13px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;' +
     'font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:500;font-size:17px;letter-spacing:0.05em;' +
     'color:rgba(232,209,165,0.62);text-shadow:0 1px 8px rgba(0,0,0,0.8);display:none;';
   cabBtn.addEventListener('click', function () { toggleCabinet(); });
   document.body.appendChild(cabBtn);
   function paintCabBtn() { cabBtn.style.display = cabinet.length ? 'block' : 'none'; }
   function toggleCabinet() {
-    /* the bench whisper fades over 1.6s by design; crossing to the
-     * cabinet it would ghost — borrow a quicker fade for the swap */
-    whisperEl.style.transition = 'opacity 0.35s ease';
+    /* crossings use the whisper's brisk pace (see setWhisper) */
     if (view === 'bench') {
       view = 'cabinet'; cabSel = -1;
-      setWhisper('cab', null);
+      setWhisper('cab', null, null, 320);
       cabBtn.textContent = 'the bench';
     } else {
       view = 'bench';
       cabBtn.textContent = 'the cabinet';
       restoreBenchWhisper();
-      setTimeout(function () { whisperEl.style.transition = ''; }, 450);
     }
   }
   function restoreBenchWhisper() {
@@ -887,10 +905,10 @@
     if (idx >= 0 && idx < cabinet.length && col >= 0 && col < L.cols) {
       cabSel = idx;
       var person = PEOPLE[cabinet[idx].p];
-      setWhisper('cab:' + idx, person.title, person.closing);
+      setWhisper('cab:' + idx, person.title, person.closing, 320);
     } else {
       cabSel = -1;
-      setWhisper('cab', null);
+      setWhisper('cab', null, null, 320);
     }
   }
 
@@ -923,7 +941,7 @@
   for (var vk in visits) totalVisits += visits[vk];
   if (mendedCount === 0 && totalVisits <= 1) {
     bootGreeting = true; bootT = 0;
-    setWhisper('title', 'The Mendery', 'bring me your broken things');
+    setWhisper('title', 'The Mendery', 'bring me your broken things', 1200);
   }
   requestAnimationFrame(function (ms) {
     window.__mendery.ready = true;

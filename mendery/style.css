@@ -65,4 +65,8 @@ html, body {
     text-align: left;
     max-width: 30vw;
   }
+  /* a breath smaller on the side bench, so the longest stories
+   * (Rosa's is thirty-four words) keep headroom above the brush */
+  #whisperMain { font-size: 30px; }
+  #whisperSub { font-size: 17px; line-height: 1.34; }
 }
