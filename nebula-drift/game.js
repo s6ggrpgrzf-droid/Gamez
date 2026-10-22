@@ -578,6 +578,7 @@
     cv.style.width = CW + 'px'; cv.style.height = CH + 'px';
     gl.viewport(0, 0, cv.width, cv.height);
     applyProj();
+    buildBloomTargets();
   }
   window.addEventListener('resize', resize);
 
@@ -701,6 +702,102 @@
     gl.uniform1f(uniformLoc(fogProg, 'uAlpha'), fogAlpha);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  /* ================= bloom (improvement pass 5) =================
+   * The scene renders into an offscreen target; highlights are
+   * extracted, blurred at quarter resolution (two separable passes,
+   * twice), and composited back additively — so Deneb, Vega and the
+   * thread cores glow the way bright things do in a long exposure.
+   * Any framebuffer failure falls back to direct rendering. */
+  var postVS = 'attribute vec2 aP; varying vec2 vUv;' +
+    'void main(){ vUv = aP * 0.5 + 0.5; gl_Position = vec4(aP, 0.0, 1.0); }';
+  var brightProg = makeProgram(postVS,
+    'precision mediump float; varying vec2 vUv; uniform sampler2D uTex;' +
+    'void main(){ vec3 c = texture2D(uTex, vUv).rgb;' +
+    '  float lum = dot(c, vec3(0.299, 0.587, 0.114));' +
+    '  float w = smoothstep(0.45, 0.95, lum);' +
+    '  gl_FragColor = vec4(c * w, 1.0); }');
+  var blurProg = makeProgram(postVS,
+    'precision mediump float; varying vec2 vUv; uniform sampler2D uTex; uniform vec2 uStep;' +
+    'void main(){ vec3 s = texture2D(uTex, vUv).rgb * 0.227027;' +
+    '  s += texture2D(uTex, vUv + uStep * 1.3846).rgb * 0.3162162;' +
+    '  s += texture2D(uTex, vUv - uStep * 1.3846).rgb * 0.3162162;' +
+    '  s += texture2D(uTex, vUv + uStep * 3.2308).rgb * 0.0702703;' +
+    '  s += texture2D(uTex, vUv - uStep * 3.2308).rgb * 0.0702703;' +
+    '  gl_FragColor = vec4(s, 1.0); }');
+  var compProg = makeProgram(postVS,
+    'precision mediump float; varying vec2 vUv;' +
+    'uniform sampler2D uTex; uniform sampler2D uBloom; uniform float uStrength;' +
+    'void main(){ vec3 base = texture2D(uTex, vUv).rgb;' +
+    '  vec3 glow = texture2D(uBloom, vUv).rgb;' +
+    '  gl_FragColor = vec4(base + glow * uStrength, 1.0); }');
+  var sceneT = null, blurA = null, blurB = null, bloomOK = false;
+  function makeTarget(w, h) {
+    var tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    var fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    var ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { tex: tex, fb: fb, w: w, h: h, ok: ok };
+  }
+  function buildBloomTargets() {
+    [sceneT, blurA, blurB].forEach(function (tt) {
+      if (tt) { gl.deleteTexture(tt.tex); gl.deleteFramebuffer(tt.fb); }
+    });
+    if (!cv.width || !cv.height) { bloomOK = false; return; }
+    sceneT = makeTarget(cv.width, cv.height);
+    blurA = makeTarget(Math.max(1, cv.width >> 2), Math.max(1, cv.height >> 2));
+    blurB = makeTarget(Math.max(1, cv.width >> 2), Math.max(1, cv.height >> 2));
+    bloomOK = !!(sceneT.ok && blurA.ok && blurB.ok);
+  }
+  function runBloom() {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, blurA.fb);
+    gl.viewport(0, 0, blurA.w, blurA.h);
+    gl.useProgram(brightProg);
+    bindAttr(brightProg, 'aP', fogBuf, 2);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, sceneT.tex);
+    gl.uniform1i(uniformLoc(brightProg, 'uTex'), 0);
+    gl.disable(gl.BLEND);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    var src = blurA, dst = blurB;
+    gl.useProgram(blurProg);
+    bindAttr(blurProg, 'aP', fogBuf, 2);
+    gl.uniform1i(uniformLoc(blurProg, 'uTex'), 0);
+    for (var i = 0; i < 2; i++) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fb);
+      gl.viewport(0, 0, dst.w, dst.h);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, src.tex);
+      gl.uniform2f(uniformLoc(blurProg, 'uStep'), (i + 1) / src.w, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, src.fb);
+      gl.viewport(0, 0, src.w, src.h);
+      gl.bindTexture(gl.TEXTURE_2D, dst.tex);
+      gl.uniform2f(uniformLoc(blurProg, 'uStep'), 0, (i + 1) / src.h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.useProgram(compProg);
+    bindAttr(compProg, 'aP', fogBuf, 2);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, sceneT.tex);
+    gl.uniform1i(uniformLoc(compProg, 'uTex'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, src.tex);
+    gl.uniform1i(uniformLoc(compProg, 'uBloom'), 1);
+    gl.uniform1f(uniformLoc(compProg, 'uStrength'), 0.55);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.enable(gl.BLEND);
   }
 
   /* ================= shooting star ================= */
@@ -833,6 +930,11 @@
     /* ================= render ================= */
     var rot = rotationMat(rgtB, upvB, fwd);
     var breathe = reduced ? 1 : 0.88 + 0.12 * Math.sin(t * 0.924);
+    var useBloom = bloomOK && qualityLevel < 2;
+    if (useBloom) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, sceneT.fb);
+      gl.viewport(0, 0, cv.width, cv.height);
+    }
     gl.clearColor(0.008, 0.012, 0.035, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
@@ -911,6 +1013,8 @@
     /* inside-the-cloud fog */
     updateFog(dt);
     drawFog();
+
+    if (useBloom) runBloom();
 
     updateWhisper(t);
     window.__nebula.frameCount++;
