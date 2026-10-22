@@ -590,6 +590,7 @@
 
   /* ================= input ================= */
   var tracing = false, lastMove = null, fadeSwap = 0, swapDone = false, settleT = 1;
+  var holdCand = null, holdT = 0;
 
   function toBowlSpace(cxPx, cyPx) {
     return { x: (cxPx - bowlC.x) / bowl.Rv, y: (cyPx - bowlC.y) / bowl.Rv };
@@ -669,13 +670,24 @@
     bootGreeting = false;
     if (bowl && bowl.complete && fadeSwap === 0) {
       var p = toBowlSpace(e.clientX, e.clientY);
-      if (Math.hypot(p.x, p.y) < 1.05) { fadeSwap = 0.0001; return; }
+      if (Math.hypot(p.x, p.y) < 1.05) {
+        /* a press on a mended piece might be a tap (she takes it
+         * home) or the start of a hold (held up to the light) —
+         * wait and see which one it is */
+        holdCand = { x: e.clientX, y: e.clientY, t: elapsed, engaged: false, dead: false };
+        try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic */ }
+        return;
+      }
     }
     tracing = true; lastMove = null;
     doTrace(e.clientX, e.clientY, e.timeStamp);
     try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic */ }
   });
   cv.addEventListener('pointermove', function (e) {
+    if (holdCand) {
+      if (Math.hypot(e.clientX - holdCand.x, e.clientY - holdCand.y) > 14) holdCand.dead = true;
+      return;
+    }
     if (cabTouch) {
       var dy = cabTouch.y - e.clientY;
       if (Math.abs(dy) > 6) cabTouch.moved = true;
@@ -695,10 +707,18 @@
     }
   });
   function endTrace() {
-    tracing = false; lastMove = null; cabTouch = null;
+    tracing = false; lastMove = null; cabTouch = null; holdCand = null;
     if (window.MenderyAudio) window.MenderyAudio.drag(0);
   }
   cv.addEventListener('pointerup', function (e) {
+    if (holdCand) {
+      var wasHold = holdCand.engaged, wasDead = holdCand.dead;
+      holdCand = null;
+      /* a quick tap still takes her home; a hold just sets the
+       * piece back down */
+      if (!wasHold && !wasDead && bowl && bowl.complete && fadeSwap === 0) fadeSwap = 0.0001;
+      return;
+    }
     if (cabTouch) {
       var wasTap = !cabTouch.moved && (e.timeStamp - cabTouch.t) < 450;
       var tx = e.clientX, ty = e.clientY;
@@ -779,6 +799,15 @@
     }
     var fadeAlpha = fadeSwap === 0 ? 1 : (fadeSwap < 0.5 ? 1 - fadeSwap * 2 : (fadeSwap - 0.5) * 2);
 
+    /* holding a mended piece up to the light: the press becomes a
+     * hold after a third of a second, and the lift eases in and
+     * back out on its own curve */
+    if (holdCand && !holdCand.dead && elapsed - holdCand.t >= 0.32) holdCand.engaged = true;
+    var holdTarget = (holdCand && holdCand.engaged) ? 1 : 0;
+    holdT += (holdTarget - holdT) * Math.min(1, dt * 6.5);
+    if (Math.abs(holdTarget - holdT) < 0.002) holdT = holdTarget;
+    var hE = holdT * holdT * (3 - 2 * holdT);
+
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.globalAlpha = 1;
     if (benchCv) ctx.drawImage(benchCv, 0, 0, CW, CH);
@@ -788,11 +817,16 @@
      * the visual half of the knock you've been hearing */
     if (settleT < 1) settleT = Math.min(1, settleT + dt / 0.32);
     var sE = 1 - Math.pow(1 - settleT, 3);
-    var pScale = 1 + 0.025 * (1 - sE), pYOff = 5 * (1 - sE);
+    var pScale = (1 + 0.025 * (1 - sE)) * (1 + 0.15 * hE), pYOff = 5 * (1 - sE);
 
+    if (hE > 0.001 && bowlCv && bowl) {
+      ctx.fillStyle = 'rgba(10,5,2,' + (0.52 * hE) + ')';
+      ctx.fillRect(0, 0, CW, CH);
+    }
     if (bowlCv && bowl) {
       var S = bowl.S || Math.ceil(bowl.Rv * 2 * bowl.ext);
       ctx.globalAlpha = fadeAlpha;
+      if (hE > 0.001) { ctx.save(); ctx.translate((CW * 0.30 - bowlC.x) * 0.16 * hE, (CH * 0.14 - (bowlC.y + pYOff)) * 0.16 * hE); }
       ctx.drawImage(bowlCv, bowlC.x - S * pScale / 2, bowlC.y + pYOff - S * pScale / 2, S * pScale, S * pScale);
       var pulse = bowl.complete ? Math.max(0, 1 - (t - bowl.completeT) / 2.2) : 0;
       var glow = 1 + pulse * 0.9;
@@ -922,6 +956,41 @@
           }
         }
       }
+      if (hE > 0.001) {
+        /* held to the light: the ware goes luminous — light through
+         * porcelain pools warm at its heart and burns at the thin
+         * rim — and the seam, opaque gold a moment ago, glows from
+         * inside the piece like a filament */
+        var bg2 = ctx.createRadialGradient(bowlC.x - RvS * 0.25, cyy - RvS * 0.30, RvS * 0.1, bowlC.x, cyy, RvS * 1.02);
+        bg2.addColorStop(0, 'rgba(255,196,116,' + (0.25 * hE) + ')');
+        bg2.addColorStop(0.75, 'rgba(255,170,90,' + (0.11 * hE) + ')');
+        bg2.addColorStop(1, 'rgba(255,170,90,0)');
+        ctx.fillStyle = bg2;
+        ctx.beginPath(); ctx.arc(bowlC.x, cyy, RvS * 1.02, 0, 6.2832); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,205,130,' + (0.38 * hE) + ')'; ctx.lineWidth = RvS * 0.045;
+        ctx.beginPath(); ctx.arc(bowlC.x, cyy, RvS * 0.965, 0, 6.2832); ctx.stroke();
+        for (var hi = 0; hi < bowl.segs.length; hi++) {
+          var hs = bowl.segs[hi];
+          if (!hs.filled) continue;
+          ctx.beginPath();
+          ctx.moveTo(bowlC.x + hs.x1 * RvS, cyy + hs.y1 * RvS);
+          ctx.lineTo(bowlC.x + hs.x2 * RvS, cyy + hs.y2 * RvS);
+          ctx.strokeStyle = 'rgba(255,158,54,' + (0.34 * hE) + ')';
+          ctx.lineWidth = RvS * 0.026 * (0.6 + hs.care * 0.65);
+          ctx.stroke();
+        }
+        for (var hj = 0; hj < bowl.segs.length; hj++) {
+          var hs2 = bowl.segs[hj];
+          if (!hs2.filled) continue;
+          ctx.beginPath();
+          ctx.moveTo(bowlC.x + hs2.x1 * RvS, cyy + hs2.y1 * RvS);
+          ctx.lineTo(bowlC.x + hs2.x2 * RvS, cyy + hs2.y2 * RvS);
+          ctx.strokeStyle = 'rgba(255,232,175,' + (Math.min(1, 0.35 + hs2.care * 0.5) * hE) + ')';
+          ctx.lineWidth = RvS * 0.009 * (0.6 + hs2.care * 0.65);
+          ctx.stroke();
+        }
+      }
+      if (hE > 0.001) ctx.restore();
       ctx.globalAlpha = 1;
     }
 
