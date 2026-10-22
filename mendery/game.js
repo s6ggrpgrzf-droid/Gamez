@@ -781,8 +781,8 @@
   cabBtn.textContent = 'the cabinet';
   cabBtn.style.cssText = 'position:fixed;left:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5;' +
     'background:none;border:none;padding:13px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;' +
-    'font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:500;font-size:17px;letter-spacing:0.05em;' +
-    'color:rgba(232,209,165,0.62);text-shadow:0 1px 8px rgba(0,0,0,0.8);display:none;';
+    'font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:11px;letter-spacing:0.26em;text-transform:uppercase;' +
+    'color:rgba(222,196,142,0.66);text-shadow:0 1px 8px rgba(0,0,0,0.8);display:none;';
   cabBtn.addEventListener('click', function () { toggleCabinet(); });
   document.body.appendChild(cabBtn);
   function paintCabBtn() { cabBtn.style.display = cabinet.length ? 'block' : 'none'; }
@@ -854,10 +854,11 @@
     lc.width = Math.round(lw * DPR); lc.height = Math.round(lh * DPR);
     var lg2 = lc.getContext('2d');
     lg2.setTransform(DPR, 0, 0, DPR, 0, 0);
-    lg2.font = '600 13px "Cormorant Garamond", Georgia, serif';
+    lg2.font = '600 10.5px "Cormorant Garamond", Georgia, serif';
+    try { lg2.letterSpacing = '2.5px'; } catch (e) { /* graceful */ }
     lg2.textAlign = 'center'; lg2.textBaseline = 'middle';
-    lg2.fillStyle = 'rgba(240,226,198,0.78)';
-    lg2.fillText(desc.person.name, lw / 2, lh / 2 + 1);
+    lg2.fillStyle = 'rgba(238,222,188,0.82)';
+    lg2.fillText(desc.person.name.toUpperCase(), lw / 2, lh / 2 + 1);
     var out = { cv: c, S: S, R: R, label: lc, lw: lw, lh: lh };
     miniCache[idx] = out;
     return out;
@@ -882,12 +883,26 @@
       var hg2 = cabHeaderCv.getContext('2d');
       hg2.setTransform(DPR, 0, 0, DPR, 0, 0);
       hg2.textAlign = 'center';
-      hg2.fillStyle = 'rgba(246,232,205,0.92)';
+      var tGrad = hg2.createLinearGradient(0, 22, 0, 54);
+      tGrad.addColorStop(0, '#fbf3da'); tGrad.addColorStop(0.55, '#ecd9a0'); tGrad.addColorStop(1, '#c9a24f');
+      hg2.fillStyle = tGrad;
       hg2.font = '600 29px "Cormorant Garamond", Georgia, serif';
+      try { hg2.letterSpacing = '2px'; } catch (e) { /* untracked is graceful */ }
       hg2.fillText('The Cabinet', CW / 2, 50);
-      hg2.font = 'italic 500 15px "Cormorant Garamond", Georgia, serif';
-      hg2.fillStyle = 'rgba(232,209,165,0.55)';
-      hg2.fillText(cabinet.length + (cabinet.length === 1 ? ' piece' : ' pieces') + ' · in the order you mended them', CW / 2, 74);
+      /* the house caption: small, tracked out, all caps — the way
+       * good hotels and watchmakers label things */
+      try { hg2.letterSpacing = CW < 360 ? '2px' : '3px'; } catch (e) { /* graceful */ }
+      hg2.font = '600 ' + (CW < 360 ? 9 : 11) + 'px "Cormorant Garamond", Georgia, serif';
+      hg2.fillStyle = 'rgba(216,188,130,0.62)';
+      hg2.fillText(cabinet.length + (cabinet.length === 1 ? ' PIECE' : ' PIECES') + ' · IN THE ORDER YOU MENDED THEM', CW / 2, 72);
+      try { hg2.letterSpacing = '0px'; } catch (e) { /* graceful */ }
+      /* a hairline and a small diamond — the stationery of the house */
+      var ln = hg2.createLinearGradient(CW / 2 - 74, 0, CW / 2 + 74, 0);
+      ln.addColorStop(0, 'rgba(201,162,79,0)'); ln.addColorStop(0.5, 'rgba(201,162,79,0.55)'); ln.addColorStop(1, 'rgba(201,162,79,0)');
+      hg2.strokeStyle = ln; hg2.lineWidth = 1;
+      hg2.beginPath(); hg2.moveTo(CW / 2 - 74, 85); hg2.lineTo(CW / 2 - 6, 85); hg2.moveTo(CW / 2 + 6, 85); hg2.lineTo(CW / 2 + 74, 85); hg2.stroke();
+      hg2.save(); hg2.translate(CW / 2, 85); hg2.rotate(Math.PI / 4);
+      hg2.fillStyle = 'rgba(220,188,110,0.85)'; hg2.fillRect(-2.6, -2.6, 5.2, 5.2); hg2.restore();
     }
     ctx.drawImage(cabHeaderCv, 0, 0, CW, 92);
     var bw = CW - 32;
