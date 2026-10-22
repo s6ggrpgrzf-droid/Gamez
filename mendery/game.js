@@ -16,6 +16,7 @@
   var whisperEl = document.getElementById('whisper');
   var whisperMain = document.getElementById('whisperMain');
   var whisperSub = document.getElementById('whisperSub');
+  var whisperWhen = document.getElementById('whisperWhen');
 
   function mulberry32(a) {
     return function () {
@@ -730,6 +731,36 @@
     if (batchCare >= 0 && AU) AU.tick(batchCare);
     if (progress() >= 0.985 && !bowl.complete) completeBowl();
   }
+  /* provenance: every mend from tonight onward remembers its
+   * evening. Mends from before are left dateless — the game will
+   * not invent a past it didn't witness. */
+  function todayStr() {
+    var d = new Date();
+    function z(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+  }
+  var DAYNAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var MONTHNAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  function datePhrase(dstr) {
+    if (!dstr) return null;
+    var p = dstr.split('-');
+    var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    if (isNaN(dt.getTime())) return null;
+    var s = 'on a ' + DAYNAMES[dt.getDay()] + ' in ' + MONTHNAMES[dt.getMonth()];
+    if (dt.getFullYear() !== new Date().getFullYear()) s += ' ' + dt.getFullYear();
+    return s;
+  }
+  function provLine(e) {
+    var ms = (e.mends && e.mends.length) ? e.mends : [];
+    var lastDated = null;
+    for (var i = 0; i < ms.length; i++) if (ms[i].d) lastDated = ms[i];
+    if (!lastDated) return '';
+    if (ms.length > 1 && lastDated !== ms[0]) {
+      var first = ms[0].d ? datePhrase(ms[0].d) : null;
+      return 'Mended again ' + datePhrase(lastDated.d) + (first ? ' · first ' + first : '');
+    }
+    return 'Mended ' + datePhrase(lastDated.d);
+  }
   function completeBowl() {
     bowl.complete = true;
     bowl.completeT = elapsed;
@@ -746,11 +777,11 @@
      * piece that's already there. */
     var caresNow = bowl.segs.map(function (sg) { return Math.round(sg.care * 100) / 100; });
     if (bowl.rebreak) {
-      bowl.rebreak.mends.push({ seed: bowl.crackSeed, c: caresNow });
+      bowl.rebreak.mends.push({ seed: bowl.crackSeed, c: caresNow, d: todayStr() });
     } else {
       cabinet.push({
         p: bowl.personIdx, s: bowl.seed, c: caresNow,
-        mends: [{ seed: bowl.seed, c: caresNow }]
+        mends: [{ seed: bowl.seed, c: caresNow, d: todayStr() }]
       });
     }
     saveTown();
@@ -841,7 +872,7 @@
    * never swaps at full opacity. Each moment has its pace: cabinet
    * crossings are brisk (320), bench moments are calm (650), and
    * the door greeting is slow (1200, passed by its caller). */
-  function setWhisper(key, main, sub, paceMs) {
+  function setWhisper(key, main, sub, paceMs, when) {
     if (key === whisperKey) return;
     whisperKey = key;
     var pace = paceMs || 650;
@@ -849,10 +880,12 @@
     clearTimeout(whisperTimer);
     if (!main) { whisperEl.classList.remove('show'); return; }
     var shown = whisperEl.classList.contains('show');
-    var differs = whisperMain.textContent !== main || whisperSub.textContent !== (sub || '');
+    var differs = whisperMain.textContent !== main || whisperSub.textContent !== (sub || '')
+      || whisperWhen.textContent !== (when || '');
     if (!shown || !differs) {
       whisperMain.textContent = main;
       whisperSub.textContent = sub || '';
+      whisperWhen.textContent = when || '';
       whisperEl.classList.add('show');
       return;
     }
@@ -860,6 +893,7 @@
     whisperTimer = setTimeout(function () {
       whisperMain.textContent = main;
       whisperSub.textContent = sub || '';
+      whisperWhen.textContent = when || '';
       whisperEl.classList.add('show');
     }, pace * 0.92);
   }
@@ -1418,7 +1452,7 @@
       var person = PEOPLE[cabinet[idx].p];
       var cabEntry = cabinet[idx];
       var cabLine = (cabEntry.mends && cabEntry.mends.length > 1 && person.rebreakClosing) ? person.rebreakClosing : person.closing;
-      setWhisper('cab:' + idx, person.title, cabLine, 320);
+      setWhisper('cab:' + idx, person.title, cabLine, 320, provLine(cabEntry));
     } else {
       cabSel = -1;
       setWhisper('cab', null, null, 320);

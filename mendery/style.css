@@ -75,6 +75,18 @@ html, body {
   color: rgba(236, 216, 175, 0.74);
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
 }
+/* provenance: the house caption again — metadata speaks in small
+ * tracked caps under the story's italics */
+#whisperWhen {
+  margin-top: 8px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(216, 188, 130, 0.66);
+}
+#whisperWhen:empty { display: none; }
 /* Short landscape: the bowl owns the middle, so the whisper moves to
  * the quiet bench on the left instead of sitting on the porcelain. */
 @media (orientation: landscape) and (max-height: 520px) {
