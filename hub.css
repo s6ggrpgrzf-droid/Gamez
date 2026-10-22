@@ -107,7 +107,6 @@ section.featured::before{display:none}
   width:132px;text-align:center}
 .chip .info b{font-size:13px;display:block;text-shadow:0 1px 8px rgba(0,0,0,.85)}
 .chip .info span{font-size:11.5px;color:#ffd9a8;font-weight:700;text-shadow:0 1px 8px rgba(0,0,0,.85)}
-@media (prefers-reduced-motion:reduce){.chip{animation:none}}
 /* ---------- dailies ---------- */
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .daily{
@@ -233,12 +232,6 @@ footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
   -webkit-background-clip:text;background-clip:text;color:transparent}
 .studio-footer .tagline{display:block;margin-top:9px;font-size:12px;letter-spacing:.18em;color:rgba(220,235,255,.28)}
 @media (max-width:380px){.games{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:reduce){
-  .bulbs i,.card .art img,.studio-footer .wordmark{animation:none;transition:none}
-  .js .rv{opacity:1 !important;transform:none !important;transition:none}
-  .js .masthead,.js .tag{opacity:1 !important;animation:none !important;filter:none !important}
-  .js .card .shine{animation:none;opacity:.3;transform:rotate(18deg) translateX(120%)}
-}
 @media (prefers-reduced-transparency:reduce){
   .card,.ed-pick,.daily{backdrop-filter:none;-webkit-backdrop-filter:none}
   .card,.ed-pick,.daily{background:rgba(10,18,32,.96)}
@@ -347,8 +340,6 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   transition:transform .12s,box-shadow .12s}
 .feat3d:active .feat-cta{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
 .feat-cta span:last-child{font-size:18px}
-@media (prefers-reduced-motion:reduce){.feat-star::before,.feat-core{animation:none}}
-
 /* tonight's picks: bright orbs — circular key art wearing its game's halo */
 .featured .ed-picks{display:flex;flex-wrap:wrap;justify-content:center;gap:38px 30px;margin-top:52px}
 .featured .ed-pick{flex-direction:column;align-items:center;text-align:center;gap:0;
@@ -382,9 +373,7 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 @media (hover:hover){
   .card:hover{box-shadow:0 34px 70px rgba(0,0,0,.65),0 0 38px rgba(77,166,255,.22),inset 0 1px 0 rgba(255,255,255,.26)}
 }
-@media (prefers-reduced-motion:reduce){
-  .card::before{display:none}
-}
+
 
 /* ---------- featured zone: banner + tonight picks under one roof ---------- */
 .featured .ed-picks { margin-top: 26px; }
@@ -476,7 +465,6 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
     color-mix(in srgb,var(--glow) 38%,#ffffff) 50%,transparent 100%)}
 @keyframes glintBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.3}
   50%{transform:translate(-50%,-50%) scale(1.12);opacity:.58}}
-@media (prefers-reduced-motion:reduce){.star .glint{animation:none;opacity:.6}}
 /* Atlas 3: one label system — the gap is measured from the core's EDGE
    (scaled by the star's own --s), so every label breathes the same 10px
    regardless of magnitude; type gets presence: brighter, a touch larger,
@@ -510,7 +498,6 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 /* the touch: a pressed star lifts and flares, like it has weight and a hinge */
 .star .core{transition:scale .16s ease,filter .16s ease}
 .star:active .core{scale:1.16;filter:brightness(1.22)}
-@media (prefers-reduced-motion:reduce){.star .core{transition:none}.star:active .core{scale:1;filter:none}}
 .star.decor{pointer-events:none;cursor:default}
 .field.blooming .star{opacity:.32}
 .field.blooming .star.open{opacity:1}
@@ -539,7 +526,7 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   border-radius:50%;border:1px solid rgba(200,230,255,.35);cursor:pointer;
   background:rgba(6,10,20,.72);color:#fff;font-size:15px;line-height:1;
   display:flex;align-items:center;justify-content:center}
-@media (prefers-reduced-motion:reduce){.star .core{animation:none}}
+
 
 /* ---------- header: quiet wordmark, one living line, surprise button ---------- */
 .hero{padding-bottom:34px}
@@ -580,7 +567,4 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   animation:sheen 7s ease-in-out infinite;
 }
 @keyframes sheen{0%,100%{background-position:115% 0}50%{background-position:-15% 0}}
-@media (prefers-reduced-motion:reduce){
-  .opendoor .w > span{animation:none;transform:none}
-  .opendoor.shimmer{animation:none;background:none;-webkit-text-fill-color:currentcolor}
-}
+

@@ -28,7 +28,6 @@
   var shoot = null;
   var shootForced = false;
   document.addEventListener('sky-shoot', function () { shootForced = true; });
-  var RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function phaseOf(h) { return h >= 5 && h < 11 ? 0 : h >= 11 && h < 17 ? 1 : h >= 17 && h < 22 ? 2 : 3; }
   function hx(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
   function rgba(c, a) { return 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')'; }
@@ -146,7 +145,7 @@
     var ph = phaseOf(new Date().getHours());
     aimCel(ph);
     /* ease toward the phase targets — the creep itself */
-    var k = RM ? 1 : 0.028, i;
+    var k = 0.028, i;
     cel.x += (cel.tx - cel.x) * k;
     cel.y += (cel.ty - cel.y) * k;
     cel.r += (cel.tr - cel.r) * k;
@@ -165,14 +164,12 @@
        a breath in front of the fixed sky, drifting up to 9px against it
        as the page scrolls; the field moves as one rigid plate (lines,
        stars, wash, bloom and all). Eased like everything else on this
-       page; reduced motion never engages it */
-    if (!RM) {
-      /* the field element is built by the collection script, which runs
-         after this one — bind lazily, the first frame it exists */
-      if (!fieldEl) { fieldEl = document.querySelector('.field'); if (fieldEl) fieldTopDoc = -1; }
-      if (fieldEl && fieldTopDoc < 0) measureField();
-    }
-    if (!RM && fieldEl) {
+       page. */
+    /* the field element is built by the collection script, which runs
+       after this one — bind lazily, the first frame it exists */
+    if (!fieldEl) { fieldEl = document.querySelector('.field'); if (fieldEl) fieldTopDoc = -1; }
+    if (fieldEl && fieldTopDoc < 0) measureField();
+    if (fieldEl) {
       var prog = ((syNow + H / 2) - (fieldTopDoc + fieldH / 2)) / (H / 2 + fieldH / 2);
       if (prog > 1) prog = 1; if (prog < -1) prog = -1;
       drift += (prog * 9 - drift) * 0.055;
@@ -297,7 +294,6 @@
     if (!btn) return;
     var cards = Array.prototype.slice.call(document.querySelectorAll('.card[data-game][href]'));
     if (!cards.length) return;
-    var RMQ = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var busy = false;
     btn.addEventListener('click', function () {
       if (busy) return;
@@ -307,11 +303,11 @@
       if (!star) { window.location.href = pick.getAttribute('href'); return; }
       busy = true;
       document.dispatchEvent(new CustomEvent('sky-shoot'));
-      star.scrollIntoView({ behavior: RMQ ? 'auto' : 'smooth', block: 'center' });
+      star.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setTimeout(function () {
         document.dispatchEvent(new CustomEvent('bloom-star', { detail: id }));
         busy = false;
-      }, RMQ ? 80 : 850);
+      }, 850);
     });
   })();
 
@@ -806,7 +802,7 @@
 
   /* ---------- cards: 3D pointer tilt (hover devices only) ---------- */
   (function () {
-    if (!window.matchMedia('(hover:hover) and (prefers-reduced-motion:no-preference)').matches) return;
+    if (!window.matchMedia('(hover:hover)').matches) return;
     cardEls.forEach(function (card) {
       card.addEventListener('pointermove', function (e) {
         var r = card.getBoundingClientRect();
