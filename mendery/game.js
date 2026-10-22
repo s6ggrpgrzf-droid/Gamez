@@ -302,11 +302,14 @@
     b.fillStyle = sg; b.beginPath(); b.arc(R * 0.08, R * 0.14, R * 1.18, 0, 6.2832); b.fill();
     /* appendages first — the body circle will hide their joints */
     if (vt === 'cup') {
-      var ha = P.handleAng, hx = Math.cos(ha) * R * 1.04, hy = Math.sin(ha) * R * 1.04;
+      /* the loop tucks into the rim — centred close enough that the
+       * body swallows its inner arc, so it reads as a handle anchored
+       * at two points, not a ring floating beside the cup */
+      var ha = P.handleAng, hx = Math.cos(ha) * R * 0.97, hy = Math.sin(ha) * R * 0.97;
       b.strokeStyle = gl.body[3]; b.lineWidth = R * 0.115;
-      b.beginPath(); b.arc(hx, hy, R * 0.30, 0, 6.2832); b.stroke();
+      b.beginPath(); b.arc(hx, hy, R * 0.28, 0, 6.2832); b.stroke();
       b.strokeStyle = gl.body[1]; b.lineWidth = R * 0.075;
-      b.beginPath(); b.arc(hx, hy, R * 0.30, 0, 6.2832); b.stroke();
+      b.beginPath(); b.arc(hx, hy, R * 0.28, 0, 6.2832); b.stroke();
     }
     if (vt === 'teapot') {
       var sa = P.spoutAng;
@@ -367,9 +370,11 @@
       b.strokeStyle = 'rgba(60,44,26,0.28)'; b.lineWidth = R * 0.05;
       b.beginPath(); b.arc(0, 0, R * (P.vd.well - 0.035), Math.PI * 0.25, Math.PI * 0.85); b.stroke();
       if (vt === 'cup') {
+        /* the cup's inner shadow, feathered across its whole radius —
+         * a hard-edged disc read as a bullseye on the light glazes */
         var cg = b.createRadialGradient(0, 0, 1, 0, 0, R * 0.37);
-        cg.addColorStop(0, gl.well[3]); cg.addColorStop(0.72, gl.well[3]); cg.addColorStop(1, gl.well[2]);
-        b.fillStyle = cg; b.globalAlpha = 0.5;
+        cg.addColorStop(0, gl.well[3]); cg.addColorStop(1, gl.well[2]);
+        b.fillStyle = cg; b.globalAlpha = 0.42;
         b.beginPath(); b.arc(0, 0, R * 0.37, 0, 6.2832); b.fill();
         b.globalAlpha = 1;
       }
@@ -645,6 +650,13 @@
         ctx.lineTo(bowlC.x + o.x2 * Rv, bowlC.y + o.y2 * Rv);
       }
       if (anyOpen) {
+        /* a breath of pale under the crack first — where glaze chips,
+         * it goes light at the edges. On pale glazes it vanishes; on
+         * charcoal it lifts the crack off the dark well so the line
+         * you're asked to trace can always be seen */
+        ctx.strokeStyle = 'rgba(255,238,205,0.15)';
+        ctx.lineWidth = Math.max(3.2, Rv * 0.024);
+        ctx.stroke();
         ctx.strokeStyle = 'rgba(36,24,13,0.92)';
         ctx.lineWidth = Math.max(1.6, Rv * 0.011);
         ctx.stroke();
