@@ -663,7 +663,7 @@
   /* fog quad */
   var fogBuf = makeBuffer(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]));
   var fogCol = [0.02, 0.02, 0.05], fogAlpha = 0;
-  function updateFog() {
+  function updateFog(dt) {
     var acc = [0, 0, 0], wSum = 0;
     for (var i = 0; i < gasClusters.length; i++) {
       var cl = gasClusters[i];
@@ -673,14 +673,25 @@
       var dist = Math.hypot(dx, dy, dz);
       var w = Math.max(0, 1 - dist / 640);
       if (w <= 0) continue;
-      var mid = PALETTES[cl.pal][1];
+      /* tint from the region's BRIGHT shade, not its murkiest */
+      var mid = PALETTES[cl.pal][0];
       acc[0] += mid[0] * w; acc[1] += mid[1] * w; acc[2] += mid[2] * w;
       wSum += w;
     }
+    /* restraint: a lower cap, and eased so crossing a region's edge
+     * is a gradient, never a step into soup */
+    var tgtA = 0, tgtC = fogCol;
     if (wSum > 0.05) {
-      fogCol = [acc[0] / wSum, acc[1] / wSum, acc[2] / wSum];
-      fogAlpha = Math.min(0.16, wSum * 0.11);
-    } else fogAlpha = 0;
+      tgtC = [acc[0] / wSum, acc[1] / wSum, acc[2] / wSum];
+      tgtA = Math.min(0.10, wSum * 0.07);
+    }
+    var ease = 1 - Math.exp(-dt * 1.1);
+    fogCol = [
+      fogCol[0] + (tgtC[0] - fogCol[0]) * ease,
+      fogCol[1] + (tgtC[1] - fogCol[1]) * ease,
+      fogCol[2] + (tgtC[2] - fogCol[2]) * ease
+    ];
+    fogAlpha += (tgtA - fogAlpha) * ease;
   }
   function drawFog() {
     if (fogAlpha < 0.004) return;
@@ -898,7 +909,7 @@
     }
 
     /* inside-the-cloud fog */
-    updateFog();
+    updateFog(dt);
     drawFog();
 
     updateWhisper(t);
