@@ -675,6 +675,7 @@
   /* ================= input ================= */
   var tracing = false, lastMove = null, fadeSwap = 0, swapDone = false, settleT = 1;
   var holdCand = null, holdT = 0;
+  var warmth = 0, breathV = 0;
 
   function toBowlSpace(cxPx, cyPx) {
     return { x: (cxPx - bowlC.x) / bowl.Rv, y: (cyPx - bowlC.y) / bowl.Rv };
@@ -749,6 +750,7 @@
     }
     saveTown();
     paintCabBtn();
+    warmth = 1; /* the room runs a little warmer for a while */
     if (window.MenderyAudio) window.MenderyAudio.bell();
     setWhisper('mended:' + bowl.id, 'Mended.', bowl.rebreak ? bowl.person.rebreakClosing : bowl.person.closing);
   }
@@ -1164,6 +1166,23 @@
     }
     ctx.globalAlpha = 1;
 
+    /* the room breathes: the lamp's glow rises and falls on a slow
+     * tide you feel more than see, and for a while after a mend the
+     * light pooled on the bench runs warmer — the room, pleased
+     * with itself, cooling back down over half a minute */
+    warmth = Math.max(0, warmth - dt / 26);
+    breathV = 0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / 7.3) - 1.2);
+    var lg = ctx.createRadialGradient(CW * 0.30, CH * 0.14, 10, CW * 0.30, CH * 0.14, CW * 0.95);
+    lg.addColorStop(0, 'rgba(255,196,118,' + ((0.028 + 0.030 * breathV) * (view === 'bench' ? 1 : 0.4)) + ')');
+    lg.addColorStop(1, 'rgba(255,196,118,0)');
+    ctx.fillStyle = lg; ctx.fillRect(0, 0, CW, CH);
+    if (warmth > 0.003 && bowl && bowlCv && view === 'bench') {
+      var wg = ctx.createRadialGradient(bowlC.x, cyy, 4, bowlC.x, cyy, bowl.Rv * 2.4);
+      wg.addColorStop(0, 'rgba(255,158,64,' + (0.11 * warmth * (0.85 + 0.15 * breathV)) + ')');
+      wg.addColorStop(1, 'rgba(255,158,64,0)');
+      ctx.fillStyle = wg; ctx.fillRect(0, 0, CW, CH);
+    }
+
     /* whisper upkeep — the bench's business only */
     if (view === 'bench') {
       if (bootGreeting) {
@@ -1410,6 +1429,8 @@
     get vessel() { return bowl ? bowl.vessel : ''; },
     get visit() { return bowl ? bowl.visit : 0; },
     get cabinetCount() { return cabinet.length; },
+    get warmth() { return warmth; },
+    get breath() { return breathV; },
     get view() { return view; },
     get audio() {
       var A = window.MenderyAudio;
