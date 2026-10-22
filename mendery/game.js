@@ -423,7 +423,8 @@
     sparkles.push({
       x: x, y: y, vx: (Math.random() - 0.5) * 14, vy: -8 - Math.random() * 16,
       life: 0, ttl: big ? 1.5 + Math.random() : 0.6 + Math.random() * 0.5,
-      r: big ? 1.6 + Math.random() * 1.6 : 0.8 + Math.random() * 1.1
+      r: big ? 1.6 + Math.random() * 1.6 : 0.8 + Math.random() * 1.1,
+      big: !!big
     });
   }
 
@@ -465,7 +466,7 @@
     bowl.complete = true;
     bowl.completeT = elapsed;
     bowl.segs.forEach(function (s) { if (!s.filled) { s.filled = true; s.care = 0.8; bowl.filledCount++; } });
-    for (var i = 0; i < 18; i++) {
+    for (var i = 0; i < 11; i++) {
       var a = Math.random() * 6.2832, rr = Math.random() * bowl.Rv * 0.7;
       spawnSparkle(bowlC.x + Math.cos(a) * rr, bowlC.y + Math.sin(a) * rr, true);
     }
@@ -582,19 +583,32 @@
       var glow = 1 + pulse * 0.9;
       var Rv = bowl.Rv;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      for (var i = 0; i < bowl.segs.length; i++) {
-        var s = bowl.segs[i];
-        if (!s.filled) continue;
-        var cw = 0.6 + s.care * 0.65;
-        var sx1 = bowlC.x + s.x1 * Rv, sy1 = bowlC.y + s.y1 * Rv;
-        var sx2 = bowlC.x + s.x2 * Rv, sy2 = bowlC.y + s.y2 * Rv;
-        ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
-        ctx.strokeStyle = 'rgba(138,90,23,0.85)'; ctx.lineWidth = Rv * 0.021 * cw * glow; ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
-        ctx.strokeStyle = 'rgba(224,164,54,0.95)'; ctx.lineWidth = Rv * 0.012 * cw * glow; ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
-        ctx.strokeStyle = 'rgba(255,233,168,' + (0.30 + s.care * 0.35 + pulse * 0.3) + ')';
-        ctx.lineWidth = Rv * 0.005 * cw * glow; ctx.stroke();
+      /* Lay the gold in three full passes — dark edge, body, then
+       * light. Finishing each segment before starting the next let
+       * the next segment's dark edge cut across the last segment's
+       * light, banding the vein like bamboo. Full passes keep the
+       * joints continuous while each stretch's width still remembers
+       * the care it was laid with. */
+      for (var seamPass = 0; seamPass < 3; seamPass++) {
+        for (var i = 0; i < bowl.segs.length; i++) {
+          var s = bowl.segs[i];
+          if (!s.filled) continue;
+          var cw = 0.6 + s.care * 0.65;
+          var sx1 = bowlC.x + s.x1 * Rv, sy1 = bowlC.y + s.y1 * Rv;
+          var sx2 = bowlC.x + s.x2 * Rv, sy2 = bowlC.y + s.y2 * Rv;
+          ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
+          if (seamPass === 0) {
+            ctx.strokeStyle = 'rgba(138,90,23,0.85)';
+            ctx.lineWidth = Rv * 0.021 * cw * glow;
+          } else if (seamPass === 1) {
+            ctx.strokeStyle = 'rgba(224,164,54,0.95)';
+            ctx.lineWidth = Rv * 0.012 * cw * glow;
+          } else {
+            ctx.strokeStyle = 'rgba(255,233,168,' + (0.30 + s.care * 0.35 + pulse * 0.3) + ')';
+            ctx.lineWidth = Rv * 0.005 * cw * glow;
+          }
+          ctx.stroke();
+        }
       }
       ctx.beginPath();
       var anyOpen = false;
@@ -620,7 +634,19 @@
       sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.vy -= 6 * dt;
       var la = 1 - sp.life / sp.ttl;
       ctx.fillStyle = 'rgba(255,220,140,' + (la * 0.85) + ')';
-      ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.r * la + 0.3, 0, 6.2832); ctx.fill();
+      if (sp.big) {
+        /* a completion glint is a tiny four-point star, not a dust dot */
+        ctx.fillStyle = 'rgba(255,224,150,' + (la * 0.68) + ')';
+        var gr = sp.r * (1.0 + la * 0.7), gw = Math.max(0.35, sp.r * 0.22);
+        ctx.beginPath();
+        ctx.moveTo(sp.x, sp.y - gr); ctx.lineTo(sp.x + gw, sp.y - gw);
+        ctx.lineTo(sp.x + gr, sp.y); ctx.lineTo(sp.x + gw, sp.y + gw);
+        ctx.lineTo(sp.x, sp.y + gr); ctx.lineTo(sp.x - gw, sp.y + gw);
+        ctx.lineTo(sp.x - gr, sp.y); ctx.lineTo(sp.x - gw, sp.y - gw);
+        ctx.closePath(); ctx.fill();
+      } else {
+        ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.r * la + 0.3, 0, 6.2832); ctx.fill();
+      }
     }
 
     ctx.fillStyle = 'rgba(255,214,150,1)';
@@ -716,18 +742,25 @@
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
     g.translate(S / 2, S / 2);
     renderPiece(g, desc, R);
-    /* the seam as it was actually laid — care and all */
+    /* the seam as it was actually laid — care and all, drawn in the
+     * same three full passes as the bench so the miniature's vein is
+     * continuous too */
     g.lineCap = 'round'; g.lineJoin = 'round';
-    for (var i = 0; i < desc.segs.length; i++) {
-      var s = desc.segs[i];
-      var care = (e.c && e.c[i] != null) ? e.c[i] : 0.8;
-      var cw = 0.6 + care * 0.65;
-      g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
-      g.strokeStyle = 'rgba(138,90,23,0.85)'; g.lineWidth = Math.max(0.8, R * 0.021 * cw); g.stroke();
-      g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
-      g.strokeStyle = 'rgba(224,164,54,0.95)'; g.lineWidth = Math.max(0.55, R * 0.012 * cw); g.stroke();
-      g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
-      g.strokeStyle = 'rgba(255,233,168,' + (0.30 + care * 0.35) + ')'; g.lineWidth = Math.max(0.3, R * 0.005 * cw); g.stroke();
+    for (var pass = 0; pass < 3; pass++) {
+      for (var i = 0; i < desc.segs.length; i++) {
+        var s = desc.segs[i];
+        var care = (e.c && e.c[i] != null) ? e.c[i] : 0.8;
+        var cw = 0.6 + care * 0.65;
+        g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
+        if (pass === 0) {
+          g.strokeStyle = 'rgba(138,90,23,0.85)'; g.lineWidth = Math.max(0.8, R * 0.021 * cw);
+        } else if (pass === 1) {
+          g.strokeStyle = 'rgba(224,164,54,0.95)'; g.lineWidth = Math.max(0.55, R * 0.012 * cw);
+        } else {
+          g.strokeStyle = 'rgba(255,233,168,' + (0.30 + care * 0.35) + ')'; g.lineWidth = Math.max(0.3, R * 0.005 * cw);
+        }
+        g.stroke();
+      }
     }
     /* the name, lettered once onto a small plate */
     var lc = document.createElement('canvas');
