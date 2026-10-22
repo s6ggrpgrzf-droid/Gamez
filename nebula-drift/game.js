@@ -430,6 +430,41 @@
         rot: r() * 3.14, aspect: 1.5 + r() * 1.1
       });
     }
+    /* foreground silhouettes for home waters (improvement pass 8):
+     * a few large dark clouds near the origin — several ahead along
+     * the opening line of flight — so the first minutes have a near
+     * layer to drift past, not just distant weather */
+    var sdDir = null, dnDir = null;
+    tonight.stars.forEach(function (s) {
+      if (s.name === 'Sadr') sdDir = s.dir;
+      if (s.name === 'Deneb') dnDir = s.dir;
+    });
+    var homeDir = null;
+    if (sdDir && dnDir) {
+      var hv = [sdDir[0] + dnDir[0] * 0.55, sdDir[1] + dnDir[1] * 0.55, sdDir[2] + dnDir[2] * 0.55];
+      var hl = Math.hypot(hv[0], hv[1], hv[2]) || 1;
+      homeDir = [hv[0] / hl, hv[1] / hl, hv[2] / hl];
+    }
+    for (var hd = 0; hd < 11; hd++) {
+      var hPos;
+      if (hd < 5 && homeDir) {
+        var hBasis = tangentBasis(homeDir);
+        var hDist = 480 + r() * 300, hJa = (r() - 0.5) * 380, hJb = (r() - 0.5) * 380;
+        hPos = [
+          homeDir[0] * hDist + hBasis.t1[0] * hJa + hBasis.t2[0] * hJb,
+          homeDir[1] * hDist + hBasis.t1[1] * hJa + hBasis.t2[1] * hJb,
+          homeDir[2] * hDist + hBasis.t1[2] * hJa + hBasis.t2[2] * hJb
+        ];
+      } else {
+        var hTh = r() * 6.283, hPh = Math.acos(r() * 2 - 1), hRr = 360 + r() * 420;
+        hPos = [hRr * Math.sin(hPh) * Math.cos(hTh), hRr * Math.cos(hPh), hRr * Math.sin(hPh) * Math.sin(hTh)];
+      }
+      puffs.push({
+        pos: hPos, col: [0.006, 0.006, 0.016], size: 300 + r() * 130,
+        alpha: 0.26 + r() * 0.08, phase: r() * 6.283, kind: 1,
+        rot: r() * 3.14, aspect: 1.8 + r() * 0.8
+      });
+    }
     localGas = buildGasBuffer(puffs);
     localGas.puffCount = puffs.length;
   })();
