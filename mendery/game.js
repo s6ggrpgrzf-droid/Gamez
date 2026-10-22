@@ -686,6 +686,13 @@
     var AU = window.MenderyAudio;
     var p = toBowlSpace(cxPx, cyPx);
     if (Math.hypot(p.x, p.y) > 1.12) { lastMove = null; if (AU) { AU.drag(0); if (AU.ring) AU.ring(0, 0); } return; }
+    /* the landing is not a motion: a finger that has just touched
+     * down has no speed yet, and grading what it touches at zero
+     * speed crowned every set-down perfect — the first stretch of
+     * every stroke graded 1.0 no matter the hand. Remember where
+     * the hand landed and let the first real movement do the
+     * grading; the gold starts, honestly, when the hand does. */
+    if (!lastMove) { lastMove = { x: p.x, y: p.y, stamp: stamp }; if (AU) AU.drag(0); return; }
     var speed = 0;
     var fromX = p.x, fromY = p.y;
     if (lastMove) {
@@ -709,6 +716,11 @@
      * report-to-report motion: the gold stays honest about how the
      * hand actually moved. */
     var span = Math.hypot(p.x - fromX, p.y - fromY);
+    /* a report that doesn't move the hand lays nothing: stillness
+     * over the crack is not a seam being laid (the drag sound
+     * already rests on the same principle). The next moving report
+     * walks from here and covers this ground at its true speed. */
+    if (span <= 0.0001) return;
     var steps = Math.max(1, Math.min(64, Math.ceil(span / 0.035)));
     for (var st = 1; st <= steps; st++) {
       var sx = fromX + (p.x - fromX) * (st / steps);
