@@ -116,6 +116,14 @@
   };
 
   /* ================= the town's memory ================= */
+  /* what each piece carries of its own story */
+  var DECO = {
+    Theo:   { squash: 0.955, tilt: 0.6 },
+    Delia:  { bands: [[0.925, 0.032, 'rgba(78,112,150,0.60)'], [0.875, 0.014, 'rgba(78,112,150,0.45)']] },
+    Ellis:  { gilt: [[0.962, 0.016], [0.918, 0.006]] },
+    Harold: { stamp: true },
+    Rosa:   { scuffs: 11 }
+  };
   var mendedCount = 0, visits = {}, queue = null, cabinet = [];
   /* each keepsake loads behind its own guard: one corrupt key must
    * never cost the town the others — least of all the cabinet */
@@ -165,7 +173,7 @@
   var benchCv = null, bowlCv = null;
 
   function resize() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    DPR = Math.min(window.devicePixelRatio || 1, 3);
     CW = window.innerWidth; CH = window.innerHeight;
     cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
     cv.style.width = CW + 'px'; cv.style.height = CH + 'px';
@@ -194,6 +202,15 @@
       b.fillRect(0, y, CW, plankH - 2);
       b.fillStyle = 'rgba(0,0,0,0.35)';
       b.fillRect(0, y + plankH - 2, CW, 2);
+      /* a catch-light along the next board's edge, and end joints staggered plank to plank
+       * (on their own rng so the grain below keeps its old pattern) */
+      b.fillStyle = 'rgba(255,200,140,0.07)';
+      b.fillRect(0, y + plankH, CW, 1.5);
+      var rngJ = mulberry32(31 + Math.round(y));
+      for (var jx = rngJ() * 380; jx < CW; jx += 320 + rngJ() * 260) {
+        b.fillStyle = 'rgba(0,0,0,0.35)'; b.fillRect(jx, y, 2, plankH - 2);
+        b.fillStyle = 'rgba(255,200,140,0.06)'; b.fillRect(jx + 2, y, 1.5, plankH - 2);
+      }
       for (var gl2 = 0; gl2 < 7; gl2++) {
         b.strokeStyle = 'rgba(0,0,0,' + (0.04 + rngB() * 0.06) + ')';
         b.lineWidth = 1 + rngB() * 1.4;
@@ -228,10 +245,20 @@
     var pg = b.createRadialGradient(dx, dy, 1, dx, dy, dr * 0.66);
     pg.addColorStop(0, '#f7d67c'); pg.addColorStop(0.7, '#d9a441'); pg.addColorStop(1, '#9a6d1f');
     b.fillStyle = pg; b.beginPath(); b.arc(dx, dy, dr * 0.66, 0, 6.2832); b.fill();
+    var rngF = mulberry32(53);
+    for (var fl = 0; fl < 16; fl++) {
+      var fa = rngF() * 6.2832, fr = dr * (1.15 + rngF() * 1.6);
+      b.fillStyle = 'rgba(240,196,96,' + (0.18 + rngF() * 0.3) + ')';
+      b.beginPath(); b.arc(dx + Math.cos(fa) * fr, dy + Math.sin(fa) * fr * 0.8, 0.7 + rngF() * 1.3, 0, 6.2832); b.fill();
+    }
     b.restore();
     b.save();
     b.translate(CW * 0.13, CH * (CW > CH ? 0.84 : 0.815));
     b.rotate(0.5);
+    b.fillStyle = 'rgba(0,0,0,0.35)'; /* the brush's shadow, a hair down and away from the lamp */
+    b.beginPath();
+    if (b.roundRect) b.roundRect(-50, -1, 84, 9, 4.5); else b.rect(-50, -1, 84, 9);
+    b.fill();
     b.fillStyle = '#54381f';
     b.beginPath();
     if (b.roundRect) b.roundRect(-52, -4.5, 84, 9, 4.5); else b.rect(-52, -4.5, 84, 9);
@@ -493,6 +520,9 @@
    * vessel, vd, glaze, seed, handleAng, spoutAng (see makeDesc). */
   function renderPiece(b, P, R) {
     var gl = P.glaze, vt = P.vessel;
+    /* taller ware throws a longer shadow; a flat dish keeps its own close */
+    var hf = ({ dish: 0.75, bowl: 1, cup: 1.3, teapot: 1.5, vase: 2.1 })[vt] || 1;
+    b.save(); b.translate(R * 0.07 * (hf - 1), R * 0.11 * (hf - 1));
     /* shadow — two layers falling away from the lamp, which burns
      * top-left: a wide soft breath, then a tighter, darker core
      * hugging the contact edge, squashed slightly the way a real
@@ -505,6 +535,9 @@
     sg2.addColorStop(0, 'rgba(0,0,0,0.30)'); sg2.addColorStop(0.8, 'rgba(0,0,0,0.22)'); sg2.addColorStop(1, 'rgba(0,0,0,0)');
     b.fillStyle = sg2; b.beginPath(); b.arc(R * 0.05, R * 0.10, R * 1.02, 0, 6.2832); b.fill();
     b.restore();
+    b.restore(); /* end of the shadow's height offset */
+    var dc = DECO[P.person && P.person.name] || null;
+    if (dc && dc.squash) { b.save(); b.rotate(dc.tilt || 0); b.scale(1, dc.squash); b.rotate(-(dc.tilt || 0)); }
     /* appendages first — the body circle will hide their joints */
     if (vt === 'cup') {
       /* the loop tucks into the rim — centred close enough that the
@@ -591,7 +624,17 @@
       b.fillStyle = fg; b.beginPath(); b.arc(0, 0, wr, 0, 6.2832); b.fill();
       b.restore();
       b.strokeStyle = 'rgba(60,44,26,0.28)'; b.lineWidth = R * 0.05;
-      b.beginPath(); b.arc(0, 0, R * (P.vd.well - 0.035), Math.PI * 0.25, Math.PI * 0.85); b.stroke();
+      /* the lamp is upper-left: the near rim throws its shadow across the upper-left
+       * of the well, and the lower-right wall faces the light and catches it */
+      var wRad = R * (P.vd.well - 0.035);
+      for (var wk = 0; wk < 3; wk++) {
+        b.strokeStyle = 'rgba(43,30,16,' + (0.11 - wk * 0.025) + ')';
+        b.lineWidth = R * (0.085 - wk * 0.024);
+        b.beginPath(); b.arc(0, 0, wRad, Math.PI * (0.95 + wk * 0.1), Math.PI * (1.55 - wk * 0.1)); b.stroke();
+        b.strokeStyle = 'rgba(255,246,220,' + (0.05 + wk * 0.012) + ')';
+        b.lineWidth = R * (0.05 - wk * 0.014);
+        b.beginPath(); b.arc(0, 0, wRad, Math.PI * (-0.05 + wk * 0.1), Math.PI * (0.55 - wk * 0.1)); b.stroke();
+      }
       if (vt === 'cup') {
         /* the cup's inner shadow, feathered across its whole radius —
          * a hard-edged disc read as a bullseye on the light glazes */
@@ -634,6 +677,13 @@
     }
     b.strokeStyle = 'rgba(40,30,18,0.35)'; b.lineWidth = R * 0.02;
     b.beginPath(); b.arc(0, 0, R * 0.995, 0, 6.2832); b.stroke();
+    /* the lip: a thin lit ring and a shaded one inside it, so the rim has thickness */
+    if (vt !== 'vase' && vt !== 'teapot') {
+      b.strokeStyle = 'rgba(255,252,240,0.16)'; b.lineWidth = R * 0.014;
+      b.beginPath(); b.arc(0, 0, R * 0.952, 0, 6.2832); b.stroke();
+      b.strokeStyle = 'rgba(60,44,26,0.10)'; b.lineWidth = R * 0.016;
+      b.beginPath(); b.arc(0, 0, R * 0.932, 0, 6.2832); b.stroke();
+    }
     /* speckle — and the odd iron spot, kissed darker by the kiln
      * (on charcoal the spots come out pale as ash instead) */
     var rngS = mulberry32(P.seed * 7 + 3);
@@ -656,9 +706,43 @@
       b.restore();
     }
     /* lamp highlight crescent */
+    /* hand-painted details, kept under the glaze highlight */
+    if (dc) {
+      b.save(); b.beginPath(); b.arc(0, 0, R * 0.985, 0, 6.2832); b.clip();
+      if (dc.bands) dc.bands.forEach(function (bd) {
+        b.strokeStyle = bd[2]; b.lineWidth = R * bd[1];
+        b.beginPath(); b.arc(0, 0, R * bd[0], 0, 6.2832); b.stroke();
+      });
+      if (dc.gilt) dc.gilt.forEach(function (gd) {
+        b.strokeStyle = 'rgba(214,170,84,0.82)'; b.lineWidth = R * gd[1];
+        b.beginPath(); b.arc(0, 0, R * gd[0], 0, 6.2832); b.stroke();
+      });
+      if (dc.stamp) { /* a faded five-point stamp, the VA's mark */
+        b.translate(Math.cos(2.3) * R * 0.84, Math.sin(2.3) * R * 0.84); b.rotate(-0.3);
+        b.strokeStyle = 'rgba(232,216,180,0.26)'; b.lineWidth = R * 0.016;
+        b.beginPath(); b.arc(0, 0, R * 0.075, 0, 6.2832); b.stroke();
+        b.fillStyle = 'rgba(232,216,180,0.22)'; b.beginPath();
+        for (var sp = 0; sp < 10; sp++) {
+          var spr = (sp % 2 ? 0.026 : 0.06) * R, spa = -Math.PI / 2 + sp * Math.PI / 5;
+          b[sp ? 'lineTo' : 'moveTo'](Math.cos(spa) * spr, Math.sin(spa) * spr);
+        }
+        b.closePath(); b.fill();
+      }
+      if (dc.scuffs) { /* forty-one Thanksgivings of serving spoons */
+        var rngU = mulberry32(P.seed * 5 + 11);
+        b.lineWidth = Math.max(0.6, R * 0.006);
+        for (var su = 0; su < dc.scuffs; su++) {
+          var sua = rngU() * 6.2832, sur = R * (0.15 + rngU() * 0.6), sul = 0.12 + rngU() * 0.3;
+          b.strokeStyle = 'rgba(255,248,230,' + (0.10 + rngU() * 0.12) + ')';
+          b.beginPath(); b.arc(0, 0, sur, sua, sua + sul); b.stroke();
+        }
+      }
+      b.restore();
+    }
     var hg = b.createRadialGradient(-R * 0.42, -R * 0.5, 2, -R * 0.42, -R * 0.5, R * 0.62);
     hg.addColorStop(0, 'rgba(255,255,246,0.20)'); hg.addColorStop(1, 'rgba(255,255,246,0)');
     b.fillStyle = hg; b.beginPath(); b.arc(0, 0, R, 0, 6.2832); b.fill();
+    if (dc && dc.squash) b.restore();
   }
 
   /* ================= the seam ================= */
@@ -673,7 +757,7 @@
    * a segment running perpendicular to them catches the most. */
   function seamLight(s) {
     var ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
-    var across = Math.abs(Math.sin(ang - 0.64));
+    var across = Math.abs(Math.sin(ang - (0.64 + (breathV - 0.5) * 0.45)));
     return 0.80 + 0.38 * across * across;
   }
 
@@ -1051,10 +1135,15 @@
         for (var i = 0; i < bowl.segs.length; i++) {
           var s = bowl.segs[i];
           if (!s.filled) continue;
-          var cw = 0.6 + s.care * 0.65;
+          /* width tapers into its neighbours instead of stepping */
+          var cPv = (i > 0 && bowl.segs[i - 1].filled) ? bowl.segs[i - 1].care : s.care;
+          var cNx = (i < bowl.segs.length - 1 && bowl.segs[i + 1].filled) ? bowl.segs[i + 1].care : s.care;
+          var cw = 0.6 + (cPv + s.care * 2 + cNx) / 4 * 0.65;
           var sx1 = bowlC.x + s.x1 * RvS, sy1 = cyy + s.y1 * RvS;
           var sx2 = bowlC.x + s.x2 * RvS, sy2 = cyy + s.y2 * RvS;
-          ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
+          /* raised metal: the dark edge slips away from the lamp, the highlight leans toward it */
+          var rel = seamPass === 0 ? 0.7 : (seamPass === 2 ? -0.6 : 0);
+          ctx.beginPath(); ctx.moveTo(sx1 + rel, sy1 + rel); ctx.lineTo(sx2 + rel, sy2 + rel);
           if (seamPass === 0) {
             ctx.strokeStyle = 'rgba(138,90,23,0.85)';
             ctx.lineWidth = RvS * 0.021 * cw * glow;
@@ -1070,6 +1159,19 @@
           ctx.stroke();
         }
       }
+      ctx.beginPath();
+      /* gold pools where the seam begins and where its main run ends */
+      var lastMain = 0;
+      for (var pq = 0; pq < bowl.segs.length; pq++) if (!bowl.segs[pq].branch) lastMain = pq;
+      [0, lastMain].forEach(function (pi, pk) {
+        var ps = bowl.segs[pi];
+        if (!ps || !ps.filled) return;
+        var px = bowlC.x + (pk ? ps.x2 : ps.x1) * RvS, py = cyy + (pk ? ps.y2 : ps.y1) * RvS;
+        ctx.fillStyle = 'rgba(224,164,54,0.95)';
+        ctx.beginPath(); ctx.arc(px, py, RvS * 0.0105 * glow, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = 'rgba(255,233,168,0.7)';
+        ctx.beginPath(); ctx.arc(px - RvS * 0.003, py - RvS * 0.003, RvS * 0.0035, 0, 6.2832); ctx.fill();
+      });
       ctx.beginPath();
       var anyOpen = false;
       for (var j = 0; j < bowl.segs.length; j++) {
@@ -1462,6 +1564,12 @@
         var m = miniFor(idx);
         var cxp = L.cellW * (col + 0.5);
         var cyp = boardY - 8 - m.R * 0.98;
+        /* a warm pool of light behind the piece, and its contact shadow on the board */
+        var spl = ctx.createRadialGradient(cxp, cyp, 2, cxp, cyp, m.R * 1.6);
+        spl.addColorStop(0, 'rgba(255,196,116,0.10)'); spl.addColorStop(1, 'rgba(255,196,116,0)');
+        ctx.fillStyle = spl; ctx.fillRect(cxp - m.R * 1.6, cyp - m.R * 1.6, m.R * 3.2, m.R * 3.2);
+        ctx.fillStyle = 'rgba(0,0,0,0.42)';
+        ctx.beginPath(); ctx.ellipse(cxp, boardY - 5.5, m.R * 0.82, 3, 0, 0, 6.2832); ctx.fill();
         if (idx === cabSel) {
           /* the ring is drawn first, so it reads as a halo on the
            * shelf behind the piece — a spout or handle crossing it
