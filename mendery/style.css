@@ -1,0 +1,64 @@
+/* The Mendery — a bench, a lamp, a broken bowl. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: #17100b;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#cv {
+  position: fixed;
+  inset: 0;
+  display: block;
+  touch-action: none;
+}
+#shade {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 120% 90% at 50% 42%, transparent 55%, rgba(5, 3, 1, 0.55) 100%);
+}
+#whisper {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(4.5vh + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+#whisper.show { opacity: 1; }
+#whisperMain {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(24px, 6.4vw, 34px);
+  letter-spacing: 0.04em;
+  color: rgba(246, 232, 205, 0.94);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.8);
+}
+#whisperSub {
+  margin-top: 2px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(15px, 4.2vw, 20px);
+  letter-spacing: 0.05em;
+  color: rgba(232, 209, 165, 0.62);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
+}
+/* Short landscape: the bowl owns the middle, so the whisper moves to
+ * the quiet bench on the left instead of sitting on the porcelain. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #whisper {
+    left: 30px;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: left;
+    max-width: 30vw;
+  }
+}
