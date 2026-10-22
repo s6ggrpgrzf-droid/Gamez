@@ -558,6 +558,17 @@
     if (!bowl || !bowl.segs.length) return 0;
     return bowl.filledCount / bowl.segs.length;
   }
+  /* how the lamplight takes a stretch of seam: a raised gold line
+   * glints where it runs across the light and dulls where it runs
+   * with it — the same metal, behaving like metal. The lamp burns
+   * up and to the left, so its rays travel down-right (≈0.64 rad);
+   * a segment running perpendicular to them catches the most. */
+  function seamLight(s) {
+    var ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+    var across = Math.abs(Math.sin(ang - 0.64));
+    return 0.80 + 0.38 * across * across;
+  }
+
   function segDist(px, py, s) {
     var dx = s.x2 - s.x1, dy = s.y2 - s.y1;
     var l2 = dx * dx + dy * dy || 1e-6;
@@ -616,6 +627,8 @@
         var d = segDist(sx, sy, s);
         if (d < TOL) {
           s.filled = true;
+          s.fillT = elapsed;
+          bowl.frontier = { x: s.x2, y: s.y2, t: elapsed };
           s.care = clamp(1.12 - speed * 0.5 - d * 4.5, 0.3, 1);
           if (s.care > batchCare) batchCare = s.care;
           bowl.filledCount++;
@@ -629,7 +642,7 @@
   function completeBowl() {
     bowl.complete = true;
     bowl.completeT = elapsed;
-    bowl.segs.forEach(function (s) { if (!s.filled) { s.filled = true; s.care = 0.8; bowl.filledCount++; } });
+    bowl.segs.forEach(function (s) { if (!s.filled) { s.filled = true; s.care = 0.8; s.fillT = elapsed - 1; bowl.filledCount++; } });
     for (var i = 0; i < 11; i++) {
       var a = Math.random() * 6.2832, rr = Math.random() * bowl.Rv * 0.7;
       spawnSparkle(bowlC.x + Math.cos(a) * rr, bowlC.y + Math.sin(a) * rr, true);
@@ -786,6 +799,21 @@
       var Rv = bowl.Rv;
       var RvS = Rv * pScale, cyy = bowlC.y + pYOff;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      /* freshly laid gold is wet gold: for a breath after a stretch
+       * is filled it carries a bloom of extra light, settling as it
+       * dries to the tone it will keep */
+      for (var wi = 0; wi < bowl.segs.length; wi++) {
+        var wsg = bowl.segs[wi];
+        if (!wsg.filled || wsg.fillT == null) continue;
+        var wet = 1 - (t - wsg.fillT) / 0.8;
+        if (wet <= 0) continue;
+        ctx.beginPath();
+        ctx.moveTo(bowlC.x + wsg.x1 * RvS, cyy + wsg.y1 * RvS);
+        ctx.lineTo(bowlC.x + wsg.x2 * RvS, cyy + wsg.y2 * RvS);
+        ctx.strokeStyle = 'rgba(255,190,80,' + (wet * 0.20) + ')';
+        ctx.lineWidth = RvS * 0.030 * (0.6 + wsg.care * 0.65) * glow;
+        ctx.stroke();
+      }
       /* Lay the gold in three full passes — dark edge, body, then
        * light. Finishing each segment before starting the next let
        * the next segment's dark edge cut across the last segment's
@@ -807,7 +835,9 @@
             ctx.strokeStyle = 'rgba(224,164,54,0.95)';
             ctx.lineWidth = RvS * 0.012 * cw * glow;
           } else {
-            ctx.strokeStyle = 'rgba(255,233,168,' + (0.30 + s.care * 0.35 + pulse * 0.3) + ')';
+            var wet2 = s.fillT != null ? Math.max(0, 1 - (t - s.fillT) / 0.8) : 0;
+            var hlA = (0.30 + s.care * 0.35 + pulse * 0.3) * seamLight(s) + wet2 * 0.30;
+            ctx.strokeStyle = 'rgba(255,233,168,' + Math.min(1, hlA) + ')';
             ctx.lineWidth = RvS * 0.005 * cw * glow;
           }
           ctx.stroke();
@@ -833,6 +863,64 @@
         ctx.strokeStyle = 'rgba(36,24,13,0.92)';
         ctx.lineWidth = Math.max(1.6, RvS * 0.011);
         ctx.stroke();
+      }
+      /* the frontier: while the hand is working, a small bloom of
+       * light sits where the gold is being laid this moment */
+      if (!bowl.complete && bowl.frontier && t - bowl.frontier.t < 0.5) {
+        var fAge = 1 - (t - bowl.frontier.t) / 0.5;
+        var fx = bowlC.x + bowl.frontier.x * RvS, fy = cyy + bowl.frontier.y * RvS;
+        var frg = ctx.createRadialGradient(fx, fy, 1, fx, fy, RvS * 0.11);
+        frg.addColorStop(0, 'rgba(255,208,105,' + (0.30 * fAge) + ')');
+        frg.addColorStop(1, 'rgba(255,208,105,0)');
+        ctx.fillStyle = frg;
+        ctx.beginPath(); ctx.arc(fx, fy, RvS * 0.11, 0, 6.2832); ctx.fill();
+      }
+      /* when a piece is mended, light walks the seam once — from
+       * the rim where the break began to the heart where it ended,
+       * the way you'd turn a finished piece slowly under the lamp */
+      if (bowl.complete) {
+        var rt = t - bowl.completeT;
+        if (rt > 0.12 && rt < 1.85) {
+          var rq = Math.min(1, (rt - 0.12) / 1.6);
+          var rqe = rq * rq * (3 - 2 * rq);
+          var runTotal = 0;
+          for (var ci = 0; ci < bowl.segs.length; ci++) {
+            if (bowl.segs[ci].branch) continue;
+            runTotal += Math.hypot(bowl.segs[ci].x2 - bowl.segs[ci].x1, bowl.segs[ci].y2 - bowl.segs[ci].y1);
+          }
+          var head = rqe * runTotal, prevD = 0, hx = 0, hy = 0, hFound = false;
+          for (var cj = 0; cj < bowl.segs.length; cj++) {
+            var cs2 = bowl.segs[cj];
+            if (cs2.branch) continue;
+            var segL = Math.hypot(cs2.x2 - cs2.x1, cs2.y2 - cs2.y1);
+            var behind = head - (prevD + segL / 2);
+            if (behind > 0 && behind < 0.30) {
+              ctx.beginPath();
+              ctx.moveTo(bowlC.x + cs2.x1 * RvS, cyy + cs2.y1 * RvS);
+              ctx.lineTo(bowlC.x + cs2.x2 * RvS, cyy + cs2.y2 * RvS);
+              ctx.strokeStyle = 'rgba(255,236,175,' + (0.55 * (1 - behind / 0.30)) + ')';
+              ctx.lineWidth = RvS * 0.008 * glow;
+              ctx.stroke();
+            }
+            if (!hFound && head <= prevD + segL) {
+              var hf = segL > 0 ? (head - prevD) / segL : 0;
+              hx = bowlC.x + (cs2.x1 + (cs2.x2 - cs2.x1) * hf) * RvS;
+              hy = cyy + (cs2.y1 + (cs2.y2 - cs2.y1) * hf) * RvS;
+              hFound = true;
+            }
+            prevD += segL;
+          }
+          if (hFound) {
+            var hFade = Math.min(1, rq / 0.08) * Math.min(1, (1 - rq) / 0.10 + 0.15);
+            var hg3 = ctx.createRadialGradient(hx, hy, 1, hx, hy, RvS * 0.13);
+            hg3.addColorStop(0, 'rgba(255,214,120,' + (0.5 * hFade) + ')');
+            hg3.addColorStop(1, 'rgba(255,214,120,0)');
+            ctx.fillStyle = hg3;
+            ctx.beginPath(); ctx.arc(hx, hy, RvS * 0.13, 0, 6.2832); ctx.fill();
+            ctx.fillStyle = 'rgba(255,246,214,' + (0.9 * hFade) + ')';
+            ctx.beginPath(); ctx.arc(hx, hy, Math.max(1.2, RvS * 0.016), 0, 6.2832); ctx.fill();
+          }
+        }
       }
       ctx.globalAlpha = 1;
     }
@@ -979,7 +1067,7 @@
         } else if (pass === 1) {
           g.strokeStyle = 'rgba(224,164,54,0.95)'; g.lineWidth = Math.max(0.55, R * 0.012 * cw);
         } else {
-          g.strokeStyle = 'rgba(255,233,168,' + (0.30 + care * 0.35) + ')'; g.lineWidth = Math.max(0.3, R * 0.005 * cw);
+          g.strokeStyle = 'rgba(255,233,168,' + Math.min(1, (0.30 + care * 0.35) * seamLight(s)) + ')'; g.lineWidth = Math.max(0.3, R * 0.005 * cw);
         }
         g.stroke();
       }
