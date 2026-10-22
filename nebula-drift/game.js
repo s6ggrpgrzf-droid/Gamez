@@ -461,12 +461,26 @@
 
   /* ================= camera + travel ================= */
   function dirToAzAlt(d) { return { az: Math.atan2(d[0], -d[2]), alt: Math.asin(Math.max(-1, Math.min(1, d[1]))) }; }
-  var deneb = tonight.stars.filter(function (s) { return s.name === 'Deneb'; })[0];
-  var vega = tonight.stars.filter(function (s) { return s.name === 'Vega'; })[0];
+  function starByName(nm) { return tonight.stars.filter(function (s) { return s.name === nm; })[0]; }
+  var deneb = starByName('Deneb');
+  var vega = starByName('Vega');
+  var sadr = starByName('Sadr');
+  var albireo = starByName('Albireo');
   var startDir = [0, 0, -1];
-  if (deneb && vega) {
-    startDir = [deneb.dir[0] + vega.dir[0] * 0.7, deneb.dir[1] + vega.dir[1] * 0.7, deneb.dir[2] + vega.dir[2] * 0.7];
+  if (deneb && sadr) {
+    /* frame the swan along its own diagonal — body (Sadr) centred,
+     * tail (Deneb) and head (Albireo) pulling the tall portrait frame
+     * full, instead of the bird floating over a black lower third */
+    startDir = [0, 0, 0];
+    var blendParts = [[sadr, 1.0], [deneb, 0.55], [albireo, 0.85], [vega, 0.3]];
+    blendParts.forEach(function (bp) {
+      if (!bp[0]) return;
+      startDir[0] += bp[0].dir[0] * bp[1]; startDir[1] += bp[0].dir[1] * bp[1]; startDir[2] += bp[0].dir[2] * bp[1];
+    });
     var sl = Math.hypot(startDir[0], startDir[1], startDir[2]); startDir = [startDir[0] / sl, startDir[1] / sl, startDir[2] / sl];
+  } else if (deneb && vega) {
+    startDir = [deneb.dir[0] + vega.dir[0] * 0.7, deneb.dir[1] + vega.dir[1] * 0.7, deneb.dir[2] + vega.dir[2] * 0.7];
+    var sl2 = Math.hypot(startDir[0], startDir[1], startDir[2]); startDir = [startDir[0] / sl2, startDir[1] / sl2, startDir[2] / sl2];
   }
   var startAA = dirToAzAlt(startDir);
   var cam = { az: startAA.az, alt: startAA.alt, vaz: 0, valt: 0 };
