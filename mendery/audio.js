@@ -14,6 +14,9 @@
   var AC = window.AudioContext || window.webkitAudioContext;
   var ctx = null, master = null, airGain = null, dragGain = null, noiseBuf = null;
   var muted = false, lastTick = -1; /* the first tick of a session is never swallowed */
+  var lastDragAt = -9; /* when the thumb last reported motion */
+  var dragLevel = 0; /* our own note of the drag gain — an AudioParam's
+   * .value does not follow its automation events, so it can't be asked */
   var plays = { tick: 0, bell: 0, knock: 0, drag: 0 };
 
   try { muted = window.localStorage.getItem('mendery-muted') === '1'; } catch (e) { /* private */ }
@@ -50,13 +53,23 @@
     airGain = ctx.createGain(); airGain.gain.value = 0;
     var air = noiseSrc(); air.connect(airF); airF.connect(airGain); airGain.connect(master);
     air.start();
-    airGain.gain.setTargetAtTime(0.016, ctx.currentTime, 1.6);
+    airGain.gain.setTargetAtTime(0.013, ctx.currentTime, 1.6);
     /* the thumb: a brush dragged on porcelain */
     var dragF = ctx.createBiquadFilter();
-    dragF.type = 'bandpass'; dragF.frequency.value = 820; dragF.Q.value = 0.7;
+    dragF.type = 'bandpass'; dragF.frequency.value = 860; dragF.Q.value = 0.7;
     dragGain = ctx.createGain(); dragGain.gain.value = 0;
     var drag = noiseSrc(); drag.connect(dragF); dragF.connect(dragGain); dragGain.connect(master);
     drag.start();
+    /* a held-still thumb makes no friction sound: if no motion has
+     * been reported for a breath, let the drag fall silent on its own
+     * (the pointer stays down; only the sound rests) */
+    setInterval(function () {
+      if (!ctx || !dragGain || muted) return;
+      if (ctx.currentTime - lastDragAt > 0.22 && dragLevel > 0.002) {
+        dragLevel = 0;
+        dragGain.gain.setTargetAtTime(0, ctx.currentTime, 0.06);
+      }
+    }, 130);
   }
 
   function wake() {
@@ -90,8 +103,9 @@
 
   function drag(speed) {
     if (!ctx || !dragGain) return;
-    var target = muted ? 0 : Math.min(0.05, (speed || 0) * 0.05);
-    if (target > 0.004) plays.drag++;
+    var target = muted ? 0 : Math.min(0.09, (speed || 0) * 0.09);
+    dragLevel = target;
+    if (target > 0.004) { plays.drag++; lastDragAt = ctx.currentTime; }
     dragGain.gain.setTargetAtTime(target, ctx.currentTime, 0.07);
   }
 
@@ -119,7 +133,7 @@
     if (!ctx || muted) return;
     plays.bell++;
     var now = ctx.currentTime, root = 523.25;
-    var partials = [ [1, 0.15, 3.2], [2.02, 0.055, 2.2], [2.74, 0.045, 1.6], [4.07, 0.018, 0.9] ];
+    var partials = [ [1, 0.115, 3.8], [2.02, 0.06, 2.6], [2.74, 0.04, 1.8], [4.07, 0.015, 1.0] ];
     partials.forEach(function (p) {
       var o = ctx.createOscillator(), g = ctx.createGain();
       o.type = 'sine'; o.frequency.value = root * p[0];
