@@ -387,10 +387,16 @@
   }
   /* a returning piece breaks along a NEW line, and the new line
    * must cross the old gold — that is the whole poetry of a second
-   * break. Try seeds until one crosses; it rarely takes three. */
+   * break. But crossing is all the first version asked for, and a
+   * crack that shadows the old seam's whole path crosses it
+   * handsomely — so second breaks kept braiding along the first
+   * break's road. Now the early crossings are scored by how far
+   * the new line ranges from the old gold on average: a braid sits
+   * close to the seam everywhere and scores low; a crack that
+   * crosses once and then lives its own life on the vessel wins. */
   function pickCrossingCrack(vd, vesselName, oldSets, baseSeed) {
-    var last = null;
-    for (var k = 0; k < 14; k++) {
+    var firstCross = null, best = null, bestScore = -1, last = null;
+    for (var k = 0; k < 24; k++) {
       var cand = walkCrack(mulberry32(baseSeed + k), vd, vesselName);
       last = { seed: baseSeed + k, segs: cand };
       var hit = false;
@@ -401,9 +407,26 @@
           }
         }
       }
-      if (hit) return last;
+      if (!hit) continue;
+      if (!firstCross) firstCross = last;
+      if (k < 10) {
+        var score = 0;
+        for (var si = 0; si < cand.length; si++) {
+          var mx = (cand[si].x1 + cand[si].x2) / 2, my = (cand[si].y1 + cand[si].y2) / 2;
+          var dMin = 1e9;
+          for (var oi2 = 0; oi2 < oldSets.length; oi2++) {
+            for (var oj2 = 0; oj2 < oldSets[oi2].length; oj2++) {
+              var dd = segDist(mx, my, oldSets[oi2][oj2]);
+              if (dd < dMin) dMin = dd;
+            }
+          }
+          score += dMin;
+        }
+        score /= cand.length;
+        if (score > bestScore) { bestScore = score; best = last; }
+      }
     }
-    return last;
+    return best || firstCross || last;
   }
 
   function makePiece(personIdx, seed, countVisit) {
