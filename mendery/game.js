@@ -99,17 +99,20 @@
   };
 
   /* ================= the town's memory ================= */
-  var mendedCount = 0, visits = {}, queue = null;
+  var mendedCount = 0, visits = {}, queue = null, cabinet = [];
   try {
     mendedCount = parseInt(window.localStorage.getItem('mendery-mended') || '0', 10) || 0;
     visits = JSON.parse(window.localStorage.getItem('mendery-visits') || '{}') || {};
     queue = JSON.parse(window.localStorage.getItem('mendery-queue') || 'null');
+    var cabSaved = JSON.parse(window.localStorage.getItem('mendery-cabinet') || '[]');
+    if (Array.isArray(cabSaved)) cabinet = cabSaved;
   } catch (e) { /* private mode: the town forgets, gently */ }
   function saveTown() {
     try {
       window.localStorage.setItem('mendery-mended', String(mendedCount));
       window.localStorage.setItem('mendery-visits', JSON.stringify(visits));
       window.localStorage.setItem('mendery-queue', JSON.stringify(queue));
+      window.localStorage.setItem('mendery-cabinet', JSON.stringify(cabinet));
     } catch (e) { /* private */ }
   }
   function nextPersonIdx() {
@@ -143,6 +146,7 @@
     bowlR = Math.min(CW, CH) * 0.365;
     buildBench();
     buildVesselBase();
+    miniCache = {};
   }
   window.addEventListener('resize', resize);
 
@@ -208,7 +212,10 @@
   /* ================= the piece on the bench ================= */
   var bowl = null, pieceSeq = 0;
 
-  function makePiece(personIdx, seed, countVisit) {
+  /* A piece, described from its seed alone: the crack, the glaze,
+   * the handle's angle — everything replays identically, which is
+   * what lets the cabinet keep faithful miniatures. */
+  function makeDesc(personIdx, seed) {
     var person = PEOPLE[personIdx];
     var vd = VESSELS[person.vessel];
     var rng = mulberry32(seed);
@@ -244,6 +251,16 @@
       var bAng = Math.atan2(src.y2 - src.y1, src.x2 - src.x1) + (rng() < 0.5 ? 1 : -1) * (0.6 + rng() * 0.5);
       walk(src.x2, src.y2, bAng, 4 + Math.floor(rng() * 4), vd.stepLen * 0.8, true);
     }
+    return {
+      personIdx: personIdx, person: person, vessel: person.vessel, vd: vd,
+      glaze: GLAZES[person.glaze], seed: seed, segs: segs,
+      handleAng: -0.35 + rng() * 0.7, spoutAng: Math.PI + (rng() - 0.5) * 0.6
+    };
+  }
+
+  function makePiece(personIdx, seed, countVisit) {
+    var desc = makeDesc(personIdx, seed);
+    var person = desc.person;
     if (countVisit) {
       visits[person.name] = (visits[person.name] || 0) + 1;
       saveTown();
@@ -251,10 +268,10 @@
     bowl = {
       id: ++pieceSeq, personIdx: personIdx, person: person,
       visit: countVisit ? visits[person.name] : (visits[person.name] || 0) + 1,
-      vessel: person.vessel, vd: vd, glaze: GLAZES[person.glaze],
-      Rv: bowlR * vd.rf, ext: vd.ext,
-      seed: seed, segs: segs, complete: false, completeT: 0, filledCount: 0,
-      handleAng: -0.35 + rng() * 0.7, spoutAng: Math.PI + (rng() - 0.5) * 0.6
+      vessel: desc.vessel, vd: desc.vd, glaze: desc.glaze,
+      Rv: bowlR * desc.vd.rf, ext: desc.vd.ext,
+      seed: seed, segs: desc.segs, complete: false, completeT: 0, filledCount: 0,
+      handleAng: desc.handleAng, spoutAng: desc.spoutAng
     };
     buildVesselBase();
     if (countVisit && window.MenderyAudio) window.MenderyAudio.knock();
@@ -264,27 +281,35 @@
   function buildVesselBase() {
     if (!bowl) return;
     bowl.Rv = bowlR * bowl.vd.rf;
-    var R = bowl.Rv, gl = bowl.glaze, vt = bowl.vessel;
-    var S = Math.ceil(R * 2 * bowl.ext);
+    var S = Math.ceil(bowl.Rv * 2 * bowl.ext);
     bowlCv = document.createElement('canvas');
     bowlCv.width = Math.round(S * DPR); bowlCv.height = Math.round(S * DPR);
     var b = bowlCv.getContext('2d');
     b.setTransform(DPR, 0, 0, DPR, 0, 0);
     b.translate(S / 2, S / 2);
+    renderPiece(b, bowl, bowl.Rv);
+    bowl.S = S;
+  }
+
+  /* Draw one piece centred at the origin with radius R — the bench
+   * piece at full size and the cabinet miniatures alike. P carries
+   * vessel, vd, glaze, seed, handleAng, spoutAng (see makeDesc). */
+  function renderPiece(b, P, R) {
+    var gl = P.glaze, vt = P.vessel;
     /* shadow */
     var sg = b.createRadialGradient(R * 0.08, R * 0.14, R * 0.2, R * 0.08, R * 0.14, R * 1.18);
     sg.addColorStop(0, 'rgba(0,0,0,0.42)'); sg.addColorStop(0.75, 'rgba(0,0,0,0.25)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
     b.fillStyle = sg; b.beginPath(); b.arc(R * 0.08, R * 0.14, R * 1.18, 0, 6.2832); b.fill();
     /* appendages first — the body circle will hide their joints */
     if (vt === 'cup') {
-      var ha = bowl.handleAng, hx = Math.cos(ha) * R * 1.04, hy = Math.sin(ha) * R * 1.04;
+      var ha = P.handleAng, hx = Math.cos(ha) * R * 1.04, hy = Math.sin(ha) * R * 1.04;
       b.strokeStyle = gl.body[3]; b.lineWidth = R * 0.115;
       b.beginPath(); b.arc(hx, hy, R * 0.30, 0, 6.2832); b.stroke();
       b.strokeStyle = gl.body[1]; b.lineWidth = R * 0.075;
       b.beginPath(); b.arc(hx, hy, R * 0.30, 0, 6.2832); b.stroke();
     }
     if (vt === 'teapot') {
-      var sa = bowl.spoutAng;
+      var sa = P.spoutAng;
       /* a tapered wedge: wide at the body, narrow at the lip, sides
        * bowing slightly outward — never pinched in the middle */
       var sb1x = Math.cos(sa - 0.25) * R * 0.86, sb1y = Math.sin(sa - 0.25) * R * 0.86;
@@ -335,12 +360,12 @@
       b.fillStyle = 'rgba(255,230,180,0.5)'; b.beginPath(); b.arc(-R * 0.025, -R * 0.028, R * 0.02, 0, 6.2832); b.fill();
     } else {
       /* the well — deepest at the centre, light on the walls */
-      var wg = b.createRadialGradient(0, R * 0.05, R * 0.05, 0, 0, R * (bowl.vd.well + 0.02));
+      var wg = b.createRadialGradient(0, R * 0.05, R * 0.05, 0, 0, R * (P.vd.well + 0.02));
       wg.addColorStop(0, gl.well[0]); wg.addColorStop(0.5, gl.well[1]);
       wg.addColorStop(0.8, gl.well[2]); wg.addColorStop(1, gl.well[3]);
-      b.fillStyle = wg; b.beginPath(); b.arc(0, 0, R * bowl.vd.well, 0, 6.2832); b.fill();
+      b.fillStyle = wg; b.beginPath(); b.arc(0, 0, R * P.vd.well, 0, 6.2832); b.fill();
       b.strokeStyle = 'rgba(60,44,26,0.28)'; b.lineWidth = R * 0.05;
-      b.beginPath(); b.arc(0, 0, R * (bowl.vd.well - 0.035), Math.PI * 0.25, Math.PI * 0.85); b.stroke();
+      b.beginPath(); b.arc(0, 0, R * (P.vd.well - 0.035), Math.PI * 0.25, Math.PI * 0.85); b.stroke();
       if (vt === 'cup') {
         var cg = b.createRadialGradient(0, 0, 1, 0, 0, R * 0.37);
         cg.addColorStop(0, gl.well[3]); cg.addColorStop(0.72, gl.well[3]); cg.addColorStop(1, gl.well[2]);
@@ -355,7 +380,7 @@
     b.strokeStyle = 'rgba(40,30,18,0.35)'; b.lineWidth = R * 0.02;
     b.beginPath(); b.arc(0, 0, R * 0.995, 0, 6.2832); b.stroke();
     /* speckle */
-    var rngS = mulberry32(bowl.seed * 7 + 3);
+    var rngS = mulberry32(P.seed * 7 + 3);
     for (var i = 0; i < 420; i++) {
       var sa2 = rngS() * 6.2832, sr = Math.sqrt(rngS()) * R * 0.97;
       b.fillStyle = rngS() < 0.12 ? 'rgba(190,150,60,0.10)' : 'rgba(' + gl.speck + ',' + (0.02 + rngS() * 0.04) + ')';
@@ -377,7 +402,6 @@
     var hg = b.createRadialGradient(-R * 0.42, -R * 0.5, 2, -R * 0.42, -R * 0.5, R * 0.62);
     hg.addColorStop(0, 'rgba(255,255,246,0.20)'); hg.addColorStop(1, 'rgba(255,255,246,0)');
     b.fillStyle = hg; b.beginPath(); b.arc(0, 0, R, 0, 6.2832); b.fill();
-    bowl.S = S;
   }
 
   /* ================= the seam ================= */
@@ -446,12 +470,24 @@
       spawnSparkle(bowlC.x + Math.cos(a) * rr, bowlC.y + Math.sin(a) * rr, true);
     }
     mendedCount++;
+    /* the cabinet keeps this piece: whose it was, its seed (so the
+     * crack and glaze replay exactly), and the care of every stretch
+     * of seam — the miniature shows the seam as it was really laid */
+    cabinet.push({
+      p: bowl.personIdx, s: bowl.seed,
+      c: bowl.segs.map(function (sg) { return Math.round(sg.care * 100) / 100; })
+    });
     saveTown();
+    paintCabBtn();
     if (window.MenderyAudio) window.MenderyAudio.bell();
     setWhisper('mended:' + bowl.id, 'Mended.', bowl.person.closing);
   }
   cv.addEventListener('pointerdown', function (e) {
     if (window.MenderyAudio) window.MenderyAudio.wake();
+    if (view === 'cabinet') {
+      cabTouch = { y: e.clientY, scroll0: cabScroll, t: e.timeStamp, moved: false };
+      return;
+    }
     bootGreeting = false;
     if (bowl && bowl.complete && fadeSwap === 0) {
       var p = toBowlSpace(e.clientX, e.clientY);
@@ -462,13 +498,28 @@
     try { cv.setPointerCapture && cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic */ }
   });
   cv.addEventListener('pointermove', function (e) {
+    if (cabTouch) {
+      var dy = cabTouch.y - e.clientY;
+      if (Math.abs(dy) > 6) cabTouch.moved = true;
+      if (cabTouch.moved) cabScroll = clamp(cabTouch.scroll0 + dy, 0, cabMaxScroll());
+      return;
+    }
     if (tracing) doTrace(e.clientX, e.clientY, e.timeStamp);
   });
   function endTrace() {
-    tracing = false; lastMove = null;
+    tracing = false; lastMove = null; cabTouch = null;
     if (window.MenderyAudio) window.MenderyAudio.drag(0);
   }
-  cv.addEventListener('pointerup', endTrace);
+  cv.addEventListener('pointerup', function (e) {
+    if (cabTouch) {
+      var wasTap = !cabTouch.moved && (e.timeStamp - cabTouch.t) < 450;
+      var tx = e.clientX, ty = e.clientY;
+      cabTouch = null;
+      if (wasTap && view === 'cabinet') cabTap(tx, ty);
+      return;
+    }
+    endTrace();
+  });
   cv.addEventListener('pointercancel', endTrace);
   window.addEventListener('blur', endTrace);
 
@@ -484,6 +535,7 @@
   }
   function pieceKey() { return 'piece:' + (bowl ? bowl.id : 0); }
   function showPieceWhisper() {
+    if (view !== 'bench') return;
     if (!bowl || !bowl.person) return;
     var sub = (bowl.visit > 1 && bowl.person.callback) ? bowl.person.callback : bowl.person.story;
     setWhisper(pieceKey(), bowl.person.title, sub);
@@ -584,16 +636,169 @@
     }
     ctx.globalAlpha = 1;
 
-    /* whisper upkeep */
-    if (bootGreeting) {
-      if (elapsed - bootT > 3.4) { bootGreeting = false; showPieceWhisper(); }
-    } else if (bowl && !bowl.complete && progress() > 0.02 && whisperKey !== 'tracing') {
-      setWhisper('tracing', null);
-    } else if (bowl && !bowl.complete && progress() <= 0.02 && whisperKey !== pieceKey()) {
-      showPieceWhisper();
+    /* whisper upkeep — the bench's business only */
+    if (view === 'bench') {
+      if (bootGreeting) {
+        if (elapsed - bootT > 3.4) { bootGreeting = false; showPieceWhisper(); }
+      } else if (bowl && !bowl.complete && progress() > 0.02 && whisperKey !== 'tracing') {
+        setWhisper('tracing', null);
+      } else if (bowl && !bowl.complete && progress() <= 0.02 && whisperKey !== pieceKey()) {
+        showPieceWhisper();
+      }
+      if (bowl && bowl.complete && whisperKey === 'mended:' + bowl.id && elapsed - bowl.completeT > 2.8) {
+        setWhisper('mended2:' + bowl.id, 'Mended.', 'tap the bowl when you\u2019re ready for another');
+      }
     }
-    if (bowl && bowl.complete && whisperKey === 'mended:' + bowl.id && elapsed - bowl.completeT > 2.8) {
-      setWhisper('mended2:' + bowl.id, 'Mended.', 'tap the bowl when you\u2019re ready for another');
+
+    /* the cabinet fades in over the bench — same room, same wall */
+    var cabTarget = view === 'cabinet' ? 1 : 0;
+    if (cabAlpha !== cabTarget) {
+      cabAlpha = clamp(cabAlpha + (cabTarget ? dt / 0.35 : -dt / 0.35), 0, 1);
+    }
+    if (cabAlpha > 0.01) drawCabinet();
+  }
+
+  /* ================= the cabinet =================
+   * Every piece ever mended, on shelves against the same wall, in
+   * the order you mended them. The cabinet is the save file. */
+  var view = 'bench', cabAlpha = 0, cabScroll = 0, cabSel = -1, cabTouch = null;
+  var miniCache = {};
+
+  var cabBtn = document.createElement('button');
+  cabBtn.id = 'cabBtn';
+  cabBtn.textContent = 'the cabinet';
+  cabBtn.style.cssText = 'position:fixed;left:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5;' +
+    'background:none;border:none;padding:10px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;' +
+    'font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:500;font-size:17px;letter-spacing:0.05em;' +
+    'color:rgba(232,209,165,0.62);text-shadow:0 1px 8px rgba(0,0,0,0.8);display:none;';
+  cabBtn.addEventListener('click', function () { toggleCabinet(); });
+  document.body.appendChild(cabBtn);
+  function paintCabBtn() { cabBtn.style.display = cabinet.length ? 'block' : 'none'; }
+  function toggleCabinet() {
+    /* the bench whisper fades over 1.6s by design; crossing to the
+     * cabinet it would ghost — borrow a quicker fade for the swap */
+    whisperEl.style.transition = 'opacity 0.35s ease';
+    if (view === 'bench') {
+      view = 'cabinet'; cabSel = -1;
+      setWhisper('cab', null);
+      cabBtn.textContent = 'the bench';
+    } else {
+      view = 'bench';
+      cabBtn.textContent = 'the cabinet';
+      restoreBenchWhisper();
+      setTimeout(function () { whisperEl.style.transition = ''; }, 450);
+    }
+  }
+  function restoreBenchWhisper() {
+    if (!bowl) return;
+    if (bowl.complete) setWhisper('mended2:' + bowl.id, 'Mended.', 'tap the bowl when you\u2019re ready for another');
+    else if (progress() > 0.02) setWhisper('tracing', null);
+    else showPieceWhisper();
+  }
+  function cabLayout() {
+    var cols = CW > CH ? 5 : 3;
+    var cellW = CW / cols;
+    return { cols: cols, cellW: cellW, cellH: cellW * 1.02, top: 102, baseR: cellW * 0.335 };
+  }
+  function cabMaxScroll() {
+    var L = cabLayout();
+    var rows = Math.ceil(cabinet.length / L.cols);
+    return Math.max(0, L.top + rows * L.cellH + 34 - CH);
+  }
+  function miniFor(idx) {
+    if (miniCache[idx]) return miniCache[idx];
+    var e = cabinet[idx], desc = makeDesc(e.p, e.s), L = cabLayout();
+    var R = L.baseR * desc.vd.rf;
+    var S = Math.ceil(R * 2 * desc.vd.ext);
+    var c = document.createElement('canvas');
+    c.width = Math.round(S * DPR); c.height = Math.round(S * DPR);
+    var g = c.getContext('2d');
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.translate(S / 2, S / 2);
+    renderPiece(g, desc, R);
+    /* the seam as it was actually laid — care and all */
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (var i = 0; i < desc.segs.length; i++) {
+      var s = desc.segs[i];
+      var care = (e.c && e.c[i] != null) ? e.c[i] : 0.8;
+      var cw = 0.6 + care * 0.65;
+      g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
+      g.strokeStyle = 'rgba(138,90,23,0.85)'; g.lineWidth = Math.max(0.8, R * 0.021 * cw); g.stroke();
+      g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
+      g.strokeStyle = 'rgba(224,164,54,0.95)'; g.lineWidth = Math.max(0.55, R * 0.012 * cw); g.stroke();
+      g.beginPath(); g.moveTo(s.x1 * R, s.y1 * R); g.lineTo(s.x2 * R, s.y2 * R);
+      g.strokeStyle = 'rgba(255,233,168,' + (0.30 + care * 0.35) + ')'; g.lineWidth = Math.max(0.3, R * 0.005 * cw); g.stroke();
+    }
+    /* the name, lettered once onto a small plate */
+    var lc = document.createElement('canvas');
+    var lw = Math.ceil(L.cellW), lh = 20;
+    lc.width = Math.round(lw * DPR); lc.height = Math.round(lh * DPR);
+    var lg2 = lc.getContext('2d');
+    lg2.setTransform(DPR, 0, 0, DPR, 0, 0);
+    lg2.font = '600 13px "Cormorant Garamond", Georgia, serif';
+    lg2.textAlign = 'center'; lg2.textBaseline = 'middle';
+    lg2.fillStyle = 'rgba(240,226,198,0.78)';
+    lg2.fillText(desc.person.name, lw / 2, lh / 2 + 1);
+    var out = { cv: c, S: S, R: R, label: lc, lw: lw, lh: lh };
+    miniCache[idx] = out;
+    return out;
+  }
+  function drawCabinet() {
+    var L = cabLayout();
+    ctx.save();
+    /* an opaque dark first, so the bench piece never ghosts through;
+     * then the room's wall at a whisper of alpha, for continuity */
+    ctx.globalAlpha = cabAlpha;
+    ctx.fillStyle = '#150c06'; ctx.fillRect(0, 0, CW, CH);
+    if (benchCv) { ctx.globalAlpha = cabAlpha * 0.45; ctx.drawImage(benchCv, 0, 0, CW, CH); }
+    ctx.globalAlpha = cabAlpha;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(246,232,205,0.92)';
+    ctx.font = '600 29px "Cormorant Garamond", Georgia, serif';
+    ctx.fillText('The Cabinet', CW / 2, 50);
+    ctx.font = 'italic 500 15px "Cormorant Garamond", Georgia, serif';
+    ctx.fillStyle = 'rgba(232,209,165,0.55)';
+    ctx.fillText(cabinet.length + (cabinet.length === 1 ? ' piece' : ' pieces') + ' · in the order you mended them', CW / 2, 74);
+    var rows = Math.ceil(cabinet.length / L.cols);
+    for (var r = 0; r < rows; r++) {
+      var boardY = L.top + (r + 1) * L.cellH - cabScroll;
+      if (boardY < -40 || boardY > CH + 60) continue;
+      for (var col = 0; col < L.cols; col++) {
+        var idx = r * L.cols + col;
+        if (idx >= cabinet.length) break;
+        var m = miniFor(idx);
+        var cxp = L.cellW * (col + 0.5);
+        var cyp = boardY - 8 - m.R * 0.98;
+        if (idx === cabSel) {
+          ctx.strokeStyle = 'rgba(255,215,130,0.55)'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(cxp, cyp, m.R * 1.14, 0, 6.2832); ctx.stroke();
+        }
+        ctx.drawImage(m.cv, cxp - m.S / 2, cyp - m.S / 2, m.S, m.S);
+        ctx.drawImage(m.label, cxp - m.lw / 2, boardY + 8, m.lw, m.lh);
+      }
+      var grd = ctx.createLinearGradient(0, boardY - 5, 0, boardY + 7);
+      grd.addColorStop(0, '#5a4026'); grd.addColorStop(0.35, '#3d2a16'); grd.addColorStop(1, '#241608');
+      ctx.fillStyle = grd;
+      ctx.fillRect(16, boardY - 4, CW - 32, 11);
+      ctx.fillStyle = 'rgba(255,205,130,0.13)';
+      ctx.fillRect(16, boardY - 4, CW - 32, 1.5);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(16, boardY + 7, CW - 32, 7);
+    }
+    ctx.restore();
+  }
+  function cabTap(x, y) {
+    var L = cabLayout();
+    var col = Math.floor(x / L.cellW);
+    var row = Math.floor((y + cabScroll - L.top) / L.cellH);
+    var idx = row * L.cols + col;
+    if (idx >= 0 && idx < cabinet.length && col >= 0 && col < L.cols) {
+      cabSel = idx;
+      var person = PEOPLE[cabinet[idx].p];
+      setWhisper('cab:' + idx, person.title, person.closing);
+    } else {
+      cabSel = -1;
+      setWhisper('cab', null);
     }
   }
 
@@ -608,6 +813,8 @@
     get personTitle() { return bowl && bowl.person ? bowl.person.title : ''; },
     get vessel() { return bowl ? bowl.vessel : ''; },
     get visit() { return bowl ? bowl.visit : 0; },
+    get cabinetCount() { return cabinet.length; },
+    get view() { return view; },
     get audio() {
       var A = window.MenderyAudio;
       return A ? { plays: A.plays, muted: A.muted, state: A.state } : null;
@@ -619,6 +826,7 @@
   };
   resize();
   makePiece(nextPersonIdx(), (Math.random() * 1e9) | 0, true);
+  paintCabBtn();
   var totalVisits = 0;
   for (var vk in visits) totalVisits += visits[vk];
   if (mendedCount === 0 && totalVisits <= 1) {
