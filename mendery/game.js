@@ -162,12 +162,12 @@
     var rngB = mulberry32(77);
     var plankH = Math.max(64, CH / 9);
     for (var y = 0; y < CH; y += plankH) {
-      b.fillStyle = 'rgba(255,190,120,' + (rngB() * 0.03) + ')';
+      b.fillStyle = 'rgba(255,190,120,' + (rngB() * 0.05) + ')';
       b.fillRect(0, y, CW, plankH - 2);
       b.fillStyle = 'rgba(0,0,0,0.35)';
       b.fillRect(0, y + plankH - 2, CW, 2);
       for (var gl2 = 0; gl2 < 7; gl2++) {
-        b.strokeStyle = 'rgba(0,0,0,' + (0.03 + rngB() * 0.05) + ')';
+        b.strokeStyle = 'rgba(0,0,0,' + (0.04 + rngB() * 0.06) + ')';
         b.lineWidth = 1 + rngB() * 1.4;
         b.beginPath();
         var gy = y + rngB() * plankH;
@@ -185,6 +185,11 @@
     var lg = b.createRadialGradient(CW * 0.30, CH * 0.14, 10, CW * 0.30, CH * 0.14, Math.max(CW, CH) * 0.85);
     lg.addColorStop(0, 'rgba(255,196,116,0.20)'); lg.addColorStop(0.5, 'rgba(255,180,100,0.06)'); lg.addColorStop(1, 'rgba(255,180,100,0)');
     b.fillStyle = lg; b.fillRect(0, 0, CW, CH);
+    /* the working light: a soft pool centred where the piece sits,
+     * so the porcelain stands IN the lamplight, not beside it */
+    var pg2 = b.createRadialGradient(bowlC.x, bowlC.y, bowlR * 0.2, bowlC.x, bowlC.y, bowlR * 2.15);
+    pg2.addColorStop(0, 'rgba(255,196,116,0.13)'); pg2.addColorStop(0.55, 'rgba(255,180,100,0.05)'); pg2.addColorStop(1, 'rgba(255,180,100,0)');
+    b.fillStyle = pg2; b.fillRect(0, 0, CW, CH);
     var dx = CW * 0.845, dy = CH * (CW > CH ? 0.82 : 0.80), dr = Math.min(CW, CH) * 0.062;
     b.save();
     b.fillStyle = 'rgba(0,0,0,0.4)';
@@ -273,6 +278,7 @@
       seed: seed, segs: desc.segs, complete: false, completeT: 0, filledCount: 0,
       handleAng: desc.handleAng, spoutAng: desc.spoutAng
     };
+    settleT = 0; /* the piece is set down, not switched on */
     buildVesselBase();
     if (countVisit && window.MenderyAudio) window.MenderyAudio.knock();
     showPieceWhisper();
@@ -434,7 +440,7 @@
   }
 
   /* ================= input ================= */
-  var tracing = false, lastMove = null, fadeSwap = 0, swapDone = false;
+  var tracing = false, lastMove = null, fadeSwap = 0, swapDone = false, settleT = 1;
 
   function toBowlSpace(cxPx, cyPx) {
     return { x: (cxPx - bowlC.x) / bowl.Rv, y: (cyPx - bowlC.y) / bowl.Rv };
@@ -582,7 +588,7 @@
   })();
 
   /* ================= render ================= */
-  var elapsed = 0, lastT = 0, raf = 0;
+  var elapsed = 0, lastT = 0, raf = 0, bootFade = 1;
   function frame(nowMs) {
     raf = requestAnimationFrame(frame);
     var now = nowMs / 1000;
@@ -605,13 +611,21 @@
     ctx.globalAlpha = 1;
     if (benchCv) ctx.drawImage(benchCv, 0, 0, CW, CH);
 
+    /* the set-down: a new piece lands a breath high and a touch
+     * large, and settles onto the wood over a third of a second —
+     * the visual half of the knock you've been hearing */
+    if (settleT < 1) settleT = Math.min(1, settleT + dt / 0.32);
+    var sE = 1 - Math.pow(1 - settleT, 3);
+    var pScale = 1 + 0.025 * (1 - sE), pYOff = 5 * (1 - sE);
+
     if (bowlCv && bowl) {
       var S = bowl.S || Math.ceil(bowl.Rv * 2 * bowl.ext);
       ctx.globalAlpha = fadeAlpha;
-      ctx.drawImage(bowlCv, bowlC.x - S / 2, bowlC.y - S / 2, S, S);
+      ctx.drawImage(bowlCv, bowlC.x - S * pScale / 2, bowlC.y + pYOff - S * pScale / 2, S * pScale, S * pScale);
       var pulse = bowl.complete ? Math.max(0, 1 - (t - bowl.completeT) / 2.2) : 0;
       var glow = 1 + pulse * 0.9;
       var Rv = bowl.Rv;
+      var RvS = Rv * pScale, cyy = bowlC.y + pYOff;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       /* Lay the gold in three full passes — dark edge, body, then
        * light. Finishing each segment before starting the next let
@@ -624,18 +638,18 @@
           var s = bowl.segs[i];
           if (!s.filled) continue;
           var cw = 0.6 + s.care * 0.65;
-          var sx1 = bowlC.x + s.x1 * Rv, sy1 = bowlC.y + s.y1 * Rv;
-          var sx2 = bowlC.x + s.x2 * Rv, sy2 = bowlC.y + s.y2 * Rv;
+          var sx1 = bowlC.x + s.x1 * RvS, sy1 = cyy + s.y1 * RvS;
+          var sx2 = bowlC.x + s.x2 * RvS, sy2 = cyy + s.y2 * RvS;
           ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2);
           if (seamPass === 0) {
             ctx.strokeStyle = 'rgba(138,90,23,0.85)';
-            ctx.lineWidth = Rv * 0.021 * cw * glow;
+            ctx.lineWidth = RvS * 0.021 * cw * glow;
           } else if (seamPass === 1) {
             ctx.strokeStyle = 'rgba(224,164,54,0.95)';
-            ctx.lineWidth = Rv * 0.012 * cw * glow;
+            ctx.lineWidth = RvS * 0.012 * cw * glow;
           } else {
             ctx.strokeStyle = 'rgba(255,233,168,' + (0.30 + s.care * 0.35 + pulse * 0.3) + ')';
-            ctx.lineWidth = Rv * 0.005 * cw * glow;
+            ctx.lineWidth = RvS * 0.005 * cw * glow;
           }
           ctx.stroke();
         }
@@ -646,8 +660,8 @@
         var o = bowl.segs[j];
         if (o.filled) continue;
         anyOpen = true;
-        ctx.moveTo(bowlC.x + o.x1 * Rv, bowlC.y + o.y1 * Rv);
-        ctx.lineTo(bowlC.x + o.x2 * Rv, bowlC.y + o.y2 * Rv);
+        ctx.moveTo(bowlC.x + o.x1 * RvS, cyy + o.y1 * RvS);
+        ctx.lineTo(bowlC.x + o.x2 * RvS, cyy + o.y2 * RvS);
       }
       if (anyOpen) {
         /* a breath of pale under the crack first — where glaze chips,
@@ -655,10 +669,10 @@
          * charcoal it lifts the crack off the dark well so the line
          * you're asked to trace can always be seen */
         ctx.strokeStyle = 'rgba(255,238,205,0.15)';
-        ctx.lineWidth = Math.max(3.2, Rv * 0.024);
+        ctx.lineWidth = Math.max(3.2, RvS * 0.024);
         ctx.stroke();
         ctx.strokeStyle = 'rgba(36,24,13,0.92)';
-        ctx.lineWidth = Math.max(1.6, Rv * 0.011);
+        ctx.lineWidth = Math.max(1.6, RvS * 0.011);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -711,6 +725,14 @@
       if (bowl && bowl.complete && whisperKey === 'mended:' + bowl.id && elapsed - bowl.completeT > 2.8) {
         setWhisper('mended2:' + bowl.id, 'Mended.', 'tap the bowl when you\u2019re ready for another');
       }
+    }
+
+    /* entering the shop: the room fades up from dark on arrival,
+     * the way your eyes adjust to lamplight */
+    if (bootFade > 0) {
+      bootFade = Math.max(0, bootFade - dt / 0.9);
+      ctx.fillStyle = 'rgba(8,5,2,' + (bootFade * 0.92) + ')';
+      ctx.fillRect(0, 0, CW, CH);
     }
 
     /* the cabinet fades in over the bench — same room, same wall */
