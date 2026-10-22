@@ -276,7 +276,7 @@
       entries.push({
         pos: csObj.pos, col: specCol(csObj.spec),
         size: dep * 0.0105 * sizeFactorForMag(s.mag) * 1.12,
-        phase: csObj.ph, twk: csObj.tw, spike: s.mag <= 1.3 ? 1 : 0
+        phase: csObj.ph, twk: csObj.tw, spike: s.mag <= 1.8 ? 1 : 0
       });
     });
     starGeo = buildStarBuffer(entries);
@@ -432,6 +432,24 @@
     }
     localGas = buildGasBuffer(puffs);
     localGas.puffCount = puffs.length;
+  })();
+
+  /* bright-star halos (improvement pass 7): a second, much larger and
+   * fainter point on the handful of genuinely bright stars, so the
+   * sky has landmarks again — Vega should feel like Vega */
+  var haloGeo = null;
+  (function buildHalos() {
+    var entries = [];
+    catStars.forEach(function (cs) {
+      if (cs.mag > 2.3) return;
+      var dep = depthFor(cs.dist);
+      entries.push({
+        pos: cs.pos, col: specCol(cs.spec),
+        size: dep * 0.0105 * sizeFactorForMag(cs.mag) * 5.2,
+        phase: cs.ph, twk: cs.tw * 0.5
+      });
+    });
+    if (entries.length) haloGeo = buildStarBuffer(entries);
   })();
 
   /* figure-star boost points (rebuilt when the settled figure changes) */
@@ -957,6 +975,7 @@
     /* star shell + figure boost */
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     drawStars(starGeo, projMat, rot, voyVec, 1, t);
+    if (haloGeo) drawStars(haloGeo, projMat, rot, voyVec, 0.15, t);
     if (boostGeo && P2.alpha > 0.02) {
       drawStars(boostGeo, projMat, rot, voyVec, P2.alpha * (0.5 + P2.voyage * 0.9), t);
     }
