@@ -86,7 +86,7 @@
     bowl:   { rf: 1.00, well: 0.80, ext: 1.30, steps: [15, 20], stepLen: 0.092, branches: 1, stopR: 0.10 },
     dish:   { rf: 1.07, well: 0.90, ext: 1.30, steps: [16, 21], stepLen: 0.095, branches: 2, stopR: 0.10 },
     cup:    { rf: 0.66, well: 0.70, ext: 1.62, steps: [12, 15], stepLen: 0.085, branches: 1, stopR: 0.12 },
-    teapot: { rf: 0.82, well: 0.88, ext: 1.66, steps: [14, 18], stepLen: 0.090, branches: 1, stopR: 0.14 },
+    teapot: { rf: 0.82, well: 0.88, ext: 1.66, steps: [14, 18], stepLen: 0.090, branches: 1, stopR: 0.40 },
     vase:   { rf: 0.60, well: 0.00, ext: 1.36, steps: [16, 21], stepLen: 0.090, branches: 1, stopR: 0.40, annulus: true }
   };
   var GLAZES = {
@@ -227,36 +227,117 @@
     var vd = VESSELS[person.vessel];
     var rng = mulberry32(seed);
     var segs = [];
-    function clampRing(x, y) {
-      var rr = Math.hypot(x, y);
-      if (rr > 0.95) { x *= 0.95 / rr; y *= 0.95 / rr; rr = 0.95; }
-      if (vd.annulus && rr < 0.44) { var s = 0.44 / (rr || 1e-4); x *= s; y *= s; }
-      return { x: x, y: y };
-    }
-    function walk(x, y, ang, steps, stepLen, branch) {
-      var px = x, py = y;
-      for (var i = 0; i < steps; i++) {
-        ang += (rng() - 0.5) * 0.72;
-        var np = clampRing(px + Math.cos(ang) * stepLen, py + Math.sin(ang) * stepLen);
-        segs.push({ x1: px, y1: py, x2: np.x, y2: np.y, filled: false, care: 0, branch: branch });
-        px = np.x; py = np.y;
-        if (Math.hypot(px, py) < vd.stopR) break;
+    /* The crack is walked on the SURFACE, not on the screen. Its
+     * coordinates are (s, th): s the distance travelled from the
+     * rim along the vessel's profile, th the angle around it. A
+     * profile maps s to a screen radius through the vessel's
+     * slopes — where the surface steepens (the well's wall, the
+     * vase's neck) a step along it covers less screen, so the
+     * drawn crack compresses and bends where the vessel curves,
+     * the way a real fracture reads from above. The old walk ran
+     * flat across the disc: it chorded over the well, sliced
+     * through the teapot's lid, and zigzagged down the vase's
+     * silhouette instead of spiralling its shoulder. */
+    function slopeAt(r) {
+      if (vd.annulus) { /* the vase: shoulder, then the neck curving in */
+        if (r >= 0.55) return 0.92;
+        var tn = Math.min(1, Math.max(0, (0.55 - r) / 0.15));
+        return 0.92 + (0.55 - 0.92) * Math.sin(tn * Math.PI * 0.5);
       }
+      if (person.vessel === 'teapot') return 0.88; /* one long shoulder to the lid */
+      var floorR = vd.well * 0.52;
+      if (r <= floorR) return 1.0;
+      if (r >= vd.well) return 0.95;
+      var tw = (r - floorR) / (vd.well - floorR);
+      var ws = 0.08 + vd.well * 0.58;
+      return 0.95 + (ws - 0.95) * Math.sin(Math.min(1, Math.max(0, tw)) * Math.PI);
+    }
+    var PN = 240, profR = [], profS = [], acc = 0;
+    for (var pi = 0; pi <= PN; pi++) {
+      var pr = 1 - pi / PN;
+      profR.push(pr); profS.push(acc);
+      acc += (1 / PN) / slopeAt(pr - 0.5 / PN);
+    }
+    var sTotal = acc;
+    function rOf(s) {
+      if (s <= 0) return 1;
+      if (s >= sTotal) return 0;
+      var lo = 0, hi = PN;
+      while (lo < hi - 1) { var mid = (lo + hi) >> 1; if (profS[mid] <= s) lo = mid; else hi = mid; }
+      var f = (s - profS[lo]) / (profS[lo + 1] - profS[lo] || 1);
+      return profR[lo] + (profR[lo + 1] - profR[lo]) * f;
+    }
+    function sOf(r) {
+      if (r >= 1) return 0;
+      if (r <= 0) return sTotal;
+      var idx = Math.min(PN, Math.max(0, Math.round((1 - r) * PN)));
+      return profS[idx];
+    }
+    function pushSeg(s1, t1, s2, t2, branch) {
+      var r1 = rOf(s1), r2 = rOf(s2);
+      segs.push({
+        x1: Math.cos(t1) * r1, y1: Math.sin(t1) * r1,
+        x2: Math.cos(t2) * r2, y2: Math.sin(t2) * r2,
+        s2: s2, t2: t2, filled: false, care: 0, branch: branch
+      });
     }
     var startR = vd.annulus ? 0.90 : 0.96;
+    var sStop = sOf(vd.stopR);
     var a0 = rng() * Math.PI * 2;
     var nSteps = vd.steps[0] + Math.floor(rng() * (vd.steps[1] - vd.steps[0] + 1));
-    /* on the vase the crack spirals: mostly around the shoulder,
-     * sinking slowly toward the neck ring as it travels */
-    var headAng = vd.annulus ? a0 + Math.PI + 0.85 + (rng() - 0.5) * 0.3
-                             : a0 + Math.PI + (rng() - 0.5) * 0.5;
-    walk(Math.cos(a0) * startR, Math.sin(a0) * startR, headAng, nSteps, vd.stepLen, false);
+    if (vd.annulus) {
+      /* on the vase the crack spirals: mostly around the shoulder,
+       * sinking slowly toward the neck as it travels */
+      var vs = sOf(startR), vt2 = a0, vSink = 0.34 + rng() * 0.16, sStopV = sOf(0.44);
+      for (var vi = 0; vi < nSteps; vi++) {
+        var vr = rOf(vs);
+        var ns = vs + vd.stepLen * vSink, nt = vt2 + vd.stepLen * (0.95 + (rng() - 0.5) * 0.3) / Math.max(vr, 0.3);
+        if (ns >= sStopV) { nt = vt2 + (nt - vt2) * ((sStopV - vs) / (ns - vs)); ns = sStopV; }
+        pushSeg(vs, vt2, ns, nt, false);
+        vs = ns; vt2 = nt;
+        if (vs >= sStopV) break;
+      }
+    } else {
+      /* the bow: the heading leans sideways most at mid-descent and
+       * straightens at the rim and the floor, so the crack sweeps
+       * in a crescent that follows the vessel's roundness instead
+       * of spearing flat at the middle */
+      var bowAmp = (0.30 + rng() * 0.35) * (rng() < 0.5 ? 1 : -1);
+      var ms = sOf(startR), mt = a0;
+      for (var mi = 0; mi < nSteps; mi++) {
+        var mr = rOf(ms);
+        var bow = bowAmp * Math.sin(Math.PI * Math.min(1, ms / sStop)) + (rng() - 0.5) * 0.30;
+        var ns2 = ms + vd.stepLen * Math.cos(bow);
+        var nt2 = mt + vd.stepLen * Math.sin(bow) / Math.max(mr, 0.25);
+        /* land exactly on the stop radius — the tip should kiss the
+         * lid's edge or the floor's heart, never overshoot them */
+        if (ns2 >= sStop) { nt2 = mt + (nt2 - mt) * ((sStop - ms) / (ns2 - ms)); ns2 = sStop; }
+        pushSeg(ms, mt, ns2, nt2, false);
+        ms = ns2; mt = nt2;
+        if (ms >= sStop) break;
+      }
+    }
     var mainCount = segs.length;
     for (var br = 0; br < vd.branches; br++) {
       var src = segs[Math.floor(mainCount * (0.3 + rng() * 0.35))];
       if (!src) break;
-      var bAng = Math.atan2(src.y2 - src.y1, src.x2 - src.x1) + (rng() < 0.5 ? 1 : -1) * (0.6 + rng() * 0.5);
-      walk(src.x2, src.y2, bAng, 4 + Math.floor(rng() * 4), vd.stepLen * 0.8, true);
+      /* a branch runs mostly along the surface — around, not down —
+       * drifting only a little in s as it goes */
+      var bs = src.s2, bt = src.t2;
+      var bDir = rng() < 0.5 ? 1 : -1;
+      var bDrift = (rng() - 0.5) * 0.5;
+      var bSteps = 4 + Math.floor(rng() * 4);
+      var sRim = sOf(0.97);
+      for (var bi = 0; bi < bSteps; bi++) {
+        var bsr = rOf(bs);
+        var bns = bs + vd.stepLen * 0.8 * bDrift;
+        var bnt = bt + bDir * vd.stepLen * 0.8 * (0.85 + (rng() - 0.5) * 0.2) / Math.max(bsr, 0.25);
+        if (bns > sStop) { bnt = bt + (bnt - bt) * ((sStop - bs) / (bns - bs)); bns = sStop; }
+        if (bns < sRim) break;
+        pushSeg(bs, bt, bns, bnt, true);
+        bs = bns; bt = bnt;
+        if (bs >= sStop) break;
+      }
     }
     return {
       personIdx: personIdx, person: person, vessel: person.vessel, vd: vd,
