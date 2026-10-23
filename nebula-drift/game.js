@@ -222,7 +222,7 @@
   }
   function sizeFactorForMag(mag) { return Math.max(0.3, Math.min(1.9, 1.9 - mag * 0.33)); }
 
-  var catByName = {}, catStars = [];
+  var catByName = {}, catStars = [], planetPts = [];
   (function buildShell() {
     var r = SKY.mulberry32(777);
     var entries = [];
@@ -279,6 +279,31 @@
         phase: csObj.ph, twk: csObj.tw, spike: s.mag <= 1.8 ? 1 : 0
       });
     });
+    /* tonight's planets — the near layer. Computed for the same 22:00
+     * instant as the stars (planets.js), hung at 190 units: inside the
+     * nearest catalogue depth, so a voyage's sideways shift moves them
+     * against the star shell, as their real closeness should. They do
+     * not twinkle (aTwk 0 with phase pi/2 pins the shader's twinkle
+     * factor at exactly 1) and carry no diffraction spike — a bright
+     * planet is a small steady disc with a halo, not a star. */
+    if (typeof PLANETS !== 'undefined') {
+      var pDepth = 190;
+      PLANETS.positions(tonight.date).forEach(function (p) {
+        var pa = SKY.altAz(p.ra, p.dec, SKY.HOME.lat, tonight.lst);
+        var pdir = SKY.dirFromAltAz(pa.alt, pa.az);
+        var ppos = [pdir[0] * pDepth, pdir[1] * pDepth, pdir[2] * pDepth];
+        var pcol = [p.color[0] / 255, p.color[1] / 255, p.color[2] / 255];
+        var core = pDepth * 0.0105 * sizeFactorForMag(Math.max(p.mag, -0.6)) * 1.5;
+        planetPts.push({ name: p.name, dir: pdir, alt: pa.alt, az: pa.az, mag: p.mag, pos: ppos });
+        entries.push({ pos: ppos, col: pcol, size: core, phase: Math.PI / 2, twk: 0, spike: 0 });
+        if (p.mag < 1.0) {
+          entries.push({
+            pos: ppos, size: core * 3.0, phase: Math.PI / 2, twk: 0, spike: 0,
+            col: [pcol[0] * 0.30, pcol[1] * 0.30, pcol[2] * 0.30]
+          });
+        }
+      });
+    }
     starGeo = buildStarBuffer(entries);
     shellCount = entries.length;
   })();
@@ -1186,7 +1211,7 @@
 
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
-    catalogue: catStars.length, fieldStars: shellCount,
+    catalogue: catStars.length, fieldStars: shellCount, planets: planetPts,
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
   });
