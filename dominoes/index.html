@@ -115,8 +115,13 @@ button{font-family:var(--font-b);}
 #house-row{display:flex;align-items:center;justify-content:space-between;padding:4px 20px;min-height:66px;}
 #house-hand-wrap{display:flex;align-items:center;gap:10px;}
 #ai-hand{display:flex;align-items:center;}
-#ai-hand .tile{--tw:24px;margin-left:-13px;box-shadow:inset 0 0 0 2px var(--brass),
-  inset 0 0 0 4px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.45);}
+#ai-hand .tile{--tw:24px;margin-left:-13px;background:linear-gradient(160deg,#1a5c3c 0%,#0a2c1a 100%);
+  box-shadow:inset 0 0 0 2px var(--brass),
+  inset 0 0 0 4px rgba(0,0,0,.45), inset 0 0 14px rgba(0,0,0,.45), 0 4px 8px rgba(0,0,0,.45);}
+#ai-hand .tile::after{content:'';position:absolute;left:50%;top:50%;width:5px;height:5px;
+  transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#f6e2a0,var(--brass-d) 78%);
+  box-shadow:0 1px 2px rgba(0,0,0,.55), inset 0 0 0 1px rgba(90,64,20,.55);}
 #ai-hand .tile:first-child{margin-left:0;}
 #house-count{font-family:var(--font-d);font-size:15px;color:var(--cream);opacity:.85;min-width:20px;}
 #ai-thinking{display:flex;gap:5px;align-items:center;height:24px;}
@@ -138,6 +143,7 @@ button{font-family:var(--font-b);}
 /* ---------- board ---------- */
 #board-layer{position:relative;flex:1;min-height:0;overflow:hidden;}
 #board{position:absolute;left:0;top:0;transform-origin:0 0;}
+#board .tile{transform-origin:0 0;}
 .endzone{position:absolute;width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:50%;
   border:2px dashed transparent;pointer-events:none;z-index:5;}
 .endzone.lit{border-color:rgba(233,200,106,.95);
@@ -328,7 +334,12 @@ button{font-family:var(--font-b);}
   .abtn{padding:5px 2px 4px;border-radius:10px;gap:0;}
   .ab-lbl{display:none;}
   .ab-ic{font-size:15px;}
-  #rack{padding:2px 14px;}
+  #rack{padding:2px 14px;min-height:0;}
+  #rack .tile{--tw:30px;}
+  #status{font-size:12.5px;padding:1px 10px;min-height:0;}
+  #bone-stack{width:24px;height:42px;}
+  #bone-stack .tile{--tw:19px;}
+  #boneyard{padding:4px 8px;}
   #title-inner{padding:6px 20px;scrollbar-width:none;}
   #title-inner::-webkit-scrollbar{display:none;}
   .title-kicker{font-size:10px;margin-bottom:3px;}
@@ -344,7 +355,7 @@ button{font-family:var(--font-b);}
   .brass-btn{font-size:15px;padding:9px 42px;}
   #play-tile{margin-bottom:5px;}
   .ghost-btn{font-size:12px;padding:7px 22px;}
-  #title-scatter .tile:nth-child(n+3){display:none;}
+  #title-scatter{display:none;}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -571,14 +582,15 @@ button{font-family:var(--font-b);}
  * (Also kept verbatim at ../sim.js so node tests run against this code.) */
 'use strict';
 
+function rngNext(st) {
+  st.rngS = (st.rngS + 0x6D2B79F5) | 0;
+  let t = Math.imul(st.rngS ^ (st.rngS >>> 15), 1 | st.rngS);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 function mulberry32(seed) {
-  let s = seed >>> 0;
-  return function () {
-    s |= 0; s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  const box = { rngS: seed >>> 0 };
+  return function () { return rngNext(box); };
 }
 
 function newSet() {
@@ -592,10 +604,10 @@ function pips(t) { return t.a + t.b; }
 function handPips(hand) { return hand.reduce((s, t) => s + pips(t), 0); }
 function tileKey(t) { return t.a + '-' + t.b; }
 
-function shuffled(set, rng) {
+function shuffled(set, st) {
   const d = set.slice();
   for (let i = d.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
+    const j = Math.floor(rngNext(st) * (i + 1));
     [d[i], d[j]] = [d[j], d[i]];
   }
   return d;
@@ -630,9 +642,9 @@ function canPlay(state, player) {
 
 function newGame(seed, target, mode) {
   _nextId = 1;
-  const rng = mulberry32(seed == null ? (Date.now() % 2147483647) : seed);
   const st = {
-    rng, target: target || 100, round: 1,
+    rngS: (seed == null ? (Date.now() % 2147483647) : seed) >>> 0,
+    target: target || 100, round: 1,
     mode: mode === 'fives' ? 'fives' : 'draw',
     scores: [0, 0],           // [you, house]
     hands: [[], []], boneyard: [], board: [],
@@ -662,7 +674,7 @@ function highestOpener(hands) {
 }
 
 function dealRound(st) {
-  const deck = shuffled(newSet(), st.rng);
+  const deck = shuffled(newSet(), st);
   st.hands = [[], []];
   for (let i = 0; i < 7; i++) { st.hands[0].push(deck.pop()); st.hands[1].push(deck.pop()); }
   st.boneyard = deck;
@@ -834,20 +846,21 @@ function aiChoose(st, player, difficulty) {
     return { type: 'knock' };
   }
   if (difficulty === 0) {
-    const mv = moves[Math.floor(st.rng() * moves.length)];
+    const mv = moves[Math.floor(rngNext(st) * moves.length)];
     return { type: 'play', tileIdx: mv.tileIdx, end: mv.end };
   }
   let best = null, bestS = -1e9;
   for (const mv of moves) {
     let s = scoreMove(st, player, mv, difficulty);
-    if (difficulty === 1) s += (st.rng() - 0.5) * 2.5; // Sharp: a little looseness
+    if (difficulty === 1) s += (rngNext(st) - 0.5) * 2.5; // Sharp: a little looseness
     if (s > bestS) { bestS = s; best = mv; }
   }
   return { type: 'play', tileIdx: best.tileIdx, end: best.end };
 }
 
-// Snapshots for undo: the whole state is plain data except rng (a closure),
-// so we persist the node-id counter and re-seed rng on restore (a new timeline).
+// Snapshots for undo: the state is all plain data (the rng stream lives in
+// the rngS integer), so a snapshot is a lossless JSON copy. Restore re-seeds
+// the stream anyway — undo starts a new timeline, as it always has.
 function snapshot(st) {
   return JSON.stringify({ nextId: _nextId, st });
 }
@@ -855,12 +868,12 @@ function restore(snap) {
   const o = JSON.parse(snap);
   _nextId = o.nextId;
   const st = o.st;
-  st.rng = mulberry32((Date.now() % 2147483647) || 1);
+  st.rngS = (Date.now() % 2147483647) || 1;
   return st;
 }
 
 const api = {
-  mulberry32, newSet, newGame, dealRound, playTile, drawTile, knock,
+  mulberry32, rngNext, newSet, newGame, dealRound, playTile, drawTile, knock,
   nextRound, legalMoves, canPlay, exposed, aiChoose, pips, handPips, tileKey,
   snapshot, restore, scoreMove,
 };
@@ -1541,15 +1554,16 @@ if (typeof window !== 'undefined') window.DomSim = api;
   }
 
   /* ---------------- serpentine layout ---------------- */
-  function computeSlots() {
+  function computeSlots(rowLen) {
+    const RL = rowLen || ROWLEN;
     const wps = [{ x: 0, y: 0 }];
     for (let k = 0; k < 16; k++) {
       const y = k * (TH + GAP);
-      if (k % 2 === 0) wps.push({ x: ROWLEN, y });
+      if (k % 2 === 0) wps.push({ x: RL, y });
       else wps.push({ x: 0, y });
       if (k < 15) {
         const ny = (k + 1) * (TH + GAP);
-        wps.push({ x: k % 2 === 0 ? ROWLEN : 0, y: ny });
+        wps.push({ x: k % 2 === 0 ? RL : 0, y: ny });
       }
     }
     let wp = 0, px = 0, py = 0;
@@ -1590,9 +1604,12 @@ if (typeof window !== 'undefined') window.DomSim = api;
     const tailPos = { x: px + lv.dx * 30, y: py + lv.dy * 30 };
     let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     for (const s of slots) {
-      const along = (s.dbl ? TW : TH) / 2, perp = (s.dbl ? TH : TW) / 2;
-      const longHoriz = (s.ang % 180 !== 0);
-      const hx = longHoriz ? along : perp, hy = longHoriz ? perp : along;
+      // True rendered extents: a TW×TH tile rotated by ang (a multiple of
+      // 90°) swaps its axes exactly when ang is odd. (The old along/perp
+      // math swapped doubles the wrong way, under-measuring a double's
+      // cross-axis by 22 units and letting it spill past the table edge.)
+      const horiz = (s.ang % 180 !== 0);
+      const hx = horiz ? TH / 2 : TW / 2, hy = horiz ? TW / 2 : TH / 2;
       minX = Math.min(minX, s.cx - hx); maxX = Math.max(maxX, s.cx + hx);
       minY = Math.min(minY, s.cy - hy); maxY = Math.max(maxY, s.cy + hy);
     }
@@ -1608,7 +1625,13 @@ if (typeof window !== 'undefined') window.DomSim = api;
     const pad = 30;
     const s = Math.min(1, (areaW - pad * 2) / bw, (areaH - pad * 2) / bh);
     const bcx = (bb.minX + bb.maxX) / 2, bcy = (bb.minY + bb.maxY) / 2;
-    const tx = areaW / 2 - bcx * s, ty = (areaH - 40) / 2 - bcy * s;
+    const tx = areaW / 2 - bcx * s;
+    // Seat the train a little toward the player's side of the table (the
+    // old dead-center left a void of felt above the rack), clamped so a
+    // full-size snake always keeps its margin from the felt's edge.
+    let ty = areaH * 0.54 - bcy * s;
+    const tyMin = 14 - bb.minY * s, tyMax = areaH - 14 - bb.maxY * s;
+    ty = tyMin <= tyMax ? Math.min(Math.max(ty, tyMin), tyMax) : (tyMin + tyMax) / 2;
     const board = $('board');
     board.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
     for (const sl of slots.slots) {
@@ -1643,7 +1666,26 @@ if (typeof window !== 'undefined') window.DomSim = api;
 
   function layout(animate) {
     if (!S) return;
-    fitBoard(computeSlots(), animate !== false && !REDUCED);
+    let slots = computeSlots(ROWLEN);
+    // Reflow rescue: shrink-to-fit alone crushes the train to a strip on
+    // short, wide screens (landscape phones). If the default row length
+    // would scale tiles below readable size, try other row lengths and
+    // keep whichever fits largest — the snake re-flows, it never just shrinks.
+    const layer = $('board-layer');
+    const areaW = layer.clientWidth, areaH = layer.clientHeight;
+    if (areaW && areaH > 90 && S.board.length > 1) {
+      const fit = (bb) => Math.min(1, (areaW - 60) / (bb.maxX - bb.minX), (areaH - 60) / (bb.maxY - bb.minY));
+      let bestS = fit(slots.bbox);
+      if (bestS < 0.45) {
+        const total = S.board.reduce((a, n) => a + (n.a === n.b ? TW : TH) + GAP, 0);
+        for (let r = 1; r <= 8; r++) {
+          const cand = computeSlots(Math.max(TH + GAP, total / r));
+          const cs = fit(cand.bbox);
+          if (cs > bestS * 1.1) { bestS = cs; slots = cand; }
+        }
+      }
+    }
+    fitBoard(slots, animate !== false && !REDUCED);
   }
 
   /* ---------------- particles + shake ---------------- */
@@ -2604,13 +2646,13 @@ if (typeof window !== 'undefined') window.DomSim = api;
   (function scatter() {
     const box = $('title-scatter');
     const heroes = [
-      { a: 6, b: 6, x: 4, y: 30, r: -14, tw: 58 },
-      { a: 5, b: 3, x: 80, y: 34, r: 12, tw: 58 },
+      { a: 6, b: 6, x: 3, y: 79, r: -14, tw: 52 },
+      { a: 5, b: 3, x: 83, y: 81, r: 12, tw: 52 },
     ];
     const chain = [
-      { a: 6, b: 4, x: 20, y: 4, r: -9 },
-      { a: 4, b: 2, x: 40, y: 2.5, r: 3 },
-      { a: 2, b: 5, x: 60, y: 4, r: 13 },
+      { a: 6, b: 4, x: 20, y: 1.2, r: -9 },
+      { a: 4, b: 2, x: 40, y: 0.4, r: 3 },
+      { a: 2, b: 5, x: 60, y: 1.2, r: 13 },
     ];
     heroes.forEach((s) => {
       const t = makeTile(s.a, s.b, false);
