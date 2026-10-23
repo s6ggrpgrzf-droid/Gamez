@@ -8,3 +8,5 @@ See [DEPLOY.md](DEPLOY.md) for setup (Workers Builds or dashboard paste) and the
 - `room.js` — pure room logic + JSON protocol
 - `sim.js` — the game's sim, synced verbatim from the client (`sync-sim.sh` in the author's workspace re-extracts it)
 - `wrangler.toml` — Worker name, `ROOMS` binding, `v1` migration
+
+Deployed via Cloudflare Workers Builds (connected 2026-10-23): pushes to `main` touching this directory run `npx wrangler deploy`, which applies the Durable Object migration and the `ROOMS` binding.
