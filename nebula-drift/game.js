@@ -673,7 +673,8 @@
       figure: fig.name, seed: fig.story,
       nearName: fig.near.name, nearDist: fmtDist(fig.near.dist),
       farName: fig.far.name, farDist: fmtDist(fig.far.dist),
-      date: aiDateKey(tonight.date)
+      date: aiDateKey(tonight.date),
+      guest: fig.guest || ''
     }, function (t) {
       aiFigPending[fig.name] = false;
       if (t) aiFigText[fig.name] = t;
@@ -686,7 +687,10 @@
       var bright = tonight.stars.filter(function (s) { return s.alt > 20; })
         .sort(function (a, b) { return a.mag - b.mag; }).slice(0, 3)
         .map(function (s) { return s.name; }).join(', ');
-      aiFetch('driftnight', { date: dateStr, up: upStr, bright: bright }, function (t) {
+      var upPlanets = planetPts.filter(function (p) { return p.alt > 0; })
+        .sort(function (a, b) { return a.mag - b.mag; })
+        .map(function (p) { return p.name + ' ' + skyPhrase(p.dir) + ', magnitude ' + p.mag.toFixed(1); }).join('; ');
+      aiFetch('driftnight', { date: dateStr, up: upStr, bright: bright, planets: upPlanets }, function (t) {
         if (t) aiTonightSub = t;
       });
       ups.slice(0, 3).forEach(function (u) { ensureFigAi(u.fig); });
