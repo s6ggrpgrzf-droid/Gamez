@@ -70,5 +70,37 @@ for (let m = 0; m < 12; m++) {
 }
 ok(sane, 'monthly sweep 2026: finite, in-band magnitudes and distances', worst);
 
+/* describeCompany geometry: figure centres and radii rebuilt from the
+ * SKY catalogue exactly as game.js builds them. */
+function figGeoFor(date) {
+  const sky = SKY.tonightSky(date, SKY.HOME);
+  const byName = {};
+  sky.stars.forEach(s => { byName[s.name] = s; });
+  return SKY.FIGURES.map(f => {
+    const used = new Set(); f.lines.flat().forEach(n => used.add(n));
+    const acc = [0, 0, 0];
+    used.forEach(n => { const d = byName[n].dir; acc[0] += d[0]; acc[1] += d[1]; acc[2] += d[2]; });
+    const len = Math.hypot(acc[0], acc[1], acc[2]) || 1;
+    const centre = [acc[0] / len, acc[1] / len, acc[2] / len];
+    let radius = 0;
+    used.forEach(n => { radius = Math.max(radius, PLANETS.angBetween(byName[n].dir, centre)); });
+    return { name: f.name, centre, radius };
+  });
+}
+{
+  const geo = figGeoFor(tonight);
+  const sky = SKY.tonightSky(tonight, SKY.HOME);
+  const sat = PLANETS.positions(tonight).find(p => p.name === 'Saturn');
+  const satDir = SKY.dirFromRaDec(sat.ra, sat.dec, SKY.HOME.lat, sky.lst);
+  const co = PLANETS.describeCompany(satDir, geo, sky.stars);
+  ok(co.host === null, 'tonight: Saturn hosts in no drawn figure (Pisces gap)', 'host=' + co.host);
+  ok(co.near.length === 2 && co.near[0].name === 'Aries' && co.near[1].name === 'Pegasus',
+    'tonight: Saturn stands between Aries and Pegasus (nearest centre first)',
+    'near=' + co.near.map(n => n.name).join(','));
+  const aries = geo.find(g => g.name === 'Aries');
+  const inAries = PLANETS.describeCompany(aries.centre, geo, sky.stars);
+  ok(inAries.host === 'Aries', 'synthetic: a point at the Aries centre is its guest', 'host=' + inAries.host);
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

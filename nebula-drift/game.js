@@ -331,6 +331,15 @@
       centre: [centreAcc[0] / cLen, centreAcc[1] / cLen, centreAcc[2] / cLen],
       upFrac: totStars ? upStars / totStars : 0, near: nearSt, far: farSt
     };
+    /* angular radius: the farthest of the figure's own stars from its
+     * centre — what "inside the figure" means for a visiting planet */
+    figObj.radius = 0;
+    Object.keys(usedSet).forEach(function (nm) {
+      var sd = tonight.stars[catByName[nm]].dir;
+      var cosA = sd[0] * figObj.centre[0] + sd[1] * figObj.centre[1] + sd[2] * figObj.centre[2];
+      var angA = Math.acos(Math.max(-1, Math.min(1, cosA)));
+      if (angA > figObj.radius) figObj.radius = angA;
+    });
     Object.keys(usedSet).forEach(function (nm) { catStars[catByName[nm]].fig = figObj; });
     figures.push(figObj); figuresByName[fDef.name] = figObj;
   });
@@ -533,7 +542,8 @@
   }
 
   /* ================= Pass 2 state (ported) ================= */
-  var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false, chimed: false, unravelled: false };
+  var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false, chimed: false, unravelled: false,
+    planet: null, pAlpha: 0, pActT: 0, planetAng: 9, figAng: 9 };
   var hasVoyaged = false;
   try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
 
@@ -683,6 +693,46 @@
     } catch (e) { /* silent — authored lines carry the night */ }
   })();
 
+  /* ================= planet lines (authored, planets Pass 2) =================
+   * Each planet gets one authored line for the night, composed at boot
+   * from computed facts only: where it stands (skyPhrase), whose
+   * company it keeps (planets.js describeCompany against the real
+   * figures and stars), and how bright it truly is tonight. The
+   * character clauses are fixed and factual. A planet standing inside
+   * a figure also marks that figure — its story gains a guest line. */
+  var PLANET_VOICE = {
+    Mercury: { who: 'the swift one, who never strays far from the Sun', pro: 'he' },
+    Venus: { who: 'the brightest of all the wanderers', pro: 'she' },
+    Mars: { who: 'the red wanderer', pro: 'he' },
+    Jupiter: { who: 'the giant, slow and certain in his rounds', pro: 'he' },
+    Saturn: { who: 'the slowest wanderer — a generation to cross the whole sky', pro: 'he' }
+  };
+  function planetBrightness(mag) {
+    if (mag <= -3) return 'Blazing — outshone only by the Moon.';
+    if (mag <= -1.5) return 'Bright enough to be mistaken for something landing.';
+    if (mag <= 0.2) return 'Steady and unmistakable.';
+    return 'Modest tonight — but no true star holds its light so steady.';
+  }
+  (function composePlanetLines() {
+    if (typeof PLANETS === 'undefined' || !PLANETS.describeCompany) return;
+    var figGeo = figures.map(function (f) { return { name: f.name, centre: f.centre, radius: f.radius }; });
+    planetPts.forEach(function (p) {
+      var v = PLANET_VOICE[p.name]; if (!v) return;
+      var co = PLANETS.describeCompany(p.dir, figGeo, tonight.stars);
+      p.host = co.host;
+      var company = '';
+      if (co.host) company = ', a guest of ' + co.host;
+      else if (co.nearStar) company = ', close beside ' + co.nearStar.name;
+      else if (co.near.length === 2 && co.near[1].ang < 0.7) company = ', between ' + co.near[0].name + ' and ' + co.near[1].name;
+      p.line = p.name + ' — ' + v.who + '. Tonight ' + v.pro + ' stands ' +
+        skyPhrase(p.dir) + company + '. ' + planetBrightness(p.mag);
+      if (co.host && p.alt > 0) {
+        var hf = figuresByName[co.host];
+        if (hf && !hf.guest) hf.guest = p.name;
+      }
+    });
+  })();
+
   var tapFlashUntil = 9;
   var bootGreetDone = false, BOOT_GREET_SECS = 4;
   function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
@@ -708,11 +758,14 @@
        * figure may settle and draw its threads beneath it; its story
        * takes the whisper once the greeting's beat is done */
       setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
+    } else if (P2.planet && P2.pAlpha > 0.3 && P2.planet.line && (!fig || P2.planetAng <= P2.figAng)) {
+      setWhisper('pl:' + P2.planet.name, P2.planet.name, P2.planet.line);
     } else if (fig && P2.alpha > 0.3) {
       var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
       var aiFig = aiFigText[fig.name] || null;
-      setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s'), fig.name,
-        hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : (aiFig || fig.story));
+      var storyShown = aiFig || (fig.story + (fig.guest ? ' ' + fig.guest + ' visits tonight.' : ''));
+      setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : ''), fig.name,
+        hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : storyShown);
     } else if (t < tapFlashUntil) {
       setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
     } else {
@@ -1080,6 +1133,31 @@
     } else {
       P2.alpha = Math.max(0, P2.alpha - dt * 0.7);
       if (P2.alpha === 0) { P2.activeName = null; P2.drawFig = null; rebuildBoost(null); }
+    }
+    P2.figAng = nextFig ? (nextFig === curFig ? curAng : candAng) : 9;
+
+    /* planet detection — a planet is a point, not a region, so its
+     * gate is tighter than a figure's; same hysteresis spirit. Only
+     * planets actually up tonight can settle. */
+    var pCur = P2.planet, pCurAng = 9, pCand = null, pCandAng = 9;
+    for (var pdi = 0; pdi < planetPts.length; pdi++) {
+      var pd = planetPts[pdi];
+      if (pd.alt <= 0) continue;
+      var cosPd = pd.dir[0] * fwd[0] + pd.dir[1] * fwd[1] + pd.dir[2] * fwd[2];
+      var angPd = Math.acos(Math.max(-1, Math.min(1, cosPd)));
+      if (angPd < pCandAng) { pCandAng = angPd; pCand = pd; }
+      if (pd === pCur) pCurAng = angPd;
+    }
+    var nextP = null;
+    if (pCur && pCurAng < 0.24 && !(pCand && pCandAng < pCurAng - 0.08)) nextP = pCur;
+    else if (pCand && pCandAng < 0.16) nextP = pCand;
+    if (nextP) {
+      if (nextP !== P2.planet) { P2.planet = nextP; P2.pActT = t; }
+      P2.planetAng = nextP === pCur ? pCurAng : pCandAng;
+      P2.pAlpha = Math.min(1, P2.pAlpha + dt * 0.8);
+    } else {
+      P2.pAlpha = Math.max(0, P2.pAlpha - dt * 0.7);
+      if (P2.pAlpha === 0) P2.planet = null;
     }
     P2.activeFor = P2.activeName ? t - P2.actT : 0;
 

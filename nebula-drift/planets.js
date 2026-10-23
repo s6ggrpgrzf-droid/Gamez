@@ -125,9 +125,42 @@ function planetPositions(date) {
   return PLANET_ELEMENTS.map(function (el) { return planetPosition(el, earth, jd); });
 }
 
+/* Where a planet keeps its company tonight, in the game's terms:
+ * the figure whose drawn shape it stands inside (centre distance
+ * within the figure's own angular radius plus a small margin), else
+ * the two nearest figure centres it stands between, else the nearest
+ * bright star. Pure geometry on unit vectors; the game supplies the
+ * figures and stars, so this stays Node-testable.
+ * figs:  [{name, centre: [x,y,z], radius: radians}]
+ * stars: [{name, dir: [x,y,z]}]                                */
+function angBetween(a, b) {
+  var d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  return Math.acos(Math.max(-1, Math.min(1, d)));
+}
+function describeCompany(dir, figs, stars) {
+  var ranked = figs.map(function (f) {
+    return { name: f.name, ang: angBetween(dir, f.centre), radius: f.radius || 0 };
+  }).sort(function (a, b) { return a.ang - b.ang; });
+  var host = null;
+  for (var i = 0; i < ranked.length; i++) {
+    if (ranked[i].ang <= ranked[i].radius + 0.10) { host = ranked[i].name; break; }
+  }
+  var nearStar = null;
+  for (var s = 0; s < stars.length; s++) {
+    var sa = angBetween(dir, stars[s].dir);
+    if (sa < 0.14 && (!nearStar || sa < nearStar.ang)) nearStar = { name: stars[s].name, ang: sa };
+  }
+  return {
+    host: host,
+    near: ranked.slice(0, 2).map(function (r) { return { name: r.name, ang: r.ang }; }),
+    nearStar: nearStar
+  };
+}
+
 var PLANETS = {
   ELEMENTS: PLANET_ELEMENTS, positions: planetPositions,
-  helioXYZ: helioXYZ, position: planetPosition, jdFromDate: planetJdFromDate
+  helioXYZ: helioXYZ, position: planetPosition, jdFromDate: planetJdFromDate,
+  describeCompany: describeCompany, angBetween: angBetween
 };
 if (typeof window !== 'undefined') window.PLANETS = PLANETS;
 if (typeof module !== 'undefined' && module.exports) module.exports = PLANETS;
