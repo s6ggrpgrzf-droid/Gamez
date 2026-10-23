@@ -5,14 +5,15 @@
  * (Also kept verbatim at ../sim.js so node tests run against this code.) */
 'use strict';
 
+function rngNext(st) {
+  st.rngS = (st.rngS + 0x6D2B79F5) | 0;
+  let t = Math.imul(st.rngS ^ (st.rngS >>> 15), 1 | st.rngS);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 function mulberry32(seed) {
-  let s = seed >>> 0;
-  return function () {
-    s |= 0; s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  const box = { rngS: seed >>> 0 };
+  return function () { return rngNext(box); };
 }
 
 function newSet() {
@@ -26,10 +27,10 @@ function pips(t) { return t.a + t.b; }
 function handPips(hand) { return hand.reduce((s, t) => s + pips(t), 0); }
 function tileKey(t) { return t.a + '-' + t.b; }
 
-function shuffled(set, rng) {
+function shuffled(set, st) {
   const d = set.slice();
   for (let i = d.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
+    const j = Math.floor(rngNext(st) * (i + 1));
     [d[i], d[j]] = [d[j], d[i]];
   }
   return d;
@@ -64,9 +65,9 @@ function canPlay(state, player) {
 
 function newGame(seed, target, mode) {
   _nextId = 1;
-  const rng = mulberry32(seed == null ? (Date.now() % 2147483647) : seed);
   const st = {
-    rng, target: target || 100, round: 1,
+    rngS: (seed == null ? (Date.now() % 2147483647) : seed) >>> 0,
+    target: target || 100, round: 1,
     mode: mode === 'fives' ? 'fives' : 'draw',
     scores: [0, 0],           // [you, house]
     hands: [[], []], boneyard: [], board: [],
@@ -96,7 +97,7 @@ function highestOpener(hands) {
 }
 
 function dealRound(st) {
-  const deck = shuffled(newSet(), st.rng);
+  const deck = shuffled(newSet(), st);
   st.hands = [[], []];
   for (let i = 0; i < 7; i++) { st.hands[0].push(deck.pop()); st.hands[1].push(deck.pop()); }
   st.boneyard = deck;
@@ -268,20 +269,21 @@ function aiChoose(st, player, difficulty) {
     return { type: 'knock' };
   }
   if (difficulty === 0) {
-    const mv = moves[Math.floor(st.rng() * moves.length)];
+    const mv = moves[Math.floor(rngNext(st) * moves.length)];
     return { type: 'play', tileIdx: mv.tileIdx, end: mv.end };
   }
   let best = null, bestS = -1e9;
   for (const mv of moves) {
     let s = scoreMove(st, player, mv, difficulty);
-    if (difficulty === 1) s += (st.rng() - 0.5) * 2.5; // Sharp: a little looseness
+    if (difficulty === 1) s += (rngNext(st) - 0.5) * 2.5; // Sharp: a little looseness
     if (s > bestS) { bestS = s; best = mv; }
   }
   return { type: 'play', tileIdx: best.tileIdx, end: best.end };
 }
 
-// Snapshots for undo: the whole state is plain data except rng (a closure),
-// so we persist the node-id counter and re-seed rng on restore (a new timeline).
+// Snapshots for undo: the state is all plain data (the rng stream lives in
+// the rngS integer), so a snapshot is a lossless JSON copy. Restore re-seeds
+// the stream anyway — undo starts a new timeline, as it always has.
 function snapshot(st) {
   return JSON.stringify({ nextId: _nextId, st });
 }
@@ -289,12 +291,12 @@ function restore(snap) {
   const o = JSON.parse(snap);
   _nextId = o.nextId;
   const st = o.st;
-  st.rng = mulberry32((Date.now() % 2147483647) || 1);
+  st.rngS = (Date.now() % 2147483647) || 1;
   return st;
 }
 
 const api = {
-  mulberry32, newSet, newGame, dealRound, playTile, drawTile, knock,
+  mulberry32, rngNext, newSet, newGame, dealRound, playTile, drawTile, knock,
   nextRound, legalMoves, canPlay, exposed, aiChoose, pips, handPips, tileKey,
   snapshot, restore, scoreMove,
 };

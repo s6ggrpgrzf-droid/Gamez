@@ -5,6 +5,7 @@
  * or point wrangler at this file for Workers Builds.
  */
 import { makeCode, createRoom, publicState, handleHello, handleMessage } from './room.js';
+import Sim from './sim.js';
 
 const ROOM_TTL_MS = 2 * 3600 * 1000;
 
@@ -25,12 +26,22 @@ export class DominoRoom {
     this.room = null;
     ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.get('room');
-      if (saved) this.room = saved;
+      if (saved) {
+        this.room = saved;
+        // The sim is stored as a Sim.snapshot string: it carries the node-id
+        // counter, which module state alone would lose across evictions.
+        const snap = await ctx.storage.get('simSnap');
+        if (snap) this.room.sim = Sim.restore(snap);
+      }
     });
   }
 
   async save() {
-    if (this.room) await this.ctx.storage.put('room', this.room);
+    if (!this.room) return;
+    const { sim, ...rest } = this.room;
+    await this.ctx.storage.put('room', rest);
+    if (sim) await this.ctx.storage.put('simSnap', Sim.snapshot(sim));
+    else await this.ctx.storage.delete('simSnap');
   }
 
   sendTo(seat, msg) {
