@@ -939,6 +939,33 @@
     }
     return 'Mended ' + datePhrase(lastDated.d);
   }
+  /* care, said aloud. Every stretch of seam has always remembered how
+   * it was laid (the number saved with each mend). These words only
+   * describe the hand; they never rank it. In play the saved numbers
+   * sit between 0.30 (a hurried hand) and about 0.60 (a very slow one),
+   * so the cutoffs below are set to that band. Tune them here. */
+  function careWord(cares) {
+    if (!cares || !cares.length) return '';
+    var sum = 0;
+    for (var i = 0; i < cares.length; i++) sum += cares[i];
+    var avg = sum / cares.length;
+    return avg >= 0.50 ? 'slowly'
+      : avg >= 0.42 ? 'steadily'
+      : avg >= 0.35 ? 'at an easy pace'
+      : avg >= 0.31 ? 'briskly'
+      : 'in one quick sweep';
+  }
+  /* the small caption under a piece in the cabinet: when it was
+   * mended, then how its latest seam was laid */
+  function seamCaption(e) {
+    var ms = (e.mends && e.mends.length) ? e.mends : [];
+    var last = ms.length ? ms[ms.length - 1] : null;
+    var how = careWord(last ? last.c : e.c);
+    var care = how ? (ms.length > 1 ? 'The latest seam, laid ' : 'Laid ') + how : '';
+    var prov = provLine(e);
+    return prov && care ? prov + '\n' + care : (prov || care);
+  }
+
   function completeBowl() {
     bowl.complete = true;
     bowl.completeT = elapsed;
@@ -966,7 +993,7 @@
     paintCabBtn();
     warmth = 1; /* the room runs a little warmer for a while */
     if (window.MenderyAudio) window.MenderyAudio.bell();
-    setWhisper('mended:' + bowl.id, 'Mended.', bowl.rebreak ? bowl.person.rebreakClosing : bowl.person.closing);
+    setWhisper('mended:' + bowl.id, 'Mended.', bowl.rebreak ? bowl.person.rebreakClosing : bowl.person.closing, 650, careWord(caresNow) ? 'Laid ' + careWord(caresNow) : '');
   }
   cv.addEventListener('pointerdown', function (e) {
     if (window.MenderyAudio) window.MenderyAudio.wake();
@@ -1730,7 +1757,7 @@
       var person = PEOPLE[cabinet[idx].p];
       var cabEntry = cabinet[idx];
       var cabLine = (cabEntry.mends && cabEntry.mends.length > 1 && person.rebreakClosing) ? person.rebreakClosing : person.closing;
-      setWhisper('cab:' + idx, person.title, cabLine, 320, provLine(cabEntry));
+      setWhisper('cab:' + idx, person.title, cabLine, 320, seamCaption(cabEntry));
     } else {
       cabSel = -1;
       setWhisper('cab', null, null, 320);

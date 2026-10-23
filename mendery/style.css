@@ -86,6 +86,7 @@ html, body {
   text-transform: uppercase;
   color: rgba(216, 188, 130, 0.66);
 }
+#whisperWhen { white-space: pre-line; }
 #whisperWhen:empty { display: none; }
 /* Short landscape: the bowl owns the middle, so the whisper moves to
  * the quiet bench on the left instead of sitting on the porcelain. */
