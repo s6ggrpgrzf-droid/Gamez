@@ -19,6 +19,8 @@
  *       vamptaunt blood-moon     comic panicked-villager line      {}
  *       fairway   tiny-fairway   serene golf hole name             {hole}
  *       fishlore  castaway-cove  whimsical fish lore line          {fish}
+ *       driftnight nebula-drift  tonight's opening sky whisper     {date, up, bright}
+ *       driftfig  nebula-drift   fresh constellation whisper       {figure, seed, nearName, nearDist, farName, farDist, date}
  *       krakentaunt neon-depths  kraken taunt for pinball          {}
  *       palette   still-life     harmonious hex color array        {mood} -> {text: "[...]"}
  *       shipstory greywater      harbormaster: new/returning ship   {keeper,day,...} -> {ship} (KV registry)
@@ -31,6 +33,15 @@
  * Every game treats the response as optional: timeouts and failures fall
  * back to local content silently. Nothing here is user-visible as "AI".
  */
+
+/* DEPLOY NOTES (verified by live probes, 2026-10-22/23): the live worker's
+ * kind set matches this file for every kind probed. Client-referenced kinds
+ * that answer "unknown kind" live: 'debrief' (neon-void — it silently uses
+ * its local fallbacks), 'sparrowrival' + 'sparrowtale' (staged, scrapped
+ * game). Caution stands anyway: this worker's code HAS drifted from this
+ * file before (Oct 2026), so pull the live code in the dashboard editor
+ * and merge new kinds into THAT before deploying; never deploy this file
+ * wholesale on assumption. */
 
 var ORIGIN = "https://s6ggrpgrzf-droid.github.io";
 var MODELS = [
@@ -221,6 +232,36 @@ var KINDS = {
       var s = String((c && c.start) || "COLD").toUpperCase(), e = String((c && c.end) || "WARM").toUpperCase();
       return "Write a playful one-line theme for a word ladder puzzle from " + s + " to " + e +
         " (max 12 words). Example: 'From frost to furnace, one letter at a time.'";
+    }
+  },
+  driftnight: {
+    max: 150,
+    tokens: 90,
+    sys: "You write the opening whisper for Nebula Drift, a private night-sky drifting experience over Edmond, Oklahoma. Quiet, luminous, unhurried — one breath of a line. Astronomically faithful: use only the figures and stars named in the prompt and invent nothing. Never mention being an AI.",
+    prompt: function (c) {
+      var date = String((c && c.date) || "tonight").slice(0, 40);
+      var up = String((c && c.up) || "the autumn figures").slice(0, 300);
+      var bright = String((c && c.bright) || "").slice(0, 120);
+      return "Write tonight's opening whisper for a night-sky drift over Edmond on " + date + ". " +
+        "Above the horizon tonight: " + up + ". " +
+        (bright ? "Brightest stars up: " + bright + ". " : "") +
+        "One sentence, max 24 words, quiet and luminous; second person welcome. Name at most three figures. " +
+        "Example flavour: 'Cygnus rides high in the west tonight, and the queen climbs in the north-east — come and pull her apart.'";
+    }
+  },
+  driftfig: {
+    max: 175,
+    tokens: 90,
+    sys: "You write whispered constellation notes for Nebula Drift, a private night-sky drifting experience. Quiet, poetic, astronomically faithful. Use ONLY the facts and the seed story given in the prompt; invent no distances, no stars, and no mythology beyond them. Never mention being an AI.",
+    prompt: function (c) {
+      var fig = String((c && c.figure) || "a constellation").slice(0, 30);
+      var seed = String((c && c.seed) || "").slice(0, 160);
+      var nn = String((c && c.nearName) || "its nearest star").slice(0, 30), nd = String((c && c.nearDist) || "").slice(0, 12);
+      var fn = String((c && c.farName) || "its farthest star").slice(0, 30), fd = String((c && c.farDist) || "").slice(0, 12);
+      return "Write a fresh whispered note for the constellation " + fig + " (one or two short sentences, max 26 words). " +
+        (seed ? "Seed story: " + seed + " " : "") +
+        "True distances: its nearest star here, " + nn + ", is " + nd + " light-years away; its farthest, " + fn + ", is " + fd + " light-years away. " +
+        "Weave that depth into the wonder if it fits; never invent numbers or facts.";
     }
   },
   racehype: {
@@ -526,6 +567,7 @@ async function shipStory(env, ctx, body, game, ip) {
 
 /* trainpassenger: one generation per date, cached in KV, served to every
    conductor. Structured {passengers:[{name,story}]}. */
+
 var TRAINPASSENGER_SCHEMA = {
   type: "json_schema",
   json_schema: {

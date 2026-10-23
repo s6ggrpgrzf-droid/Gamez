@@ -584,7 +584,82 @@
   var dateStr = tonight.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   var tonightMain = 'Tonight · ' + dateStr + ' · the sky over ' + SKY.HOME.name;
   var tonightSub = 'drag to look — it drifts on its own';
+
+  /* ================= gamez-ai whispers (silent, Pass 1) =================
+   * Tonight's opening line and fresh figure stories come from the shared
+   * gamez-ai worker when it answers; the authored lines stay as the
+   * instant fallback and the game is unchanged if it never does.
+   * Prefetch hides the latency: tonight + the three highest figures at
+   * boot, every other figure lazily the first time it settles. */
+  var AI_BASE = 'https://gamez-ai.chaoticutopia84.workers.dev';
+  var aiTonightSub = null;
+  var aiFigText = {}, aiFigPending = {};
+  function aiFetch(kind, ctx2, cb) {
+    var done = false, timer = null;
+    function fin(t) { if (!done) { done = true; if (timer) clearTimeout(timer); cb(t); } }
+    timer = setTimeout(function () { fin(null); }, 7000);
+    try {
+      fetch(AI_BASE + '/g', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind, game: 'nebula-drift', ctx: ctx2 })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) { fin(d && d.text ? String(d.text) : null); })
+        .catch(function () { fin(null); });
+    } catch (e) { fin(null); }
+  }
+  function aiDateKey(d) {
+    function p(x) { return (x < 10 ? '0' : '') + x; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  var COMPASS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+  function dirAltAz(dir) {
+    var alt = Math.asin(Math.max(-1, Math.min(1, dir[1]))) * 180 / Math.PI;
+    var az = (Math.atan2(dir[0], -dir[2]) * 180 / Math.PI + 360) % 360;
+    return { alt: alt, az: az };
+  }
+  function skyPhrase(dir) {
+    var a = dirAltAz(dir);
+    var sector = COMPASS[Math.round(a.az / 45) % 8];
+    return (a.alt >= 50 ? 'high in the ' : a.alt >= 26 ? 'in the ' : 'low in the ') + sector;
+  }
+  function upFigures() {
+    var ups = [];
+    figures.forEach(function (fig) {
+      var a = dirAltAz(fig.centre);
+      if (fig.upFrac > 0.5 && a.alt > 12) ups.push({ fig: fig, alt: a.alt });
+    });
+    ups.sort(function (x, y) { return y.alt - x.alt; });
+    return ups;
+  }
+  function ensureFigAi(fig) {
+    if (!fig || aiFigText[fig.name] || aiFigPending[fig.name]) return;
+    aiFigPending[fig.name] = true;
+    aiFetch('driftfig', {
+      figure: fig.name, seed: fig.story,
+      nearName: fig.near.name, nearDist: fmtDist(fig.near.dist),
+      farName: fig.far.name, farDist: fmtDist(fig.far.dist),
+      date: aiDateKey(tonight.date)
+    }, function (t) {
+      aiFigPending[fig.name] = false;
+      if (t) aiFigText[fig.name] = t;
+    });
+  }
+  (function prefetchAiWhispers() {
+    try {
+      var ups = upFigures();
+      var upStr = ups.slice(0, 5).map(function (u) { return u.fig.name + ' ' + skyPhrase(u.fig.centre); }).join(', ');
+      var bright = tonight.stars.filter(function (s) { return s.alt > 20; })
+        .sort(function (a, b) { return a.mag - b.mag; }).slice(0, 3)
+        .map(function (s) { return s.name; }).join(', ');
+      aiFetch('driftnight', { date: dateStr, up: upStr, bright: bright }, function (t) {
+        if (t) aiTonightSub = t;
+      });
+      ups.slice(0, 3).forEach(function (u) { ensureFigAi(u.fig); });
+    } catch (e) { /* silent — authored lines carry the night */ }
+  })();
+
   var tapFlashUntil = 9;
+  var bootGreetDone = false, BOOT_GREET_SECS = 4;
   function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
   var lastWhisperKey = '__boot';
   function setWhisper(key, main, sub) {
@@ -598,16 +673,23 @@
   function fmtDist(d) { return d ? d.toLocaleString('en-US') : ''; }
   function updateWhisper(t) {
     var fig = P2.drawFig;
+    if (!bootGreetDone && (t >= tapFlashUntil || t >= BOOT_GREET_SECS)) bootGreetDone = true;
     if (fig && P2.alpha > 0.3 && P2.voyage > 0.35) {
       setWhisper('dis:' + fig.name, fig.name + ', dissolved',
         fig.near.name + ' is ' + fmtDist(fig.near.dist) + ' light-years away · ' +
         fig.far.name + ' is ' + fmtDist(fig.far.dist) + ' — the shape only exists from home');
+    } else if (t < tapFlashUntil && !bootGreetDone) {
+      /* the boot greeting holds the whisper for its first seconds — a
+       * figure may settle and draw its threads beneath it; its story
+       * takes the whisper once the greeting's beat is done */
+      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
     } else if (fig && P2.alpha > 0.3) {
       var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
-      setWhisper('fig:' + fig.name + (hintOn ? ':h' : ':s'), fig.name,
-        hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : fig.story);
+      var aiFig = aiFigText[fig.name] || null;
+      setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s'), fig.name,
+        hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : (aiFig || fig.story));
     } else if (t < tapFlashUntil) {
-      setWhisper('tonight', tonightMain, tonightSub);
+      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
     } else {
       setWhisper('none', null);
     }
@@ -965,6 +1047,7 @@
         P2.activeName = nextFig.name; P2.actT = t;
         P2.chimed = false; P2.unravelled = false;
         rebuildBoost(nextFig);
+        ensureFigAi(nextFig);
         if (AU) AU.setRegion(nextFig.name);
       }
       P2.drawFig = nextFig;
