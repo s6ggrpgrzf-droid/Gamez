@@ -281,6 +281,41 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 /* the feature is the biggest star in the sky, wearing its brass ring;
    the marquee retired into a halo. the picks are bright orbs beneath it. */
 .featured{width:100%;max-width:1100px;padding:30px 20px 0;position:relative;z-index:1}
+/* ---------- the theatre room: a warm band the feature lives in ----------
+   the page is one cool night sky; the feature presentation is indoors.
+   the band breaks the column full-width: lamplight warmth at the center,
+   velvet folds at the edges, gold rules where the room meets the night */
+.theatre-band{
+  position:relative;z-index:1;align-self:stretch;
+  display:flex;flex-direction:column;align-items:center;
+  padding:46px 20px 42px;
+  background:
+    radial-gradient(ellipse 72% 95% at 50% 40%, rgba(255,178,96,.15), rgba(146,84,32,.06) 52%, rgba(0,0,0,0) 78%),
+    linear-gradient(180deg,#150e08 0%,#110a06 34%,#0e0805 100%);
+  border-top:1px solid rgba(217,184,119,.38);
+  border-bottom:1px solid rgba(217,184,119,.38);
+  box-shadow:inset 0 1px 0 rgba(255,224,170,.14), inset 0 -14px 34px rgba(0,0,0,.5),
+             inset 0 14px 34px rgba(0,0,0,.45);
+}
+.theatre-band::before,.theatre-band::after{
+  content:"";position:absolute;top:0;bottom:0;width:118px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,
+    rgba(0,0,0,.5) 0 9px, rgba(96,26,22,.28) 9px 15px,
+    rgba(0,0,0,.12) 15px 22px, rgba(60,14,12,.2) 22px 30px);
+}
+.theatre-band::before{left:0;
+  -webkit-mask-image:linear-gradient(90deg,#000 30%,transparent 96%);
+          mask-image:linear-gradient(90deg,#000 30%,transparent 96%)}
+.theatre-band::after{right:0;transform:scaleX(-1);
+  -webkit-mask-image:linear-gradient(90deg,#000 30%,transparent 96%);
+          mask-image:linear-gradient(90deg,#000 30%,transparent 96%)}
+.theatre-band .feat3d{z-index:1}
+@media (max-width:480px){
+  .theatre-band{padding:36px 16px 34px}
+  .theatre-band::before,.theatre-band::after{width:64px}
+}
+/* the picks' half of Tonight: the band already gave the room its air */
+.featured-lobby{padding-top:0}
 .feat3d{display:flex;flex-direction:column;align-items:center;text-align:center;
   text-decoration:none;color:#fff;position:relative;padding:6px 0 2px}
 .feat-kicker{display:block;font-size:10px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;
