@@ -79,12 +79,15 @@
     'attribute float aPhase; attribute float aTwk; attribute float aSpike;' +
     'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift;' +
     'uniform float uTime; uniform float uScaleH; uniform float uAlphaMul;' +
+    'uniform vec3 uMoonDir; uniform float uMoonDim;' +
     'varying vec3 vCol; varying float vAlpha; varying float vSpike;' +
     'void main(){' +
     '  vec4 vp = uRot * vec4(aPos - uShift, 1.0);' +
     '  gl_Position = uProj * vp;' +
     '  float tw = 0.86 + 0.14 * sin(uTime * aTwk + aPhase);' +
-    '  vCol = aCol; vAlpha = tw * uAlphaMul; vSpike = aSpike;' +
+    '  vec3 dirW = normalize(aPos - uShift);' +
+    '  float mDim = 1.0 - uMoonDim * smoothstep(0.966, 0.9986, dot(dirW, uMoonDir)) * 0.62;' +
+    '  vCol = aCol; vAlpha = tw * uAlphaMul * mDim; vSpike = aSpike;' +
     '  gl_PointSize = clamp(aSize * uScaleH / max(1.0, -vp.z), 1.0, 64.0);' +
     '}',
     'precision mediump float;' +
@@ -162,6 +165,60 @@
     'precision mediump float;' +
     'uniform vec3 uCol; varying float vA;' +
     'void main(){ gl_FragColor = vec4(uCol, vA); }'
+  );
+
+  /* ---- the Moon: one billboarded quad, lit by the real Sun ----
+   * The disc lives in a celestial frame (p.x toward increasing RA,
+   * p.y toward the north celestial pole, both projected per frame on
+   * the CPU), so the maria keep their true place among the stars and
+   * the terminator falls where the Sun's actual direction puts it.
+   * Maria are a handful of soft dark plains in their approximate true
+   * positions — a portrait, not a photograph. The dark side is near-
+   * black and occludes: no earthshine, by design. */
+  var moonProg = makeProgram(
+    'attribute vec3 aPos; attribute vec2 aCorner;' +
+    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift; uniform float uSize;' +
+    'varying vec2 vQ;' +
+    'void main(){' +
+    '  vec4 vp = uRot * vec4(aPos - uShift, 1.0);' +
+    '  vp.xy += aCorner * (uSize * 0.5);' +
+    '  gl_Position = uProj * vp;' +
+    '  vQ = aCorner;' +
+    '}',
+    'precision mediump float;' +
+    'varying vec2 vQ;' +
+    'uniform vec2 uEast; uniform vec2 uNorth; uniform vec3 uSun; uniform float uDiscR;' +
+    'float blob(vec2 p, vec2 c, float r){ vec2 d = p - c; return smoothstep(r, r * 0.30, length(d)); }' +
+    'void main(){' +
+    '  vec2 p = vec2(dot(vQ, uEast), dot(vQ, uNorth));' +
+    '  float rp = length(p);' +
+    '  vec3 col; float alpha;' +
+    '  if (rp <= uDiscR) {' +
+    '    vec2 dn = p / uDiscR;' +
+    '    float z = sqrt(max(0.0, 1.0 - dot(dn, dn)));' +
+    '    vec3 n = vec3(dn, z);' +
+    '    float li = dot(n, normalize(uSun));' +
+    '    float maria = 0.0;' +
+    '    maria += 0.55 * blob(dn, vec2(-0.36, 0.16), 0.46);' +  /* Oceanus Procellarum */
+    '    maria += 0.50 * blob(dn, vec2(-0.28, 0.50), 0.21);' +  /* Imbrium */
+    '    maria += 0.45 * blob(dn, vec2(0.16, 0.30), 0.25);' +   /* Serenitatis */
+    '    maria += 0.50 * blob(dn, vec2(0.30, 0.02), 0.27);' +   /* Tranquillitatis */
+    '    maria += 0.55 * blob(dn, vec2(0.63, 0.27), 0.115);' +  /* Crisium */
+    '    maria += 0.40 * blob(dn, vec2(-0.06, -0.33), 0.23);' + /* Nubium */
+    '    maria += 0.35 * blob(dn, vec2(0.10, -0.60), 0.19);' +  /* southern highlands shade */
+    '    maria = clamp(maria, 0.0, 0.72);' +
+    '    vec3 base = mix(vec3(0.93, 0.90, 0.82), vec3(0.46, 0.45, 0.43), maria);' +
+    '    float shade = smoothstep(-0.10, 0.28, li);' +
+    '    col = base * (0.015 + 0.985 * shade);' +
+    '    alpha = 1.0;' +
+    '  } else {' +
+    '    float g = exp(-pow(max(0.0, rp - uDiscR) * 3.4, 1.6));' +
+    '    col = vec3(0.82, 0.85, 0.95);' +
+    '    alpha = g * 0.16;' +
+    '    if (alpha < 0.004) discard;' +
+    '  }' +
+    '  gl_FragColor = vec4(col, alpha);' +
+    '}'
   );
 
   /* ---- fullscreen fog quad ---- */
@@ -543,7 +600,8 @@
 
   /* ================= Pass 2 state (ported) ================= */
   var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false, chimed: false, unravelled: false,
-    planet: null, pAlpha: 0, pActT: 0, planetAng: 9, figAng: 9 };
+    planet: null, pAlpha: 0, pActT: 0, planetAng: 9, figAng: 9,
+    moon: null, mAlpha: 0, mActT: 0, moonAng: 9 };
   var hasVoyaged = false;
   try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
 
@@ -737,6 +795,76 @@
     });
   })();
 
+  /* ================= the Moon (Pass 1 of the 2026-10-23 picks) =========
+   * Computed at boot for the same 22:00 instant as everything else
+   * (moon.js — Schlyter's lunar theory, perturbation terms included),
+   * hung nearer than the planets (130 against their 190, inside the
+   * nearest catalogue depth ~225), so a voyage's sideways step moves
+   * it against the star shell harder than anything else in the sky —
+   * which is simply true: it IS the nearest thing here. Its whisper
+   * line is composed like the planets', from computed facts only.
+   * It does NOT take the figure-guest slot: the planets own that
+   * channel (and its AI guarantee), and the Moon changes hosts every
+   * couple of nights — its own line names its host instead. */
+  var MOON_DEPTH = 130;
+  var moonPt = null, moonGeo = null;
+  function moonPhaseClause(mp) {
+    var theta = mp.waxing ? mp.elong : 360 - mp.elong;   // 0 new, 180 full
+    if (mp.illum > 0.985) return 'Full tonight';
+    var name;
+    if (mp.illum < 0.03) name = 'New tonight — a dark disc among the stars';
+    else if (mp.illum < 0.42) name = mp.waxing ? 'A waxing crescent' : 'A waning crescent';
+    else if (mp.illum < 0.58) name = mp.waxing ? 'At first quarter' : 'At last quarter';
+    else if (mp.waxing) {
+      var n = Math.round((180 - theta) / 12.19);
+      var nw = ['one', 'two', 'three', 'four'][n - 1];
+      name = 'A waxing gibbous' + (nw ? ', ' + nw + (n === 1 ? ' night' : ' nights') + ' short of full' : '');
+    } else {
+      var n2 = Math.round((theta - 180) / 12.19);
+      var nw2 = ['one', 'two', 'three', 'four'][n2 - 1];
+      name = 'A waning gibbous' + (nw2 ? ', ' + nw2 + (n2 === 1 ? ' night' : ' nights') + ' past full' : '');
+    }
+    return name;
+  }
+  (function buildMoon() {
+    if (typeof MOON === 'undefined') return;
+    var mp = MOON.position(tonight.date);
+    var maa = SKY.altAz(mp.ra, mp.dec, SKY.HOME.lat, tonight.lst);
+    var mdir = SKY.dirFromAltAz(maa.alt, maa.az);
+    var saa = SKY.altAz(mp.sunRa, mp.sunDec, SKY.HOME.lat, tonight.lst);
+    var sunDirW = SKY.dirFromAltAz(saa.alt, saa.az);
+    moonPt = {
+      name: 'Moon', dir: mdir, alt: maa.alt, az: maa.az, ra: mp.ra, dec: mp.dec,
+      distKm: mp.distKm, illum: mp.illum, waxing: mp.waxing, elong: mp.elong,
+      sunDirW: sunDirW,
+      pos: [mdir[0] * MOON_DEPTH, mdir[1] * MOON_DEPTH, mdir[2] * MOON_DEPTH]
+    };
+    /* drawn size: the true angular diameter, magnified 5.5x so the
+     * disc and its phase read on a phone — the planets take the
+     * same licence with their cores */
+    var angDiam = 2 * Math.atan(1737.4 / mp.distKm);
+    var discWorld = 2 * MOON_DEPTH * Math.tan(angDiam * 5.5 / 2);
+    moonPt.quadSize = discWorld * 2.8;
+    moonPt.discR = 1 / 2.8;
+    /* the authored line, composed from tonight's computed facts */
+    var figGeo = figures.map(function (f) { return { name: f.name, centre: f.centre, radius: f.radius }; });
+    var co = PLANETS.describeCompany(mdir, figGeo, tonight.stars);
+    var company = '';
+    if (co.host) company = ', a guest of ' + co.host;
+    else if (co.nearStar) company = ', close beside ' + co.nearStar.name;
+    else if (co.near.length === 2 && co.near[1].ang < 0.7) company = ', between ' + co.near[0].name + ' and ' + co.near[1].name;
+    var lightSecs = mp.distKm / 299792.458;
+    moonPt.line = 'Moon — the near one, lit by borrowed sunlight. Tonight she stands ' +
+      skyPhrase(mdir) + company + '. ' + moonPhaseClause(mp) + ' — ' +
+      Math.round(mp.distKm).toLocaleString('en-US') + ' km away, and its light left ' +
+      lightSecs.toFixed(1) + ' seconds ago.';
+    /* one quad, six vertices */
+    var corners = [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]];
+    var pos = new Float32Array(6 * 3), cor = new Float32Array(6 * 2);
+    corners.forEach(function (c, i) { pos.set(moonPt.pos, i * 3); cor.set(c, i * 2); });
+    moonGeo = { pos: makeBuffer(gl.ARRAY_BUFFER, pos), corner: makeBuffer(gl.ARRAY_BUFFER, cor), count: 6 };
+  })();
+
   var tapFlashUntil = 9;
   var bootGreetDone = false, BOOT_GREET_SECS = 4;
   function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
@@ -762,7 +890,12 @@
        * figure may settle and draw its threads beneath it; its story
        * takes the whisper once the greeting's beat is done */
       setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
-    } else if (P2.planet && P2.pAlpha > 0.3 && P2.planet.line && (!fig || P2.planetAng <= P2.figAng)) {
+    } else if (P2.moon && P2.mAlpha > 0.3 && P2.moon.line &&
+               (!P2.planet || P2.moonAng <= P2.planetAng) &&
+               (!fig || P2.moonAng <= P2.figAng)) {
+      setWhisper('mo:Moon', 'Moon', P2.moon.line);
+    } else if (P2.planet && P2.pAlpha > 0.3 && P2.planet.line && (!fig || P2.planetAng <= P2.figAng) &&
+               (!P2.moon || P2.planetAng <= P2.moonAng)) {
       setWhisper('pl:' + P2.planet.name, P2.planet.name, P2.planet.line);
     } else if (fig && P2.alpha > 0.3) {
       var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
@@ -831,7 +964,57 @@
     gl.uniform1f(uniformLoc(starProg, 'uTime'), time);
     gl.uniform1f(uniformLoc(starProg, 'uScaleH'), scaleH);
     gl.uniform1f(uniformLoc(starProg, 'uAlphaMul'), alphaMul);
+    if (moonPt) {
+      gl.uniform3f(uniformLoc(starProg, 'uMoonDir'), moonPt.dir[0], moonPt.dir[1], moonPt.dir[2]);
+      gl.uniform1f(uniformLoc(starProg, 'uMoonDim'), moonPt.alt > -3 ? moonPt.illum : 0);
+    } else {
+      gl.uniform3f(uniformLoc(starProg, 'uMoonDir'), 0, 1, 0);
+      gl.uniform1f(uniformLoc(starProg, 'uMoonDim'), 0);
+    }
     gl.drawArrays(gl.POINTS, 0, geo.count);
+  }
+  function drawMoon(proj, rot, shift) {
+    if (!moonPt || !moonGeo) return;
+    /* the Sun and the celestial frame, carried into view space by
+     * the same rotation the renderer uses, then expressed in the
+     * disc's own frame: x toward increasing RA, y toward the pole */
+    var s = moonPt.sunDirW;
+    var sunView = [
+      rot[0] * s[0] + rot[4] * s[1] + rot[8] * s[2],
+      rot[1] * s[0] + rot[5] * s[1] + rot[9] * s[2],
+      rot[2] * s[0] + rot[6] * s[1] + rot[10] * s[2]
+    ];
+    var pole = SKY.dirFromRaDec(0, 90, SKY.HOME.lat, tonight.lst);
+    var md = moonPt.dir;
+    var pd = pole[0] * md[0] + pole[1] * md[1] + pole[2] * md[2];
+    var nT = [pole[0] - md[0] * pd, pole[1] - md[1] * pd, pole[2] - md[2] * pd];
+    var nl = Math.hypot(nT[0], nT[1], nT[2]) || 1; nT = [nT[0] / nl, nT[1] / nl, nT[2] / nl];
+    var eT = [nT[1] * md[2] - nT[2] * md[1], nT[2] * md[0] - nT[0] * md[2], nT[0] * md[1] - nT[1] * md[0]];
+    function toView(v) {
+      return [
+        rot[0] * v[0] + rot[4] * v[1] + rot[8] * v[2],
+        rot[1] * v[0] + rot[5] * v[1] + rot[9] * v[2]
+      ];
+    }
+    var e2 = toView(eT), n2 = toView(nT);
+    var el = Math.hypot(e2[0], e2[1]) || 1; e2 = [e2[0] / el, e2[1] / el];
+    var nl2 = Math.hypot(n2[0], n2[1]) || 1; n2 = [n2[0] / nl2, n2[1] / nl2];
+    var sunCel = [
+      sunView[0] * e2[0] + sunView[1] * e2[1],
+      sunView[0] * n2[0] + sunView[1] * n2[1],
+      sunView[2]
+    ];
+    gl.useProgram(moonProg);
+    bindAttr(moonProg, 'aPos', moonGeo.pos, 3); bindAttr(moonProg, 'aCorner', moonGeo.corner, 2);
+    gl.uniformMatrix4fv(uniformLoc(moonProg, 'uProj'), false, proj);
+    gl.uniformMatrix4fv(uniformLoc(moonProg, 'uRot'), false, rot);
+    gl.uniform3f(uniformLoc(moonProg, 'uShift'), shift[0], shift[1], shift[2]);
+    gl.uniform1f(uniformLoc(moonProg, 'uSize'), moonPt.quadSize);
+    gl.uniform2f(uniformLoc(moonProg, 'uEast'), e2[0], e2[1]);
+    gl.uniform2f(uniformLoc(moonProg, 'uNorth'), n2[0], n2[1]);
+    gl.uniform3f(uniformLoc(moonProg, 'uSun'), sunCel[0], sunCel[1], sunCel[2]);
+    gl.uniform1f(uniformLoc(moonProg, 'uDiscR'), moonPt.discR);
+    gl.drawArrays(gl.TRIANGLES, 0, moonGeo.count);
   }
   function drawGas(geo, kindPass, wrap, origin, proj, rot, rendCam, breathe, frac) {
     gl.useProgram(gasProg);
@@ -1163,6 +1346,21 @@
       P2.pAlpha = Math.max(0, P2.pAlpha - dt * 0.7);
       if (P2.pAlpha === 0) P2.planet = null;
     }
+    /* moon detection — a single point, gated exactly like a planet */
+    var mAng = 9;
+    if (moonPt && moonPt.alt > 0) {
+      var cosMd = moonPt.dir[0] * fwd[0] + moonPt.dir[1] * fwd[1] + moonPt.dir[2] * fwd[2];
+      mAng = Math.acos(Math.max(-1, Math.min(1, cosMd)));
+    }
+    if (moonPt && moonPt.alt > 0 && (P2.moon ? mAng < 0.24 : mAng < 0.16)) {
+      if (P2.moon !== moonPt) { P2.moon = moonPt; P2.mActT = t; }
+      P2.moonAng = mAng;
+      P2.mAlpha = Math.min(1, P2.mAlpha + dt * 0.8);
+    } else {
+      P2.mAlpha = Math.max(0, P2.mAlpha - dt * 0.7);
+      if (P2.mAlpha === 0) P2.moon = null;
+    }
+
     P2.activeFor = P2.activeName ? t - P2.actT : 0;
 
     /* sound events (ported) */
@@ -1215,6 +1413,14 @@
     drawGas(localGas, 0, 1, camPos, projMat, rot, rendCam, breathe, qualityGas);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     drawGas(localGas, 1, 1, camPos, projMat, rot, rendCam, 1, qualityGas);
+
+    /* the Moon — drawn with normal blending so its dark side truly
+     * occludes the stars behind it, then additive resumes */
+    if (moonPt) {
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      drawMoon(projMat, rot, voyVec);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    }
 
     /* threads of light */
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
@@ -1293,12 +1499,18 @@
 
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
-    catalogue: catStars.length, fieldStars: shellCount, planets: planetPts,
+    catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt,
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
   });
   window.__nebula.bankNow = function () { return bankCur; };
   window.__nebula.face = function (name) {
+    if (name === 'Moon' && moonPt) {
+      var aaM = dirToAzAlt(moonPt.dir);
+      cam.az = aaM.az; cam.alt = aaM.alt; cam.vaz = 0; cam.valt = 0;
+      lastTouchAt = perfNow();
+      return true;
+    }
     var figT = figuresByName[name];
     if (!figT) return false;
     var aaT = dirToAzAlt(figT.centre);
