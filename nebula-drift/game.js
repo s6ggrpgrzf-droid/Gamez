@@ -401,11 +401,23 @@
       if (!nearSt || st.dist < nearSt.dist) nearSt = { name: nm, dist: st.dist };
       if (!farSt || st.dist > farSt.dist) farSt = { name: nm, dist: st.dist };
     });
+    /* the middle witness (review Pass G): the star whose distance
+     * sits nearest the geometric mean of near and far — the third
+     * distance the long-voyage whisper names */
+    var midSt = null;
+    if (nearSt && farSt && totStars > 2) {
+      var midTarget = Math.sqrt(nearSt.dist * farSt.dist);
+      Object.keys(usedSet).forEach(function (nm) {
+        if (nm === nearSt.name || nm === farSt.name) return;
+        var d = tonight.stars[catByName[nm]].dist;
+        if (!midSt || Math.abs(Math.log(d / midTarget)) < Math.abs(Math.log(midSt.dist / midTarget))) midSt = { name: nm, dist: d };
+      });
+    }
     var cLen = Math.hypot(centreAcc[0], centreAcc[1], centreAcc[2]) || 1;
     var figObj = {
       name: fDef.name, story: fDef.story, lines: idxLines,
       centre: [centreAcc[0] / cLen, centreAcc[1] / cLen, centreAcc[2] / cLen],
-      upFrac: totStars ? upStars / totStars : 0, near: nearSt, far: farSt
+      upFrac: totStars ? upStars / totStars : 0, near: nearSt, far: farSt, mid: midSt
     };
     /* angular radius: the farthest of the figure's own stars from its
      * centre — what "inside the figure" means for a visiting planet */
@@ -638,7 +650,7 @@
   }
 
   /* ================= Pass 2 state (ported) ================= */
-  var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false, chimed: false, unravelled: false,
+  var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, voyageHold: 0, longV: 0, engaged: false, chimed: false, unravelled: false,
     planet: null, pAlpha: 0, pActT: 0, planetAng: 9, figAng: 9,
     moon: null, mAlpha: 0, mActT: 0, moonAng: 9,
     loggedFig: null, loggedPlanet: null, loggedMoon: false,
@@ -1278,9 +1290,17 @@
     var fig = P2.drawFig;
     if (!bootGreetDone && (t >= tapFlashUntil || t >= BOOT_GREET_SECS)) bootGreetDone = true;
     if (fig && P2.alpha > 0.3 && P2.voyage > 0.35) {
-      setWhisper('dis:' + fig.name, fig.name + ', dissolved',
-        fig.near.name + ' is ' + fmtDist(fig.near.dist) + ' light-years away · ' +
-        fig.far.name + ' is ' + fmtDist(fig.far.dist) + ' — the shape only exists from home');
+      if (P2.longV >= 0.22) {
+        setWhisper('disL:' + fig.name, fig.name + ', dissolved',
+          fig.near.name + ' is ' + fmtDist(fig.near.dist) + ' light-years away · ' +
+          (fig.mid ? fig.mid.name + ' is ' + fmtDist(fig.mid.dist) + ' · ' : '') +
+          fig.far.name + ' is ' + fmtDist(fig.far.dist) +
+          ' — from out here, nothing of the shape survives');
+      } else {
+        setWhisper('dis:' + fig.name, fig.name + ', dissolved',
+          fig.near.name + ' is ' + fmtDist(fig.near.dist) + ' light-years away · ' +
+          fig.far.name + ' is ' + fmtDist(fig.far.dist) + ' — the shape only exists from home');
+      }
     } else if (t < tapFlashUntil && !bootGreetDone) {
       /* the boot greeting holds the whisper for its first seconds — a
        * figure may settle and draw its threads beneath it; its story
@@ -1693,6 +1713,14 @@
     if (pointers.size === 1 && !P2.engaged && movedPx < 10 && performance.now() - downStamp > 450) P2.engaged = true;
     if (P2.engaged) P2.voyageTarget = 1;
     P2.voyage += (P2.voyageTarget - P2.voyage) * Math.min(1, dt * 1.05);
+    /* THE LONG VOYAGE (review Pass G): keep holding past the first
+     * step and the step itself keeps growing — from 115 units out to
+     * 545 over about five more seconds, far enough that a figure's
+     * nearest stars sweep past the traveller and the shape does not
+     * loosen but come apart. Release, and both eases bring you home. */
+    if (P2.engaged) P2.voyageHold += dt; else P2.voyageHold = 0;
+    var longTgt = P2.engaged ? Math.max(0, Math.min(1, (P2.voyageHold - 1.15) / 5.5)) : 0;
+    P2.longV += (longTgt - P2.longV) * Math.min(1, dt * (P2.engaged ? 0.85 : 1.7));
     if (P2.voyage > 0.5 && !hasVoyaged) {
       hasVoyaged = true;
       try { window.localStorage.setItem('nd-voyaged', '1'); } catch (e) { /* private mode */ }
@@ -1719,7 +1747,9 @@
       camPos[1] += fwd[1] * TRAVEL_SPEED * dt;
       camPos[2] += fwd[2] * TRAVEL_SPEED * dt;
     }
-    voyVec = [rgtB[0] * P2.voyage * 115, rgtB[1] * P2.voyage * 115, rgtB[2] * P2.voyage * 115];
+    var lvSm = P2.longV * P2.longV * (3 - 2 * P2.longV);
+    P2.stepLen = P2.voyage * (115 + 430 * lvSm);
+    voyVec = [rgtB[0] * P2.stepLen, rgtB[1] * P2.stepLen, rgtB[2] * P2.stepLen];
     rendCam = [camPos[0] + voyVec[0], camPos[1] + voyVec[1], camPos[2] + voyVec[2]];
 
     /* figure detection (ported) */
@@ -2120,7 +2150,8 @@
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts, brightStars: starPts,
-    meteors: meteorInfo, skyEvent: skyEvent, almanac: almanac, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
+    meteors: meteorInfo, skyEvent: skyEvent, almanac: almanac,
+    voyageState: function () { return { engaged: P2.engaged, hold: P2.voyageHold, v: P2.voyage, longV: P2.longV, step: P2.stepLen || 0 }; }, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
     meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
