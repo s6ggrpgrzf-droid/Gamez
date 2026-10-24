@@ -664,6 +664,22 @@
     field.appendChild(bloom);
     main.insertBefore(field, gamesEl);
     main.classList.add('has-field');
+    /* first visit: one bright star beckons — the floor's invitation */
+    try {
+      if (!localStorage.getItem('gamez-star-hint')) {
+        localStorage.setItem('gamez-star-hint', '1');
+        var beckon = null;
+        order.forEach(function (id) {
+          if (!beckon && stars[id] && stars[id].classList.contains('t3')) beckon = stars[id];
+        });
+        if (!beckon && order.length) beckon = stars[order[0]];
+        if (beckon) {
+          var ring = document.createElement('span');
+          ring.className = 'hint-ring'; ring.setAttribute('aria-hidden', 'true');
+          beckon.appendChild(ring);
+        }
+      }
+    } catch (e) {}
     var openId = null, openBtn = null;
     function drawLines() {
       var fr = field.getBoundingClientRect();

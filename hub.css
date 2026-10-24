@@ -476,6 +476,13 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
               0 0 14px color-mix(in srgb,var(--glow) 35%,transparent);
   pointer-events:none;transition:color .25s}
 .star:active .core{transform:scale(1.35)}
+/* first visit: a bright star beckons with an expanding ring */
+.star .hint-ring{position:absolute;left:50%;top:50%;z-index:0;pointer-events:none;
+  width:var(--s,10px);height:var(--s,10px);border-radius:50%;
+  border:2px solid rgba(180,210,255,.85);transform:translate(-50%,-50%);
+  animation:hintRing 1.8s ease-out 3;animation-fill-mode:forwards;}
+@keyframes hintRing{0%{width:var(--s,10px);height:var(--s,10px);opacity:.9}
+  100%{width:58px;height:58px;opacity:0}}
 /* ---------- Depth pass (2026-10-20): the chart gains relief ----------
    Magnitude is depth: t3 nearest, t1 farthest. A contact shadow pools
    beneath each core, offset down-right (the light in this sky is upper-left),
