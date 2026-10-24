@@ -651,6 +651,70 @@
     }
   }
 
+  /* Clusters are not gas — they are crowds of stars (visual
+   * refinement Pass 3). Their light goes through the star renderer
+   * as individual points, one small buffer per cluster so the
+   * settled one can brighten on its own; only a breath of gas
+   * stays underneath, for the unresolved glow between the stars. */
+  var clusterPts = [];
+  function buildCluster(puffs, neb, ni) {
+    var basis = tangentBasis(neb.dir);
+    var S = neb.size, D = 2500;
+    function G(x, y, size, alpha) {
+      puffs.push({
+        pos: [
+          neb.dir[0] * D + basis.t1[0] * x + basis.t2[0] * y,
+          neb.dir[1] * D + basis.t1[1] * x + basis.t2[1] * y,
+          neb.dir[2] * D + basis.t1[2] * x + basis.t2[2] * y
+        ],
+        col: anchorShade(neb.palette, rng), size: size, alpha: alpha,
+        phase: rng() * 6.283, kind: 0, hi: ni, rot: rng() * 3.14, aspect: 1.25
+      });
+    }
+    function PT(x, y, col, size) {
+      var dep = D + (rng() - 0.5) * 90;
+      clusterPts.push({
+        pos: [
+          neb.dir[0] * dep + basis.t1[0] * x + basis.t2[0] * y,
+          neb.dir[1] * dep + basis.t1[1] * x + basis.t2[1] * y,
+          neb.dir[2] * dep + basis.t1[2] * x + basis.t2[2] * y
+        ],
+        col: col, size: size, phase: rng() * 6.283,
+        twk: 0.25 + rng() * 0.55, spike: 0, neb: ni
+      });
+    }
+    function STAR(cx, cy, spread, powCurve, fixedCol) {
+      var th = rng() * Math.PI * 2, rr = spread * Math.pow(rng(), powCurve);
+      var m = 3.9 + rng() * 3.6;
+      var w = rng();
+      var col = fixedCol || (w < 0.18 ? [1.0, 0.88, 0.70] : (w < 0.42 ? [0.78, 0.87, 1.05] : [0.97, 0.97, 0.94]));
+      PT(cx + Math.cos(th) * rr, cy + Math.sin(th) * rr, col, D * 0.0105 * sizeFactorForMag(m) * 1.12);
+    }
+    if (neb.name === 'Double Cluster') {
+      /* two swarms side by side, a few strays wandering between */
+      var a = 0.5, ax = Math.cos(a), ay = Math.sin(a);
+      G(-ax * S * 118, -ay * S * 118, S * 190, 0.020);
+      G(ax * S * 118, ay * S * 118, S * 190, 0.020);
+      for (var i = 0; i < 26; i++) STAR(-ax * S * 118, -ay * S * 118, S * 82, 1.7);
+      for (var j = 0; j < 26; j++) STAR(ax * S * 118, ay * S * 118, S * 82, 1.7);
+      for (var s = 0; s < 7; s++) STAR(0, 0, S * 150, 1.0);
+    } else if (neb.name === 'Great Hercules Cluster') {
+      /* one dense heart, falling off fast — a globular's grain */
+      G(0, 0, S * 250, 0.036);
+      for (var h = 0; h < 56; h++) STAR(0, 0, S * 115, 2.1);
+    } else {
+      /* Pleiades: the knot of sisters in thin blue mist — seven
+       * bright blue-white stars in their little-dipper shape,
+       * fainter company scattered through the glow */
+      G(0, 0, S * 300, 0.075);
+      G(S * 30, S * 10, S * 200, 0.060);
+      G(-S * 20, S * 30, S * 380, 0.030);
+      var knot = [[0, 0], [0.9, 0.25], [1.7, 0.05], [2.45, 0.5], [1.15, 0.95], [0.3, 0.8], [2.6, 1.2]];
+      knot.forEach(function (kp) { PT(kp[0] * S * 46, kp[1] * S * 46, [0.74, 0.85, 1.08], 17 + rng() * 7); });
+      for (var p = 0; p < 13; p++) STAR(S * 52, S * 24, S * 130, 1.4, [0.78, 0.87, 1.05]);
+    }
+  }
+
   var anchorGas = null;
   (function buildAnchors() {
     var puffs = [];
@@ -665,6 +729,7 @@
       else if (neb.kind === 'planetary') { shape.aspect = 1.2; }
       if (neb.kind === 'galaxy') { buildGalaxy(puffs, neb, ni); return; }
       if (neb.kind === 'planetary') { buildPlanetary(puffs, neb, ni); return; }
+      if (neb.kind === 'cluster' || neb.kind === 'reflection') { buildCluster(puffs, neb, ni); return; }
       var layers = neb.kind === 'cluster' ? 3 : 7;
       for (var li = 0; li < layers; li++) {
         var dist = 2350 + li * 230 + rng() * 120;
@@ -699,6 +764,15 @@
     });
     anchorGas = buildGasBuffer(puffs);
     anchorGas.puffCount = puffs.length;
+  })();
+
+  /* one star buffer per cluster, so presence can lift the settled
+   * cluster's points without touching the rest of the shell */
+  var clusterGeos = {};
+  (function buildClusterGeos() {
+    var byNeb = {};
+    clusterPts.forEach(function (p) { (byNeb[p.neb] = byNeb[p.neb] || []).push(p); });
+    Object.keys(byNeb).forEach(function (k) { clusterGeos[k] = buildStarBuffer(byNeb[k]); });
   })();
 
   /* the local volume: coloured regions of gas you fly through, forever */
@@ -2565,6 +2639,10 @@
     /* star shell + figure boost */
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     drawStars(starGeo, projMat, rot, voyVec, 1, t);
+    for (var cgi in clusterGeos) {
+      var cMul = (P2.neb && P2.neb.idx === +cgi) ? 1 + P2.nbAlpha * 0.9 : 1;
+      drawStars(clusterGeos[cgi], projMat, rot, voyVec, cMul, t);
+    }
     if (issNow) drawStars(issGeo, projMat, rot, voyVec, 1, t);
     if (haloGeo) drawStars(haloGeo, projMat, rot, voyVec, 0.15, t);
     if (boostGeo && P2.alpha > 0.02) {
