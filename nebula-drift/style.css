@@ -15,6 +15,22 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 .corner svg{width:20px;height:20px}
 .corner.off{color:rgba(120,130,165,.8)}
 .corner.off svg g{display:none}
+.corner.left{left:12px;right:auto}
+#logScrim{position:absolute;inset:0;z-index:9;background:rgba(2,3,10,.45);
+  opacity:0;pointer-events:none;transition:opacity .4s}
+#logScrim.show{opacity:1;pointer-events:auto}
+#logPanel{position:absolute;z-index:10;left:50%;top:50%;width:min(86vw,340px);max-height:72vh;overflow-y:auto;
+  transform:translate(-50%,-47%);opacity:0;pointer-events:none;transition:opacity .45s ease,transform .45s ease;
+  background:rgba(7,10,24,.94);border:1px solid rgba(255,255,255,.13);border-radius:18px;
+  padding:22px 22px 18px;box-shadow:0 18px 60px rgba(0,0,0,.55)}
+#logPanel.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+#logTitle{font-size:13px;font-weight:600;letter-spacing:.22em;color:rgba(238,242,255,.92);text-align:center}
+#logSummary{margin-top:8px;font-size:11px;letter-spacing:.08em;color:rgba(200,212,245,.6);text-align:center}
+.logSec{margin-top:18px;font-size:10px;font-weight:600;letter-spacing:.26em;color:rgba(160,175,220,.55)}
+.logRow{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:9px}
+.logName{font-size:13px;color:rgba(238,242,255,.9)}
+.logMeta{font-size:10.5px;letter-spacing:.05em;color:rgba(200,212,245,.55);text-align:right;white-space:nowrap}
+.logLine{margin-top:9px;font-size:11.5px;line-height:1.55;color:rgba(200,212,245,.72)}
 #whisper{position:absolute;left:0;right:0;z-index:5;pointer-events:none;text-align:center;
   bottom:calc(30px + env(safe-area-inset-bottom));padding:0 28px;
   opacity:0;transform:translateY(6px);transition:opacity 1.6s ease,transform 1.6s ease}

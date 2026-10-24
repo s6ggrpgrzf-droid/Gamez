@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <div id="stage">
@@ -17,6 +17,15 @@
   <button id="sndBtn" class="corner" aria-label="Sound on or off">
     <svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="currentColor"/><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15.3 9.7a3.6 3.6 0 0 1 0 4.6"/><path d="M17.8 7.2a7.2 7.2 0 0 1 0 9.6"/></g></svg>
   </button>
+  <button id="logBtn" class="corner left" aria-label="Field log">
+    <svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 4.5h10.2a1 1 0 0 1 1 1V18.5a1 1 0 0 1-1 1H8z"/><path d="M8 4.5v15"/><path d="M11.8 9h4.2M11.8 12.5h4.2"/></g><path d="M5.2 4.5v15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+  </button>
+  <div id="logScrim"></div>
+  <div id="logPanel" aria-hidden="true">
+    <div id="logTitle">FIELD LOG</div>
+    <div id="logSummary"></div>
+    <div id="logBody"></div>
+  </div>
   <div id="whisper" aria-hidden="true">
     <div id="whisperMain"></div>
     <div id="whisperSub"></div>
@@ -26,6 +35,6 @@
 <script src="planets.js?v=2"></script>
 <script src="moon.js?v=1"></script>
 <script src="audio.js?v=1"></script>
-<script src="game.js?v=17"></script>
+<script src="game.js?v=18"></script>
 </body>
 </html>

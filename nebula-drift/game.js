@@ -601,7 +601,9 @@
   /* ================= Pass 2 state (ported) ================= */
   var P2 = { activeName: null, drawFig: null, alpha: 0, actT: 0, activeFor: 0, voyage: 0, voyageTarget: 0, engaged: false, chimed: false, unravelled: false,
     planet: null, pAlpha: 0, pActT: 0, planetAng: 9, figAng: 9,
-    moon: null, mAlpha: 0, mActT: 0, moonAng: 9 };
+    moon: null, mAlpha: 0, mActT: 0, moonAng: 9,
+    loggedFig: null, loggedPlanet: null, loggedMoon: false,
+    firstNotes: { fig: null, planet: null, moon: null } };
   var hasVoyaged = false;
   try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
 
@@ -865,6 +867,58 @@
     moonGeo = { pos: makeBuffer(gl.ARRAY_BUFFER, pos), corner: makeBuffer(gl.ARRAY_BUFFER, cor), count: 6 };
   })();
 
+  /* ================= the remembering log (Pass 2) =================
+   * On-device only, schema-versioned, silent: who he has met under
+   * this sky, and when he first met them. Nothing leaves the phone,
+   * nothing is scored — it is a journal, not a checklist. A settle is
+   * recorded on the same beat the completion chime uses (figure
+   * threads fully drawn, planet/moon held a moment), once per
+   * activation. The first-ever meeting earns one quiet sentence in
+   * that object's own whisper, for that activation only. */
+  var LOG_KEY = 'nd-log-v1';
+  var log = { v: 1, nights: [], figs: {}, planets: {}, moon: { first: null, n: 0, phases: [] } };
+  function saveLog() {
+    try { window.localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch (e) { /* private mode */ }
+  }
+  (function loadLog() {
+    try {
+      var raw = window.localStorage.getItem(LOG_KEY);
+      if (raw) {
+        var p = JSON.parse(raw);
+        if (p && p.v === 1) {
+          log.nights = p.nights || []; log.figs = p.figs || {};
+          log.planets = p.planets || {};
+          if (p.moon) log.moon = p.moon;
+        }
+      }
+    } catch (e) { /* a fresh log is a fine beginning */ }
+    var tk = aiDateKey(tonight.date);
+    if (log.nights.indexOf(tk) === -1) { log.nights.push(tk); saveLog(); }
+  })();
+  function moonPhaseName(mp) {
+    if (mp.illum > 0.985) return 'Full';
+    if (mp.illum < 0.03) return 'New';
+    if (mp.illum < 0.42) return mp.waxing ? 'Waxing crescent' : 'Waning crescent';
+    if (mp.illum < 0.58) return mp.waxing ? 'First quarter' : 'Last quarter';
+    return mp.waxing ? 'Waxing gibbous' : 'Waning gibbous';
+  }
+  function recordMeet(kind, name) {
+    var tk = aiDateKey(tonight.date);
+    if (kind === 'fig') {
+      if (!log.figs[name]) { log.figs[name] = { first: tk, n: 1 }; P2.firstNotes.fig = name; }
+      else log.figs[name].n++;
+    } else if (kind === 'planet') {
+      if (!log.planets[name]) { log.planets[name] = { first: tk, n: 1 }; P2.firstNotes.planet = name; }
+      else log.planets[name].n++;
+    } else if (kind === 'moon' && moonPt) {
+      if (!log.moon.first) { log.moon.first = tk; P2.firstNotes.moon = 'Moon'; }
+      log.moon.n++;
+      var ph = moonPhaseName(moonPt);
+      if (log.moon.phases.indexOf(ph) === -1) log.moon.phases.push(ph);
+    }
+    saveLog();
+  }
+
   var tapFlashUntil = 9;
   var bootGreetDone = false, BOOT_GREET_SECS = 4;
   function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
@@ -893,15 +947,20 @@
     } else if (P2.moon && P2.mAlpha > 0.3 && P2.moon.line &&
                (!P2.planet || P2.moonAng <= P2.planetAng) &&
                (!fig || P2.moonAng <= P2.figAng)) {
-      setWhisper('mo:Moon', 'Moon', P2.moon.line);
+      var moNote = P2.firstNotes.moon === 'Moon';
+      setWhisper('mo:Moon' + (moNote ? ':f' : ''), 'Moon',
+        P2.moon.line + (moNote ? ' First time you’ve met her.' : ''));
     } else if (P2.planet && P2.pAlpha > 0.3 && P2.planet.line && (!fig || P2.planetAng <= P2.figAng) &&
                (!P2.moon || P2.planetAng <= P2.moonAng)) {
-      setWhisper('pl:' + P2.planet.name, P2.planet.name, P2.planet.line);
+      var plNote = P2.firstNotes.planet === P2.planet.name;
+      var plSuffix = plNote ? ' First time you’ve met ' + (PLANET_VOICE[P2.planet.name].pro === 'she' ? 'her' : 'him') + '.' : '';
+      setWhisper('pl:' + P2.planet.name + (plNote ? ':f' : ''), P2.planet.name, P2.planet.line + plSuffix);
     } else if (fig && P2.alpha > 0.3) {
       var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
       var aiFig = aiFigText[fig.name] || null;
-      var storyShown = aiFig || (fig.story + (fig.guest ? ' ' + fig.guest + ' visits tonight.' : ''));
-      setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : ''), fig.name,
+      var figNote = P2.firstNotes.fig === fig.name && !aiFig && !hintOn;
+      var storyShown = aiFig || (fig.story + (fig.guest ? ' ' + fig.guest + ' visits tonight.' : '') + (figNote ? ' First time you’ve found it.' : ''));
+      setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : '') + (figNote ? ':n' : ''), fig.name,
         hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : storyShown);
     } else if (t < tapFlashUntil) {
       setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
@@ -1311,6 +1370,8 @@
       if (nextFig.name !== P2.activeName) {
         P2.activeName = nextFig.name; P2.actT = t;
         P2.chimed = false; P2.unravelled = false;
+        P2.loggedFig = null;
+        if (P2.firstNotes.fig && P2.firstNotes.fig !== nextFig.name) P2.firstNotes.fig = null;
         rebuildBoost(nextFig);
         ensureFigAi(nextFig);
         if (AU) AU.setRegion(nextFig.name);
@@ -1319,7 +1380,10 @@
       P2.alpha = Math.min(1, P2.alpha + dt * 0.8);
     } else {
       P2.alpha = Math.max(0, P2.alpha - dt * 0.7);
-      if (P2.alpha === 0) { P2.activeName = null; P2.drawFig = null; rebuildBoost(null); }
+      if (P2.alpha === 0) {
+        P2.activeName = null; P2.drawFig = null; rebuildBoost(null);
+        P2.firstNotes.fig = null;
+      }
     }
     P2.figAng = nextFig ? (nextFig === curFig ? curAng : candAng) : 9;
 
@@ -1344,7 +1408,10 @@
       P2.pAlpha = Math.min(1, P2.pAlpha + dt * 0.8);
     } else {
       P2.pAlpha = Math.max(0, P2.pAlpha - dt * 0.7);
-      if (P2.pAlpha === 0) P2.planet = null;
+      if (P2.pAlpha === 0) {
+        P2.planet = null; P2.loggedPlanet = null;
+        P2.firstNotes.planet = null;
+      }
     }
     /* moon detection — a single point, gated exactly like a planet */
     var mAng = 9;
@@ -1358,7 +1425,10 @@
       P2.mAlpha = Math.min(1, P2.mAlpha + dt * 0.8);
     } else {
       P2.mAlpha = Math.max(0, P2.mAlpha - dt * 0.7);
-      if (P2.mAlpha === 0) P2.moon = null;
+      if (P2.mAlpha === 0) {
+        P2.moon = null; P2.loggedMoon = false;
+        P2.firstNotes.moon = null;
+      }
     }
 
     P2.activeFor = P2.activeName ? t - P2.actT : 0;
@@ -1372,6 +1442,21 @@
     if (AU && P2.drawFig && !P2.unravelled && P2.voyage > 0.6) {
       P2.unravelled = true;
       AU.unravel(P2.drawFig.name);
+    }
+
+    /* the log records its meetings on the chime's beat, AU or not */
+    if (P2.drawFig && P2.loggedFig !== P2.drawFig.name && P2.alpha > 0.6 && P2.voyage < 0.2 &&
+        t - P2.actT > (P2.drawFig.lines.length - 1) * 0.13 + 0.95) {
+      P2.loggedFig = P2.drawFig.name;
+      recordMeet('fig', P2.drawFig.name);
+    }
+    if (P2.planet && P2.loggedPlanet !== P2.planet.name && P2.pAlpha > 0.6 && t - P2.pActT > 1.2) {
+      P2.loggedPlanet = P2.planet.name;
+      recordMeet('planet', P2.planet.name);
+    }
+    if (P2.moon && !P2.loggedMoon && P2.mAlpha > 0.6 && t - P2.mActT > 1.2) {
+      P2.loggedMoon = true;
+      recordMeet('moon', 'Moon');
     }
 
     /* the lean-in: when a figure has settled and you're not voyaging,
@@ -1497,6 +1582,72 @@
     if (AU) { AU.init(mutedPref); AU.setMuted(mutedPref); }
   });
 
+  /* ================= the field log panel ================= */
+  var logBtn = document.getElementById('logBtn');
+  var logPanel = document.getElementById('logPanel');
+  var logScrim = document.getElementById('logScrim');
+  var logOpen = false;
+  function fmtLogDate(key) {
+    var p = key.split('-');
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function logRow(parent, name, meta) {
+    var row = document.createElement('div'); row.className = 'logRow';
+    var n = document.createElement('div'); n.className = 'logName'; n.textContent = name;
+    var m = document.createElement('div'); m.className = 'logMeta'; m.textContent = meta;
+    row.appendChild(n); row.appendChild(m); parent.appendChild(row);
+  }
+  function logSection(parent, label) {
+    var s = document.createElement('div'); s.className = 'logSec'; s.textContent = label;
+    parent.appendChild(s);
+  }
+  function renderLog() {
+    var body = document.getElementById('logBody');
+    while (body.firstChild) body.removeChild(body.firstChild);
+    var figNames = Object.keys(log.figs);
+    document.getElementById('logSummary').textContent =
+      log.nights.length + (log.nights.length === 1 ? ' night' : ' nights') + ' under this sky · ' +
+      figNames.length + ' of ' + figures.length + ' figures met';
+    function byFirst(a, b) { return a[1].first < b[1].first ? 1 : -1; }
+    function metaOf(e) { return 'first met ' + fmtLogDate(e.first) + (e.n > 1 ? ' · ×' + e.n : ''); }
+    if (figNames.length) {
+      logSection(body, 'FIGURES');
+      figNames.map(function (n) { return [n, log.figs[n]]; }).sort(byFirst)
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+    }
+    var plNames = Object.keys(log.planets);
+    if (plNames.length) {
+      logSection(body, 'PLANETS');
+      plNames.map(function (n) { return [n, log.planets[n]]; }).sort(byFirst)
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+    }
+    if (log.moon.first) {
+      logSection(body, 'THE MOON');
+      logRow(body, 'Moon', metaOf(log.moon));
+      if (log.moon.phases.length) {
+        var ph = document.createElement('div'); ph.className = 'logLine';
+        ph.textContent = 'Seen as: ' + log.moon.phases.join(' · ');
+        body.appendChild(ph);
+      }
+    }
+    if (!figNames.length && !plNames.length && !log.moon.first) {
+      var em = document.createElement('div'); em.className = 'logLine';
+      em.textContent = 'Nothing remembered yet. Settle on a figure, a planet, or the Moon, and tonight will be kept here.';
+      body.appendChild(em);
+    }
+  }
+  function setLogOpen(open) {
+    logOpen = open;
+    if (open) renderLog();
+    logPanel.classList.toggle('show', open);
+    logScrim.classList.toggle('show', open);
+    logPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
+  }
+  if (logBtn) logBtn.addEventListener('click', function () { setLogOpen(!logOpen); });
+  if (logScrim) logScrim.addEventListener('click', function () { setLogOpen(false); });
+  window.__nebula.getLog = function () { return JSON.parse(JSON.stringify(log)); };
+
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt,
@@ -1505,6 +1656,14 @@
   });
   window.__nebula.bankNow = function () { return bankCur; };
   window.__nebula.face = function (name) {
+    var plT = null;
+    for (var pli = 0; pli < planetPts.length; pli++) if (planetPts[pli].name === name) plT = planetPts[pli];
+    if (plT) {
+      var aaP = dirToAzAlt(plT.dir);
+      cam.az = aaP.az; cam.alt = aaP.alt; cam.vaz = 0; cam.valt = 0;
+      lastTouchAt = perfNow();
+      return true;
+    }
     if (name === 'Moon' && moonPt) {
       var aaM = dirToAzAlt(moonPt.dir);
       cam.az = aaM.az; cam.alt = aaM.alt; cam.vaz = 0; cam.valt = 0;
