@@ -1118,6 +1118,72 @@
     .filter(function (st) { return !!STAR_LINES[st.name]; })
     .map(function (st) { return { name: st.name, dir: st.dir, alt: st.alt, az: st.az, line: STAR_LINES[st.name] }; });
 
+  /* ================= tonight, in order (Live Pass 4) =================
+   * The night laid out as one timed itinerary in the Field Log:
+   * when full dark begins and ends, when the Moon and each planet
+   * rise or set, when the station culminates, and when tonight's
+   * shower radiant stands highest. Every instant is computed on
+   * the game's own ephemerides over the watch window (18:00 to
+   * 06:00); the list only holds what the window holds, in order. */
+  var itineraryCache = null;
+  function getItinerary() {
+    if (itineraryCache) return itineraryCache;
+    var rows = [];
+    if (typeof MOON === 'undefined') return (itineraryCache = rows);
+    var start = tonight.date.getTime() - 4 * 3600000, end = tonight.date.getTime() + 9.5 * 3600000;
+    function push(ms, label) { if (ms > start && ms < end) rows.push({ t: ms, label: label }); }
+    var dd = darkCrossing(new Date(start), 'down'); if (dd) push(dd.getTime(), 'Full dark');
+    var du = darkCrossing(new Date(tonight.date.getTime()), 'up'); if (du) push(du.getTime(), 'First light');
+    if (almanac) {
+      if (almanac.riseD) push(almanac.riseD.getTime(), 'Moonrise');
+      if (almanac.setD) push(almanac.setD.getTime(), 'Moonset');
+    }
+    try {
+      issPasses.forEach(function (ps) {
+        if (!ps.truncated) push(ps.culmMs, 'Station overhead' + (ps.through ? ' — through ' + ps.through : ''));
+      });
+    } catch (e) { /* elements not ready: the itinerary stands without it */ }
+    if (typeof PLANETS !== 'undefined') {
+      function pAlt(name, date) {
+        var arr = PLANETS.positions(date), lst = SKY.lstDeg(SKY.jdFromDate(date), SKY.HOME.lon);
+        for (var i = 0; i < arr.length; i++) if (arr[i].name === name) return SKY.altAz(arr[i].ra, arr[i].dec, SKY.HOME.lat, lst).alt;
+        return -90;
+      }
+      var names = PLANETS.positions(tonight.date).map(function (pl) { return pl.name; });
+      names.forEach(function (nm) {
+        var prevA = pAlt(nm, new Date(start)), prevT = start;
+        for (var tt = start + 600000; tt <= end; tt += 600000) {
+          var a2 = pAlt(nm, new Date(tt));
+          if ((prevA < 0) !== (a2 < 0) && Math.max(prevA, a2) > -4) {
+            var lo = prevT, hi = tt, alo = prevA;
+            for (var bi = 0; bi < 20; bi++) {
+              var mid = (lo + hi) / 2, am = pAlt(nm, new Date(mid));
+              if ((alo < 0) === (am < 0)) { lo = mid; alo = am; } else hi = mid;
+            }
+            push((lo + hi) / 2, nm + (prevA >= 0 ? ' sets' : ' rises'));
+            break;
+          }
+          prevA = a2; prevT = tt;
+        }
+      });
+    }
+    if (meteorInfo.shower) {
+      var sh3 = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
+      if (sh3) {
+        var bestT = 0, bestA = -90;
+        for (var rt = start; rt <= end; rt += 600000) {
+          var rd = new Date(rt);
+          var ra2 = SKY.altAz(sh3.ra, sh3.dec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(rd), SKY.HOME.lon)).alt;
+          if (ra2 > bestA) { bestA = ra2; bestT = rt; }
+        }
+        if (bestA > 20) push(bestT, meteorInfo.shower + ' radiant highest');
+      }
+    }
+    rows.sort(function (a, b) { return a.t - b.t; });
+    itineraryCache = rows.slice(0, 9).map(function (r) { return [fmtClock(new Date(r.t)), r.label]; });
+    return itineraryCache;
+  }
+
   /* ================= the remembering log (Pass 2) =================
    * On-device only, schema-versioned, silent: who he has met under
    * this sky, and when he first met them. Nothing leaves the phone,
@@ -1500,7 +1566,8 @@
       riseNote: dayNote(rise), setNote: dayNote(set),
       planetsUp: planetPts.filter(function (pl) { return pl.alt > 0; }).map(function (pl) { return pl.name; }),
       shower: meteorInfo.shower, showerPeak: meteorInfo.peakLabel || null,
-      full: full ? fmtDay(full) : null, newMoon: newM ? fmtDay(newM) : null
+      full: full ? fmtDay(full) : null, newMoon: newM ? fmtDay(newM) : null,
+      riseD: rise, setD: set
     };
   })();
 
@@ -2474,6 +2541,11 @@
       if (almanac.full) logRow(body, 'Full moon', almanac.full);
       if (almanac.newMoon) logRow(body, 'New moon', almanac.newMoon);
     }
+    var itin = getItinerary();
+    if (itin.length) {
+      logSection(body, 'TONIGHT, IN ORDER');
+      itin.forEach(function (r) { logRow(body, r[0], r[1]); });
+    }
     var figNames = Object.keys(log.figs);
     document.getElementById('logSummary').textContent =
       log.nights.length + (log.nights.length === 1 ? ' night' : ' nights') + ' under this sky · ' +
@@ -2588,6 +2660,7 @@
     nowMode: function () { return nowMode; }, liveLst: function () { return live.lst; }, liveDeltaDeg: function () { return live.deltaDeg; },
     daylight: function () { return phaseNote; },
     issPasses: function () { return issPasses; }, issNow: function () { return issNow; },
+    itinerary: function () { return getItinerary(); },
     liveDirOf: function (name) {
       for (var li = 0; li < starPts.length; li++) if (starPts[li].name === name) return liveDir(starPts[li].dir);
       for (var lj = 0; lj < planetPts.length; lj++) if (planetPts[lj].name === name) return liveDir(planetPts[lj].dir);
