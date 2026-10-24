@@ -765,9 +765,44 @@
       for (var j = 0; j < 26; j++) STAR(ax * S * 118, ay * S * 118, S * 82, 1.7);
       for (var s = 0; s < 7; s++) STAR(0, 0, S * 150, 1.0);
     } else if (neb.name === 'Great Hercules Cluster') {
-      /* one dense heart, falling off fast — a globular's grain */
-      G(0, 0, S * 250, 0.036);
-      for (var h = 0; h < 56; h++) STAR(0, 0, S * 115, 2.1);
+      /* a true globular: two hundred stars in three continuous
+       * shells over a dim ember — grain all the way in, never a
+       * smooth ball. A warm old population: cream first, orange
+       * giants sprinkled through, blue stragglers near the heart. */
+      G(0, 0, S * 160, 0.010);
+      var R = S * 155;
+      function MSTAR(rad, sLo, sHi) {
+        var th = rng() * Math.PI * 2;
+        var w = rng();
+        var col, sz = sLo + rng() * (sHi - sLo);
+        if (w < 0.12) { col = [1.05, 0.72, 0.45]; sz *= 1.35; }
+        else if (w < 0.20 && rad < 0.55) { col = [0.72, 0.84, 1.08]; }
+        else { var cw = 0.90 + rng() * 0.10; col = [cw + 0.07, cw + 0.03, cw - 0.05]; }
+        PT(Math.cos(th) * rad * R, Math.sin(th) * rad * R, col, sz);
+      }
+      var ci;
+      for (ci = 0; ci < 90; ci++) MSTAR(Math.pow(rng(), 1.6) * 0.35, 5.5, 9.5);
+      for (ci = 0; ci < 80; ci++) MSTAR(0.35 + Math.pow(rng(), 1.25) * 0.65, 7, 13);
+      for (ci = 0; ci < 40; ci++) MSTAR(1.0 + Math.pow(rng(), 1.8) * 0.8, 8, 15);
+      for (ci = 0; ci < 5; ci++) MSTAR(1.8 + rng() * 0.5, 8, 13);
+      /* two chains of stars curving out of the heart */
+      [-0.7, 2.2].forEach(function (a0) {
+        for (var k = 0; k < 6; k++) {
+          var f = k / 5, ca = a0 + f * 0.85, cr2 = 0.30 + f * 0.85;
+          PT(Math.cos(ca) * cr2 * R, Math.sin(ca) * cr2 * R, [0.98, 0.95, 0.88], 9 + rng() * 4);
+        }
+      });
+      /* the propeller: one small dark notch off-centre — a whisper
+       * of M13's famous dark lanes, there if you look for it */
+      puffs.push({
+        pos: [
+          neb.dir[0] * (D + 30) + basis.t1[0] * S * 26 + basis.t2[0] * S * 10,
+          neb.dir[1] * (D + 30) + basis.t1[1] * S * 26 + basis.t2[1] * S * 10,
+          neb.dir[2] * (D + 30) + basis.t1[2] * S * 26 + basis.t2[2] * S * 10
+        ],
+        col: [0.006, 0.006, 0.016], size: S * 95, alpha: 0.16, phase: rng() * 6.283, kind: 1,
+        rot: 0.8, aspect: 1.6
+      });
     } else {
       /* Pleiades: the knot of sisters in thin blue mist — seven
        * bright blue-white stars in their little-dipper shape,
