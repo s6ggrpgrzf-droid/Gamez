@@ -50,7 +50,7 @@
   }
   var lastPhase = -1;
   /* the celestial disc must never sit on the words: measure the hero's
-     content rects (headline, surprise button) in canvas coords and let
+     content rects (headline) in canvas coords and let
      aimCel steer the disc clear of them at narrow widths */
   var clearRects = [];
   var heroBand = 0;
@@ -59,7 +59,7 @@
     var heroEl = document.querySelector('.hero');
     heroBand = heroEl ? heroEl.offsetHeight : 0;
     var out = [];
-    ['opendoor', 'surprise'].forEach(function (id) {
+    ['opendoor'].forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
       var r = el.getBoundingClientRect();
@@ -288,27 +288,21 @@
     }, 30000);
   })();
 
-  /* ---------- surprise me: a shooting star picks a random star ---------- */
+  /* ---------- hero status strip: live clock, phase, units ---------- */
   (function () {
-    var btn = document.getElementById('surprise');
-    if (!btn) return;
-    var cards = Array.prototype.slice.call(document.querySelectorAll('.card[data-game][href]'));
-    if (!cards.length) return;
-    var busy = false;
-    btn.addEventListener('click', function () {
-      if (busy) return;
-      var pick = cards[Math.floor(Math.random() * cards.length)];
-      var id = pick.getAttribute('data-game');
-      var star = id && document.querySelector('.star[data-game="' + id + '"]');
-      if (!star) { window.location.href = pick.getAttribute('href'); return; }
-      busy = true;
-      document.dispatchEvent(new CustomEvent('sky-shoot'));
-      star.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(function () {
-        document.dispatchEvent(new CustomEvent('bloom-star', { detail: id }));
-        busy = false;
-      }, 850);
-    });
+    var clock = document.getElementById('stClock');
+    var phase = document.getElementById('stPhase');
+    var units = document.getElementById('stUnits');
+    if (units) units.textContent = document.querySelectorAll('.card[data-game]').length;
+    var PHASES = ['DAWN', 'DAY', 'DUSK', 'NIGHT'];
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function tick() {
+      var d = new Date();
+      if (clock) clock.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      if (phase) phase.textContent = PHASES[phaseOf(d.getHours())];
+    }
+    tick();
+    setInterval(tick, 1000);
   })();
 
   /* ---------- continue playing rail ---------- */
@@ -872,7 +866,7 @@
       to.start(); to.stop(tickAC.currentTime + 0.07);
     } catch (e) {}
   }
-  document.querySelectorAll('.card,.chip,.ed-pick,.feat3d,#surprise').forEach(function (el) {
+  document.querySelectorAll('.card,.chip,.ed-pick,.feat3d').forEach(function (el) {
     el.addEventListener('pointerdown', tick);
   });
   var sndbtn = document.getElementById('sndbtn');
