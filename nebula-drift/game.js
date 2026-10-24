@@ -743,7 +743,7 @@
   /* ================= whisper (ported) ================= */
   var dateStr = tonight.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   var tonightMain = 'Tonight · ' + dateStr + ' · the sky over ' + SKY.HOME.name;
-  var tonightSub = 'drag to look — it drifts on its own.';
+  var tonightSub = 'Drag to look — it drifts on its own.';
 
   /* ================= gamez-ai whispers (silent, Pass 1) =================
    * Tonight's opening line and fresh figure stories come from the shared
@@ -1421,7 +1421,7 @@
       var figMile = P2.mileNotes.fig === fig.name && !aiFig && !hintOn;
       var storyShown = aiFig || (fig.story + (fig.guest ? ' ' + fig.guest + ' visits tonight.' : '') + (figNote ? ' First time you’ve found it.' : '') + (figMile ? ' Your tenth figure.' : ''));
       setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : '') + (figNote ? ':n' : '') + (figMile ? ':m10' : ''), fig.name,
-        hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : storyShown);
+        hintOn ? 'Press and hold — step sideways, off the Earth viewpoint' : storyShown);
     } else if (t < tapFlashUntil) {
       setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, greetSub());
     } else {
