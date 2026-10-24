@@ -858,7 +858,7 @@
   var sndbtn = document.getElementById('sndbtn');
   function renderSnd() {
     if (!sndbtn) return;
-    sndbtn.innerHTML = hubSnd ? '&#x1F50A;' : '&#x1F507;';
+    sndbtn.textContent = hubSnd ? 'Sound on' : 'Sound off';
     sndbtn.classList.toggle('off', !hubSnd);
   }
   if (sndbtn) sndbtn.addEventListener('click', function () {
