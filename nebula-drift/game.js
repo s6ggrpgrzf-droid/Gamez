@@ -814,25 +814,66 @@
   /* daylight honesty (Live Pass 1): in Now mode with the Sun up, the
    * greeting says the sky is still blue and names the hour full dark
    * arrives, scanned forward on the game's own solar ephemeris */
-  var daylightNote = '';
-  function computeDaylight() {
-    daylightNote = '';
-    if (!nowMode || typeof MOON === 'undefined') return;
-    var now = new Date();
-    var mp0 = MOON.position(now);
-    var sunAltNow = SKY.altAz(mp0.sunRa, mp0.sunDec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(now), SKY.HOME.lon)).alt;
-    if (sunAltNow < -18) return;
+  /* ================= the evening, timed (Live Pass 3) =================
+   * The greeting knows where in the evening you are standing: the
+   * Sun's altitude right now names the phase — still blue, dusk,
+   * deepening, nearly dark — and the small hours look the other way,
+   * toward first light. Tonight mode gets one honest clause of its
+   * own on the evenings when 22:00 is not yet fully dark. Crossings
+   * are found on the game's own solar ephemeris by a 10-minute walk
+   * refined with bisection. Words only; nothing is drawn. */
+  var phaseNote = '', tonightPhaseNote = '', tonightPhaseDone = false;
+  function sunAltAt(d) {
+    var mp = MOON.position(d);
+    return SKY.altAz(mp.sunRa, mp.sunDec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(d), SKY.HOME.lon)).alt;
+  }
+  function fmtClock(d) { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
+  function darkCrossing(from, dir) {
+    var prevA = sunAltAt(from), prevT = from.getTime();
     for (var k = 1; k <= 84; k++) {
-      var d2 = new Date(now.getTime() + k * 600000);
-      var mp2 = MOON.position(d2);
-      var a2 = SKY.altAz(mp2.sunRa, mp2.sunDec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(d2), SKY.HOME.lon)).alt;
-      if (a2 < -18) {
-        daylightNote = 'The sky is still blue — full dark at ' + d2.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '.';
-        return;
+      var t2 = prevT + 600000, a2 = sunAltAt(new Date(t2));
+      var hit = dir === 'down' ? (prevA >= -18 && a2 < -18) : (prevA <= -18 && a2 > -18);
+      if (hit) {
+        var lo = prevT, hi = t2;
+        for (var b = 0; b < 20; b++) {
+          var mid = (lo + hi) / 2, am = sunAltAt(new Date(mid));
+          if (dir === 'down' ? am >= -18 : am <= -18) lo = mid; else hi = mid;
+        }
+        return new Date((lo + hi) / 2);
+      }
+      prevA = a2; prevT = t2;
+    }
+    return null;
+  }
+  function computeEveningPhase() {
+    phaseNote = '';
+    if (typeof MOON === 'undefined') return;
+    if (!tonightPhaseDone) {
+      tonightPhaseDone = true;
+      if (sunAltAt(tonight.date) > -18) {
+        var dc0 = darkCrossing(tonight.date, 'down');
+        if (dc0) tonightPhaseNote = 'Full dark comes at ' + fmtClock(dc0) + ' tonight.';
+      }
+    }
+    if (!nowMode) return;
+    var now = new Date(), alt = sunAltAt(now);
+    if (alt > -18) {
+      var dc = darkCrossing(now, 'down');
+      if (!dc) return;
+      if (alt > 0) phaseNote = 'The sky is still blue — full dark at ' + fmtClock(dc) + '.';
+      else if (alt > -6) phaseNote = 'Dusk — the first stars are out. Full dark at ' + fmtClock(dc) + '.';
+      else if (alt > -12) phaseNote = 'Twilight is deepening — full dark at ' + fmtClock(dc) + '.';
+      else phaseNote = 'Nearly dark — full dark at ' + fmtClock(dc) + '.';
+    } else {
+      var hr = now.getHours();
+      if (hr >= 0 && hr < 5) {
+        var fc = darkCrossing(now, 'up');
+        if (fc && fc.getTime() - now.getTime() <= 5 * 3600000) phaseNote = 'The small hours — first light at ' + fmtClock(fc) + '.';
       }
     }
   }
-  computeDaylight();
+  function computeDaylight() { computeEveningPhase(); }
+  computeEveningPhase();
   var tonightSub = 'Drag to look — it drifts on its own.';
 
   /* ================= gamez-ai whispers (silent, Pass 1) =================
@@ -1594,7 +1635,8 @@
   }
   function fmtDist(d) { return d ? d.toLocaleString('en-US') : ''; }
   function greetSub() {
-    return (nowMode && daylightNote ? daylightNote : (aiTonightSub || tonightSub)) + (skyEvent ? ' ' + skyEvent : '') +
+    return (nowMode && phaseNote ? phaseNote : (aiTonightSub || tonightSub)) +
+      (!nowMode && tonightPhaseNote ? ' ' + tonightPhaseNote : '') + (skyEvent ? ' ' + skyEvent : '') +
       (mileNight ? ' Your tenth night under this sky.' : '');
   }
   function updateWhisper(t) {
@@ -2082,7 +2124,7 @@
       lastLiveTick = t;
       refreshMoon(new Date(), live.lst, live.Wi);
       planMeteors(tonight.date, live.lst, live.Wi);
-      computeDaylight();
+      computeEveningPhase();
     }
     var rgt = [cosA, 0, sinA];
     var upv = [-sinH * sinA, cosH, sinH * cosA];
@@ -2532,7 +2574,7 @@
     applyNowUI();
     refreshLive();
     if (nowMode) { refreshMoon(new Date(), live.lst, live.Wi); planMeteors(tonight.date, live.lst, live.Wi); computeDaylight(); }
-    else { refreshMoon(tonight.date, tonight.lst, null); planMeteors(tonight.date, tonight.lst, null); daylightNote = ''; issNow = null; issAimDot = -2; }
+    else { refreshMoon(tonight.date, tonight.lst, null); planMeteors(tonight.date, tonight.lst, null); phaseNote = ''; issNow = null; issAimDot = -2; }
     showWhisper(5000);
   });
   applyNowUI();
@@ -2544,7 +2586,7 @@
     voyageState: function () { return { engaged: P2.engaged, hold: P2.voyageHold, v: P2.voyage, longV: P2.longV, step: P2.stepLen || 0 }; },
     milestones: function () { return { night: mileNight, fig: P2.mileNotes.fig, moon: P2.mileNotes.moon }; }, spawnMeteor: function (fwd) { return spawnMeteor(elapsed, fwd || null); },
     nowMode: function () { return nowMode; }, liveLst: function () { return live.lst; }, liveDeltaDeg: function () { return live.deltaDeg; },
-    daylight: function () { return daylightNote; },
+    daylight: function () { return phaseNote; },
     issPasses: function () { return issPasses; }, issNow: function () { return issNow; },
     liveDirOf: function (name) {
       for (var li = 0; li < starPts.length; li++) if (starPts[li].name === name) return liveDir(starPts[li].dir);
