@@ -430,6 +430,15 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 /* ---------- Living Sky step 2: the constellation field ---------- */
 /* the carousel retires once JS builds the field (no-JS keeps the carousel) */
 .collection.has-field .games{display:none}
+/* the floor has two faces: the constellation, or the card grid.
+   the visitor picks; the pick is remembered */
+.collection.view-grid .field{display:none}
+.viewtoggle{display:flex;gap:18px;margin-top:10px}
+.vt{background:none;border:none;padding:4px 2px;cursor:pointer;
+  font:inherit;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(220,235,255,.4);border-bottom:1px solid transparent;
+  transition:color .15s,border-color .15s}
+.vt.on{color:rgba(235,245,255,.92);border-bottom-color:rgba(160,210,255,.7)}
 .field{position:relative;height:640px;width:calc(100% - 40px);max-width:1060px;margin:0 auto 46px}
 @media(min-width:700px){.field{height:560px}}
 .field-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;

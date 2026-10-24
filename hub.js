@@ -680,6 +680,26 @@
         }
       }
     } catch (e) {}
+    /* two faces for the floor: stars or grid — the visitor's pick sticks */
+    var vtS = document.getElementById('vtStars'), vtG = document.getElementById('vtGrid');
+    var colSub = document.getElementById('colSub');
+    function setView(v) {
+      var grid = v === 'grid';
+      main.classList.toggle('view-grid', grid);
+      main.classList.toggle('has-field', !grid);
+      if (vtS) vtS.classList.toggle('on', !grid);
+      if (vtG) vtG.classList.toggle('on', grid);
+      if (colSub) colSub.textContent = grid
+        ? 'Every machine on the floor. Tap a card to open it.'
+        : 'Every machine on the floor. Tap a star to open it.';
+      try { localStorage.setItem('gamez-view', v); } catch (e) {}
+      if (!grid) layout();
+    }
+    if (vtS) vtS.addEventListener('click', function () { setView('stars'); });
+    if (vtG) vtG.addEventListener('click', function () { setView('grid'); });
+    var savedView = 'stars';
+    try { savedView = localStorage.getItem('gamez-view') || 'stars'; } catch (e) {}
+    if (savedView === 'grid') setView('grid');
     var openId = null, openBtn = null;
     function drawLines() {
       var fr = field.getBoundingClientRect();
