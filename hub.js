@@ -552,15 +552,15 @@
     var POS = {
       'candy-cascade': [37, 24, 38, 25, 2], 'bubble-hex': [52, 30, 54, 31, 1],
       'bloom-defense': [30, 37, 30, 37, 1], 'neon-void': [72, 37, 75, 37, 2],
-      'maze-trace': [23, 31, 23, 32, 1], 'word-well': [13, 76, 11, 76, 1],
-      'pdawg': [20, 4, 19, 5, 1], 'life-story': [12, 91, 10, 91, 1],
+      'maze-trace': [23, 31, 23, 32, 1], 'word-well': [16, 76, 14, 76, 1],
+      'pdawg': [20, 4, 19, 5, 1], 'life-story': [15, 91, 13, 91, 1],
       'reel-empire': [76, 61, 79, 62, 1], 'tiny-fairway': [69, 53, 72, 53, 3],
       'skylark': [65, 21, 68, 22, 2], 'dominoes': [88, 40, 92, 39, 1],
       'cathedral': [30, 9, 29, 10, 1],
       /* a second, younger figure in the lower-right sky: a five-star ram.
        * Four of its stars are pure asterism; the bright head is a game. */
-      'starlight-drums': [67, 75, 70, 74, 3],
-      'aries-1': [42, 80, 43, 80, 1], 'aries-2': [47, 79, 48, 78, 1],
+      'starlight-drums': [71, 75, 73, 74, 3],
+      'aries-1': [42, 80, 43, 80, 1], 'aries-2': [45, 79, 46, 78, 1],
       'aries-3': [56, 74, 58, 73, 2], 'aries-4': [62, 64, 64, 63, 1]
     };
     var LINKS = [['dominoes', 'neon-void'], ['neon-void', 'tiny-fairway'],
