@@ -139,7 +139,13 @@ var STARS = [
    * alone; these six give the southern fish its body and tail */
   ['Epsilon Piscis Austrini', 22.678, -27.04, 4.18, 'B8'], ['Delta Piscis Austrini', 22.933, -32.54, 4.20, 'G8'],
   ['Beta Piscis Austrini', 22.525, -32.35, 4.29, 'A1'], ['Iota Piscis Austrini', 21.749, -33.03, 4.35, 'B9'],
-  ['Gamma Piscis Austrini', 22.875, -32.88, 4.46, 'A0'], ['Mu Piscis Austrini', 22.140, -32.99, 4.50, 'A2']
+  ['Gamma Piscis Austrini', 22.875, -32.88, 4.46, 'A0'], ['Mu Piscis Austrini', 22.140, -32.99, 4.50, 'A2'],
+  /* Two bright wanderers with no drawn figure (added for Bright Stars
+   * Speak): Boötes and Canis Minor were never drawn, but a sky that
+   * omits Arcturus — the brightest star of the northern half — and
+   * Procyon is missing part of itself. They render, settle and speak;
+   * they simply wear no threads. */
+  ['Arcturus', 14.261, 19.18, -0.05, 'K1'], ['Procyon', 7.655, 5.22, 0.34, 'F5']
 ];
 
 /* Deep-sky anchors: [name, raHours, decDeg, kind, palette, size]
@@ -178,7 +184,7 @@ var DISTANCES = {
   'Dubhe': 123, 'Merak': 79, 'Phecda': 84, 'Megrez': 81, 'Alioth': 83, 'Mizar': 83, 'Alkaid': 104,
   'Eltanin': 148, 'Rastaban': 380, 'Thuban': 303,
   'Hamal': 66, 'Sheratan': 60,
-  'Aldebaran': 65, 'Elnath': 134, 'Alcyone': 444,
+  'Aldebaran': 65, 'Elnath': 134, 'Alcyone': 444, 'Arcturus': 37, 'Procyon': 11.5,
   'Capella': 43, 'Menkalinan': 82,
   'Sadalsuud': 540, 'Sadalmelik': 520, 'Skat': 160,
   'Fomalhaut': 25, 'Alrescha': 151, 'Deneb Algedi': 39, 'Dabih': 344,

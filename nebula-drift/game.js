@@ -642,8 +642,9 @@
     planet: null, pAlpha: 0, pActT: 0, planetAng: 9, figAng: 9,
     moon: null, mAlpha: 0, mActT: 0, moonAng: 9,
     loggedFig: null, loggedPlanet: null, loggedMoon: false,
-    firstNotes: { fig: null, planet: null, moon: null, neb: null },
-    neb: null, nbAlpha: 0, nbActT: 0, nebAng: 9, loggedNeb: null };
+    firstNotes: { fig: null, planet: null, moon: null, neb: null, star: null },
+    neb: null, nbAlpha: 0, nbActT: 0, nebAng: 9, loggedNeb: null,
+    star: null, stAlpha: 0, stActT: 0, starAng: 9, loggedStar: null };
   var hasVoyaged = false;
   try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
 
@@ -927,6 +928,32 @@
     .filter(function (n) { return !!NEBULA_LINES[n.name]; })
     .map(function (n) { return { name: n.name, dir: n.dir, alt: n.alt, az: n.az, line: NEBULA_LINES[n.name] }; });
 
+  /* ================= bright stars speak (Pass D) =================
+   * The fifteen brightest stars in the catalogue get the nebula
+   * treatment: settle, an authored line, a true distance and one
+   * true fact. Their distances were already in the game — the
+   * dissolve whisper has quoted them since the voyages began. */
+  var STAR_LINES = {
+    'Sirius': 'Sirius — the Dog Star, the brightest in the sky and one of the nearest at 8.6 light-years. What looks like one star is two: a white dwarf the size of the Earth circles it.',
+    'Arcturus': 'Arcturus — an orange giant 37 light-years away. It does not travel with the local stars; it is a visitor, falling through the galaxy on a road of its own.',
+    'Vega': 'Vega — a blue-white star 25 light-years away, spinning so fast it bulges at its equator. Twelve thousand years ago it was the pole star; in twelve thousand more it will be again.',
+    'Capella': 'Capella — not one star but four: two golden giants and two red dwarfs, 43 light-years away, locked in two close pairs.',
+    'Rigel': 'Rigel — a blue supergiant some 860 light-years away, burning tens of thousands of times brighter than the Sun. Its light has been travelling since the age of the Crusades.',
+    'Procyon': 'Procyon — the little dog star, 11.5 light-years away, one of our nearest neighbours, with a white dwarf companion like the one at Sirius.',
+    'Betelgeuse': 'Betelgeuse — a red supergiant some 550 light-years away, so large it would swallow the orbit of Jupiter. It is dying, and restless: it dims and brightens on no schedule.',
+    'Altair': 'Altair — the eagle’s eye, 17 light-years away, spinning once in nine hours: so fast the star is shaped like a squashed ball.',
+    'Aldebaran': 'Aldebaran — the eye of the Bull, an orange giant 65 light-years away. It only pretends to sit in the Hyades cluster behind it; it is less than half as far.',
+    'Antares': 'Antares — the rival of Mars, a red supergiant some 550 light-years away. Set it where the Sun sits and its surface would reach past the orbit of Mars.',
+    'Spica': 'Spica — two blue stars in a four-day dance, 250 light-years away, so close they raise tides on each other and neither one stays round.',
+    'Pollux': 'Pollux — an orange giant 34 light-years away, the brighter head of the Twins, with a giant planet in orbit around it.',
+    'Fomalhaut': 'Fomalhaut — a young white star 25 light-years away, ringed by a great disc of dust and rubble: a solar system still being built.',
+    'Deneb': 'Deneb — the Swan’s tail, one of the most luminous stars known: thousands of light-years away, and still it stands among the brightest in our sky.',
+    'Regulus': 'Regulus — the little king, a blue-white star 79 light-years away, spinning so fast it is stretched a third wider than it is tall.'
+  };
+  var starPts = tonight.stars
+    .filter(function (st) { return !!STAR_LINES[st.name]; })
+    .map(function (st) { return { name: st.name, dir: st.dir, alt: st.alt, az: st.az, line: STAR_LINES[st.name] }; });
+
   /* ================= the remembering log (Pass 2) =================
    * On-device only, schema-versioned, silent: who he has met under
    * this sky, and when he first met them. Nothing leaves the phone,
@@ -936,7 +963,7 @@
    * activation. The first-ever meeting earns one quiet sentence in
    * that object's own whisper, for that activation only. */
   var LOG_KEY = 'nd-log-v1';
-  var log = { v: 1, nights: [], figs: {}, planets: {}, nebulae: {}, moon: { first: null, n: 0, phases: [] } };
+  var log = { v: 1, nights: [], figs: {}, planets: {}, stars: {}, nebulae: {}, moon: { first: null, n: 0, phases: [] } };
   function saveLog() {
     try { window.localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch (e) { /* private mode */ }
   }
@@ -949,6 +976,7 @@
           log.nights = p.nights || []; log.figs = p.figs || {};
           log.planets = p.planets || {};
           log.nebulae = p.nebulae || {};   /* added by Pass 3; older logs default empty */
+          log.stars = p.stars || {};       /* added by review Pass D; same rule */
           if (p.moon) log.moon = p.moon;
         }
       }
@@ -971,6 +999,9 @@
     } else if (kind === 'planet') {
       if (!log.planets[name]) { log.planets[name] = { first: tk, n: 1 }; P2.firstNotes.planet = name; }
       else log.planets[name].n++;
+    } else if (kind === 'star') {
+      if (!log.stars[name]) { log.stars[name] = { first: tk, n: 1 }; P2.firstNotes.star = name; }
+      else log.stars[name].n++;
     } else if (kind === 'neb') {
       if (!log.nebulae[name]) { log.nebulae[name] = { first: tk, n: 1 }; P2.firstNotes.neb = name; }
       else log.nebulae[name].n++;
@@ -1193,12 +1224,14 @@
     } else if (P2.moon && P2.mAlpha > 0.3 && P2.moon.line &&
                (!P2.planet || P2.moonAng <= P2.planetAng) &&
                (!P2.neb || P2.moonAng <= P2.nebAng) &&
+               (!P2.star || P2.moonAng <= P2.starAng) &&
                (!fig || P2.moonAng <= P2.figAng)) {
       var moNote = P2.firstNotes.moon === 'Moon';
       setWhisper('mo:Moon' + (moNote ? ':f' : ''), 'Moon',
         P2.moon.line + (moNote ? ' First time you’ve met her.' : ''));
     } else if (P2.planet && P2.pAlpha > 0.3 && P2.planet.line && (!fig || P2.planetAng <= P2.figAng) &&
                (!P2.moon || P2.planetAng <= P2.moonAng) &&
+               (!P2.star || P2.planetAng <= P2.starAng) &&
                (!P2.neb || P2.planetAng <= P2.nebAng)) {
       var plNote = P2.firstNotes.planet === P2.planet.name;
       var plSuffix = plNote ? ' First time you’ve met ' + (PLANET_VOICE[P2.planet.name].pro === 'she' ? 'her' : 'him') + '.' : '';
@@ -1206,11 +1239,21 @@
     } else if (P2.neb && P2.nbAlpha > 0.3 && P2.neb.line &&
                (!P2.moon || P2.nebAng <= P2.moonAng) &&
                (!P2.planet || P2.nebAng <= P2.planetAng) &&
+               (!P2.star || P2.nebAng <= P2.starAng) &&
                (!fig || P2.nebAng <= P2.figAng)) {
       var nbNote = P2.firstNotes.neb === P2.neb.name;
       setWhisper('nb:' + P2.neb.name + (nbNote ? ':f' : ''), P2.neb.name,
         P2.neb.line + (nbNote ? ' First time you’ve found it.' : ''));
-    } else if (fig && P2.alpha > 0.3 && (!P2.neb || P2.nbAlpha <= 0.3 || P2.figAng <= P2.nebAng)) {
+    } else if (P2.star && P2.stAlpha > 0.3 && P2.star.line &&
+               (!P2.moon || P2.starAng <= P2.moonAng) &&
+               (!P2.planet || P2.starAng <= P2.planetAng) &&
+               (!P2.neb || P2.starAng <= P2.nebAng) &&
+               (!fig || P2.starAng <= P2.figAng)) {
+      var stNote = P2.firstNotes.star === P2.star.name;
+      setWhisper('st:' + P2.star.name + (stNote ? ':f' : ''), P2.star.name,
+        P2.star.line + (stNote ? ' First time you’ve found it.' : ''));
+    } else if (fig && P2.alpha > 0.3 && (!P2.neb || P2.nbAlpha <= 0.3 || P2.figAng <= P2.nebAng) &&
+               (!P2.star || P2.stAlpha <= 0.3 || P2.figAng <= P2.starAng)) {
       var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
       var aiFig = aiFigText[fig.name] || null;
       var figNote = P2.firstNotes.fig === fig.name && !aiFig && !hintOn;
@@ -1714,6 +1757,25 @@
       if (P2.nbAlpha === 0) { P2.neb = null; P2.loggedNeb = null; P2.firstNotes.neb = null; }
     }
 
+    /* bright-star detection — a point, gated exactly like a planet */
+    var stCand = null, stAng = 9;
+    for (var sti = 0; sti < starPts.length; sti++) {
+      var stp = starPts[sti];
+      if (stp.alt < 0) continue;
+      var cosSt = stp.dir[0] * fwd[0] + stp.dir[1] * fwd[1] + stp.dir[2] * fwd[2];
+      var aSt = Math.acos(Math.max(-1, Math.min(1, cosSt)));
+      if (aSt < stAng) { stAng = aSt; stCand = stp; }
+    }
+    if (stCand && (P2.star ? stAng < 0.24 : stAng < 0.16)) {
+      if (P2.star !== stCand) { P2.star = stCand; P2.stActT = t; }
+      P2.starAng = stAng;
+      P2.stAlpha = Math.min(1, P2.stAlpha + dt * 0.8);
+    } else {
+      P2.stAlpha = Math.max(0, P2.stAlpha - dt * 0.7);
+      P2.starAng = 9;
+      if (P2.stAlpha === 0) { P2.star = null; P2.loggedStar = null; P2.firstNotes.star = null; }
+    }
+
     P2.activeFor = P2.activeName ? t - P2.actT : 0;
 
     /* sound events (ported) */
@@ -1744,6 +1806,10 @@
     if (P2.neb && P2.loggedNeb !== P2.neb.name && P2.nbAlpha > 0.6 && t - P2.nbActT > 1.2) {
       P2.loggedNeb = P2.neb.name;
       recordMeet('neb', P2.neb.name);
+    }
+    if (P2.star && P2.loggedStar !== P2.star.name && P2.stAlpha > 0.6 && t - P2.stActT > 1.2) {
+      P2.loggedStar = P2.star.name;
+      recordMeet('star', P2.star.name);
     }
 
     /* meteors arrive on their own schedule */
@@ -1918,6 +1984,12 @@
       plNames.map(function (n) { return [n, log.planets[n]]; }).sort(byFirst)
         .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
     }
+    var stNames = Object.keys(log.stars);
+    if (stNames.length) {
+      logSection(body, 'STARS');
+      stNames.map(function (n) { return [n, log.stars[n]]; }).sort(byFirst)
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+    }
     var nbNames = Object.keys(log.nebulae);
     if (nbNames.length) {
       logSection(body, 'DEEP SKY');
@@ -1933,7 +2005,7 @@
         body.appendChild(ph);
       }
     }
-    if (!figNames.length && !plNames.length && !nbNames.length && !log.moon.first) {
+    if (!figNames.length && !plNames.length && !stNames.length && !nbNames.length && !log.moon.first) {
       var em = document.createElement('div'); em.className = 'logLine';
       em.textContent = 'Nothing remembered yet. Settle on a figure, a planet, or the Moon, and tonight will be kept here.';
       body.appendChild(em);
@@ -1952,7 +2024,7 @@
 
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
-    catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts,
+    catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts, brightStars: starPts,
     meteors: meteorInfo, skyEvent: skyEvent, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
     meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
@@ -1960,6 +2032,14 @@
   });
   window.__nebula.bankNow = function () { return bankCur; };
   window.__nebula.face = function (name) {
+    for (var sfi = 0; sfi < starPts.length; sfi++) {
+      if (starPts[sfi].name === name) {
+        var aaS = dirToAzAlt(starPts[sfi].dir);
+        cam.az = aaS.az; cam.alt = aaS.alt; cam.vaz = 0; cam.valt = 0;
+        lastTouchAt = perfNow();
+        return true;
+      }
+    }
     for (var nfi = 0; nfi < nebPts.length; nfi++) {
       if (nebPts[nfi].name === name) {
         var aaN = dirToAzAlt(nebPts[nfi].dir);
