@@ -1058,12 +1058,13 @@
   var mileNight = log.nights.length === 10;
 
   /* ================= field notes (review Pass H) =================
-   * The deferred AI tier, homed at last: once a night has three
-   * distinct meetings in it, the worker writes one dated line for
-   * the journal from that night's own facts — and if it never
-   * answers, an authored line composed of the same facts takes its
-   * place, so a real night's drifting is never left unrecorded.
-   * One attempt per night; the note itself is the guard. */
+   * Once a night has three distinct meetings in it, one dated line
+   * is written for the journal from that night's own facts.
+   * Authored-only, by Jimmy's pick (2026-10-24): the worker's
+   * driftlog lines were prettier but embroidered — a journal entry
+   * that can invent a position is worse than a plainer one that
+   * can't. The worker kind still exists; the game never calls it.
+   * One note per night; the note itself is the guard. */
   var metTonight = [], noteAttempted = false;
   function trackFieldNote(name) {
     if (metTonight.indexOf(name) === -1) metTonight.push(name);
@@ -1083,18 +1084,9 @@
     var joined = met.length > 2
       ? met.slice(0, -1).join(', ') + ', and ' + met[met.length - 1]
       : met.join(' and ');
-    var moonFact = moonPt ? moonPhaseName(moonPt) + ', ' + Math.round(moonPt.illum * 100) + '% lit' : '';
-    aiFetch('driftlog', {
-      date: dateStr, met: met.join(', '),
-      moon: moonFact, event: skyEvent || ''
-    }, function (t) {
-      if (t) addFieldNote(t);
-      else {
-        addFieldNote(moonPt
-          ? joined + ' — met under a ' + moonPhaseName(moonPt).toLowerCase() + ' Moon.'
-          : joined + ' — met tonight.');
-      }
-    });
+    addFieldNote(moonPt
+      ? joined + ' — met under a ' + moonPhaseName(moonPt).toLowerCase() + ' Moon.'
+      : joined + ' — met tonight.');
   }
   function addFieldNote(text) {
     var tk = aiDateKey(tonight.date);
