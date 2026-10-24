@@ -293,13 +293,22 @@
     var clock = document.getElementById('stClock');
     var phase = document.getElementById('stPhase');
     var units = document.getElementById('stUnits');
-    if (units) units.textContent = document.querySelectorAll('.card[data-game]').length;
+    var dDate = document.getElementById('dDate');
+    var dPhase = document.getElementById('dPhase');
+    var dUnits = document.getElementById('dUnits');
+    var nUnits = document.querySelectorAll('.card[data-game]').length;
+    if (units) units.textContent = nUnits;
+    if (dUnits) dUnits.textContent = nUnits;
     var PHASES = ['DAWN', 'DAY', 'DUSK', 'NIGHT'];
+    var DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    var MONS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     function pad(n) { return String(n).padStart(2, '0'); }
     function tick() {
       var d = new Date();
       if (clock) clock.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
       if (phase) phase.textContent = PHASES[phaseOf(d.getHours())];
+      if (dPhase) dPhase.textContent = PHASES[phaseOf(d.getHours())];
+      if (dDate) dDate.textContent = DAYS[d.getDay()] + ' · ' + MONS[d.getMonth()] + ' ' + pad(d.getDate());
     }
     tick();
     setInterval(tick, 1000);
@@ -425,9 +434,11 @@
     if (!pr) return;
     any = true;
     var a = document.createElement('a');
-    a.className = 'chip ' + g.cls; a.href = './' + g.id + '/';
-    a.innerHTML = '<div class="scrim"></div><div class="info"><b>' +
-      escapeHtml(g.name) + '</b><span>' + escapeHtml(pr.label) + '</span></div>';
+    a.className = 'chip'; a.href = './' + g.id + '/';
+    a.innerHTML = '<span class="win ' + g.cls + '" aria-hidden="true"></span>' +
+      '<div class="info"><b>' + escapeHtml(g.name) + '</b><span>' +
+      escapeHtml(pr.label) + '</span>' +
+      '<div class="meter"><i style="width:' + Math.round((pr.frac || 0) * 100) + '%"></i></div></div>';
     rail.appendChild(a);
   });
   if (any) document.getElementById('continue').style.display = 'block';

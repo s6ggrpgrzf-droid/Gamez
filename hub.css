@@ -780,7 +780,7 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   border:1px solid rgba(150,190,240,.11);
   background:linear-gradient(180deg,rgba(22,33,55,.62),rgba(11,17,31,.62));
   box-shadow:inset 0 1px 0 rgba(215,235,255,.05),0 16px 34px rgba(0,0,0,.30)}
-.console .shead{margin:0;padding:14px 18px 13px;align-items:baseline;
+.console .shead{margin:0;padding:14px 18px 13px 26px;align-items:baseline;
   border-bottom:1px solid rgba(150,190,240,.10);border-radius:18px 18px 0 0;
   background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,0) 75%)}
 .console .shead h2{font-size:14px;font-weight:600;letter-spacing:.2em;
@@ -822,3 +822,178 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   .band-tag{font-size:9px;letter-spacing:.18em}
   .band-tag span{white-space:nowrap}
 }
+
+/* ================= CONSOLE INTERIORS — PASS 2: PANEL FACES =================
+   Grounded in the Apollo main display console: sub-panels are bolted
+   plates (a fastener at every corner), faces are panel-grey rather
+   than blue-black, seams are machined grooves, legends are engraved. */
+.console{background:linear-gradient(180deg,#0c1119 0%,#070a10 55%,#05070c 100%)}
+.console>section,.console>main.collection{
+  background-image:
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
+    linear-gradient(180deg,rgba(27,33,46,.70),rgba(13,16,24,.70));
+  background-position:10px 10px,calc(100% - 10px) 10px,10px calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),0 0;
+  background-size:8px 8px,8px 8px,8px 8px,8px 8px,100% 100%;
+  background-repeat:no-repeat;
+  box-shadow:inset 0 1px 0 rgba(215,235,255,.05),inset 0 0 0 1px rgba(0,0,0,.22),0 16px 34px rgba(0,0,0,.30)}
+.console .display{
+  background-image:
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    linear-gradient(180deg,#04070d,#060b14);
+  background-position:10px 10px,calc(100% - 10px) 10px,10px calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),0 0;
+  background-size:8px 8px,8px 8px,8px 8px,8px 8px,100% 100%;
+  background-repeat:no-repeat}
+.console .shead{box-shadow:inset 0 -1px 0 rgba(0,0,0,.55),inset 0 -2px 0 rgba(220,240,255,.045)}
+.console .shead h2{text-shadow:0 1px 0 rgba(0,0,0,.65)}
+.console .studio-footer{
+  background-image:
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
+    linear-gradient(180deg,rgba(17,22,34,.55),rgba(8,11,19,.55));
+  background-position:10px 10px,calc(100% - 10px) 10px,10px calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),0 0;
+  background-size:8px 8px,8px 8px,8px 8px,8px 8px,100% 100%;
+  background-repeat:no-repeat}
+.console .studio-footer .wordmark,.console .studio-footer .made-by{
+  text-shadow:0 1px 0 rgba(0,0,0,.7),0 -1px 0 rgba(225,242,255,.05)}
+
+/* ================= PASS 3: THE SCREENS' CONTENT =================
+   The main display gains a caution-and-warning style tile block —
+   legend over value, the Apollo C/W matrix in miniature. The theatre
+   program becomes a printed board: ruled rows, mono times. */
+.console .display{display:flex;align-items:center;gap:28px}
+.display .opendoor{flex:1 1 auto;min-width:0}
+.dtiles{display:grid;grid-template-columns:repeat(2,minmax(116px,auto));gap:8px;flex:none}
+.dtile{border:1px solid rgba(150,190,240,.16);border-radius:6px;padding:8px 12px 9px;
+  background:linear-gradient(180deg,rgba(22,30,48,.85),rgba(8,12,20,.85));
+  box-shadow:inset 0 1px 0 rgba(215,235,255,.06),inset 0 2px 8px rgba(0,0,0,.45)}
+.dt-leg{display:block;font-family:var(--mono);font-size:8.5px;font-weight:500;
+  letter-spacing:.24em;text-transform:uppercase;color:rgba(150,185,230,.55)}
+.dt-val{display:block;margin-top:3px;font-family:var(--mono);font-size:13px;font-weight:500;
+  letter-spacing:.08em;color:#e9f3ff;text-transform:uppercase;white-space:nowrap}
+@media (max-width:760px){
+  .console .display{flex-direction:column;align-items:flex-start;gap:20px}
+  .dtiles{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+}
+/* ---------- the program board ---------- */
+.console .feat-shows{gap:0;align-items:stretch;width:100%;
+  border:1px solid rgba(232,196,130,.22);border-radius:12px;overflow:hidden;
+  background:rgba(5,8,14,.45);box-shadow:inset 0 2px 10px rgba(0,0,0,.4)}
+.console .feat-show{border:none;border-bottom:1px solid rgba(232,196,130,.14);
+  border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
+  box-shadow:none;padding:11px 16px;max-width:none;width:100%}
+.console .feat-show:last-child{border-bottom:none}
+.console .feat-show .t{font-family:var(--mono);font-weight:500;font-size:11.5px;min-width:62px}
+.console .feat-show span:last-child{font-family:var(--mono);font-size:11px;
+  letter-spacing:.06em;color:rgba(226,205,165,.55);margin-left:auto;text-align:right}
+.console .feat-kicker{display:flex;align-items:center;gap:12px}
+.console .feat-kicker::before{content:"";flex:0 0 26px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(232,196,130,.6))}
+.console .feat-kicker::after{content:"";flex:1;height:1px;
+  background:linear-gradient(90deg,rgba(232,196,130,.6),transparent)}
+.console .feat3d .feat-cta{border-radius:12px;letter-spacing:.03em}
+@media (max-width:700px){
+  .console .feat-shows{align-items:stretch}
+  .console .feat-show .t{min-width:56px}
+}
+@media (max-width:560px){
+  .console .feat-show{flex-wrap:wrap}
+  .console .feat-show span:last-child{margin-left:68px;text-align:left;
+    flex-basis:calc(100% - 68px);white-space:normal}
+}
+
+/* ================= PASS 4: PICKS AS GAUGED MONITORS =================
+   Apollo's round instruments sit in machined bezel collars — so do
+   the picks' discs now. Corner fasteners and a legend footer finish
+   each monitor. */
+.featured .ed-pick{
+  background-image:
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px);
+  background-position:7px 7px,calc(100% - 7px) 7px,7px calc(100% - 7px),calc(100% - 7px) calc(100% - 7px);
+  background-size:6px 6px;background-repeat:no-repeat}
+.featured .ed-art{position:relative;
+  box-shadow:0 0 0 5px #0b111d,0 0 0 6px rgba(170,205,245,.22),
+    0 0 24px 6px color-mix(in srgb,var(--glow) 45%,transparent),
+    0 0 70px 22px color-mix(in srgb,var(--glow) 18%,transparent),
+    inset 0 0 0 1px rgba(255,255,255,.28),0 10px 24px rgba(0,0,0,.5)}
+.featured .ed-art::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:linear-gradient(135deg,rgba(255,255,255,.17),transparent 46%);pointer-events:none}
+.featured .ed-go{display:flex;align-items:center;width:100%;margin-top:15px;
+  padding-top:11px;border-top:1px solid rgba(150,190,240,.10);
+  font-family:var(--mono);font-size:13px;color:rgba(170,205,245,.65)}
+.featured .ed-go::before{content:"OPEN UNIT";font-size:9px;font-weight:500;
+  letter-spacing:.24em;color:rgba(150,185,230,.5);margin-right:auto}
+
+/* ================= PASS 5: CONTINUE AS TELEMETRY SLOTS =================
+   The warm orbs retire. Each in-progress game is a rectangular slot:
+   key art in a collared window, legend + mono value, and progress as
+   a segmented strip gauge — Apollo's strip instruments, miniaturized. */
+.console .rail{gap:14px}
+.console .chip{flex:0 0 auto;width:256px;height:auto;display:flex;align-items:center;
+  gap:12px;padding:12px;border-radius:14px;overflow:hidden;text-align:left;
+  border:1px solid rgba(150,190,240,.13);
+  background:linear-gradient(180deg,rgba(24,32,48,.78),rgba(11,16,27,.78));
+  box-shadow:inset 0 1px 0 rgba(215,235,255,.06),0 12px 24px rgba(0,0,0,.35);
+  animation:none}
+.console .chip .win{flex:0 0 54px;width:54px;height:54px;border-radius:9px;
+  background-size:cover;background-position:center;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 0 0 3px #0b111d,0 0 0 4px rgba(170,205,245,.16)}
+.console .chip .info{position:static;transform:none;flex:1;min-width:0}
+.console .chip .info b{font-family:var(--font-display);font-size:13.5px;font-weight:600;
+  letter-spacing:.02em;text-shadow:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.console .chip .info span{display:block;margin:3px 0 7px;font-family:var(--mono);
+  font-size:10.5px;font-weight:500;color:rgba(190,220,250,.78);text-shadow:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.console .chip .meter{position:relative;height:6px;border-radius:2px;overflow:hidden;
+  background:rgba(150,190,240,.13)}
+.console .chip .meter i{display:block;height:100%;
+  background:linear-gradient(90deg,#57b6ff,#9fd8ff)}
+.console .chip .meter::after{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(4,8,14,.85) 9px 10px)}
+@media (max-width:480px){.console .chip{width:228px}}
+
+/* ================= PASS 6: GRID CARDS AS SPEC PLATES =================
+   In grid view each game is a bolted spec plate: serial legend,
+   key art in a bezel screen, segmented progress, a ruled meta row. */
+.console .games{counter-reset:unit;padding:18px 18px 22px}
+.console .card{counter-increment:unit;border:1px solid rgba(150,190,240,.13);
+  border-radius:16px;backdrop-filter:none;-webkit-backdrop-filter:none;
+  background-image:
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
+    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
+    linear-gradient(180deg,rgba(25,33,49,.92),rgba(12,17,28,.92));
+  background-position:7px 7px,calc(100% - 7px) 7px,7px calc(100% - 7px),calc(100% - 7px) calc(100% - 7px),0 0;
+  background-size:6px 6px,6px 6px,6px 6px,6px 6px,100% 100%;
+  background-repeat:no-repeat;
+  box-shadow:inset 0 1px 0 rgba(215,235,255,.06),0 16px 32px rgba(0,0,0,.4)}
+.console .card .art{margin:10px 10px 0;border-radius:10px;
+  box-shadow:inset 0 0 0 1px rgba(210,235,255,.14),inset 0 2px 12px rgba(0,0,0,.45)}
+.console .card .badge{font-family:var(--mono);font-size:8.5px;font-weight:500;
+  letter-spacing:.2em;text-transform:uppercase;border-radius:5px;
+  background:rgba(4,8,14,.8);border:1px solid rgba(200,230,255,.25);color:#dcecfb}
+.console .card .art .pbar{height:6px;background:rgba(150,190,240,.13)}
+.console .card .art .pbar i{background:linear-gradient(90deg,#57b6ff,#9fd8ff)}
+.console .card .art .pbar::after{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(4,8,14,.85) 9px 10px)}
+.console .card .body::before{content:"UNIT " counter(unit,decimal-leading-zero);
+  font-family:var(--mono);font-size:8.5px;font-weight:500;letter-spacing:.26em;
+  color:rgba(150,185,230,.5);margin-bottom:6px}
+.console .card .meta{border-top:1px solid rgba(150,190,240,.10);padding-top:12px}
+.console .card .play{font-family:var(--mono);font-size:10px;font-weight:500;
+  letter-spacing:.2em;text-transform:uppercase;color:#dcecfb;
+  border:1px solid rgba(150,190,240,.22);border-radius:7px;padding:6px 11px;
+  background:linear-gradient(180deg,rgba(120,180,255,.13),rgba(120,180,255,.04))}
+.console .card .prog{font-family:var(--mono);font-size:10.5px;
+  color:rgba(190,220,250,.78);text-align:right}
