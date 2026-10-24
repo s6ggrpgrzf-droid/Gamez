@@ -80,7 +80,17 @@ var STARS = [
   /* Ophiuchus + Hercules — the west, going down */
   ['Rasalhague', 17.560, 12.56, 2.07, 'A5'], ['Cebalrai', 17.724, 4.57, 2.77, 'K2'],
   ['Sabik', 17.173, -15.72, 2.43, 'A2'], ['Kornephoros', 16.499, 21.49, 2.77, 'G7'],
-  ['Rasalgethi', 17.244, 14.39, 3.40, 'M5'], ['Zeta Herculis', 16.688, 31.60, 2.81, 'F9']
+  ['Rasalgethi', 17.244, 14.39, 3.40, 'M5'], ['Zeta Herculis', 16.688, 31.60, 2.81, 'F9'],
+  /* Orion — the Hunter, climbing the winter east (added 2026-10-23;
+   * Betelgeuse is a semiregular variable, ~0.0–1.3 — 0.42 is its mean) */
+  ['Betelgeuse', 5.920, 7.41, 0.42, 'M2'], ['Rigel', 5.242, -8.20, 0.18, 'B8'],
+  ['Bellatrix', 5.419, 6.35, 1.64, 'B2'], ['Alnilam', 5.604, -1.20, 1.69, 'B0'],
+  ['Alnitak', 5.679, -1.94, 1.88, 'O9'], ['Mintaka', 5.533, -0.30, 2.20, 'B0'],
+  ['Saiph', 5.796, -9.67, 2.07, 'B0'], ['Meissa', 5.586, 9.93, 3.33, 'O8'],
+  /* Canis Major — the Hunter's dog, low in the winter south */
+  ['Sirius', 6.753, -16.71, -1.46, 'A1'], ['Mirzam', 6.378, -17.96, 1.98, 'B1'],
+  ['Adhara', 6.977, -28.97, 1.50, 'B2'], ['Wezen', 7.140, -26.39, 1.83, 'F8'],
+  ['Aludra', 7.402, -29.30, 2.45, 'B5']
 ];
 
 /* Deep-sky anchors: [name, raHours, decDeg, kind, palette, size]
@@ -124,7 +134,10 @@ var DISTANCES = {
   'Sadalsuud': 540, 'Sadalmelik': 520, 'Skat': 160,
   'Fomalhaut': 25, 'Alrescha': 151, 'Deneb Algedi': 39, 'Dabih': 344,
   'Rasalhague': 49, 'Cebalrai': 82, 'Sabik': 88,
-  'Kornephoros': 148, 'Rasalgethi': 360, 'Zeta Herculis': 35
+  'Kornephoros': 148, 'Rasalgethi': 360, 'Zeta Herculis': 35,
+  'Betelgeuse': 643, 'Rigel': 773, 'Bellatrix': 243, 'Alnilam': 1342,
+  'Alnitak': 817, 'Mintaka': 916, 'Saiph': 721, 'Meissa': 1055,
+  'Sirius': 9, 'Mirzam': 499, 'Adhara': 431, 'Wezen': 1791, 'Aludra': 3196
 };
 
 /* The figures: stick lines over catalogue stars, plus the one line of
@@ -166,7 +179,14 @@ var FIGURES = [
   { name: 'Hercules', story: 'The strongman, kneeling forever in the middle of his labours.',
     lines: [['Kornephoros', 'Zeta Herculis'], ['Zeta Herculis', 'Rasalgethi']] },
   { name: 'Ophiuchus', story: 'The Serpent Bearer, the healer who learned to wake the dead.',
-    lines: [['Rasalhague', 'Cebalrai'], ['Rasalhague', 'Sabik']] }
+    lines: [['Rasalhague', 'Cebalrai'], ['Rasalhague', 'Sabik']] },
+  { name: 'Orion', story: 'The Hunter — the red star on his shoulder is Betelgeuse, swollen and near its end.',
+    lines: [['Betelgeuse', 'Alnitak'], ['Alnitak', 'Alnilam'], ['Alnilam', 'Mintaka'],
+            ['Mintaka', 'Bellatrix'], ['Betelgeuse', 'Bellatrix'], ['Alnitak', 'Saiph'],
+            ['Mintaka', 'Rigel'], ['Saiph', 'Rigel'], ['Bellatrix', 'Meissa']] },
+  { name: 'Canis Major', story: 'The Hunter’s dog — Sirius, the brightest star in the sky, sits just nine light-years away.',
+    lines: [['Mirzam', 'Sirius'], ['Sirius', 'Adhara'], ['Adhara', 'Wezen'],
+            ['Wezen', 'Aludra'], ['Sirius', 'Wezen']] }
 ];
 
 /* ---------- seeded PRNG (mulberry32) — reproducible fields ---------- */

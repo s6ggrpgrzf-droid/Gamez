@@ -42,7 +42,7 @@ ok(nebUp.length >= 11, 'tonight nebula anchors placed', nebUp.length + ' of ' + 
 /* Catalogue integrity */
 ok(SKY.STARS.length >= 70, 'catalogue size', SKY.STARS.length);
 ok(SKY.STARS.every(s => s[1] >= 0 && s[1] < 24 && s[2] >= -90 && s[2] <= 90), 'RA/Dec ranges sane');
-ok(SKY.STARS.every(s => s[3] > -1 && s[3] <= 4.5), 'magnitudes sane');
+ok(SKY.STARS.every(s => s[3] >= -1.5 && s[3] <= 4.5), 'magnitudes sane'); // lower bound is Sirius, the brightest star there is
 ok(SKY.NEBULAE.length >= 12, 'nebula anchor count', SKY.NEBULAE.length);
 
 /* Direction vectors are unit length */
@@ -83,6 +83,25 @@ ok(skyFig.stars.find(s => s.name === 'Deneb').dist === 2615, 'tonight stars carr
 /* Seeded RNG is reproducible */
 const r1 = SKY.mulberry32(42), r2 = SKY.mulberry32(42);
 ok(r1() === r2() && r1() === r2(), 'mulberry32 deterministic');
+
+/* Orion + Canis Major (constellations Pass 1, 2026-10-23): reference
+ * data from the Wikipedia star lists (Hipparcos). In December evenings
+ * both figures stand up over Edmond; on the October reference night
+ * they are honestly still below the horizon at 22:00. */
+const figNames = SKY.FIGURES.map(f => f.name);
+ok(figNames.includes('Orion') && figNames.includes('Canis Major'), 'figures include Orion + Canis Major');
+const starNameSet = new Set(SKY.STARS.map(s => s[0]));
+let allWired = true;
+SKY.FIGURES.forEach(f => f.lines.flat().forEach(n => { if (!starNameSet.has(n) || !SKY.DISTANCES[n]) allWired = false; }));
+ok(allWired, 'every figure line names a catalogued star with a distance');
+const DEC = new Date(Date.UTC(2026, 11, 22, 4, 0, 0)); // Dec 21, 22:00 CST
+const lstDec = SKY.lstDeg(SKY.jdFromDate(DEC), SKY.HOME.lon);
+const betD = SKY.altAz(5.920, 7.41, SKY.HOME.lat, lstDec);
+ok(betD.alt > 35, 'December 22:00: Betelgeuse high in the east', 'alt ' + betD.alt.toFixed(1));
+const sirD = SKY.altAz(6.753, -16.71, SKY.HOME.lat, lstDec);
+ok(sirD.alt > 12 && sirD.alt < 30, 'December 22:00: Sirius up, low in the south', 'alt ' + sirD.alt.toFixed(1));
+const betO = SKY.altAz(5.920, 7.41, SKY.HOME.lat, lst);
+ok(betO.alt < 0, 'October 22:00: Orion honestly below the horizon', 'alt ' + betO.alt.toFixed(1));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
