@@ -435,6 +435,14 @@
   }
 
   /* distant anchor complexes, in shell space at their real directions */
+  function anchorShade(pal, r) {
+    var raw = paletteShade(pal, r);
+    var lum = 0.35 * raw[0] + 0.45 * raw[1] + 0.20 * raw[2];
+    var warm = raw[0] > raw[2] + 0.02;
+    var gMix = warm ? 0.52 : 0.26;
+    var gTint = warm ? [lum * 0.92, lum * 0.98, lum * 1.08] : [lum, lum, lum];
+    return [raw[0] + (gTint[0] - raw[0]) * gMix, raw[1] + (gTint[1] - raw[1]) * gMix, raw[2] + (gTint[2] - raw[2]) * gMix];
+  }
   var anchorGas = null;
   (function buildAnchors() {
     var puffs = [];
@@ -458,15 +466,15 @@
             neb.dir[1] * dist + basis.t1[1] * j1 + basis.t2[1] * j2,
             neb.dir[2] * dist + basis.t1[2] * j1 + basis.t2[2] * j2
           ],
-          col: paletteShade(neb.palette, rng), size: neb.size * (270 + rng() * 240),
-          alpha: neb.kind === 'cluster' ? 0.10 : 0.08, phase: rng() * 6.283, kind: 0,
+          col: anchorShade(neb.palette, rng), size: neb.size * (270 + rng() * 240),
+          alpha: neb.kind === 'cluster' ? 0.085 : 0.066, phase: rng() * 6.283, kind: 0,
           rot: shape.rot + (rng() - 0.5) * 0.35, aspect: shape.aspect * (0.9 + rng() * 0.2)
         });
         if (li === 0 && (neb.kind === 'galaxy' || neb.kind === 'cluster')) {
           /* a bright core so a galaxy reads as a galaxy */
           puffs.push({
             pos: [neb.dir[0] * (dist + 30), neb.dir[1] * (dist + 30), neb.dir[2] * (dist + 30)],
-            col: paletteShade(neb.palette, rng), size: neb.size * 130,
+            col: anchorShade(neb.palette, rng), size: neb.size * 130,
             alpha: 0.16, phase: rng() * 6.283, kind: 0, rot: shape.rot, aspect: shape.aspect
           });
         }
@@ -490,7 +498,13 @@
   (function buildLocal() {
     var r = SKY.mulberry32(4242);
     var palNames = Object.keys(PALETTES);
-    for (var c = 0; c < 26; c++) {
+    /* RESTRAINT (2026-10-23 review tour): the near volume had grown
+     * louder than the sky — big saturated banks sitting on the
+     * subjects, the gold clusters reading as smudges. Fewer, smaller,
+     * dimmer; every colour pulled toward its own grey, warm colours
+     * greying harder and cooling — gold belongs to the far anchors
+     * and the star cores. The Milky Way river carries the colour. */
+    for (var c = 0; c < 18; c++) {
       gasClusters.push({
         pos: [(r() - 0.5) * BOX, (r() - 0.5) * BOX, (r() - 0.5) * BOX],
         pal: palNames[Math.floor(r() * palNames.length)]
@@ -498,26 +512,32 @@
     }
     var puffs = [];
     gasClusters.forEach(function (cl) {
-      var nP = 34 + Math.floor(r() * 14);
+      var nP = 26 + Math.floor(r() * 10);
       for (var i = 0; i < nP; i++) {
+        var raw = paletteShade(cl.pal, r);
+        var lum = 0.35 * raw[0] + 0.45 * raw[1] + 0.20 * raw[2];
+        var warm = raw[0] > raw[2] + 0.02;
+        var gMix = warm ? 0.66 : 0.38;
+        var gTint = warm ? [lum * 0.90, lum * 0.97, lum * 1.10] : [lum, lum, lum];
         puffs.push({
           pos: [
             cl.pos[0] + ((r() + r() + r()) / 3 - 0.5) * 560,
             cl.pos[1] + ((r() + r() + r()) / 3 - 0.5) * 560,
             cl.pos[2] + ((r() + r() + r()) / 3 - 0.5) * 560
           ],
-          col: paletteShade(cl.pal, r), size: 95 + r() * 210,
-          alpha: 0.055 + r() * 0.07, phase: r() * 6.283, kind: 0,
+          col: [raw[0] + (gTint[0] - raw[0]) * gMix, raw[1] + (gTint[1] - raw[1]) * gMix, raw[2] + (gTint[2] - raw[2]) * gMix],
+          size: 80 + r() * 150,
+          alpha: 0.035 + r() * 0.05, phase: r() * 6.283, kind: 0,
           rot: r() * 3.14, aspect: 1 + r() * 0.8
         });
       }
     });
-    for (var d = 0; d < 130; d++) {
+    for (var d = 0; d < 90; d++) {
       var host = puffs[Math.floor(r() * puffs.length)];
       puffs.push({
         pos: [host.pos[0] + (r() - 0.5) * 90, host.pos[1] + (r() - 0.5) * 90, host.pos[2] + (r() - 0.5) * 90],
         col: [0.008, 0.008, 0.02], size: 120 + r() * 150,
-        alpha: 0.15 + r() * 0.16, phase: r() * 6.283, kind: 1,
+        alpha: 0.10 + r() * 0.12, phase: r() * 6.283, kind: 1,
         rot: r() * 3.14, aspect: 1.5 + r() * 1.1
       });
     }
@@ -552,7 +572,7 @@
       }
       puffs.push({
         pos: hPos, col: [0.006, 0.006, 0.016], size: 300 + r() * 130,
-        alpha: 0.26 + r() * 0.08, phase: r() * 6.283, kind: 1,
+        alpha: 0.19 + r() * 0.07, phase: r() * 6.283, kind: 1,
         rot: r() * 3.14, aspect: 1.8 + r() * 0.8
       });
     }
@@ -1190,8 +1210,15 @@
      * is a gradient, never a step into soup */
     var tgtA = 0, tgtC = fogCol;
     if (wSum > 0.05) {
-      tgtC = [acc[0] / wSum, acc[1] / wSum, acc[2] / wSum];
-      tgtA = Math.min(0.10, wSum * 0.07);
+      /* restraint pass: the fog tint is greyed like the near gas and
+       * capped lower — a wash of colour, never weather */
+      var fc = [acc[0] / wSum, acc[1] / wSum, acc[2] / wSum];
+      var fLum = 0.35 * fc[0] + 0.45 * fc[1] + 0.20 * fc[2];
+      var fWarm = fc[0] > fc[2] + 0.02;
+      var fMix = fWarm ? 0.66 : 0.38;
+      var fTint = fWarm ? [fLum * 0.90, fLum * 0.97, fLum * 1.10] : [fLum, fLum, fLum];
+      tgtC = [fc[0] + (fTint[0] - fc[0]) * fMix, fc[1] + (fTint[1] - fc[1]) * fMix, fc[2] + (fTint[2] - fc[2]) * fMix];
+      tgtA = Math.min(0.07, wSum * 0.055);
     }
     var ease = 1 - Math.exp(-dt * 1.1);
     fogCol = [
