@@ -102,7 +102,26 @@ var STARS = [
   ['Regulus', 10.140, 11.97, 1.36, 'B7'], ['Eta Leonis', 10.122, 16.76, 3.48, 'A0'],
   ['Algieba', 10.333, 19.84, 2.11, 'K0'], ['Adhafera', 10.278, 23.42, 3.43, 'F0'],
   ['Ras Elased', 9.764, 23.77, 2.97, 'G0'], ['Zosma', 11.235, 20.52, 2.56, 'A4'],
-  ['Chertan', 11.237, 15.43, 3.33, 'A2'], ['Denebola', 11.818, 14.57, 2.14, 'A3']
+  ['Chertan', 11.237, 15.43, 3.33, 'A2'], ['Denebola', 11.818, 14.57, 2.14, 'A3'],
+  /* Virgo — the Maiden, spring's second figure (added 2026-10-23;
+   * Porrima's magnitude is the combined light of its pair) */
+  ['Spica', 13.420, -11.16, 0.98, 'B1'], ['Porrima', 12.694, -1.45, 2.36, 'F0'],
+  ['Vindemiatrix', 13.036, 10.96, 2.85, 'G8'], ['Heze', 13.578, -0.60, 3.38, 'A3'],
+  ['Zavijava', 11.845, 1.77, 3.59, 'F8'], ['Zaniah', 12.332, -0.67, 3.89, 'A2'],
+  /* Scorpius — the Scorpion, summer's low southern arc (Antares is a
+   * semiregular variable, ~0.75–1.21; Acrab's magnitude is combined) */
+  ['Acrab', 16.091, -19.81, 2.49, 'B0'], ['Dschubba', 16.006, -22.62, 2.29, 'B0'],
+  ['Pi Scorpii', 15.981, -26.11, 2.89, 'B1'], ['Sigma Scorpii', 16.353, -25.59, 2.90, 'B1'],
+  ['Antares', 16.490, -26.43, 0.91, 'M1'], ['Tau Scorpii', 16.598, -28.22, 2.82, 'B0'],
+  ['Wei', 16.836, -34.29, 2.29, 'K2'], ['Mu Scorpii', 16.865, -38.05, 3.00, 'B1'],
+  ['Eta Scorpii', 17.203, -43.24, 3.32, 'F3'], ['Sargas', 17.622, -43.00, 1.86, 'F1'],
+  ['Girtab', 17.708, -39.03, 2.39, 'B1'], ['Lesath', 17.513, -37.30, 2.70, 'B2'],
+  ['Shaula', 17.560, -37.10, 1.62, 'B2'],
+  /* Sagittarius — the Archer, drawn as the Teapot (summer, low south) */
+  ['Kaus Australis', 18.403, -34.38, 1.85, 'B9'], ['Kaus Media', 18.350, -29.83, 2.72, 'K3'],
+  ['Kaus Borealis', 18.466, -25.42, 2.82, 'K1'], ['Alnasl', 18.097, -30.42, 2.98, 'K0'],
+  ['Ascella', 19.044, -29.88, 2.60, 'A3'], ['Nunki', 18.921, -26.30, 2.05, 'B2'],
+  ['Phi Sagittarii', 18.761, -26.99, 3.17, 'B8'], ['Tau Sagittarii', 19.116, -27.67, 3.32, 'K1']
 ];
 
 /* Deep-sky anchors: [name, raHours, decDeg, kind, palette, size]
@@ -153,7 +172,14 @@ var DISTANCES = {
   'Castor': 52, 'Pollux': 34, 'Alhena': 105, 'Tejat': 232, 'Mebsuta': 903,
   'Alzirr': 57, 'Wasat': 59,
   'Regulus': 77, 'Eta Leonis': 2131, 'Algieba': 126, 'Adhafera': 260,
-  'Ras Elased': 251, 'Zosma': 58, 'Chertan': 178, 'Denebola': 36
+  'Ras Elased': 251, 'Zosma': 58, 'Chertan': 178, 'Denebola': 36,
+  'Spica': 262, 'Porrima': 39, 'Vindemiatrix': 102, 'Heze': 73,
+  'Zavijava': 36, 'Zaniah': 250,
+  'Acrab': 530, 'Dschubba': 401, 'Pi Scorpii': 459, 'Sigma Scorpii': 734,
+  'Antares': 553, 'Tau Scorpii': 430, 'Wei': 65, 'Mu Scorpii': 821,
+  'Eta Scorpii': 72, 'Sargas': 272, 'Girtab': 464, 'Lesath': 518, 'Shaula': 703,
+  'Kaus Australis': 143, 'Kaus Media': 306, 'Kaus Borealis': 77, 'Alnasl': 96,
+  'Ascella': 89, 'Nunki': 225, 'Phi Sagittarii': 231, 'Tau Sagittarii': 120
 };
 
 /* The figures: stick lines over catalogue stars, plus the one line of
@@ -210,7 +236,19 @@ var FIGURES = [
   { name: 'Leo', story: 'The Lion — Regulus, the little king at his heart, spins so fast the star bulges wide.',
     lines: [['Regulus', 'Eta Leonis'], ['Eta Leonis', 'Algieba'], ['Algieba', 'Adhafera'],
             ['Adhafera', 'Ras Elased'], ['Algieba', 'Zosma'], ['Zosma', 'Chertan'],
-            ['Chertan', 'Denebola'], ['Zosma', 'Denebola']] }
+            ['Chertan', 'Denebola'], ['Zosma', 'Denebola']] },
+  { name: 'Virgo', story: 'The Maiden — Spica, the wheat sheaf in her hand, is two blue stars in a four-day dance.',
+    lines: [['Zavijava', 'Zaniah'], ['Zaniah', 'Porrima'], ['Porrima', 'Heze'],
+            ['Heze', 'Spica'], ['Porrima', 'Vindemiatrix']] },
+  { name: 'Scorpius', story: 'The Scorpion — Antares, his heart, is a red giant so vast it would swallow the orbit of Mars.',
+    lines: [['Acrab', 'Dschubba'], ['Dschubba', 'Pi Scorpii'], ['Pi Scorpii', 'Sigma Scorpii'],
+            ['Sigma Scorpii', 'Antares'], ['Antares', 'Tau Scorpii'], ['Tau Scorpii', 'Wei'],
+            ['Wei', 'Mu Scorpii'], ['Mu Scorpii', 'Eta Scorpii'], ['Eta Scorpii', 'Sargas'],
+            ['Sargas', 'Girtab'], ['Girtab', 'Lesath'], ['Lesath', 'Shaula']] },
+  { name: 'Sagittarius', story: 'The Archer — every eye finds the Teapot first, and the steam above its spout is the Milky Way’s heart.',
+    lines: [['Alnasl', 'Kaus Media'], ['Kaus Media', 'Kaus Borealis'], ['Kaus Borealis', 'Phi Sagittarii'],
+            ['Phi Sagittarii', 'Ascella'], ['Ascella', 'Kaus Australis'], ['Kaus Australis', 'Kaus Media'],
+            ['Phi Sagittarii', 'Nunki'], ['Nunki', 'Tau Sagittarii'], ['Tau Sagittarii', 'Ascella']] }
 ];
 
 /* ---------- seeded PRNG (mulberry32) — reproducible fields ---------- */

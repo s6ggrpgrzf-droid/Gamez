@@ -120,5 +120,27 @@ const polO = SKY.altAz(7.755, 28.03, SKY.HOME.lat, lst);
 const regO = SKY.altAz(10.140, 11.97, SKY.HOME.lat, lst);
 ok(polO.alt < 0 && regO.alt < 0, 'October 22:00: Gemini and Leo both honestly below the horizon');
 
+/* Virgo + Scorpius + Sagittarius (constellations Pass 3, 2026-10-23):
+ * Virgo owns May evenings; the two southern figures culminate low in
+ * July — Antares never climbs past ~28° from Edmond — and by October
+ * all three are gone from the 22:00 sky. */
+ok(figNames.includes('Virgo') && figNames.includes('Scorpius') && figNames.includes('Sagittarius'), 'figures include Virgo + Scorpius + Sagittarius');
+const MAY = new Date(Date.UTC(2026, 4, 16, 3, 0, 0)); // May 15, 22:00 CDT
+const lstMay = SKY.lstDeg(SKY.jdFromDate(MAY), SKY.HOME.lon);
+const spiM = SKY.altAz(13.420, -11.16, SKY.HOME.lat, lstMay);
+ok(spiM.alt > 30, 'May 22:00: Spica high — Virgo owns the spring evening', 'alt ' + spiM.alt.toFixed(1));
+const JUL = new Date(Date.UTC(2026, 6, 16, 3, 0, 0)); // Jul 15, 22:00 CDT
+const lstJul = SKY.lstDeg(SKY.jdFromDate(JUL), SKY.HOME.lon);
+const antJ = SKY.altAz(16.490, -26.43, SKY.HOME.lat, lstJul);
+ok(antJ.alt > 20 && antJ.alt < 30, 'July 22:00: Antares at his Edmond ceiling, low in the south', 'alt ' + antJ.alt.toFixed(1));
+const sarJ = SKY.altAz(17.622, -43.00, SKY.HOME.lat, lstJul);
+ok(sarJ.alt > 0, 'July 22:00: even Sargas, the tail’s lowest star, clears the horizon', 'alt ' + sarJ.alt.toFixed(1));
+const kauJ = SKY.altAz(18.403, -34.38, SKY.HOME.lat, lstJul);
+ok(kauJ.alt > 8, 'July 22:00: the Teapot is up, riding low', 'alt ' + kauJ.alt.toFixed(1));
+const spiO = SKY.altAz(13.420, -11.16, SKY.HOME.lat, lst);
+const antO = SKY.altAz(16.490, -26.43, SKY.HOME.lat, lst);
+const kauO = SKY.altAz(18.403, -34.38, SKY.HOME.lat, lst);
+ok(spiO.alt < 0 && antO.alt < 0 && kauO.alt < 0, 'October 22:00: all three summer figures honestly set');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
