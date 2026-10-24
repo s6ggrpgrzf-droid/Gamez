@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div id="stage">
@@ -20,6 +20,10 @@
   <button id="logBtn" class="corner left" aria-label="Field log">
     <svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 4.5h10.2a1 1 0 0 1 1 1V18.5a1 1 0 0 1-1 1H8z"/><path d="M8 4.5v15"/><path d="M11.8 9h4.2M11.8 12.5h4.2"/></g><path d="M5.2 4.5v15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
   </button>
+  <button id="redBtn" class="corner left2" aria-label="Night vision — astronomer's red">
+    <svg viewBox="0 0 24 24"><path d="M20 13.6A8.2 8.2 0 1 1 10.4 4 6.6 6.6 0 0 0 20 13.6z" fill="currentColor"/></svg>
+  </button>
+  <div id="redVeil"></div>
   <div id="logScrim"></div>
   <div id="logPanel" aria-hidden="true">
     <div id="logTitle">FIELD LOG</div>
@@ -35,6 +39,6 @@
 <script src="planets.js?v=2"></script>
 <script src="moon.js?v=1"></script>
 <script src="audio.js?v=1"></script>
-<script src="game.js?v=23"></script>
+<script src="game.js?v=24"></script>
 </body>
 </html>

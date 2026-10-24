@@ -2022,6 +2022,26 @@
   if (logScrim) logScrim.addEventListener('click', function () { setLogOpen(false); });
   window.__nebula.getLog = function () { return JSON.parse(JSON.stringify(log)); };
 
+  /* ================= astronomer's red (Pass E) =================
+   * Real observers guard their dark adaptation with red light; this
+   * is the same courtesy from the app. One veil, multiplied over
+   * everything, remembered between nights. */
+  var redBtn = document.getElementById('redBtn');
+  var redVeil = document.getElementById('redVeil');
+  var redOn = false;
+  try { redOn = window.localStorage.getItem('nd-red') === '1'; } catch (e) { /* private mode */ }
+  function applyRed() {
+    if (redVeil) redVeil.classList.toggle('on', redOn);
+    if (redBtn) redBtn.classList.toggle('on', redOn);
+  }
+  if (redBtn) redBtn.addEventListener('click', function () {
+    redOn = !redOn;
+    try { window.localStorage.setItem('nd-red', redOn ? '1' : '0'); } catch (e) { /* private mode */ }
+    applyRed();
+  });
+  applyRed();
+  window.__nebula.redOn = function () { return redOn; };
+
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts, brightStars: starPts,
