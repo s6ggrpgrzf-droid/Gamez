@@ -540,6 +540,72 @@
     var gTint = warm ? [lum * 0.92, lum * 0.98, lum * 1.08] : [lum, lum, lum];
     return [raw[0] + (gTint[0] - raw[0]) * gMix, raw[1] + (gTint[1] - raw[1]) * gMix, raw[2] + (gTint[2] - raw[2]) * gMix];
   }
+  /* Galaxies are built, not scattered (visual refinement Pass 1):
+   * a nucleus, a disc laid along the major axis, and the feature
+   * that makes each one itself — Andromeda's dust lane, Triangulum's
+   * loose trailing arms. (u, v) are disc-plane coordinates, u along
+   * the major axis, rotated into the tangent basis by the same
+   * angle the puffs' own quads carry on screen. */
+  function buildGalaxy(puffs, neb, ni) {
+    var basis = tangentBasis(neb.dir);
+    var shape = neb.name === 'Andromeda Galaxy' ? { aspect: 2.7, rot: -0.55 } : { aspect: 1.8, rot: 0.4 };
+    var cr = Math.cos(shape.rot), sr = Math.sin(shape.rot);
+    var S = neb.size, D = 2500;
+    function P(dist, u, v, col, size, alpha, aspect, noHi) {
+      var x = u * cr - v * sr, y = u * sr + v * cr;
+      puffs.push({
+        pos: [
+          neb.dir[0] * dist + basis.t1[0] * x + basis.t2[0] * y,
+          neb.dir[1] * dist + basis.t1[1] * x + basis.t2[1] * y,
+          neb.dir[2] * dist + basis.t1[2] * x + basis.t2[2] * y
+        ],
+        col: col, size: size, alpha: alpha, phase: rng() * 6.283, kind: 0,
+        rot: shape.rot, aspect: aspect
+      });
+      if (!noHi) puffs[puffs.length - 1].hi = ni;
+    }
+    if (neb.name === 'Andromeda Galaxy') {
+      /* outer disc — wide, faint, the full reach of the spiral */
+      P(D, -S * 105, 0, anchorShade(neb.palette, rng), S * 330, 0.040, 2.7);
+      P(D + 60, S * 105, 0, anchorShade(neb.palette, rng), S * 330, 0.040, 2.7);
+      P(D + 30, 0, 0, anchorShade(neb.palette, rng), S * 360, 0.034, 2.7);
+      /* inner disc */
+      P(D + 40, -S * 48, 0, anchorShade(neb.palette, rng), S * 205, 0.085, 2.7);
+      P(D + 40, S * 48, 0, anchorShade(neb.palette, rng), S * 205, 0.085, 2.7);
+      /* the dust lane: one dark stroke laid across the disc, offset
+       * along the minor axis. No hi flag — a lane stays a lane when
+       * the galaxy's light rises around it. */
+      var lx = (0 * cr - S * 30 * sr), ly = (0 * sr + S * 30 * cr);
+      puffs.push({
+        pos: [
+          neb.dir[0] * (D + 90) + basis.t1[0] * lx + basis.t2[0] * ly,
+          neb.dir[1] * (D + 90) + basis.t1[1] * lx + basis.t2[1] * ly,
+          neb.dir[2] * (D + 90) + basis.t1[2] * lx + basis.t2[2] * ly
+        ],
+        col: [0.006, 0.006, 0.016], size: S * 170, alpha: 0.32, phase: rng() * 6.283, kind: 1,
+        rot: shape.rot, aspect: 3.2
+      });
+      /* nucleus — small, hot, the brightest point in the disc */
+      var warm = paletteShade(neb.palette, rng);
+      P(D + 80, 0, 0, [warm[0] * 1.25 + 0.10, warm[1] * 1.18 + 0.07, warm[2] * 1.05 + 0.03], S * 92, 0.30, 1.6);
+    } else {
+      /* Triangulum: a face-on spiral that only just holds together —
+       * a soft heart, then arms trailing off into star-forming
+       * knots, pink and blue alternating as they go */
+      P(D, 0, 0, anchorShade(neb.palette, rng), S * 300, 0.036, 1.5);
+      P(D + 40, 0, 0, anchorShade(neb.palette, rng), S * 215, 0.070, 1.5);
+      P(D + 80, 0, 0, anchorShade(neb.palette, rng), S * 105, 0.16, 1.2);
+      var knots = [[0.85, 0.62], [2.6, 0.95], [4.4, 1.15], [1.7, 1.30], [3.6, 1.50], [5.5, 1.35]];
+      knots.forEach(function (k, ki) {
+        var u = Math.cos(k[0]) * k[1] * S * 128, v = Math.sin(k[0]) * k[1] * S * 128;
+        var tint = ki % 2 ? [0.62, 0.70, 0.98] : [0.94, 0.66, 0.72];
+        var sh = anchorShade(neb.palette, rng);
+        var col = [sh[0] * 0.45 + tint[0] * 0.55, sh[1] * 0.45 + tint[1] * 0.55, sh[2] * 0.45 + tint[2] * 0.55];
+        P(D + 20 + (ki % 3) * 25, u, v, col, S * (120 + (ki % 3) * 26), 0.055, 1.4);
+      });
+    }
+  }
+
   var anchorGas = null;
   (function buildAnchors() {
     var puffs = [];
@@ -551,8 +617,8 @@
       var shape = { aspect: 1.1 + rng() * 0.5, rot: rng() * 3.14 };
       if (neb.name === 'Andromeda Galaxy') { shape.aspect = 2.7; shape.rot = -0.55; }
       else if (neb.name === 'Triangulum Galaxy') { shape.aspect = 1.8; shape.rot = 0.4; }
-      else if (neb.kind === 'galaxy') { shape.aspect = 1.7; }
       else if (neb.kind === 'planetary') { shape.aspect = 1.2; }
+      if (neb.kind === 'galaxy') { buildGalaxy(puffs, neb, ni); return; }
       var layers = neb.kind === 'cluster' ? 3 : 7;
       for (var li = 0; li < layers; li++) {
         var dist = 2350 + li * 230 + rng() * 120;
