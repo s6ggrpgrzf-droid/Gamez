@@ -172,13 +172,14 @@
   var gasProg = makeProgram(
     'attribute vec3 aPos; attribute vec2 aCorner; attribute vec3 aCol;' +
     'attribute float aSize; attribute float aAlpha; attribute float aPhase; attribute float aKind;' +
-    'attribute float aRot; attribute float aAspect;' +
+    'attribute float aRot; attribute float aAspect; attribute float aHi;' +
     'uniform mat4 uProj; uniform mat4 uRot; uniform mat3 uSky;' +
     'uniform vec3 uCamPos; uniform vec3 uOrigin; uniform float uWrap; uniform float uBox;' +
-    'uniform float uBreathe;' +
+    'uniform float uBreathe; uniform float uHiSel; uniform float uHiAmt;' +
     'varying vec2 vUv; varying vec3 vCol; varying float vAlpha; varying float vPhase; varying float vKind;' +
     'void main(){' +
-    '  vUv = aCorner; vCol = aCol; vPhase = aPhase; vKind = aKind;' +
+    '  float hi = (uHiSel > -0.5 && abs(aHi - uHiSel) < 0.5) ? uHiAmt : 0.0;' +
+    '  vUv = aCorner; vCol = aCol * (1.0 + hi * 0.55); vPhase = aPhase; vKind = aKind;' +
     '  vec3 wp;' +
     '  if (uWrap > 0.5) { wp = mod(aPos - uCamPos, uBox) - uBox * 0.5; }' +
     '  else { wp = uSky * aPos + uOrigin - uCamPos; }' +
@@ -189,9 +190,9 @@
     '  float crA = cos(aRot), srA = sin(aRot);' +
     '  vec2 rc = vec2(aCorner.x * crA - aCorner.y * srA, aCorner.x * srA + aCorner.y * crA);' +
     '  rc.x *= aAspect;' +
-    '  vp.xy += rc * (aSize * 0.5);' +
+    '  vp.xy += rc * (aSize * 0.5 * (1.0 + hi * 0.3));' +
     '  gl_Position = uProj * vp;' +
-    '  vAlpha = aAlpha * nearFade * farFade * uBreathe;' +
+    '  vAlpha = aAlpha * nearFade * farFade * uBreathe * (1.0 + hi * 1.3);' +
     '}',
     'precision mediump float;' +
     'varying vec2 vUv; varying vec3 vCol; varying float vAlpha; varying float vPhase; varying float vKind;' +
@@ -502,6 +503,7 @@
     var col = new Float32Array(n * vertsPer * 3), size = new Float32Array(n * vertsPer);
     var alpha = new Float32Array(n * vertsPer), phase = new Float32Array(n * vertsPer), kind = new Float32Array(n * vertsPer);
     var rot = new Float32Array(n * vertsPer), aspect = new Float32Array(n * vertsPer);
+    var hi = new Float32Array(n * vertsPer);
     var idx = new Uint16Array(n * 6);
     var corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
     puffs.forEach(function (p, i) {
@@ -511,6 +513,7 @@
         corner.set(corners[v], vi * 2);
         size[vi] = p.size; alpha[vi] = p.alpha; phase[vi] = p.phase; kind[vi] = p.kind;
         rot[vi] = p.rot || 0; aspect[vi] = p.aspect || 1;
+        hi[vi] = (p.hi != null ? p.hi : -1);
       }
       var io = i * 6, vo = i * 4;
       idx[io] = vo; idx[io + 1] = vo + 1; idx[io + 2] = vo + 2;
@@ -523,6 +526,7 @@
       alpha: makeBuffer(gl.ARRAY_BUFFER, alpha), phase: makeBuffer(gl.ARRAY_BUFFER, phase),
       kind: makeBuffer(gl.ARRAY_BUFFER, kind),
       rot: makeBuffer(gl.ARRAY_BUFFER, rot), aspect: makeBuffer(gl.ARRAY_BUFFER, aspect),
+      hi: makeBuffer(gl.ARRAY_BUFFER, hi),
       index: makeBuffer(gl.ELEMENT_ARRAY_BUFFER, idx)
     };
   }
@@ -560,7 +564,7 @@
             neb.dir[2] * dist + basis.t1[2] * j1 + basis.t2[2] * j2
           ],
           col: anchorShade(neb.palette, rng), size: neb.size * (270 + rng() * 240),
-          alpha: neb.kind === 'cluster' ? 0.085 : 0.066, phase: rng() * 6.283, kind: 0,
+          alpha: neb.kind === 'cluster' ? 0.085 : 0.066, phase: rng() * 6.283, kind: 0, hi: ni,
           rot: shape.rot + (rng() - 0.5) * 0.35, aspect: shape.aspect * (0.9 + rng() * 0.2)
         });
         if (li === 0 && (neb.kind === 'galaxy' || neb.kind === 'cluster')) {
@@ -568,7 +572,7 @@
           puffs.push({
             pos: [neb.dir[0] * (dist + 30), neb.dir[1] * (dist + 30), neb.dir[2] * (dist + 30)],
             col: anchorShade(neb.palette, rng), size: neb.size * 130,
-            alpha: 0.16, phase: rng() * 6.283, kind: 0, rot: shape.rot, aspect: shape.aspect
+            alpha: 0.16, phase: rng() * 6.283, kind: 0, hi: ni, rot: shape.rot, aspect: shape.aspect
           });
         }
         if (neb.kind === 'emission' && li === 2) {
@@ -1090,7 +1094,7 @@
   };
   var nebPts = tonight.nebulae
     .filter(function (n) { return !!NEBULA_LINES[n.name]; })
-    .map(function (n) { return { name: n.name, dir: n.dir, alt: n.alt, az: n.az, line: NEBULA_LINES[n.name] }; });
+    .map(function (n) { return { name: n.name, dir: n.dir, alt: n.alt, az: n.az, idx: tonight.nebulae.indexOf(n), line: NEBULA_LINES[n.name] }; });
 
   /* ================= bright stars speak (Pass D) =================
    * The fifteen brightest stars in the catalogue get the nebula
@@ -1822,6 +1826,9 @@
   /* ================= matrices + draw helpers ================= */
   var CW = 0, CH = 0, DPR = 1, projMat = null, scaleH = 1;
   var FOV_WIDE = 1.361, FOV_IN = 1.152, fovCur = FOV_WIDE, fovApplied = 0;
+  /* deep-sky presence: the anchor index currently lit (the settled
+   * subject's own gas swells) and how far the light has risen */
+  var hiSel = -1, hiAmt = 0;
   function perspectiveMat(fovy, aspect, near, far) {
     var f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
     return new Float32Array([
@@ -1935,6 +1942,7 @@
     bindAttr(gasProg, 'aAlpha', geo.alpha, 1); bindAttr(gasProg, 'aPhase', geo.phase, 1);
     bindAttr(gasProg, 'aKind', geo.kind, 1);
     bindAttr(gasProg, 'aRot', geo.rot, 1); bindAttr(gasProg, 'aAspect', geo.aspect, 1);
+    bindAttr(gasProg, 'aHi', geo.hi, 1);
     gl.uniformMatrix4fv(uniformLoc(gasProg, 'uProj'), false, proj);
     gl.uniformMatrix4fv(uniformLoc(gasProg, 'uRot'), false, rot);
     gl.uniformMatrix3fv(uniformLoc(gasProg, 'uSky'), false, live.skyMat);
@@ -1944,6 +1952,8 @@
     gl.uniform1f(uniformLoc(gasProg, 'uBox'), BOX);
     gl.uniform1f(uniformLoc(gasProg, 'uBreathe'), breathe);
     gl.uniform1f(uniformLoc(gasProg, 'uKind'), kindPass);
+    gl.uniform1f(uniformLoc(gasProg, 'uHiSel'), hiSel);
+    gl.uniform1f(uniformLoc(gasProg, 'uHiAmt'), hiAmt);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.index);
     var cnt = Math.floor(geo.indexCount * (frac || 1) / 6) * 6;
     gl.drawElements(gl.TRIANGLES, cnt, gl.UNSIGNED_SHORT, 0);
@@ -2410,12 +2420,22 @@
     }
 
     /* the lean-in: when a figure has settled and you're not voyaging,
-     * the view breathes from 68 deg toward 56 deg — an arrival, not a
+     * the view breathes from 78 deg toward 66 deg — an arrival, not a
      * zoom. Skipped under reduced motion. */
     var fovTgt = (P2.drawFig && P2.alpha > 0.55 && P2.voyage < 0.3 && !reduced) ? FOV_IN : FOV_WIDE;
     fovCur += (fovTgt - fovCur) * Math.min(1, dt * 0.55);
     if (Math.abs(fovTgt - fovCur) < 0.001) fovCur = fovTgt;
     if (Math.abs(fovCur - fovApplied) > 0.0004) applyProj();
+
+    /* deep-sky presence: while a galaxy, nebula or cluster is the
+     * settled subject, its own light rises — the patch swells and
+     * its core brightens, so the words have something to point at.
+     * The selection holds while the light falls, so it dims in
+     * place rather than snapping to a new subject. */
+    if (P2.neb) hiSel = P2.neb.idx;
+    var hiTgt = P2.neb ? P2.nbAlpha : 0;
+    hiAmt += (hiTgt - hiAmt) * Math.min(1, dt * 1.6);
+    if (hiAmt < 0.002 && !P2.neb) { hiAmt = 0; hiSel = -1; }
 
     /* ================= render ================= */
     var rot = rotationMat(rgtB, upvB, fwd);
@@ -2546,11 +2566,21 @@
     var d = new Date(+p[0], +p[1] - 1, +p[2]);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
-  function logRow(parent, name, meta) {
+  function logRow(parent, name, meta, faceTarget) {
     var row = document.createElement('div'); row.className = 'logRow';
     var n = document.createElement('div'); n.className = 'logName'; n.textContent = name;
     var m = document.createElement('div'); m.className = 'logMeta'; m.textContent = meta;
     row.appendChild(n); row.appendChild(m); parent.appendChild(row);
+    /* a name you've met can be faced: tap the row and the view
+     * turns to the thing itself, so a name in the book always
+     * leads the eye to what's in the sky */
+    if (faceTarget) {
+      row.classList.add('logRowTap');
+      row.setAttribute('role', 'button');
+      var go = document.createElement('span'); go.className = 'logGo'; go.textContent = '›';
+      row.appendChild(go);
+      row.addEventListener('click', function () { if (faceName(faceTarget)) setLogOpen(false); });
+    }
   }
   function logSection(parent, label) {
     var s = document.createElement('div'); s.className = 'logSec'; s.textContent = label;
@@ -2585,29 +2615,29 @@
     if (figNames.length) {
       logSection(body, 'FIGURES');
       figNames.map(function (n) { return [n, log.figs[n]]; }).sort(byFirst)
-        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1]), pair[0]); });
     }
     var plNames = Object.keys(log.planets);
     if (plNames.length) {
       logSection(body, 'PLANETS');
       plNames.map(function (n) { return [n, log.planets[n]]; }).sort(byFirst)
-        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1]), pair[0]); });
     }
     var stNames = Object.keys(log.stars);
     if (stNames.length) {
       logSection(body, 'STARS');
       stNames.map(function (n) { return [n, log.stars[n]]; }).sort(byFirst)
-        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1]), pair[0]); });
     }
     var nbNames = Object.keys(log.nebulae);
     if (nbNames.length) {
       logSection(body, 'DEEP SKY');
       nbNames.map(function (n) { return [n, log.nebulae[n]]; }).sort(byFirst)
-        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1]), pair[0]); });
     }
     if (log.moon.first) {
       logSection(body, 'THE MOON');
-      logRow(body, 'Moon', metaOf(log.moon));
+      logRow(body, 'Moon', metaOf(log.moon), 'Moon');
       if (log.moon.phases.length) {
         var ph = document.createElement('div'); ph.className = 'logLine';
         ph.textContent = 'Seen as: ' + log.moon.phases.join(' · ');
@@ -2704,7 +2734,7 @@
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
   });
   window.__nebula.bankNow = function () { return bankCur; };
-  window.__nebula.face = function (name) {
+  function faceName(name) {
     for (var sfi = 0; sfi < starPts.length; sfi++) {
       if (starPts[sfi].name === name) {
         var aaS = dirToAzAlt(liveDir(starPts[sfi].dir));
@@ -2741,7 +2771,8 @@
     cam.az = aaT.az; cam.alt = aaT.alt; cam.vaz = 0; cam.valt = 0;
     lastTouchAt = perfNow();
     return true;
-  };
+  }
+  window.__nebula.face = faceName;
 
   resize();
   showWhisper(8000);

@@ -54,6 +54,8 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 .logRow{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:9px}
 .logName{font-size:13px;color:rgba(238,242,255,.9)}
 .logMeta{font-size:10.5px;letter-spacing:.05em;color:rgba(200,212,245,.55);text-align:right;white-space:nowrap}
+.logRowTap{cursor:pointer}
+.logGo{font-size:13px;color:rgba(240,199,106,.75);margin-left:2px}
 .logLine{margin-top:9px;font-size:11.5px;line-height:1.55;color:rgba(200,212,245,.72)}
 .logNoteD{color:rgba(160,175,220,.55);letter-spacing:.04em;white-space:nowrap}
 #whisper{position:absolute;left:0;right:0;z-index:5;pointer-events:none;text-align:center;
