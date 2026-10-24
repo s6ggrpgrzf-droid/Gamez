@@ -718,7 +718,7 @@
   /* ================= whisper (ported) ================= */
   var dateStr = tonight.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   var tonightMain = 'Tonight · ' + dateStr + ' · the sky over ' + SKY.HOME.name;
-  var tonightSub = 'drag to look — it drifts on its own';
+  var tonightSub = 'drag to look — it drifts on its own.';
 
   /* ================= gamez-ai whispers (silent, Pass 1) =================
    * Tonight's opening line and fresh figure stories come from the shared
@@ -1114,6 +1114,57 @@
     gl.drawArrays(gl.TRIANGLES, 0, METEOR_POOL * 6);
   }
 
+  /* ================= tonight's news: sky events (Pass C) =================
+   * The ephemerides already know when the sky does something worth
+   * remarking on; the greeting should say it. One event, the best
+   * one, computed for tonight and tomorrow at 22:00: a close Moon,
+   * failing that a close planet pair. Words only — nothing drawn,
+   * nothing scored. */
+  var skyEvent = '';
+  (function computeSkyEvent() {
+    if (typeof MOON === 'undefined' || typeof PLANETS === 'undefined') return;
+    function sepDeg(a, b) {
+      var c = Math.sin(a.dec * Math.PI / 180) * Math.sin(b.dec * Math.PI / 180) +
+        Math.cos(a.dec * Math.PI / 180) * Math.cos(b.dec * Math.PI / 180) *
+        Math.cos((a.ra - b.ra) * 15 * Math.PI / 180);
+      return Math.acos(Math.max(-1, Math.min(1, c))) * 180 / Math.PI;
+    }
+    function degWords(n) {
+      var w = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+      return n >= 1 && n <= 9 ? w[n - 1] : '' + n;
+    }
+    var t0 = tonight.date.getTime();
+    var best = null;
+    [0, 1].forEach(function (off) {
+      var d = new Date(t0 + off * 86400000);
+      var mp = MOON.position(d);
+      PLANETS.positions(d).forEach(function (pl) {
+        if (pl.alt < -4) return;
+        var sep = sepDeg(mp, pl);
+        var limit = off === 0 ? 9 : 6.5;
+        if (sep < limit && (!best || sep < best.sep)) best = { sep: sep, name: pl.name, off: off };
+      });
+    });
+    if (best) {
+      var r = Math.round(best.sep);
+      if (best.off === 0) {
+        skyEvent = best.sep <= 3.2
+          ? 'Tonight the Moon passes close by ' + best.name + ' — about ' + degWords(r) + (r === 1 ? ' degree' : ' degrees') + ' off.'
+          : 'Tonight the Moon stands about ' + degWords(r) + ' degrees from ' + best.name + '.';
+      } else {
+        skyEvent = 'Tomorrow night the Moon closes in on ' + best.name + ', passing about ' + degWords(r) + (r === 1 ? ' degree' : ' degrees') + ' away.';
+      }
+      return;
+    }
+    var ps = PLANETS.positions(tonight.date), pair = null;
+    for (var i = 0; i < ps.length; i++) for (var j = i + 1; j < ps.length; j++) {
+      if (ps[i].alt < 0 || ps[j].alt < 0) continue;
+      var sp = sepDeg(ps[i], ps[j]);
+      if (sp < 2.6 && (!pair || sp < pair.sep)) pair = { sep: sp, a: ps[i].name, b: ps[j].name };
+    }
+    if (pair) skyEvent = pair.a + ' and ' + pair.b + ' stand close tonight — about ' + degWords(Math.round(pair.sep)) + ' degrees apart.';
+  })();
+
   var tapFlashUntil = 9;
   var bootGreetDone = false, BOOT_GREET_SECS = 4;
   function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
@@ -1138,7 +1189,7 @@
       /* the boot greeting holds the whisper for its first seconds — a
        * figure may settle and draw its threads beneath it; its story
        * takes the whisper once the greeting's beat is done */
-      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
+      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, (aiTonightSub || tonightSub) + (skyEvent ? ' ' + skyEvent : ''));
     } else if (P2.moon && P2.mAlpha > 0.3 && P2.moon.line &&
                (!P2.planet || P2.moonAng <= P2.planetAng) &&
                (!P2.neb || P2.moonAng <= P2.nebAng) &&
@@ -1167,7 +1218,7 @@
       setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : '') + (figNote ? ':n' : ''), fig.name,
         hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : storyShown);
     } else if (t < tapFlashUntil) {
-      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
+      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, (aiTonightSub || tonightSub) + (skyEvent ? ' ' + skyEvent : ''));
     } else {
       setWhisper('none', null);
     }
@@ -1902,7 +1953,7 @@
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts,
-    meteors: meteorInfo, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
+    meteors: meteorInfo, skyEvent: skyEvent, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
     meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
