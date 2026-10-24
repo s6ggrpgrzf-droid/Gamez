@@ -340,6 +340,17 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   transition:transform .12s,box-shadow .12s}
 .feat3d:active .feat-cta{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
 .feat-cta span:last-child{font-size:18px}
+/* wide screens: the feature stops stacking and sits beside its star —
+   same column of content, half the vertical sprawl */
+@media (min-width:900px){
+  .feat3d{display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:28px;
+    align-items:center;text-align:left;max-width:860px;margin:0 auto;padding:10px 0 2px}
+  .feat3d .feat-star{grid-column:1;grid-row:1 / span 5;align-self:center}
+  .feat3d .feat-kicker,.feat3d .feat-name,.feat3d .feat-line,.feat3d .feat-shows{grid-column:2}
+  .feat3d .feat-shows{align-items:flex-start}
+  .feat3d .feat-cta{grid-column:2;justify-self:start}
+  .feat3d .feat-name{margin-top:0}
+}
 /* tonight's picks: bright orbs — circular key art wearing its game's halo */
 .featured .ed-picks{display:flex;flex-wrap:wrap;justify-content:center;gap:38px 30px;margin-top:52px}
 .featured .ed-pick{flex-direction:column;align-items:center;text-align:center;gap:0;
