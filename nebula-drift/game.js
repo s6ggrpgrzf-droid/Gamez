@@ -1118,6 +1118,34 @@
     .filter(function (st) { return !!STAR_LINES[st.name]; })
     .map(function (st) { return { name: st.name, dir: st.dir, alt: st.alt, az: st.az, line: STAR_LINES[st.name] }; });
 
+  /* ================= aurora watch (Live Pass 6) =================
+   * Oklahoma sees the aurora only in a genuine storm: Kp 7 is the
+   * floor, and even then it is a rumour low on the northern
+   * horizon, not a show. The gamez-ai worker proxies NOAA SWPC's
+   * Kp forecast; the game reads tonight's window and stays silent
+   * below storm strength. When it speaks, it calls the number a
+   * forecast — because it is one. */
+  var auroraWatch = null;
+  function computeAurora(series) {
+    auroraWatch = null;
+    if (!series || !series.length) return;
+    var start = tonight.date.getTime() - 4 * 3600000, end = tonight.date.getTime() + 9.5 * 3600000;
+    var best = null;
+    series.forEach(function (e) {
+      if (e.t >= start - 5400000 && e.t <= end && (!best || e.kp > best.kp)) best = e;
+    });
+    if (best && best.kp >= 7) auroraWatch = { kp: Math.round(best.kp), atMs: best.t, forecast: best.k !== 'observed' };
+  }
+  try {
+    fetch(AI_BASE + '/kp', { signal: AbortSignal.timeout(8000) }).then(function (r) {
+      if (!r.ok) throw new Error('kp ' + r.status);
+      return r.json();
+    }).then(function (j) {
+      computeAurora(j.series || []);
+      if (auroraWatch) { itineraryCache = null; if (logPanel.classList.contains('show')) renderLog(); }
+    }).catch(function () { /* silent: no watch is the sky's normal state */ });
+  } catch (e) { /* offline: silence */ }
+
   /* ================= tonight, in order (Live Pass 4) =================
    * The night laid out as one timed itinerary in the Field Log:
    * when full dark begins and ends, when the Moon and each planet
@@ -1179,6 +1207,7 @@
         if (bestA > 20) push(bestT, meteorInfo.shower + ' radiant highest');
       }
     }
+    if (auroraWatch) push(auroraWatch.atMs, 'Aurora watch — Kp ' + auroraWatch.kp + ' peak');
     rows.sort(function (a, b) { return a.t - b.t; });
     itineraryCache = rows.slice(0, 9).map(function (r) { return [fmtClock(new Date(r.t)), r.label]; });
     return itineraryCache;
@@ -2538,6 +2567,7 @@
       if (almanac.planetsUp.length) logRow(body, 'Planets riding', almanac.planetsUp.join(' · '));
       if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : ''));
       var issLine = issAlmanacLine(); if (issLine) logRow(body, 'Space station', issLine);
+      if (auroraWatch) logRow(body, 'Aurora watch', 'Kp ' + auroraWatch.kp + ' storm ' + (auroraWatch.forecast ? 'forecast' : 'under way') + ' — strongest near ' + fmtClock(new Date(auroraWatch.atMs)) + '. Look low to the north.');
       if (almanac.full) logRow(body, 'Full moon', almanac.full);
       if (almanac.newMoon) logRow(body, 'New moon', almanac.newMoon);
     }
@@ -2660,7 +2690,7 @@
     nowMode: function () { return nowMode; }, liveLst: function () { return live.lst; }, liveDeltaDeg: function () { return live.deltaDeg; },
     daylight: function () { return phaseNote; },
     issPasses: function () { return issPasses; }, issNow: function () { return issNow; },
-    itinerary: function () { return getItinerary(); },
+    itinerary: function () { return getItinerary(); }, aurora: function () { return auroraWatch; },
     liveDirOf: function (name) {
       for (var li = 0; li < starPts.length; li++) if (starPts[li].name === name) return liveDir(starPts[li].dir);
       for (var lj = 0; lj < planetPts.length; lj++) if (planetPts[lj].name === name) return liveDir(planetPts[lj].dir);
