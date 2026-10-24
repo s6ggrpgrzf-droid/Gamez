@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./hub.css?v=46">
+<link rel="stylesheet" href="./hub.css?v=47">
 <link rel="stylesheet" href="./art-a.css?v=1">
 <link rel="stylesheet" href="./art-b.css?v=1">
 <link rel="stylesheet" href="./art-c.css?v=1">
@@ -31,18 +31,21 @@
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
+<div class="console">
 <header class="hero">
-  <p class="wordmark">gamez</p>
-  <p class="opendoor" id="opendoor">The arcade is open.</p>
-  <div class="statusbar" role="status" aria-label="Arcade status">
-    <span class="st-dot" aria-hidden="true"></span>
-    <span class="st-item" id="stClock">--:--:--</span>
-    <span class="st-sep" aria-hidden="true">/</span>
-    <span class="st-item" id="stPhase">—</span>
-    <span class="st-sep" aria-hidden="true">/</span>
-    <span class="st-item"><span id="stUnits">–</span> UNITS ON THE FLOOR</span>
-    <span class="st-sep" aria-hidden="true">/</span>
-    <span class="st-item">EDMOND, OK</span>
+  <div class="topbar">
+    <p class="wordmark">gamez</p>
+    <div class="statusbar" role="status" aria-label="Arcade status">
+      <span class="st-dot" aria-hidden="true"></span>
+      <span class="st-item" id="stClock">--:--:--</span>
+      <span class="st-item" id="stPhase">—</span>
+      <span class="st-item st-units"><span id="stUnits">–</span> UNITS ON THE FLOOR</span>
+      <span class="st-item st-loc">EDMOND, OK</span>
+    </div>
+    <button id="sndbtn" class="sndbtn" aria-label="Toggle hub sounds">Sound on</button>
+  </div>
+  <div class="display">
+    <p class="opendoor" id="opendoor">The arcade is open.</p>
   </div>
 </header>
 
@@ -192,7 +195,8 @@
   </a>
 
 </main>
-<footer class="studio-footer"><span class="made-by">Made by</span><span class="wordmark">Workman Designs</span><span class="tagline">more games coming</span><button id="sndbtn" class="sndbtn" aria-label="Toggle hub sounds">Sound on</button></footer>
+<footer class="studio-footer"><span class="made-by">Made by</span><span class="wordmark">Workman Designs</span><span class="tagline">more games coming</span></footer>
+</div>
 <script src="./hub.js?v=52"></script>
 </body>
 </html>
