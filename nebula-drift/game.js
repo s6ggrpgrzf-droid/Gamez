@@ -73,7 +73,14 @@
     return b;
   }
 
-  /* ---- star points ---- */
+  /* ---- star points ----
+   * HONEST AIR (review Pass J): the vertex shader reads each star's
+   * true altitude off its world direction and treats the low sky the
+   * way air does — scintillation grows (wider, faster twinkle),
+   * extinction dims, and the colour warms as a star sinks toward
+   * the horizon plane. High stars keep the original calm twinkle
+   * exactly; planets, pinned at aTwk 0, stay steady but still dim
+   * and warm when low, the way Venus does at dusk. */
   var starProg = makeProgram(
     'attribute vec3 aPos; attribute vec3 aCol; attribute float aSize;' +
     'attribute float aPhase; attribute float aTwk; attribute float aSpike;' +
@@ -84,10 +91,14 @@
     'void main(){' +
     '  vec4 vp = uRot * vec4(aPos - uShift, 1.0);' +
     '  gl_Position = uProj * vp;' +
-    '  float tw = 0.86 + 0.14 * sin(uTime * aTwk + aPhase);' +
+    '  float sinAlt = normalize(aPos).y;' +
+    '  float lowAir = 1.0 - smoothstep(0.02, 0.34, sinAlt);' +
+    '  float twAmp = mix(0.14, 0.30, lowAir);' +
+    '  float tw = (1.0 - twAmp) + twAmp * sin(uTime * aTwk * (1.0 + 1.3 * lowAir) + aPhase);' +
+    '  float ext = mix(1.0, 0.52, lowAir);' +
     '  vec3 dirW = normalize(aPos - uShift);' +
     '  float mDim = 1.0 - uMoonDim * smoothstep(0.966, 0.9986, dot(dirW, uMoonDir)) * 0.62;' +
-    '  vCol = aCol; vAlpha = tw * uAlphaMul * mDim; vSpike = aSpike;' +
+    '  vCol = mix(aCol, aCol * vec3(1.0, 0.78, 0.58), lowAir * 0.55); vAlpha = tw * uAlphaMul * mDim * ext; vSpike = aSpike;' +
     '  gl_PointSize = clamp(aSize * uScaleH / max(1.0, -vp.z), 1.0, 64.0);' +
     '}',
     'precision mediump float;' +
@@ -655,6 +666,7 @@
     moon: null, mAlpha: 0, mActT: 0, moonAng: 9,
     loggedFig: null, loggedPlanet: null, loggedMoon: false,
     firstNotes: { fig: null, planet: null, moon: null, neb: null, star: null },
+    mileNotes: { fig: null, moon: false },
     neb: null, nbAlpha: 0, nbActT: 0, nebAng: 9, loggedNeb: null,
     star: null, stAlpha: 0, stActT: 0, starAng: 9, loggedStar: null };
   var hasVoyaged = false;
@@ -1007,7 +1019,10 @@
   function recordMeet(kind, name) {
     var tk = aiDateKey(tonight.date);
     if (kind === 'fig') {
-      if (!log.figs[name]) { log.figs[name] = { first: tk, n: 1 }; P2.firstNotes.fig = name; }
+      if (!log.figs[name]) {
+        log.figs[name] = { first: tk, n: 1 }; P2.firstNotes.fig = name;
+        if (Object.keys(log.figs).length === 10) P2.mileNotes.fig = name;   /* review Pass I */
+      }
       else log.figs[name].n++;
     } else if (kind === 'planet') {
       if (!log.planets[name]) { log.planets[name] = { first: tk, n: 1 }; P2.firstNotes.planet = name; }
@@ -1022,11 +1037,16 @@
       if (!log.moon.first) { log.moon.first = tk; P2.firstNotes.moon = 'Moon'; }
       log.moon.n++;
       var ph = moonPhaseName(moonPt);
+      if (ph === 'Full' && log.moon.phases.indexOf('Full') === -1) P2.mileNotes.moon = true;   /* review Pass I */
       if (log.moon.phases.indexOf(ph) === -1) log.moon.phases.push(ph);
     }
     saveLog();
     trackFieldNote(name);
   }
+  /* the tenth night (review Pass I): true for the whole of the
+   * night on which the log's night count stands at ten — the
+   * greeting speaks it once, that night only, and never again */
+  var mileNight = log.nights.length === 10;
 
   /* ================= field notes (review Pass H) =================
    * The deferred AI tier, homed at last: once a night has three
@@ -1336,6 +1356,10 @@
     whisperEl.classList.add('show');
   }
   function fmtDist(d) { return d ? d.toLocaleString('en-US') : ''; }
+  function greetSub() {
+    return (aiTonightSub || tonightSub) + (skyEvent ? ' ' + skyEvent : '') +
+      (mileNight ? ' Your tenth night under this sky.' : '');
+  }
   function updateWhisper(t) {
     var fig = P2.drawFig;
     if (!bootGreetDone && (t >= tapFlashUntil || t >= BOOT_GREET_SECS)) bootGreetDone = true;
@@ -1355,15 +1379,17 @@
       /* the boot greeting holds the whisper for its first seconds — a
        * figure may settle and draw its threads beneath it; its story
        * takes the whisper once the greeting's beat is done */
-      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, (aiTonightSub || tonightSub) + (skyEvent ? ' ' + skyEvent : ''));
+      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, greetSub());
     } else if (P2.moon && P2.mAlpha > 0.3 && P2.moon.line &&
                (!P2.planet || P2.moonAng <= P2.planetAng) &&
                (!P2.neb || P2.moonAng <= P2.nebAng) &&
                (!P2.star || P2.moonAng <= P2.starAng) &&
                (!fig || P2.moonAng <= P2.figAng)) {
       var moNote = P2.firstNotes.moon === 'Moon';
-      setWhisper('mo:Moon' + (moNote ? ':f' : ''), 'Moon',
-        P2.moon.line + (moNote ? ' First time you’ve met her.' : ''));
+      var moMile = P2.mileNotes.moon;
+      setWhisper('mo:Moon' + (moNote ? ':f' : '') + (moMile ? ':m' : ''), 'Moon',
+        P2.moon.line + (moNote ? ' First time you’ve met her.' : '') +
+        (moMile ? ' Your first full Moon under this sky.' : ''));
     } else if (P2.planet && P2.pAlpha > 0.3 && P2.planet.line && (!fig || P2.planetAng <= P2.figAng) &&
                (!P2.moon || P2.planetAng <= P2.moonAng) &&
                (!P2.star || P2.planetAng <= P2.starAng) &&
@@ -1392,11 +1418,12 @@
       var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
       var aiFig = aiFigText[fig.name] || null;
       var figNote = P2.firstNotes.fig === fig.name && !aiFig && !hintOn;
-      var storyShown = aiFig || (fig.story + (fig.guest ? ' ' + fig.guest + ' visits tonight.' : '') + (figNote ? ' First time you’ve found it.' : ''));
-      setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : '') + (figNote ? ':n' : ''), fig.name,
+      var figMile = P2.mileNotes.fig === fig.name && !aiFig && !hintOn;
+      var storyShown = aiFig || (fig.story + (fig.guest ? ' ' + fig.guest + ' visits tonight.' : '') + (figNote ? ' First time you’ve found it.' : '') + (figMile ? ' Your tenth figure.' : ''));
+      setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : '') + (figNote ? ':n' : '') + (figMile ? ':m10' : ''), fig.name,
         hintOn ? 'press and hold — step sideways, off the Earth viewpoint' : storyShown);
     } else if (t < tapFlashUntil) {
-      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, (aiTonightSub || tonightSub) + (skyEvent ? ' ' + skyEvent : ''));
+      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, greetSub());
     } else {
       setWhisper('none', null);
     }
@@ -1822,6 +1849,7 @@
         P2.chimed = false; P2.unravelled = false;
         P2.loggedFig = null;
         if (P2.firstNotes.fig && P2.firstNotes.fig !== nextFig.name) P2.firstNotes.fig = null;
+        if (P2.mileNotes.fig && P2.mileNotes.fig !== nextFig.name) P2.mileNotes.fig = null;
         rebuildBoost(nextFig);
         ensureFigAi(nextFig);
         if (AU) AU.setRegion(nextFig.name);
@@ -1832,7 +1860,7 @@
       P2.alpha = Math.max(0, P2.alpha - dt * 0.7);
       if (P2.alpha === 0) {
         P2.activeName = null; P2.drawFig = null; rebuildBoost(null);
-        P2.firstNotes.fig = null;
+        P2.firstNotes.fig = null; P2.mileNotes.fig = null;
       }
     }
     P2.figAng = nextFig ? (nextFig === curFig ? curAng : candAng) : 9;
@@ -1877,7 +1905,7 @@
       P2.mAlpha = Math.max(0, P2.mAlpha - dt * 0.7);
       if (P2.mAlpha === 0) {
         P2.moon = null; P2.loggedMoon = false;
-        P2.firstNotes.moon = null;
+        P2.firstNotes.moon = null; P2.mileNotes.moon = false;
       }
     }
 
@@ -2213,7 +2241,8 @@
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts, brightStars: starPts,
     meteors: meteorInfo, skyEvent: skyEvent, almanac: almanac,
-    voyageState: function () { return { engaged: P2.engaged, hold: P2.voyageHold, v: P2.voyage, longV: P2.longV, step: P2.stepLen || 0 }; }, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
+    voyageState: function () { return { engaged: P2.engaged, hold: P2.voyageHold, v: P2.voyage, longV: P2.longV, step: P2.stepLen || 0 }; },
+    milestones: function () { return { night: mileNight, fig: P2.mileNotes.fig, moon: P2.mileNotes.moon }; }, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
     meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
