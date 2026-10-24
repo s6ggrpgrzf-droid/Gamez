@@ -606,6 +606,51 @@
     }
   }
 
+  /* Planetaries are shells, not clouds (visual refinement Pass 2):
+   * the Ring is a rim with a hollow heart and the white dwarf still
+   * burning at its centre; the Dumbbell is two lobes and a waist. */
+  function buildPlanetary(puffs, neb, ni) {
+    var basis = tangentBasis(neb.dir);
+    var S = neb.size, D = 2500;
+    function P(dist, x, y, col, size, alpha, aspect, rot) {
+      puffs.push({
+        pos: [
+          neb.dir[0] * dist + basis.t1[0] * x + basis.t2[0] * y,
+          neb.dir[1] * dist + basis.t1[1] * x + basis.t2[1] * y,
+          neb.dir[2] * dist + basis.t1[2] * x + basis.t2[2] * y
+        ],
+        col: col, size: size, alpha: alpha, phase: rng() * 6.283, kind: 0,
+        hi: ni, rot: rot || 0, aspect: aspect || 1
+      });
+    }
+    if (neb.name === 'Ring Nebula') {
+      var R = S * 105;
+      for (var k = 0; k < 10; k++) {
+        var th = (k / 10) * Math.PI * 2 + rng() * 0.2;
+        var rr = R * (0.92 + rng() * 0.16);
+        P(D + (k % 3) * 18, Math.cos(th) * rr, Math.sin(th) * rr,
+          anchorShade(neb.palette, rng), S * 118, 0.16, 1.25, th);
+      }
+      /* the hollow: a breath of fill, far fainter than the rim, so
+       * the middle reads darker than the ring around it */
+      P(D, 0, 0, anchorShade(neb.palette, rng), S * 150, 0.028, 1);
+      /* outer glow */
+      P(D - 30, 0, 0, anchorShade(neb.palette, rng), S * 235, 0.030, 1);
+      /* the white dwarf — one small steady point at the heart,
+       * exactly where the Ring's own line says it still burns */
+      P(D + 40, 0, 0, [0.86, 0.96, 1.0], S * 28, 0.7, 1);
+    } else {
+      /* Dumbbell: two lobes on one axis, a pinched waist, a halo */
+      var a = 0.7, ax = Math.cos(a), ay = Math.sin(a);
+      P(D, -ax * S * 60, -ay * S * 60, anchorShade(neb.palette, rng), S * 108, 0.13, 1.25, a);
+      P(D, ax * S * 60, ay * S * 60, anchorShade(neb.palette, rng), S * 108, 0.13, 1.25, a);
+      P(D + 20, -ax * S * 98, -ay * S * 98, anchorShade(neb.palette, rng), S * 80, 0.08, 1.1, a);
+      P(D + 20, ax * S * 98, ay * S * 98, anchorShade(neb.palette, rng), S * 80, 0.08, 1.1, a);
+      P(D, 0, 0, anchorShade(neb.palette, rng), S * 150, 0.04, 1.3, a);
+      P(D - 30, 0, 0, anchorShade(neb.palette, rng), S * 300, 0.028, 1.15, a);
+    }
+  }
+
   var anchorGas = null;
   (function buildAnchors() {
     var puffs = [];
@@ -619,6 +664,7 @@
       else if (neb.name === 'Triangulum Galaxy') { shape.aspect = 1.8; shape.rot = 0.4; }
       else if (neb.kind === 'planetary') { shape.aspect = 1.2; }
       if (neb.kind === 'galaxy') { buildGalaxy(puffs, neb, ni); return; }
+      if (neb.kind === 'planetary') { buildPlanetary(puffs, neb, ni); return; }
       var layers = neb.kind === 'cluster' ? 3 : 7;
       for (var li = 0; li < layers; li++) {
         var dist = 2350 + li * 230 + rng() * 120;
