@@ -154,5 +154,18 @@ ok(denO.alt > 25, 'October 22:00: Deneb Algedi well up — the sea-goat is an au
 const alrO = SKY.altAz(2.034, 2.76, SKY.HOME.lat, lst);
 ok(alrO.alt > 20, 'October 22:00: Alrescha, the knot of the fishes, is up', 'alt ' + alrO.alt.toFixed(1));
 
+/* small hours (perfectionist Pass P): before 04:00, tonight is the
+ * evening that began the current darkness */
+{
+  const wee = SKY.tonightDate(new Date(2026, 9, 24, 2, 30));   /* Oct 24, 02:30 local */
+  ok(wee.getDate() === 23 && wee.getHours() === 22, 'Pass P: 02:30 belongs to the night of the 23rd', wee.toString());
+  const evening = SKY.tonightDate(new Date(2026, 9, 23, 21, 5));
+  ok(evening.getDate() === 23 && evening.getHours() === 22, 'Pass P: an ordinary evening is its own night');
+  const fourAm = SKY.tonightDate(new Date(2026, 9, 24, 4, 0));
+  ok(fourAm.getDate() === 24, 'Pass P: 04:00 sharp starts the new night');
+  const monthEdge = SKY.tonightDate(new Date(2026, 10, 1, 1, 15));   /* Nov 1, 01:15 -> Oct 31's night */
+  ok(monthEdge.getMonth() === 9 && monthEdge.getDate() === 31, 'Pass P: the step back crosses a month boundary cleanly');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

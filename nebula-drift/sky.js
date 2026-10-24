@@ -320,9 +320,14 @@ function lstDeg(jd, lonDeg) {
   return l < 0 ? l + 360 : l;
 }
 
-/* "Tonight" = the viewer's current calendar date at 22:00 local time. */
+/* "Tonight" = 22:00 local on the date whose evening owns the
+ * current darkness: before 04:00 the night still belongs to the
+ * evening that began it, so the small hours step back a day
+ * (perfectionist Pass P). One function owns this conceit; the log
+ * keys, the almanac and the AI's date all follow from it. */
 function tonightDate(now) {
   var t = new Date(now.getTime());
+  if (t.getHours() < 4) t.setDate(t.getDate() - 1);
   t.setHours(22, 0, 0, 0);
   return t;
 }
