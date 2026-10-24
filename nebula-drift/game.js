@@ -1356,9 +1356,21 @@
       }
       lastTh = th;
     }
+    /* day-part honesty (perfectionist Pass Q): a moonrise that
+     * happens in broad morning or afternoon is a fact of the date,
+     * not of the night — the row says which it is. Dawn and dusk
+     * events belong to the watch and stay unlabelled. */
+    function dayNote(d) {
+      if (!d) return '';
+      var h = d.getHours();
+      if (h >= 7 && h < 12) return 'morning';
+      if (h >= 12 && h < 18) return 'afternoon';
+      return '';
+    }
     almanac = {
       phase: moonPhaseName(mp), illumPct: Math.round(mp.illum * 100),
       rise: rise ? fmtTime(rise) : null, set: set ? fmtTime(set) : null,
+      riseNote: dayNote(rise), setNote: dayNote(set),
       planetsUp: planetPts.filter(function (pl) { return pl.alt > 0; }).map(function (pl) { return pl.name; }),
       shower: meteorInfo.shower, showerPeak: meteorInfo.peakLabel || null,
       full: full ? fmtDay(full) : null, newMoon: newM ? fmtDay(newM) : null
@@ -2182,8 +2194,8 @@
     if (almanac) {
       logSection(body, 'ALMANAC');
       logRow(body, 'Moon', almanac.phase + ' · ' + almanac.illumPct + '% lit');
-      if (almanac.rise) logRow(body, 'Moonrise', almanac.rise);
-      if (almanac.set) logRow(body, 'Moonset', almanac.set);
+      if (almanac.rise) logRow(body, 'Moonrise', almanac.rise + (almanac.riseNote ? ' · ' + almanac.riseNote : ''));
+      if (almanac.set) logRow(body, 'Moonset', almanac.set + (almanac.setNote ? ' · ' + almanac.setNote : ''));
       if (almanac.planetsUp.length) logRow(body, 'Planets riding', almanac.planetsUp.join(' · '));
       if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : ''));
       if (almanac.full) logRow(body, 'Full moon', almanac.full);
