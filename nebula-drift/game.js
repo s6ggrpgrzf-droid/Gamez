@@ -1463,6 +1463,123 @@
     };
   })();
 
+  /* ================= the space station (Live Pass 2) =================
+   * The station is the one thing in the sky that keeps an appointment:
+   * it crosses on a schedule the game can compute, not invent. SAT
+   * propagates its two-line elements (Kepler + J2, topocentric — the
+   * parallax correction is the whole game at 420 km up); the worker
+   * proxies CelesTrak so the game never has to guess at CORS, and a
+   * cached or bundled set carries any night the fetch cannot reach.
+   * Passes are scanned for the owning night (18:00 to 06:00 local);
+   * the live dot renders in Now mode only — Tonight is a still
+   * photograph, and a moving station would lie about it. */
+  var issEl = null, issPasses = [], issTleAgeDays = 0;
+  var issNow = null, issAimDot = -2;
+  /* the station's point: two entries (core + halo) at a dummy place,
+   * re-aimed every frame while a pass is live. It is never drawn
+   * unless issNow is set, so the dummy place is never seen. */
+  var ISS_DEPTH = 190, ISS_CORE = ISS_DEPTH * 0.0105 * 1.9 * 1.5;
+  var issGeo = buildStarBuffer([
+    { pos: [0, 0, 0], col: [1.0, 0.98, 0.92], size: ISS_CORE, phase: Math.PI / 2, twk: 0, spike: 0 },
+    { pos: [0, 0, 0], col: [0.30, 0.29, 0.28], size: ISS_CORE * 3.0, phase: Math.PI / 2, twk: 0, spike: 0 }
+  ]);
+  /* Bundled elements: the CelesTrak set fetched 2026-10-24 (epoch
+   * 2026-10-23 16:38 UTC). The worker fetch refreshes them whenever
+   * it can; this set is the floor, good for days either side. */
+  var ISS_TLE_BUNDLED = 'ISS (ZARYA)\n' +
+    '1 25544U 98067A   26296.69304404  .00008515  00000+0  16237-3 0  9995\n' +
+    '2 25544  51.6336  24.1765 0006871 300.7285  59.3026 15.49021515591674';
+  function issObs() {
+    return {
+      lat: SKY.HOME.lat, lon: SKY.HOME.lon,
+      lstAt: function (ms) { return SKY.lstDeg(SKY.jdFromDate(new Date(ms)), SKY.HOME.lon); },
+      gmstAt: function (ms) { return SKY.gmstDeg(SKY.jdFromDate(new Date(ms))); },
+      altAzOf: function (raH, dec, lst) { return SKY.altAz(raH, dec, SKY.HOME.lat, lst); },
+      sunAt: function (ms) { var mp = MOON.position(new Date(ms)); return { raH: mp.sunRa, decDeg: mp.sunDec }; },
+      sunAltAt: function (ms) {
+        var mp = MOON.position(new Date(ms));
+        return SKY.altAz(mp.sunRa, mp.sunDec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(new Date(ms)), SKY.HOME.lon)).alt;
+      }
+    };
+  }
+  function computeIssPasses() {
+    if (typeof SAT === 'undefined' || !issEl) { issPasses = []; return; }
+    var from = tonight.date.getTime() - 4 * 3600000, to = tonight.date.getTime() + 8 * 3600000;
+    issPasses = SAT.scanPasses(issEl, from, to, issObs());
+    issTleAgeDays = (Date.now() - issEl.epochMs) / 86400000;
+  }
+  function issThrough(pass) {
+    var lst = SKY.lstDeg(SKY.jdFromDate(new Date(pass.culmMs)), SKY.HOME.lon);
+    var dir = SKY.dirFromRaDec(pass.culmRaH, pass.culmDecDeg, SKY.HOME.lat, lst);
+    var figs = (typeof figures !== 'undefined' ? figures : []).map(function (f) { return { name: f.name, centre: f.centre, radius: f.radius }; });
+    var co = PLANETS.describeCompany(dir, figs, tonight.stars);
+    if (co.host) return 'through ' + co.host;
+    if (co.nearStar) return 'by ' + co.nearStar.name;
+    return 'overhead';
+  }
+  function issAlmanacLine() {
+    if (!issPasses.length) return null;
+    var now = Date.now();
+    var ageNote = issTleAgeDays > 7 ? ' · elements ' + Math.round(issTleAgeDays) + ' days old' : '';
+    function fmtT(d) { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
+    for (var i = 0; i < issPasses.length; i++) {
+      var pp = issPasses[i];
+      if (now >= pp.startMs && now <= pp.endMs) return 'Crossing now · ' + issThrough(pp) + ' · ' + Math.round(pp.durMin) + ' min' + ageNote;
+      if (pp.culmMs > now && !pp.truncated) return fmtT(new Date(pp.culmMs)) + ' · ' + issThrough(pp) + ' · ' + Math.round(pp.durMin) + ' min' + ageNote;
+    }
+    return null;
+  }
+  function updateIssLive(nowDate, fwdLive) {
+    issNow = null; issAimDot = -2;
+    if (typeof SAT === 'undefined' || !issEl || !issPasses.length) return;
+    var nowMs = nowDate.getTime(), pass = null;
+    for (var i = 0; i < issPasses.length; i++) {
+      if (nowMs >= issPasses[i].startMs && nowMs <= issPasses[i].endMs) { pass = issPasses[i]; break; }
+    }
+    if (!pass) return;
+    var p = SAT.positionAt(issEl, nowMs);
+    var rd = SAT.topoRaDec(p, SKY.HOME.lat, SKY.HOME.lon, SKY.gmstDeg(SKY.jdFromDate(nowDate)));
+    var aa = SKY.altAz(rd.raH, rd.decDeg, SKY.HOME.lat, live.lst);
+    if (aa.alt <= 0) return;
+    var sun = MOON.position(nowDate);
+    if (!SAT.sunlit(p, sun.sunRa, sun.sunDec)) return;
+    var dirLive = SKY.dirFromAltAz(aa.alt, aa.az);
+    var dirBase = applyCols(live.Wi, dirLive);
+    var pos = [dirBase[0] * ISS_DEPTH, dirBase[1] * ISS_DEPTH, dirBase[2] * ISS_DEPTH];
+    gl.bindBuffer(gl.ARRAY_BUFFER, issGeo.pos);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([pos[0], pos[1], pos[2], pos[0], pos[1], pos[2]]), gl.DYNAMIC_DRAW);
+    /* Frames, stated carefully: dirLive is where the station renders
+     * (the shader wheels base dirs into the live frame), while
+     * fwdLive is the camera's forward un-wheeled into the base frame
+     * — the arbitration's own convention. The comparable pair is
+     * fwdLive against the base dir, not dirLive against fwdLive:
+     * dotting two live-frame vectors against each other double-turns
+     * the wheel and the aim reads ~13 degrees off. */
+    issAimDot = fwdLive[0] * dirBase[0] + fwdLive[1] * dirBase[1] + fwdLive[2] * dirBase[2];
+    issNow = { dir: dirBase, alt: aa.alt, az: aa.az, pass: pass };
+  }
+  (function initIssTle() {
+    if (typeof SAT === 'undefined') return;
+    try {
+      var cached = window.localStorage.getItem('nd-tle');
+      if (cached) { var c = JSON.parse(cached); var elc = SAT.parseTLE(c.text); if (elc) issEl = elc; }
+    } catch (e) { /* private mode or a damaged cache: the bundle carries it */ }
+    if (!issEl && ISS_TLE_BUNDLED) issEl = SAT.parseTLE(ISS_TLE_BUNDLED);
+    computeIssPasses();
+    try {
+      fetch(AI_BASE + '/tle', { signal: AbortSignal.timeout(8000) }).then(function (r) {
+        if (!r.ok) throw new Error('tle ' + r.status);
+        return r.text();
+      }).then(function (txt) {
+        var el2 = SAT.parseTLE(txt);
+        if (!el2) return;
+        issEl = el2;
+        try { window.localStorage.setItem('nd-tle', JSON.stringify({ text: txt, fetchedMs: Date.now() })); } catch (e) {}
+        computeIssPasses();
+      }).catch(function () { /* the cached or bundled set carries the night */ });
+    } catch (e) { /* fetch unavailable: same */ }
+  })();
+
   var tapFlashUntil = 9;
   var bootGreetDone = false, BOOT_GREET_SECS = 4;
   function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
@@ -1484,7 +1601,13 @@
     var fig = P2.drawFig;
     if (!(fig && P2.alpha > 0.3 && P2.voyage > 0.35)) longHintActive = false;
     if (!bootGreetDone && (t >= tapFlashUntil || t >= BOOT_GREET_SECS)) bootGreetDone = true;
-    if (fig && P2.alpha > 0.3 && P2.voyage > 0.35) {
+    /* The station, when you are looking right at it, outranks
+     * everything settled: it is the thing moving in front of you.
+     * The cone is tight (~3.6 degrees) so a figure behind it still
+     * speaks when you are merely looking its way. */
+    if (nowMode && issNow && issAimDot > 0.998) {
+      setWhisper('iss', 'The space station', 'Crossing now — a bright, steady light, faster than any star.');
+    } else if (fig && P2.alpha > 0.3 && P2.voyage > 0.35) {
       if (P2.longV < 0.22 && dissolveSeen && !longVoyaged && !longHintShown) {
         /* once ever, on a dissolved hold after a first dissolve is
          * already behind him: the deeper step exists — say so */
@@ -1951,6 +2074,7 @@
      * wheel; travel and the view matrix keep the base forward */
     refreshLive();
     var fwdL = nowMode ? applyCols(live.Wi, fwd) : fwd;
+    if (nowMode) updateIssLive(new Date(), fwdL);
     /* slow live tick: the Moon's own place, the shower plan and the
      * daylight line refresh once a minute; the wheel itself turns
      * every frame through the shader rotation */
@@ -2171,6 +2295,7 @@
     /* star shell + figure boost */
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     drawStars(starGeo, projMat, rot, voyVec, 1, t);
+    if (issNow) drawStars(issGeo, projMat, rot, voyVec, 1, t);
     if (haloGeo) drawStars(haloGeo, projMat, rot, voyVec, 0.15, t);
     if (boostGeo && P2.alpha > 0.02) {
       drawStars(boostGeo, projMat, rot, voyVec, P2.alpha * (0.5 + P2.voyage * 0.9), t);
@@ -2303,6 +2428,7 @@
       if (almanac.set) logRow(body, 'Moonset', almanac.set + (almanac.setNote ? ' · ' + almanac.setNote : ''));
       if (almanac.planetsUp.length) logRow(body, 'Planets riding', almanac.planetsUp.join(' · '));
       if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : ''));
+      var issLine = issAlmanacLine(); if (issLine) logRow(body, 'Space station', issLine);
       if (almanac.full) logRow(body, 'Full moon', almanac.full);
       if (almanac.newMoon) logRow(body, 'New moon', almanac.newMoon);
     }
@@ -2406,7 +2532,7 @@
     applyNowUI();
     refreshLive();
     if (nowMode) { refreshMoon(new Date(), live.lst, live.Wi); planMeteors(tonight.date, live.lst, live.Wi); computeDaylight(); }
-    else { refreshMoon(tonight.date, tonight.lst, null); planMeteors(tonight.date, tonight.lst, null); daylightNote = ''; }
+    else { refreshMoon(tonight.date, tonight.lst, null); planMeteors(tonight.date, tonight.lst, null); daylightNote = ''; issNow = null; issAimDot = -2; }
     showWhisper(5000);
   });
   applyNowUI();
@@ -2419,6 +2545,7 @@
     milestones: function () { return { night: mileNight, fig: P2.mileNotes.fig, moon: P2.mileNotes.moon }; }, spawnMeteor: function (fwd) { return spawnMeteor(elapsed, fwd || null); },
     nowMode: function () { return nowMode; }, liveLst: function () { return live.lst; }, liveDeltaDeg: function () { return live.deltaDeg; },
     daylight: function () { return daylightNote; },
+    issPasses: function () { return issPasses; }, issNow: function () { return issNow; },
     liveDirOf: function (name) {
       for (var li = 0; li < starPts.length; li++) if (starPts[li].name === name) return liveDir(starPts[li].dir);
       for (var lj = 0; lj < planetPts.length; lj++) if (planetPts[lj].name === name) return liveDir(planetPts[lj].dir);
