@@ -2237,6 +2237,7 @@
     if (open) renderLog();
     logPanel.classList.toggle('show', open);
     logScrim.classList.toggle('show', open);
+    whisperEl.classList.toggle('hiddenByPanel', open);
     logPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
   }
   if (logBtn) logBtn.addEventListener('click', function () { setLogOpen(!logOpen); });

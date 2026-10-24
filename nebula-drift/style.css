@@ -7,7 +7,7 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 #cv{position:absolute;inset:0;display:block}
 #vignette{position:absolute;inset:0;pointer-events:none;z-index:3;
   background:radial-gradient(118% 92% at 50% 44%, transparent 60%, rgba(1,2,8,.42) 100%)}
-.corner{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:8;
+.corner{position:absolute;top:calc(12px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));z-index:8;
   width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.13);
   background:rgba(10,14,32,.42);color:rgba(223,230,255,.85);cursor:pointer;opacity:.55;
   display:flex;align-items:center;justify-content:center;transition:opacity .3s}
@@ -15,8 +15,8 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 .corner svg{width:20px;height:20px}
 .corner.off{color:rgba(120,130,165,.8)}
 .corner.off svg g{display:none}
-.corner.left{left:12px;right:auto}
-.corner.left2{left:12px;right:auto;top:calc(68px + env(safe-area-inset-top))}
+.corner.left{left:calc(12px + env(safe-area-inset-left));right:auto}
+.corner.left2{left:calc(12px + env(safe-area-inset-left));right:auto;top:calc(68px + env(safe-area-inset-top))}
 .corner.left2.on{opacity:1;color:rgba(255,120,110,.95);border-color:rgba(255,90,80,.4)}
 /* astronomer's red: a multiply veil turns the whole field — canvas,
  * whispers, panel, buttons — into true night-vision red, the way a
@@ -28,10 +28,24 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
   opacity:0;pointer-events:none;transition:opacity .4s}
 #logScrim.show{opacity:1;pointer-events:auto}
 #logPanel{position:absolute;z-index:10;left:50%;top:50%;width:min(86vw,340px);max-height:72vh;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:rgba(160,175,220,.35) transparent;
   transform:translate(-50%,-47%);opacity:0;pointer-events:none;transition:opacity .45s ease,transform .45s ease;
   background:rgba(7,10,24,.94);border:1px solid rgba(255,255,255,.13);border-radius:18px;
   padding:22px 22px 18px;box-shadow:0 18px 60px rgba(0,0,0,.55)}
 #logPanel.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+#logPanel::-webkit-scrollbar{width:4px}
+#logPanel::-webkit-scrollbar-track{background:transparent}
+#logPanel::-webkit-scrollbar-thumb{background:rgba(160,175,220,.32);border-radius:2px}
+/* short landscape (perfectionist Pass M): the panel goes wide and
+ * the journal reads in two columns instead of one long scroll */
+@media (orientation:landscape) and (max-height:500px){
+  #logPanel{width:min(82vw,580px);max-height:88vh}
+  #logBody{column-count:2;column-gap:32px}
+  #logBody .logRow,#logBody .logLine{break-inside:avoid}
+  #logBody .logSec{break-after:avoid}
+}
+/* while the panel is open it owns the screen — the whisper steps back */
+#whisper.hiddenByPanel{opacity:0!important;transition-duration:.35s}
 #logTitle{font-size:13px;font-weight:600;letter-spacing:.22em;color:rgba(238,242,255,.92);text-align:center}
 #logSummary{margin-top:8px;font-size:11px;letter-spacing:.08em;color:rgba(200,212,245,.6);text-align:center}
 .logSec{margin-top:18px;font-size:10px;font-weight:600;letter-spacing:.26em;color:rgba(160,175,220,.55)}
