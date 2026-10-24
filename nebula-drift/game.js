@@ -1172,7 +1172,12 @@
       var th = Math.random() * 6.283, ph = Math.acos(Math.random() * 2 - 1);
       var cand = [Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)];
       if (cand[1] < 0.10) continue;
-      if (fwd && cand[0] * fwd[0] + cand[1] * fwd[1] + cand[2] * fwd[2] < 0.15) continue;
+      /* witness bias (perfectionist Pass O): the first tries hold
+       * out for a start well inside the watched sky, so a shower
+       * night is actually seen; the last tries relax to the old
+       * whole-sky honesty — some meteors still belong to the sky
+       * nobody is facing, and simply go unwitnessed */
+      if (fwd && cand[0] * fwd[0] + cand[1] * fwd[1] + cand[2] * fwd[2] < (tries < 8 ? 0.45 : 0.15)) continue;
       S = cand; break;
     }
     if (!S) return false;
@@ -1187,6 +1192,14 @@
     var vl = Math.hypot(V[0], V[1], V[2]);
     if (vl < 0.05) { V = [S[2], 0.2, -S[0]]; vl = Math.hypot(V[0], V[1], V[2]) || 1; }
     V = [V[0] / vl, V[1] / vl, V[2] / vl];
+    /* a sporadic may travel either way along its line, so if its
+     * path would cross only unwatched sky, send it the other way;
+     * a shower meteor's direction is the radiant's and never flips */
+    if (!R && fwd) {
+      var mx = S[0] + V[0] * 0.3, my = S[1] + V[1] * 0.3, mz = S[2] + V[2] * 0.3;
+      var ml = Math.hypot(mx, my, mz) || 1;
+      if ((mx / ml) * fwd[0] + (my / ml) * fwd[1] + (mz / ml) * fwd[2] < 0.25) V = [-V[0], -V[1], -V[2]];
+    }
     var speed = (28 + Math.random() * 26) * Math.PI / 180;   /* rad/s across the sky */
     var fireball = Math.random() < 0.08;
     m.on = true; m.t0 = t; m.dur = 0.55 + Math.random() * 0.5;
@@ -2269,7 +2282,8 @@
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts, brightStars: starPts,
     meteors: meteorInfo, skyEvent: skyEvent, almanac: almanac,
     voyageState: function () { return { engaged: P2.engaged, hold: P2.voyageHold, v: P2.voyage, longV: P2.longV, step: P2.stepLen || 0 }; },
-    milestones: function () { return { night: mileNight, fig: P2.mileNotes.fig, moon: P2.mileNotes.moon }; }, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
+    milestones: function () { return { night: mileNight, fig: P2.mileNotes.fig, moon: P2.mileNotes.moon }; }, spawnMeteor: function (fwd) { return spawnMeteor(elapsed, fwd || null); },
+    meteorPool: function () { return meteors.map(function (m) { return m.on ? { S: m.S, V: m.V } : null; }); },
     meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
