@@ -1049,6 +1049,11 @@
       if (add > 4) { rate += add; if (!meteorInfo.shower || add > meteorInfo.best) { meteorInfo.shower = sh.name; meteorInfo.best = add; } }
     });
     meteorInfo.meanSec = Math.max(14, Math.min(400, 3600 / rate));
+    if (meteorInfo.shower) {
+      var shD = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
+      var yr = tonight.date.getFullYear();
+      meteorInfo.peakLabel = new Date(yr, 0, shD.peak).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
     meteorInfo.radiantDir = null;
     if (meteorInfo.shower) {
       var sh2 = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
@@ -1194,6 +1199,66 @@
       if (sp < 2.6 && (!pair || sp < pair.sep)) pair = { sep: sp, a: ps[i].name, b: ps[j].name };
     }
     if (pair) skyEvent = pair.a + ' and ' + pair.b + ' stand close tonight — about ' + degWords(Math.round(pair.sep)) + ' degrees apart.';
+  })();
+
+  /* ================= the almanac (review Pass F) =================
+   * Tonight's computed facts, gathered in one place in the Field
+   * Log: the Moon's hours and phase, the planets riding, the active
+   * shower, and the next full and new moons. Everything is worked
+   * from the game's own ephemerides — moonrise and moonset by
+   * walking the evening in ten-minute steps and bisecting the
+   * horizon crossing; the lunations by following the Moon's
+   * elongation from the Sun until it turns. */
+  var almanac = null;
+  (function computeAlmanac() {
+    if (typeof MOON === 'undefined') return;
+    var mp = MOON.position(tonight.date);
+    function moonAltAt(date) {
+      var m2 = MOON.position(date);
+      return SKY.altAz(m2.ra, m2.dec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(date), SKY.HOME.lon)).alt;
+    }
+    function fmtTime(d) { return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
+    function fmtDay(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+    var noon = new Date(tonight.date.getTime()); noon.setHours(12, 0, 0, 0);
+    var rise = null, set = null;
+    var prevA = moonAltAt(noon), prevT = noon.getTime();
+    for (var tt = prevT + 600000; tt <= prevT + 86400000 && (!rise || !set); tt += 600000) {
+      var a2 = moonAltAt(new Date(tt));
+      if ((prevA < 0) !== (a2 < 0)) {
+        var lo = prevT, hi = tt, alo = prevA;
+        for (var bi = 0; bi < 24; bi++) {
+          var mid = (lo + hi) / 2, am = moonAltAt(new Date(mid));
+          if ((alo < 0) === (am < 0)) { lo = mid; alo = am; } else hi = mid;
+        }
+        if (prevA < 0 && !rise) rise = new Date((lo + hi) / 2);
+        if (prevA >= 0 && !set) set = new Date((lo + hi) / 2);
+      }
+      prevA = a2; prevT = tt;
+    }
+    function thetaAt(d) { var m3 = MOON.position(d); return ((m3.eclLon - m3.sunEclLon) % 360 + 360) % 360; }
+    var full = null, newM = null;
+    var lastTh = thetaAt(tonight.date);
+    for (var t2 = tonight.date.getTime() + 21600000; t2 < tonight.date.getTime() + 34 * 86400000 && (!full || !newM); t2 += 21600000) {
+      var th = thetaAt(new Date(t2));
+      if (!full && lastTh < 180 && th >= 180) {
+        var flo = t2 - 21600000, fhi = t2;
+        for (var fb = 0; fb < 22; fb++) { var fm = (flo + fhi) / 2; if (thetaAt(new Date(fm)) < 180) flo = fm; else fhi = fm; }
+        full = new Date((flo + fhi) / 2);
+      }
+      if (!newM && th < lastTh - 180) {
+        var nlo = t2 - 21600000, nhi = t2;
+        for (var nb2 = 0; nb2 < 22; nb2++) { var nm2 = (nlo + nhi) / 2; if (thetaAt(new Date(nm2)) > 180) nlo = nm2; else nhi = nm2; }
+        newM = new Date((nlo + nhi) / 2);
+      }
+      lastTh = th;
+    }
+    almanac = {
+      phase: moonPhaseName(mp), illumPct: Math.round(mp.illum * 100),
+      rise: rise ? fmtTime(rise) : null, set: set ? fmtTime(set) : null,
+      planetsUp: planetPts.filter(function (pl) { return pl.alt > 0; }).map(function (pl) { return pl.name; }),
+      shower: meteorInfo.shower, showerPeak: meteorInfo.peakLabel || null,
+      full: full ? fmtDay(full) : null, newMoon: newM ? fmtDay(newM) : null
+    };
   })();
 
   var tapFlashUntil = 9;
@@ -1967,6 +2032,16 @@
   function renderLog() {
     var body = document.getElementById('logBody');
     while (body.firstChild) body.removeChild(body.firstChild);
+    if (almanac) {
+      logSection(body, 'ALMANAC');
+      logRow(body, 'Moon', almanac.phase + ' · ' + almanac.illumPct + '% lit');
+      if (almanac.rise) logRow(body, 'Moonrise', almanac.rise);
+      if (almanac.set) logRow(body, 'Moonset', almanac.set);
+      if (almanac.planetsUp.length) logRow(body, 'Planets riding', almanac.planetsUp.join(' · '));
+      if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : ''));
+      if (almanac.full) logRow(body, 'Full moon', almanac.full);
+      if (almanac.newMoon) logRow(body, 'New moon', almanac.newMoon);
+    }
     var figNames = Object.keys(log.figs);
     document.getElementById('logSummary').textContent =
       log.nights.length + (log.nights.length === 1 ? ' night' : ' nights') + ' under this sky · ' +
@@ -2045,7 +2120,7 @@
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts, brightStars: starPts,
-    meteors: meteorInfo, skyEvent: skyEvent, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
+    meteors: meteorInfo, skyEvent: skyEvent, almanac: almanac, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
     meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
