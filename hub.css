@@ -338,6 +338,9 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
   background:linear-gradient(180deg,#a8d4ff,#4da6ff);
   box-shadow:0 6px 0 rgba(20,70,130,.9),0 12px 26px rgba(77,166,255,.35),inset 0 1px 0 rgba(255,255,255,.5);
   transition:transform .12s,box-shadow .12s}
+/* the CTA wears the feature's gold: a miniature of the patriarch ring */
+.feat-cta::before{content:"";width:11px;height:11px;flex:none;border-radius:50%;
+  border:1.5px solid #d9b877;box-shadow:0 0 9px rgba(217,184,119,.65),inset 0 0 4px rgba(217,184,119,.5)}
 .feat3d:active .feat-cta{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
 .feat-cta span:last-child{font-size:18px}
 /* wide screens: the feature stops stacking and sits beside its star —
