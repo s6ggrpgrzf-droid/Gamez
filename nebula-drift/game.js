@@ -1821,7 +1821,7 @@
 
   /* ================= matrices + draw helpers ================= */
   var CW = 0, CH = 0, DPR = 1, projMat = null, scaleH = 1;
-  var FOV_WIDE = 1.187, FOV_IN = 0.977, fovCur = FOV_WIDE, fovApplied = 0;
+  var FOV_WIDE = 1.361, FOV_IN = 1.152, fovCur = FOV_WIDE, fovApplied = 0;
   function perspectiveMat(fovy, aspect, near, far) {
     var f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
     return new Float32Array([
