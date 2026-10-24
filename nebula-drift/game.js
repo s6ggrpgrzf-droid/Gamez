@@ -975,7 +975,7 @@
    * activation. The first-ever meeting earns one quiet sentence in
    * that object's own whisper, for that activation only. */
   var LOG_KEY = 'nd-log-v1';
-  var log = { v: 1, nights: [], figs: {}, planets: {}, stars: {}, nebulae: {}, moon: { first: null, n: 0, phases: [] } };
+  var log = { v: 1, nights: [], figs: {}, planets: {}, stars: {}, nebulae: {}, moon: { first: null, n: 0, phases: [] }, notes: [] };
   function saveLog() {
     try { window.localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch (e) { /* private mode */ }
   }
@@ -989,6 +989,7 @@
           log.planets = p.planets || {};
           log.nebulae = p.nebulae || {};   /* added by Pass 3; older logs default empty */
           log.stars = p.stars || {};       /* added by review Pass D; same rule */
+          log.notes = p.notes || [];       /* added by review Pass H; same rule */
           if (p.moon) log.moon = p.moon;
         }
       }
@@ -1024,6 +1025,55 @@
       if (log.moon.phases.indexOf(ph) === -1) log.moon.phases.push(ph);
     }
     saveLog();
+    trackFieldNote(name);
+  }
+
+  /* ================= field notes (review Pass H) =================
+   * The deferred AI tier, homed at last: once a night has three
+   * distinct meetings in it, the worker writes one dated line for
+   * the journal from that night's own facts — and if it never
+   * answers, an authored line composed of the same facts takes its
+   * place, so a real night's drifting is never left unrecorded.
+   * One attempt per night; the note itself is the guard. */
+  var metTonight = [], noteAttempted = false;
+  function trackFieldNote(name) {
+    if (metTonight.indexOf(name) === -1) metTonight.push(name);
+    if (metTonight.length < 3 || noteAttempted) return;
+    var tk = aiDateKey(tonight.date);
+    if (log.notes.some(function (n) { return n.d === tk; })) { noteAttempted = true; return; }
+    noteAttempted = true;
+    /* the note is written a little after the third meeting, not in
+     * the moment — a journal entry, considered once the drifting has
+     * had time to add whoever else the night brings (the list is read
+     * when the timer fires, and a figure whose threads completed
+     * while you gazed at its guest is honestly among them) */
+    setTimeout(writeFieldNote, 20000);
+  }
+  function writeFieldNote() {
+    var met = metTonight.slice(0, 5);
+    var joined = met.length > 2
+      ? met.slice(0, -1).join(', ') + ', and ' + met[met.length - 1]
+      : met.join(' and ');
+    var moonFact = moonPt ? moonPhaseName(moonPt) + ', ' + Math.round(moonPt.illum * 100) + '% lit' : '';
+    aiFetch('driftlog', {
+      date: dateStr, met: met.join(', '),
+      moon: moonFact, event: skyEvent || ''
+    }, function (t) {
+      if (t) addFieldNote(t);
+      else {
+        addFieldNote(moonPt
+          ? joined + ' — met under a ' + moonPhaseName(moonPt).toLowerCase() + ' Moon.'
+          : joined + ' — met tonight.');
+      }
+    });
+  }
+  function addFieldNote(text) {
+    var tk = aiDateKey(tonight.date);
+    if (log.notes.some(function (n) { return n.d === tk; })) return;
+    log.notes.push({ d: tk, text: String(text).trim() });
+    while (log.notes.length > 60) log.notes.shift();
+    saveLog();
+    if (logPanel.classList.contains('show')) renderLog();
   }
 
   /* ================= the living sky: meteors (Pass B) =================
@@ -2109,6 +2159,18 @@
         ph.textContent = 'Seen as: ' + log.moon.phases.join(' · ');
         body.appendChild(ph);
       }
+    }
+    if (log.notes.length) {
+      logSection(body, 'FIELD NOTES');
+      log.notes.slice(-6).reverse().forEach(function (n) {
+        var nd = document.createElement('div'); nd.className = 'logLine';
+        var ds = document.createElement('span'); ds.className = 'logNoteD';
+        var dp = n.d.split('-');
+        ds.textContent = new Date(+dp[0], +dp[1] - 1, +dp[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        nd.appendChild(ds);
+        nd.appendChild(document.createTextNode(' — ' + n.text));
+        body.appendChild(nd);
+      });
     }
     if (!figNames.length && !plNames.length && !stNames.length && !nbNames.length && !log.moon.first) {
       var em = document.createElement('div'); em.className = 'logLine';

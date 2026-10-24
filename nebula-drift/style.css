@@ -39,6 +39,7 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 .logName{font-size:13px;color:rgba(238,242,255,.9)}
 .logMeta{font-size:10.5px;letter-spacing:.05em;color:rgba(200,212,245,.55);text-align:right;white-space:nowrap}
 .logLine{margin-top:9px;font-size:11.5px;line-height:1.55;color:rgba(200,212,245,.72)}
+.logNoteD{color:rgba(160,175,220,.55);letter-spacing:.04em;white-space:nowrap}
 #whisper{position:absolute;left:0;right:0;z-index:5;pointer-events:none;text-align:center;
   bottom:calc(30px + env(safe-area-inset-bottom));padding:34px 28px 10px;
   background:linear-gradient(to top, rgba(2,3,10,.52), rgba(2,3,10,.28) 55%, rgba(2,3,10,0));
