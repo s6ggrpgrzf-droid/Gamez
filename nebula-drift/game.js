@@ -33,6 +33,55 @@
   try { mutedPref = !!window.localStorage.getItem('nd-muted'); } catch (e) { /* private mode */ }
 
   var tonight = SKY.tonightSky(new Date(), SKY.HOME);
+
+  /* ================= live sky (Live Pass 1: Now mode) =================
+   * Tonight mode is the game as it has always been: the sky stands at
+   * 22:00, frozen. Now mode is the same sky at the true current moment,
+   * wheeling at its true rate. The baked buffers never move — the
+   * shaders rotate every sky-fixed direction by W, the rotation about
+   * the celestial pole by minus the LST gained since the baked epoch,
+   * and the facing tests compare W-inverse times the camera forward,
+   * so render and logic always agree. The Moon gets her own true
+   * position on a slow tick; the log, almanac and AI keys keep the
+   * owning night (Pass P), because the journal is of nights, and the
+   * planets stay at their 22:00 places — they move arcminutes an
+   * hour, far below anything the eye can hold. */
+  var nowMode = false;
+  try { nowMode = window.localStorage.getItem('nd-now') === '1'; } catch (e) { /* private mode */ }
+  var POLE_AXIS = [0, Math.sin(SKY.HOME.lat * Math.PI / 180), -Math.cos(SKY.HOME.lat * Math.PI / 180)];
+  function rotColumns(axis, ang) {
+    var x = axis[0], y = axis[1], z = axis[2], c = Math.cos(ang), s = Math.sin(ang), t = 1 - c;
+    return [
+      [c + x * x * t, y * x * t + z * s, z * x * t - y * s],
+      [x * y * t - z * s, c + y * y * t, z * y * t + x * s],
+      [x * z * t + y * s, y * z * t - x * s, c + z * z * t]
+    ];
+  }
+  function applyCols(cols, v) {
+    return [
+      cols[0][0] * v[0] + cols[1][0] * v[1] + cols[2][0] * v[2],
+      cols[0][1] * v[0] + cols[1][1] * v[1] + cols[2][1] * v[2],
+      cols[0][2] * v[0] + cols[1][2] * v[1] + cols[2][2] * v[2]
+    ];
+  }
+  function colsToMat3(cols) {
+    return new Float32Array([
+      cols[0][0], cols[0][1], cols[0][2],
+      cols[1][0], cols[1][1], cols[1][2],
+      cols[2][0], cols[2][1], cols[2][2]
+    ]);
+  }
+  var IDENT_COLS = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  var live = { W: IDENT_COLS, Wi: IDENT_COLS, skyMat: colsToMat3(IDENT_COLS), lst: tonight.lst, deltaDeg: 0 };
+  function refreshLive() {
+    if (!nowMode) { live = { W: IDENT_COLS, Wi: IDENT_COLS, skyMat: colsToMat3(IDENT_COLS), lst: tonight.lst, deltaDeg: 0 }; return; }
+    var lstNow = SKY.lstDeg(SKY.jdFromDate(new Date()), SKY.HOME.lon);
+    var d = (lstNow - tonight.lst) * Math.PI / 180;
+    var W = rotColumns(POLE_AXIS, -d), Wi = rotColumns(POLE_AXIS, d);
+    live = { W: W, Wi: Wi, skyMat: colsToMat3(W), lst: lstNow, deltaDeg: ((lstNow - tonight.lst + 540) % 360) - 180 };
+  }
+  function liveDir(d) { return nowMode ? applyCols(live.W, d) : d; }
+  var lastLiveTick = 0;
   var rng = SKY.mulberry32(20261021);
 
   /* ================= WebGL setup ================= */
@@ -85,18 +134,20 @@
     'attribute vec3 aPos; attribute vec3 aCol; attribute float aSize;' +
     'attribute float aPhase; attribute float aTwk; attribute float aSpike;' +
     'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift;' +
+    'uniform mat3 uSky;' +
     'uniform float uTime; uniform float uScaleH; uniform float uAlphaMul;' +
     'uniform vec3 uMoonDir; uniform float uMoonDim;' +
     'varying vec3 vCol; varying float vAlpha; varying float vSpike;' +
     'void main(){' +
-    '  vec4 vp = uRot * vec4(aPos - uShift, 1.0);' +
+    '  vec3 livePos = uSky * aPos;' +
+    '  vec4 vp = uRot * vec4(livePos - uShift, 1.0);' +
     '  gl_Position = uProj * vp;' +
-    '  float sinAlt = normalize(aPos).y;' +
+    '  float sinAlt = normalize(livePos).y;' +
     '  float lowAir = 1.0 - smoothstep(0.02, 0.34, sinAlt);' +
     '  float twAmp = mix(0.14, 0.30, lowAir);' +
     '  float tw = (1.0 - twAmp) + twAmp * sin(uTime * aTwk * (1.0 + 1.3 * lowAir) + aPhase);' +
     '  float ext = mix(1.0, 0.52, lowAir);' +
-    '  vec3 dirW = normalize(aPos - uShift);' +
+    '  vec3 dirW = normalize(livePos - uShift);' +
     '  float mDim = 1.0 - uMoonDim * smoothstep(0.966, 0.9986, dot(dirW, uMoonDir)) * 0.62;' +
     '  vCol = mix(aCol, aCol * vec3(1.0, 0.78, 0.58), lowAir * 0.55); vAlpha = tw * uAlphaMul * mDim * ext; vSpike = aSpike;' +
     '  gl_PointSize = clamp(aSize * uScaleH / max(1.0, -vp.z), 1.0, 64.0);' +
@@ -122,7 +173,7 @@
     'attribute vec3 aPos; attribute vec2 aCorner; attribute vec3 aCol;' +
     'attribute float aSize; attribute float aAlpha; attribute float aPhase; attribute float aKind;' +
     'attribute float aRot; attribute float aAspect;' +
-    'uniform mat4 uProj; uniform mat4 uRot;' +
+    'uniform mat4 uProj; uniform mat4 uRot; uniform mat3 uSky;' +
     'uniform vec3 uCamPos; uniform vec3 uOrigin; uniform float uWrap; uniform float uBox;' +
     'uniform float uBreathe;' +
     'varying vec2 vUv; varying vec3 vCol; varying float vAlpha; varying float vPhase; varying float vKind;' +
@@ -130,7 +181,7 @@
     '  vUv = aCorner; vCol = aCol; vPhase = aPhase; vKind = aKind;' +
     '  vec3 wp;' +
     '  if (uWrap > 0.5) { wp = mod(aPos - uCamPos, uBox) - uBox * 0.5; }' +
-    '  else { wp = aPos + uOrigin - uCamPos; }' +
+    '  else { wp = uSky * aPos + uOrigin - uCamPos; }' +
     '  vec4 vp = uRot * vec4(wp, 1.0);' +
     '  float depth = max(1.0, -vp.z);' +
     '  float nearFade = smoothstep(6.0, 95.0, depth);' +
@@ -165,10 +216,10 @@
   /* ---- ribbons (threads of light, the meteor) ---- */
   var ribbonProg = makeProgram(
     'attribute vec3 aPos; attribute vec2 aOff; attribute float aAlpha;' +
-    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift;' +
+    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift; uniform mat3 uSky;' +
     'varying float vA;' +
     'void main(){' +
-    '  vec4 vp = uRot * vec4(aPos - uShift, 1.0);' +
+    '  vec4 vp = uRot * vec4(uSky * aPos - uShift, 1.0);' +
     '  vp.xy += aOff;' +
     '  gl_Position = uProj * vp;' +
     '  vA = aAlpha;' +
@@ -188,10 +239,10 @@
    * black and occludes: no earthshine, by design. */
   var moonProg = makeProgram(
     'attribute vec3 aPos; attribute vec2 aCorner;' +
-    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift; uniform float uSize;' +
+    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift; uniform float uSize; uniform mat3 uSky;' +
     'varying vec2 vQ;' +
     'void main(){' +
-    '  vec4 vp = uRot * vec4(aPos - uShift, 1.0);' +
+    '  vec4 vp = uRot * vec4(uSky * aPos - uShift, 1.0);' +
     '  vp.xy += aCorner * (uSize * 0.5);' +
     '  gl_Position = uProj * vp;' +
     '  vQ = aCorner;' +
@@ -235,10 +286,10 @@
   /* ---- meteors: small streak quads, CPU-steered ---- */
   var meteorProg = makeProgram(
     'attribute vec3 aPos; attribute float aU; attribute float aSide; attribute float aA;' +
-    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift;' +
+    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift; uniform mat3 uSky;' +
     'varying float vU; varying float vSide; varying float vA;' +
     'void main(){' +
-    '  gl_Position = uProj * (uRot * vec4(aPos - uShift, 1.0));' +
+    '  gl_Position = uProj * (uRot * vec4(uSky * aPos - uShift, 1.0));' +
     '  vU = aU; vSide = aSide; vA = aA;' +
     '}',
     'precision mediump float;' +
@@ -752,6 +803,36 @@
   /* ================= whisper (ported) ================= */
   var dateStr = tonight.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   var tonightMain = 'Tonight · ' + dateStr + ' · the sky over ' + SKY.HOME.name;
+  function greetKey() {
+    return 'tonight' + (aiTonightSub ? ':ai' : '') + (nowMode ? ':now' + new Date().getMinutes() : '');
+  }
+  function greetMain() {
+    if (!nowMode) return tonightMain;
+    var hh = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return 'Now · ' + dateStr + ' · ' + hh + ' · the sky over ' + SKY.HOME.name;
+  }
+  /* daylight honesty (Live Pass 1): in Now mode with the Sun up, the
+   * greeting says the sky is still blue and names the hour full dark
+   * arrives, scanned forward on the game's own solar ephemeris */
+  var daylightNote = '';
+  function computeDaylight() {
+    daylightNote = '';
+    if (!nowMode || typeof MOON === 'undefined') return;
+    var now = new Date();
+    var mp0 = MOON.position(now);
+    var sunAltNow = SKY.altAz(mp0.sunRa, mp0.sunDec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(now), SKY.HOME.lon)).alt;
+    if (sunAltNow < -18) return;
+    for (var k = 1; k <= 84; k++) {
+      var d2 = new Date(now.getTime() + k * 600000);
+      var mp2 = MOON.position(d2);
+      var a2 = SKY.altAz(mp2.sunRa, mp2.sunDec, SKY.HOME.lat, SKY.lstDeg(SKY.jdFromDate(d2), SKY.HOME.lon)).alt;
+      if (a2 < -18) {
+        daylightNote = 'The sky is still blue — full dark at ' + d2.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '.';
+        return;
+      }
+    }
+  }
+  computeDaylight();
   var tonightSub = 'Drag to look — it drifts on its own.';
 
   /* ================= gamez-ai whispers (silent, Pass 1) =================
@@ -902,19 +983,25 @@
     }
     return name;
   }
-  (function buildMoon() {
+  function refreshMoon(date, lst, toBase) {
     if (typeof MOON === 'undefined') return;
-    var mp = MOON.position(tonight.date);
-    var maa = SKY.altAz(mp.ra, mp.dec, SKY.HOME.lat, tonight.lst);
+    var mp = MOON.position(date);
+    var maa = SKY.altAz(mp.ra, mp.dec, SKY.HOME.lat, lst);
     var mdir = SKY.dirFromAltAz(maa.alt, maa.az);
-    var saa = SKY.altAz(mp.sunRa, mp.sunDec, SKY.HOME.lat, tonight.lst);
+    var saa = SKY.altAz(mp.sunRa, mp.sunDec, SKY.HOME.lat, lst);
     var sunDirW = SKY.dirFromAltAz(saa.alt, saa.az);
-    moonPt = {
-      name: 'Moon', dir: mdir, alt: maa.alt, az: maa.az, ra: mp.ra, dec: mp.dec,
+    /* buffers and facing tests live in the baked (epoch) frame, so a
+     * live refresh stores the true direction un-rotated by the wheel;
+     * altitude, phase and the line itself stay true to the moment */
+    var baseDir = toBase ? applyCols(toBase, mdir) : mdir;
+    var baseSun = toBase ? applyCols(toBase, sunDirW) : sunDirW;
+    var moonFields = {
+      name: 'Moon', dir: baseDir, alt: maa.alt, az: maa.az, ra: mp.ra, dec: mp.dec,
       distKm: mp.distKm, illum: mp.illum, waxing: mp.waxing, elong: mp.elong,
-      sunDirW: sunDirW,
-      pos: [mdir[0] * MOON_DEPTH, mdir[1] * MOON_DEPTH, mdir[2] * MOON_DEPTH]
+      sunDirW: baseSun,
+      pos: [baseDir[0] * MOON_DEPTH, baseDir[1] * MOON_DEPTH, baseDir[2] * MOON_DEPTH]
     };
+    if (moonPt) Object.assign(moonPt, moonFields); else moonPt = moonFields;
     /* drawn size: the true angular diameter, magnified 5.5x so the
      * disc and its phase read on a phone — the planets take the
      * same licence with their cores */
@@ -934,12 +1021,15 @@
       skyPhrase(mdir) + company + '. ' + moonPhaseClause(mp) + ' — ' +
       Math.round(mp.distKm).toLocaleString('en-US') + ' km away, and its light left ' +
       lightSecs.toFixed(1) + ' seconds ago.';
-    /* one quad, six vertices */
+    /* one quad, six vertices; on a live refresh the same buffer is
+     * re-uploaded in place — the Moon keeps her own true place */
     var corners = [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]];
     var pos = new Float32Array(6 * 3), cor = new Float32Array(6 * 2);
     corners.forEach(function (c, i) { pos.set(moonPt.pos, i * 3); cor.set(c, i * 2); });
-    moonGeo = { pos: makeBuffer(gl.ARRAY_BUFFER, pos), corner: makeBuffer(gl.ARRAY_BUFFER, cor), count: 6 };
-  })();
+    if (moonGeo) { gl.bindBuffer(gl.ARRAY_BUFFER, moonGeo.pos); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW); }
+    else { moonGeo = { pos: makeBuffer(gl.ARRAY_BUFFER, pos), corner: makeBuffer(gl.ARRAY_BUFFER, cor), count: 6 }; }
+  }
+  refreshMoon(tonight.date, tonight.lst, null);
 
   /* ================= nebulae speak (Pass 3) =================
    * The painted anchors were scenery; the bright half of them are
@@ -1115,15 +1205,16 @@
     { name: 'Ursids', peak: 356, half: 5, zhr: 10, ra: 14.50, dec: 75.7 }
   ];
   var meteorInfo = { shower: null, meanSec: 400 };
-  (function planMeteors() {
-    var d = tonight.date;
+  function planMeteors(date, lst, toBase) {
+    meteorInfo.shower = null; meteorInfo.best = 0;
+    var d = date;
     var doy = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000);
     var rate = 9; /* sporadics, per hour, one patch of sky */
     SHOWERS.forEach(function (sh) {
       var dd = Math.abs(doy - sh.peak); dd = Math.min(dd, 365 - dd);
       if (dd > sh.half) return;
       var fall = (1 + Math.cos(Math.PI * dd / sh.half)) / 2;
-      var aa = SKY.altAz(sh.ra, sh.dec, SKY.HOME.lat, tonight.lst);
+      var aa = SKY.altAz(sh.ra, sh.dec, SKY.HOME.lat, lst);
       /* the game's sky stands at 22:00, but a shower night belongs
        * to the whole night — a radiant near rising still performs,
        * and its first meteors are earthgrazers */
@@ -1134,15 +1225,17 @@
     meteorInfo.meanSec = Math.max(14, Math.min(400, 3600 / rate));
     if (meteorInfo.shower) {
       var shD = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
-      var yr = tonight.date.getFullYear();
+      var yr = date.getFullYear();
       meteorInfo.peakLabel = new Date(yr, 0, shD.peak).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
     meteorInfo.radiantDir = null;
     if (meteorInfo.shower) {
       var sh2 = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
-      meteorInfo.radiantDir = SKY.dirFromRaDec(sh2.ra, sh2.dec, SKY.HOME.lat, tonight.lst);
+      var rLive = SKY.dirFromRaDec(sh2.ra, sh2.dec, SKY.HOME.lat, lst);
+      meteorInfo.radiantDir = toBase ? applyCols(toBase, rLive) : rLive;
     }
-  })();
+  }
+  planMeteors(tonight.date, tonight.lst, null);
   var METEOR_DIST = 1500, METEOR_POOL = 8;
   var meteors = [];
   for (var mi = 0; mi < METEOR_POOL; mi++) meteors.push({ on: false, t0: 0, dur: 1, S: null, V: null, len: 200, wid: 7, bright: 0.8 });
@@ -1242,6 +1335,7 @@
     bindAttr(meteorProg, 'aA', meteorGeo.a, 1);
     gl.uniformMatrix4fv(uniformLoc(meteorProg, 'uProj'), false, proj);
     gl.uniformMatrix4fv(uniformLoc(meteorProg, 'uRot'), false, rot);
+    gl.uniformMatrix3fv(uniformLoc(meteorProg, 'uSky'), false, live.skyMat);
     gl.uniform3f(uniformLoc(meteorProg, 'uShift'), shift[0], shift[1], shift[2]);
     gl.drawArrays(gl.TRIANGLES, 0, METEOR_POOL * 6);
   }
@@ -1383,7 +1477,7 @@
   }
   function fmtDist(d) { return d ? d.toLocaleString('en-US') : ''; }
   function greetSub() {
-    return (aiTonightSub || tonightSub) + (skyEvent ? ' ' + skyEvent : '') +
+    return (nowMode && daylightNote ? daylightNote : (aiTonightSub || tonightSub)) + (skyEvent ? ' ' + skyEvent : '') +
       (mileNight ? ' Your tenth night under this sky.' : '');
   }
   function updateWhisper(t) {
@@ -1414,7 +1508,7 @@
       /* the boot greeting holds the whisper for its first seconds — a
        * figure may settle and draw its threads beneath it; its story
        * takes the whisper once the greeting's beat is done */
-      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, greetSub());
+      setWhisper(greetKey(), greetMain(), greetSub());
     } else if (P2.moon && P2.mAlpha > 0.3 && P2.moon.line &&
                (!P2.planet || P2.moonAng <= P2.planetAng) &&
                (!P2.neb || P2.moonAng <= P2.nebAng) &&
@@ -1458,7 +1552,7 @@
       setWhisper('fig:' + fig.name + (hintOn ? ':h' : aiFig ? ':ai' : ':s') + (fig.guest && !aiFig && !hintOn ? ':g' : '') + (figNote ? ':n' : '') + (figMile ? ':m10' : ''), fig.name,
         hintOn ? 'Press and hold — step sideways, off the Earth viewpoint' : storyShown);
     } else if (t < tapFlashUntil) {
-      setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, greetSub());
+      setWhisper(greetKey(), greetMain(), greetSub());
     } else {
       setWhisper('none', null);
     }
@@ -1514,12 +1608,14 @@
     bindAttr(starProg, 'aTwk', geo.twk, 1); bindAttr(starProg, 'aSpike', geo.spike, 1);
     gl.uniformMatrix4fv(uniformLoc(starProg, 'uProj'), false, proj);
     gl.uniformMatrix4fv(uniformLoc(starProg, 'uRot'), false, rot);
+    gl.uniformMatrix3fv(uniformLoc(starProg, 'uSky'), false, live.skyMat);
     gl.uniform3f(uniformLoc(starProg, 'uShift'), shift[0], shift[1], shift[2]);
     gl.uniform1f(uniformLoc(starProg, 'uTime'), time);
     gl.uniform1f(uniformLoc(starProg, 'uScaleH'), scaleH);
     gl.uniform1f(uniformLoc(starProg, 'uAlphaMul'), alphaMul);
     if (moonPt) {
-      gl.uniform3f(uniformLoc(starProg, 'uMoonDir'), moonPt.dir[0], moonPt.dir[1], moonPt.dir[2]);
+      var mdL = liveDir(moonPt.dir);
+      gl.uniform3f(uniformLoc(starProg, 'uMoonDir'), mdL[0], mdL[1], mdL[2]);
       gl.uniform1f(uniformLoc(starProg, 'uMoonDim'), moonPt.alt > -3 ? moonPt.illum : 0);
     } else {
       gl.uniform3f(uniformLoc(starProg, 'uMoonDir'), 0, 1, 0);
@@ -1532,14 +1628,14 @@
     /* the Sun and the celestial frame, carried into view space by
      * the same rotation the renderer uses, then expressed in the
      * disc's own frame: x toward increasing RA, y toward the pole */
-    var s = moonPt.sunDirW;
+    var s = liveDir(moonPt.sunDirW);
     var sunView = [
       rot[0] * s[0] + rot[4] * s[1] + rot[8] * s[2],
       rot[1] * s[0] + rot[5] * s[1] + rot[9] * s[2],
       rot[2] * s[0] + rot[6] * s[1] + rot[10] * s[2]
     ];
     var pole = SKY.dirFromRaDec(0, 90, SKY.HOME.lat, tonight.lst);
-    var md = moonPt.dir;
+    var md = liveDir(moonPt.dir);
     var pd = pole[0] * md[0] + pole[1] * md[1] + pole[2] * md[2];
     var nT = [pole[0] - md[0] * pd, pole[1] - md[1] * pd, pole[2] - md[2] * pd];
     var nl = Math.hypot(nT[0], nT[1], nT[2]) || 1; nT = [nT[0] / nl, nT[1] / nl, nT[2] / nl];
@@ -1562,6 +1658,7 @@
     bindAttr(moonProg, 'aPos', moonGeo.pos, 3); bindAttr(moonProg, 'aCorner', moonGeo.corner, 2);
     gl.uniformMatrix4fv(uniformLoc(moonProg, 'uProj'), false, proj);
     gl.uniformMatrix4fv(uniformLoc(moonProg, 'uRot'), false, rot);
+    gl.uniformMatrix3fv(uniformLoc(moonProg, 'uSky'), false, live.skyMat);
     gl.uniform3f(uniformLoc(moonProg, 'uShift'), shift[0], shift[1], shift[2]);
     gl.uniform1f(uniformLoc(moonProg, 'uSize'), moonPt.quadSize);
     gl.uniform2f(uniformLoc(moonProg, 'uEast'), e2[0], e2[1]);
@@ -1579,6 +1676,7 @@
     bindAttr(gasProg, 'aRot', geo.rot, 1); bindAttr(gasProg, 'aAspect', geo.aspect, 1);
     gl.uniformMatrix4fv(uniformLoc(gasProg, 'uProj'), false, proj);
     gl.uniformMatrix4fv(uniformLoc(gasProg, 'uRot'), false, rot);
+    gl.uniformMatrix3fv(uniformLoc(gasProg, 'uSky'), false, live.skyMat);
     gl.uniform3f(uniformLoc(gasProg, 'uCamPos'), rendCam[0], rendCam[1], rendCam[2]);
     gl.uniform3f(uniformLoc(gasProg, 'uOrigin'), origin[0], origin[1], origin[2]);
     gl.uniform1f(uniformLoc(gasProg, 'uWrap'), wrap);
@@ -1610,6 +1708,7 @@
     bindAttr(ribbonProg, 'aAlpha', ribAB, 1);
     gl.uniformMatrix4fv(uniformLoc(ribbonProg, 'uProj'), false, proj);
     gl.uniformMatrix4fv(uniformLoc(ribbonProg, 'uRot'), false, rot);
+    gl.uniformMatrix3fv(uniformLoc(ribbonProg, 'uSky'), false, live.skyMat);
     gl.uniform3f(uniformLoc(ribbonProg, 'uShift'), shift[0], shift[1], shift[2]);
     gl.uniform3f(uniformLoc(ribbonProg, 'uCol'), colArr[0], colArr[1], colArr[2]);
     gl.drawArrays(gl.TRIANGLES, 0, n);
@@ -1847,6 +1946,20 @@
     bankCur += (bankTgt - bankCur) * Math.min(1, dt * 3.5);
     var cosA = Math.cos(cam.az), sinA = Math.sin(cam.az), cosH = Math.cos(cam.alt), sinH = Math.sin(cam.alt);
     var fwd = [cosH * sinA, sinH, -cosH * cosA];
+    /* live sky: the facing tests compare the camera against the baked
+     * (epoch) directions, so they take the forward un-rotated by the
+     * wheel; travel and the view matrix keep the base forward */
+    refreshLive();
+    var fwdL = nowMode ? applyCols(live.Wi, fwd) : fwd;
+    /* slow live tick: the Moon's own place, the shower plan and the
+     * daylight line refresh once a minute; the wheel itself turns
+     * every frame through the shader rotation */
+    if (nowMode && t - lastLiveTick > 60) {
+      lastLiveTick = t;
+      refreshMoon(new Date(), live.lst, live.Wi);
+      planMeteors(tonight.date, live.lst, live.Wi);
+      computeDaylight();
+    }
     var rgt = [cosA, 0, sinA];
     var upv = [-sinH * sinA, cosH, sinH * cosA];
     var cb = Math.cos(bankCur), sb = Math.sin(bankCur);
@@ -1870,7 +1983,7 @@
     for (var fgi = 0; fgi < figures.length; fgi++) {
       var fgCand = figures[fgi];
       if (fgCand.upFrac < 0.6) continue;
-      var cosFc = fgCand.centre[0] * fwd[0] + fgCand.centre[1] * fwd[1] + fgCand.centre[2] * fwd[2];
+      var cosFc = fgCand.centre[0] * fwdL[0] + fgCand.centre[1] * fwdL[1] + fgCand.centre[2] * fwdL[2];
       var angFc = Math.acos(Math.max(-1, Math.min(1, cosFc)));
       if (angFc < candAng) { candAng = angFc; candFig = fgCand; }
       if (fgCand === curFig) curAng = angFc;
@@ -1907,7 +2020,7 @@
     for (var pdi = 0; pdi < planetPts.length; pdi++) {
       var pd = planetPts[pdi];
       if (pd.alt <= 0) continue;
-      var cosPd = pd.dir[0] * fwd[0] + pd.dir[1] * fwd[1] + pd.dir[2] * fwd[2];
+      var cosPd = pd.dir[0] * fwdL[0] + pd.dir[1] * fwdL[1] + pd.dir[2] * fwdL[2];
       var angPd = Math.acos(Math.max(-1, Math.min(1, cosPd)));
       if (angPd < pCandAng) { pCandAng = angPd; pCand = pd; }
       if (pd === pCur) pCurAng = angPd;
@@ -1929,7 +2042,7 @@
     /* moon detection — a single point, gated exactly like a planet */
     var mAng = 9;
     if (moonPt && moonPt.alt > 0) {
-      var cosMd = moonPt.dir[0] * fwd[0] + moonPt.dir[1] * fwd[1] + moonPt.dir[2] * fwd[2];
+      var cosMd = moonPt.dir[0] * fwdL[0] + moonPt.dir[1] * fwdL[1] + moonPt.dir[2] * fwdL[2];
       mAng = Math.acos(Math.max(-1, Math.min(1, cosMd)));
     }
     if (moonPt && moonPt.alt > 0 && (P2.moon ? mAng < 0.24 : mAng < 0.16)) {
@@ -1951,7 +2064,7 @@
     for (var nbi = 0; nbi < nebPts.length; nbi++) {
       var nbp = nebPts[nbi];
       if (nbp.alt < 0) continue;
-      var cosNb = nbp.dir[0] * fwd[0] + nbp.dir[1] * fwd[1] + nbp.dir[2] * fwd[2];
+      var cosNb = nbp.dir[0] * fwdL[0] + nbp.dir[1] * fwdL[1] + nbp.dir[2] * fwdL[2];
       var aNb = Math.acos(Math.max(-1, Math.min(1, cosNb)));
       if (aNb < nbAng) { nbAng = aNb; nbCand = nbp; }
     }
@@ -1970,7 +2083,7 @@
     for (var sti = 0; sti < starPts.length; sti++) {
       var stp = starPts[sti];
       if (stp.alt < 0) continue;
-      var cosSt = stp.dir[0] * fwd[0] + stp.dir[1] * fwd[1] + stp.dir[2] * fwd[2];
+      var cosSt = stp.dir[0] * fwdL[0] + stp.dir[1] * fwdL[1] + stp.dir[2] * fwdL[2];
       var aSt = Math.acos(Math.max(-1, Math.min(1, cosSt)));
       if (aSt < stAng) { stAng = aSt; stCand = stp; }
     }
@@ -2030,7 +2143,7 @@
 
     /* meteors arrive on their own schedule */
     if (t > nextMeteorAt) {
-      spawnMeteor(t, fwd);
+      spawnMeteor(t, fwdL);
       nextMeteorAt = t + meteorInfo.meanSec * (0.45 + Math.random() * 1.1);
     }
 
@@ -2281,12 +2394,38 @@
   applyRed();
   window.__nebula.redOn = function () { return redOn; };
 
+  /* ================= live sky toggle (Live Pass 1) =================
+   * A clock on the right, under the sound button; gold while Now is
+   * on. Switching re-anchors the Moon and the shower plan at once —
+   * the wheel itself is just the shader rotation, so it flips free. */
+  var nowBtn = document.getElementById('nowBtn');
+  function applyNowUI() { if (nowBtn) nowBtn.classList.toggle('on', nowMode); }
+  if (nowBtn) nowBtn.addEventListener('click', function () {
+    nowMode = !nowMode;
+    try { window.localStorage.setItem('nd-now', nowMode ? '1' : '0'); } catch (e) { /* private mode */ }
+    applyNowUI();
+    refreshLive();
+    if (nowMode) { refreshMoon(new Date(), live.lst, live.Wi); planMeteors(tonight.date, live.lst, live.Wi); computeDaylight(); }
+    else { refreshMoon(tonight.date, tonight.lst, null); planMeteors(tonight.date, tonight.lst, null); daylightNote = ''; }
+    showWhisper(5000);
+  });
+  applyNowUI();
+
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts, brightStars: starPts,
     meteors: meteorInfo, skyEvent: skyEvent, almanac: almanac,
     voyageState: function () { return { engaged: P2.engaged, hold: P2.voyageHold, v: P2.voyage, longV: P2.longV, step: P2.stepLen || 0 }; },
     milestones: function () { return { night: mileNight, fig: P2.mileNotes.fig, moon: P2.mileNotes.moon }; }, spawnMeteor: function (fwd) { return spawnMeteor(elapsed, fwd || null); },
+    nowMode: function () { return nowMode; }, liveLst: function () { return live.lst; }, liveDeltaDeg: function () { return live.deltaDeg; },
+    daylight: function () { return daylightNote; },
+    liveDirOf: function (name) {
+      for (var li = 0; li < starPts.length; li++) if (starPts[li].name === name) return liveDir(starPts[li].dir);
+      for (var lj = 0; lj < planetPts.length; lj++) if (planetPts[lj].name === name) return liveDir(planetPts[lj].dir);
+      if (moonPt && name === 'Moon') return liveDir(moonPt.dir);
+      for (var lk = 0; lk < nebPts.length; lk++) if (nebPts[lk].name === name) return liveDir(nebPts[lk].dir);
+      return null;
+    },
     meteorPool: function () { return meteors.map(function (m) { return m.on ? { S: m.S, V: m.V } : null; }); },
     meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
@@ -2296,7 +2435,7 @@
   window.__nebula.face = function (name) {
     for (var sfi = 0; sfi < starPts.length; sfi++) {
       if (starPts[sfi].name === name) {
-        var aaS = dirToAzAlt(starPts[sfi].dir);
+        var aaS = dirToAzAlt(liveDir(starPts[sfi].dir));
         cam.az = aaS.az; cam.alt = aaS.alt; cam.vaz = 0; cam.valt = 0;
         lastTouchAt = perfNow();
         return true;
@@ -2304,7 +2443,7 @@
     }
     for (var nfi = 0; nfi < nebPts.length; nfi++) {
       if (nebPts[nfi].name === name) {
-        var aaN = dirToAzAlt(nebPts[nfi].dir);
+        var aaN = dirToAzAlt(liveDir(nebPts[nfi].dir));
         cam.az = aaN.az; cam.alt = aaN.alt; cam.vaz = 0; cam.valt = 0;
         lastTouchAt = perfNow();
         return true;
@@ -2313,20 +2452,20 @@
     var plT = null;
     for (var pli = 0; pli < planetPts.length; pli++) if (planetPts[pli].name === name) plT = planetPts[pli];
     if (plT) {
-      var aaP = dirToAzAlt(plT.dir);
+      var aaP = dirToAzAlt(liveDir(plT.dir));
       cam.az = aaP.az; cam.alt = aaP.alt; cam.vaz = 0; cam.valt = 0;
       lastTouchAt = perfNow();
       return true;
     }
     if (name === 'Moon' && moonPt) {
-      var aaM = dirToAzAlt(moonPt.dir);
+      var aaM = dirToAzAlt(liveDir(moonPt.dir));
       cam.az = aaM.az; cam.alt = aaM.alt; cam.vaz = 0; cam.valt = 0;
       lastTouchAt = perfNow();
       return true;
     }
     var figT = figuresByName[name];
     if (!figT) return false;
-    var aaT = dirToAzAlt(figT.centre);
+    var aaT = dirToAzAlt(liveDir(figT.centre));
     cam.az = aaT.az; cam.alt = aaT.alt; cam.vaz = 0; cam.valt = 0;
     lastTouchAt = perfNow();
     return true;

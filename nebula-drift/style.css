@@ -18,6 +18,8 @@ body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:#ee
 .corner.left{left:calc(12px + env(safe-area-inset-left));right:auto}
 .corner.left2{left:calc(12px + env(safe-area-inset-left));right:auto;top:calc(68px + env(safe-area-inset-top))}
 .corner.left2.on{opacity:1;color:rgba(255,120,110,.95);border-color:rgba(255,90,80,.4)}
+.corner.right2{right:calc(12px + env(safe-area-inset-right));top:calc(68px + env(safe-area-inset-top))}
+.corner.right2.on{opacity:1;color:rgba(232,200,119,.95);border-color:rgba(232,200,119,.4)}
 /* astronomer's red: a multiply veil turns the whole field — canvas,
  * whispers, panel, buttons — into true night-vision red, the way a
  * red torch does; it intercepts nothing */
