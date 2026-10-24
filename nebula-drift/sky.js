@@ -90,7 +90,19 @@ var STARS = [
   /* Canis Major — the Hunter's dog, low in the winter south */
   ['Sirius', 6.753, -16.71, -1.46, 'A1'], ['Mirzam', 6.378, -17.96, 1.98, 'B1'],
   ['Adhara', 6.977, -28.97, 1.50, 'B2'], ['Wezen', 7.140, -26.39, 1.83, 'F8'],
-  ['Aludra', 7.402, -29.30, 2.45, 'B5']
+  ['Aludra', 7.402, -29.30, 2.45, 'B5'],
+  /* Gemini — the Twins, winter's second pair (added 2026-10-23;
+   * Castor's magnitude is the combined light of its A+B pair) */
+  ['Castor', 7.577, 31.89, 1.53, 'A2'], ['Pollux', 7.755, 28.03, 1.16, 'K0'],
+  ['Alhena', 6.629, 16.40, 1.93, 'A0'], ['Tejat', 6.383, 22.51, 2.87, 'M3'],
+  ['Mebsuta', 6.732, 25.13, 3.06, 'G8'], ['Alzirr', 6.755, 12.90, 3.35, 'F5'],
+  ['Wasat', 7.335, 21.98, 3.50, 'F0'],
+  /* Leo — the Lion, spring's figure (Algieba's magnitude is the
+   * combined light of its pair; Eta Leonis has no common proper name) */
+  ['Regulus', 10.140, 11.97, 1.36, 'B7'], ['Eta Leonis', 10.122, 16.76, 3.48, 'A0'],
+  ['Algieba', 10.333, 19.84, 2.11, 'K0'], ['Adhafera', 10.278, 23.42, 3.43, 'F0'],
+  ['Ras Elased', 9.764, 23.77, 2.97, 'G0'], ['Zosma', 11.235, 20.52, 2.56, 'A4'],
+  ['Chertan', 11.237, 15.43, 3.33, 'A2'], ['Denebola', 11.818, 14.57, 2.14, 'A3']
 ];
 
 /* Deep-sky anchors: [name, raHours, decDeg, kind, palette, size]
@@ -137,7 +149,11 @@ var DISTANCES = {
   'Kornephoros': 148, 'Rasalgethi': 360, 'Zeta Herculis': 35,
   'Betelgeuse': 643, 'Rigel': 773, 'Bellatrix': 243, 'Alnilam': 1342,
   'Alnitak': 817, 'Mintaka': 916, 'Saiph': 721, 'Meissa': 1055,
-  'Sirius': 9, 'Mirzam': 499, 'Adhara': 431, 'Wezen': 1791, 'Aludra': 3196
+  'Sirius': 9, 'Mirzam': 499, 'Adhara': 431, 'Wezen': 1791, 'Aludra': 3196,
+  'Castor': 52, 'Pollux': 34, 'Alhena': 105, 'Tejat': 232, 'Mebsuta': 903,
+  'Alzirr': 57, 'Wasat': 59,
+  'Regulus': 77, 'Eta Leonis': 2131, 'Algieba': 126, 'Adhafera': 260,
+  'Ras Elased': 251, 'Zosma': 58, 'Chertan': 178, 'Denebola': 36
 };
 
 /* The figures: stick lines over catalogue stars, plus the one line of
@@ -186,7 +202,15 @@ var FIGURES = [
             ['Mintaka', 'Rigel'], ['Saiph', 'Rigel'], ['Bellatrix', 'Meissa']] },
   { name: 'Canis Major', story: 'The Hunter’s dog — Sirius, the brightest star in the sky, sits just nine light-years away.',
     lines: [['Mirzam', 'Sirius'], ['Sirius', 'Adhara'], ['Adhara', 'Wezen'],
-            ['Wezen', 'Aludra'], ['Sirius', 'Wezen']] }
+            ['Wezen', 'Aludra'], ['Sirius', 'Wezen']] },
+  { name: 'Gemini', story: 'The Twins — golden Pollux stands just thirty-four light-years off; white Castor is six stars bound as one.',
+    lines: [['Castor', 'Pollux'], ['Castor', 'Mebsuta'], ['Mebsuta', 'Tejat'],
+            ['Tejat', 'Alhena'], ['Pollux', 'Wasat'], ['Wasat', 'Alzirr'],
+            ['Mebsuta', 'Wasat']] },
+  { name: 'Leo', story: 'The Lion — Regulus, the little king at his heart, spins so fast the star bulges wide.',
+    lines: [['Regulus', 'Eta Leonis'], ['Eta Leonis', 'Algieba'], ['Algieba', 'Adhafera'],
+            ['Adhafera', 'Ras Elased'], ['Algieba', 'Zosma'], ['Zosma', 'Chertan'],
+            ['Chertan', 'Denebola'], ['Zosma', 'Denebola']] }
 ];
 
 /* ---------- seeded PRNG (mulberry32) — reproducible fields ---------- */

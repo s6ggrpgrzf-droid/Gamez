@@ -103,5 +103,22 @@ ok(sirD.alt > 12 && sirD.alt < 30, 'December 22:00: Sirius up, low in the south'
 const betO = SKY.altAz(5.920, 7.41, SKY.HOME.lat, lst);
 ok(betO.alt < 0, 'October 22:00: Orion honestly below the horizon', 'alt ' + betO.alt.toFixed(1));
 
+/* Gemini + Leo (constellations Pass 2, 2026-10-23): Gemini is a winter
+ * evening figure, Leo a spring one; in October both are still down. */
+ok(figNames.includes('Gemini') && figNames.includes('Leo'), 'figures include Gemini + Leo');
+const polD = SKY.altAz(7.755, 28.03, SKY.HOME.lat, lstDec);
+ok(polD.alt > 30, 'December 22:00: Pollux high — Gemini owns the winter evening', 'alt ' + polD.alt.toFixed(1));
+const regD = SKY.altAz(10.140, 11.97, SKY.HOME.lat, lstDec);
+ok(regD.alt < 2, 'December 22:00: Regulus still on the horizon — Leo not yet risen', 'alt ' + regD.alt.toFixed(1));
+const APR = new Date(Date.UTC(2026, 3, 16, 3, 0, 0)); // Apr 15, 22:00 CDT
+const lstApr = SKY.lstDeg(SKY.jdFromDate(APR), SKY.HOME.lon);
+const regA = SKY.altAz(10.140, 11.97, SKY.HOME.lat, lstApr);
+ok(regA.alt > 55, 'April 22:00: Regulus near the top of the sky', 'alt ' + regA.alt.toFixed(1));
+const casA = SKY.altAz(7.577, 31.89, SKY.HOME.lat, lstApr);
+ok(casA.alt > 45, 'April 22:00: Castor still high in the west — both spring figures up', 'alt ' + casA.alt.toFixed(1));
+const polO = SKY.altAz(7.755, 28.03, SKY.HOME.lat, lst);
+const regO = SKY.altAz(10.140, 11.97, SKY.HOME.lat, lst);
+ok(polO.alt < 0 && regO.alt < 0, 'October 22:00: Gemini and Leo both honestly below the horizon');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
