@@ -93,9 +93,12 @@ function figGeoFor(date) {
   const sat = PLANETS.positions(tonight).find(p => p.name === 'Saturn');
   const satDir = SKY.dirFromRaDec(sat.ra, sat.dec, SKY.HOME.lat, sky.lst);
   const co = PLANETS.describeCompany(satDir, geo, sky.stars);
-  ok(co.host === null, 'tonight: Saturn hosts in no drawn figure (Pisces gap)', 'host=' + co.host);
-  ok(co.near.length === 2 && co.near[0].name === 'Aries' && co.near[1].name === 'Pegasus',
-    'tonight: Saturn stands between Aries and Pegasus (nearest centre first)',
+  /* Updated 2026-10-23 (constellations Pass 4): with Pisces drawn, the
+   * gap Saturn stood in is gone — he is Pisces' guest tonight, which
+   * is also where the real Saturn is. Passes 1–3 asserted the gap. */
+  ok(co.host === 'Pisces', 'tonight: Saturn is a guest of the newly drawn Pisces', 'host=' + co.host);
+  ok(co.near.length >= 1 && co.near[0].name === 'Pisces',
+    'tonight: Pisces is Saturn’s nearest figure centre',
     'near=' + co.near.map(n => n.name).join(','));
   const aries = geo.find(g => g.name === 'Aries');
   const inAries = PLANETS.describeCompany(aries.centre, geo, sky.stars);

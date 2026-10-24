@@ -121,7 +121,25 @@ var STARS = [
   ['Kaus Australis', 18.403, -34.38, 1.85, 'B9'], ['Kaus Media', 18.350, -29.83, 2.72, 'K3'],
   ['Kaus Borealis', 18.466, -25.42, 2.82, 'K1'], ['Alnasl', 18.097, -30.42, 2.98, 'K0'],
   ['Ascella', 19.044, -29.88, 2.60, 'A3'], ['Nunki', 18.921, -26.30, 2.05, 'B2'],
-  ['Phi Sagittarii', 18.761, -26.99, 3.17, 'B8'], ['Tau Sagittarii', 19.116, -27.67, 3.32, 'K1']
+  ['Phi Sagittarii', 18.761, -26.99, 3.17, 'B8'], ['Tau Sagittarii', 19.116, -27.67, 3.32, 'K1'],
+  /* Capricornus completed (pass 4, 2026-10-23) — Deneb Algedi and
+   * Dabih were already catalogued; these six finish the sea-goat */
+  ['Algedi', 20.301, -12.54, 3.58, 'G6'], ['Nashira', 21.668, -16.66, 3.69, 'A7'],
+  ['Zeta Capricorni', 21.445, -22.41, 3.77, 'G4'], ['Theta Capricorni', 21.099, -17.23, 4.08, 'A1'],
+  ['Psi Capricorni', 20.768, -25.27, 4.13, 'F5'], ['Omega Capricorni', 20.864, -26.92, 4.12, 'K4'],
+  /* Pisces completed (pass 4) — Alrescha, the knot, was already
+   * catalogued; these ten draw the western fish, the cord, and the
+   * northern fish's one bright star, Kullat Nunu */
+  ['Kullat Nunu', 1.525, 15.35, 3.62, 'G8'], ['Gamma Piscium', 23.286, 3.28, 3.70, 'G7'],
+  ['Omega Piscium', 23.989, 6.86, 4.03, 'F4'], ['Iota Piscium', 23.666, 5.63, 4.13, 'F7'],
+  ['Omicron Piscium', 1.757, 9.16, 4.26, 'K0'], ['Epsilon Piscium', 1.049, 7.89, 4.27, 'K0'],
+  ['Theta Piscium', 23.466, 6.38, 4.27, 'K1'], ['Delta Piscium', 0.811, 7.59, 4.44, 'K5'],
+  ['Fumalsamakah', 23.065, 3.82, 4.48, 'B6'], ['Lambda Piscium', 23.701, 1.78, 4.49, 'A7'],
+  /* Piscis Austrinus completed (pass 4) — Fomalhaut was catalogued
+   * alone; these six give the southern fish its body and tail */
+  ['Epsilon Piscis Austrini', 22.678, -27.04, 4.18, 'B8'], ['Delta Piscis Austrini', 22.933, -32.54, 4.20, 'G8'],
+  ['Beta Piscis Austrini', 22.525, -32.35, 4.29, 'A1'], ['Iota Piscis Austrini', 21.749, -33.03, 4.35, 'B9'],
+  ['Gamma Piscis Austrini', 22.875, -32.88, 4.46, 'A0'], ['Mu Piscis Austrini', 22.140, -32.99, 4.50, 'A2']
 ];
 
 /* Deep-sky anchors: [name, raHours, decDeg, kind, palette, size]
@@ -179,7 +197,14 @@ var DISTANCES = {
   'Antares': 553, 'Tau Scorpii': 430, 'Wei': 65, 'Mu Scorpii': 821,
   'Eta Scorpii': 72, 'Sargas': 272, 'Girtab': 464, 'Lesath': 518, 'Shaula': 703,
   'Kaus Australis': 143, 'Kaus Media': 306, 'Kaus Borealis': 77, 'Alnasl': 96,
-  'Ascella': 89, 'Nunki': 225, 'Phi Sagittarii': 231, 'Tau Sagittarii': 120
+  'Ascella': 89, 'Nunki': 225, 'Phi Sagittarii': 231, 'Tau Sagittarii': 120,
+  'Algedi': 109, 'Nashira': 139, 'Zeta Capricorni': 398, 'Theta Capricorni': 158,
+  'Psi Capricorni': 48, 'Omega Capricorni': 628,
+  'Kullat Nunu': 294, 'Gamma Piscium': 131, 'Omega Piscium': 106, 'Iota Piscium': 45,
+  'Omicron Piscium': 258, 'Epsilon Piscium': 190, 'Theta Piscium': 159, 'Delta Piscium': 305,
+  'Fumalsamakah': 492, 'Lambda Piscium': 101,
+  'Epsilon Piscis Austrini': 744, 'Delta Piscis Austrini': 170, 'Beta Piscis Austrini': 148,
+  'Iota Piscis Austrini': 205, 'Gamma Piscis Austrini': 222, 'Mu Piscis Austrini': 130
 };
 
 /* The figures: stick lines over catalogue stars, plus the one line of
@@ -248,7 +273,21 @@ var FIGURES = [
   { name: 'Sagittarius', story: 'The Archer — every eye finds the Teapot first, and the steam above its spout is the Milky Way’s heart.',
     lines: [['Alnasl', 'Kaus Media'], ['Kaus Media', 'Kaus Borealis'], ['Kaus Borealis', 'Phi Sagittarii'],
             ['Phi Sagittarii', 'Ascella'], ['Ascella', 'Kaus Australis'], ['Kaus Australis', 'Kaus Media'],
-            ['Phi Sagittarii', 'Nunki'], ['Nunki', 'Tau Sagittarii'], ['Tau Sagittarii', 'Ascella']] }
+            ['Phi Sagittarii', 'Nunki'], ['Nunki', 'Tau Sagittarii'], ['Tau Sagittarii', 'Ascella']] },
+  { name: 'Capricornus', story: 'The Sea-Goat — Babylon drew him thousands of years before Greece had letters to name him.',
+    lines: [['Algedi', 'Dabih'], ['Dabih', 'Theta Capricorni'], ['Theta Capricorni', 'Nashira'],
+            ['Nashira', 'Deneb Algedi'], ['Dabih', 'Psi Capricorni'], ['Psi Capricorni', 'Omega Capricorni'],
+            ['Omega Capricorni', 'Zeta Capricorni'], ['Zeta Capricorni', 'Deneb Algedi']] },
+  { name: 'Pisces', story: 'The Two Fish — fleeing a monster, they tied their tails with a cord and leapt into the river together.',
+    lines: [['Fumalsamakah', 'Gamma Piscium'], ['Gamma Piscium', 'Theta Piscium'], ['Theta Piscium', 'Iota Piscium'],
+            ['Iota Piscium', 'Omega Piscium'], ['Omega Piscium', 'Lambda Piscium'], ['Lambda Piscium', 'Gamma Piscium'],
+            ['Omega Piscium', 'Delta Piscium'], ['Delta Piscium', 'Epsilon Piscium'], ['Epsilon Piscium', 'Omicron Piscium'],
+            ['Omicron Piscium', 'Alrescha'], ['Omicron Piscium', 'Kullat Nunu']] },
+  { name: 'Piscis Austrinus', story: 'The Southern Fish — Fomalhaut at its mouth keeps the loneliest vigil of any bright star.',
+    lines: [['Fomalhaut', 'Epsilon Piscis Austrini'], ['Epsilon Piscis Austrini', 'Beta Piscis Austrini'],
+            ['Beta Piscis Austrini', 'Gamma Piscis Austrini'], ['Gamma Piscis Austrini', 'Delta Piscis Austrini'],
+            ['Delta Piscis Austrini', 'Fomalhaut'], ['Beta Piscis Austrini', 'Mu Piscis Austrini'],
+            ['Mu Piscis Austrini', 'Iota Piscis Austrini']] }
 ];
 
 /* ---------- seeded PRNG (mulberry32) — reproducible fields ---------- */

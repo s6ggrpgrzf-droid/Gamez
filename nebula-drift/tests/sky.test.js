@@ -142,5 +142,17 @@ const antO = SKY.altAz(16.490, -26.43, SKY.HOME.lat, lst);
 const kauO = SKY.altAz(18.403, -34.38, SKY.HOME.lat, lst);
 ok(spiO.alt < 0 && antO.alt < 0 && kauO.alt < 0, 'October 22:00: all three summer figures honestly set');
 
+/* Capricornus + Pisces + Piscis Austrinus completed (pass 4,
+ * 2026-10-23): the three half-drawn autumn figures, finished from
+ * stars the catalogue already held. All three are up on the October
+ * reference night itself — this pass is visible the night it ships. */
+ok(figNames.includes('Capricornus') && figNames.includes('Pisces') && figNames.includes('Piscis Austrinus'), 'figures include Capricornus + Pisces + Piscis Austrinus');
+const fomO = SKY.altAz(22.961, -29.62, SKY.HOME.lat, lst);
+ok(fomO.alt > 15 && fomO.alt < 30, 'October 22:00: Fomalhaut rides low in the south', 'alt ' + fomO.alt.toFixed(1));
+const denO = SKY.altAz(21.783, -16.13, SKY.HOME.lat, lst);
+ok(denO.alt > 25, 'October 22:00: Deneb Algedi well up — the sea-goat is an autumn figure', 'alt ' + denO.alt.toFixed(1));
+const alrO = SKY.altAz(2.034, 2.76, SKY.HOME.lat, lst);
+ok(alrO.alt > 20, 'October 22:00: Alrescha, the knot of the fishes, is up', 'alt ' + alrO.alt.toFixed(1));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
