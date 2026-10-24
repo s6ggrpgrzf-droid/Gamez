@@ -423,7 +423,11 @@
    * crosses once and then lives its own life on the vessel wins. */
   function pickCrossingCrack(vd, vesselName, oldSets, baseSeed) {
     var firstCross = null, best = null, bestScore = -1, last = null;
-    for (var k = 0; k < 24; k++) {
+    /* 24 candidates leaked a non-crossing second break about
+     * once in 300 (teapot 5/300 in simulation) — keep rolling
+     * until a crosser is found; the fallback below stays as a
+     * guard for a seam no crack can ever cross */
+    for (var k = 0; k < 400; k++) {
       var cand = walkCrack(mulberry32(baseSeed + k), vd, vesselName);
       last = { seed: baseSeed + k, segs: cand };
       var hit = false;
@@ -631,6 +635,14 @@
       b.fillStyle = mg; b.beginPath(); b.arc(0, 0, R * 0.38, 0, 6.2832); b.fill();
       b.strokeStyle = 'rgba(255,240,210,0.10)'; b.lineWidth = R * 0.03;
       b.beginPath(); b.arc(0, 0, R * 0.335, Math.PI * 0.1, Math.PI * 0.5); b.stroke();
+      /* shoulder depth: the vase is the one vessel that reads flat
+       * (concentric rings, no well) — let the far edge fall away
+       * from the lamp so the shoulder curves instead of staring */
+      var vd2 = b.createRadialGradient(-R * 0.42, -R * 0.5, R * 0.3, -R * 0.42, -R * 0.5, R * 1.35);
+      vd2.addColorStop(0, 'rgba(30,22,10,0)');
+      vd2.addColorStop(0.72, 'rgba(30,22,10,0)');
+      vd2.addColorStop(1, 'rgba(30,22,10,0.20)');
+      b.fillStyle = vd2; b.beginPath(); b.arc(0, 0, R, 0, 6.2832); b.fill();
     } else if (vt === 'teapot') {
       /* the lid, and its wooden knob — kept flatter than the body so
        * it reads as a lid sitting on the pot, not a pearl inside it */
@@ -990,6 +1002,10 @@
       });
     }
     saveTown();
+    /* a new seam changes what the shelf must show: the miniature
+     * cache is keyed by shelf slot and would otherwise keep
+     * painting the piece as it was before this mend */
+    miniCache = {};
     paintCabBtn();
     warmth = 1; /* the room runs a little warmer for a while */
     if (window.MenderyAudio) window.MenderyAudio.bell();
@@ -998,7 +1014,8 @@
   cv.addEventListener('pointerdown', function (e) {
     if (window.MenderyAudio) window.MenderyAudio.wake();
     if (view === 'cabinet') {
-      cabTouch = { y: e.clientY, scroll0: cabScroll, t: e.timeStamp, moved: false };
+      cabVel = 0;
+      cabTouch = { y: e.clientY, scroll0: cabScroll, t: e.timeStamp, moved: false, hist: [{ y: e.clientY, t: e.timeStamp }] };
       return;
     }
     bootGreeting = false;
@@ -1025,7 +1042,11 @@
     if (cabTouch) {
       var dy = cabTouch.y - e.clientY;
       if (Math.abs(dy) > 6) cabTouch.moved = true;
-      if (cabTouch.moved) cabScroll = clamp(cabTouch.scroll0 + dy, 0, cabMaxScroll());
+      if (cabTouch.moved) {
+        cabScroll = clamp(cabTouch.scroll0 + dy, 0, cabMaxScroll());
+        cabTouch.hist.push({ y: e.clientY, t: e.timeStamp });
+        if (cabTouch.hist.length > 4) cabTouch.hist.shift();
+      }
       return;
     }
     if (tracing) {
@@ -1059,6 +1080,14 @@
     if (cabTouch) {
       var wasTap = !cabTouch.moved && (e.timeStamp - cabTouch.t) < 450;
       var tx = e.clientX, ty = e.clientY;
+      /* a flick keeps gliding after release, decaying on its own
+       * curve; a tap or a slow drag leaves the shelves still */
+      var ch = cabTouch.hist;
+      if (ch.length >= 2) {
+        var hdt = (ch[ch.length - 1].t - ch[0].t) / 1000;
+        if (hdt > 0.02) cabVel = clamp(-(ch[ch.length - 1].y - ch[0].y) / hdt, -1400, 1400);
+        if (Math.abs(cabVel) < 120) cabVel = 0;
+      }
       cabTouch = null;
       if (wasTap && view === 'cabinet') cabTap(tx, ty);
       return;
@@ -1106,7 +1135,10 @@
   function showPieceWhisper() {
     if (view !== 'bench') return;
     if (!bowl || !bowl.person) return;
-    var sub = (bowl.rebreak && bowl.visit === 2 && bowl.person.rebreak) ? bowl.person.rebreak
+    /* a rebreak is a rebreak at any visit: the callback texts
+     * are written for casual returns and say nothing broke, while
+     * a fresh crack is sitting on the bench */
+    var sub = (bowl.rebreak && bowl.visit >= 2 && bowl.person.rebreak) ? bowl.person.rebreak
       : (bowl.visit > 1 && bowl.person.callback) ? bowl.person.callback : bowl.person.story;
     setWhisper(pieceKey(), bowl.person.title, sub);
   }
@@ -1157,6 +1189,13 @@
     ctx.restore();
   }
   var elapsed = 0, lastT = 0, raf = 0, bootFade = 1;
+  /* gradients the frame used to rebuild sixty times a second:
+   * the breath and warmth washes (alpha factored out into
+   * globalAlpha, so the cached gradient stays pixel-identical),
+   * the cabinet's per-piece light pools (one per radius, painted
+   * through a translate), the posts, the scroll hint */
+  var breathGrad = null, breathKey = '', warmthGrad = null, warmthKey = '';
+  var poolGrads = {}, postGrad = null, scrollFadeGrad = null, scrollFadeKey = '';
   function frame(nowMs) {
     raf = requestAnimationFrame(frame);
     var now = nowMs / 1000;
@@ -1194,7 +1233,20 @@
      * the visual half of the knock you've been hearing */
     if (settleT < 1) settleT = Math.min(1, settleT + dt / 0.32);
     var sE = 1 - Math.pow(1 - settleT, 3);
-    var pScale = (1 + 0.025 * (1 - sE)) * (1 + 0.15 * hE), pYOff = 5 * (1 - sE);
+    var pYOff = 5 * (1 - sE);
+    /* the lift must never push the ware itself off the frame: cap
+     * the hold's growth by the room left around the piece on each
+     * axis, counting the lift's own drift toward the lamp (the
+     * soft mat and shadow may still feather to the edge) */
+    var holdMult = 1 + 0.15 * hE;
+    if (hE > 0.001 && bowl) {
+      var hTx = (CW * 0.30 - bowlC.x) * 0.16, hTy = (CH * 0.14 - (bowlC.y + pYOff)) * 0.16;
+      var hSet = 1 + 0.025 * (1 - sE);
+      var capX = (CW / 2 - 6 - Math.abs(hTx)) / (bowl.Rv * hSet);
+      var capY = (CH / 2 - 6 - Math.abs(hTy)) / (bowl.Rv * hSet);
+      holdMult = Math.max(1, Math.min(holdMult, capX, capY));
+    }
+    var pScale = (1 + 0.025 * (1 - sE)) * holdMult;
 
     if (hE > 0.001 && bowlCv && bowl) {
       ctx.fillStyle = 'rgba(10,5,2,' + (0.52 * hE) + ')';
@@ -1472,21 +1524,38 @@
      * with itself, cooling back down over half a minute */
     warmth = Math.max(0, warmth - dt / 26);
     breathV = 0.5 + 0.5 * Math.sin(t * (Math.PI * 2 / 7.3) - 1.2);
-    var lg = ctx.createRadialGradient(CW * 0.30, CH * 0.14, 10, CW * 0.30, CH * 0.14, CW * 0.95);
-    lg.addColorStop(0, 'rgba(255,196,118,' + ((0.028 + 0.030 * breathV) * (view === 'bench' ? 1 : 0.4)) + ')');
-    lg.addColorStop(1, 'rgba(255,196,118,0)');
-    ctx.fillStyle = lg; ctx.fillRect(0, 0, CW, CH);
+    var bk = CW + '|' + CH;
+    if (!breathGrad || breathKey !== bk) {
+      breathKey = bk;
+      breathGrad = ctx.createRadialGradient(CW * 0.30, CH * 0.14, 10, CW * 0.30, CH * 0.14, CW * 0.95);
+      breathGrad.addColorStop(0, 'rgba(255,196,118,1)');
+      breathGrad.addColorStop(1, 'rgba(255,196,118,0)');
+    }
+    ctx.save();
+    ctx.globalAlpha = (0.028 + 0.030 * breathV) * (view === 'bench' ? 1 : 0.4);
+    ctx.fillStyle = breathGrad; ctx.fillRect(0, 0, CW, CH);
+    ctx.restore();
     if (warmth > 0.003 && bowl && bowlCv && view === 'bench') {
-      var wg = ctx.createRadialGradient(bowlC.x, cyy, 4, bowlC.x, cyy, bowl.Rv * 2.4);
-      wg.addColorStop(0, 'rgba(255,158,64,' + (0.11 * warmth * (0.85 + 0.15 * breathV)) + ')');
-      wg.addColorStop(1, 'rgba(255,158,64,0)');
-      ctx.fillStyle = wg; ctx.fillRect(0, 0, CW, CH);
+      var wk = bowlC.x + '|' + cyy + '|' + bowl.Rv;
+      if (!warmthGrad || warmthKey !== wk) {
+        warmthKey = wk;
+        warmthGrad = ctx.createRadialGradient(bowlC.x, cyy, 4, bowlC.x, cyy, bowl.Rv * 2.4);
+        warmthGrad.addColorStop(0, 'rgba(255,158,64,1)');
+        warmthGrad.addColorStop(1, 'rgba(255,158,64,0)');
+      }
+      ctx.save();
+      ctx.globalAlpha = 0.11 * warmth * (0.85 + 0.15 * breathV);
+      ctx.fillStyle = warmthGrad; ctx.fillRect(0, 0, CW, CH);
+      ctx.restore();
     }
 
     /* whisper upkeep — the bench's business only */
     if (view === 'bench') {
       if (bootGreeting) {
-        if (elapsed - bootT > 3.4) { bootGreeting = false; showPieceWhisper(); }
+        /* the greeting only reaches full opacity ~2.3s in (its
+       * 1.1s swap-out plus 1.2s fade) — count its reading time
+       * from there, not from boot */
+      if (elapsed - bootT > 5.0) { bootGreeting = false; showPieceWhisper(); }
       } else if (bowl && !bowl.complete && progress() > 0.02 && whisperKey !== 'tracing') {
         setWhisper('tracing', null);
       } else if (bowl && !bowl.complete && progress() <= 0.02 && whisperKey !== pieceKey()) {
@@ -1512,6 +1581,13 @@
     }
     /* a rotation can shrink the scroll range out from under the
      * current offset — keep the shelves inside their world */
+    if (view === 'cabinet' && !cabTouch && cabVel !== 0) {
+      cabScroll += cabVel * dt;
+      cabVel *= Math.exp(-3.2 * dt);
+      if (cabScroll <= 0 || cabScroll >= cabMaxScroll()) cabVel = 0;
+      cabScroll = clamp(cabScroll, 0, cabMaxScroll());
+      if (Math.abs(cabVel) < 25) cabVel = 0;
+    }
     if (view === 'cabinet') cabScroll = clamp(cabScroll, 0, cabMaxScroll());
     if (cabAlpha > 0.01) drawCabinet();
   }
@@ -1519,15 +1595,16 @@
   /* ================= the cabinet =================
    * Every piece ever mended, on shelves against the same wall, in
    * the order you mended them. The cabinet is the save file. */
-  var view = 'bench', cabAlpha = 0, cabScroll = 0, cabSel = -1, cabTouch = null;
+  var view = 'bench', cabAlpha = 0, cabScroll = 0, cabSel = -1, cabTouch = null, cabVel = 0;
   var miniCache = {};
   var cabHeaderCv = null, cabHeaderKey = '', cabBoardCv = null, cabBoardKey = 0;
 
   var cabBtn = document.createElement('button');
   cabBtn.id = 'cabBtn';
   cabBtn.textContent = 'the cabinet';
-  cabBtn.style.cssText = 'position:fixed;left:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5;' +
-    'background:none;border:none;padding:13px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;' +
+  cabBtn.setAttribute('aria-label', 'the cabinet');
+  cabBtn.style.cssText = 'position:fixed;left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5;' +
+    'background:none;border:none;padding:16px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;' +
     'font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:11px;letter-spacing:0.26em;text-transform:uppercase;' +
     'color:rgba(222,196,142,0.66);text-shadow:0 1px 8px rgba(0,0,0,0.8);display:none;';
   cabBtn.addEventListener('click', function () { toggleCabinet(); });
@@ -1537,14 +1614,16 @@
     /* crossings use the whisper's brisk pace (see setWhisper);
      * in the cabinet the whisper wears its caption settle (style.css) */
     if (view === 'bench') {
-      view = 'cabinet'; cabSel = -1;
+      view = 'cabinet'; cabSel = -1; cabVel = 0;
       whisperEl.classList.add('inCab');
       setWhisper('cab', null, null, 320);
       cabBtn.textContent = 'the bench';
+      cabBtn.setAttribute('aria-label', 'the bench');
     } else {
       view = 'bench';
       whisperEl.classList.remove('inCab');
       cabBtn.textContent = 'the cabinet';
+      cabBtn.setAttribute('aria-label', 'the cabinet');
       restoreBenchWhisper();
     }
   }
@@ -1711,9 +1790,11 @@
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 92, CW, CH - 92); ctx.clip();
     /* the cabinet's two posts, fixed while the shelves slide between them */
-    var post = ctx.createLinearGradient(0, 0, 16, 0);
-    post.addColorStop(0, '#2a1a0c'); post.addColorStop(0.7, '#4a3320'); post.addColorStop(1, '#2b1b0d');
-    ctx.fillStyle = post; ctx.fillRect(0, 92, 16, CH - 92);
+    if (!postGrad) {
+      postGrad = ctx.createLinearGradient(0, 0, 16, 0);
+      postGrad.addColorStop(0, '#2a1a0c'); postGrad.addColorStop(0.7, '#4a3320'); postGrad.addColorStop(1, '#2b1b0d');
+    }
+    ctx.fillStyle = postGrad; ctx.fillRect(0, 92, 16, CH - 92);
     ctx.save(); ctx.translate(CW, 0); ctx.scale(-1, 1); ctx.fillRect(0, 92, 16, CH - 92); ctx.restore();
     var rows = Math.ceil(cabinet.length / L.cols);
     for (var r = 0; r < rows; r++) {
@@ -1725,24 +1806,47 @@
         if (idx >= cabinet.length) break;
         var m = miniFor(idx);
         var cxp = L.cellW * (col + 0.5);
-        var cyp = boardY - 8 - m.R * 0.98;
+        var cyp = boardY - 12 - m.R * 0.98;
+        /* an edge bay's piece must not cross the cabinet's posts:
+         * nudge the whole piece (glow, shadow, ring, plate and
+         * all) inward just enough to clear them, true size kept */
+        var drawCx = cxp;
+        if (col === 0) drawCx = Math.max(cxp, 18 + m.S / 2);
+        if (col === L.cols - 1) drawCx = Math.min(cxp, CW - 18 - m.S / 2);
         /* a warm pool of light behind the piece, and its contact shadow on the board */
-        var spl = ctx.createRadialGradient(cxp, cyp, 2, cxp, cyp, m.R * 1.6);
-        spl.addColorStop(0, 'rgba(255,196,116,0.10)'); spl.addColorStop(1, 'rgba(255,196,116,0)');
-        ctx.fillStyle = spl; ctx.fillRect(cxp - m.R * 1.6, cyp - m.R * 1.6, m.R * 3.2, m.R * 3.2);
+        var pk = Math.round(m.R);
+        if (!poolGrads[pk]) {
+          var pg = ctx.createRadialGradient(0, 0, 2, 0, 0, m.R * 1.6);
+          pg.addColorStop(0, 'rgba(255,196,116,0.10)'); pg.addColorStop(1, 'rgba(255,196,116,0)');
+          poolGrads[pk] = pg;
+        }
+        ctx.save(); ctx.translate(drawCx, cyp); ctx.fillStyle = poolGrads[pk];
+        ctx.fillRect(-m.R * 1.6, -m.R * 1.6, m.R * 3.2, m.R * 3.2); ctx.restore();
         ctx.fillStyle = 'rgba(0,0,0,0.42)';
-        ctx.beginPath(); ctx.ellipse(cxp, boardY - 5.5, m.R * 0.82, 3, 0, 0, 6.2832); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(drawCx, boardY - 5.5, m.R * 0.82, 3, 0, 0, 6.2832); ctx.fill();
         if (idx === cabSel) {
           /* the ring is drawn first, so it reads as a halo on the
            * shelf behind the piece — a spout or handle crossing it
            * paints over it instead of being struck through */
           ctx.strokeStyle = 'rgba(255,215,130,0.55)'; ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.arc(cxp, cyp, m.R * 1.14, 0, 6.2832); ctx.stroke();
+          ctx.beginPath(); ctx.arc(drawCx, cyp, m.R * 1.14, 0, 6.2832); ctx.stroke();
         }
-        ctx.drawImage(m.cv, cxp - m.S / 2, cyp - m.S / 2, m.S, m.S);
-        ctx.drawImage(m.label, cxp - m.lw / 2, boardY + 8, m.lw, m.lh);
+        ctx.drawImage(m.cv, drawCx - m.S / 2, cyp - m.S / 2, m.S, m.S);
+        ctx.drawImage(m.label, drawCx - m.lw / 2, boardY + 8, m.lw, m.lh);
       }
       ctx.drawImage(cabBoardCv, 16, boardY - 4, bw, 18);
+    }
+    /* when more shelf sits below the fold, a soft dark breath
+     * at the bottom edge says so — the shelves don't just end */
+    if (cabMaxScroll() > 0 && cabScroll < cabMaxScroll() - 2) {
+      var sfk = CH;
+      if (!scrollFadeGrad || scrollFadeKey !== sfk) {
+        scrollFadeKey = sfk;
+        scrollFadeGrad = ctx.createLinearGradient(0, CH - 90, 0, CH);
+        scrollFadeGrad.addColorStop(0, 'rgba(10,5,2,0)');
+        scrollFadeGrad.addColorStop(1, 'rgba(10,5,2,0.35)');
+      }
+      ctx.fillStyle = scrollFadeGrad; ctx.fillRect(0, CH - 90, CW, 90);
     }
     ctx.restore(); /* the header clip */
     ctx.restore();
@@ -1791,6 +1895,12 @@
   resize();
   makePiece(nextPersonIdx(), (Math.random() * 1e9) | 0, true);
   paintCabBtn();
+  /* canvas-baked words (the cabinet header, the brass plates) are
+   * only as good as the font that was loaded when they were baked:
+   * if Cormorant arrives after the first paint, bake them again */
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { cabHeaderCv = null; miniCache = {}; });
+  }
   var totalVisits = 0;
   for (var vk in visits) totalVisits += visits[vk];
   if (mendedCount === 0 && totalVisits <= 1) {

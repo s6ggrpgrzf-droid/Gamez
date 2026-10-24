@@ -86,13 +86,26 @@ html, body {
   text-transform: uppercase;
   color: rgba(216, 188, 130, 0.66);
 }
+/* a visible ring for keyboard and switch focus — the game's only
+ * two buttons should say so when they hold it */
+button:focus-visible {
+  outline: 2px solid rgba(255, 215, 130, 0.85);
+  outline-offset: 3px;
+}
 #whisperWhen { white-space: pre-line; }
 #whisperWhen:empty { display: none; }
+/* Short portrait: the story grows tall enough to strike through
+ * the cabinet button — lift the whisper clear of it */
+@media (orientation: portrait) and (max-height: 720px) {
+  #whisper {
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+}
 /* Short landscape: the bowl owns the middle, so the whisper moves to
  * the quiet bench on the left instead of sitting on the porcelain. */
 @media (orientation: landscape) and (max-height: 520px) {
   #whisper {
-    left: 30px;
+    left: max(30px, env(safe-area-inset-left, 0px));
     right: auto;
     bottom: auto;
     top: 50%;

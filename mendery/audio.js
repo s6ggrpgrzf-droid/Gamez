@@ -208,7 +208,7 @@
   var btn = document.createElement('button');
   btn.setAttribute('aria-label', 'sound on or off');
   btn.textContent = '\u266A';
-  btn.style.cssText = 'position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:14px;z-index:5;' +
+  btn.style.cssText = 'position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));z-index:5;' +
     'width:44px;height:44px;border-radius:50%;border:1px solid rgba(246,232,205,0.20);' +
     'background:rgba(20,12,6,0.25);color:rgba(246,232,205,0.80);font-size:19px;line-height:1;' +
     'font-family:Georgia,serif;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;';
