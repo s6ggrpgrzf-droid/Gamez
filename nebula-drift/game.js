@@ -671,6 +671,15 @@
     star: null, stAlpha: 0, stActT: 0, starAng: 9, loggedStar: null };
   var hasVoyaged = false;
   try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
+  /* the long-voyage lesson (perfectionist Pass L): three small
+   * remembered facts — a dissolve has been seen, the deeper step
+   * has been taken, and the hint bridging them has been shown */
+  var dissolveSeen = false, longVoyaged = false, longHintShown = false, longHintActive = false;
+  try {
+    dissolveSeen = !!window.localStorage.getItem('nd-dissolved');
+    longVoyaged = !!window.localStorage.getItem('nd-longed');
+    longHintShown = !!window.localStorage.getItem('nd-longhint');
+  } catch (e) { /* private mode */ }
 
   /* ================= camera + travel ================= */
   function dirToAzAlt(d) { return { az: Math.atan2(d[0], -d[2]), alt: Math.asin(Math.max(-1, Math.min(1, d[1]))) }; }
@@ -1362,14 +1371,23 @@
   }
   function updateWhisper(t) {
     var fig = P2.drawFig;
+    if (!(fig && P2.alpha > 0.3 && P2.voyage > 0.35)) longHintActive = false;
     if (!bootGreetDone && (t >= tapFlashUntil || t >= BOOT_GREET_SECS)) bootGreetDone = true;
     if (fig && P2.alpha > 0.3 && P2.voyage > 0.35) {
+      if (P2.longV < 0.22 && dissolveSeen && !longVoyaged && !longHintShown) {
+        /* once ever, on a dissolved hold after a first dissolve is
+         * already behind him: the deeper step exists — say so */
+        longHintShown = true; longHintActive = true;
+        try { window.localStorage.setItem('nd-longhint', '1'); } catch (e) { /* private mode */ }
+      }
       if (P2.longV >= 0.22) {
         setWhisper('disL:' + fig.name, fig.name + ', dissolved',
           fig.near.name + ' is ' + fmtDist(fig.near.dist) + ' light-years away · ' +
           (fig.mid ? fig.mid.name + ' is ' + fmtDist(fig.mid.dist) + ' · ' : '') +
           fig.far.name + ' is ' + fmtDist(fig.far.dist) +
           ' — from out here, nothing of the shape survives');
+      } else if (longHintActive) {
+        setWhisper('disH:' + fig.name, fig.name + ', dissolved', 'Keep holding — go farther out.');
       } else {
         setWhisper('dis:' + fig.name, fig.name + ', dissolved',
           fig.near.name + ' is ' + fmtDist(fig.near.dist) + ' light-years away · ' +
@@ -1956,6 +1974,14 @@
         t - P2.actT > (P2.drawFig.lines.length - 1) * 0.13 + 0.95) {
       P2.chimed = true;
       AU.figureComplete(P2.drawFig.name);
+    }
+    if (P2.drawFig && !dissolveSeen && P2.voyage > 0.6) {
+      dissolveSeen = true;
+      try { window.localStorage.setItem('nd-dissolved', '1'); } catch (e) { /* private mode */ }
+    }
+    if (P2.longV > 0.5 && !longVoyaged) {
+      longVoyaged = true;
+      try { window.localStorage.setItem('nd-longed', '1'); } catch (e) { /* private mode */ }
     }
     if (AU && P2.drawFig && !P2.unravelled && P2.voyage > 0.6) {
       P2.unravelled = true;
