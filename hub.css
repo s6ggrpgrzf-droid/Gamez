@@ -333,6 +333,16 @@ a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outl
 .feat-show b{font-family:var(--font-display);font-weight:700;font-size:15.5px;white-space:nowrap}
 .feat-show span:last-child{font-size:12px;color:rgba(220,235,255,.6);white-space:nowrap}
 @media (max-width:480px){.feat-show span:last-child{display:none}}
+/* narrow phones: the feature's ornament steps down so the content arrives sooner */
+@media (max-width:480px){
+  .feat-star{width:152px;height:152px}
+  .feat-ring{inset:17px}
+  .feat-core{width:38px;height:38px}
+  .feat-kicker{margin-bottom:14px}
+  .feat-name{margin-top:6px}
+  .feat-shows{margin-top:14px;gap:8px}
+  .feat-cta{margin-top:16px}
+}
 .feat-cta{display:inline-flex;align-items:center;gap:10px;margin:24px 0 0;
   font-weight:800;font-size:15px;color:#04101f;padding:12px 22px;border-radius:999px;
   background:linear-gradient(180deg,#a8d4ff,#4da6ff);
