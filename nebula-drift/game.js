@@ -603,7 +603,8 @@
     planet: null, pAlpha: 0, pActT: 0, planetAng: 9, figAng: 9,
     moon: null, mAlpha: 0, mActT: 0, moonAng: 9,
     loggedFig: null, loggedPlanet: null, loggedMoon: false,
-    firstNotes: { fig: null, planet: null, moon: null } };
+    firstNotes: { fig: null, planet: null, moon: null, neb: null },
+    neb: null, nbAlpha: 0, nbActT: 0, nebAng: 9, loggedNeb: null };
   var hasVoyaged = false;
   try { hasVoyaged = !!window.localStorage.getItem('nd-voyaged'); } catch (e) { /* private mode */ }
 
@@ -867,6 +868,26 @@
     moonGeo = { pos: makeBuffer(gl.ARRAY_BUFFER, pos), corner: makeBuffer(gl.ARRAY_BUFFER, cor), count: 6 };
   })();
 
+  /* ================= nebulae speak (Pass 3) =================
+   * The painted anchors were scenery; the bright half of them are
+   * destinations in their own right. Their lines are authored under
+   * the planets' discipline: what it is, a true distance, one true
+   * striking fact — stable astronomy, stated once, not per-night
+   * claims. The faint half stays scenery on purpose: a whisper for
+   * everything would leave nothing quiet. */
+  var NEBULA_LINES = {
+    'Andromeda Galaxy': 'Andromeda Galaxy — a spiral of a trillion stars, 2.5 million light-years away: the farthest thing the naked eye can reach. It is drifting toward us, and in some four billion years our two galaxies will begin to merge.',
+    'Triangulum Galaxy': 'Triangulum Galaxy — a face-on spiral 2.7 million light-years out, the third great city of the Local Group. Under the darkest skies it is the most distant object the unaided eye can hold.',
+    'Pleiades': 'The Pleiades — a young family of hot blue stars 444 light-years away, barely a hundred million years old. The mist shining around them is not their birthplace; it is dust they are only passing through.',
+    'Double Cluster': 'The Double Cluster — twin swarms of young stars 7,500 light-years away, born from the same cloud and still travelling together across the dark.',
+    'Great Hercules Cluster': 'The Great Hercules Cluster — a single ball of some 300,000 ancient stars, 22,000 light-years away. In 1974 the Arecibo telescope sent a message toward it; the message is still on its way.',
+    'Ring Nebula': 'The Ring Nebula — the shed outer skin of a dying star much like the Sun, 2,300 light-years away. The white dwarf that lit it still burns at its centre.',
+    'Dumbbell Nebula': 'The Dumbbell Nebula — the first planetary nebula ever catalogued, in 1764: the cast-off envelope of a dying star, 1,360 light-years away and still expanding into the dark.'
+  };
+  var nebPts = tonight.nebulae
+    .filter(function (n) { return !!NEBULA_LINES[n.name]; })
+    .map(function (n) { return { name: n.name, dir: n.dir, alt: n.alt, az: n.az, line: NEBULA_LINES[n.name] }; });
+
   /* ================= the remembering log (Pass 2) =================
    * On-device only, schema-versioned, silent: who he has met under
    * this sky, and when he first met them. Nothing leaves the phone,
@@ -876,7 +897,7 @@
    * activation. The first-ever meeting earns one quiet sentence in
    * that object's own whisper, for that activation only. */
   var LOG_KEY = 'nd-log-v1';
-  var log = { v: 1, nights: [], figs: {}, planets: {}, moon: { first: null, n: 0, phases: [] } };
+  var log = { v: 1, nights: [], figs: {}, planets: {}, nebulae: {}, moon: { first: null, n: 0, phases: [] } };
   function saveLog() {
     try { window.localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch (e) { /* private mode */ }
   }
@@ -888,6 +909,7 @@
         if (p && p.v === 1) {
           log.nights = p.nights || []; log.figs = p.figs || {};
           log.planets = p.planets || {};
+          log.nebulae = p.nebulae || {};   /* added by Pass 3; older logs default empty */
           if (p.moon) log.moon = p.moon;
         }
       }
@@ -910,6 +932,9 @@
     } else if (kind === 'planet') {
       if (!log.planets[name]) { log.planets[name] = { first: tk, n: 1 }; P2.firstNotes.planet = name; }
       else log.planets[name].n++;
+    } else if (kind === 'neb') {
+      if (!log.nebulae[name]) { log.nebulae[name] = { first: tk, n: 1 }; P2.firstNotes.neb = name; }
+      else log.nebulae[name].n++;
     } else if (kind === 'moon' && moonPt) {
       if (!log.moon.first) { log.moon.first = tk; P2.firstNotes.moon = 'Moon'; }
       log.moon.n++;
@@ -946,16 +971,25 @@
       setWhisper('tonight' + (aiTonightSub ? ':ai' : ''), tonightMain, aiTonightSub || tonightSub);
     } else if (P2.moon && P2.mAlpha > 0.3 && P2.moon.line &&
                (!P2.planet || P2.moonAng <= P2.planetAng) &&
+               (!P2.neb || P2.moonAng <= P2.nebAng) &&
                (!fig || P2.moonAng <= P2.figAng)) {
       var moNote = P2.firstNotes.moon === 'Moon';
       setWhisper('mo:Moon' + (moNote ? ':f' : ''), 'Moon',
         P2.moon.line + (moNote ? ' First time you’ve met her.' : ''));
     } else if (P2.planet && P2.pAlpha > 0.3 && P2.planet.line && (!fig || P2.planetAng <= P2.figAng) &&
-               (!P2.moon || P2.planetAng <= P2.moonAng)) {
+               (!P2.moon || P2.planetAng <= P2.moonAng) &&
+               (!P2.neb || P2.planetAng <= P2.nebAng)) {
       var plNote = P2.firstNotes.planet === P2.planet.name;
       var plSuffix = plNote ? ' First time you’ve met ' + (PLANET_VOICE[P2.planet.name].pro === 'she' ? 'her' : 'him') + '.' : '';
       setWhisper('pl:' + P2.planet.name + (plNote ? ':f' : ''), P2.planet.name, P2.planet.line + plSuffix);
-    } else if (fig && P2.alpha > 0.3) {
+    } else if (P2.neb && P2.nbAlpha > 0.3 && P2.neb.line &&
+               (!P2.moon || P2.nebAng <= P2.moonAng) &&
+               (!P2.planet || P2.nebAng <= P2.planetAng) &&
+               (!fig || P2.nebAng <= P2.figAng)) {
+      var nbNote = P2.firstNotes.neb === P2.neb.name;
+      setWhisper('nb:' + P2.neb.name + (nbNote ? ':f' : ''), P2.neb.name,
+        P2.neb.line + (nbNote ? ' First time you’ve found it.' : ''));
+    } else if (fig && P2.alpha > 0.3 && (!P2.neb || P2.nbAlpha <= 0.3 || P2.figAng <= P2.nebAng)) {
       var hintOn = !hasVoyaged && P2.activeFor > 7 && P2.activeFor < 17;
       var aiFig = aiFigText[fig.name] || null;
       var figNote = P2.firstNotes.fig === fig.name && !aiFig && !hintOn;
@@ -1431,6 +1465,27 @@
       }
     }
 
+    /* nebula detection — the nearest speakable anchor near centre,
+     * gated a hair wider than the planets: these are patches of
+     * light, not points */
+    var nbCand = null, nbAng = 9;
+    for (var nbi = 0; nbi < nebPts.length; nbi++) {
+      var nbp = nebPts[nbi];
+      if (nbp.alt < 0) continue;
+      var cosNb = nbp.dir[0] * fwd[0] + nbp.dir[1] * fwd[1] + nbp.dir[2] * fwd[2];
+      var aNb = Math.acos(Math.max(-1, Math.min(1, cosNb)));
+      if (aNb < nbAng) { nbAng = aNb; nbCand = nbp; }
+    }
+    if (nbCand && (P2.neb ? nbAng < 0.25 : nbAng < 0.17)) {
+      if (P2.neb !== nbCand) { P2.neb = nbCand; P2.nbActT = t; }
+      P2.nebAng = nbAng;
+      P2.nbAlpha = Math.min(1, P2.nbAlpha + dt * 0.8);
+    } else {
+      P2.nbAlpha = Math.max(0, P2.nbAlpha - dt * 0.7);
+      P2.nebAng = 9;
+      if (P2.nbAlpha === 0) { P2.neb = null; P2.loggedNeb = null; P2.firstNotes.neb = null; }
+    }
+
     P2.activeFor = P2.activeName ? t - P2.actT : 0;
 
     /* sound events (ported) */
@@ -1457,6 +1512,10 @@
     if (P2.moon && !P2.loggedMoon && P2.mAlpha > 0.6 && t - P2.mActT > 1.2) {
       P2.loggedMoon = true;
       recordMeet('moon', 'Moon');
+    }
+    if (P2.neb && P2.loggedNeb !== P2.neb.name && P2.nbAlpha > 0.6 && t - P2.nbActT > 1.2) {
+      P2.loggedNeb = P2.neb.name;
+      recordMeet('neb', P2.neb.name);
     }
 
     /* the lean-in: when a figure has settled and you're not voyaging,
@@ -1622,6 +1681,12 @@
       plNames.map(function (n) { return [n, log.planets[n]]; }).sort(byFirst)
         .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
     }
+    var nbNames = Object.keys(log.nebulae);
+    if (nbNames.length) {
+      logSection(body, 'DEEP SKY');
+      nbNames.map(function (n) { return [n, log.nebulae[n]]; }).sort(byFirst)
+        .forEach(function (pair) { logRow(body, pair[0], metaOf(pair[1])); });
+    }
     if (log.moon.first) {
       logSection(body, 'THE MOON');
       logRow(body, 'Moon', metaOf(log.moon));
@@ -1631,7 +1696,7 @@
         body.appendChild(ph);
       }
     }
-    if (!figNames.length && !plNames.length && !log.moon.first) {
+    if (!figNames.length && !plNames.length && !nbNames.length && !log.moon.first) {
       var em = document.createElement('div'); em.className = 'logLine';
       em.textContent = 'Nothing remembered yet. Settle on a figure, a planet, or the Moon, and tonight will be kept here.';
       body.appendChild(em);
@@ -1650,12 +1715,20 @@
 
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
-    catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt,
+    catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts,
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
   });
   window.__nebula.bankNow = function () { return bankCur; };
   window.__nebula.face = function (name) {
+    for (var nfi = 0; nfi < nebPts.length; nfi++) {
+      if (nebPts[nfi].name === name) {
+        var aaN = dirToAzAlt(nebPts[nfi].dir);
+        cam.az = aaN.az; cam.alt = aaN.alt; cam.vaz = 0; cam.valt = 0;
+        lastTouchAt = perfNow();
+        return true;
+      }
+    }
     var plT = null;
     for (var pli = 0; pli < planetPts.length; pli++) if (planetPts[pli].name === name) plT = planetPts[pli];
     if (plT) {
