@@ -651,6 +651,72 @@
     }
   }
 
+  /* Emission nebulae keep their colour (visual refinement Pass 4):
+   * the anchor greying that suits galaxies would bleach the rose
+   * and teal that ARE these objects, so they get a shade of their
+   * own — the same discipline, a lighter hand. */
+  function emissionShade(pal, r) {
+    var raw = paletteShade(pal, r);
+    var lum = 0.35 * raw[0] + 0.45 * raw[1] + 0.20 * raw[2];
+    var warm = raw[0] > raw[2] + 0.02;
+    var gMix = warm ? 0.28 : 0.12;
+    var gTint = warm ? [lum * 0.92, lum * 0.98, lum * 1.08] : [lum, lum, lum];
+    return [raw[0] + (gTint[0] - raw[0]) * gMix, raw[1] + (gTint[1] - raw[1]) * gMix, raw[2] + (gTint[2] - raw[2]) * gMix];
+  }
+
+  /* Emission nebulae get edges, not blobs: arcs of thin filament
+   * puffs standing on a faint wash, one brighter rim, and a dark
+   * lane cut through the shape — the Gulf in the North America.
+   * The Veil, a remnant, is all filament: two wisps, no wash. */
+  function buildEmission(puffs, neb, ni) {
+    var basis = tangentBasis(neb.dir);
+    var S = neb.size, D = 2500, veil = neb.kind === 'remnant';
+    function P(dist, x, y, col, size, alpha, aspect, rot, kind) {
+      puffs.push({
+        pos: [
+          neb.dir[0] * dist + basis.t1[0] * x + basis.t2[0] * y,
+          neb.dir[1] * dist + basis.t1[1] * x + basis.t2[1] * y,
+          neb.dir[2] * dist + basis.t1[2] * x + basis.t2[2] * y
+        ],
+        col: col, size: size, alpha: alpha, phase: rng() * 6.283, kind: kind || 0,
+        rot: rot || 0, aspect: aspect || 1
+      });
+      if (!kind) puffs[puffs.length - 1].hi = ni;
+    }
+    var a0 = rng() * Math.PI * 2;
+    if (!veil) {
+      P(D, 0, 0, emissionShade(neb.palette, rng), S * 330, 0.022, 1.3, a0);
+      P(D + 30, S * 20, -S * 10, emissionShade(neb.palette, rng), S * 240, 0.027, 1.4, a0 + 0.7);
+    }
+    var arcs = veil
+      ? [{ c: a0, R: S * 95, sweep: 1.5 }, { c: a0 + Math.PI, R: S * 95, sweep: 1.5 }]
+      : [{ c: a0, R: S * 62, sweep: 1.9 }, { c: a0 + 2.2, R: S * 118, sweep: 1.7 }];
+    arcs.forEach(function (arc) {
+      for (var k = 0; k < 5; k++) {
+        var a = arc.c + (k / 4 - 0.5) * arc.sweep + (rng() - 0.5) * 0.14;
+        var rr = arc.R * (0.9 + rng() * 0.2);
+        P(D + (k % 3) * 22, Math.cos(a) * rr, Math.sin(a) * rr,
+          emissionShade(neb.palette, rng), veil ? S * 110 : S * 115, veil ? 0.065 : 0.065,
+          veil ? 3.6 : 3.2, a + Math.PI / 2);
+      }
+    });
+    if (!veil) {
+      /* one brighter rim, where the light breaks */
+      for (var b = 0; b < 3; b++) {
+        var ba = a0 + 0.9 + (b / 2 - 0.5) * 0.9;
+        P(D + 45, Math.cos(ba) * S * 88, Math.sin(ba) * S * 88,
+          emissionShade(neb.palette, rng), S * 130, 0.085, 2.4, ba + Math.PI / 2);
+      }
+      /* the dark lane — skipped for the smallest clouds, where a
+       * lane would erase the object instead of shaping it */
+      if (S >= 1.0) {
+        var la = a0 + 1.1;
+        P(D + 70, Math.cos(la) * S * 30, Math.sin(la) * S * 30,
+          [0.006, 0.006, 0.016], S * 260, 0.26, 3.0, la + Math.PI / 2, 1);
+      }
+    }
+  }
+
   /* Clusters are not gas — they are crowds of stars (visual
    * refinement Pass 3). Their light goes through the star renderer
    * as individual points, one small buffer per cluster so the
@@ -730,6 +796,7 @@
       if (neb.kind === 'galaxy') { buildGalaxy(puffs, neb, ni); return; }
       if (neb.kind === 'planetary') { buildPlanetary(puffs, neb, ni); return; }
       if (neb.kind === 'cluster' || neb.kind === 'reflection') { buildCluster(puffs, neb, ni); return; }
+      if (neb.kind === 'emission' || neb.kind === 'remnant') { buildEmission(puffs, neb, ni); return; }
       var layers = neb.kind === 'cluster' ? 3 : 7;
       for (var li = 0; li < layers; li++) {
         var dist = 2350 + li * 230 + rng() * 120;
