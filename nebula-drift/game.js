@@ -221,6 +221,25 @@
     '}'
   );
 
+  /* ---- meteors: small streak quads, CPU-steered ---- */
+  var meteorProg = makeProgram(
+    'attribute vec3 aPos; attribute float aU; attribute float aSide; attribute float aA;' +
+    'uniform mat4 uProj; uniform mat4 uRot; uniform vec3 uShift;' +
+    'varying float vU; varying float vSide; varying float vA;' +
+    'void main(){' +
+    '  gl_Position = uProj * (uRot * vec4(aPos - uShift, 1.0));' +
+    '  vU = aU; vSide = aSide; vA = aA;' +
+    '}',
+    'precision mediump float;' +
+    'varying float vU; varying float vSide; varying float vA;' +
+    'void main(){' +
+    '  float body = pow(vU, 2.0) * (1.0 - abs(vSide));' +
+    '  float a = body * vA;' +
+    '  if (a < 0.004) discard;' +
+    '  gl_FragColor = vec4(vec3(1.0, 0.96, 0.88), a);' +
+    '}'
+  );
+
   /* ---- fullscreen fog quad ---- */
   var fogProg = makeProgram(
     'attribute vec2 aP;' +
@@ -964,6 +983,137 @@
     saveLog();
   }
 
+  /* ================= the living sky: meteors (Pass B) =================
+   * Real showers on their real nights, radiating from their true
+   * radiants; sporadic strays otherwise. Rates are scaled to what
+   * one watcher facing one patch of sky would actually catch —
+   * whole-sky ZHR figures would flood a single view — and a shower
+   * only performs while its radiant is up. Pure ambience: no text,
+   * no log, nothing scored. */
+  var SHOWERS = [
+    { name: 'Quadrantids', peak: 3, half: 4, zhr: 80, ra: 15.30, dec: 49.7 },
+    { name: 'Lyrids', peak: 112, half: 8, zhr: 18, ra: 18.07, dec: 33.5 },
+    { name: 'Eta Aquariids', peak: 125, half: 19, zhr: 50, ra: 22.45, dec: -1.0 },
+    { name: 'Perseids', peak: 224, half: 19, zhr: 110, ra: 3.13, dec: 58.0 },
+    { name: 'Orionids', peak: 294, half: 18, zhr: 20, ra: 6.32, dec: 15.5 },
+    { name: 'Leonids', peak: 321, half: 12, zhr: 15, ra: 10.13, dec: 21.8 },
+    { name: 'Geminids', peak: 347, half: 10, zhr: 130, ra: 7.55, dec: 32.3 },
+    { name: 'Ursids', peak: 356, half: 5, zhr: 10, ra: 14.50, dec: 75.7 }
+  ];
+  var meteorInfo = { shower: null, meanSec: 400 };
+  (function planMeteors() {
+    var d = tonight.date;
+    var doy = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000);
+    var rate = 9; /* sporadics, per hour, one patch of sky */
+    SHOWERS.forEach(function (sh) {
+      var dd = Math.abs(doy - sh.peak); dd = Math.min(dd, 365 - dd);
+      if (dd > sh.half) return;
+      var fall = (1 + Math.cos(Math.PI * dd / sh.half)) / 2;
+      var aa = SKY.altAz(sh.ra, sh.dec, SKY.HOME.lat, tonight.lst);
+      /* the game's sky stands at 22:00, but a shower night belongs
+       * to the whole night — a radiant near rising still performs,
+       * and its first meteors are earthgrazers */
+      var altF = aa.alt < 0 ? 0.45 : (aa.alt < 25 ? 0.75 : 1);
+      var add = sh.zhr * fall * altF * 2.0;
+      if (add > 4) { rate += add; if (!meteorInfo.shower || add > meteorInfo.best) { meteorInfo.shower = sh.name; meteorInfo.best = add; } }
+    });
+    meteorInfo.meanSec = Math.max(14, Math.min(400, 3600 / rate));
+    meteorInfo.radiantDir = null;
+    if (meteorInfo.shower) {
+      var sh2 = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
+      meteorInfo.radiantDir = SKY.dirFromRaDec(sh2.ra, sh2.dec, SKY.HOME.lat, tonight.lst);
+    }
+  })();
+  var METEOR_DIST = 1500, METEOR_POOL = 8;
+  var meteors = [];
+  for (var mi = 0; mi < METEOR_POOL; mi++) meteors.push({ on: false, t0: 0, dur: 1, S: null, V: null, len: 200, wid: 7, bright: 0.8 });
+  var meteorGeo = {
+    pos: makeBuffer(gl.ARRAY_BUFFER, new Float32Array(METEOR_POOL * 6 * 3)),
+    u: makeBuffer(gl.ARRAY_BUFFER, new Float32Array(METEOR_POOL * 6)),
+    side: makeBuffer(gl.ARRAY_BUFFER, new Float32Array(METEOR_POOL * 6)),
+    a: makeBuffer(gl.ARRAY_BUFFER, new Float32Array(METEOR_POOL * 6))
+  };
+  var nextMeteorAt = 6 + meteorInfo.meanSec * 0.35;
+  function spawnMeteor(t, fwd) {
+    var m = null;
+    for (var i = 0; i < meteors.length; i++) if (!meteors[i].on) { m = meteors[i]; break; }
+    if (!m) return false;
+    var R = meteorInfo.radiantDir;
+    /* a start point in the watched sky, up off the horizon */
+    var S = null;
+    for (var tries = 0; tries < 12; tries++) {
+      var th = Math.random() * 6.283, ph = Math.acos(Math.random() * 2 - 1);
+      var cand = [Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)];
+      if (cand[1] < 0.10) continue;
+      if (fwd && cand[0] * fwd[0] + cand[1] * fwd[1] + cand[2] * fwd[2] < 0.15) continue;
+      S = cand; break;
+    }
+    if (!S) return false;
+    /* travel away from the radiant, along the great circle */
+    var V;
+    if (R) {
+      var proj = R[0] * S[0] + R[1] * S[1] + R[2] * S[2];
+      V = [S[0] - R[0] * proj, S[1] - R[1] * proj, S[2] - R[2] * proj];
+    } else {
+      V = [S[2], 0.15, -S[0]];
+    }
+    var vl = Math.hypot(V[0], V[1], V[2]);
+    if (vl < 0.05) { V = [S[2], 0.2, -S[0]]; vl = Math.hypot(V[0], V[1], V[2]) || 1; }
+    V = [V[0] / vl, V[1] / vl, V[2] / vl];
+    var speed = (28 + Math.random() * 26) * Math.PI / 180;   /* rad/s across the sky */
+    var fireball = Math.random() < 0.08;
+    m.on = true; m.t0 = t; m.dur = 0.55 + Math.random() * 0.5;
+    m.S = S; m.V = [V[0] * speed * METEOR_DIST, V[1] * speed * METEOR_DIST, V[2] * speed * METEOR_DIST];
+    m.len = speed * METEOR_DIST * 0.30;
+    m.wid = fireball ? 13 : 6.5;
+    m.bright = fireball ? 1.0 : 0.55 + Math.random() * 0.35;
+    return true;
+  }
+  function drawMeteors(proj, rot, shift, t) {
+    var pos = new Float32Array(METEOR_POOL * 6 * 3), uu = new Float32Array(METEOR_POOL * 6),
+        sd = new Float32Array(METEOR_POOL * 6), aa = new Float32Array(METEOR_POOL * 6);
+    var any = false, vi = 0;
+    meteors.forEach(function (m) {
+      var base = vi * 6; vi++;
+      if (!m.on) { for (var q = 0; q < 6; q++) aa[base + q] = 0; return; }
+      var el = t - m.t0, u = el / m.dur;
+      if (u >= 1) { m.on = false; for (var q2 = 0; q2 < 6; q2++) aa[base + q2] = 0; return; }
+      any = true;
+      var cx = m.S[0] * METEOR_DIST + m.V[0] * el, cy = m.S[1] * METEOR_DIST + m.V[1] * el, cz = m.S[2] * METEOR_DIST + m.V[2] * el;
+      var vl = Math.hypot(m.V[0], m.V[1], m.V[2]) || 1;
+      var vx = m.V[0] / vl, vy = m.V[1] / vl, vz = m.V[2] / vl;
+      var bx = vy * m.S[2] - vz * m.S[1], by = vz * m.S[0] - vx * m.S[2], bz = vx * m.S[1] - vy * m.S[0];
+      var bl = Math.hypot(bx, by, bz) || 1; bx = bx / bl * m.wid / 2; by = by / bl * m.wid / 2; bz = bz / bl * m.wid / 2;
+      var hx = vx * m.len / 2, hy = vy * m.len / 2, hz = vz * m.len / 2;
+      var env = Math.pow(Math.sin(Math.PI * Math.min(1, u)), 0.7) * m.bright;
+      /* front(+hx, u=1) two verts, back(-hx, u=0) two, as two triangles */
+      var corners = [
+        [cx + hx - bx, cy + hy - by, cz + hz - bz, 1, -1], [cx + hx + bx, cy + hy + by, cz + hz + bz, 1, 1],
+        [cx - hx + bx, cy - hy + by, cz - hz + bz, 0, 1],
+        [cx + hx - bx, cy + hy - by, cz + hz - bz, 1, -1], [cx - hx + bx, cy - hy + by, cz - hz + bz, 0, 1],
+        [cx - hx - bx, cy - hy - by, cz - hz - bz, 0, -1]
+      ];
+      corners.forEach(function (c, q3) {
+        pos.set([c[0], c[1], c[2]], (base + q3) * 3);
+        uu[base + q3] = c[3]; sd[base + q3] = c[4]; aa[base + q3] = env;
+      });
+    });
+    if (!any) return;
+    gl.useProgram(meteorProg);
+    gl.bindBuffer(gl.ARRAY_BUFFER, meteorGeo.pos); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.DYNAMIC_DRAW);
+    bindAttr(meteorProg, 'aPos', meteorGeo.pos, 3);
+    gl.bindBuffer(gl.ARRAY_BUFFER, meteorGeo.u); gl.bufferData(gl.ARRAY_BUFFER, uu, gl.DYNAMIC_DRAW);
+    bindAttr(meteorProg, 'aU', meteorGeo.u, 1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, meteorGeo.side); gl.bufferData(gl.ARRAY_BUFFER, sd, gl.DYNAMIC_DRAW);
+    bindAttr(meteorProg, 'aSide', meteorGeo.side, 1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, meteorGeo.a); gl.bufferData(gl.ARRAY_BUFFER, aa, gl.DYNAMIC_DRAW);
+    bindAttr(meteorProg, 'aA', meteorGeo.a, 1);
+    gl.uniformMatrix4fv(uniformLoc(meteorProg, 'uProj'), false, proj);
+    gl.uniformMatrix4fv(uniformLoc(meteorProg, 'uRot'), false, rot);
+    gl.uniform3f(uniformLoc(meteorProg, 'uShift'), shift[0], shift[1], shift[2]);
+    gl.drawArrays(gl.TRIANGLES, 0, METEOR_POOL * 6);
+  }
+
   var tapFlashUntil = 9;
   var bootGreetDone = false, BOOT_GREET_SECS = 4;
   function showWhisper(ms) { tapFlashUntil = elapsed + ms / 1000; }
@@ -1545,6 +1695,12 @@
       recordMeet('neb', P2.neb.name);
     }
 
+    /* meteors arrive on their own schedule */
+    if (t > nextMeteorAt) {
+      spawnMeteor(t, fwd);
+      nextMeteorAt = t + meteorInfo.meanSec * (0.45 + Math.random() * 1.1);
+    }
+
     /* the lean-in: when a figure has settled and you're not voyaging,
      * the view breathes from 68 deg toward 56 deg — an arrival, not a
      * zoom. Skipped under reduced motion. */
@@ -1592,6 +1748,9 @@
       drawMoon(projMat, rot, voyVec);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     }
+
+    /* meteors streak above the gas, below the threads */
+    drawMeteors(projMat, rot, voyVec, t);
 
     /* threads of light */
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
@@ -1743,6 +1902,8 @@
   Object.assign(window.__nebula, {
     cam: cam, tonight: tonight, visibleUp: upCount,
     catalogue: catStars.length, fieldStars: shellCount, planets: planetPts, moon: moonPt, nebulae: nebPts,
+    meteors: meteorInfo, spawnMeteor: function () { return spawnMeteor(elapsed, null); },
+    meteorsActive: function () { return meteors.filter(function (m) { return m.on; }).length; },
     gasPuffs: localGas.puffCount + anchorGas.puffCount,
     camPos: camPos, pass2: P2, audio: AU ? AU.state : null
   });
