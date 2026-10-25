@@ -343,7 +343,8 @@ document.addEventListener('pointermove', function (e) {
   kickTilt();
 }, { passive: true });
 if (window.DeviceOrientationEvent) {
-  var gyroOn = false;
+  var gyroOn = false, gyroAsked = false;
+  var gyroKey = document.getElementById('gyroKey');
   var enableGyro = function () {
     if (gyroOn) return; gyroOn = true;
     window.addEventListener('deviceorientation', function (e) {
@@ -353,13 +354,32 @@ if (window.DeviceOrientationEvent) {
       kickTilt();
     });
   };
-  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-    document.addEventListener('pointerdown', function h(e) {
-      if (!e.target.closest('#mainScreen')) return;
-      document.removeEventListener('pointerdown', h);
-      DeviceOrientationEvent.requestPermission().then(function (r) { if (r === 'granted') enableGyro(); }).catch(function () {});
-    });
-  } else { enableGyro(); }
+  function renderGyro(state) {
+    if (!gyroKey) return;
+    gyroKey.textContent = 'GYRO ' + state;
+    gyroKey.classList.toggle('on', state === 'ON');
+  }
+  function askGyro() {
+    if (gyroOn) return;
+    gyroAsked = true;
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(function (r) {
+        if (r === 'granted') { enableGyro(); renderGyro('ON'); ccSay('GYRO ONLINE · TILT THE PHONE', 2200); }
+        else { renderGyro('DENIED'); ccSay('MOTION DENIED · ALLOW IT IN SAFARI WEBSITE SETTINGS', 3000, true); }
+      }).catch(function () { renderGyro('OFF'); });
+    } else { enableGyro(); renderGyro('ON'); }
+  }
+  if (gyroKey) gyroKey.addEventListener('click', askGyro);
+  renderGyro('OFF');
+  /* one polite auto-ask on the first tracker tap — the key stays as the manual path */
+  document.addEventListener('pointerdown', function h(e) {
+    if (gyroAsked || !e.target.closest || !e.target.closest('#mainScreen')) return;
+    document.removeEventListener('pointerdown', h);
+    askGyro();
+  });
+} else {
+  var gk = document.getElementById('gyroKey');
+  if (gk) gk.style.display = 'none';
 }
 
 /* a shooting star, now and then — never on a schedule you'd notice */
