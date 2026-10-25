@@ -118,15 +118,130 @@ function figureStats() {
     var ids = comps[r];
     if (ids.length < 2) return;
     total++;
-    if (ids.every(function (id) { return !!progressFor(id); })) { done++; doneRoots[r] = true; }
+    if (ids.every(function (id) { return hasData(id); })) { done++; doneRoots[r] = true; }
   });
   return { done: done, total: total, doneRoots: doneRoots, rootOf: rootOf };
 }
+function flownStamp(id) {
+  try {
+    var f = JSON.parse(localStorage.getItem('gz_flown') || '{}');
+    return f[id] || 0;
+  } catch (e) { return 0; }
+}
+/* flight data = the game's own records, or the deck's logbook stamp for
+   games that keep none (Skylark) — without it their stars could never charge */
+function hasData(id) { return !!progressFor(id) || !!flownStamp(id); }
+function flownFor(id) {
+  try {
+    var f = JSON.parse(localStorage.getItem('gz_flown') || '{}');
+    var t = f[id]; if (!t) return null;
+    var m = Math.floor((Date.now() - t) / 60000);
+    if (m < 2) return 'JUST NOW';
+    if (m < 60) return m + 'M AGO';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'H AGO';
+    return Math.floor(h / 24) + 'D AGO';
+  } catch (e) { return null; }
+}
+function stampFlown(id) {
+  try {
+    var f = JSON.parse(localStorage.getItem('gz_flown') || '{}');
+    f[id] = Date.now();
+    localStorage.setItem('gz_flown', JSON.stringify(f));
+  } catch (e) {}
+}
+/* a figure completes when every game in it has flight data — celebrate once, ever */
+function maybeCeremony() {
+  if (!trkrUp) return;
+  var fs = figureStats();
+  var byRoot = {};
+  GAMES.forEach(function (g) { var r = fs.rootOf[g.id]; (byRoot[r] = byRoot[r] || []).push(g.id); });
+  var gold = {};
+  try { gold = JSON.parse(localStorage.getItem('gz_fig_gold') || '{}'); } catch (e) {}
+  var target = null;
+  Object.keys(byRoot).forEach(function (r) {
+    var ids = byRoot[r];
+    if (target || ids.length < 2) return;
+    var key = ids.slice().sort().join('+');
+    if (!gold[key] && ids.every(function (id) { return hasData(id); })) target = { key: key, ids: ids };
+  });
+  if (!target) return;
+  gold[target.key] = 1;
+  try { localStorage.setItem('gz_fig_gold', JSON.stringify(gold)); } catch (e) {}
+  target.ids.forEach(function (id) {
+    var el = main.querySelector('[data-call="' + id + '"]');
+    if (el) el.classList.add('gold');
+  });
+  var svg = document.getElementById('trkr');
+  if (svg) {
+    var linkEls = svg.querySelectorAll('.lnk');
+    LINKS.forEach(function (pr, i) {
+      if (linkEls[i] && target.ids.indexOf(pr[0]) >= 0 && target.ids.indexOf(pr[1]) >= 0) linkEls[i].classList.add('gold');
+    });
+  }
+  ccSay('FIGURE COMPLETE · ' + target.ids.length + ' UNITS CHARGED', 3400, true);
+  confirmTone();
+  buzz([10, 40, 10]);
+  setTimeout(function () {
+    document.querySelectorAll('#trkr .gold').forEach(function (el) { el.classList.remove('gold'); });
+  }, 3000);
+}
+/* ---------- the deck remembers: docking, ceremonies, console keys ---------- */
+(function () {
+  var dockedId = null;
+  try { dockedId = sessionStorage.getItem('gz_docked'); if (dockedId) sessionStorage.removeItem('gz_docked'); } catch (e) {}
+  var dg = dockedId ? byId(dockedId) : null;
+  if (dg) {
+    document.documentElement.classList.add('dock');
+    setTimeout(function () { ccSay('WELCOME BACK · ' + dg.name + ' RETURNED TO DECK', 2800); }, 600);
+    setTimeout(function () { document.documentElement.classList.remove('dock'); }, 1500);
+    document.addEventListener('pointerdown', function h() {
+      document.documentElement.classList.remove('dock');
+      document.removeEventListener('pointerdown', h);
+    });
+    setTimeout(maybeCeremony, 4000);
+  } else {
+    setTimeout(maybeCeremony, 1600);
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'Escape') {
+      var r = document.getElementById('rtnBtn');
+      if (r) { r.click(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === 'Enter') {
+      var a = document.activeElement;
+      if (a && a.classList && a.classList.contains('starwrap')) {
+        a.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        e.preventDefault();
+      }
+      return;
+    }
+    if (['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'].indexOf(e.key) < 0) return;
+    var bankEl = document.getElementById('bank');
+    var items = [].slice.call(document.querySelectorAll('#trkr .starwrap, .tile, .opsbar .key, .opsrow, #rtnBtn, .exec')).filter(function (el) {
+      if (!el.getClientRects().length) return false;
+      if (el.classList.contains('tile') && bankEl && bankEl.classList.contains('dim') && !el.classList.contains('hit')) return false;
+      return true;
+    });
+    if (!items.length) return;
+    items.sort(function (a2, b2) {
+      var ra = a2.getBoundingClientRect(), rb = b2.getBoundingClientRect();
+      return (ra.top - rb.top) || (ra.left - rb.left);
+    });
+    var fwd = e.key === 'ArrowDown' || e.key === 'ArrowRight';
+    var ix = items.indexOf(document.activeElement);
+    var next = ix < 0 ? items[0] : items[(ix + (fwd ? 1 : -1) + items.length) % items.length];
+    if (next) { next.focus(); e.preventDefault(); }
+  });
+})();
+
 function isCharged(id, fs) {
-  if (byId(id)) return !!progressFor(id);
+  if (byId(id)) return hasData(id);
   return LINKS.some(function (pr) {
     var other = pr[0] === id ? pr[1] : pr[1] === id ? pr[0] : null;
-    return other && byId(other) && !!progressFor(other);
+    return other && byId(other) && hasData(other);
   });
 }
 
@@ -214,6 +329,17 @@ function progressFor(id) {
       if (!best) return null;
       var stk = (sd && sd.streak && sd.streak.count >= 2) ? ' · 🔥 ' + sd.streak.count + '-day streak' : '';
       return { label: 'Best ' + best.letter + ' · ' + (+best.pct).toFixed(1) + '%' + stk, frac: Math.min(1, best.pct / 100) };
+    }
+    if (id === 'cathedral') {
+      var cs = readJSON('cathedral_state_v1');
+      if (!cs || !cs.station) return null;
+      return { label: 'Listening · ' + cs.station, frac: .5 };
+    }
+    if (id === 'dominoes') {
+      var ds = readJSON('dominoes.stats.v1');
+      if (!ds || !(ds.w || ds.l)) return null;
+      var played = (ds.w || 0) + (ds.l || 0);
+      return { label: 'W ' + (ds.w || 0) + ' · L ' + (ds.l || 0), frac: Math.min(1, played / 20) };
     }
   } catch (e) { return null; }
   return null;
@@ -437,7 +563,7 @@ function showTracker() {
     var glare = Math.hypot(p[0] - MXY[0], p[1] - MXY[1]) < 17;
     if (g) starXY[id] = [p[0], p[1]];
     if (!g) return '<circle class="star" style="' + twkStyle(id, true) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (r * .85) + '" opacity="' + (glare ? .38 : .75) + '"/>';
-    var lit = !!progressFor(id);
+    var lit = hasData(id);
     var crowded = Object.keys(POS).some(function (o) {
       if (o === id) return false; var q = xy(POS[o]);
       return q[0] > p[0] && q[0] - p[0] < 19 && Math.abs(q[1] - p[1]) < 6;
@@ -510,13 +636,15 @@ function showTracker() {
   tickClock();
 }
 
-function callUp(id) {
+function callUp(id, via) {
   var g = byId(id); if (!g) return;
   trkrUp = false; selectedId = id;
   mduPage.textContent = 'UNIT · ' + g.name;
   document.querySelectorAll('.tile').forEach(function (t) { t.classList.toggle('sel', t.getAttribute('data-id') === id); });
   var pr = progressFor(id);
   var dataText = pr ? cleanLabel(pr.label) : 'NO FLIGHT DATA LOGGED';
+  if (via !== 'tile') sfxStar();
+  ccSay(g.name + ' CALLED UP · ' + (pr ? cleanLabel(pr.label).toUpperCase() : 'STANDING BY'), 2400);
   var tele = '<dt>CLASS</dt><dd>' + g.cls + '</dd>' +
     '<dt>STATUS</dt><dd>' + (pr ? 'IN PROGRESS' : 'READY') + '</dd>' +
     '<dt>DATA</dt><dd class="dataVal"></dd>';
@@ -541,6 +669,9 @@ function callUp(id) {
     committing = true;
     e.preventDefault();
     var href = exec.getAttribute('href');
+    stampFlown(id);
+    try { sessionStorage.setItem('gz_docked', id); } catch (err) {}
+    sfxArm();
     main.classList.add('commit');
     exec.classList.add('lit');
     confirmTone();
@@ -580,6 +711,7 @@ setInterval(function () {
     void fb.getBoundingClientRect();
     fb.classList.add('go');
   }
+  sfxBrush();
 }, 30000);
 
 /* ---------- MDU 2: flight plan (editorial picks; AI replaces when it lands) ---------- */
@@ -696,14 +828,18 @@ setInterval(function () {
   document.getElementById('bankCnt').textContent = '14 UNITS · TAP TO CALL UP';
   bank.innerHTML = GAMES.map(function (g) {
     var pr = progressFor(g.id);
+    var fl = flownFor(g.id);
     return '<button class="tile" data-id="' + g.id + '"><span class="screen">' +
+      '<svg class="twm" viewBox="0 0 24 24" aria-hidden="true">' + g.glyph + '</svg>' +
       '<svg viewBox="0 0 24 24" aria-hidden="true">' + g.glyph + '</svg>' +
       '<span class="nm">' + g.name + '</span><span class="cls">' + g.cls + '</span>' +
       '<span class="st' + (pr ? '' : ' none') + '">' + (pr ? escapeHtml(cleanLabel(pr.label)) : 'READY') + '</span>' +
+      (pr ? '<span class="tbar"><i style="width:' + Math.round(pr.frac * 100) + '%"></i></span>' : '') +
+      (fl ? '<span class="flw">FLOWN ' + fl + '</span>' : '') +
       '</span></button>';
   }).join('');
   bank.querySelectorAll('.tile').forEach(function (t) {
-    t.addEventListener('click', function () { callUp(t.getAttribute('data-id')); });
+    t.addEventListener('click', function () { sfxTile(); callUp(t.getAttribute('data-id'), 'tile'); });
     var scr = t.querySelector('.screen');
     t.addEventListener('pointermove', function (e) {
       if (e.pointerType === 'touch' || !scr) return;
@@ -723,9 +859,11 @@ setInterval(function () {
       document.querySelectorAll('.opsbar .key').forEach(function (x) { x.classList.remove('on'); });
       k.classList.add('on');
       var f = k.getAttribute('data-ops');
+      sfxFilter();
       if (f === 'all') {
         bank.classList.remove('dim');
         bank.querySelectorAll('.tile').forEach(function (t) { t.classList.remove('hit'); });
+        ccSay('OPS · ALL · 14 UNITS REPORTING', 2000);
         return;
       }
       bank.classList.add('dim');
@@ -735,6 +873,7 @@ setInterval(function () {
         t.classList.toggle('hit', g.ops.indexOf(f) >= 0);
         setTimeout(function () { t.style.transitionDelay = ''; }, 600);
       });
+      ccSay('OPS · ' + k.textContent.trim() + ' · ' + bank.querySelectorAll('.tile.hit').length + ' REPORTING', 2000);
     });
   });
 })();
@@ -825,6 +964,85 @@ function confirmTone() {
       o.connect(g); g.connect(tickAC.destination);
       o.start(t); o.stop(t + 0.11);
     });
+  } catch (e) {}
+}
+/* ---------- second sound pass: a voice per surface ---------- */
+function sfxAC() {
+  if (!hubSnd) return null;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!tickAC) tickAC = new AC();
+    if (tickAC.state === 'suspended') tickAC.resume();
+    return tickAC;
+  } catch (e) { return null; }
+}
+function sfxEnv(g, t, vol, dur) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
+function sfxNoise(ac, secs) {
+  var buf = ac.createBuffer(1, Math.floor(ac.sampleRate * secs), ac.sampleRate);
+  var ch = buf.getChannelData(0);
+  for (var i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+  var src = ac.createBufferSource(); src.buffer = buf; return src;
+}
+function sfxTile() {
+  var ac = sfxAC(); if (!ac) return;
+  try {
+    var t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(64, t + 0.09);
+    sfxEnv(g, t, 0.12, 0.1);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.11);
+  } catch (e) {}
+}
+function sfxStar() {
+  var ac = sfxAC(); if (!ac) return;
+  try {
+    var t = ac.currentTime;
+    [1244, 1866].forEach(function (f, i) {
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      sfxEnv(g, t, i ? 0.013 : 0.03, i ? 0.1 : 0.16);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.18);
+    });
+  } catch (e) {}
+}
+function sfxFilter() {
+  var ac = sfxAC(); if (!ac) return;
+  try {
+    var t = ac.currentTime, src = sfxNoise(ac, 0.2), bp = ac.createBiquadFilter(), g = ac.createGain();
+    bp.type = 'bandpass'; bp.Q.value = 1.1;
+    bp.frequency.setValueAtTime(2600, t);
+    bp.frequency.exponentialRampToValueAtTime(620, t + 0.16);
+    sfxEnv(g, t, 0.045, 0.17);
+    src.connect(bp); bp.connect(g); g.connect(ac.destination); src.start(t); src.stop(t + 0.2);
+  } catch (e) {}
+}
+function sfxArm() {
+  var ac = sfxAC(); if (!ac) return;
+  try {
+    [523.25, 783.99].forEach(function (f, i) {
+      var t = ac.currentTime + i * 0.09, o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      sfxEnv(g, t, 0.045, 0.08);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.09);
+    });
+  } catch (e) {}
+}
+function sfxBrush() {
+  if (document.hidden) return;
+  var ac = sfxAC(); if (!ac) return;
+  try {
+    var t = ac.currentTime, src = sfxNoise(ac, 0.5), bp = ac.createBiquadFilter(), g = ac.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = 760; bp.Q.value = 0.6;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.011, t + 0.12);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.48);
+    src.connect(bp); bp.connect(g); g.connect(ac.destination); src.start(t); src.stop(t + 0.5);
   } catch (e) {}
 }
 function buzz(p) {
@@ -998,3 +1216,4 @@ function sysCheck() {
 showTracker();
 tickClock();
 })();
+

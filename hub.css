@@ -324,3 +324,19 @@ html.boot .deck{animation:bootSafeT .01s 2.8s forwards}
   .bank{grid-template-columns:repeat(4,1fr)}
   .strip .ro .val{font-size:17px}
 }
+
+/* ---------- alive round: docking, status board, gold, keys ---------- */
+html.dock body{perspective:1150px}
+html.dock .deck{animation:dockIn .8s cubic-bezier(.16,.7,.24,1)}
+@keyframes dockIn{from{transform:rotateX(-5deg) rotateY(2.5deg) translateZ(64px) scale(1.015);opacity:.35}to{transform:none;opacity:1}}
+.tile .screen{overflow:hidden}
+.tile .twm{position:absolute;right:-10px;bottom:-12px;width:78px;height:78px;stroke:var(--grn);fill:none;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;opacity:.055;pointer-events:none}
+.tile .tbar{display:block;height:3px;margin-top:6px;background:rgba(76,232,164,.13);border-radius:2px;overflow:hidden}
+.tile .tbar i{display:block;height:100%;background:var(--grn);border-radius:2px;box-shadow:0 0 5px rgba(76,232,164,.35)}
+.tile .flw{display:block;margin-top:5px;font-size:8.5px;letter-spacing:.14em;color:var(--dim2)}
+#trkr .lnk{transition:stroke .45s ease}
+#trkr .lnk.gold{stroke:#f5b83d;stroke-width:.9;opacity:1;filter:drop-shadow(0 0 2.2px rgba(245,184,61,.5))}
+#trkr .starwrap.gold .star{fill:#ffd166}
+#trkr .starwrap.gold text{fill:#f5b83d}
+.tile:focus-visible{outline:2px solid rgba(99,199,232,.8);outline-offset:2px}
+.opsbar .key:focus-visible{outline:2px solid rgba(99,199,232,.8);outline-offset:2px}
