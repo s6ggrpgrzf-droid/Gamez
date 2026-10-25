@@ -443,6 +443,7 @@ function showTracker() {
       return q[0] > p[0] && q[0] - p[0] < 19 && Math.abs(q[1] - p[1]) < 6;
     });
     var anchor = (p[0] > 84 || crowded) ? 'end' : 'start';
+    if (id === 'bubble-hex' && window.innerWidth > window.innerHeight) anchor = 'end';
     var lx = anchor === 'end' ? p[0] - 2.6 : p[0] + 2.6;
     var ly = p[1] + 1.1;
     if (LABOVE[id]) { anchor = 'middle'; lx = p[0]; ly = p[1] - 3.8; }

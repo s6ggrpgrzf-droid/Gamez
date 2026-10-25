@@ -7,7 +7,8 @@
   --cyn:#63c7e8; --wht:#eafff3; --amb:#f5b83d;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{background:#07080a}
+html{background:#07080a;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+::selection{background:rgba(76,232,164,.28);color:#eafff3}
 body{
   font-family:'IBM Plex Mono',monospace;color:var(--grn);
   background:linear-gradient(180deg,#0b0d10,#07080a 240px),#07080a;
@@ -72,7 +73,7 @@ button{font-family:inherit}
 .capcom{display:flex;align-items:baseline;gap:12px;background:linear-gradient(180deg,var(--panel2),var(--panel));
   border:1px solid var(--seam);border-radius:8px;padding:8px 14px;margin-bottom:14px;min-height:34px}
 .capcom .cc-tag{font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.18em;font-size:8.5px;color:var(--label);font-weight:600;flex:none}
-.capcom .cc-line{font-size:11px;letter-spacing:.05em;color:var(--grn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .35s ease}
+.capcom .cc-line{min-width:0;font-size:11px;letter-spacing:.05em;color:var(--grn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .35s ease}
 .capcom .cc-line.amb{color:var(--amb)}
 .capcom,#mdu1,.subrow .mdu,.opsbar,.bankwrap,.studio{transition:opacity .5s ease,transform .5s ease}
 html.boot .capcom,html.boot #mdu1,html.boot .subrow .mdu,html.boot .opsbar,html.boot .bankwrap,html.boot .studio{opacity:0;transform:translateY(8px)}
@@ -135,6 +136,7 @@ html.boot .deck{animation:bootSafeT .01s 2.8s forwards}
 
 /* primary display — star tracker page */
 #mdu1{scroll-margin-top:104px}
+.bankwrap,.subrow .mdu{scroll-margin-top:104px}
 #mdu1 .screen{min-height:356px;display:flex;flex-direction:column}
 .trkr-wrap{flex:1;display:flex;flex-direction:column;perspective:900px}
 #trkr{transform:rotateX(var(--tiltX,0deg)) rotateY(var(--tiltY,0deg));transition:transform .25s ease-out;will-change:transform}
@@ -209,7 +211,7 @@ html.boot .deck{animation:bootSafeT .01s 2.8s forwards}
   background-size:250% 100%;background-position:calc(50% + var(--glare,0) * 44%) 0}
 .feed .feedhud{z-index:4}
 .feed .feedband{z-index:2}
-.feed .feedhud{position:absolute;left:8px;right:8px;top:6px;display:flex;justify-content:space-between;
+.feed .feedhud{position:absolute;left:0;right:0;top:0;padding:6px 8px 12px;display:flex;justify-content:space-between;background:linear-gradient(180deg,rgba(2,8,5,.52),rgba(2,8,5,0));
   font-size:8.5px;letter-spacing:.16em;color:rgba(190,255,220,.85);text-shadow:0 1px 3px rgba(0,0,0,.65)}
 .feed .feedhud .fl{color:var(--amb);animation:pulse 2.6s infinite}
 .feed .feedband{position:absolute;left:0;right:0;top:-30px;height:26px;pointer-events:none;
@@ -254,6 +256,8 @@ html.boot .deck{animation:bootSafeT .01s 2.8s forwards}
 .mdu.sysfold .screen{min-height:0;height:auto}
 .mdu.sysfold .fleet{display:flex;gap:22px;flex-wrap:wrap}
 .mdu.sysfold .frow{gap:10px}
+#sys{display:flex;flex-direction:column}
+#sys .fleet{margin-top:auto}
 .fleet{margin-top:10px;border-top:1px dashed var(--grn-faint);padding-top:9px;display:grid;gap:5px}
 .fleet .frow{display:flex;justify-content:space-between;align-items:baseline;font-size:11px}
 .fleet .frow span{color:var(--grn-dim);letter-spacing:.14em}
@@ -264,7 +268,7 @@ html.boot .deck{animation:bootSafeT .01s 2.8s forwards}
 .opsbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
 .opsbar .lbl{margin-right:2px}
 .opsbar .key{flex:1 1 0;min-width:0;text-align:center;padding:9px 2px;font-size:10.5px;min-height:44px}
-.opsbar .key.on{color:#0b0d10;background:linear-gradient(180deg,#59ffb0,#2fd67f);border-color:var(--grn-faint);font-weight:600}
+.opsbar .key.on{color:var(--grn);background:linear-gradient(180deg,#0e2f1e,#081b11);border-color:var(--grn-mute);font-weight:600;box-shadow:inset 0 1px 0 rgba(140,255,200,.14), inset 0 -2px 0 rgba(0,0,0,.4), 0 3px 6px rgba(0,0,0,.42), 0 0 12px rgba(76,232,164,.12)}
 
 /* display bank */
 .bank-head{display:flex;align-items:baseline;gap:12px;margin:4px 2px 8px}
@@ -295,7 +299,7 @@ html.boot .deck{animation:bootSafeT .01s 2.8s forwards}
 .tile svg{width:30px;height:30px;stroke:var(--cyn);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:9px}
 .tile .nm{font-size:13.5px;color:var(--wht);font-weight:600;letter-spacing:.05em;line-height:1.25}
 .tile .cls{font-size:9px;letter-spacing:.18em;color:var(--grn-mute);margin-top:3px}
-.tile .st{margin-top:auto;padding-top:7px;font-size:10px;color:var(--grn);letter-spacing:.06em}
+.tile .st{margin-top:auto;padding-top:7px;font-size:9.5px;color:var(--grn);letter-spacing:.02em;line-height:1.45}
 .tile .st.none{color:#24573c}
 .tile:active{border-color:var(--grn-faint)}
 .tile.sel{border-color:var(--amb)}
