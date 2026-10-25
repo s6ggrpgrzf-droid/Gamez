@@ -1,999 +1,160 @@
-/* Gamez arcade hub — obsidian: dark luxury tech, 3D depth throughout */
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* GAMEZ flight deck — flat panels, working displays. hub.css v50 */
 :root{
-  --font-display:"Unbounded",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
-  --font-body:"Inter",ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
-  --accent:#4da6ff;
-  --ice:#bfe0ff;
-  --ease:cubic-bezier(.16,1,.3,1);
+  --panel:#101216; --panel2:#14171c; --seam:#262b31;
+  --label:#8b939e; --label-hi:#c9d1d9;
+  --scr:#03120a; --scr-edge:#0a2e1a;
+  --grn:#46ffa0; --grn-dim:#1e7a4b; --grn-faint:#0f5132;
+  --cyn:#5fd8ff; --wht:#eafff3; --amb:#ffb02e;
 }
-::selection{background:var(--accent);color:#04060c}
-html,body{height:100%}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:#07080a}
 body{
-  margin:0;color:#fff;
-  font-family:var(--font-body);
-  background:#04060c;
-  min-height:100dvh;display:flex;flex-direction:column;align-items:center;
-  overflow-x:hidden;user-select:none;-webkit-user-select:none;
+  font-family:'IBM Plex Mono',monospace;color:var(--grn);
+  background:linear-gradient(180deg,#0b0d10,#07080a 240px),#07080a;
+  min-height:100vh;max-width:1180px;margin:0 auto;
+  padding:10px 10px calc(26px + env(safe-area-inset-bottom));
+  padding-left:calc(10px + env(safe-area-inset-left));
+  padding-right:calc(10px + env(safe-area-inset-right));
 }
-/* ambient depth: layered glows at different depths + faint perspective grid */
-/* ambient depth: VISIBLE aurora washes — glass needs light behind it to read as glass */
-body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:
-    radial-gradient(55% 30% at 12% 2%,rgba(77,166,255,.17),transparent 70%),
-    radial-gradient(48% 28% at 88% 20%,rgba(122,110,255,.13),transparent 70%),
-    radial-gradient(60% 32% at 50% 52%,rgba(77,166,255,.08),transparent 70%),
-    radial-gradient(46% 28% at 86% 84%,rgba(122,110,255,.11),transparent 70%),
-    radial-gradient(42% 26% at 10% 90%,rgba(77,166,255,.09),transparent 70%);}
-/* no grid: a repeating rule reads as wallpaper/banding behind glass.
-   just a vignette — the room falls off to black at the edges */
-body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:radial-gradient(120% 90% at 50% 42%,transparent 55%,rgba(0,0,0,.5) 100%);}
-main{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center}
-/* ---------- hero ---------- */
-.hero{position:relative;z-index:1;width:100%;overflow:hidden;text-align:center;flex-shrink:0;
-  padding:calc(30px + env(safe-area-inset-top)) 20px 26px;
-  background:transparent}
-/* Living Sky step 1: the sky is the room — one fixed canvas behind the
-   whole page; you scroll through the night, not past a header */
-#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
-h1.masthead{
-  margin:6px 0 2px;font-family:var(--font-display);font-weight:800;
-  font-size:clamp(44px,10.5vw,80px);letter-spacing:.01em;
-  background:linear-gradient(100deg,#ffffff 5%,#cfe8ff 32%,#7cc0ff 62%,#a08fff 92%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  /* 3D extrusion: stacked hard shadows read as depth */
-  text-shadow:0 1px 0 rgba(30,70,120,.85),0 2px 0 rgba(24,58,102,.85),0 3px 0 rgba(18,46,86,.85),
-    0 4px 0 rgba(13,36,70,.85),0 10px 28px rgba(0,0,0,.7),0 0 44px rgba(77,166,255,.32);
+.lbl{font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.18em;font-size:10px;color:var(--label);font-weight:600}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--cyn);outline-offset:2px}
+
+/* ---------- top panel strip ---------- */
+.strip{
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border:1px solid var(--seam);border-radius:8px;
+  padding:10px 14px;margin-bottom:10px;
 }
-.tag{color:rgba(220,235,255,.62);font-size:15px;margin:0 0 12px;letter-spacing:.02em}
-/* ---------- sections ---------- */
-/* ---------- section architecture: glowing beam dividers give every section a room ---------- */
-/* one spacing rhythm: every room on the floor gets the same air above it */
-section{width:100%;max-width:1100px;padding:44px 20px 0;position:relative;z-index:1}
-@media(min-width:900px){section{padding-top:60px}}
-section::before,main.collection::before{content:"";display:block;height:1px;margin:0 2px 32px;
-  background:linear-gradient(90deg,transparent,rgba(140,200,255,.4) 18%,rgba(140,200,255,.4) 82%,transparent);
-  box-shadow:0 0 14px rgba(77,166,255,.3)}
-main.collection::before{margin:44px 20px 32px}
-@media(min-width:900px){main.collection::before{margin-top:60px}}
-/* the collection lives in a centering flex column — stretch its header so it
-   aligns left like every other section: one header system everywhere */
-main.collection>.shead{align-self:stretch}
-/* the feature banner is its own stage — no beam, it carries its own frame */
-section.featured::before{display:none}
-.collection{width:100%;max-width:1100px;position:relative;z-index:1}
-.kicker{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;
-  color:var(--ice);margin-bottom:12px;padding:8px 16px 8px 19px;border-radius:999px;
-  background:rgba(77,166,255,.1);border:1px solid rgba(140,200,255,.3);
-  box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2),0 0 20px rgba(77,166,255,.16)}
-.shead{margin:6px 2px 24px}
-.shead h2{margin:0;font-family:var(--font-display);font-weight:800;
-  font-size:clamp(30px,6.6vw,40px);letter-spacing:-.02em;
-  background:linear-gradient(180deg,#ffffff,#a9c9ef);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-.shead .sub{margin:10px 0 0;color:rgba(220,235,255,.62);font-size:14.5px}
-.shead::after{content:"";display:block;height:2px;margin-top:16px;
-  background:linear-gradient(90deg,rgba(77,166,255,.65),rgba(77,166,255,.14) 55%,transparent);
-  box-shadow:0 1px 10px rgba(77,166,255,.35)}
-/* ---------- continue rail ---------- */
-#continue{display:none}
-/* Living Sky step 4: continue games are warm stars — round art orbs with a
-   slow amber pulse, "still warm from last time"; name + progress beneath */
-.rail{display:flex;gap:28px;overflow-x:auto;padding:30px 22px 62px;
-  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.rail::-webkit-scrollbar{display:none}
-.chip{
-  flex:0 0 auto;scroll-snap-align:start;border-radius:50%;overflow:visible;
-  text-decoration:none;color:#fff;position:relative;width:92px;height:92px;
-  border:1px solid rgba(255,210,150,.4);background-size:cover;background-position:center;
-  animation:warmPulse 3.4s ease-in-out infinite;
-  transition:transform .15s;
-  transform:translateZ(0);
+.strip .brand{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:.34em;font-size:15px;color:var(--label-hi)}
+.strip .brand small{display:block;letter-spacing:.22em;font-size:8.5px;color:var(--label);font-weight:600;margin-top:2px}
+.strip .readouts{margin-left:auto;display:flex;gap:18px;text-align:right}
+.strip .ro .lbl{font-size:8.5px}
+.strip .ro .val{font-size:15px;color:var(--wht);font-weight:600;letter-spacing:.06em}
+.strip .ro .val.g{color:var(--grn)}
+.lamp{width:8px;height:8px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);flex:none;animation:pulse 2.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* ---------- displays ---------- */
+.deck{display:flex;flex-direction:column;gap:10px}
+.mdu{
+  background:linear-gradient(180deg,#171a1f,#101216);
+  border:1px solid var(--seam);border-radius:10px;padding:8px;
 }
-.rail .chip:nth-child(2){animation-delay:.7s}
-.rail .chip:nth-child(3){animation-delay:1.4s}
-.rail .chip:nth-child(4){animation-delay:2.1s}
-.rail .chip:nth-child(5){animation-delay:2.8s}
-@keyframes warmPulse{
-  0%,100%{box-shadow:0 0 13px 2px rgba(255,190,110,.3),0 0 28px 7px rgba(255,170,90,.13),0 10px 24px rgba(0,0,0,.5)}
-  50%{box-shadow:0 0 19px 5px rgba(255,190,110,.5),0 0 40px 12px rgba(255,170,90,.2),0 10px 24px rgba(0,0,0,.5)}
+.mdu-head{display:flex;align-items:center;gap:10px;padding:2px 4px 8px}
+.mdu-head .tag{font-family:'Inter',sans-serif;font-size:9px;font-weight:700;letter-spacing:.2em;color:#0b0d10;background:var(--label);border-radius:3px;padding:2px 6px}
+.mdu-head .page{font-size:12px;color:var(--wht);letter-spacing:.14em;font-weight:600}
+.mdu-head .soft{margin-left:auto;display:flex;gap:6px}
+.screen{
+  position:relative;background:
+    repeating-linear-gradient(0deg,rgba(70,255,160,.025) 0 1px,transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 0%,rgba(6,35,21,0),#03120a 70%),
+    var(--scr);
+  border:1px solid var(--scr-edge);border-radius:5px;
+  box-shadow:inset 0 0 34px rgba(0,0,0,.75), inset 0 0 6px rgba(70,255,160,.12);
+  overflow:hidden;
 }
-.chip:active{transform:scale(.94)}
-.chip .scrim{position:absolute;inset:0;border-radius:50%;
-  background:radial-gradient(circle,transparent 58%,rgba(0,0,0,.32));
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
-.chip .info{position:absolute;left:50%;transform:translateX(-50%);top:calc(100% + 11px);
-  width:132px;text-align:center}
-.chip .info b{font-size:13px;display:block;text-shadow:0 1px 8px rgba(0,0,0,.85)}
-.chip .info span{font-size:11.5px;color:#ffd9a8;font-weight:700;text-shadow:0 1px 8px rgba(0,0,0,.85)}
-/* ---------- dailies ---------- */
-.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-.daily{
-  display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;
-  background:linear-gradient(rgba(170,210,255,.13),rgba(170,210,255,.04));
-  border:1px solid rgba(170,215,255,.3);
-  border-top-color:rgba(220,240,255,.5);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border-radius:16px;padding:12px 14px;transition:transform .15s, background .15s;
-  box-shadow:0 12px 30px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.28),0 0 18px rgba(77,166,255,.08);
-  transform:translateZ(0);
+.key{
+  font-size:10px;letter-spacing:.12em;min-height:34px;
+  background:linear-gradient(180deg,#22262d,#171a1f);color:var(--label-hi);
+  border:1px solid #333a42;border-bottom-width:3px;border-radius:5px;
+  padding:6px 10px;cursor:pointer;user-select:none;
 }
-.daily:active{transform:scale(.96)}
-.daily .cal{flex:0 0 46px;width:46px;height:46px;font-size:24px;border-radius:13px;
-  display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(circle at 50% 30%,rgba(140,200,255,.35),rgba(77,166,255,.12) 70%);
-  border:1px solid rgba(170,215,255,.35);border-top-color:rgba(220,240,255,.55);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 4px 12px rgba(0,0,0,.4),0 0 14px rgba(77,166,255,.2)}
-.daily b{font-size:14px;display:block}
-.daily span{font-size:12px;color:rgba(220,235,255,.6)}
-.daily{min-height:66px}
-@media (hover:hover){
-  .daily:hover{background:linear-gradient(rgba(170,210,255,.2),rgba(170,210,255,.07));transform:translateY(-2px)}
-  .daily:active{transform:scale(.96)}
+.key:active{transform:translateY(2px);border-bottom-width:1px}
+.key.on{color:var(--grn);border-color:var(--grn-faint)}
+.key.amb{color:#141414;background:linear-gradient(180deg,#ffc65c,#f5a623);border-color:#8a5d10;font-weight:600}
+
+/* primary display — star tracker page */
+#mdu1 .screen{min-height:340px;display:flex;flex-direction:column}
+.trkr-wrap{flex:1;display:flex;flex-direction:column}
+.trkr-head{display:flex;justify-content:space-between;padding:10px 12px 0;font-size:10.5px;letter-spacing:.14em;color:var(--cyn)}
+.trkr-head b{color:var(--wht);font-weight:600}
+#trkr{flex:1;width:100%}
+#trkr .lk{stroke:rgba(95,216,255,.34);stroke-width:.45}
+#trkr .star{fill:var(--grn);cursor:pointer}
+#trkr .halo{fill:none;stroke:rgba(70,255,160,0);stroke-width:.5;cursor:pointer}
+#trkr .starwrap:hover .halo,#trkr .starwrap:active .halo{stroke:rgba(70,255,160,.55)}
+#trkr .slab{font-size:3.1px;fill:var(--cyn);letter-spacing:.08em;pointer-events:none}
+#trkr .tgt{stroke:var(--amb);stroke-width:.55;fill:none}
+.trkr-foot{padding:0 12px 10px;font-size:10.5px;color:var(--grn-dim);letter-spacing:.1em;display:flex;justify-content:space-between;gap:8px}
+.trkr-foot .amb{color:var(--amb)}
+
+/* primary display — unit page */
+.gpage{padding:16px 16px 14px;display:flex;flex-direction:column;gap:10px;flex:1}
+.gpage .cls{font-size:10px;letter-spacing:.22em;color:var(--cyn)}
+.gpage h2{font-size:27px;color:var(--wht);font-weight:600;letter-spacing:.04em;line-height:1.1}
+.gpage .blurb{font-size:13px;line-height:1.65;color:var(--grn);max-width:56ch}
+.gpage .tele{border-top:1px dashed var(--grn-faint);padding-top:10px;display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:11.5px}
+.gpage .tele dt{color:var(--grn-dim);letter-spacing:.14em}
+.gpage .tele dd{color:var(--wht)}
+.bar{height:7px;background:#07271a;border:1px solid var(--grn-faint)}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--grn) 0 6px,transparent 6px 8px)}
+.gpage .execrow{margin-top:auto;display:flex;gap:10px;align-items:stretch;padding-top:8px}
+.gpage .exec{flex:1;text-align:center;text-decoration:none;font-size:15px;letter-spacing:.3em;padding:13px 10px 13px calc(10px + .3em);display:flex;align-items:center;justify-content:center}
+.gpage .rtn{padding:13px 14px;font-size:11px}
+
+/* secondary displays */
+.subrow{display:flex;flex-direction:column;gap:10px}
+.sub .screen{padding:10px 12px;min-height:118px}
+.sub h4{font-size:10.5px;letter-spacing:.2em;color:var(--wht);font-weight:600;margin-bottom:8px}
+.sub h4 span{color:var(--cyn)}
+.opsrow{display:flex;gap:10px;font-size:11.5px;padding:7px 0;border-bottom:1px dotted rgba(70,255,160,.14);cursor:pointer;background:none;border-top:none;border-left:none;border-right:none;width:100%;text-align:left;color:inherit}
+.opsrow:last-child{border-bottom:none}
+.opsrow .no{color:var(--amb);flex:none}
+.opsrow .nm{color:var(--wht);letter-spacing:.06em;white-space:nowrap}
+.opsrow .st{margin-left:auto;color:var(--grn-dim);letter-spacing:.08em;text-align:right}
+.opsrow:active .nm{color:var(--grn)}
+.telrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:11.5px;padding:4px 0;border-bottom:1px dotted rgba(70,255,160,.14)}
+.telrow:last-child{border-bottom:none}
+.telrow .nm{color:var(--wht);letter-spacing:.05em}
+.telrow .vl{color:var(--cyn)}
+.telrow .bar{grid-column:1/-1}
+.nodata{font-size:11.5px;color:var(--grn-dim);line-height:1.7;letter-spacing:.05em}
+.nodata b{color:var(--cyn);font-weight:500}
+
+/* ops keys */
+.opsbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.opsbar .lbl{margin-right:2px}
+.opsbar .key{flex:1 1 0;min-width:0;text-align:center;padding:9px 2px;font-size:10.5px;min-height:40px}
+.opsbar .key.on{color:#0b0d10;background:linear-gradient(180deg,#59ffb0,#2fd67f);border-color:var(--grn-faint);font-weight:600}
+
+/* display bank */
+.bank-head{display:flex;align-items:baseline;gap:12px;margin:4px 2px 8px}
+.bank-head .lbl{font-size:10.5px;color:var(--label-hi)}
+.bank-head .cnt{font-size:10.5px;color:var(--grn-dim);letter-spacing:.12em}
+.bank{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{
+  background:linear-gradient(180deg,#171a1f,#101216);border:1px solid var(--seam);
+  border-radius:9px;padding:6px;cursor:pointer;text-align:left;color:inherit;
+  transition:opacity .18s, filter .18s, border-color .18s;
 }
-/* ---------- tonight at the arcade ---------- */
-.ed-picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
-.ed-pick{
-  display:flex;align-items:center;gap:14px;text-decoration:none;color:#fff;
-  border-radius:18px;padding:12px 16px 12px 12px;position:relative;overflow:hidden;
-  border:1px solid transparent;
-  /* identical glass recipe to .card — one material for everything on the floor */
-  background:linear-gradient(rgba(170,210,255,.14),rgba(170,210,255,.045)) padding-box,
-    linear-gradient(160deg,rgba(220,240,255,.5),rgba(220,240,255,.12) 42%,rgba(77,166,255,.32)) border-box;
-  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
-  box-shadow:0 18px 42px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.34),0 0 22px rgba(77,166,255,.09);
-  transition:transform .18s var(--ease),box-shadow .18s var(--ease);
-  transform:translateZ(0);
+.tile .screen{padding:10px 11px 9px;min-height:104px;display:flex;flex-direction:column}
+.tile svg{width:30px;height:30px;stroke:var(--cyn);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:7px}
+.tile .nm{font-size:13.5px;color:var(--wht);font-weight:600;letter-spacing:.05em;line-height:1.25}
+.tile .cls{font-size:9px;letter-spacing:.18em;color:var(--grn-dim);margin-top:3px}
+.tile .st{margin-top:auto;padding-top:7px;font-size:10px;color:var(--grn);letter-spacing:.06em}
+.tile .st.none{color:#2c5c40}
+.tile:active{border-color:var(--grn-faint)}
+.tile.sel{border-color:var(--amb)}
+.bank.dim .tile{opacity:.28;filter:saturate(.3)}
+.bank.dim .tile.hit{opacity:1;filter:none}
+
+/* footer */
+.studio{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:12px;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--seam);
+  border-radius:8px;padding:10px 14px}
+.studio .wm{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:.2em;font-size:11px;color:var(--label-hi);white-space:nowrap}
+.studio .lbl{letter-spacing:.12em;white-space:nowrap}
+
+@media (min-width:760px){
+  .deck{display:grid;grid-template-columns:1.55fr 1fr;gap:10px}
+  #mdu1{grid-row:span 2}
+  #mdu1 .screen{min-height:470px;height:calc(100% - 34px)}
+  .subrow{display:contents}
+  .sub .screen{height:calc(100% - 34px)}
+  .opsbar{grid-column:1/-1}
+  .bankwrap{grid-column:1/-1}
+  .bank{grid-template-columns:repeat(4,1fr)}
+  .strip .ro .val{font-size:17px}
 }
-@media (hover:hover){
-  .ed-pick:hover{transform:translateY(-4px);
-    box-shadow:0 24px 52px rgba(0,0,0,.62),0 0 30px rgba(77,166,255,.24),inset 0 1px 0 rgba(255,255,255,.32)}
-}
-.ed-pick:active{transform:scale(.97)}
-.ed-art{flex:0 0 64px;width:64px;height:64px;border-radius:12px;background-size:cover;background-position:center;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 8px 18px rgba(0,0,0,.5)}
-.ed-body{flex:1;min-width:0}
-.ed-body b{display:block;font-family:var(--font-display);font-weight:700;font-size:16px;letter-spacing:-.01em}
-.ed-body i{display:block;font-style:normal;font-size:12.5px;color:rgba(220,235,255,.62);margin-top:3px;line-height:1.45;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ed-go{font-size:20px;color:var(--accent);flex:0 0 auto}
-/* ---------- game cards: obsidian glass, deep 3D ---------- */
-.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-  gap:22px;padding:2px 20px 40px;max-width:1100px;width:100%;position:relative;z-index:1}
-.card{
-  position:relative;border-radius:20px;overflow:hidden;text-decoration:none;color:#fff;
-  border:1px solid transparent;
-  background:linear-gradient(rgba(170,210,255,.14),rgba(170,210,255,.045)) padding-box,
-    linear-gradient(160deg,rgba(220,240,255,.5),rgba(220,240,255,.12) 42%,rgba(77,166,255,.32)) border-box;
-  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
-  box-shadow:0 26px 56px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.34),0 0 26px rgba(77,166,255,.1);
-  transition:transform .18s var(--ease),box-shadow .18s var(--ease);display:flex;flex-direction:column;
-  transform-style:preserve-3d;
-}
-.card:hover{transform:translateY(-6px);box-shadow:0 34px 66px rgba(0,0,0,.65),0 2px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.36)}
-.card:active{transform:scale(.97)}
-.card.featured{grid-column:span 2;
-  border:1px solid transparent;
-  background:linear-gradient(rgba(150,200,255,.1),rgba(150,200,255,.03)) padding-box,
-    linear-gradient(135deg,rgba(120,190,255,.5),rgba(120,190,255,.1) 58%,rgba(210,235,255,.3)) border-box;
-  box-shadow:0 22px 56px rgba(0,0,0,.6),0 0 32px rgba(77,166,255,.14),inset 0 1px 0 rgba(255,255,255,.26);
-}
-.card .art{aspect-ratio:16/10;position:relative;overflow:hidden;background-color:#0a1220;transform:translateZ(24px)}
-.card .art img{width:100%;height:100%;object-fit:cover;display:block}
-/* shared grade: cool midnight wash + bottom scrim, every card */
-.card .art::after{content:"";position:absolute;inset:0;z-index:1;
-  background:linear-gradient(180deg,rgba(8,14,28,.12),rgba(8,14,28,.12)),
-    linear-gradient(180deg,transparent 50%,rgba(4,8,16,.68));}
-.card .shine{position:absolute;top:-25%;bottom:-25%;left:0;width:42%;z-index:3;pointer-events:none;
-  transform:rotate(18deg) translateX(-320%);
-  background:linear-gradient(90deg,transparent,rgba(210,235,255,.16),transparent);}
-.js .card .shine{animation:shineSweep 7.5s ease-in-out infinite;animation-delay:var(--sd,0s)}
-@keyframes shineSweep{0%,74%{transform:rotate(18deg) translateX(-320%)}94%,100%{transform:rotate(18deg) translateX(620%)}}
-.badge{
-  position:absolute;top:10px;left:10px;z-index:4;font-size:10px;font-weight:800;letter-spacing:2px;
-  padding:6px 11px;border-radius:999px;color:var(--ice);
-  background:rgba(6,10,20,.72);border:1px solid rgba(160,210,255,.45);
-  box-shadow:0 4px 14px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.14);
-  transform:translateZ(40px);
-}
-.card .art .pbar{position:absolute;left:0;right:0;bottom:0;height:5px;z-index:4;
-  background:rgba(255,255,255,.14)}
-.card .art .pbar i{display:block;height:100%;width:0;
-  background:linear-gradient(90deg,var(--accent),#fff);border-radius:0 3px 3px 0;
-  box-shadow:0 0 8px var(--accent)}
-.card .body{padding:16px 18px 18px;flex:1;display:flex;flex-direction:column;transform:translateZ(12px)}
-.card .body h3{margin:0 0 6px;font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.015em;
-  text-shadow:0 2px 10px rgba(0,0,0,.45)}
-/* uniform copy block (3 lines max) + meta pinned to one shared baseline:
-   no more canyon of dead air under short descriptions */
-.card .body p{margin:0;color:rgba(220,235,255,.62);font-size:13.5px;line-height:1.5;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.card .meta{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:14px}
-@media (max-width:640px){.card.featured{grid-column:span 1}}
-.play{
-  display:inline-block;padding:10px 24px;border-radius:999px;font-weight:800;font-size:15px;color:#04101f;
-  background:linear-gradient(180deg,#a8d4ff,#4da6ff);
-  box-shadow:0 6px 0 rgba(20,70,130,.9),0 12px 26px rgba(77,166,255,.35),inset 0 1px 0 rgba(255,255,255,.5);
-  transition:transform .12s,box-shadow .12s;
-}
-.play:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
-.prog{font-size:12px;color:rgba(220,235,255,.55);font-weight:700}
-footer{position:relative;z-index:1;color:rgba(220,235,255,.4);font-size:13px;
-  padding:6px 20px calc(26px + env(safe-area-inset-bottom));text-align:center}
-/* Living Sky step 4: the footer goes near-silent — a whisper, not a sign */
-.studio-footer{padding-top:28px}
-.studio-footer::before{content:"";display:block;width:min(300px,58%);height:1px;margin:0 auto 18px;opacity:.45;
-  background:linear-gradient(90deg,transparent,rgba(120,175,240,.6),transparent)}
-.studio-footer .made-by{display:block;font-size:10px;letter-spacing:.42em;text-indent:.42em;
-  text-transform:uppercase;color:rgba(220,235,255,.34);margin-bottom:7px}
-.studio-footer .wordmark{display:block;font-size:16px;font-weight:700;letter-spacing:.26em;
-  text-indent:.26em;background:linear-gradient(100deg,#3d5878 0%,#7d9cc2 50%,#3d5878 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-.studio-footer .tagline{display:block;margin-top:9px;font-size:12px;letter-spacing:.18em;color:rgba(220,235,255,.28)}
-@media (max-width:380px){.games{grid-template-columns:1fr}}
-@media (prefers-reduced-transparency:reduce){
-  .card,.ed-pick,.daily{backdrop-filter:none;-webkit-backdrop-filter:none}
-  .card,.ed-pick,.daily{background:rgba(10,18,32,.96)}
-}
-
-/* keyboard focus: a visible ring on everything tappable, in the accent */
-a:focus-visible,button:focus-visible{outline:2px solid rgba(160,210,255,.9);outline-offset:3px}
-.card:focus-visible,.ed-pick:focus-visible,.feat3d:focus-visible,.chip:focus-visible,.daily:focus-visible{outline-offset:5px}
-
-/* ---------- motion: choreographed load + reveal-once ---------- */
-/* base (no-JS): everything visible. .js gates all hidden states. */
-.js .masthead{opacity:0;animation:heroRise 1s var(--ease) .05s forwards}
-.js .tag{opacity:0;animation:heroRise .9s var(--ease) .22s forwards}
-@keyframes heroRise{
-  from{opacity:0;transform:translateY(20px);filter:blur(10px)}
-  to{opacity:1;transform:none;filter:blur(0)}
-}
-.js .rv{opacity:0;transform:translateY(26px);
-  transition:opacity .55s ease-out,transform .65s var(--ease);
-  transition-delay:var(--rd,0s)}
-.js .rv.in{opacity:1;transform:none}
-
-/* ---------- footer sound toggle ---------- */
-.sndbtn{
-  display:block;margin:14px auto 0;background:none;border:none;
-  font:inherit;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
-  color:rgba(220,235,255,.55);padding:6px 12px;cursor:pointer;
-  transition:transform .15s,color .15s;
-}
-.sndbtn:active{transform:scale(.94)}
-.sndbtn.off{color:rgba(220,235,255,.28)}
-
-/* Word Well key art: painted, see art-i.css */
-
-/* Tiny Fairway key art: painted, see art-i.css */
-
-/* Castaway Cove key art: painted, see art-j.css */
-
-/* Neon Drift key art: painted, see art-j.css */
-
-/* Dead Man's Hand key art: painted, see art-fw.css */
-
-
-/* Moss & Stone key art: in-game screenshot, baked as data URI */
-
-/* ---------- Living Sky step 3: Tonight, the brightest stars ---------- */
-/* the feature is the biggest star in the sky, wearing its brass ring;
-   the marquee retired into a halo. the picks are bright orbs beneath it. */
-.featured{width:100%;max-width:1100px;padding:30px 20px 0;position:relative;z-index:1}
-/* ---------- the theatre room: a warm band the feature lives in ----------
-   the page is one cool night sky; the feature presentation is indoors.
-   the band breaks the column full-width: lamplight warmth at the center,
-   velvet folds at the edges, gold rules where the room meets the night */
-.theatre-band{
-  position:relative;z-index:1;align-self:stretch;
-  display:flex;flex-direction:column;align-items:center;
-  padding:46px 20px 42px;
-  background:
-    radial-gradient(ellipse 72% 95% at 50% 40%, rgba(255,178,96,.15), rgba(146,84,32,.06) 52%, rgba(0,0,0,0) 78%),
-    linear-gradient(180deg,#150e08 0%,#110a06 34%,#0e0805 100%);
-  border-top:1px solid rgba(217,184,119,.38);
-  border-bottom:1px solid rgba(217,184,119,.38);
-  box-shadow:inset 0 1px 0 rgba(255,224,170,.14), inset 0 -14px 34px rgba(0,0,0,.5),
-             inset 0 14px 34px rgba(0,0,0,.45);
-}
-.theatre-band::before,.theatre-band::after{
-  content:"";position:absolute;top:0;bottom:0;width:118px;pointer-events:none;
-  background:repeating-linear-gradient(90deg,
-    rgba(0,0,0,.5) 0 9px, rgba(96,26,22,.28) 9px 15px,
-    rgba(0,0,0,.12) 15px 22px, rgba(60,14,12,.2) 22px 30px);
-}
-.theatre-band::before{left:0;
-  -webkit-mask-image:linear-gradient(90deg,#000 30%,transparent 96%);
-          mask-image:linear-gradient(90deg,#000 30%,transparent 96%)}
-.theatre-band::after{right:0;transform:scaleX(-1);
-  -webkit-mask-image:linear-gradient(90deg,#000 30%,transparent 96%);
-          mask-image:linear-gradient(90deg,#000 30%,transparent 96%)}
-.theatre-band .feat3d{z-index:1}
-@media (max-width:480px){
-  .theatre-band{padding:36px 16px 34px}
-  .theatre-band::before,.theatre-band::after{width:64px}
-}
-/* the picks' half of Tonight: the band already gave the room its air */
-.featured-lobby{padding-top:0}
-.feat3d{display:flex;flex-direction:column;align-items:center;text-align:center;
-  text-decoration:none;color:#fff;position:relative;padding:6px 0 2px}
-.feat-kicker{display:block;font-size:10px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;
-  color:#d9b877;margin:0 0 20px;text-shadow:0 0 18px rgba(217,184,119,.4)}
-.feat-star{position:relative;width:196px;height:196px;display:flex;align-items:center;justify-content:center}
-.feat-star::before{content:"";position:absolute;inset:0;border-radius:50%;
-  border:1px dashed rgba(217,184,119,.28);
-  animation:ringspin 70s linear infinite}
-@keyframes ringspin{to{transform:rotate(360deg)}}
-.feat-ring{position:absolute;inset:22px;border-radius:50%;
-  border:1px solid rgba(227,195,124,.55);
-  box-shadow:0 0 24px rgba(217,184,119,.18),inset 0 0 24px rgba(217,184,119,.1)}
-/* Atlas 6: the ring catches light like metal — a conic gradient overlay
-   (masked to a 2px band on a pseudo-element, so the ring's own glow
-   shadows survive beneath it): bright at upper-left, falling off around */
-.feat-ring::after{content:"";position:absolute;inset:-1px;border-radius:50%;
-  background:conic-gradient(from 215deg,
-    rgba(217,184,119,.1), rgba(250,226,168,.95) 20%, rgba(217,184,119,.4) 46%,
-    rgba(110,82,36,.45) 71%, rgba(250,226,168,.7) 88%, rgba(217,184,119,.1));
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px));
-  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px))}
-/* Atlas 6: the patriarch core — the field stars' spherical recipe at
-   ceremonial scale: lit cap, amber mid-band, bronze base, terminator */
-/* Observatory 1: the patriarch's glint — the same optics at ceremonial
-   scale; the spikes ride the core's own twinkle, swelling and settling
-   with it like a slow breath held over the brass rings */
-.feat-core::before,.feat-core::after{content:"";position:absolute;left:50%;top:50%;
-  border-radius:999px;pointer-events:none}
-.feat-core::before{width:2px;height:116px;transform:translate(-50%,-50%);
-  background:linear-gradient(180deg,transparent,rgba(255,242,208,.6) 50%,transparent)}
-.feat-core::after{width:84px;height:2px;transform:translate(-50%,-50%);
-  background:linear-gradient(90deg,transparent,rgba(255,242,208,.48) 50%,transparent)}
-.feat-core{position:relative;width:46px;height:46px;border-radius:50%;
-  background:radial-gradient(circle at 36% 30%,
-    #ffffff 0%,#ffeec9 24%,#ffc978 54%,#e08e35 84%,#a8641c 100%);
-  box-shadow:inset -3px -5px 8px rgba(90,45,0,.55),inset 2px 3px 5px rgba(255,255,255,.55),
-             0 0 34px 12px rgba(255,205,120,.5),0 0 100px 40px rgba(255,180,90,.22);
-  animation:twinkle 4.2s ease-in-out infinite}
-.feat-name{display:block;font-family:var(--font-display);font-weight:800;
-  font-size:clamp(27px,6vw,36px);letter-spacing:-.015em;margin-top:10px;
-  text-shadow:0 2px 24px rgba(255,190,100,.25),0 2px 10px rgba(0,0,0,.5)}
-.feat-line{display:block;margin-top:8px;color:rgba(220,235,255,.72);font-size:14.5px}
-.feat-shows{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:20px}
-.feat-show{display:flex;align-items:baseline;gap:12px;max-width:92vw;
-  background:rgba(8,14,28,.55);border:1px solid rgba(200,230,255,.2);
-  border-top-color:rgba(220,240,255,.38);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  border-radius:999px;padding:10px 20px;
-  box-shadow:0 14px 30px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.22)}
-.feat-show .t{font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--sac,var(--ice));white-space:nowrap}
-.feat-show b{font-family:var(--font-display);font-weight:700;font-size:15.5px;white-space:nowrap}
-.feat-show span:last-child{font-size:12px;color:rgba(220,235,255,.6);white-space:nowrap}
-@media (max-width:480px){.feat-show span:last-child{display:none}}
-/* narrow phones: the feature's ornament steps down so the content arrives sooner */
-@media (max-width:480px){
-  .feat-star{width:152px;height:152px}
-  .feat-ring{inset:17px}
-  .feat-core{width:38px;height:38px}
-  .feat-kicker{margin-bottom:14px}
-  .feat-name{margin-top:6px}
-  .feat-shows{margin-top:14px;gap:8px}
-  .feat-cta{margin-top:16px}
-}
-.feat-cta{display:inline-flex;align-items:center;gap:10px;margin:24px 0 0;
-  font-weight:800;font-size:15px;color:#04101f;padding:12px 22px;border-radius:999px;
-  background:linear-gradient(180deg,#a8d4ff,#4da6ff);
-  box-shadow:0 6px 0 rgba(20,70,130,.9),0 12px 26px rgba(77,166,255,.35),inset 0 1px 0 rgba(255,255,255,.5);
-  transition:transform .12s,box-shadow .12s}
-/* the CTA wears the feature's gold: a miniature of the patriarch ring */
-.feat-cta::before{content:"";width:11px;height:11px;flex:none;border-radius:50%;
-  border:1.5px solid #d9b877;box-shadow:0 0 9px rgba(217,184,119,.65),inset 0 0 4px rgba(217,184,119,.5)}
-.feat3d:active .feat-cta{transform:translateY(4px);box-shadow:0 2px 0 rgba(20,70,130,.9),0 4px 12px rgba(77,166,255,.3)}
-.feat-cta span:last-child{font-size:18px}
-/* wide screens: the feature stops stacking and sits beside its star —
-   same column of content, half the vertical sprawl */
-@media (min-width:900px){
-  .feat3d{display:grid;grid-template-columns:230px minmax(0,1fr);column-gap:28px;
-    align-items:center;text-align:left;max-width:860px;margin:0 auto;padding:10px 0 2px}
-  .feat3d .feat-star{grid-column:1;grid-row:1 / span 5;align-self:center}
-  .feat3d .feat-kicker,.feat3d .feat-name,.feat3d .feat-line,.feat3d .feat-shows{grid-column:2}
-  .feat3d .feat-shows{align-items:flex-start}
-  .feat3d .feat-cta{grid-column:2;justify-self:start}
-  .feat3d .feat-name{margin-top:0}
-}
-/* tonight's picks: bright orbs — circular key art wearing its game's halo */
-.featured .ed-picks{display:flex;flex-wrap:wrap;justify-content:center;gap:38px 30px;margin-top:52px}
-.featured .ed-pick{flex-direction:column;align-items:center;text-align:center;gap:0;
-  width:min(300px,100%);padding:8px 12px;border-radius:24px;overflow:visible;
-  background:none;border-color:transparent;box-shadow:none;
-  backdrop-filter:none;-webkit-backdrop-filter:none}
-.featured .ed-pick:hover{background:none;box-shadow:none;transform:translateY(-4px)}
-.featured .ed-art{flex:none;width:88px;height:88px;border-radius:50%;margin-bottom:16px;
-  box-shadow:0 0 24px 6px color-mix(in srgb,var(--glow) 45%,transparent),
-             0 0 70px 22px color-mix(in srgb,var(--glow) 18%,transparent),
-             inset 0 0 0 1px rgba(255,255,255,.28),0 10px 24px rgba(0,0,0,.5)}
-.featured .ed-body b{font-size:18px}
-.featured .ed-body i{font-size:13px;color:rgba(220,235,255,.66);max-width:260px;margin-top:5px}
-.featured .ed-go{display:none}
-@media (max-width:640px){
-  .featured .ed-pick:nth-child(odd){transform:translateX(-14px)}
-  .featured .ed-pick:nth-child(even){transform:translateX(14px)}
-  .featured .ed-pick:active{transform:scale(.97)}
-}
-
-/* ---------- cards: 3D poster treatment (obsidian) ---------- */
-.card{--mx:50%;--my:50%}
-.card::before{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;
-  transition:opacity .25s;border-radius:inherit;
-  background:radial-gradient(560px circle at var(--mx) var(--my),rgba(210,235,255,.18),transparent 46%)}
-@media (hover:hover){.card:hover::before{opacity:1}}
-.card .body h3{position:relative;padding-bottom:10px}
-.card .body h3::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:46px;border-radius:2px;
-  background:linear-gradient(90deg,var(--accent),transparent);
-  box-shadow:0 0 10px var(--accent)}
-@media (hover:hover){
-  .card:hover{box-shadow:0 34px 70px rgba(0,0,0,.65),0 0 38px rgba(77,166,255,.22),inset 0 1px 0 rgba(255,255,255,.26)}
-}
-
-
-/* ---------- featured zone: banner + tonight picks under one roof ---------- */
-.featured .ed-picks { margin-top: 26px; }
-
-/* ---------- collection carousel: native snap strip, GPU-cheap ---------- */
-.games{
-  display:flex;flex-wrap:nowrap;gap:22px;
-  overflow-x:auto;overflow-y:hidden;
-  scroll-snap-type:x mandatory;-webkit-scroll-snap-type:x mandatory;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:none;-ms-overflow-style:none;
-  scroll-padding:0 20px;
-  -webkit-mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent);
-  mask-image:linear-gradient(to right,transparent,#000 28px,#000 calc(100% - 28px),transparent);
-}
-.games::-webkit-scrollbar{display:none}
-.games .card{
-  flex:0 0 auto;width:min(340px,80vw);
-  scroll-snap-align:center;-webkit-scroll-snap-align:center;
-}
-/* the blur is the frame-killer inside a scroller on touch: swap it for a
-   solid frosted fill (same gradient border, zero per-frame cost) */
-@media (pointer:coarse){
-  .games .card,.ed-pick{backdrop-filter:none;-webkit-backdrop-filter:none;
-    background:linear-gradient(rgba(14,24,42,.97),rgba(14,24,42,.97)) padding-box,
-    linear-gradient(160deg,rgba(220,240,255,.5),rgba(220,240,255,.12) 42%,rgba(77,166,255,.32)) border-box}
-}
-
-/* ---------- Living Sky step 2: the constellation field ---------- */
-/* the carousel retires once JS builds the field (no-JS keeps the carousel) */
-.collection.has-field .games{display:none}
-/* the floor has two faces: the constellation, or the card grid.
-   the visitor picks; the pick is remembered */
-.collection.view-grid .field{display:none}
-.viewtoggle{display:flex;gap:18px;margin-top:10px}
-.vt{background:none;border:none;padding:4px 2px;cursor:pointer;
-  font:inherit;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
-  color:rgba(220,235,255,.4);border-bottom:1px solid transparent;
-  transition:color .15s,border-color .15s}
-.vt.on{color:rgba(235,245,255,.92);border-bottom-color:rgba(160,210,255,.7)}
-.field{position:relative;height:640px;width:calc(100% - 40px);max-width:1060px;margin:0 auto 46px}
-@media(min-width:700px){.field{height:560px}}
-.field-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
-  opacity:0;transition:opacity 1.4s ease .15s}
-.field.lit .field-lines{opacity:1}
-.field-lines line{stroke:rgba(160,205,255,.18);stroke-width:1}
-/* Depth pass: filament lines — a wide, faint glow pass under a crisp core.
-   The core line's opacity is set per link in JS from its stars' depths. */
-.field-lines line.lg{stroke:rgba(150,200,255,.09);stroke-width:4}
-.field-lines line.lc{stroke:rgba(196,226,255,.9);stroke-width:1}
-/* Observatory 2: the milky wash — a band of unresolved starlight behind
-   the figure, in the ambient dust's own two colors (ice + warm white),
-   leaning with the chart's NW-SE energy. It lives inside the field (so
-   it scrolls with the chart) and below the lines: depth, never fog */
-.field::before{content:"";position:absolute;inset:-18% -12%;z-index:0;pointer-events:none;
-  transform:rotate(-19deg);
-  background:
-    radial-gradient(ellipse 62% 15% at 58% 58%,rgba(255,240,214,.05),transparent 68%),
-    radial-gradient(ellipse 78% 19% at 50% 47%,rgba(226,236,255,.075),transparent 66%),
-    radial-gradient(ellipse 96% 34% at 50% 52%,rgba(190,205,240,.04),transparent 72%)}
-.field-lines{position:relative;z-index:1}
-.star{position:absolute;transform:translate(-50%,-50%);width:64px;height:64px;
-  background:none;border:none;cursor:pointer;padding:0;z-index:2;
-  display:flex;align-items:center;justify-content:center;
-  transition:opacity .35s ease}
-/* Atlas 2 (rebalanced 2026-10-20): one spherical recipe for every core —
-   light from upper-left, a color-rich mid-band, a shaded base; the disc is
-   solid like a tiny planet, the halo (box-shadow) is what makes it a star.
-   White is only a small highlight kiss in the first few percent — at 9–14px
-   the old 42%-white mix washed the sphere's own color out of it, so the
-   body now reaches full --glow by the midpoint and the planet wears its
-   game's color, not just its glow. */
-.star .core{display:block;position:relative;z-index:1;width:var(--s,10px);height:var(--s,10px);border-radius:50%;
-  background:radial-gradient(circle at 36% 30%,
-    #ffffff 0%,
-    color-mix(in srgb,var(--glow) 25%,#ffffff) 14%,
-    var(--glow) 50%,
-    color-mix(in srgb,var(--glow) 60%,#000000) 92%,
-    color-mix(in srgb,var(--glow) 52%,#000000) 100%);
-  box-shadow:inset -1px -2px 3px rgba(0,0,0,.5),inset 1px 2px 2px rgba(255,255,255,.30),
-             0 0 14px 3px color-mix(in srgb,var(--glow) 55%,transparent),
-             0 0 44px 12px color-mix(in srgb,var(--glow) 22%,transparent);
-  animation:twinkle 3.6s ease-in-out infinite;animation-delay:var(--td,0s)}
-@keyframes twinkle{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.8);opacity:.72}}
-/* Observatory 1: diffraction glints — the artifact of seeing itself.
-   Hair-thin spikes, vertical longer than horizontal as human optics
-   makes them; white at the core, the star's own color at the tips;
-   they breathe a fraction out of phase with the core's twinkle */
-.star .glint{position:absolute;left:50%;top:50%;width:var(--gl,46px);height:var(--gl,46px);
-  transform:translate(-50%,-50%);pointer-events:none;z-index:0;
-  animation:glintBreathe 5.4s ease-in-out infinite;animation-delay:var(--gd,0s)}
-.star .glint::before,.star .glint::after{content:"";position:absolute;left:50%;top:50%;border-radius:999px}
-.star .glint::before{width:1.5px;height:100%;transform:translate(-50%,-50%);
-  background:linear-gradient(180deg,transparent 0%,
-    color-mix(in srgb,var(--glow) 38%,#ffffff) 50%,transparent 100%)}
-.star .glint::after{width:66%;height:1.5px;transform:translate(-50%,-50%);
-  background:linear-gradient(90deg,transparent 0%,
-    color-mix(in srgb,var(--glow) 38%,#ffffff) 50%,transparent 100%)}
-@keyframes glintBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.3}
-  50%{transform:translate(-50%,-50%) scale(1.12);opacity:.58}}
-/* Atlas 3: one label system — the gap is measured from the core's EDGE
-   (scaled by the star's own --s), so every label breathes the same 10px
-   regardless of magnitude; type gets presence: brighter, a touch larger,
-   wider tracking, and a whisper of the star's own color in its shadow */
-.star .lab{position:absolute;top:calc(50% + var(--s,10px) * .5 + 10px);left:50%;transform:translateX(-50%);
-  white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
-  color:rgba(228,240,255,.82);
-  text-shadow:0 1px 8px rgba(0,0,0,.9),0 0 18px rgba(0,0,0,.7),
-              0 0 14px color-mix(in srgb,var(--glow) 35%,transparent);
-  pointer-events:none;transition:color .25s}
-.star:active .core{transform:scale(1.35)}
-/* first visit: a bright star beckons with an expanding ring */
-.star .hint-ring{position:absolute;left:50%;top:50%;z-index:0;pointer-events:none;
-  width:var(--s,10px);height:var(--s,10px);border-radius:50%;
-  border:2px solid rgba(180,210,255,.85);transform:translate(-50%,-50%);
-  animation:hintRing 1.8s ease-out 3;animation-fill-mode:forwards;}
-@keyframes hintRing{0%{width:var(--s,10px);height:var(--s,10px);opacity:.9}
-  100%{width:58px;height:58px;opacity:0}}
-/* ---------- Depth pass (2026-10-20): the chart gains relief ----------
-   Magnitude is depth: t3 nearest, t1 farthest. A contact shadow pools
-   beneath each core, offset down-right (the light in this sky is upper-left),
-   darkest under the nearest planets — that shadow is what lifts the sphere
-   off the chart. The sky loop publishes its eased plate drift as --pdrift;
-   each tier's core, glint, label and shadow ride an extra slice of it via
-   the independent translate property, which composes with (never fights)
-   the twinkle and glint animations — so scrolling separates the layers:
-   near stars travel farthest, far stars least. Reduced motion never sets
-   --pdrift, so the field simply stays flat and still. */
-.star::after{content:"";position:absolute;left:50%;top:50%;z-index:0;pointer-events:none;
-  transform:translate(-50%,-50%);border-radius:50%;
-  background:radial-gradient(closest-side,rgba(0,0,0,.55),rgba(0,0,0,0));
-  width:34px;height:13px;opacity:0}
-.t3::after{opacity:.85;translate:5px calc(11px + var(--pdrift,0px)*.5)}
-.t2::after{opacity:.5;width:29px;height:11px;translate:4px 9px}
-.t1::after{opacity:.26;width:24px;height:9px;translate:3px calc(8px - var(--pdrift,0px)*.4)}
-.t3 .core,.t3 .glint,.t3 .lab{translate:0 calc(var(--pdrift,0px)*.5)}
-.t1 .core,.t1 .glint,.t1 .lab{translate:0 calc(var(--pdrift,0px)*-.4)}
-/* the touch: a pressed star lifts and flares, like it has weight and a hinge */
-.star .core{transition:scale .16s ease,filter .16s ease}
-.star:active .core{scale:1.16;filter:brightness(1.22)}
-.star.decor{pointer-events:none;cursor:default}
-.field.blooming .star{opacity:.32}
-.field.blooming .star.open{opacity:1}
-.star.open .core{animation:none;transform:scale(1.45);
-  box-shadow:0 0 22px 6px color-mix(in srgb,var(--glow) 65%,transparent),
-             0 0 60px 18px color-mix(in srgb,var(--glow) 30%,transparent)}
-.star.open .lab{color:#fff}
-/* the bloom: a star opens into its poster, centered over the field */
-.bloom{position:absolute;left:50%;top:50%;z-index:6;width:min(340px,88%);
-  transform:translate(-50%,-43%) scale(.92);opacity:0;pointer-events:none;
-  transition:opacity .28s ease,transform .38s var(--ease),box-shadow .38s ease;
-  /* Atlas 5: rim + shadow tinted by the star that opened it (--glow set in JS) */
-  border-color:color-mix(in srgb,var(--glow,#4da6ff) 42%,transparent);
-  box-shadow:0 34px 90px rgba(0,0,0,.72),
-             0 0 46px color-mix(in srgb,var(--glow,#4da6ff) 16%,transparent),
-             inset 0 1px 0 rgba(255,255,255,.28)}
-.card.bloom h3::after{background:linear-gradient(90deg,var(--glow,#4da6ff),transparent)}
-.field.blooming .bloom{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto;
-  box-shadow:0 52px 120px rgba(0,0,0,.82),
-             0 0 64px color-mix(in srgb,var(--glow,#4da6ff) 22%,transparent),
-             inset 0 1px 0 rgba(255,255,255,.28)}
-.bloom a.play{text-decoration:none}
-/* a detail view shows the whole description — no clamp in the bloom */
-.bloom .body p{display:block;-webkit-line-clamp:unset;overflow:visible}
-.bloom .bclose{position:absolute;top:8px;right:8px;z-index:8;width:32px;height:32px;
-  border-radius:50%;border:1px solid rgba(200,230,255,.35);cursor:pointer;
-  background:rgba(6,10,20,.72);color:#fff;font-size:15px;line-height:1;
-  display:flex;align-items:center;justify-content:center}
-
-
-/* ---------- header: quiet wordmark, one living line, status strip ---------- */
-.hero{padding-bottom:34px}
-.wordmark{
-  position:relative;z-index:1;margin:6px 0 16px;
-  font-size:13px;font-weight:600;letter-spacing:.58em;text-indent:.58em;
-  text-transform:lowercase;color:rgba(205,228,255,.72);
-}
-.opendoor{
-  position:relative;z-index:1;margin:0 0 24px;padding:0 12px;
-  font-size:clamp(30px,7vw,46px);font-weight:650;letter-spacing:-.015em;line-height:1.15;
-  color:#fff;text-wrap:balance;
-  text-shadow:0 2px 24px rgba(80,150,255,.25);
-}
-/* ONE button material everywhere: machined ice-blue, hard extrusion, presses in.
-   Hierarchy comes from typography and size — never from a different material. */
-/* (the Surprise Me button retired with the Mission Control refit —
-   the hero now carries a status strip instead) */
-
-/* ---------- opendoor: word rise-in, slow sheen, phase crossfade ---------- */
-.opendoor{transition:opacity .3s ease,transform .3s ease}
-.opendoor .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.08em;margin-bottom:-.08em}
-.opendoor .w > span{display:inline-block;transform:translateY(110%);animation:wordRise .7s cubic-bezier(.2,.7,.2,1) forwards;will-change:transform}
-@keyframes wordRise{to{transform:translateY(0)}}
-.opendoor.shimmer{
-  background:linear-gradient(100deg,#ffffff 35%,#b9d9ff 48%,#ffffff 62%);
-  background-size:230% 100%;
-  -webkit-background-clip:text;background-clip:text;
-  -webkit-text-fill-color:transparent;color:transparent;
-  text-shadow:none;
-  animation:sheen 7s ease-in-out infinite;
-}
-@keyframes sheen{0%,100%{background-position:115% 0}50%{background-position:-15% 0}}
-
-
-/* ================= MISSION CONTROL (2026-10-24) =================
-   The hub as one instrument: a status strip in the hero, numbered
-   modules with mono readouts, the picks as monitors, the theatre as
-   the main screen, the star chart mounted in a bezel. The sky dims
-   so the panels carry the light. The constellation itself is
-   untouched — only its mounting is new. */
-#sky{filter:brightness(.74) saturate(.88)}
-
-/* ---------- hero status strip ---------- */
-.statusbar{position:relative;z-index:1;display:inline-flex;align-items:center;gap:11px;
-  margin:2px 12px 0;padding:9px 18px;border-radius:999px;
-  border:1px solid rgba(160,200,255,.16);background:rgba(7,12,24,.5);
-  box-shadow:inset 0 1px 0 rgba(210,235,255,.09),0 10px 26px rgba(0,0,0,.35);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.16em;
-  color:rgba(198,224,252,.72);text-transform:uppercase;white-space:nowrap}
-.st-dot{width:6px;height:6px;flex:none;border-radius:50%;background:#7ce7a6;
-  box-shadow:0 0 8px rgba(124,231,166,.9);animation:stPulse 2.6s ease-in-out infinite}
-@keyframes stPulse{0%,100%{opacity:1}50%{opacity:.4}}
-.st-sep{color:rgba(160,200,255,.3)}
-@media (max-width:480px){
-  .statusbar{gap:8px;padding:8px 13px;font-size:9.5px;letter-spacing:.11em}
-}
-@media (max-width:400px){
-  .statusbar > span:nth-last-child(-n+2){display:none}
-}
-
-/* ---------- module headers: numbered, with a readout ---------- */
-.shead{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:18px}
-.shead .sub{flex-basis:100%}
-.shead .viewtoggle{flex-basis:100%}
-.shead-read{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:500;
-  letter-spacing:.22em;color:rgba(170,205,245,.5);text-transform:uppercase;white-space:nowrap}
-@media (max-width:480px){.shead-read{display:none}}
-
-/* ---------- the theatre as the main screen ---------- */
-.theatre-band{box-shadow:inset 0 1px 0 rgba(255,224,170,.14),inset 0 -14px 34px rgba(0,0,0,.5),
-  inset 0 14px 34px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.35),
-  inset 0 0 0 3px rgba(217,184,119,.07)}
-.band-tag{position:relative;z-index:1;width:100%;max-width:1060px;
-  display:flex;justify-content:space-between;gap:16px;margin:0 auto 26px;
-  font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.24em;
-  color:rgba(232,196,130,.66);text-transform:uppercase}
-@media (max-width:480px){.band-tag{margin-bottom:18px}}
-
-/* ---------- the picks as monitors ---------- */
-.featured .ed-picks{counter-reset:pick}
-.featured .ed-pick{counter-increment:pick;
-  background:rgba(9,14,26,.52);border:1px solid rgba(160,200,255,.13);
-  box-shadow:inset 0 1px 0 rgba(205,230,255,.08),0 18px 36px rgba(0,0,0,.42);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  padding:28px 16px 18px}
-.featured .ed-pick::before{content:"PICK " counter(pick,decimal-leading-zero);
-  position:absolute;top:11px;left:14px;
-  font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.2em;
-  color:rgba(170,205,245,.55)}
-.featured .ed-pick::after{content:"";position:absolute;top:13px;right:14px;
-  width:6px;height:6px;border-radius:50%;
-  background:var(--glow,#4da6ff);box-shadow:0 0 9px var(--glow,#4da6ff)}
-.featured .ed-pick:hover{border-color:rgba(170,215,255,.32)}
-
-/* ---------- the star chart, mounted ---------- */
-.field{border:1px solid rgba(160,200,255,.13);border-radius:24px;
-  background:radial-gradient(120% 100% at 50% 0%,rgba(20,34,64,.28),rgba(4,8,18,.16));
-  box-shadow:inset 0 1px 0 rgba(200,230,255,.07),inset 0 0 60px rgba(0,0,0,.35)}
-
-/* ---------- view toggle as a segmented control ---------- */
-.viewtoggle{display:inline-flex;gap:0;margin-top:12px;padding:3px;border-radius:999px;
-  border:1px solid rgba(160,200,255,.16);background:rgba(7,12,24,.5)}
-.vt{border:none;border-radius:999px;padding:6px 16px;color:rgba(198,224,252,.5)}
-.vt.on{background:rgba(110,175,255,.18);color:#eaf4ff;
-  box-shadow:inset 0 1px 0 rgba(220,240,255,.18)}
-
-/* ================= CONSOLE SHELL — PASS 1 (2026-10-24) =================
-   The hub stops being a page and becomes equipment: one chassis,
-   a sticky instrument bar, a recessed main display, and the sections
-   mounted as panels with engraved header strips. Panel INTERIORS are
-   untouched in this pass — only the shell, frames and headers. */
-.console{position:relative;z-index:1;width:min(1240px,100%);margin:22px 0;
-  display:flex;flex-direction:column;align-items:center;
-  padding:14px 14px 16px;border-radius:28px;
-  border:1px solid rgba(150,190,240,.15);
-  background:linear-gradient(180deg,#0b1120 0%,#070c16 55%,#05080f 100%);
-  box-shadow:0 44px 100px rgba(0,0,0,.6),inset 0 1px 0 rgba(220,240,255,.07),
-    inset 0 0 90px rgba(0,0,0,.38)}
-.console>section,.console>main,.console>footer{width:100%;max-width:none}
-.console section::before,.console main.collection::before{display:none}
-.console section,.console main,.console .theatre-band,.console .display{scroll-margin-top:86px}
-
-/* ---------- instrument bar ---------- */
-.console .hero{padding:78px 0 0;overflow:visible;text-align:left;width:100%;z-index:95}
-.topbar{position:fixed;top:10px;left:50%;transform:translateX(-50%);width:min(1210px,calc(100% - 48px));z-index:90;display:flex;align-items:center;gap:12px;
-  padding:9px 12px;border-radius:14px;
-  border:1px solid rgba(150,190,240,.14);
-  background:linear-gradient(180deg,#111a2c,#0a111f);
-  box-shadow:inset 0 1px 0 rgba(220,240,255,.08),0 12px 26px rgba(0,0,0,.42)}
-.topbar .wordmark{margin:0;font-family:var(--font-display);font-weight:700;font-size:13px;
-  letter-spacing:.32em;text-transform:uppercase;color:#d5e8ff;
-  padding:9px 12px 9px 15px;border-radius:9px;white-space:nowrap;
-  border:1px solid rgba(150,190,240,.17);
-  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.012));
-  box-shadow:inset 0 1px 0 rgba(220,240,255,.12),inset 0 -8px 14px rgba(0,0,0,.4)}
-.topbar .statusbar{margin:0 0 0 auto;padding:0;border-radius:10px;overflow:hidden;gap:0;
-  border:1px solid rgba(150,190,240,.13);background:rgba(3,6,12,.55);
-  box-shadow:inset 0 2px 9px rgba(0,0,0,.55);backdrop-filter:none;-webkit-backdrop-filter:none}
-.topbar .statusbar .st-item{padding:8px 12px;border-left:1px solid rgba(150,190,240,.10)}
-.topbar .statusbar .st-dot{margin:0 2px 0 12px}
-.topbar .sndbtn{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.18em;
-  text-transform:uppercase;color:#dcecfb;padding:10px 13px;border-radius:9px;cursor:pointer;
-  border:1px solid rgba(150,190,240,.18);
-  background:linear-gradient(180deg,rgba(120,180,255,.16),rgba(120,180,255,.05));
-  box-shadow:inset 0 1px 0 rgba(220,240,255,.14)}
-.topbar .sndbtn.off{opacity:.5}
-@media (max-width:860px){.topbar .statusbar .st-loc{display:none}}
-@media (max-width:640px){.topbar .statusbar .st-units{display:none}}
-@media (max-width:480px){
-  .topbar{gap:8px;padding:8px 9px;top:8px;width:calc(100% - 20px)}
-  .console .hero{padding-top:84px}
-  .topbar .wordmark{font-size:11px;letter-spacing:.22em;padding:8px 9px 8px 11px}
-  .topbar .statusbar #stPhase{display:none}
-  .topbar .statusbar .st-item{padding:8px 9px}
-  .topbar .sndbtn{padding:9px 10px;font-size:9.5px}
-}
-
-/* ---------- main display: the living line, recessed ---------- */
-.display{position:relative;margin-top:12px;border-radius:16px;overflow:hidden;
-  padding:30px 28px 34px;
-  border:1px solid rgba(150,190,240,.10);
-  background:linear-gradient(180deg,#04070d,#060b14);
-  box-shadow:inset 0 4px 22px rgba(0,0,0,.78),inset 0 -1px 0 rgba(200,230,255,.05)}
-.display::after{content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(115deg,rgba(255,255,255,.05),transparent 42%)}
-.display .opendoor{margin:0;text-align:left;max-width:15em;
-  font-size:clamp(26px,5.2vw,44px);line-height:1.16}
-
-/* ---------- panels: mounted units with engraved header strips ---------- */
-.console>section,.console>main.collection{
-  margin-top:12px;padding:0;border-radius:18px;
-  border:1px solid rgba(150,190,240,.11);
-  background:linear-gradient(180deg,rgba(22,33,55,.62),rgba(11,17,31,.62));
-  box-shadow:inset 0 1px 0 rgba(215,235,255,.05),0 16px 34px rgba(0,0,0,.30)}
-.console .shead{margin:0;padding:14px 18px 13px 26px;align-items:baseline;
-  border-bottom:1px solid rgba(150,190,240,.10);border-radius:18px 18px 0 0;
-  background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,0) 75%)}
-.console .shead h2{font-size:14px;font-weight:600;letter-spacing:.2em;
-  text-transform:uppercase;color:#e8f1fd}
-.console .shead h2::before{font-family:var(--mono);font-size:11px;font-weight:500;
-  letter-spacing:.14em;color:rgba(140,180,230,.55);margin-right:10px}
-.console section.featured .shead h2::before{content:"01 ·"}
-.console #continue .shead h2::before{content:"02 ·"}
-.console main.collection .shead h2::before{content:"03 ·"}
-.console .shead .sub{font-size:12.5px;color:rgba(190,210,235,.55);margin-top:5px}
-.console .rail{padding:22px 18px 28px}
-.console .featured .ed-picks{margin-top:0;padding:22px 18px 28px}
-.console .field{width:calc(100% - 28px);margin:16px auto 20px}
-.console .games{width:calc(100% - 28px);margin:16px auto 20px}
-
-/* ---------- the theatre, mounted as the console's screen ---------- */
-.console .theatre-band{align-self:center;width:calc(100% - 28px);margin:12px auto 0;
-  border-radius:18px;overflow:hidden;
-  border:1px solid rgba(217,184,119,.30);
-  box-shadow:inset 0 1px 0 rgba(255,224,170,.14),inset 0 -14px 34px rgba(0,0,0,.5),
-    inset 0 14px 34px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.35),
-    inset 0 0 0 3px rgba(217,184,119,.07),0 16px 34px rgba(0,0,0,.34)}
-
-/* ---------- footer: the maker's plate ---------- */
-.console .studio-footer{margin-top:12px;padding:24px 20px 28px;border-radius:18px;
-  border:1px solid rgba(150,190,240,.09);
-  background:linear-gradient(180deg,rgba(16,24,42,.5),rgba(8,12,22,.5))}
-
-/* ---------- chassis goes full-bleed on phones ---------- */
-@media (max-width:760px){
-  .console{margin:0;padding:10px 10px 12px;border-radius:0;border:none;
-    box-shadow:inset 0 0 90px rgba(0,0,0,.38)}
-}
-
-/* Pass 1 small-screen strip fixes: the readout leaves the strip (no room),
-   and the screen tag must fit the inset screen on one line */
-@media (max-width:560px){
-  .console .shead-read{display:none}
-  .band-tag{font-size:9px;letter-spacing:.18em}
-  .band-tag span{white-space:nowrap}
-}
-
-/* ================= CONSOLE INTERIORS — PASS 2: PANEL FACES =================
-   Grounded in the Apollo main display console: sub-panels are bolted
-   plates (a fastener at every corner), faces are panel-grey rather
-   than blue-black, seams are machined grooves, legends are engraved. */
-.console{background:linear-gradient(180deg,#0c1119 0%,#070a10 55%,#05070c 100%)}
-.console>section,.console>main.collection{
-  background-image:
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 2px,#222933 3px,transparent 3.6px),
-    linear-gradient(180deg,rgba(27,33,46,.70),rgba(13,16,24,.70));
-  background-position:10px 10px,calc(100% - 10px) 10px,10px calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),0 0;
-  background-size:8px 8px,8px 8px,8px 8px,8px 8px,100% 100%;
-  background-repeat:no-repeat;
-  box-shadow:inset 0 1px 0 rgba(215,235,255,.05),inset 0 0 0 1px rgba(0,0,0,.22),0 16px 34px rgba(0,0,0,.30)}
-.console .display{
-  background-image:
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    linear-gradient(180deg,#04070d,#060b14);
-  background-position:10px 10px,calc(100% - 10px) 10px,10px calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),0 0;
-  background-size:8px 8px,8px 8px,8px 8px,8px 8px,100% 100%;
-  background-repeat:no-repeat}
-.console .shead{box-shadow:inset 0 -1px 0 rgba(0,0,0,.55),inset 0 -2px 0 rgba(220,240,255,.045)}
-.console .shead h2{text-shadow:0 1px 0 rgba(0,0,0,.65)}
-.console .studio-footer{
-  background-image:
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    radial-gradient(circle at 50% 50%,#c8d6e8 0 1px,#5d6a7c 2px,#1d232e 3px,transparent 3.6px),
-    linear-gradient(180deg,rgba(17,22,34,.55),rgba(8,11,19,.55));
-  background-position:10px 10px,calc(100% - 10px) 10px,10px calc(100% - 10px),calc(100% - 10px) calc(100% - 10px),0 0;
-  background-size:8px 8px,8px 8px,8px 8px,8px 8px,100% 100%;
-  background-repeat:no-repeat}
-.console .studio-footer .wordmark,.console .studio-footer .made-by{
-  text-shadow:0 1px 0 rgba(0,0,0,.7),0 -1px 0 rgba(225,242,255,.05)}
-
-/* ================= PASS 3: THE SCREENS' CONTENT =================
-   The main display gains a caution-and-warning style tile block —
-   legend over value, the Apollo C/W matrix in miniature. The theatre
-   program becomes a printed board: ruled rows, mono times. */
-.console .display{display:flex;align-items:center;gap:28px}
-.display .opendoor{flex:1 1 auto;min-width:0}
-.dtiles{display:grid;grid-template-columns:repeat(2,minmax(116px,auto));gap:8px;flex:none}
-.dtile{border:1px solid rgba(150,190,240,.16);border-radius:6px;padding:8px 12px 9px;
-  background:linear-gradient(180deg,rgba(22,30,48,.85),rgba(8,12,20,.85));
-  box-shadow:inset 0 1px 0 rgba(215,235,255,.06),inset 0 2px 8px rgba(0,0,0,.45)}
-.dt-leg{display:block;font-family:var(--mono);font-size:8.5px;font-weight:500;
-  letter-spacing:.24em;text-transform:uppercase;color:rgba(150,185,230,.55)}
-.dt-val{display:block;margin-top:3px;font-family:var(--mono);font-size:13px;font-weight:500;
-  letter-spacing:.08em;color:#e9f3ff;text-transform:uppercase;white-space:nowrap}
-@media (max-width:760px){
-  .console .display{flex-direction:column;align-items:flex-start;gap:20px}
-  .dtiles{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
-}
-/* ---------- the program board ---------- */
-.console .feat-shows{gap:0;align-items:stretch;width:100%;
-  border:1px solid rgba(232,196,130,.22);border-radius:12px;overflow:hidden;
-  background:rgba(5,8,14,.45);box-shadow:inset 0 2px 10px rgba(0,0,0,.4)}
-.console .feat-show{border:none;border-bottom:1px solid rgba(232,196,130,.14);
-  border-radius:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;
-  box-shadow:none;padding:11px 16px;max-width:none;width:100%}
-.console .feat-show:last-child{border-bottom:none}
-.console .feat-show .t{font-family:var(--mono);font-weight:500;font-size:11.5px;min-width:62px}
-.console .feat-show span:last-child{font-family:var(--mono);font-size:11px;
-  letter-spacing:.06em;color:rgba(226,205,165,.55);margin-left:auto;text-align:right}
-.console .feat-kicker{display:flex;align-items:center;gap:12px}
-.console .feat-kicker::before{content:"";flex:0 0 26px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(232,196,130,.6))}
-.console .feat-kicker::after{content:"";flex:1;height:1px;
-  background:linear-gradient(90deg,rgba(232,196,130,.6),transparent)}
-.console .feat3d .feat-cta{border-radius:12px;letter-spacing:.03em}
-@media (max-width:700px){
-  .console .feat-shows{align-items:stretch}
-  .console .feat-show .t{min-width:56px}
-}
-@media (max-width:560px){
-  .console .feat-show{flex-wrap:wrap}
-  .console .feat-show span:last-child{margin-left:68px;text-align:left;
-    flex-basis:calc(100% - 68px);white-space:normal}
-}
-
-/* ================= PASS 4: PICKS AS GAUGED MONITORS =================
-   Apollo's round instruments sit in machined bezel collars — so do
-   the picks' discs now. Corner fasteners and a legend footer finish
-   each monitor. */
-.featured .ed-pick{
-  background-image:
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px);
-  background-position:7px 7px,calc(100% - 7px) 7px,7px calc(100% - 7px),calc(100% - 7px) calc(100% - 7px);
-  background-size:6px 6px;background-repeat:no-repeat}
-.featured .ed-art{position:relative;
-  box-shadow:0 0 0 5px #0b111d,0 0 0 6px rgba(170,205,245,.22),
-    0 0 24px 6px color-mix(in srgb,var(--glow) 45%,transparent),
-    0 0 70px 22px color-mix(in srgb,var(--glow) 18%,transparent),
-    inset 0 0 0 1px rgba(255,255,255,.28),0 10px 24px rgba(0,0,0,.5)}
-.featured .ed-art::after{content:"";position:absolute;inset:0;border-radius:50%;
-  background:linear-gradient(135deg,rgba(255,255,255,.17),transparent 46%);pointer-events:none}
-.featured .ed-go{display:flex;align-items:center;width:100%;margin-top:15px;
-  padding-top:11px;border-top:1px solid rgba(150,190,240,.10);
-  font-family:var(--mono);font-size:13px;color:rgba(170,205,245,.65)}
-.featured .ed-go::before{content:"OPEN UNIT";font-size:9px;font-weight:500;
-  letter-spacing:.24em;color:rgba(150,185,230,.5);margin-right:auto}
-
-/* ================= PASS 5: CONTINUE AS TELEMETRY SLOTS =================
-   The warm orbs retire. Each in-progress game is a rectangular slot:
-   key art in a collared window, legend + mono value, and progress as
-   a segmented strip gauge — Apollo's strip instruments, miniaturized. */
-.console .rail{gap:14px}
-.console .chip{flex:0 0 auto;width:256px;height:auto;display:flex;align-items:center;
-  gap:12px;padding:12px;border-radius:14px;overflow:hidden;text-align:left;
-  border:1px solid rgba(150,190,240,.13);
-  background:linear-gradient(180deg,rgba(24,32,48,.78),rgba(11,16,27,.78));
-  box-shadow:inset 0 1px 0 rgba(215,235,255,.06),0 12px 24px rgba(0,0,0,.35);
-  animation:none}
-.console .chip .win{flex:0 0 54px;width:54px;height:54px;border-radius:9px;
-  background-size:cover;background-position:center;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 0 0 3px #0b111d,0 0 0 4px rgba(170,205,245,.16)}
-.console .chip .info{position:static;transform:none;flex:1;min-width:0}
-.console .chip .info b{font-family:var(--font-display);font-size:13.5px;font-weight:600;
-  letter-spacing:.02em;text-shadow:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.console .chip .info span{display:block;margin:3px 0 7px;font-family:var(--mono);
-  font-size:10.5px;font-weight:500;color:rgba(190,220,250,.78);text-shadow:none;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.console .chip .meter{position:relative;height:6px;border-radius:2px;overflow:hidden;
-  background:rgba(150,190,240,.13)}
-.console .chip .meter i{display:block;height:100%;
-  background:linear-gradient(90deg,#57b6ff,#9fd8ff)}
-.console .chip .meter::after{content:"";position:absolute;inset:0;
-  background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(4,8,14,.85) 9px 10px)}
-@media (max-width:480px){.console .chip{width:228px}}
-
-/* ================= PASS 6: GRID CARDS AS SPEC PLATES =================
-   In grid view each game is a bolted spec plate: serial legend,
-   key art in a bezel screen, segmented progress, a ruled meta row. */
-.console .games{counter-reset:unit;padding:18px 18px 22px}
-.console .card{counter-increment:unit;border:1px solid rgba(150,190,240,.13);
-  border-radius:16px;backdrop-filter:none;-webkit-backdrop-filter:none;
-  background-image:
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
-    radial-gradient(circle at 50% 50%,#d9e4f2 0 1px,#6d7a8c 1.6px,#222933 2.4px,transparent 3px),
-    linear-gradient(180deg,rgba(25,33,49,.92),rgba(12,17,28,.92));
-  background-position:7px 7px,calc(100% - 7px) 7px,7px calc(100% - 7px),calc(100% - 7px) calc(100% - 7px),0 0;
-  background-size:6px 6px,6px 6px,6px 6px,6px 6px,100% 100%;
-  background-repeat:no-repeat;
-  box-shadow:inset 0 1px 0 rgba(215,235,255,.06),0 16px 32px rgba(0,0,0,.4)}
-.console .card .art{margin:10px 10px 0;border-radius:10px;
-  box-shadow:inset 0 0 0 1px rgba(210,235,255,.14),inset 0 2px 12px rgba(0,0,0,.45)}
-.console .card .badge{font-family:var(--mono);font-size:8.5px;font-weight:500;
-  letter-spacing:.2em;text-transform:uppercase;border-radius:5px;
-  background:rgba(4,8,14,.8);border:1px solid rgba(200,230,255,.25);color:#dcecfb}
-.console .card .art .pbar{height:6px;background:rgba(150,190,240,.13)}
-.console .card .art .pbar i{background:linear-gradient(90deg,#57b6ff,#9fd8ff)}
-.console .card .art .pbar::after{content:"";position:absolute;inset:0;
-  background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(4,8,14,.85) 9px 10px)}
-.console .card .body::before{content:"UNIT " counter(unit,decimal-leading-zero);
-  font-family:var(--mono);font-size:8.5px;font-weight:500;letter-spacing:.26em;
-  color:rgba(150,185,230,.5);margin-bottom:6px}
-.console .card .meta{border-top:1px solid rgba(150,190,240,.10);padding-top:12px}
-.console .card .play{font-family:var(--mono);font-size:10px;font-weight:500;
-  letter-spacing:.2em;text-transform:uppercase;color:#dcecfb;
-  border:1px solid rgba(150,190,240,.22);border-radius:7px;padding:6px 11px;
-  background:linear-gradient(180deg,rgba(120,180,255,.13),rgba(120,180,255,.04))}
-.console .card .prog{font-family:var(--mono);font-size:10.5px;
-  color:rgba(190,220,250,.78);text-align:right}
