@@ -9,9 +9,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=optional" rel="stylesheet">
-<link rel="stylesheet" href="./hub.css?v=55">
+<link rel="stylesheet" href="./hub.css?v=57">
+<link rel="stylesheet" href="./art-a.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-b.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-c.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-d.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-i.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-l.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-cr.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-dm.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-sd.css" media="print" onload="this.media='all'">
 </head>
 <body>
+<script>try{if(!sessionStorage.getItem('gz_boot')){document.documentElement.classList.add('boot');}}catch(e){}</script>
 
 <div class="strip">
   <div class="lamp" aria-hidden="true"></div>
@@ -22,6 +32,8 @@
     <div class="ro"><div class="lbl">Local</div><div class="val" id="loc">--:--</div></div>
   </div>
 </div>
+
+<div class="capcom" aria-label="Flight log"><span class="cc-tag">Flight Log</span><span class="cc-line" id="ccLine"></span></div>
 
 <div class="deck">
 
@@ -71,6 +83,6 @@
 
 <footer class="studio"><span class="lbl">Made by</span><span class="wm">WORKMAN DESIGNS</span><span class="lbl">More games coming</span></footer>
 
-<script src="./hub.js?v=58"></script>
+<script src="./hub.js?v=60"></script>
 </body>
 </html>

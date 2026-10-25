@@ -98,10 +98,36 @@ var SHORT = {'candy-cascade':'CANDY','bubble-hex':'BUBBLE','bloom-defense':'BLOO
   'maze-trace':'ARROW','word-well':'WELL','pdawg':'PDAWG','life-story':'LIFE','reel-empire':'REEL',
   'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS'};
 function xy(p) { return (window.innerWidth > window.innerHeight) ? [p[2], p[3]] : [p[0], p[1]]; }
-function twkStyle(id, dim) {
+function twkStyle(id, dim, lit) {
   var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
   var dur = (2.6 + (h % 23) / 10).toFixed(2), del = (-(h % 40) / 10).toFixed(2);
-  return 'animation:' + (dim ? 'twkDim ' : 'twk ') + dur + 's ease-in-out ' + del + 's infinite';
+  return 'animation:' + (lit ? 'twkLit ' : dim ? 'twkDim ' : 'twk ') + dur + 's ease-in-out ' + del + 's infinite';
+}
+
+/* the figures, as union-find over the link graph — a figure is lit when
+   every game in it has flight data */
+function figureStats() {
+  var parent = {};
+  function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+  Object.keys(POS).forEach(function (id) { parent[id] = id; });
+  LINKS.forEach(function (pr) { var a = find(pr[0]), b = find(pr[1]); if (a !== b) parent[a] = b; });
+  var comps = {}, rootOf = {};
+  GAMES.forEach(function (g) { var r = find(g.id); rootOf[g.id] = r; (comps[r] = comps[r] || []).push(g.id); });
+  var total = 0, done = 0, doneRoots = {};
+  Object.keys(comps).forEach(function (r) {
+    var ids = comps[r];
+    if (ids.length < 2) return;
+    total++;
+    if (ids.every(function (id) { return !!progressFor(id); })) { done++; doneRoots[r] = true; }
+  });
+  return { done: done, total: total, doneRoots: doneRoots, rootOf: rootOf };
+}
+function isCharged(id, fs) {
+  if (byId(id)) return !!progressFor(id);
+  return LINKS.some(function (pr) {
+    var other = pr[0] === id ? pr[1] : pr[1] === id ? pr[0] : null;
+    return other && byId(other) && !!progressFor(other);
+  });
 }
 
 /* ---------- progress: the readers the hub has always used ---------- */
@@ -250,6 +276,8 @@ function moonSvg(MXY) {
 var pxEls = null, pxT = 0, pxRaf = 0;
 function pxApply() {
   pxRaf = 0;
+  var fp = document.querySelector('.feed .feedpar');
+  if (fp) fp.style.transform = 'translateY(' + (pxT * -3).toFixed(1) + 'px)';
   if (!pxEls) return;
   var t = pxT;
   pxEls.far.setAttribute('transform', 'translate(' + (t * -1.1).toFixed(2) + ' ' + (t * .8).toFixed(2) + ')');
@@ -258,7 +286,12 @@ function pxApply() {
 }
 function pxMeasure() {
   var svg = document.getElementById('trkr');
-  if (!svg) { pxEls = null; return; }
+  if (!svg) {
+    pxEls = null;
+    pxT = Math.max(-1, Math.min(1, (window.scrollY - 200) / 500));
+    if (!pxRaf) pxRaf = requestAnimationFrame(pxApply);
+    return;
+  }
   var far = document.getElementById('bgFar'), near = document.getElementById('bgNear'), neb = document.getElementById('nebG');
   if (!far || !near || !neb) { pxEls = null; return; }
   pxEls = { far: far, near: near, neb: neb };
@@ -312,15 +345,19 @@ function showTracker() {
   var MXY = xy(MOONRAW);
   var bgFar = '<g id="bgFar">' + bgStars(30, 11, .28, .55, .10, .26) + '</g>';
   var bgNear = '<g id="bgNear">' + bgStars(15, 97, .5, .85, .22, .42) + '</g>';
+  var fs = figureStats();
   var lines = LINKS.map(function (pr) {
     var a = xy(POS[pr[0]]), b = xy(POS[pr[1]]);
-    return '<line class="lk" pathLength="1" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
+    var cls = 'lk';
+    if (isCharged(pr[0], fs) && isCharged(pr[1], fs)) cls += fs.doneRoots[fs.rootOf[pr[0]]] && fs.rootOf[pr[0]] === fs.rootOf[pr[1]] ? ' done' : ' hot';
+    return '<line class="' + cls + '" pathLength="1" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
   }).join('');
   var stars = Object.keys(POS).map(function (id) {
     var raw = POS[id], p = xy(raw).concat([raw[4]]), r = [0, 0.85, 1.2, 1.7][p[2]], g = byId(id);
     var glare = Math.hypot(p[0] - MXY[0], p[1] - MXY[1]) < 17;
     if (g) starXY[id] = [p[0], p[1]];
     if (!g) return '<circle class="star" style="' + twkStyle(id, true) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (r * .85) + '" opacity="' + (glare ? .38 : .75) + '"/>';
+    var lit = !!progressFor(id);
     var crowded = Object.keys(POS).some(function (o) {
       if (o === id) return false; var q = xy(POS[o]);
       return q[0] > p[0] && q[0] - p[0] < 19 && Math.abs(q[1] - p[1]) < 6;
@@ -341,8 +378,8 @@ function showTracker() {
     var delay = acquiredOnce ? 0 : (120 + (3 - p[2]) * 110);
     return '<g class="starwrap" style="animation-delay:' + delay + 'ms" data-call="' + id + '" role="button" tabindex="0" aria-label="' + g.name + '">' +
       '<circle class="halo" cx="' + p[0] + '" cy="' + p[1] + '" r="6.5"/>' +
-      '<circle class="star" style="' + twkStyle(id, false) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"' + (glare ? ' opacity=".55"' : '') + '/>' + ticks + tgt +
-      '<text class="slab" x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '">' + SHORT[id] + '</text></g>';
+      '<circle class="star" style="' + twkStyle(id, false, lit) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (lit ? (r * 1.15).toFixed(2) : r) + '"' + (glare ? ' opacity=".55"' : '') + '/>' + ticks + tgt +
+      '<text class="slab' + (lit ? ' lit' : '') + '" x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '">' + SHORT[id] + '</text></g>';
   }).join('');
   main.innerHTML =
     '<div class="trkr-wrap"><div class="trkr-head"><span><b>STR TRKR</b> · FIX: LIVE</span><span id="trkrClock"></span></div>' +
@@ -403,8 +440,12 @@ function callUp(id) {
     '<dt>DATA</dt><dd class="dataVal"></dd>';
   var bar = pr ? '<div class="bar"><i style="width:' + Math.round(pr.frac * 100) + '%"></i></div>' : '';
   var verb = id === 'cathedral' ? 'LISTEN' : 'PLAY';
+  var cssArt = id === 'cathedral' || id === 'dominoes' || id === 'starlight-drums';
+  var artChild = id === 'cathedral' ? '<i class="cr2"></i>' : id === 'dominoes' ? '<i class="dm2"></i>' : '';
+  var feed = '<div class="feed" aria-hidden="true"><div class="feedpar"><div class="artimg art-' + id + (cssArt ? ' cssart' : '') + '">' + artChild + '</div></div>' +
+    '<div class="feedshade"></div><div class="feedhud"><span>EXT CAM · ' + SHORT[id] + '</span><span class="fl">FEED &#9679;</span></div><div class="feedband"></div></div>';
   main.innerHTML =
-    '<div class="gpage"><svg class="wm" viewBox="0 0 24 24" aria-hidden="true">' + g.glyph + '</svg><div class="cls">UNIT CALLED UP // MDU 1</div>' +
+    '<div class="gpage"><svg class="wm" viewBox="0 0 24 24" aria-hidden="true">' + g.glyph + '</svg><div class="cls">UNIT CALLED UP // MDU 1</div>' + feed +
     '<h2>' + g.name + '</h2><p class="blurb">' + g.blurb + '</p>' +
     '<dl class="tele">' + tele + '</dl>' + bar +
     '<div class="execrow"><button class="key rtn" id="rtnBtn">&#9664; TRKR</button>' +
@@ -446,10 +487,17 @@ function callUp(id) {
 /* the tracker repaints itself every half minute while it is up */
 setInterval(function () {
   var sw = document.querySelector('#trkr .sweep');
-  if (!sw) return;
-  sw.classList.remove('go');
-  void sw.getBoundingClientRect();
-  sw.classList.add('go');
+  if (sw) {
+    sw.classList.remove('go');
+    void sw.getBoundingClientRect();
+    sw.classList.add('go');
+  }
+  var fb = document.querySelector('.feed .feedband');
+  if (fb) {
+    fb.classList.remove('go');
+    void fb.getBoundingClientRect();
+    fb.classList.add('go');
+  }
 }, 30000);
 
 /* ---------- MDU 2: flight plan (editorial picks; AI replaces when it lands) ---------- */
@@ -514,8 +562,10 @@ setInterval(function () {
   GAMES.forEach(function (g) { var pr = progressFor(g.id); if (pr) rows.push({ g: g, pr: pr }); });
   if (!rows.length) {
     var sec = el.closest('section'); if (sec) sec.classList.add('sysfold');
+    var fs0 = figureStats();
     el.innerHTML = '<p class="nodata"><b>NO DATA.</b><br>No flights logged on this device yet. Play any unit and its telemetry reports here — scores, levels, streaks, as live values.</p>' +
       '<div class="fleet"><div class="frow"><span>UNITS REPORTING</span><b>0 / ' + GAMES.length + '</b></div>' +
+      '<div class="frow"><span>FIGURES LIT</span><b>' + fs0.done + ' / ' + fs0.total + '</b></div>' +
       '<div class="frow"><span>DAILY RESET</span><b id="fleetReset">--:--:--</b></div></div>';
   } else {
     el.innerHTML = rows.map(function (r) {
@@ -543,7 +593,9 @@ setInterval(function () {
         })(t0);
       });
     }
+    var fsx = figureStats();
     fleetHtml = '<div class="fleet"><div class="frow"><span>UNITS REPORTING</span><b>' + rows.length + ' / ' + GAMES.length + '</b></div>' +
+      '<div class="frow"><span>FIGURES LIT</span><b>' + fsx.done + ' / ' + fsx.total + '</b></div>' +
       '<div class="frow"><span>DAILY RESET</span><b id="fleetReset">--:--:--</b></div></div>';
     el.innerHTML += fleetHtml;
     if ('IntersectionObserver' in window) {
@@ -611,6 +663,9 @@ function tickClock() {
     var rs = Math.max(0, Math.floor((mid - d) / 1000));
     fr.textContent = pad(Math.floor(rs / 3600)) + ':' + pad(Math.floor(rs / 60) % 60) + ':' + pad(rs % 60);
   }
+  var hh = d.getHours() + d.getMinutes() / 60;
+  var w = hh >= 5 && hh < 7.5 ? 'dawn' : hh >= 7.5 && hh < 17.5 ? 'day' : hh >= 17.5 && hh < 21.5 ? 'eve' : 'night';
+  if (document.body.getAttribute('data-watch') !== w) document.body.setAttribute('data-watch', w);
   var tc = document.getElementById('trkrClock');
   if (tc) tc.textContent = 'LOC ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
 }
@@ -721,6 +776,113 @@ if (sndKey) sndKey.addEventListener('click', function () {
   tick();
 });
 renderSnd();
+
+/* ---------- flight log: the deck reports, in rotation, only what's true ---------- */
+var ccTimer = null, ccIdx = 0;
+function ccEntries() {
+  var out = [];
+  GAMES.forEach(function (g) { var pr = progressFor(g.id); if (pr) out.push(g.name.toUpperCase() + ' · ' + cleanLabel(pr.label).toUpperCase()); });
+  var m = moonInfo();
+  out.push('MOON · ' + m.name + ' · ' + Math.round(m.illum * 100) + '% LIT');
+  var d = new Date(), mid = new Date(d); mid.setHours(24, 0, 0, 0);
+  var rs = Math.max(0, Math.floor((mid - d) / 1000));
+  out.push('DAILY RESET IN ' + pad(Math.floor(rs / 3600)) + ':' + pad(Math.floor(rs / 60) % 60) + ':' + pad(rs % 60));
+  var names = Array.prototype.map.call(document.querySelectorAll('#fpln .opsrow .nm'), function (e) { return e.textContent; });
+  if (names.length) out.push('TONIGHT\'S OPS · ' + names.join(' / ').toUpperCase());
+  var rep = GAMES.filter(function (g) { return !!progressFor(g.id); }).length;
+  out.push('FLEET · ' + rep + ' OF ' + GAMES.length + ' UNITS REPORTING');
+  var fs = figureStats();
+  if (fs.total) out.push('FIGURES LIT · ' + fs.done + ' OF ' + fs.total);
+  return out;
+}
+function ccType(text, done) {
+  var el = document.getElementById('ccLine');
+  if (!el) { if (done) done(); return; }
+  if (document.hidden) { el.textContent = text; if (done) done(); return; }
+  el.textContent = '';
+  var i = 0;
+  (function step() {
+    el.textContent = text.slice(0, ++i);
+    if (i < text.length) ccTimer = setTimeout(step, 9);
+    else if (done) done();
+  })();
+}
+function ccRotate() {
+  if (window.__systest) return;
+  var es = ccEntries();
+  if (!es.length) return;
+  var el = document.getElementById('ccLine');
+  if (el) el.classList.remove('amb');
+  ccType(es[ccIdx++ % es.length], function () { ccTimer = setTimeout(ccRotate, 5400); });
+}
+function ccSay(text, holdMs, amber) {
+  clearTimeout(ccTimer);
+  var el = document.getElementById('ccLine');
+  if (el) el.classList.toggle('amb', !!amber);
+  ccType(text, function () {
+    ccTimer = setTimeout(function () { if (!window.__systest) ccRotate(); }, holdMs || 1500);
+  });
+}
+(function ccBoot() {
+  if (document.documentElement.classList.contains('boot')) { setTimeout(ccBoot, 300); return; }
+  ccRotate();
+})();
+
+/* ---------- power-on: the deck wakes in order, once a visit ---------- */
+(function bootSeq() {
+  if (!document.documentElement.classList.contains('boot')) return;
+  var subs = document.querySelectorAll('.subrow .mdu');
+  var els = [document.querySelector('.capcom'), document.getElementById('mdu1'), subs[0], subs[1],
+    document.querySelector('.opsbar'), document.querySelector('.bankwrap'), document.querySelector('.studio')];
+  var timers = [], done = false;
+  function finish() {
+    if (done) return; done = true;
+    timers.forEach(clearTimeout);
+    els.forEach(function (e) { if (e) e.classList.add('wake'); });
+    document.documentElement.classList.remove('boot');
+    try { sessionStorage.setItem('gz_boot', '1'); } catch (e) {}
+  }
+  els.forEach(function (e, i) { if (e) timers.push(setTimeout(function () { e.classList.add('wake'); }, 220 + i * 200)); });
+  timers.push(setTimeout(finish, 220 + els.length * 200 + 400));
+  window.addEventListener('pointerdown', function h() { finish(); window.removeEventListener('pointerdown', h); });
+})();
+
+/* ---------- systems check: hold the wordmark ---------- */
+function sysCheck() {
+  if (window.__systest) return;
+  window.__systest = true;
+  var subs = document.querySelectorAll('.subrow .mdu');
+  var targets = [document.getElementById('mdu1'), subs[0], subs[1], document.querySelector('.strip'), document.querySelector('.opsbar')];
+  var steps = ['MDU 1', 'MDU 2', 'MDU 3', 'AUDIO', 'UPLINK'];
+  ccSay('SYS CHECK IN PROGRESS', 800);
+  steps.forEach(function (s, i) {
+    setTimeout(function () {
+      tick();
+      var t = targets[i];
+      if (t) { t.classList.remove('testflash'); void t.offsetWidth; t.classList.add('testflash'); }
+      ccSay('SYS CHECK · ' + steps.slice(0, i + 1).map(function (x) { return x + ' \u2713'; }).join(' · '), 600);
+    }, 400 + i * 400);
+  });
+  setTimeout(function () {
+    confirmTone(); buzz([10, 40, 10]);
+    window.__systest = false;
+    ccSay('ALL SYSTEMS GO', 2800, true);
+  }, 400 + steps.length * 400 + 300);
+}
+(function () {
+  var brand = document.querySelector('.strip .brand');
+  if (!brand) return;
+  var t = null, fired = false;
+  brand.addEventListener('pointerdown', function () {
+    fired = false;
+    brand.classList.add('holding');
+    t = setTimeout(function () { fired = true; brand.classList.remove('holding'); sysCheck(); }, 650);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+    brand.addEventListener(ev, function () { clearTimeout(t); brand.classList.remove('holding'); });
+  });
+  brand.addEventListener('click', function (e) { if (fired) { e.preventDefault(); fired = false; } });
+})();
 
 showTracker();
 tickClock();
