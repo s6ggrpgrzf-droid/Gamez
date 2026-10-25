@@ -1,4 +1,4 @@
-/* GAMEZ flight deck — hub.js v54
+/* GAMEZ flight deck — hub.js v55
  * Flat panels, working displays: MDU 1 star tracker / unit pages,
  * MDU 2 flight plan (editorial picks, AI-enhanced), MDU 3 systems
  * telemetry (the same save keys the old hub read), display bank. */
@@ -190,14 +190,14 @@ function progressFor(id) {
 /* ---------- MDU 1: star tracker + unit pages ---------- */
 var main = document.getElementById('mainScreen');
 var mduPage = document.getElementById('mduPage');
-var trkrUp = false, selectedId = null;
+var trkrUp = false, selectedId = null, acquiredOnce = false;
 
 function showTracker() {
   trkrUp = true;
   mduPage.textContent = 'STR TRKR';
   var lines = LINKS.map(function (pr) {
     var a = xy(POS[pr[0]]), b = xy(POS[pr[1]]);
-    return '<line class="lk" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
+    return '<line class="lk" pathLength="1" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
   }).join('');
   var stars = Object.keys(POS).map(function (id) {
     var raw = POS[id], p = xy(raw).concat([raw[4]]), r = [0, 0.85, 1.2, 1.7][p[2]], g = byId(id);
@@ -208,7 +208,7 @@ function showTracker() {
     });
     var anchor = (p[0] > 84 || crowded) ? 'end' : 'start';
     var lx = anchor === 'end' ? p[0] - 2.6 : p[0] + 2.6;
-    var ticks = p[2] === 3 ? '<path d="M' + (p[0] - 3.1) + ' ' + p[1] + ' L' + (p[0] + 3.1) + ' ' + p[1] + ' M' + p[0] + ' ' + (p[1] - 3.1) + ' L' + p[0] + ' ' + (p[1] + 3.1) + '" stroke="rgba(70,255,160,.5)" stroke-width=".4"/>' : '';
+    var ticks = p[2] === 3 ? '<path d="M' + (p[0] - 3.1) + ' ' + p[1] + ' L' + (p[0] + 3.1) + ' ' + p[1] + ' M' + p[0] + ' ' + (p[1] - 3.1) + ' L' + p[0] + ' ' + (p[1] + 3.1) + '" stroke="rgba(76,232,164,.5)" stroke-width=".4"/>' : '';
     var tgt = '';
     if (id === selectedId) {
       var d = 4.4, x0 = p[0] - d, x1 = p[0] + d, y0 = p[1] - d, y1 = p[1] + d, c = 1.7;
@@ -217,18 +217,28 @@ function showTracker() {
         ' M' + x1 + ' ' + (y1 - c) + ' L' + x1 + ' ' + y1 + ' L' + (x1 - c) + ' ' + y1 +
         ' M' + (x0 + c) + ' ' + y1 + ' L' + x0 + ' ' + y1 + ' L' + x0 + ' ' + (y1 - c) + '"/>';
     }
-    return '<g class="starwrap" data-call="' + id + '" role="button" aria-label="' + g.name + '">' +
+    var delay = acquiredOnce ? 0 : (120 + (3 - p[2]) * 110);
+    return '<g class="starwrap" style="animation-delay:' + delay + 'ms" data-call="' + id + '" role="button" aria-label="' + g.name + '">' +
       '<circle class="halo" cx="' + p[0] + '" cy="' + p[1] + '" r="5"/>' +
       '<circle class="star" cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"/>' + ticks + tgt +
       '<text class="slab" x="' + lx + '" y="' + (p[1] + 1.1) + '" text-anchor="' + anchor + '">' + SHORT[id] + '</text></g>';
   }).join('');
   main.innerHTML =
     '<div class="trkr-wrap"><div class="trkr-head"><span><b>STR TRKR</b> · FIX: LIVE</span><span id="trkrClock"></span></div>' +
-    '<svg id="trkr" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Star tracker — the collection as a constellation">' + lines + stars + '</svg>' +
+    '<svg id="trkr" class="' + (acquiredOnce ? '' : 'acq') + '" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Star tracker — the collection as a constellation">' + lines + stars + '</svg>' +
     '<div class="trkr-foot"><span>SELECT STAR &#8594; CALL UP</span><span class="amb">14 UNITS</span></div></div>';
   main.querySelectorAll('[data-call]').forEach(function (el) {
     el.addEventListener('click', function () { callUp(el.getAttribute('data-call')); });
   });
+  if (!acquiredOnce) {
+    /* safety: whatever happens to the draw-in animation, the links
+       must be fully drawn shortly after first acquire */
+    setTimeout(function () {
+      var t = document.getElementById('trkr');
+      if (t) t.classList.remove('acq');
+    }, 1400);
+  }
+  acquiredOnce = true;
   tickClock();
 }
 
@@ -262,6 +272,15 @@ function callUp(id) {
     { game: 'neon-void', blurb: 'Thread the gravity wells. Don’t blink — the swarm is waiting.' },
     { game: 'tiny-fairway', blurb: 'One hole, worldwide. Drag back, let fly. The turtle judges.' }
   ];
+  function fitBlurb(s) {
+    s = String(s || '');
+    if (s.length <= 84) return s;
+    var cut = s.slice(0, 84);
+    var sent = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+    if (sent > 40) return cut.slice(0, sent + 1);
+    var sp = cut.lastIndexOf(' ');
+    return (sp > 40 ? cut.slice(0, sp) : cut).replace(/[.,;:!?—-]+$/, '') + '…';
+  }
   function render(picks) {
     el.innerHTML = '';
     picks.forEach(function (p, i) {
@@ -270,7 +289,8 @@ function callUp(id) {
       var row = document.createElement('button');
       row.className = 'opsrow';
       row.innerHTML = '<span class="no">OPS ' + (i + 1) + '</span><span class="nm">' + g.name +
-        '</span><span class="st">' + (pr ? escapeHtml(cleanLabel(pr.label)) : 'STANDING BY') + '</span>';
+        '</span><span class="st">' + (pr ? escapeHtml(cleanLabel(pr.label)) : 'STANDING BY') + '</span>' +
+        '<span class="bl">' + escapeHtml(fitBlurb(p.blurb)) + '</span>';
       row.addEventListener('click', function () { callUp(p.game); });
       el.appendChild(row);
     });
@@ -378,16 +398,36 @@ function tick() {
     if (!tickAC) tickAC = new AC();
     if (tickAC.state === 'suspended') tickAC.resume();
     var to = tickAC.createOscillator(), tg = tickAC.createGain();
-    to.type = 'sine'; to.frequency.value = 1320;
+    to.type = 'sine'; to.frequency.value = 1180;
     tg.gain.setValueAtTime(0.0001, tickAC.currentTime);
-    tg.gain.exponentialRampToValueAtTime(0.07, tickAC.currentTime + 0.008);
-    tg.gain.exponentialRampToValueAtTime(0.0001, tickAC.currentTime + 0.06);
+    tg.gain.exponentialRampToValueAtTime(0.045, tickAC.currentTime + 0.008);
+    tg.gain.exponentialRampToValueAtTime(0.0001, tickAC.currentTime + 0.05);
     to.connect(tg); tg.connect(tickAC.destination);
-    to.start(); to.stop(tickAC.currentTime + 0.07);
+    to.start(); to.stop(tickAC.currentTime + 0.06);
+  } catch (e) {}
+}
+function confirmTone() {
+  if (!hubSnd) return;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!tickAC) tickAC = new AC();
+    if (tickAC.state === 'suspended') tickAC.resume();
+    [880, 1318.5].forEach(function (f, i) {
+      var o = tickAC.createOscillator(), g = tickAC.createGain();
+      var t = tickAC.currentTime + i * 0.07;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.05, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+      o.connect(g); g.connect(tickAC.destination);
+      o.start(t); o.stop(t + 0.11);
+    });
   } catch (e) {}
 }
 document.addEventListener('pointerdown', function (e) {
-  if (e.target.closest('.tile,.key,.opsrow,.starwrap,.exec')) tick();
+  if (e.target.closest('.exec')) { confirmTone(); return; }
+  if (e.target.closest('.tile,.key,.opsrow,.starwrap')) tick();
 });
 var sndKey = document.getElementById('sndKey');
 function renderSnd() {
