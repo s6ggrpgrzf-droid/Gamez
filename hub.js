@@ -33,7 +33,7 @@ var GAMES = [
     glyph:'<path d="M12 3 L19.5 7.5 L19.5 16.5 L12 21 L4.5 16.5 L4.5 7.5 Z"/><circle cx="12" cy="12" r="3"/>',
     blurb:'The Witchwood revamp: 30 levels with Stella & Nero, Wilbur boss battles, doom bubbles, Hex Blast spells and a daily challenge.' },
   { id:'bloom-defense', name:'BLOOM DEFENSE', cls:'DAILY · DEFENSE', ops:['daily','arcade'], href:'./bloom-defense/',
-    glyph:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="5.5" r="2.4"/><circle cx="12" cy="18.5" r="2.4"/><circle cx="5.5" cy="12" r="2.4"/><circle cx="18.5" cy="12" r="2.4"/>',
+    glyph:'<circle cx="12" cy="12" r="3.4"/><path d="M12 3.6 V5.8 M12 18.2 V20.4 M3.6 12 H5.8 M18.2 12 H20.4 M6.1 6.1 L7.6 7.6 M16.4 16.4 L17.9 17.9 M17.9 6.1 L16.4 7.6 M7.6 16.4 L6.1 17.9"/><circle cx="10.7" cy="11" r=".5" fill="currentColor"/><circle cx="13.3" cy="13" r=".5" fill="currentColor"/>',
     blurb:'Hold the lawn through 10 waves of weeds: sunflowers, wall-nuts, cherry bombs, lawnmowers — and a daily bloom for everyone.' },
   { id:'neon-void', name:'NEON VOID', cls:'ARCADE', ops:['arcade'], href:'./neon-void/',
     glyph:'<path d="M12 4 L21 20 L3 20 Z"/><path d="M12 11 L16.5 18 L7.5 18 Z"/>',
@@ -42,16 +42,16 @@ var GAMES = [
     glyph:'<path d="M4 18 L4 8 L14 8"/><path d="M11 4.5 L14.5 8 L11 11.5"/><path d="M14 15 L20 15 L20 20"/>',
     blurb:'Tap each arrow to slide it clean off the grid — but only if its path is clear. 24 levels of winding paths, plus a daily slide.' },
   { id:'life-story', name:'LIFE STORY', cls:'4 SCENARIOS', ops:['long'], href:'./life-story/',
-    glyph:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5 A8.5 8.5 0 0 1 20.5 12"/><circle cx="12" cy="12" r="2"/>',
+    glyph:'<path d="M3 12 H8 L10.5 5.5 L13.5 18.5 L16 12 H21"/>',
     blurb:'Live a whole life one tap at a time — four scenarios, fame, fortune, crime, prison breaks. What will your obituary say?' },
   { id:'reel-empire', name:'REEL EMPIRE', cls:'TYCOON', ops:['long'], href:'./reel-empire/',
     glyph:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="7.6" r="1.7"/><circle cx="12" cy="16.4" r="1.7"/><circle cx="7.6" cy="12" r="1.7"/><circle cx="16.4" cy="12" r="1.7"/>',
     blurb:'Run a movie studio from 1955: greenlight scripts, manage stars, dodge scandals, chase awards — and the $1B dream.' },
   { id:'pdawg', name:'PDAWG PUZZLES', cls:'DAILY PUZZLE', ops:['daily','puzzle'], href:'./pdawg/',
-    glyph:'<path d="M5 9 L9 9 a3 3 0 1 1 6 0 L19 9 L19 19 L5 19 Z"/><path d="M5 9 L5 5 L19 5"/>',
+    glyph:'<path d="M5 9 H8.8 a3.2 3.2 0 1 0 6.4 0 H19 V9.8 a2.6 2.6 0 1 0 0 5.2 V19.5 H5 Z"/>',
     blurb:'Hand-cut jigsaws on a real puzzle table: hidden whimsy pieces, a daily for everyone — and your own photos.' },
   { id:'word-well', name:'WORD WELL', cls:'DAILY · VS BOT', ops:['daily','puzzle'], href:'./word-well/',
-    glyph:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".6" fill="currentColor"/>',
+    glyph:'<circle cx="12" cy="12" r="8.5"/><path d="M8 8.5 L10 15 L12 10.5 L14 15 L16 8.5"/>',
     blurb:'Cast letter-stones into the deep: a crossword tile duel in the style of Words With Friends. Solo vs the Well Warden, pass & play, and one daily well for everyone.' },
   { id:'tiny-fairway', name:'TINY FAIRWAY', cls:'NEW · DAILY', ops:['daily','arcade'], href:'./tiny-fairway/',
     glyph:'<path d="M8 21 L8 4"/><path d="M8 4 L17 6.5 L8 9"/><path d="M3 21 L21 21"/>',
@@ -93,6 +93,7 @@ var LINKS = [['dominoes', 'neon-void'], ['neon-void', 'tiny-fairway'],
   ['cathedral', 'maze-trace'], ['bloom-defense', 'word-well'], ['word-well', 'life-story'],
   ['aries-1', 'aries-2'], ['aries-2', 'aries-3'],
   ['aries-3', 'starlight-drums'], ['aries-3', 'aries-4']];
+var LABOVE = { 'neon-void': 1 };
 var SHORT = {'candy-cascade':'CANDY','bubble-hex':'BUBBLE','bloom-defense':'BLOOM','neon-void':'VOID',
   'maze-trace':'ARROW','word-well':'WELL','pdawg':'PDAWG','life-story':'LIFE','reel-empire':'REEL',
   'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS'};
@@ -229,6 +230,8 @@ function showTracker() {
     });
     var anchor = (p[0] > 84 || crowded) ? 'end' : 'start';
     var lx = anchor === 'end' ? p[0] - 2.6 : p[0] + 2.6;
+    var ly = p[1] + 1.1;
+    if (LABOVE[id]) { anchor = 'middle'; lx = p[0]; ly = p[1] - 3.8; }
     var ticks = p[2] === 3 ? '<path d="M' + (p[0] - 3.1) + ' ' + p[1] + ' L' + (p[0] + 3.1) + ' ' + p[1] + ' M' + p[0] + ' ' + (p[1] - 3.1) + ' L' + p[0] + ' ' + (p[1] + 3.1) + '" stroke="rgba(76,232,164,.5)" stroke-width=".4"/>' : '';
     var tgt = '';
     if (id === selectedId) {
@@ -239,10 +242,10 @@ function showTracker() {
         ' M' + (x0 + c) + ' ' + y1 + ' L' + x0 + ' ' + y1 + ' L' + x0 + ' ' + (y1 - c) + '"/>';
     }
     var delay = acquiredOnce ? 0 : (120 + (3 - p[2]) * 110);
-    return '<g class="starwrap" style="animation-delay:' + delay + 'ms" data-call="' + id + '" role="button" aria-label="' + g.name + '">' +
-      '<circle class="halo" cx="' + p[0] + '" cy="' + p[1] + '" r="5"/>' +
+    return '<g class="starwrap" style="animation-delay:' + delay + 'ms" data-call="' + id + '" role="button" tabindex="0" aria-label="' + g.name + '">' +
+      '<circle class="halo" cx="' + p[0] + '" cy="' + p[1] + '" r="6.5"/>' +
       '<circle class="star" style="' + twkStyle(id, false) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"/>' + ticks + tgt +
-      '<text class="slab" x="' + lx + '" y="' + (p[1] + 1.1) + '" text-anchor="' + anchor + '">' + SHORT[id] + '</text></g>';
+      '<text class="slab" x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '">' + SHORT[id] + '</text></g>';
   }).join('');
   main.innerHTML =
     '<div class="trkr-wrap"><div class="trkr-head"><span><b>STR TRKR</b> · FIX: LIVE</span><span id="trkrClock"></span></div>' +
@@ -251,6 +254,9 @@ function showTracker() {
     lines + stars + '<rect class="sweep" x="0" y="-18" width="100" height="16" fill="url(#swg)"/>' + '</svg>' +
     '<div class="trkr-foot"><span>SELECT STAR &#8594; CALL UP</span><span class="amb">14 UNITS</span></div></div>';
   main.querySelectorAll('[data-call]').forEach(function (el) {
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.dispatchEvent(new Event('click')); }
+    });
     el.addEventListener('click', function () {
       var id = el.getAttribute('data-call'), c = starXY[id];
       if (c && !el.querySelector('.tgt')) {
@@ -293,7 +299,7 @@ function callUp(id) {
   var bar = pr ? '<div class="bar"><i style="width:' + Math.round(pr.frac * 100) + '%"></i></div>' : '';
   var verb = id === 'cathedral' ? 'LISTEN' : 'PLAY';
   main.innerHTML =
-    '<div class="gpage"><div class="cls">UNIT CALLED UP // MDU 1</div>' +
+    '<div class="gpage"><svg class="wm" viewBox="0 0 24 24" aria-hidden="true">' + g.glyph + '</svg><div class="cls">UNIT CALLED UP // MDU 1</div>' +
     '<h2>' + g.name + '</h2><p class="blurb">' + g.blurb + '</p>' +
     '<dl class="tele">' + tele + '</dl>' + bar +
     '<div class="execrow"><button class="key rtn" id="rtnBtn">&#9664; TRKR</button>' +
@@ -387,9 +393,12 @@ setInterval(function () {
   var el = document.getElementById('sys');
   if (!el) return;
   var rows = [];
+  var fleetHtml = '';
   GAMES.forEach(function (g) { var pr = progressFor(g.id); if (pr) rows.push({ g: g, pr: pr }); });
   if (!rows.length) {
-    el.innerHTML = '<p class="nodata"><b>NO DATA.</b><br>No flights logged on this device yet. Play any unit and its telemetry reports here — scores, levels, streaks, as live values.</p>';
+    el.innerHTML = '<p class="nodata"><b>NO DATA.</b><br>No flights logged on this device yet. Play any unit and its telemetry reports here — scores, levels, streaks, as live values.</p>' +
+      '<div class="fleet"><div class="frow"><span>UNITS REPORTING</span><b>0 / ' + GAMES.length + '</b></div>' +
+      '<div class="frow"><span>DAILY RESET</span><b id="fleetReset">--:--:--</b></div></div>';
   } else {
     el.innerHTML = rows.map(function (r) {
       var finalLabel = cleanLabel(r.pr.label);
@@ -416,6 +425,9 @@ setInterval(function () {
         })(t0);
       });
     }
+    fleetHtml = '<div class="fleet"><div class="frow"><span>UNITS REPORTING</span><b>' + rows.length + ' / ' + GAMES.length + '</b></div>' +
+      '<div class="frow"><span>DAILY RESET</span><b id="fleetReset">--:--:--</b></div></div>';
+    el.innerHTML += fleetHtml;
     if ('IntersectionObserver' in window) {
       var io = new IntersectionObserver(function (es) {
         if (es.some(function (x) { return x.isIntersecting; })) { reveal(); io.disconnect(); }
@@ -472,6 +484,15 @@ function tickClock() {
   var d = new Date();
   var loc = document.getElementById('loc');
   if (loc) loc.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  var dow = document.getElementById('dow'), dateEl = document.getElementById('date');
+  if (dow) dow.textContent = ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()];
+  if (dateEl) dateEl.textContent = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()] + ' ' + pad(d.getDate());
+  var fr = document.getElementById('fleetReset');
+  if (fr) {
+    var mid = new Date(d); mid.setHours(24, 0, 0, 0);
+    var rs = Math.max(0, Math.floor((mid - d) / 1000));
+    fr.textContent = pad(Math.floor(rs / 3600)) + ':' + pad(Math.floor(rs / 60) % 60) + ':' + pad(rs % 60);
+  }
   var tc = document.getElementById('trkrClock');
   if (tc) tc.textContent = 'LOC ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
 }
@@ -487,7 +508,7 @@ window.addEventListener('resize', function () {
 /* ---------- tap tick + sound key (the hub's own tick, carried over) ---------- */
 var hubSnd = true;
 try { hubSnd = localStorage.getItem('hub_sound') !== 'off'; } catch (e) {}
-var tickAC = null;
+var tickAC = null, noiseBuf = null;
 function tick() {
   if (!hubSnd) return;
   try {
@@ -495,13 +516,28 @@ function tick() {
     if (!AC) return;
     if (!tickAC) tickAC = new AC();
     if (tickAC.state === 'suspended') tickAC.resume();
-    var to = tickAC.createOscillator(), tg = tickAC.createGain();
-    to.type = 'sine'; to.frequency.value = 1180;
-    tg.gain.setValueAtTime(0.0001, tickAC.currentTime);
-    tg.gain.exponentialRampToValueAtTime(0.045, tickAC.currentTime + 0.008);
-    tg.gain.exponentialRampToValueAtTime(0.0001, tickAC.currentTime + 0.05);
-    to.connect(tg); tg.connect(tickAC.destination);
-    to.start(); to.stop(tickAC.currentTime + 0.06);
+    var t = tickAC.currentTime;
+    if (!noiseBuf) {
+      noiseBuf = tickAC.createBuffer(1, tickAC.sampleRate * 0.03, tickAC.sampleRate);
+      var ch = noiseBuf.getChannelData(0);
+      for (var i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
+    }
+    /* the contact: a 30ms noise snap through a bandpass — a switch, not a tone */
+    var ns = tickAC.createBufferSource(); ns.buffer = noiseBuf;
+    var bp = tickAC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2100; bp.Q.value = 0.9;
+    var ng = tickAC.createGain();
+    ng.gain.setValueAtTime(0.14, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    ns.connect(bp); bp.connect(ng); ng.connect(tickAC.destination);
+    ns.start(t); ns.stop(t + 0.035);
+    /* the body: one low soft thock underneath */
+    var bo = tickAC.createOscillator(), bg = tickAC.createGain();
+    bo.type = 'triangle'; bo.frequency.value = 185;
+    bg.gain.setValueAtTime(0.0001, t);
+    bg.gain.exponentialRampToValueAtTime(0.05, t + 0.006);
+    bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    bo.connect(bg); bg.connect(tickAC.destination);
+    bo.start(t); bo.stop(t + 0.06);
   } catch (e) {}
 }
 function confirmTone() {

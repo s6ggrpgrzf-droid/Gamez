@@ -22,14 +22,17 @@ button{font-family:inherit}
 
 /* ---------- top panel strip ---------- */
 .strip{
+  position:sticky;top:10px;z-index:60;
+  box-shadow:0 12px 26px rgba(0,0,0,.5);
   display:flex;align-items:center;gap:14px;
   background:linear-gradient(180deg,var(--panel2),var(--panel));
   border:1px solid var(--seam);border-radius:8px;
   padding:12px 16px;margin-bottom:14px;
 }
-.strip .brand{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:.34em;font-size:15px;color:var(--label-hi)}
+.strip .brand{font-family:'Inter',sans-serif;font-weight:700;letter-spacing:.34em;font-size:15px;color:var(--label-hi);flex:none;white-space:nowrap}
 .strip .brand small{display:block;letter-spacing:.22em;font-size:8.5px;color:var(--label);font-weight:600;margin-top:2px}
-.strip .readouts{margin-left:auto;display:flex;gap:18px;text-align:right}
+.strip .readouts{margin-left:auto;display:flex;gap:13px;text-align:right}
+.strip .ro .val{white-space:nowrap}
 .strip .ro .lbl{font-size:8.5px}
 .strip .ro .val{font-size:15px;color:var(--wht);font-weight:600;letter-spacing:.06em}
 .strip .ro .val.g{color:var(--grn)}
@@ -62,7 +65,7 @@ button{font-family:inherit}
 }
 .key.amb{text-shadow:none}
 .key{
-  font-size:10px;letter-spacing:.12em;min-height:34px;
+  font-size:10px;letter-spacing:.12em;min-height:44px;
   transition:transform .22s cubic-bezier(.2,1.4,.4,1);
   background:linear-gradient(180deg,#22262d,#171a1f);color:var(--label-hi);
   border:1px solid #333a42;border-bottom-width:3px;border-radius:5px;
@@ -73,6 +76,7 @@ button{font-family:inherit}
 .key.amb{color:#141414;background:linear-gradient(180deg,#ffc65c,#f5a623);border-color:#8a5d10;font-weight:600}
 
 /* primary display — star tracker page */
+#mdu1{scroll-margin-top:104px}
 #mdu1 .screen{min-height:356px;display:flex;flex-direction:column}
 .trkr-wrap{flex:1;display:flex;flex-direction:column}
 .trkr-head{display:flex;justify-content:space-between;padding:10px 12px 0;font-size:10.5px;letter-spacing:.14em;color:var(--cyn)}
@@ -82,7 +86,9 @@ button{font-family:inherit}
 #trkr .star{fill:var(--grn);cursor:pointer}
 #trkr .halo{fill:none;stroke:rgba(76,232,164,0);stroke-width:.5;cursor:pointer}
 #trkr .starwrap:hover .halo,#trkr .starwrap:active .halo{stroke:rgba(76,232,164,.55)}
-#trkr .slab{font-size:3.1px;fill:var(--cyn);fill-opacity:.78;letter-spacing:.08em;pointer-events:none}
+#trkr .starwrap:focus{outline:none}
+#trkr .starwrap:focus .halo{stroke:rgba(99,199,232,.85)}
+#trkr .slab{font-size:3.35px;fill:var(--cyn);fill-opacity:.78;letter-spacing:.08em;pointer-events:none}
 #trkr .tgt{stroke:var(--amb);stroke-width:.55;fill:none}
 /* JUICE DIAL: 20% (set 2026-10-25) — every decorative amplitude in this
    file is scaled to a fifth of its built value; timings and sequences
@@ -115,7 +121,8 @@ button{font-family:inherit}
 .trkr-foot .amb{color:var(--amb)}
 
 /* primary display — unit page */
-.gpage{padding:16px 16px 14px;display:flex;flex-direction:column;gap:10px;flex:1}
+.gpage{padding:16px 16px 14px;display:flex;flex-direction:column;gap:10px;flex:1;position:relative}
+.gpage .wm{position:absolute;right:-16px;bottom:2px;width:158px;height:158px;stroke:var(--grn);fill:none;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;opacity:.06;pointer-events:none}
 .gpage .cls{font-size:10px;letter-spacing:.22em;color:var(--cyn)}
 .gpage h2{font-size:27px;color:var(--wht);font-weight:600;letter-spacing:.04em;line-height:1.1}
 .gpage .blurb{font-size:13px;line-height:1.65;color:var(--grn);max-width:56ch}
@@ -149,12 +156,16 @@ button{font-family:inherit}
 .gpage .cursor{color:var(--grn);animation:blink .5s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .nodata{font-size:11.5px;color:var(--grn-dim);line-height:1.7;letter-spacing:.05em}
+.fleet{margin-top:10px;border-top:1px dashed var(--grn-faint);padding-top:9px;display:grid;gap:5px}
+.fleet .frow{display:flex;justify-content:space-between;align-items:baseline;font-size:11px}
+.fleet .frow span{color:var(--grn-dim);letter-spacing:.14em}
+.fleet .frow b{color:var(--wht);font-weight:600;font-size:11.5px}
 .nodata b{color:var(--cyn);font-weight:500}
 
 /* ops keys */
 .opsbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
 .opsbar .lbl{margin-right:2px}
-.opsbar .key{flex:1 1 0;min-width:0;text-align:center;padding:9px 2px;font-size:10.5px;min-height:40px}
+.opsbar .key{flex:1 1 0;min-width:0;text-align:center;padding:9px 2px;font-size:10.5px;min-height:44px}
 .opsbar .key.on{color:#0b0d10;background:linear-gradient(180deg,#59ffb0,#2fd67f);border-color:var(--grn-faint);font-weight:600}
 
 /* display bank */
