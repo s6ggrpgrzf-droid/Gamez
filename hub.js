@@ -212,18 +212,115 @@ function printOn(el, text) {
   }, 11);
 }
 
+/* deterministic scatter for the depth layers */
+function rnd1(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+/* the real Moon, from the synodic cycle — the tracker shows tonight's sky too */
+function moonInfo() {
+  var syn = 29.53058867;
+  var age = ((Date.now() / 864e5 - 10962.76) % syn + syn) % syn;
+  var phase = age / syn;
+  var illum = (1 - Math.cos(2 * Math.PI * phase)) / 2;
+  var name = phase < 0.033 || phase > 0.967 ? 'NEW' : phase < 0.217 ? 'WAXING CRESCENT' :
+    phase < 0.283 ? 'FIRST QUARTER' : phase < 0.467 ? 'WAXING GIBBOUS' :
+    phase < 0.533 ? 'FULL' : phase < 0.717 ? 'WANING GIBBOUS' :
+    phase < 0.783 ? 'LAST QUARTER' : 'WANING CRESCENT';
+  return { phase: phase, illum: illum, name: name };
+}
+var MOONRAW = [88, 10, 90, 13];
+function moonSvg(MXY) {
+  var m = moonInfo(), x = MXY[0], y = MXY[1];
+  var dark = '';
+  if (m.illum < 0.985) {
+    var off = (1 - m.illum) * 9 * (m.phase < 0.5 ? -1 : 1);
+    dark = '<circle cx="' + (x + off).toFixed(1) + '" cy="' + y + '" r="5" fill="#060a09" opacity=".88"/>';
+  }
+  var disc = m.illum < 0.02
+    ? '<circle cx="' + x + '" cy="' + y + '" r="5" fill="none" stroke="rgba(220,235,228,.35)" stroke-width=".4"/>'
+    : '<circle cx="' + x + '" cy="' + y + '" r="9.5" fill="url(#mhalo)"/>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="5" fill="#e9e7de"/>' +
+      '<ellipse cx="' + (x - 1.6) + '" cy="' + (y - 1.2) + '" rx="1.5" ry="1.1" fill="#b9b6aa" opacity=".35"/>' +
+      '<ellipse cx="' + (x + 1.8) + '" cy="' + (y + 1.6) + '" rx="1.1" ry=".8" fill="#b9b6aa" opacity=".3"/>' +
+      '<ellipse cx="' + (x + .6) + '" cy="' + (y - 2.4) + '" rx=".8" ry=".6" fill="#b9b6aa" opacity=".25"/>' + dark;
+  return '<g class="moon" aria-hidden="true">' + disc +
+    '<text class="slab" x="' + x + '" y="' + (y - 7.6) + '" text-anchor="middle">MOON</text></g>';
+}
+
+/* depth: background layers drift against the scroll by a breath */
+var pxEls = null, pxT = 0, pxRaf = 0;
+function pxApply() {
+  pxRaf = 0;
+  if (!pxEls) return;
+  var t = pxT;
+  pxEls.far.setAttribute('transform', 'translate(' + (t * -1.1).toFixed(2) + ' ' + (t * .8).toFixed(2) + ')');
+  pxEls.near.setAttribute('transform', 'translate(' + (t * -2.3).toFixed(2) + ' ' + (t * 1.6).toFixed(2) + ')');
+  pxEls.neb.setAttribute('transform', 'translate(' + (t * -.5).toFixed(2) + ' ' + (t * .4).toFixed(2) + ')');
+}
+function pxMeasure() {
+  var svg = document.getElementById('trkr');
+  if (!svg) { pxEls = null; return; }
+  var far = document.getElementById('bgFar'), near = document.getElementById('bgNear'), neb = document.getElementById('nebG');
+  if (!far || !near || !neb) { pxEls = null; return; }
+  pxEls = { far: far, near: near, neb: neb };
+  var r = svg.getBoundingClientRect();
+  var c = r.top + r.height / 2 - window.innerHeight / 2;
+  pxT = Math.max(-1, Math.min(1, c / (window.innerHeight * .7)));
+  if (!pxRaf) pxRaf = requestAnimationFrame(pxApply);
+}
+window.addEventListener('scroll', pxMeasure, { passive: true });
+window.addEventListener('resize', pxMeasure);
+
+/* a shooting star, now and then — never on a schedule you'd notice */
+(function () {
+  var paths = [[82, 7, 54, 22], [96, 18, 68, 34], [58, 3, 32, 17], [90, 30, 64, 44]];
+  function fire() {
+    var g = document.getElementById('meteor');
+    if (g && trkrUp && !document.hidden) {
+      var p = paths[Math.floor(Math.random() * paths.length)];
+      var t0 = performance.now();
+      (function step(now) {
+        var k = Math.min(1, (now - t0) / 950), e = 1 - Math.pow(1 - k, 2.2);
+        var x = p[0] + (p[2] - p[0]) * e, y = p[1] + (p[3] - p[1]) * e;
+        g.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')');
+        g.setAttribute('opacity', (Math.sin(k * Math.PI) * .95).toFixed(2));
+        if (k < 1) requestAnimationFrame(step); else g.setAttribute('opacity', '0');
+      })(t0);
+    }
+    setTimeout(fire, 40000 + Math.random() * 50000);
+  }
+  setTimeout(fire, 16000 + Math.random() * 22000);
+})();
+
 function showTracker() {
   if (printTimer) { clearInterval(printTimer); printTimer = null; }
   trkrUp = true;
   mduPage.textContent = 'STR TRKR';
+  function bgStars(n, seed, rMin, rMax, oMin, oMax) {
+    var out = '';
+    for (var i = 0; i < n; i++) {
+      var bx = (rnd1(seed + i * 3.1) * 104 - 2).toFixed(1), by = (rnd1(seed + i * 7.7 + 40) * 104 - 2).toFixed(1);
+      var br = (rMin + rnd1(seed + i * 1.3) * (rMax - rMin)).toFixed(2);
+      var bo = (oMin + rnd1(seed + i * 2.9) * (oMax - oMin)).toFixed(2);
+      out += '<circle class="bgstar" cx="' + bx + '" cy="' + by + '" r="' + br + '" opacity="' + bo + '"/>';
+    }
+    return out;
+  }
+  var nebulae = '<g id="nebG">' +
+    '<ellipse cx="27" cy="30" rx="36" ry="23" fill="url(#neb1)"/>' +
+    '<ellipse cx="75" cy="64" rx="32" ry="21" fill="url(#neb2)"/>' +
+    '<ellipse cx="62" cy="14" rx="24" ry="15" fill="url(#neb3)"/></g>';
+  var MXY = xy(MOONRAW);
+  var bgFar = '<g id="bgFar">' + bgStars(30, 11, .28, .55, .10, .26) + '</g>';
+  var bgNear = '<g id="bgNear">' + bgStars(15, 97, .5, .85, .22, .42) + '</g>';
   var lines = LINKS.map(function (pr) {
     var a = xy(POS[pr[0]]), b = xy(POS[pr[1]]);
     return '<line class="lk" pathLength="1" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
   }).join('');
   var stars = Object.keys(POS).map(function (id) {
     var raw = POS[id], p = xy(raw).concat([raw[4]]), r = [0, 0.85, 1.2, 1.7][p[2]], g = byId(id);
+    var glare = Math.hypot(p[0] - MXY[0], p[1] - MXY[1]) < 17;
     if (g) starXY[id] = [p[0], p[1]];
-    if (!g) return '<circle class="star" style="' + twkStyle(id, true) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (r * .85) + '" opacity=".75"/>';
+    if (!g) return '<circle class="star" style="' + twkStyle(id, true) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (r * .85) + '" opacity="' + (glare ? .38 : .75) + '"/>';
     var crowded = Object.keys(POS).some(function (o) {
       if (o === id) return false; var q = xy(POS[o]);
       return q[0] > p[0] && q[0] - p[0] < 19 && Math.abs(q[1] - p[1]) < 6;
@@ -244,15 +341,23 @@ function showTracker() {
     var delay = acquiredOnce ? 0 : (120 + (3 - p[2]) * 110);
     return '<g class="starwrap" style="animation-delay:' + delay + 'ms" data-call="' + id + '" role="button" tabindex="0" aria-label="' + g.name + '">' +
       '<circle class="halo" cx="' + p[0] + '" cy="' + p[1] + '" r="6.5"/>' +
-      '<circle class="star" style="' + twkStyle(id, false) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"/>' + ticks + tgt +
+      '<circle class="star" style="' + twkStyle(id, false) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"' + (glare ? ' opacity=".55"' : '') + '/>' + ticks + tgt +
       '<text class="slab" x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '">' + SHORT[id] + '</text></g>';
   }).join('');
   main.innerHTML =
     '<div class="trkr-wrap"><div class="trkr-head"><span><b>STR TRKR</b> · FIX: LIVE</span><span id="trkrClock"></span></div>' +
     '<svg id="trkr" class="' + (acquiredOnce ? '' : 'acq') + '" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Star tracker — the collection as a constellation">' +
-    '<defs><linearGradient id="swg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4ce8a4" stop-opacity="0"/><stop offset=".5" stop-color="#4ce8a4" stop-opacity=".16"/><stop offset="1" stop-color="#4ce8a4" stop-opacity="0"/></linearGradient></defs>' +
-    lines + stars + '<rect class="sweep" x="0" y="-18" width="100" height="16" fill="url(#swg)"/>' + '</svg>' +
-    '<div class="trkr-foot"><span>SELECT STAR &#8594; CALL UP</span><span class="amb">14 UNITS</span></div></div>';
+    '<defs><linearGradient id="swg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4ce8a4" stop-opacity="0"/><stop offset=".5" stop-color="#4ce8a4" stop-opacity=".16"/><stop offset="1" stop-color="#4ce8a4" stop-opacity="0"/></linearGradient>' +
+    '<radialGradient id="neb1"><stop offset="0" stop-color="#2e7d5f" stop-opacity=".13"/><stop offset="1" stop-color="#2e7d5f" stop-opacity="0"/></radialGradient>' +
+    '<radialGradient id="neb2"><stop offset="0" stop-color="#33507e" stop-opacity=".12"/><stop offset="1" stop-color="#33507e" stop-opacity="0"/></radialGradient>' +
+    '<radialGradient id="neb3"><stop offset="0" stop-color="#5b3a78" stop-opacity=".10"/><stop offset="1" stop-color="#5b3a78" stop-opacity="0"/></radialGradient>' +
+    '<radialGradient id="mhalo"><stop offset="0" stop-color="#f4f1e4" stop-opacity=".13"/><stop offset="1" stop-color="#f4f1e4" stop-opacity="0"/></radialGradient>' +
+    '<linearGradient id="metg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="-13" y2="6.5"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient></defs>' +
+    nebulae + bgFar + bgNear + lines + stars + moonSvg(MXY) +
+    '<g id="meteor" opacity="0"><line x1="0" y1="0" x2="-13" y2="6.5" stroke="url(#metg)" stroke-width=".8" stroke-linecap="round"/><circle cx="0" cy="0" r=".9" fill="#eafff5"/></g>' +
+    '<rect class="sweep" x="0" y="-18" width="100" height="16" fill="url(#swg)"/></svg>' +
+    '<div class="trkr-foot"><span>SELECT STAR &#8594; CALL UP</span><span class="amb">MOON · ' + moonInfo().name + '</span></div></div>';
+  requestAnimationFrame(pxMeasure);
   main.querySelectorAll('[data-call]').forEach(function (el) {
     el.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.dispatchEvent(new Event('click')); }
@@ -321,7 +426,19 @@ function callUp(id) {
     dds.forEach(function (dd, i) {
       setTimeout(function () { dd.innerHTML += '<span class="chk"> \u2713</span>'; }, 90 + i * 100);
     });
-    setTimeout(function () { window.location.href = href; }, 430);
+    setTimeout(function () {
+      /* the launch: back to the tracker, and the deck flies into the star */
+      showTracker();
+      var wrap = main.querySelector('.trkr-wrap'), svg = document.getElementById('trkr');
+      var gel = main.querySelector('[data-call="' + id + '"]');
+      if (!wrap || !svg || !gel) { window.location.href = href; return; }
+      var sr = svg.getBoundingClientRect(), gr = gel.getBoundingClientRect();
+      var ox = ((gr.left + gr.width / 2 - sr.left) / sr.width) * 100;
+      var oy = ((gr.top + gr.height / 2 - sr.top) / sr.height) * 100;
+      wrap.style.transformOrigin = ox.toFixed(1) + '% ' + oy.toFixed(1) + '%';
+      wrap.classList.add('zooming');
+      setTimeout(function () { window.location.href = href; }, 460);
+    }, 430);
   });
   document.getElementById('mdu1').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -396,6 +513,7 @@ setInterval(function () {
   var fleetHtml = '';
   GAMES.forEach(function (g) { var pr = progressFor(g.id); if (pr) rows.push({ g: g, pr: pr }); });
   if (!rows.length) {
+    var sec = el.closest('section'); if (sec) sec.classList.add('sysfold');
     el.innerHTML = '<p class="nodata"><b>NO DATA.</b><br>No flights logged on this device yet. Play any unit and its telemetry reports here — scores, levels, streaks, as live values.</p>' +
       '<div class="fleet"><div class="frow"><span>UNITS REPORTING</span><b>0 / ' + GAMES.length + '</b></div>' +
       '<div class="frow"><span>DAILY RESET</span><b id="fleetReset">--:--:--</b></div></div>';
