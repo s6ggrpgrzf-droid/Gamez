@@ -1,4 +1,4 @@
-/* GAMEZ flight deck — hub.js v55
+/* GAMEZ flight deck — hub.js v56
  * Flat panels, working displays: MDU 1 star tracker / unit pages,
  * MDU 2 flight plan (editorial picks, AI-enhanced), MDU 3 systems
  * telemetry (the same save keys the old hub read), display bank. */
@@ -97,6 +97,11 @@ var SHORT = {'candy-cascade':'CANDY','bubble-hex':'BUBBLE','bloom-defense':'BLOO
   'maze-trace':'ARROW','word-well':'WELL','pdawg':'PDAWG','life-story':'LIFE','reel-empire':'REEL',
   'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS'};
 function xy(p) { return (window.innerWidth > window.innerHeight) ? [p[2], p[3]] : [p[0], p[1]]; }
+function twkStyle(id, dim) {
+  var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
+  var dur = (2.6 + (h % 23) / 10).toFixed(2), del = (-(h % 40) / 10).toFixed(2);
+  return 'animation:' + (dim ? 'twkDim ' : 'twk ') + dur + 's ease-in-out ' + del + 's infinite';
+}
 
 /* ---------- progress: the readers the hub has always used ---------- */
 function progressFor(id) {
@@ -190,9 +195,24 @@ function progressFor(id) {
 /* ---------- MDU 1: star tracker + unit pages ---------- */
 var main = document.getElementById('mainScreen');
 var mduPage = document.getElementById('mduPage');
-var trkrUp = false, selectedId = null, acquiredOnce = false;
+var trkrUp = false, selectedId = null, acquiredOnce = false, starXY = {}, printTimer = null;
+function printOn(el, text) {
+  if (printTimer) clearInterval(printTimer);
+  el.textContent = '';
+  var cur = document.createElement('span');
+  cur.className = 'cursor'; cur.textContent = '\u258c';
+  el.appendChild(cur);
+  var i = 0;
+  printTimer = setInterval(function () {
+    i++;
+    el.textContent = text.slice(0, i);
+    if (i < text.length) { el.appendChild(cur); }
+    else { clearInterval(printTimer); printTimer = null; }
+  }, 11);
+}
 
 function showTracker() {
+  if (printTimer) { clearInterval(printTimer); printTimer = null; }
   trkrUp = true;
   mduPage.textContent = 'STR TRKR';
   var lines = LINKS.map(function (pr) {
@@ -201,7 +221,8 @@ function showTracker() {
   }).join('');
   var stars = Object.keys(POS).map(function (id) {
     var raw = POS[id], p = xy(raw).concat([raw[4]]), r = [0, 0.85, 1.2, 1.7][p[2]], g = byId(id);
-    if (!g) return '<circle class="star" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (r * .85) + '" opacity=".75"/>';
+    if (g) starXY[id] = [p[0], p[1]];
+    if (!g) return '<circle class="star" style="' + twkStyle(id, true) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (r * .85) + '" opacity=".75"/>';
     var crowded = Object.keys(POS).some(function (o) {
       if (o === id) return false; var q = xy(POS[o]);
       return q[0] > p[0] && q[0] - p[0] < 19 && Math.abs(q[1] - p[1]) < 6;
@@ -212,7 +233,7 @@ function showTracker() {
     var tgt = '';
     if (id === selectedId) {
       var d = 4.4, x0 = p[0] - d, x1 = p[0] + d, y0 = p[1] - d, y1 = p[1] + d, c = 1.7;
-      tgt = '<path class="tgt" d="M' + x0 + ' ' + (y0 + c) + ' L' + x0 + ' ' + y0 + ' L' + (x0 + c) + ' ' + y0 +
+      tgt = '<path class="tgt lock" d="M' + x0 + ' ' + (y0 + c) + ' L' + x0 + ' ' + y0 + ' L' + (x0 + c) + ' ' + y0 +
         ' M' + (x1 - c) + ' ' + y0 + ' L' + x1 + ' ' + y0 + ' L' + x1 + ' ' + (y0 + c) +
         ' M' + x1 + ' ' + (y1 - c) + ' L' + x1 + ' ' + y1 + ' L' + (x1 - c) + ' ' + y1 +
         ' M' + (x0 + c) + ' ' + y1 + ' L' + x0 + ' ' + y1 + ' L' + x0 + ' ' + (y1 - c) + '"/>';
@@ -220,15 +241,32 @@ function showTracker() {
     var delay = acquiredOnce ? 0 : (120 + (3 - p[2]) * 110);
     return '<g class="starwrap" style="animation-delay:' + delay + 'ms" data-call="' + id + '" role="button" aria-label="' + g.name + '">' +
       '<circle class="halo" cx="' + p[0] + '" cy="' + p[1] + '" r="5"/>' +
-      '<circle class="star" cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"/>' + ticks + tgt +
+      '<circle class="star" style="' + twkStyle(id, false) + '" cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '"/>' + ticks + tgt +
       '<text class="slab" x="' + lx + '" y="' + (p[1] + 1.1) + '" text-anchor="' + anchor + '">' + SHORT[id] + '</text></g>';
   }).join('');
   main.innerHTML =
     '<div class="trkr-wrap"><div class="trkr-head"><span><b>STR TRKR</b> · FIX: LIVE</span><span id="trkrClock"></span></div>' +
-    '<svg id="trkr" class="' + (acquiredOnce ? '' : 'acq') + '" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Star tracker — the collection as a constellation">' + lines + stars + '</svg>' +
+    '<svg id="trkr" class="' + (acquiredOnce ? '' : 'acq') + '" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Star tracker — the collection as a constellation">' +
+    '<defs><linearGradient id="swg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4ce8a4" stop-opacity="0"/><stop offset=".5" stop-color="#4ce8a4" stop-opacity=".16"/><stop offset="1" stop-color="#4ce8a4" stop-opacity="0"/></linearGradient></defs>' +
+    lines + stars + '<rect class="sweep" x="0" y="-18" width="100" height="16" fill="url(#swg)"/>' + '</svg>' +
     '<div class="trkr-foot"><span>SELECT STAR &#8594; CALL UP</span><span class="amb">14 UNITS</span></div></div>';
   main.querySelectorAll('[data-call]').forEach(function (el) {
-    el.addEventListener('click', function () { callUp(el.getAttribute('data-call')); });
+    el.addEventListener('click', function () {
+      var id = el.getAttribute('data-call'), c = starXY[id];
+      if (c && !el.querySelector('.tgt')) {
+        var d = 4.4, x0 = c[0] - d, x1 = c[0] + d, y0 = c[1] - d, y1 = c[1] + d, k = 1.7;
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'tgt lock');
+        path.setAttribute('d', 'M' + x0 + ' ' + (y0 + k) + ' L' + x0 + ' ' + y0 + ' L' + (x0 + k) + ' ' + y0 +
+          ' M' + (x1 - k) + ' ' + y0 + ' L' + x1 + ' ' + y0 + ' L' + x1 + ' ' + (y0 + k) +
+          ' M' + x1 + ' ' + (y1 - k) + ' L' + x1 + ' ' + y1 + ' L' + (x1 - k) + ' ' + y1 +
+          ' M' + (x0 + k) + ' ' + y1 + ' L' + x0 + ' ' + y1 + ' L' + x0 + ' ' + (y1 - k));
+        el.appendChild(path);
+        setTimeout(function () { callUp(id); }, 210);
+      } else {
+        callUp(id);
+      }
+    });
   });
   if (!acquiredOnce) {
     /* safety: whatever happens to the draw-in animation, the links
@@ -248,9 +286,10 @@ function callUp(id) {
   mduPage.textContent = 'UNIT · ' + g.name;
   document.querySelectorAll('.tile').forEach(function (t) { t.classList.toggle('sel', t.getAttribute('data-id') === id); });
   var pr = progressFor(id);
+  var dataText = pr ? cleanLabel(pr.label) : 'NO FLIGHT DATA LOGGED';
   var tele = '<dt>CLASS</dt><dd>' + g.cls + '</dd>' +
     '<dt>STATUS</dt><dd>' + (pr ? 'IN PROGRESS' : 'READY') + '</dd>' +
-    '<dt>DATA</dt><dd>' + (pr ? escapeHtml(cleanLabel(pr.label)) : 'NO FLIGHT DATA LOGGED') + '</dd>';
+    '<dt>DATA</dt><dd class="dataVal"></dd>';
   var bar = pr ? '<div class="bar"><i style="width:' + Math.round(pr.frac * 100) + '%"></i></div>' : '';
   var verb = id === 'cathedral' ? 'LISTEN' : 'PLAY';
   main.innerHTML =
@@ -260,8 +299,35 @@ function callUp(id) {
     '<div class="execrow"><button class="key rtn" id="rtnBtn">&#9664; TRKR</button>' +
     '<a class="key amb exec" href="' + g.href + '">EXEC &#9654; ' + verb + '</a></div></div>';
   document.getElementById('rtnBtn').addEventListener('click', showTracker);
+  var dv = main.querySelector('.dataVal');
+  if (dv) printOn(dv, dataText);
+  var exec = main.querySelector('.exec'), committing = false;
+  if (exec) exec.addEventListener('click', function (e) {
+    if (committing) { e.preventDefault(); return; }
+    committing = true;
+    e.preventDefault();
+    var href = exec.getAttribute('href');
+    main.classList.add('commit');
+    exec.classList.add('lit');
+    confirmTone();
+    buzz([10, 40, 10]);
+    var dds = main.querySelectorAll('.tele dd');
+    dds.forEach(function (dd, i) {
+      setTimeout(function () { dd.innerHTML += '<span class="chk"> \u2713</span>'; }, 90 + i * 100);
+    });
+    setTimeout(function () { window.location.href = href; }, 430);
+  });
   document.getElementById('mdu1').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+/* the tracker repaints itself every half minute while it is up */
+setInterval(function () {
+  var sw = document.querySelector('#trkr .sweep');
+  if (!sw) return;
+  sw.classList.remove('go');
+  void sw.getBoundingClientRect();
+  sw.classList.add('go');
+}, 30000);
 
 /* ---------- MDU 2: flight plan (editorial picks; AI replaces when it lands) ---------- */
 (function () {
@@ -281,13 +347,16 @@ function callUp(id) {
     var sp = cut.lastIndexOf(' ');
     return (sp > 40 ? cut.slice(0, sp) : cut).replace(/[.,;:!?—-]+$/, '') + '…';
   }
+  var renderCount = 0;
   function render(picks) {
+    var wave = renderCount++ > 0;
     el.innerHTML = '';
     picks.forEach(function (p, i) {
       var g = byId(p.game); if (!g) return;
       var pr = progressFor(p.game);
       var row = document.createElement('button');
-      row.className = 'opsrow';
+      row.className = 'opsrow' + (wave ? ' wave' : '');
+      if (wave) row.style.animationDelay = (i * 45) + 'ms';
       row.innerHTML = '<span class="no">OPS ' + (i + 1) + '</span><span class="nm">' + g.name +
         '</span><span class="st">' + (pr ? escapeHtml(cleanLabel(pr.label)) : 'STANDING BY') + '</span>' +
         '<span class="bl">' + escapeHtml(fitBlurb(p.blurb)) + '</span>';
@@ -323,9 +392,36 @@ function callUp(id) {
     el.innerHTML = '<p class="nodata"><b>NO DATA.</b><br>No flights logged on this device yet. Play any unit and its telemetry reports here — scores, levels, streaks, as live values.</p>';
   } else {
     el.innerHTML = rows.map(function (r) {
-      return '<div class="telrow"><span class="nm">' + r.g.name + '</span><span class="vl">' + escapeHtml(cleanLabel(r.pr.label)) +
-        '</span><span class="bar"><i style="width:' + Math.round(r.pr.frac * 100) + '%"></i></span></div>';
+      var finalLabel = cleanLabel(r.pr.label);
+      var zeroed = finalLabel.replace(/\d[\d,]*/g, '0');
+      return '<div class="telrow"><span class="nm">' + r.g.name + '</span><span class="vl" data-final="' + escapeHtml(finalLabel) + '">' + escapeHtml(zeroed) +
+        '</span><span class="bar"><i data-w="' + Math.round(r.pr.frac * 100) + '" style="width:0%"></i></span></div>';
     }).join('');
+    var revealed = false;
+    function reveal() {
+      if (revealed) return; revealed = true;
+      el.querySelectorAll('.telrow').forEach(function (row) {
+        var bar = row.querySelector('.bar i');
+        if (bar) requestAnimationFrame(function () { bar.style.width = bar.getAttribute('data-w') + '%'; });
+        var vl = row.querySelector('.vl'), fin = vl.getAttribute('data-final');
+        var t0 = performance.now();
+        (function step(now) {
+          var k = Math.min(1, (now - t0) / 950), e = 1 - Math.pow(1 - k, 3);
+          vl.textContent = fin.replace(/\d[\d,]*/g, function (tok, off) {
+            if (/of $/.test(fin.slice(0, off))) return tok;
+            var n = parseInt(tok.replace(/,/g, ''), 10);
+            return Math.round(n * e).toLocaleString('en-US');
+          });
+          if (k < 1) requestAnimationFrame(step);
+        })(t0);
+      });
+    }
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) {
+        if (es.some(function (x) { return x.isIntersecting; })) { reveal(); io.disconnect(); }
+      }, { threshold: .25 });
+      io.observe(el);
+    } else { reveal(); }
   }
 })();
 
@@ -356,9 +452,11 @@ function callUp(id) {
         return;
       }
       bank.classList.add('dim');
-      bank.querySelectorAll('.tile').forEach(function (t) {
+      bank.querySelectorAll('.tile').forEach(function (t, ix) {
         var g = byId(t.getAttribute('data-id'));
+        t.style.transitionDelay = (ix * 16) + 'ms';
         t.classList.toggle('hit', g.ops.indexOf(f) >= 0);
+        setTimeout(function () { t.style.transitionDelay = ''; }, 600);
       });
     });
   });
@@ -425,9 +523,36 @@ function confirmTone() {
     });
   } catch (e) {}
 }
+function buzz(p) {
+  try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {}
+}
+function bleed(e, amb) {
+  var scr = e.target.closest('.screen');
+  if (!scr) return;
+  var r = scr.getBoundingClientRect();
+  var d = document.createElement('span');
+  d.className = 'bleed' + (amb ? ' amb' : '');
+  var S = 150;
+  d.style.width = d.style.height = S + 'px';
+  d.style.left = (e.clientX - r.left - S / 2) + 'px';
+  d.style.top = (e.clientY - r.top - S / 2) + 'px';
+  scr.appendChild(d);
+  setTimeout(function () { d.remove(); }, 340);
+}
 document.addEventListener('pointerdown', function (e) {
+  var hit = e.target.closest('.tile,.key,.opsrow,.starwrap,.exec');
+  if (hit) {
+    var pressEl = e.target.closest('.tile,.key,.opsrow');
+    if (pressEl) {
+      pressEl.classList.add('pressing');
+      var clear = function () { pressEl.classList.remove('pressing'); document.removeEventListener('pointerup', clear); document.removeEventListener('pointercancel', clear); };
+      document.addEventListener('pointerup', clear);
+      document.addEventListener('pointercancel', clear);
+    }
+    if (!e.target.closest('.starwrap')) bleed(e, !!e.target.closest('.exec'));
+  }
   if (e.target.closest('.exec')) { confirmTone(); return; }
-  if (e.target.closest('.tile,.key,.opsrow,.starwrap')) tick();
+  if (hit) { tick(); buzz(8); }
 });
 var sndKey = document.getElementById('sndKey');
 function renderSnd() {
