@@ -267,8 +267,10 @@ function moonSvg(MXY) {
       '<circle cx="' + x + '" cy="' + y + '" r="5" fill="#e9e7de"/>' +
       '<ellipse cx="' + (x - 1.6) + '" cy="' + (y - 1.2) + '" rx="1.5" ry="1.1" fill="#b9b6aa" opacity=".35"/>' +
       '<ellipse cx="' + (x + 1.8) + '" cy="' + (y + 1.6) + '" rx="1.1" ry=".8" fill="#b9b6aa" opacity=".3"/>' +
-      '<ellipse cx="' + (x + .6) + '" cy="' + (y - 2.4) + '" rx=".8" ry=".6" fill="#b9b6aa" opacity=".25"/>' + dark;
-  return '<g class="moon" aria-hidden="true">' + disc +
+      '<ellipse cx="' + (x + .6) + '" cy="' + (y - 2.4) + '" rx=".8" ry=".6" fill="#b9b6aa" opacity=".25"/>' +
+      '<circle cx="' + x + '" cy="' + y + '" r="5" fill="url(#msph)"/>' +
+      '<path d="M' + (x - 4.9) + ' ' + (y - .9) + ' A5 5 0 0 1 ' + (x + 1.3) + ' ' + (y - 4.8) + '" stroke="rgba(255,255,255,.38)" stroke-width=".35" fill="none" stroke-linecap="round"/>' + dark;
+  return '<g class="moon" id="moonG" aria-hidden="true">' + disc +
     '<text class="slab" x="' + x + '" y="' + (y - 7.6) + '" text-anchor="middle">MOON</text></g>';
 }
 
@@ -276,13 +278,14 @@ function moonSvg(MXY) {
 var pxEls = null, pxT = 0, pxRaf = 0;
 function pxApply() {
   pxRaf = 0;
+  document.documentElement.style.setProperty('--drift', pxT.toFixed(2));
+  document.body.style.setProperty('--glare', pxT.toFixed(2));
+  var feed = document.querySelector('.feed');
+  if (feed) feed.style.setProperty('--feedRx', (pxT * -2.4).toFixed(2) + 'deg');
   var fp = document.querySelector('.feed .feedpar');
   if (fp) fp.style.transform = 'translateY(' + (pxT * -3).toFixed(1) + 'px)';
-  if (!pxEls) return;
-  var t = pxT;
-  pxEls.far.setAttribute('transform', 'translate(' + (t * -1.1).toFixed(2) + ' ' + (t * .8).toFixed(2) + ')');
-  pxEls.near.setAttribute('transform', 'translate(' + (t * -2.3).toFixed(2) + ' ' + (t * 1.6).toFixed(2) + ')');
-  pxEls.neb.setAttribute('transform', 'translate(' + (t * -.5).toFixed(2) + ' ' + (t * .4).toFixed(2) + ')');
+  /* layer transforms live in tiltStep now — it combines scroll + tilt */
+  kickTilt();
 }
 function pxMeasure() {
   var svg = document.getElementById('trkr');
@@ -302,6 +305,62 @@ function pxMeasure() {
 }
 window.addEventListener('scroll', pxMeasure, { passive: true });
 window.addEventListener('resize', pxMeasure);
+
+/* the hologram: the tracker plane tilts, and every depth layer answers
+   at its own rate — pointer on desktop, gyro (with iOS permission) on phone */
+var tiltPX = 0, tiltPY = 0, tiltGX = 0, tiltGY = 0, tiltCX = 0, tiltCY = 0, tiltRunning = false;
+function kickTilt() { if (!tiltRunning) { tiltRunning = true; requestAnimationFrame(tiltStep); } }
+function tiltStep() {
+  var tx = tiltGX || tiltPX, ty = tiltGY || tiltPY;
+  tiltCX += (tx - tiltCX) * .1;
+  tiltCY += (ty - tiltCY) * .1;
+  var svg = document.getElementById('trkr');
+  if (svg) {
+    svg.style.setProperty('--tiltX', tiltCX.toFixed(2) + 'deg');
+    svg.style.setProperty('--tiltY', tiltCY.toFixed(2) + 'deg');
+    var fig = document.getElementById('figG'), moon = document.getElementById('moonG');
+    if (fig) fig.setAttribute('transform', 'translate(' + (-tiltCY * .35).toFixed(2) + ' ' + (tiltCX * .3).toFixed(2) + ')');
+    if (moon) moon.setAttribute('transform', 'translate(' + (-tiltCY * .18).toFixed(2) + ' ' + (tiltCX * .16).toFixed(2) + ')');
+    if (pxEls) {
+      pxEls.far.setAttribute('transform', 'translate(' + (pxT * -1.1 - tiltCY * .55).toFixed(2) + ' ' + (pxT * .8 + tiltCX * .45).toFixed(2) + ')');
+      pxEls.near.setAttribute('transform', 'translate(' + (pxT * -2.3 - tiltCY * 1.15).toFixed(2) + ' ' + (pxT * 1.6 + tiltCX * .9).toFixed(2) + ')');
+      pxEls.neb.setAttribute('transform', 'translate(' + (pxT * -.5 - tiltCY * .3).toFixed(2) + ' ' + (pxT * .4 + tiltCX * .25).toFixed(2) + ')');
+    }
+  }
+  if (Math.abs(tx - tiltCX) > .02 || Math.abs(ty - tiltCY) > .02 || tiltGX || tiltGY) requestAnimationFrame(tiltStep);
+  else tiltRunning = false;
+}
+document.addEventListener('pointermove', function (e) {
+  var svg = document.getElementById('trkr');
+  if (!svg || !trkrUp) return;
+  var r = svg.getBoundingClientRect();
+  if (e.clientX < r.left - 30 || e.clientX > r.right + 30 || e.clientY < r.top - 30 || e.clientY > r.bottom + 30) {
+    if (tiltPX || tiltPY) { tiltPX = 0; tiltPY = 0; kickTilt(); }
+    return;
+  }
+  tiltPY = ((e.clientX - r.left) / r.width - .5) * 7;
+  tiltPX = -((e.clientY - r.top) / r.height - .5) * 6;
+  kickTilt();
+}, { passive: true });
+if (window.DeviceOrientationEvent) {
+  var gyroOn = false;
+  var enableGyro = function () {
+    if (gyroOn) return; gyroOn = true;
+    window.addEventListener('deviceorientation', function (e) {
+      if (e.gamma == null || !trkrUp) return;
+      tiltGY = Math.max(-7, Math.min(7, e.gamma * .18));
+      tiltGX = Math.max(-6, Math.min(6, (e.beta - 45) * .12));
+      kickTilt();
+    });
+  };
+  if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+    document.addEventListener('pointerdown', function h(e) {
+      if (!e.target.closest('#mainScreen')) return;
+      document.removeEventListener('pointerdown', h);
+      DeviceOrientationEvent.requestPermission().then(function (r) { if (r === 'granted') enableGyro(); }).catch(function () {});
+    });
+  } else { enableGyro(); }
+}
 
 /* a shooting star, now and then — never on a schedule you'd notice */
 (function () {
@@ -350,7 +409,8 @@ function showTracker() {
     var a = xy(POS[pr[0]]), b = xy(POS[pr[1]]);
     var cls = 'lk';
     if (isCharged(pr[0], fs) && isCharged(pr[1], fs)) cls += fs.doneRoots[fs.rootOf[pr[0]]] && fs.rootOf[pr[0]] === fs.rootOf[pr[1]] ? ' done' : ' hot';
-    return '<line class="' + cls + '" pathLength="1" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
+    return '<line class="lkg' + cls.slice(2) + '" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>' +
+      '<line class="' + cls + '" pathLength="1" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
   }).join('');
   var stars = Object.keys(POS).map(function (id) {
     var raw = POS[id], p = xy(raw).concat([raw[4]]), r = [0, 0.85, 1.2, 1.7][p[2]], g = byId(id);
@@ -389,8 +449,9 @@ function showTracker() {
     '<radialGradient id="neb2"><stop offset="0" stop-color="#33507e" stop-opacity=".12"/><stop offset="1" stop-color="#33507e" stop-opacity="0"/></radialGradient>' +
     '<radialGradient id="neb3"><stop offset="0" stop-color="#5b3a78" stop-opacity=".10"/><stop offset="1" stop-color="#5b3a78" stop-opacity="0"/></radialGradient>' +
     '<radialGradient id="mhalo"><stop offset="0" stop-color="#f4f1e4" stop-opacity=".13"/><stop offset="1" stop-color="#f4f1e4" stop-opacity="0"/></radialGradient>' +
+    '<radialGradient id="msph" cx="38%" cy="30%" r="75%"><stop offset="0" stop-color="#ffffff" stop-opacity=".20"/><stop offset=".45" stop-color="#ffffff" stop-opacity="0"/><stop offset=".78" stop-color="#0a0e0c" stop-opacity=".10"/><stop offset="1" stop-color="#0a0e0c" stop-opacity=".34"/></radialGradient>' +
     '<linearGradient id="metg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="-13" y2="6.5"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient></defs>' +
-    nebulae + bgFar + bgNear + lines + stars + moonSvg(MXY) +
+    nebulae + bgFar + bgNear + '<g id="figG">' + lines + stars + '</g>' + moonSvg(MXY) +
     '<g id="meteor" opacity="0"><line x1="0" y1="0" x2="-13" y2="6.5" stroke="url(#metg)" stroke-width=".8" stroke-linecap="round"/><circle cx="0" cy="0" r=".9" fill="#eafff5"/></g>' +
     '<rect class="sweep" x="0" y="-18" width="100" height="16" fill="url(#swg)"/></svg>' +
     '<div class="trkr-foot"><span>SELECT STAR &#8594; CALL UP</span><span class="amb">MOON · ' + moonInfo().name + '</span></div></div>';
@@ -622,6 +683,19 @@ setInterval(function () {
   }).join('');
   bank.querySelectorAll('.tile').forEach(function (t) {
     t.addEventListener('click', function () { callUp(t.getAttribute('data-id')); });
+    var scr = t.querySelector('.screen');
+    t.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch' || !scr) return;
+      var r = t.getBoundingClientRect();
+      var dx = (e.clientX - r.left) / r.width - .5, dy = (e.clientY - r.top) / r.height - .5;
+      scr.style.setProperty('--try', (dx * 3.4).toFixed(2) + 'deg');
+      scr.style.setProperty('--trx', (-dy * 3.4).toFixed(2) + 'deg');
+    });
+    t.addEventListener('pointerleave', function () {
+      if (!scr) return;
+      scr.style.setProperty('--try', '0deg');
+      scr.style.setProperty('--trx', '0deg');
+    });
   });
   document.querySelectorAll('.opsbar .key').forEach(function (k) {
     k.addEventListener('click', function () {
@@ -835,12 +909,28 @@ function ccSay(text, holdMs, amber) {
   var els = [document.querySelector('.capcom'), document.getElementById('mdu1'), subs[0], subs[1],
     document.querySelector('.opsbar'), document.querySelector('.bankwrap'), document.querySelector('.studio')];
   var timers = [], done = false;
+  var deck = document.querySelector('.deck');
   function finish() {
     if (done) return; done = true;
     timers.forEach(clearTimeout);
     els.forEach(function (e) { if (e) e.classList.add('wake'); });
     document.documentElement.classList.remove('boot');
+    document.documentElement.classList.remove('flight');
+    if (deck) deck.style.transform = '';
     try { sessionStorage.setItem('gz_boot', '1'); } catch (e) {}
+  }
+  /* the front door: the deck flies in from the dark, displays lighting
+     in sequence as it docks — the wake stagger below is the lighting */
+  if (deck) {
+    document.documentElement.classList.add('flight');
+    var ft0 = performance.now(), FDUR = 1550;
+    (function fly(now) {
+      if (done) return;
+      var k = Math.min(1, (now - ft0) / FDUR), e = 1 - Math.pow(1 - k, 3);
+      deck.style.transform = 'rotateX(' + ((1 - e) * 15).toFixed(2) + 'deg) rotateY(' + ((1 - e) * -8).toFixed(2) +
+        'deg) translateZ(' + ((1 - e) * -150).toFixed(0) + 'px) translateY(' + ((1 - e) * 30).toFixed(0) + 'px)';
+      if (k < 1) requestAnimationFrame(fly);
+    })(ft0);
   }
   els.forEach(function (e, i) { if (e) timers.push(setTimeout(function () { e.classList.add('wake'); }, 220 + i * 200)); });
   timers.push(setTimeout(finish, 220 + els.length * 200 + 400));
