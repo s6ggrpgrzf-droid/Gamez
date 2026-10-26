@@ -323,11 +323,6 @@
   @keyframes flareFlame{0%{transform:translate(-50%,-92%) scale(1)}35%{transform:translate(-50%,-92%) scale(1.6)}100%{transform:translate(-50%,-92%) scale(1)}}
 
   /* --- actors --- */
-  .ghost{position:absolute;top:46%;left:-14%;width:12%;opacity:0;pointer-events:none;filter:blur(.4px)}
-  .ghost.fly{pointer-events:auto;cursor:pointer;animation:ghostGlide 17s linear forwards}
-  @keyframes ghostGlide{0%{transform:translate(0,0);opacity:0}7%{opacity:.5}50%{transform:translate(58vw,-14px)}93%{opacity:.5}100%{transform:translate(118vw,4px);opacity:0}}
-  .ghost.bow{animation:ghostBow .8s ease forwards}
-  @keyframes ghostBow{0%{transform:rotate(0)}40%{transform:rotate(9deg) translateY(4px);opacity:.55}100%{transform:rotate(0);opacity:0}}
   .spark{position:absolute;width:11px;height:11px;border-radius:50%;cursor:pointer;z-index:30;
     background:radial-gradient(circle,#fff3c4 0%, #ffca55 45%, rgba(255,150,40,0) 75%);
     box-shadow:0 0 14px 5px rgba(255,180,70,.5);transition:left 2.6s cubic-bezier(.4,.1,.3,1), top 2.6s cubic-bezier(.4,.1,.3,1);
@@ -534,7 +529,6 @@
 
     <!-- actors -->
     <div class="layer lz-actors">
-      <div class="ghost" id="ghost"></div>
       <div class="spark" id="spark" title="A stray spark…"></div>
     </div>
 
@@ -1219,26 +1213,6 @@ document.getElementById('casebox').addEventListener('click',function(){
 });
 document.querySelectorAll('.lancet').forEach(function(l){
   l.addEventListener('click',function(){ say('Beyond the diamond glass, the night is doing its slow arithmetic of stars.'); });
-});
-
-/* the ghost */
-var ghost=document.getElementById('ghost');
-ghost.innerHTML='<svg viewBox="0 0 60 92" style="width:100%;display:block">' +
-  '<ellipse cx="30" cy="26" rx="13" ry="15" fill="rgba(220,228,255,.50)"/>' +
-  '<path d="M16 38 Q13 70 20 85 L25 77 L30 86 L35 77 L40 85 Q47 70 44 38 Q30 47 16 38 Z" fill="rgba(220,228,255,.32)"/>' +
-  '<circle cx="25" cy="25" r="2" fill="rgba(30,30,60,.55)"/><circle cx="35" cy="25" r="2" fill="rgba(30,30,60,.55)"/>' +
-  '<ellipse cx="30" cy="33" rx="2.6" ry="3.4" fill="rgba(30,30,60,.40)"/></svg>';
-function ghostCycle(){
-  ghost.classList.remove('fly','bow'); void ghost.offsetWidth;
-  ghost.classList.add('fly');
-  setTimeout(ghostCycle, 34000);
-}
-setTimeout(ghostCycle, 11000);
-ghost.addEventListener('click', function(){
-  if(!ghost.classList.contains('fly')) return;
-  ghost.classList.remove('fly'); ghost.classList.add('bow');
-  say('The ghost bows from the aisle. It sat in this class once, centuries ago, and never quite left.');
-  setTimeout(function(){ ghost.classList.remove('bow'); }, 850);
 });
 
 /* the stray spark */
