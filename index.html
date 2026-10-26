@@ -103,10 +103,9 @@
   .board .tray::before{content:"";position:absolute;left:12%;top:1px;width:34px;height:3px;border-radius:2px;background:#e8e6da;opacity:.85}
   .board .tray::after{content:"";position:absolute;right:16%;top:1px;width:16px;height:3px;border-radius:2px;background:#d8d4c4;opacity:.6}
   .quill{position:absolute;right:-4.5%;bottom:2%;width:15%;max-width:52px;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(0,0,0,.5));
-    animation:quillBob 3.6s ease-in-out infinite alternate}
+    animation:quillBob 3.6s ease-in-out infinite alternate;transition:transform .16s linear}
   @keyframes quillBob{from{transform:rotate(-3deg) translateY(0)}to{transform:rotate(2deg) translateY(-3px)}}
-  .quill.write{animation:quillWrite .16s ease-in-out 7 alternate}
-  @keyframes quillWrite{from{transform:rotate(-7deg) translate(0,0)}to{transform:rotate(4deg) translate(-4px,2px)}}
+  .quill.travel{animation:none}
   .door2{position:absolute;left:86.5%;top:13%;width:10.5%;height:31%;cursor:pointer;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
   .dais{position:absolute;left:10%;right:10%;top:55%;height:14%;
     background:linear-gradient(180deg,#43301a,#2a1c0d 60%,#1c1107);border-radius:6px 6px 0 0;
@@ -901,6 +900,32 @@ document.getElementById('port1').addEventListener('click',function(){
 /* ================= the board speaks (in chalk) ================= */
 var boardText=document.getElementById('boardText'), quillEl=document.getElementById('quill'), boardBusy=false;
 var saySeq=0, sayIv=null, sayTo=null;
+var boardEl=document.getElementById('board');
+function quillTo(px,py){
+  var br=boardEl.getBoundingClientRect(), scale=br.width/boardEl.offsetWidth;
+  var lx=(px-br.left)/scale, ly=(py-br.top)/scale;
+  var nx=quillEl.offsetLeft+quillEl.offsetWidth*0.10, ny=quillEl.offsetTop+quillEl.offsetHeight*0.95;
+  quillEl.style.transform='translate('+((lx-nx).toFixed(1))+'px,'+((ly-ny).toFixed(1))+'px) rotate(-4deg)';
+}
+function quillStart(){
+  var bt=boardText.getBoundingClientRect();
+  var lh=parseFloat(getComputedStyle(boardText).lineHeight)||26;
+  quillTo(bt.left+1, bt.top+lh-3);
+}
+function quillCaret(i){
+  var node=boardText.firstChild;
+  if(!node||!node.length) return;
+  var rg=document.createRange();
+  rg.setStart(node,0); rg.setEnd(node,Math.min(i,node.length));
+  var rects=rg.getClientRects(), r=rects[rects.length-1];
+  if(r) quillTo(r.right+2, r.bottom-2);
+}
+function quillHome(){
+  var seq=saySeq;
+  quillEl.style.transition='transform .7s cubic-bezier(.3,.7,.3,1)';
+  quillEl.style.transform='';
+  setTimeout(function(){ if(seq===saySeq){ quillEl.classList.remove('travel'); quillEl.style.transition=''; } },720);
+}
 function say(text){
   saySeq++;
   var mySeq=saySeq;
@@ -914,14 +939,14 @@ function say(text){
     boardText.textContent='';
     boardText.classList.remove('swap');
     var i=0, step=Math.max(13, Math.min(28, Math.round(2100/Math.max(1,text.length))));
-    quillEl.classList.remove('write'); void quillEl.offsetWidth;
-    quillEl.style.animation='quillWrite .18s ease-in-out infinite alternate';
-    quillEl.classList.add('write');
+    quillEl.classList.add('travel');
+    quillStart();
     sayIv=setInterval(function(){
       if(mySeq!==saySeq){ clearInterval(sayIv); sayIv=null; return; }
       i++;
       boardText.textContent=text.slice(0,i);
-      if(i>=text.length){ clearInterval(sayIv); sayIv=null; quillEl.classList.remove('write'); quillEl.style.animation=''; boardBusy=false; }
+      quillCaret(i);
+      if(i>=text.length){ clearInterval(sayIv); sayIv=null; quillHome(); boardBusy=false; }
     }, step);
   },290);
 }
