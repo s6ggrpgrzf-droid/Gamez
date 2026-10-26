@@ -565,29 +565,143 @@
       if (!noHi) puffs[puffs.length - 1].hi = ni;
     }
     if (neb.name === 'Andromeda Galaxy') {
-      /* outer disc — wide, faint, the full reach of the spiral */
-      P(D, -S * 105, 0, anchorShade(neb.palette, rng), S * 330, 0.040, 2.7);
-      P(D + 60, S * 105, 0, anchorShade(neb.palette, rng), S * 330, 0.040, 2.7);
-      P(D + 30, 0, 0, anchorShade(neb.palette, rng), S * 360, 0.034, 2.7);
-      /* inner disc */
-      P(D + 40, -S * 48, 0, anchorShade(neb.palette, rng), S * 205, 0.085, 2.7);
-      P(D + 40, S * 48, 0, anchorShade(neb.palette, rng), S * 205, 0.085, 2.7);
-      /* the dust lane: one dark stroke laid across the disc, offset
-       * along the minor axis. No hi flag — a lane stays a lane when
-       * the galaxy's light rises around it. */
-      var lx = (0 * cr - S * 30 * sr), ly = (0 * sr + S * 30 * cr);
-      puffs.push({
-        pos: [
-          neb.dir[0] * (D + 90) + basis.t1[0] * lx + basis.t2[0] * ly,
-          neb.dir[1] * (D + 90) + basis.t1[1] * lx + basis.t2[1] * ly,
-          neb.dir[2] * (D + 90) + basis.t1[2] * lx + basis.t2[2] * ly
-        ],
-        col: [0.006, 0.006, 0.016], size: S * 170, alpha: 0.32, phase: rng() * 6.283, kind: 1,
-        rot: shape.rot, aspect: 3.2
+      /* Andromeda rebuilt from stars, not smears (the M13 lesson):
+       * points carry the structure — nucleus, bulge, disc, two arm
+       * chains — gas is demoted to halo wash and unresolved glow,
+       * and the dust lane returns as a chain of small dark puffs
+       * with broken edges. (u, v) are disc coordinates: u along the
+       * major axis, v squashed by the disc's own tilt. R is the
+       * disc's semi-major reach in world units. */
+      var R = S * 250;
+      function GPT(u, v, col, size) {
+        clusterPts.push({
+          pos: [
+            neb.dir[0] * (D + (rng() - 0.5) * 70) + basis.t1[0] * (u * cr - v * sr) + basis.t2[0] * (u * sr + v * cr),
+            neb.dir[1] * (D + (rng() - 0.5) * 70) + basis.t1[1] * (u * cr - v * sr) + basis.t2[1] * (u * sr + v * cr),
+            neb.dir[2] * (D + (rng() - 0.5) * 70) + basis.t1[2] * (u * cr - v * sr) + basis.t2[2] * (u * sr + v * cr)
+          ],
+          col: col, size: size, phase: rng() * 6.283,
+          twk: 0.25 + rng() * 0.55, spike: 0, neb: ni
+        });
+      }
+      function discPt(rFrac, a) { return [Math.cos(a) * rFrac * R, Math.sin(a) * rFrac * R / 2.7]; }
+      /* halo wash — the old outer disc, at a whisper */
+      P(D, -S * 90, 0, anchorShade(neb.palette, rng), S * 340, 0.020, 2.7);
+      P(D + 60, S * 90, 0, anchorShade(neb.palette, rng), S * 340, 0.020, 2.7);
+      P(D + 30, 0, 0, anchorShade(neb.palette, rng), S * 370, 0.016, 2.7);
+      /* unresolved glow: the bulge and inner disc as many small
+       * puffs, none bright enough to show its texture */
+      for (var gi = 0; gi < 14; gi++) {
+        var ga = rng() * 6.283, gr = Math.pow(rng(), 1.7) * 0.30;
+        var gp = discPt(gr, ga);
+        P(D + 40, gp[0], gp[1], paletteShade(neb.palette, rng), S * (20 + rng() * 24), 0.050 + rng() * 0.040, 1.9);
+      }
+      for (var gj = 0; gj < 10; gj++) {
+        var ha = rng() * 6.283, hr = 0.30 + rng() * 0.38;
+        var hp = discPt(hr, ha);
+        P(D + 30, hp[0], hp[1], anchorShade(neb.palette, rng), S * (50 + rng() * 30), 0.038 + rng() * 0.020, 2.2);
+      }
+      /* the nucleus: a dense knot of warm points, gold at the heart
+       * grading to cream — no single blaze, so no lattice */
+      for (var ni2 = 0; ni2 < 90; ni2++) {
+        var nr = Math.pow(rng(), 1.8) * 0.16, na = rng() * 6.283;
+        var np = discPt(nr, na);
+        var nw = rng();
+        var ncol = nr < 0.05
+          ? [1.06, 0.86 + nw * 0.08, 0.55 + nw * 0.10]
+          : [0.98, 0.88 + nw * 0.07, 0.70 + nw * 0.10];
+        GPT(np[0], np[1], ncol, 5.5 + rng() * 7.5 + (nr < 0.04 ? 2.5 : 0));
+      }
+      /* the disc: two hundred faint points, blue-white over cream,
+       * thinning as they reach the edge */
+      for (var di = 0; di < 300; di++) {
+        var dr = rng() < 0.55
+          ? Math.min(1, 0.62 * -Math.log(1 - rng() * 0.92))
+          : Math.sqrt(rng());
+        var dp = discPt(dr, rng() * 6.283);
+        var dw = rng(), ddim = 0.92 - dr * 0.42;
+        var dcol = dw < 0.62
+          ? [0.72 * ddim, 0.80 * ddim, 1.02 * ddim]
+          : (dw < 0.86 ? [0.92 * ddim, 0.90 * ddim, 0.82 * ddim] : [1.0 * ddim, 0.84 * ddim, 0.62 * ddim]);
+        GPT(dp[0], dp[1], dcol, 5.5 + rng() * 6);
+      }
+      /* two spiral arms as chains of points winding out of the disc,
+       * with pink knots where the stars are being born */
+      [0.5, 0.5 + Math.PI].forEach(function (a0, armIx) {
+        for (var ai = 0; ai < 22; ai++) {
+          var t = ai / 21, aa = a0 + t * 2.1, ar = 0.16 + t * 0.78;
+          var ap = discPt(ar, aa);
+          var jx = (rng() - 0.5) * 0.045 * R, jy = (rng() - 0.5) * 0.045 * R / 2.7;
+          var ab = 1.0 - t * 0.25;
+          GPT(ap[0] + jx, ap[1] + jy, [0.78 * ab, 0.85 * ab, 1.05 * ab], 6 + rng() * 5);
+          if (ai === 9 || ai === 15) {
+            P(D + 55, ap[0], ap[1], [0.94, 0.60, 0.68], S * (11 + rng() * 6), 0.11, 1.4);
+            GPT(ap[0], ap[1], [1.0, 0.72, 0.78], 7.5);
+          }
+        }
       });
-      /* nucleus — small, hot, the brightest point in the disc */
-      var warm = paletteShade(neb.palette, rng);
-      P(D + 80, 0, 0, [warm[0] * 1.25 + 0.10, warm[1] * 1.18 + 0.07, warm[2] * 1.05 + 0.03], S * 92, 0.30, 1.6);
+      /* the dust lane: a chain of small dark puffs along the near
+       * side of the disc, sizes and depths jittered so the edge
+       * breaks like real dust. No hi — a lane stays a lane when
+       * the galaxy's light rises around it. */
+      for (var li = 0; li < 10; li++) {
+        var lu = -0.62 + (li / 9) * 1.24;
+        var lv = 0.135 + 0.020 * Math.sin(lu * 4.2) + (rng() - 0.5) * 0.012;
+        var lx2 = lu * R, ly2 = lv * R; /* lv is measured in disc-plane units */
+        puffs.push({
+          pos: [
+            neb.dir[0] * (D + 90) + basis.t1[0] * (lx2 * cr - ly2 * sr) + basis.t2[0] * (lx2 * sr + ly2 * cr),
+            neb.dir[1] * (D + 90) + basis.t1[1] * (lx2 * cr - ly2 * sr) + basis.t2[1] * (lx2 * sr + ly2 * cr),
+            neb.dir[2] * (D + 90) + basis.t1[2] * (lx2 * cr - ly2 * sr) + basis.t2[2] * (lx2 * sr + ly2 * cr)
+          ],
+          col: [0.006, 0.006, 0.016], size: S * (13 + rng() * 10), alpha: 0.48 + rng() * 0.20, phase: rng() * 6.283, kind: 1,
+          rot: shape.rot, aspect: 2.6
+        });
+      }
+      for (var ei = 0; ei < 8; ei++) {
+        var eu = -0.55 + (ei / 7) * 1.10;
+        var ev = 0.135 + 0.020 * Math.sin(eu * 4.2) - 0.020 + (rng() - 0.5) * 0.008;
+        var ex = eu * R, ey = ev * R;
+        puffs.push({
+          pos: [
+            neb.dir[0] * (D + 95) + basis.t1[0] * (ex * cr - ey * sr) + basis.t2[0] * (ex * sr + ey * cr),
+            neb.dir[1] * (D + 95) + basis.t1[1] * (ex * cr - ey * sr) + basis.t2[1] * (ex * sr + ey * cr),
+            neb.dir[2] * (D + 95) + basis.t1[2] * (ex * cr - ey * sr) + basis.t2[2] * (ex * sr + ey * cr)
+          ],
+          col: [0.006, 0.006, 0.016], size: S * (8 + rng() * 6), alpha: 0.36 + rng() * 0.12, phase: rng() * 6.283, kind: 1,
+          rot: shape.rot, aspect: 2.6
+        });
+      }
+      for (var wi = 0; wi < 5; wi++) {
+        var wu = -0.5 + wi * 0.25, wv = 0.235 + (rng() - 0.5) * 0.014;
+        var wx = wu * R, wy = wv * R;
+        puffs.push({
+          pos: [
+            neb.dir[0] * (D + 85) + basis.t1[0] * (wx * cr - wy * sr) + basis.t2[0] * (wx * sr + wy * cr),
+            neb.dir[1] * (D + 85) + basis.t1[1] * (wx * cr - wy * sr) + basis.t2[1] * (wx * sr + wy * cr),
+            neb.dir[2] * (D + 85) + basis.t1[2] * (wx * cr - wy * sr) + basis.t2[2] * (wx * sr + wy * cr)
+          ],
+          col: [0.006, 0.006, 0.016], size: S * (22 + rng() * 12), alpha: 0.15 + rng() * 0.07, phase: rng() * 6.283, kind: 1,
+          rot: shape.rot, aspect: 2.6
+        });
+      }
+      /* the companions: M32, a compact ember hugging the core on
+       * the south side; M110, a fainter oval across the disc */
+      (function companions() {
+        var ci;
+        for (ci = 0; ci < 12; ci++) {
+          var c32 = discPt(0.035 * Math.sqrt(rng()), rng() * 6.283);
+          GPT(0.06 * R + c32[0], -0.26 * R / 2.7 + c32[1], [1.0, 0.94, 0.82], 6 + rng() * 5);
+        }
+        P(D + 60, 0.06 * R, -0.26 * R / 2.7, [0.98, 0.92, 0.80], S * 17, 0.15, 1.25);
+        P(D + 60, 0.06 * R, -0.26 * R / 2.7, [0.95, 0.90, 0.78], S * 32, 0.085, 1.25);
+        for (ci = 0; ci < 10; ci++) {
+          var c110 = discPt(0.05 * Math.sqrt(rng()), rng() * 6.283);
+          GPT(-0.38 * R + c110[0], 0.40 * R / 2.7 + c110[1], [0.88, 0.92, 1.0], 5 + rng() * 4);
+        }
+        P(D + 40, -0.38 * R, 0.40 * R / 2.7, [0.88, 0.91, 0.99], S * 23, 0.10, 1.7);
+        P(D + 40, -0.38 * R, 0.40 * R / 2.7, [0.85, 0.89, 0.97], S * 46, 0.048, 1.7);
+      })();
     } else {
       /* Triangulum: a face-on spiral that only just holds together —
        * a soft heart, then arms trailing off into star-forming
