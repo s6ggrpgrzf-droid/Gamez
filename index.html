@@ -624,6 +624,7 @@ var G = [
   ['CATHEDRAL','CATHEDRAL','OLD TIME RADIO','Old time radio on a 1940s cathedral set. 1,800+ episodes.','<path d="M5 21 L5 11 a7 6.5 0 0 1 14 0 L19 21"/><path d="M9 21 L9 12.5 a3 3 0 0 1 6 0 L15 21"/><path d="M3 21 L21 21"/>',[]],
   ['STARLIGHT DRUMS','DRUMS','DAILY · RHYTHM','Tap the beat under a night sky — every true hit wakes a star.','<path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/>',[],{label:'Best A · 96.2%',frac:.96}]
 ];
+var U = ['./candy-cascade/','./bubble-hex/','./bloom-defense/','./neon-void/','./maze-trace/','./life-story/','./reel-empire/','./pdawg/','./word-well/','./tiny-fairway/','./skylark/','./dominoes/','https://s6ggrpgrzf-droid.github.io/Cathedral/','./starlight-drums/'];
 </script>
 <script>
 'use strict';
@@ -1017,7 +1018,8 @@ function openTale(i){
   document.getElementById('taleRtn').addEventListener('click', closeTale);
   document.getElementById('taleSeal').addEventListener('click', function(){
     this.classList.add('stamped'); flare();
-    setTimeout(function(){ closeTale(); say('This lesson isn\u2019t in session \u2014 for now. In the finished classroom, the lesson begins the moment you stamp.'); }, 680);
+    var u=U[i];
+    setTimeout(function(){ if(u) location.href=u; }, 680);
   });
 }
 
