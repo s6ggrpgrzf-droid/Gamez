@@ -625,12 +625,174 @@ var G = [
   ['STARLIGHT DRUMS','DRUMS','DAILY · RHYTHM','Tap the beat under a night sky — every true hit wakes a star.','<path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/>',[],{label:'Best A · 96.2%',frac:.96}]
 ];
 var U = ['./candy-cascade/','./bubble-hex/','./bloom-defense/','./neon-void/','./maze-trace/','./life-story/','./reel-empire/','./pdawg/','./word-well/','./tiny-fairway/','./skylark/','./dominoes/','https://s6ggrpgrzf-droid.github.io/Cathedral/','./starlight-drums/'];
+var IDS = ['candy-cascade','bubble-hex','bloom-defense','neon-void','maze-trace','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums'];
 </script>
 <script>
 'use strict';
 function el(html){ var d=document.createElement('div'); d.innerHTML=html; return d.firstElementChild; }
 function rnd(a,b){ return a + Math.random()*(b-a); }
 var stage=document.getElementById('stage'), world=document.getElementById('world');
+function cleanLabel(s) {
+  var t = String(s || '').replace(/^(\p{Extended_Pictographic}\uFE0F?\s*)+/gu, '').trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+}
+function read(key) {
+  try { var v = localStorage.getItem(key); return v == null ? null : v; }
+  catch (e) { return null; }
+}
+function readJSON(key) {
+  try { var v = read(key); return v ? JSON.parse(v) : null; }
+  catch (e) { return null; }
+}
+
+function flownStamp(id) {
+  try {
+    var f = JSON.parse(localStorage.getItem('gz_flown') || '{}');
+    return f[id] || 0;
+  } catch (e) { return 0; }
+}
+/* flight data = the game's own records, or the deck's logbook stamp for
+   games that keep none (Skylark) — without it their stars could never charge */
+function hasData(id) { return !!progressFor(id) || !!flownStamp(id); }
+function flownFor(id) {
+  try {
+    var f = JSON.parse(localStorage.getItem('gz_flown') || '{}');
+    var t = f[id]; if (!t) return null;
+    var m = Math.floor((Date.now() - t) / 60000);
+    if (m < 2) return 'JUST NOW';
+    if (m < 60) return m + 'M AGO';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'H AGO';
+    return Math.floor(h / 24) + 'D AGO';
+  } catch (e) { return null; }
+}
+function stampFlown(id) {
+  try {
+    var f = JSON.parse(localStorage.getItem('gz_flown') || '{}');
+    f[id] = Date.now();
+    localStorage.setItem('gz_flown', JSON.stringify(f));
+  } catch (e) {}
+}
+
+function progressFor(id) {
+  // returns {label, frac} or null
+  try {
+    if (id === 'candy-cascade') {
+      var c = readJSON('cc_progress_v1'); if (!c) return null;
+      var stars = 0, keys = c.stars || {};
+      Object.keys(keys).forEach(function (k) { stars += +keys[k] || 0; });
+      return { label: 'Level ' + (c.unlocked || 1) + ' of 25 · ★' + stars, frac: ((c.unlocked || 1) - 1) / 25 };
+    }
+    if (id === 'bubble-hex') {
+      var b = readJSON('bubblehex'); if (!b) return null;
+      var unlocked = 0, bst = 0;
+      Object.keys(b).forEach(function (k) {
+        if (k === 'muted' || k === 'name') return;
+        if (b[k]) { unlocked++; bst += (typeof b[k] === 'number' ? b[k] : 0); }
+      });
+      if (!unlocked) return null;
+      return { label: 'Level ' + unlocked + ' of 30 · ★' + bst, frac: unlocked / 30 };
+    }
+    if (id === 'bloom-defense') {
+      var bb = +(read('bloom2_best') || 0); if (!bb) return null;
+      return { label: 'Best ' + bb.toLocaleString(), frac: Math.min(1, bb / 50000) };
+    }
+    if (id === 'neon-void') {
+      var nv = +(read('nv_best') || 0); if (!nv) return null;
+      return { label: 'Best ' + nv.toLocaleString(), frac: Math.min(1, nv / 100000) };
+    }
+    if (id === 'maze-trace') {
+      var m = readJSON('as_progress'); if (!m) return null;
+      var cl = m.cleared || m.best || 0;
+      if (!cl) return null;
+      return { label: cl + ' boards cleared', frac: Math.min(1, cl / 24) };
+    }
+    if (id === 'life-story') {
+      var l = readJSON('lifestory'); if (!l) return null;
+      var lives = l.lives || 0, wins = l.wins || 0;
+      if (!lives) return null;
+      return { label: lives + ' lives · 🏆' + wins, frac: Math.min(1, wins / 4) };
+    }
+    if (id === 'reel-empire') {
+      var r = readJSON('reel-empire-v1'); if (!r || r.cash == null) return null;
+      return { label: '$' + Math.round(r.cash) + 'M studio', frac: Math.min(1, r.cash / 1000) };
+    }
+    if (id === 'pdawg') {
+      var p = readJSON('pdawg-daily');
+      var today = new Date().toISOString().slice(0, 10);
+      if (p && p.date === today && p.ms != null) {
+        var s = Math.round(p.ms / 1000);
+        var mm = Math.floor(s / 60), ss = ('' + (s % 60)).padStart(2, '0');
+        return { label: "Today's daily: " + mm + ':' + ss, frac: 1 };
+      }
+      var t = readJSON('pdawg-table');
+      if (t) return { label: 'Puzzle in progress', frac: .5 };
+      return null;
+    }
+    if (id === 'word-well') {
+      var w = readJSON('wwf_daily');
+      if (!w || !w.streak) return null;
+      return { label: '🔥 ' + w.streak + '-day streak', frac: Math.min(1, w.streak / 30) };
+    }
+    if (id === 'blood-moon') {
+      var bm = readJSON('bm_meta');
+      if (!bm) return null;
+      var bn = bm.nightsSurvived || 0, bk = bm.bestKills || 0;
+      if (!bn && !bk) return null;
+      return { label: '🌙 ' + bn + ' night' + (bn === 1 ? '' : 's') + ' · 🩸' + bk + ' best', frac: Math.min(1, bn / 5) };
+    }
+    if (id === 'tiny-fairway') {
+      var tf = readJSON('tf_best');
+      if (!tf || !tf.holes) return null;
+      var tst = tf.stars || 0, th = tf.holes;
+      return { label: '⛳ best ' + tf.strokes + ' strokes · ★' + tst, frac: Math.min(1, tst / (th * 3)) };
+    }
+    if (id === 'starlight-drums') {
+      var sd = readJSON('sd-records-v1');
+      var best = null;
+      if (sd && sd.songs) Object.keys(sd.songs).forEach(function (k) {
+        if (!best || sd.songs[k].pct > best.pct) best = sd.songs[k];
+      });
+      if (!best) { var ob = readJSON('sd-best-v1'); if (ob && ob.pct != null) best = ob; }
+      if (!best) return null;
+      var stk = (sd && sd.streak && sd.streak.count >= 2) ? ' · 🔥 ' + sd.streak.count + '-day streak' : '';
+      return { label: 'Best ' + best.letter + ' · ' + (+best.pct).toFixed(1) + '%' + stk, frac: Math.min(1, best.pct / 100) };
+    }
+    if (id === 'cathedral') {
+      var cs = readJSON('cathedral_state_v1');
+      if (!cs || !cs.station) return null;
+      return { label: 'Listening · ' + cs.station, frac: .5 };
+    }
+    if (id === 'dominoes') {
+      var ds = readJSON('dominoes.stats.v1');
+      if (!ds || !(ds.w || ds.l)) return null;
+      var played = (ds.w || 0) + (ds.l || 0);
+      return { label: 'W ' + (ds.w || 0) + ' · L ' + (ds.l || 0), frac: Math.min(1, played / 20) };
+    }
+  } catch (e) { return null; }
+  return null;
+}
+
+/* ==== the classroom reads the same records the flight deck did ==== */
+for (var gi2=0; gi2<G.length; gi2++){
+  var pr2=progressFor(IDS[gi2]);
+  if(!pr2){ var ft2=flownFor(IDS[gi2]); if(ft2) pr2={label:'Entered \u00b7 '+ft2, frac:.12}; }
+  if(pr2) pr2={label:cleanLabel(pr2.label), frac:pr2.frac};
+  G[gi2][6]=pr2||undefined;
+}
+(function(){
+  var reg=document.getElementById('register'); if(!reg) return;
+  var rows=[];
+  for (var i=0;i<G.length;i++){ if(G[i][6]) rows.push(i); }
+  rows.sort(function(x,y){ return (G[y][6].frac||0)-(G[x][6].frac||0); });
+  rows=rows.slice(0,3);
+  var h='<h5>Class Register</h5>';
+  if(!rows.length) h+='<div class="lrow"><span>No marks yet \u2014 stamp a seal and begin.</span></div>';
+  rows.forEach(function(i){ var lb=G[i][6].label; lb=lb.charAt(0).toLowerCase()+lb.slice(1);
+    h+='<div class="lrow"><b>'+G[i][0]+'</b><span>'+lb+'</span></div>'; });
+  reg.innerHTML=h;
+})();
+
 
 /* ================= candle factory ================= */
 function candle(s){
@@ -1019,6 +1181,7 @@ function openTale(i){
   document.getElementById('taleSeal').addEventListener('click', function(){
     this.classList.add('stamped'); flare();
     var u=U[i];
+    stampFlown(IDS[i]);
     setTimeout(function(){ if(u) location.href=u; }, 680);
   });
 }
@@ -1049,7 +1212,7 @@ document.getElementById('pass').addEventListener('click',function(){
   say('The hall pass — your way back to the flight deck. In the finished classroom, it works both ways.');
 });
 document.getElementById('register').addEventListener('click',function(){
-  say('The class register keeps your place in every lesson. In the finished classroom it will hold your real progress.');
+  say('The class register keeps your place in every lesson \u2014 and every mark in it is truly yours.');
 });
 document.getElementById('casebox').addEventListener('click',function(){
   say('The bookcase leans a little, the way old books do. The master reshelves it in his sleep, badly.');
