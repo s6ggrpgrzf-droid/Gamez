@@ -3,87 +3,1105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#07080a">
-<meta name="description" content="Gamez — a little arcade of handmade games: match-3, tycoon, shooters, puzzles and more.">
-<title>Gamez — arcade</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=optional" rel="stylesheet">
-<link rel="stylesheet" href="./hub.css?v=62">
-<link rel="stylesheet" href="./art-a.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-b.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-c.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-d.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-i.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-l.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-cr.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-dm.css" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="./art-sd.css" media="print" onload="this.media='all'">
+<title>The Classroom — a preview</title>
+<link rel="stylesheet" href="chalkfont.css">
+<style>
+  :root{
+    --gold:#e3ac55; --gold-hi:#ffd98a; --gold-deep:#9a7434;
+    --parch:#f3e5c3; --ink:#2a1c0d;
+    --chalk:#ece9db; --board:#17231c;
+    --oak:#3a2413; --oak-hi:#5a3a1e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{background:#050403;font-family:Georgia,'Times New Roman',serif;overflow:hidden;color:var(--parch)}
+
+  /* =============== the 3D stage =============== */
+  .stage{position:fixed;inset:0;overflow:hidden;
+    transform:scale(.9);transform-origin:50% 42%;
+    background:radial-gradient(120% 90% at 50% 30%, #16100a 0%, #060403 70%)}
+  .world{position:absolute;inset:-7%}
+  .layer{position:absolute;inset:0;pointer-events:none;transform-origin:50% 42.9%}
+  .layer > *{pointer-events:auto}
+  /* flat parallax (sweep fix 1): each layer's old projection, baked in as scale,
+     the lean as a differential translate from the same --px/--py the room already feels */
+  .lz-vault{transform:translate(calc(var(--px,0) * -13.7px), calc(var(--py,0) * 9px)) scale(.742)}
+  #cndFar{transform:translate(calc(var(--px,0) * -11px), calc(var(--py,0) * 7.2px)) scale(.792)}
+  #cndMid{transform:translate(calc(var(--px,0) * -7.2px), calc(var(--py,0) * 4.7px)) scale(.864)}
+  .lz-floor{transform:translate(calc(var(--px,0) * -1.6px), calc(var(--py,0) * 1.1px)) scale(.969);
+    perspective:950px;perspective-origin:50% 43%}
+  .lz-actors{transform:translate(calc(var(--px,0) * 1.7px), calc(var(--py,0) * -1.1px)) scale(1.033)}
+  .lz-easel{transform:translate(calc(var(--px,0) * -2px), calc(var(--py,0) * 1.3px)) scale(.962)}
+
+  /* --- the vault: dark oak ribs, ring chandeliers --- */
+  .vault{position:absolute;left:-6%;right:-6%;top:-8%;height:46%;
+    background:linear-gradient(180deg,#0a0603 0%,#17100a 55%,#211709 100%);
+    box-shadow:inset 0 -50px 80px rgba(3,4,10,.85)}
+  .vault svg{position:absolute;inset:0;width:100%;height:100%}
+  .vault::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg, rgba(0,0,0,.20) 0 3px, transparent 3px 64px)}
+  .chand{position:absolute;transform-origin:50% -30%;animation:sway 12.5s ease-in-out infinite alternate;pointer-events:none}
+  @keyframes sway{from{transform:rotate(-.65deg)}to{transform:rotate(.65deg)}}
+  .chand .chain{position:absolute;left:50%;top:-46%;width:2px;height:46%;transform:translateX(-50%);
+    background:repeating-linear-gradient(0deg,#0c0a08 0 4px,#3a3d44 4px 5px)}
+  .chand .ring{position:absolute;inset:0;border-radius:50%;border:5px solid #3d2f1e;
+    box-shadow:inset 0 0 0 2px #4a3a26, 0 6px 14px rgba(0,0,0,.6), inset 0 -6px 10px rgba(0,0,0,.7)}
+  .chand::before{content:"";position:absolute;inset:-34%;border-radius:50%;background:radial-gradient(circle, rgba(255,180,80,.13), transparent 68%)}
+  .chand .fl{position:absolute;width:11px;height:16px;border-radius:50% 50% 50% 50% / 64% 64% 36% 36%;transform:translate(-50%,-92%);
+    background:radial-gradient(ellipse at 50% 78%, #fff6cf 0%, #ffd76e 40%, rgba(255,140,30,0) 80%);
+    box-shadow:0 0 16px 7px rgba(255,180,80,.40);animation:flick var(--fd,.8s) ease-in-out var(--fdl,0s) infinite alternate}
+  @keyframes flick{from{transform:translate(-50%,-92%) scaleY(.965) skewX(-1.1deg)}to{transform:translate(-50%,-92%) scaleY(1.035) skewX(1.1deg)}}
+  .vaulthit{position:absolute;inset:0;cursor:pointer}
+  .sparkstreak{position:absolute;width:120px;height:2px;border-radius:2px;opacity:0;pointer-events:none;
+    background:linear-gradient(90deg, rgba(255,220,150,.95), rgba(255,220,150,0));transform:rotate(-18deg);transform-origin:right center}
+  .sparkstreak.go{animation:streakFly 1s ease-out}
+  @keyframes streakFly{0%{opacity:0;transform:rotate(-18deg) translateX(30px)}12%{opacity:1}100%{opacity:0;transform:rotate(-18deg) translateX(-210px)}}
+
+  /* --- far wall: honey stone, the board, lancets, the dais --- */
+  .farwall{transform:translate(calc(var(--px,0) * -8.6px), calc(var(--py,0) * 5.7px)) scale(.837)}
+  .farwall::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg, rgba(12,14,30,.30) 0%, rgba(12,14,30,.08) 30%, rgba(24,16,8,.05) 60%, rgba(0,0,0,.14) 100%)}
+  .wallwash{position:absolute;left:-4%;right:-4%;top:24%;bottom:0;
+    background:radial-gradient(60% 52% at 46% 52%, rgba(255,190,100,.17), rgba(255,190,100,0) 70%),
+               linear-gradient(180deg,#241a0e 0%, #37260f 36%, #2a1a09 100%)}
+  .wallwash::before{content:"";position:absolute;inset:0;opacity:.6;
+    background:repeating-linear-gradient(90deg, rgba(0,0,0,.17) 0 2px, transparent 2px 88px),
+               repeating-linear-gradient(0deg, rgba(0,0,0,.13) 0 2px, transparent 2px 52px),
+               repeating-linear-gradient(90deg, rgba(255,220,160,.03) 0 44px, transparent 44px 88px)}
+  .lancet{position:absolute;top:3%;width:11%;height:46%;border-radius:48% 48% 0 0 / 16% 16% 0 0;
+    background:radial-gradient(85% 60% at 50% 26%, #3a5c96, #1a3054 60%, #0c1830);
+    box-shadow:inset 0 0 0 3px #0d0906, inset 0 0 24px rgba(130,170,255,.30), 0 0 22px rgba(70,110,200,.12)}
+  .lancet::before{content:"";position:absolute;inset:0;border-radius:inherit;
+    background:linear-gradient(90deg, transparent 47%, rgba(5,3,2,.9) 47%, rgba(5,3,2,.9) 53%, transparent 53%),
+               repeating-linear-gradient(45deg, transparent 0 9px, rgba(5,3,2,.35) 9px 10.5px, transparent 10.5px 19px),
+               repeating-linear-gradient(-45deg, transparent 0 9px, rgba(5,3,2,.35) 9px 10.5px, transparent 10.5px 19px)}
+  .shaft{position:absolute;left:69%;top:10%;width:27%;height:46%;pointer-events:none;transform:skewX(-9deg);
+    background:linear-gradient(195deg, rgba(190,210,255,.11), rgba(190,210,255,0) 72%)}
+  .mote{position:absolute;border-radius:50%;background:rgba(230,238,255,.5);pointer-events:none;
+    animation:moteDrift var(--md,11s) ease-in-out var(--mdl,0s) infinite alternate}
+  @keyframes moteDrift{from{transform:translate(0,0)}to{transform:translate(-14px,20px)}}
+  .board{position:absolute;left:16%;top:6%;width:54%;height:38.5%;cursor:pointer;
+    background:linear-gradient(180deg,#4b3016,#33200f);border-radius:5px;
+    box-shadow:inset 0 2px 0 rgba(255,220,150,.22), inset 0 0 0 3px #241708, 0 16px 30px rgba(0,0,0,.55)}
+  .board .slate{position:absolute;inset:11px;border-radius:2px;overflow:hidden;
+    background:radial-gradient(70% 60% at 30% 30%, rgba(236,233,219,.05), transparent 60%),
+               radial-gradient(50% 44% at 74% 66%, rgba(236,233,219,.04), transparent 60%),
+               linear-gradient(168deg,#1a2820,#141f18 60%,#101a13);
+    box-shadow:inset 0 0 46px rgba(0,0,0,.6)}
+  .board .slate::after{content:"";position:absolute;inset:0;opacity:.5;
+    background:repeating-linear-gradient(93deg, transparent 0 34px, rgba(236,233,219,.022) 34px 52px, transparent 52px 90px)}
+  .board .bhead{position:absolute;left:6%;right:6%;top:6%;display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(236,233,219,.55);font-size:clamp(7px,1.9vw,10px);letter-spacing:.34em;text-transform:uppercase}
+  .board .bhead svg{width:15px;height:15px;stroke:rgba(236,233,219,.5);fill:none;stroke-width:1.4}
+  #boardText{position:absolute;left:7%;right:7%;top:19%;color:var(--chalk);
+    font-family:'ChalkHand','Snell Roundhand','Brush Script MT',cursive;font-weight:600;
+    font-size:clamp(17px,4.9vw,23px);line-height:1.3;letter-spacing:.01em;text-shadow:0 0 3px rgba(236,233,219,.35);
+    transition:opacity .28s ease, filter .28s ease}
+  #boardText.swap{opacity:0;filter:blur(2.5px)}
+  .board .tray{position:absolute;left:4%;right:4%;bottom:-7px;height:7px;border-radius:3px;
+    background:linear-gradient(180deg,#5a3a1e,#33200f);box-shadow:0 3px 6px rgba(0,0,0,.5)}
+  .board .tray::before{content:"";position:absolute;left:12%;top:1px;width:34px;height:3px;border-radius:2px;background:#e8e6da;opacity:.85}
+  .board .tray::after{content:"";position:absolute;right:16%;top:1px;width:16px;height:3px;border-radius:2px;background:#d8d4c4;opacity:.6}
+  .quill{position:absolute;right:-4.5%;bottom:2%;width:15%;max-width:52px;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(0,0,0,.5));
+    animation:quillBob 3.6s ease-in-out infinite alternate}
+  @keyframes quillBob{from{transform:rotate(-3deg) translateY(0)}to{transform:rotate(2deg) translateY(-3px)}}
+  .quill.write{animation:quillWrite .16s ease-in-out 7 alternate}
+  @keyframes quillWrite{from{transform:rotate(-7deg) translate(0,0)}to{transform:rotate(4deg) translate(-4px,2px)}}
+  .door2{position:absolute;left:86.5%;top:13%;width:10.5%;height:31%;cursor:pointer;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
+  .dais{position:absolute;left:10%;right:10%;top:55%;height:14%;
+    background:linear-gradient(180deg,#43301a,#2a1c0d 60%,#1c1107);border-radius:6px 6px 0 0;
+    box-shadow:0 -3px 0 rgba(255,210,130,.10), 0 18px 34px rgba(0,0,0,.55)}
+  .dais::before{content:"";position:absolute;left:-5%;right:-5%;bottom:-15%;height:22%;
+    background:linear-gradient(180deg,#37260f,#1c1107);border-radius:4px;box-shadow:0 14px 26px rgba(0,0,0,.6)}
+  .tdesk{position:absolute;left:21%;right:21%;top:46%;height:10.5%;
+    background:linear-gradient(180deg,#5f3d1c,#43301a 55%,#2a1c0d);border-radius:5px;
+    box-shadow:inset 0 2px 0 rgba(255,220,150,.25), inset 0 -3px 0 rgba(0,0,0,.5), inset 0 -8px 14px rgba(0,0,0,.5), 0 12px 22px rgba(0,0,0,.5)}
+  .tdesk::after{content:"";position:absolute;inset:0;border-radius:5px;
+    background:radial-gradient(60% 90% at 50% 0%, rgba(255,190,90,.13), transparent 70%)}
+  .slate3{position:absolute;bottom:51.5%;width:13%;text-align:center;cursor:pointer;z-index:3;transition:transform .25s ease}
+  .slate3:active{transform:translateY(-3px)}
+  .slate3 .scard{margin:0 auto;width:92%;padding:5px 1px 6px;border-radius:2px;color:var(--chalk);
+    background:linear-gradient(170deg,#1d2a21,#131e16);box-shadow:0 4px 10px rgba(0,0,0,.55), inset 0 0 0 3px #4a3016, inset 0 0 12px rgba(0,0,0,.5);
+    font-size:clamp(6.5px,1.7vw,10px);letter-spacing:.08em;font-weight:700;text-transform:uppercase;line-height:1.3}
+  .slate3 .ssub{margin-top:3px;font-size:clamp(5.5px,1.5vw,8.5px);letter-spacing:.24em;color:var(--gold-hi);text-transform:uppercase;
+    text-shadow:0 1px 4px rgba(0,0,0,.85)}
+  .dome{position:absolute;left:23%;bottom:52.5%;width:8%;cursor:pointer;z-index:2}
+  .hourglass{position:absolute;right:24%;bottom:52.8%;width:5.4%;cursor:pointer;z-index:2;
+    transition:transform .8s cubic-bezier(.3,1.2,.4,1);filter:drop-shadow(0 3px 4px rgba(0,0,0,.55))}
+  .hourglass.flip{transform:rotate(180deg)}
+  .tbooks{position:absolute;right:31%;bottom:52.6%;width:7%;z-index:2;pointer-events:none}
+  .stand{position:absolute;top:43%;width:5.5%;height:15%;pointer-events:none}
+  .stand::before{content:"";position:absolute;left:50%;top:16%;bottom:6%;width:3px;transform:translateX(-50%);
+    background:linear-gradient(90deg,#191512,#3a3d44,#191512)}
+  .stand::after{content:"";position:absolute;left:16%;right:16%;bottom:0;height:5px;border-radius:50%;
+    background:radial-gradient(ellipse at center, #2c2620, #100d0a)}
+
+  /* --- the master's cauldron, on the dais corner --- */
+  .cauldron{position:absolute;left:1.8%;top:36.5%;width:15%;cursor:pointer;z-index:2}
+  .cauldron .pot{position:relative;border-radius:50% 50% 50% 50% / 42% 42% 58% 58%;
+    background:radial-gradient(circle at 38% 30%, #3d3f45 0%, #232428 52%, #101114 100%);
+    box-shadow:inset 0 -10px 18px rgba(0,0,0,.8), inset 0 4px 8px rgba(255,255,255,.06), 0 14px 22px rgba(0,0,0,.55)}
+  .cauldron .brew{position:absolute;left:9%;right:9%;top:5%;height:26%;border-radius:50%;
+    background:radial-gradient(ellipse at 46% 42%, #a4f2b0 0%, #57d98a 42%, #1f7a44 78%, #14532c 100%);
+    box-shadow:inset 0 -4px 8px rgba(0,0,0,.35), 0 0 24px 6px rgba(87,217,138,.28)}
+  .cauldron .bub{position:absolute;border-radius:50%;background:radial-gradient(circle at 38% 32%, #eaffea, #7de79b 60%, #2f9e5f);
+    animation:bub var(--bd,2.6s) ease-in-out var(--bdl,0s) infinite alternate}
+  @keyframes bub{from{transform:scale(.55);opacity:.65}to{transform:scale(1.12);opacity:1}}
+  .cauldron .fire2{position:absolute;left:22%;right:22%;bottom:-13%;height:20%}
+  .cauldron .fl2{position:absolute;bottom:0;border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;transform-origin:50% 100%;
+    animation:flick2 var(--fd,.8s) ease-in-out var(--fdl,0s) infinite alternate}
+  @keyframes flick2{from{transform:scaleY(.92) skewX(-1.6deg)}to{transform:scaleY(1.07) skewX(1.8deg)}}
+  .cauldron .wisp{position:absolute;border-radius:50%;pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(230,255,236,.15), transparent 68%);
+    animation:wispRise var(--wd,5s) ease-in-out var(--wdl,0s) infinite}
+  @keyframes wispRise{0%{transform:translateY(0) scaleX(1);opacity:0}22%{opacity:.8}100%{transform:translateY(-46px) scaleX(1.5) translateX(7px);opacity:0}}
+  .cauldron.burst .brew{animation:brewBurst .8s ease}
+  @keyframes brewBurst{0%{transform:scale(1)}30%{transform:scale(1.07)}100%{transform:scale(1)}}
+  .cauldron::before{content:"";position:absolute;left:15%;right:15%;top:-12%;height:25%;border:4px solid #232328;border-bottom:none;border-radius:50% 50% 0 0/100% 100% 0 0;transform:rotate(-5deg)}
+  .cauldron .cglow{position:absolute;left:-16%;right:-16%;bottom:-24%;height:40%;border-radius:50%;pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(255,130,40,.20), transparent 70%)}
+
+  /* --- side walls: jar shelves (left), bookcase + portrait (right) --- */
+  .sidewall{transform:translate(calc(var(--px,0) * -4.8px), calc(var(--py,0) * 3.2px)) scale(.909)}
+  .shelves{position:absolute;left:-2%;top:25.5%;width:27.5%;height:21.5%}
+  .shelves::before{content:"";position:absolute;inset:-8% -6%;z-index:-1;pointer-events:none;background:radial-gradient(72% 62% at 42% 46%, rgba(255,170,80,.14), transparent 70%)}
+  .jar .jlabel{position:absolute;left:20%;right:20%;top:38%;height:20%;background:linear-gradient(175deg,#ead9ac,#d5bd85);opacity:.9;border-radius:1px;box-shadow:inset 0 0 0 1px rgba(120,90,40,.35)}
+  .jar .jlabel::after{content:"";position:absolute;left:15%;right:15%;top:32%;height:1.5px;background:rgba(96,68,22,.75);box-shadow:0 3.5px 0 rgba(96,68,22,.5)}
+  .shelves .sboard{position:absolute;left:0;right:0;height:6px;border-radius:3px;
+    background:linear-gradient(180deg,#5a3a1e,#33200f);box-shadow:0 4px 7px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,210,130,.18)}
+  #shelves,#casebox{pointer-events:none}
+  #shelves .jar, #casebox .spine{pointer-events:auto}
+  .jar{position:absolute;transform:translateX(-50%);cursor:pointer;transition:transform .25s ease}
+  .jar.back{filter:brightness(.93) saturate(.94)}
+  .jar.front{filter:brightness(1.03)}
+  .jar:active{transform:translateX(-50%) translateY(-2px)}
+  .jar .glass{position:absolute;inset:0;border-radius:38% 38% 34% 34% / 22% 22% 30% 30%;overflow:hidden;
+    background:linear-gradient(180deg, rgba(205,228,255,.07), rgba(205,228,255,.02) 55%, rgba(205,228,255,.05));
+    box-shadow:inset 0 0 0 2px rgba(220,235,255,.13), inset -5px 0 9px rgba(0,0,0,.35), inset 4px 0 7px rgba(255,255,255,.06)}
+  .jar .glass::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0) 14%),
+      radial-gradient(90% 30% at 32% 10%, rgba(255,255,255,.12), rgba(255,255,255,0) 70%),
+      linear-gradient(90deg, rgba(255,255,255,.09) 0%, rgba(255,255,255,0) 34%, rgba(0,0,0,.14) 76%, rgba(0,0,0,.30) 100%),
+      linear-gradient(102deg, rgba(235,245,255,.18) 0%, rgba(235,245,255,.04) 30%, rgba(235,245,255,0) 48%, rgba(190,220,255,.06) 82%, rgba(235,245,255,.11) 100%);
+    box-shadow:inset 0 -7px 9px rgba(240,250,255,.10), inset 0 -12px 16px rgba(0,0,0,.30), inset -3px 0 5px rgba(215,235,255,.13), inset 3px 0 6px rgba(255,255,255,.05)}
+  .jar .glass::before{content:"";position:absolute;left:17%;top:8%;width:17%;height:7%;border-radius:50%;z-index:1;
+    background:radial-gradient(ellipse, rgba(255,255,255,.5), rgba(255,255,255,0) 70%);transform:rotate(-14deg);pointer-events:none}
+  .jar .glass.s-round{border-radius:50% 50% 46% 46% / 58% 58% 42% 42%}
+  .jar .glass.s-flask{border-radius:16% 16% 48% 48% / 12% 12% 62% 62%}
+  .jar .glass.s-square{border-radius:9% 9% 12% 12% / 8% 8% 10% 10%}
+  .jar .glass.s-vial{border-radius:46% 46% 42% 42% / 30% 30% 36% 36%}
+  .jar .glass.s-round::after, .jar .glass.s-flask::after{
+    background:linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,0) 18%),
+      radial-gradient(90% 26% at 50% 5%, rgba(255,255,255,.14), rgba(255,255,255,0) 70%),
+      linear-gradient(90deg, rgba(255,255,255,.09) 0%, rgba(255,255,255,0) 34%, rgba(0,0,0,.14) 76%, rgba(0,0,0,.30) 100%),
+      linear-gradient(102deg, rgba(235,245,255,.18) 0%, rgba(235,245,255,.04) 30%, rgba(235,245,255,0) 48%, rgba(190,220,255,.06) 82%, rgba(235,245,255,.11) 100%);
+    box-shadow:inset 0 -7px 9px rgba(240,250,255,.10), inset 0 -12px 16px rgba(0,0,0,.30), inset -3px 0 5px rgba(215,235,255,.13), inset 3px 0 6px rgba(255,255,255,.05)}
+  .jar .glass.s-square::after{
+    background:linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0) 14%),
+      radial-gradient(90% 30% at 32% 10%, rgba(255,255,255,.10), rgba(255,255,255,0) 70%),
+      linear-gradient(90deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.02) 52%, rgba(0,0,0,.06) 54%, rgba(0,0,0,.34) 100%),
+      linear-gradient(102deg, rgba(235,245,255,.18) 0%, rgba(235,245,255,.04) 30%, rgba(235,245,255,0) 48%, rgba(190,220,255,.06) 82%, rgba(235,245,255,.11) 100%);
+    box-shadow:inset 0 -7px 9px rgba(240,250,255,.10), inset 0 -12px 16px rgba(0,0,0,.30), inset -3px 0 5px rgba(215,235,255,.13), inset 3px 0 6px rgba(255,255,255,.05)}
+  .jar .glass.s-round ~ .cork{left:38%;right:38%}
+  .jar .glass.s-flask ~ .cork{left:39%;right:39%}
+  .jar .glass.s-square ~ .cork{left:26%;right:26%}
+  .jar .stopper{position:absolute;left:33%;right:33%;top:-6%;height:16%;border-radius:50% 50% 42% 42% / 70% 70% 30% 30%;
+    background:radial-gradient(circle at 38% 30%, rgba(255,255,255,.5), rgba(190,220,255,.18) 60%, rgba(140,180,220,.10));
+    box-shadow:inset 0 0 0 1.5px rgba(230,245,255,.25), 0 3px 5px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.4)}
+  .jar .liquid{position:absolute;left:3.5%;right:3.5%;bottom:4%;opacity:.94}
+  .jar .liquid::before{content:"";position:absolute;left:0;right:0;top:-4.5px;height:9px;border-radius:50%;
+    background:radial-gradient(ellipse at 50% 38%, rgba(255,255,255,.48), rgba(255,255,255,.16) 72%);box-shadow:0 1px 2px rgba(255,255,255,.10)}
+  .jar .liquid::after{content:"";position:absolute;left:0;right:0;bottom:0;height:24%;
+    background:linear-gradient(180deg, transparent, rgba(0,0,0,.22))}
+  .jar .bubs{position:absolute;left:3.5%;right:3.5%;bottom:4%;overflow:hidden}
+  .jar .bubs i{position:absolute;bottom:-4px;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.4);
+    animation:rise var(--bd,6s) linear var(--bdl,0s) infinite}
+  @keyframes rise{from{transform:translateY(0);opacity:0}12%{opacity:.5}88%{opacity:.4}to{transform:translateY(-46px);opacity:0}}
+  .jar .cork{position:absolute;left:31%;right:31%;top:-4%;height:13%;border-radius:2px;
+    background:linear-gradient(180deg,#b98d58,#77572e);box-shadow:0 3px 5px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.5)}
+  .jar .cork::after{content:"";position:absolute;left:6%;right:6%;top:10%;height:28%;border-radius:50%;background:rgba(232,202,152,.55)}
+  .jar .shine{position:absolute;left:15%;top:10%;width:12%;height:52%;border-radius:50%;
+    background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.32) 30%, rgba(255,255,255,.10) 70%, rgba(255,255,255,0));transform:rotate(7deg)}
+  .jar.glow .glass{box-shadow:inset 0 0 0 2px rgba(220,235,255,.2), 0 0 20px 5px var(--jg,rgba(120,255,170,.35))}
+  .easel{position:absolute;width:12.6%;aspect-ratio:.74;cursor:pointer}
+  .easel .slate2{position:absolute;inset:0 0 13% 0;background:linear-gradient(165deg,#22352a,#182820 70%);border:4px solid #3d2a12;border-radius:3px;box-shadow:inset 0 0 0 1.6px rgba(0,0,0,.55), inset 0 0 14px rgba(0,0,0,.5), 0 8px 12px rgba(0,0,0,.5);overflow:hidden}
+  .easel .slate2 svg{position:absolute;inset:5% 6%;width:88%;height:90%}
+  .easel .leg{position:absolute;bottom:-1%;width:5px;height:17%;background:linear-gradient(90deg,#241708,#4a3016 55%,#241708);border-radius:2px}
+  .easel .leg.l{left:15%;transform:rotate(9deg)} .easel .leg.r{right:15%;transform:rotate(-9deg)}
+  .easel .bar2{position:absolute;left:7%;right:7%;bottom:5%;height:4px;background:#2e1e0c;border-radius:2px}
+  .easel .cl{position:absolute;height:2px;border-radius:2px;background:rgba(238,242,226,.30)}
+  #easelL{transform:rotate(1.4deg)} #easelR{transform:rotate(-1.4deg)}
+  .chair{position:absolute;left:50%;transform:translateX(-50%);top:35.5%;width:10%;height:11.5%;pointer-events:none}
+  .chair svg{width:100%;height:100%}
+  .case{position:absolute;right:-2%;top:25.5%;width:27.5%;height:21.5%}
+  .case .sboard{position:absolute;left:0;right:0;height:6px;border-radius:3px;
+    background:linear-gradient(180deg,#5a3a1e,#33200f);box-shadow:0 4px 7px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,210,130,.18)}
+  .spine{position:absolute;bottom:0;border-radius:2px 2px 1px 1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), inset 2px 0 3px rgba(255,255,255,.06)}
+  .spine::after{content:"";position:absolute;left:0;right:0;top:16%;height:2px;background:rgba(232,207,142,.4)}
+  .portrait{position:absolute;width:14.5%;cursor:pointer;filter:drop-shadow(0 7px 9px rgba(0,0,0,.55))}
+  .portrait .frame{border:4px solid #5f4520;border-radius:3px;overflow:hidden;
+    box-shadow:inset 0 0 0 2px #c99b3f, inset 0 0 24px rgba(0,0,0,.55), 0 0 0 5px #241708}
+  .portrait .eyesOpen{opacity:0;transition:opacity .3s}
+  .portrait.awake .eyesOpen{opacity:1}
+  .portrait .eyesShut{transition:opacity .3s}
+  .portrait.awake .eyesShut{opacity:0}
+  .portrait.wake{animation:wake .8s cubic-bezier(.3,1.8,.4,1)}
+  @keyframes wake{0%{transform:rotate(0)}35%{transform:rotate(-2.4deg)}70%{transform:rotate(1.6deg)}100%{transform:rotate(0)}}
+
+
+  /* --- the floor: boards, the chalk circle, fourteen desks --- */
+  .floorwrap{position:absolute;left:50%;top:45%;width:186%;height:82%;
+    transform:translateX(-50%) rotateX(50deg);transform-origin:50% 0;transform-style:preserve-3d;pointer-events:none}
+  .floor{position:absolute;inset:0;background:linear-gradient(180deg,#3d2812 0%, #4a3016 30%, #33200f 100%)}
+  .floor::before{content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg, transparent 37%, rgba(255,215,150,.05) 46%, rgba(255,215,150,.08) 50%, rgba(255,215,150,.05) 54%, transparent 63%), repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0 3px, transparent 3px 118px),
+               repeating-linear-gradient(0deg, rgba(255,205,120,.028) 0 2px, transparent 2px 62px)}
+  .floor::after{content:"";position:absolute;inset:0;
+    background:radial-gradient(90% 46% at 50% 0%, rgba(255,180,80,.10), transparent 60%),
+               radial-gradient(70% 60% at 50% 108%, rgba(0,0,0,.5), transparent 70%)}
+  .runes{position:absolute;left:50%;top:57%;width:54%;aspect-ratio:1;transform:translate(-50%,-50%);opacity:.15;pointer-events:none}
+  #desks{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
+  #desks .desk{pointer-events:auto}
+  .desk{position:absolute;width:9.8%;transform:translate(-50%,-50%);cursor:pointer;pointer-events:auto;transform-style:preserve-3d}
+  .desk .dtop{position:relative;border-radius:4px;padding-bottom:58%;
+    background:linear-gradient(90deg, rgba(255,214,140,.05), rgba(255,214,140,0) 30%, rgba(255,214,140,.04) 55%, rgba(255,214,140,0) 82%),
+               repeating-linear-gradient(0deg, rgba(0,0,0,.10) 0 2px, transparent 2px 9px),
+               linear-gradient(90deg,#4e3319,#634324 50%,#4e3319);
+    box-shadow:inset 0 0 0 2px rgba(30,18,6,.7), inset 0 0 30px rgba(0,0,0,.35), inset 0 6px 14px rgba(255,205,120,.06),
+               0 10px 14px rgba(0,0,0,.35)}
+  .desk .dtop::after{content:"";position:absolute;left:0;right:0;bottom:-7%;height:9%;border-radius:0 0 4px 4px;
+    background:linear-gradient(180deg,#33200f,#1e1206);box-shadow:0 6px 9px rgba(0,0,0,.4)}
+  .desk .book{position:absolute;left:50%;top:40%;width:56%;aspect-ratio:1.45;transform:translate(-50%,-50%) rotate(-2deg);
+    border-radius:2px;box-shadow:0 3px 7px rgba(0,0,0,.45), inset 0 0 0 1px rgba(122,90,36,.4);
+    background:linear-gradient(90deg,#e7d9b4 0%,#f2e7c6 44%,#c9b384 50%,#f2e7c6 56%,#e2d2a8 100%)}
+  .desk .book svg{position:absolute;left:9%;top:50%;transform:translateY(-50%);width:36%;height:72%;
+    fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
+  .desk .book .btitle{position:absolute;right:7%;top:50%;transform:translateY(-50%);width:38%;text-align:center;
+    font-size:clamp(4.5px,1.15vw,7px);letter-spacing:.06em;color:#6b4d1c;text-transform:uppercase;line-height:1.35;font-weight:700}
+  .desk .book .ribbon{position:absolute;left:50%;top:0;width:7%;height:118%;transform:translateX(-50%);
+    background:linear-gradient(180deg,#8c2432,#5e1622);clip-path:polygon(0 0,100% 0,100% 100%,50% 86%,0 100%);opacity:0}
+  .desk.pick .book .ribbon{opacity:1}
+  .desk .stack{position:absolute;left:5%;top:8%;width:24%;pointer-events:none}
+  .desk .stack i{display:block;height:5px;margin-top:2px;border-radius:1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  .desk .parch{position:absolute;right:5%;top:9%;width:23%;height:26%;border-radius:1px;transform:rotate(5deg);
+    background:linear-gradient(175deg,#f2e5c2,#e0cb96);box-shadow:0 2px 4px rgba(0,0,0,.4);opacity:0}
+  .desk .parch::after{content:"";position:absolute;left:14%;right:14%;top:26%;height:2px;background:rgba(107,77,28,.55);
+    box-shadow:0 4px 0 rgba(107,77,28,.4), 0 8px 0 rgba(107,77,28,.3)}
+  .desk.laden .parch{opacity:1}
+  .desk .inkwell{position:absolute;right:8%;bottom:10%;width:9%;aspect-ratio:1;border-radius:50%;opacity:0;
+    background:radial-gradient(circle at 40% 34%, #3a3f4a, #101216 70%);box-shadow:inset 0 0 0 1.5px rgba(201,155,63,.5), 0 2px 3px rgba(0,0,0,.5)}
+  .desk.laden .inkwell{opacity:1}
+  .desk .platewrap{position:absolute;left:50%;bottom:-4%;width:118%;margin-left:-59%;
+    transform:rotateX(-50deg);transform-origin:50% 100%;text-align:center}
+  .desk .nameplate{display:inline-block;padding:3px 7px 4px;border-radius:2px;white-space:nowrap;
+    background:linear-gradient(180deg,#77602c,#4a3a14 60%,#5d4a1e);color:#f0d896;
+    font-size:clamp(6.5px,1.7vw,10px);font-weight:700;letter-spacing:.09em;text-transform:uppercase;line-height:1.2;
+    text-shadow:0 -1px 1px rgba(0,0,0,.7), 0 1px 0 rgba(255,240,200,.14);
+    box-shadow:0 3px 6px rgba(0,0,0,.5), inset 0 0 0 1px rgba(240,216,150,.35), inset 0 1px 0 rgba(255,240,200,.3)}
+  .desk .nameplate.longn{font-size:6px;letter-spacing:.03em}
+  .desk:active .nameplate{transform:translateY(-2px)}
+  .desk .nameplate{transition:transform .25s ease}
+
+  /* --- candles (shared factory) --- */
+  .cnd{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
+  .cnd .halo{position:absolute;left:50%;top:0;transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle, rgba(255,196,96,.27) 0%, rgba(255,170,70,.10) 42%, rgba(255,160,60,0) 70%);
+    animation:breathe var(--bb,6s) ease-in-out var(--bdl,0s) infinite alternate}
+  @keyframes breathe{from{opacity:.72}to{opacity:1}}
+  .cnd .flame{position:absolute;left:50%;top:0;transform:translate(-50%,-92%);transform-origin:50% 100%;
+    border-radius:50% 50% 50% 50% / 64% 64% 36% 36%;
+    background:radial-gradient(ellipse 62% 24% at 50% 90%, rgba(110,150,255,.45), rgba(110,150,255,0) 70%), radial-gradient(ellipse at 50% 80%, #fff6cf 0%, #ffd76e 26%, #ff9d2e 58%, rgba(255,120,20,0) 96%);
+    animation:flick var(--fd,.8s) ease-in-out var(--fdl,0s) infinite alternate;will-change:transform}
+  .cnd .wax{position:absolute;left:50%;top:0;transform:translateX(-50%);border-radius:2px 2px 3px 3px;
+    background:linear-gradient(90deg,#d9c9a4,#f6ecd4 45%,#c9b48c);box-shadow:inset 0 -3px 4px rgba(120,90,40,.35)}
+  .cnd .wax::before{content:"";position:absolute;left:-10%;right:-10%;top:-1.6px;height:3.6px;border-radius:50%;
+    background:radial-gradient(ellipse at center,#fff8e2,#e6d6ae 72%,#c9b48c)}
+  .cnd .wax::after{content:"";position:absolute;top:1px;left:14%;width:24%;height:42%;border-radius:0 0 3px 3px;
+    background:linear-gradient(180deg,#f6ecd4,#e0cfa4)}
+  .cnd .holder{position:absolute;left:50%;transform:translateX(-50%);width:17px;height:5px;border-radius:50%;
+    background:radial-gradient(ellipse at center, #c99b3f, #6e5322);box-shadow:0 2px 4px rgba(0,0,0,.5)}
+  .hallflare .cnd .flame{animation:flareFlame .9s ease}
+  @keyframes flareFlame{0%{transform:translate(-50%,-92%) scale(1)}35%{transform:translate(-50%,-92%) scale(1.6)}100%{transform:translate(-50%,-92%) scale(1)}}
+
+  /* --- actors --- */
+  .ghost{position:absolute;top:46%;left:-14%;width:12%;opacity:0;pointer-events:none;filter:blur(.4px)}
+  .ghost.fly{pointer-events:auto;cursor:pointer;animation:ghostGlide 17s linear forwards}
+  @keyframes ghostGlide{0%{transform:translate(0,0);opacity:0}7%{opacity:.5}50%{transform:translate(58vw,-14px)}93%{opacity:.5}100%{transform:translate(118vw,4px);opacity:0}}
+  .ghost.bow{animation:ghostBow .8s ease forwards}
+  @keyframes ghostBow{0%{transform:rotate(0)}40%{transform:rotate(9deg) translateY(4px);opacity:.55}100%{transform:rotate(0);opacity:0}}
+  .spark{position:absolute;width:11px;height:11px;border-radius:50%;cursor:pointer;z-index:30;
+    background:radial-gradient(circle,#fff3c4 0%, #ffca55 45%, rgba(255,150,40,0) 75%);
+    box-shadow:0 0 14px 5px rgba(255,180,70,.5);transition:left 2.6s cubic-bezier(.4,.1,.3,1), top 2.6s cubic-bezier(.4,.1,.3,1);
+    animation:sparkPulse 2.2s ease-in-out infinite alternate}
+  @keyframes sparkPulse{from{transform:scale(.82);opacity:.72}to{transform:scale(1.12);opacity:1}}
+
+  /* --- foreground: your desk --- */
+  .forefx{position:absolute;inset:0;z-index:20;pointer-events:none}
+  .forefx > *{pointer-events:auto}
+  .forefx::after{content:"";position:absolute;inset:0;z-index:30;pointer-events:none;
+    background:radial-gradient(115% 90% at 50% 42%, transparent 56%, rgba(2,2,6,.38) 100%),
+               linear-gradient(0deg, rgba(0,0,0,.22), transparent 18%)}
+  .mydesk{position:absolute;left:-6%;right:-6%;bottom:-4%;height:22.5%;
+    background:repeating-linear-gradient(90deg, rgba(0,0,0,.17) 0 2px, transparent 2px 72px),
+               repeating-linear-gradient(0deg, rgba(255,220,160,.025) 0 2px, transparent 2px 7px),
+               linear-gradient(180deg,#664226,#3a2413 55%,#201306);
+    border-radius:10px 10px 0 0;box-shadow:inset 0 3px 0 rgba(255,220,150,.20), inset 0 14px 26px rgba(255,190,90,.06), 0 -18px 44px rgba(0,0,0,.5)}
+  #cndNear{position:absolute;inset:0;pointer-events:none}
+  .register{position:absolute;left:50%;bottom:5%;transform:translateX(-50%) rotate(.5deg);width:min(64%,340px);
+    background:radial-gradient(rgba(122,90,36,.05) 1px, transparent 1.4px), radial-gradient(rgba(122,90,36,.04) 1px, transparent 1.4px), linear-gradient(175deg,#f7ecd2,#ecdcae 70%,#e2cd97);
+    background-size:7px 7px,11px 11px,auto;background-position:0 0,3px 5px,0 0;
+    color:var(--ink);border-radius:3px;padding:10px 14px 9px;
+    box-shadow:0 14px 30px rgba(0,0,0,.6), inset 0 0 0 1px rgba(154,116,52,.4), inset 0 0 34px rgba(154,116,52,.14);cursor:pointer}
+  .register h5{font-size:clamp(9px,2.4vw,12px);letter-spacing:.26em;text-transform:uppercase;color:#7a5a24;text-align:center;font-weight:700}
+  .register .lrow{display:flex;justify-content:space-between;gap:10px;margin-top:5px;font-size:clamp(9px,2.5vw,12.5px);font-style:italic}
+  .register .lrow b{font-style:normal;letter-spacing:.06em}
+  .register .lrow span{color:#6b4d1c;white-space:nowrap}
+  .inkset{position:absolute;right:6.5%;bottom:9.5%;width:9%;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))}
+  .pass{position:absolute;left:4.2%;top:80.5%;width:10.5%;cursor:pointer;transform:rotate(-5deg);z-index:5;
+    filter:drop-shadow(0 5px 6px rgba(0,0,0,.55))}
+  .pass::before{content:"";position:absolute;left:50%;top:-13px;width:1.5px;height:13px;background:rgba(230,220,190,.5)}
+  .pass .tag{border-radius:4px;padding:5px 2px 6px;text-align:center;
+    background:linear-gradient(180deg,#7a5c2e,#54401a);color:#f0d896;
+    font-size:clamp(5.5px,1.5vw,8px);letter-spacing:.18em;font-weight:700;text-transform:uppercase;line-height:1.5;
+    box-shadow:inset 0 0 0 1px rgba(240,216,150,.4), inset 0 1px 0 rgba(255,240,200,.3)}
+  .hintline{position:absolute;left:50%;bottom:.4%;transform:translateX(-50%);z-index:35;white-space:nowrap;
+    font-size:clamp(8.5px,2.3vw,10.5px);letter-spacing:.3em;text-transform:uppercase;color:rgba(243,229,195,.5);
+    text-shadow:0 1px 4px rgba(0,0,0,.9)}
+
+  /* --- the tale card (parchment, as before) --- */
+  .veil{position:absolute;inset:-8%;background:rgba(3,2,1,.55);opacity:0;pointer-events:none;transition:opacity .4s;z-index:44}
+  .veil.on{opacity:1;pointer-events:auto}
+  .tale{position:absolute;left:50%;top:50%;width:min(87%,400px);z-index:45;
+    transform:translate(-50%,-46%) scale(.92);opacity:0;pointer-events:none;
+    transition:transform .5s cubic-bezier(.2,1.25,.3,1), opacity .35s ease;
+    background:radial-gradient(rgba(122,90,36,.05) 1px, transparent 1.4px), radial-gradient(rgba(122,90,36,.04) 1px, transparent 1.4px), linear-gradient(172deg,#f9f0d8,#efdfae 72%,#e6d09c);
+    background-size:7px 7px,11px 11px,auto;background-position:0 0,3px 5px,0 0;
+    color:var(--ink);border-radius:4px;padding:18px 20px 16px;
+    box-shadow:0 30px 60px rgba(0,0,0,.7), inset 0 0 0 1px rgba(154,116,52,.5), inset 0 0 44px rgba(154,116,52,.13)}
+  .tale.on{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+  .tale .portrait2{height:118px;border-radius:3px;position:relative;overflow:hidden;
+    box-shadow:inset 0 0 0 3px #7a5a24, inset 0 0 0 5px #3d2b10, inset 0 0 34px rgba(0,0,0,.4)}
+  .tale .portrait2 svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;
+    stroke:#ffe9ad;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+  .tale h2{margin-top:13px;text-align:center;font-size:clamp(19px,5.6vw,25px);letter-spacing:.06em;font-weight:700}
+  .tale .tcls{text-align:center;margin-top:3px;font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:#7a5a24}
+  .tale .tblurb{margin-top:10px;font-size:13.5px;line-height:1.6;font-style:italic;text-align:center;color:#43300f}
+  .tale .tprog{margin-top:12px;border-top:1px solid rgba(122,90,36,.4);padding-top:9px;
+    display:flex;justify-content:space-between;gap:12px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#6b4d1c}
+  .tale .tprog span,.tale .tprog b{white-space:nowrap}
+  .tale .tprog b{color:var(--ink);text-align:right}
+  .tale .inkbar{height:5px;margin-top:6px;border-radius:3px;background:rgba(122,90,36,.22);overflow:hidden}
+  .tale .inkbar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#8c6a2a,#5e451a)}
+  .tale .sealrow{margin-top:15px;display:flex;align-items:center;justify-content:space-between}
+  .tale .rtn{background:none;border:none;font-family:inherit;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:#7a5a24;cursor:pointer;padding:10px 4px}
+  .tale .seal{width:74px;height:74px;border-radius:50%;border:none;cursor:pointer;position:relative;
+    background:radial-gradient(circle at 40% 32%, #c0455a, #8c2432 58%, #5e1622);
+    box-shadow:inset 0 -5px 9px rgba(0,0,0,.45), inset 0 3px 5px rgba(255,200,200,.25), 0 8px 18px rgba(0,0,0,.45);
+    color:#ffd9a8;font-family:inherit;font-size:10.5px;letter-spacing:.18em;font-weight:700;
+    transition:transform .18s cubic-bezier(.2,1.6,.4,1)}
+  .tale .seal::before{content:"";position:absolute;inset:7px;border-radius:50%;border:1.5px solid rgba(255,217,168,.5)}
+  .tale .seal:active{transform:scale(.9)}
+  .tale .seal.stamped{animation:stamp .5s ease}
+  @keyframes stamp{0%{transform:scale(1)}40%{transform:scale(.84)}100%{transform:scale(1)}}
+
+  @media (orientation:landscape) and (max-height:520px){
+    #chand1{width:23% !important;left:4% !important;top:-2% !important}
+    .vault{height:56%}
+    .floorwrap{top:58%;height:82%}
+    .board{top:3%;height:44%}
+    .dais{top:62%} .tdesk{top:53%}
+    .slate3{bottom:44.5%}
+    .dome{bottom:45.5%} .hourglass{bottom:45.8%} .tbooks{bottom:45.6%}
+    .cauldron{top:44%}
+    .stand{top:52%}
+    .shelves{top:38%;height:24%} .case{top:38%;height:24%}
+    .desk{width:7.6%}
+    .mydesk{height:19%}
+    .register{bottom:1.2%;padding:7px 12px 6px;width:min(48%,320px)}
+    .register .lrow{font-size:10.5px}
+    .hintline{display:none}
+    .tale .portrait2{height:74px}
+    .pass{top:76%}
+    .portrait{width:10.5%}
+  }
+</style>
 </head>
 <body>
-<script>try{if(!sessionStorage.getItem('gz_boot')){document.documentElement.classList.add('boot');}}catch(e){}</script>
+<div class="stage" id="stage">
+  <div class="world" id="world">
 
-<div class="strip">
-  <div class="lamp" aria-hidden="true"></div>
-  <div class="brand">GAMEZ<small>FLIGHT DECK</small></div>
-  <div class="readouts">
-    <div class="ro"><div class="lbl">MET</div><div class="val g" id="met">00:00:00</div></div>
-    <div class="ro"><div class="lbl" id="dow">Date</div><div class="val" id="date">--- --</div></div>
-    <div class="ro"><div class="lbl">Local</div><div class="val" id="loc">--:--</div></div>
-  </div>
-</div>
-
-<div class="capcom" aria-label="Flight log"><span class="cc-tag">Flight Log</span><span class="cc-line" id="ccLine"></span></div>
-
-<div class="deck">
-
-  <section class="mdu" id="mdu1" aria-label="Primary display">
-    <div class="mdu-head">
-      <span class="tag">MDU 1</span><span class="page" id="mduPage">STR TRKR</span>
-      <div class="soft">
-        <button class="key" id="gyroKey" aria-label="Enable motion tilt">GYRO OFF</button>
-        <button class="key" id="sndKey" aria-label="Toggle hub sounds">SND ON</button>
+    <!-- the vault -->
+    <div class="layer lz-vault">
+      <div class="vault" id="vault">
+        <svg viewBox="0 0 400 160" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M200 8 L30 165 M200 8 L110 165 M200 8 L290 165 M200 8 L370 165" stroke="rgba(90,60,28,.35)" stroke-width="5" fill="none"/>
+          <path d="M70 165 Q200 26 330 165" fill="none" stroke="#170e05" stroke-width="17"/>
+          <path d="M70 165 Q200 26 330 165" fill="none" stroke="#4a3013" stroke-width="10"/>
+          <rect x="-8" y="112" width="416" height="11" fill="#170e05"/>
+          <rect x="-8" y="112" width="416" height="7" fill="#54381a"/>
+          <rect x="-8" y="112" width="416" height="2" fill="rgba(255,210,130,.30)"/>
+          <rect x="195" y="16" width="10" height="98" fill="#170e05"/>
+          <rect x="196.5" y="16" width="7" height="98" fill="#5f3f1c"/>
+          <rect x="58" y="66" width="8" height="48" fill="#170e05"/>
+          <rect x="59.5" y="66" width="5" height="48" fill="#54381a"/>
+          <rect x="334" y="66" width="8" height="48" fill="#170e05"/>
+          <rect x="335.5" y="66" width="5" height="48" fill="#54381a"/>
+          <path d="M-10 168 Q105 44 200 12" fill="none" stroke="#170e05" stroke-width="30"/>
+          <path d="M-10 168 Q105 44 200 12" fill="none" stroke="#6e4a22" stroke-width="19"/>
+          <path d="M-10 168 Q105 44 200 12" fill="none" stroke="rgba(255,210,130,.30)" stroke-width="3.4" transform="translate(0,-9)"/>
+          <path d="M410 168 Q295 44 200 12" fill="none" stroke="#170e05" stroke-width="30"/>
+          <path d="M410 168 Q295 44 200 12" fill="none" stroke="#6e4a22" stroke-width="19"/>
+          <path d="M410 168 Q295 44 200 12" fill="none" stroke="rgba(255,210,130,.30)" stroke-width="3.4" transform="translate(0,-9)"/>
+        </svg>
+        <div class="chand" id="chand1" style="left:33%;top:23%;width:28%;aspect-ratio:2.6"></div>
+        <div class="chand" id="chand2" style="left:56%;top:9%;width:14%;aspect-ratio:2.6"></div>
+        <div class="sparkstreak" id="streak"></div>
+        <div class="vaulthit" id="vaultHit" title="The vault"></div>
       </div>
     </div>
-    <div class="screen" id="mainScreen"></div>
-  </section>
 
-  <div class="subrow">
-    <section class="mdu sub" aria-label="Tonight's flight plan">
-      <div class="mdu-head"><span class="tag">MDU 2</span><span class="page">FLIGHT PLAN</span></div>
-      <div class="screen">
-        <h4>TONIGHT&rsquo;S OPS <span>// ROTATION</span></h4>
-        <div id="fpln"></div>
+    <!-- far candles (sconce glow depth) -->
+    <div class="layer" id="cndFar"></div>
+
+    <!-- far wall -->
+    <div class="layer farwall">
+      <div class="wallwash"></div>
+      <div class="lancet" style="left:3.5%"></div>
+      <div class="lancet" style="left:73.5%;height:52%;width:11.5%"></div>
+      <div class="shaft"><span class="mote" style="left:22%;top:20%;width:3px;height:3px;--md:9s"></span><span class="mote" style="left:48%;top:38%;width:2.4px;height:2.4px;--md:12s;--mdl:-4s"></span><span class="mote" style="left:64%;top:16%;width:2px;height:2px;--md:10s;--mdl:-7s"></span><span class="mote" style="left:36%;top:56%;width:2.6px;height:2.6px;--md:13s;--mdl:-2s"></span><span class="mote" style="left:74%;top:48%;width:2px;height:2px;--md:9.5s;--mdl:-5s"></span></div>
+      <div class="board" id="board">
+        <div class="slate">
+          <div class="bhead"><span>Lesson VII</span><svg viewBox="0 0 24 24"><path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/></svg></div>
+          <div id="boardText"></div>
+        </div>
+        <div class="tray"></div>
+        <div class="quill" id="quill"></div>
       </div>
-    </section>
+      <div class="door2" id="door2"></div>
+      <div class="dais"></div>
+      <div class="cauldron" id="cauldron"><div class="cglow"></div><div class="fire2" id="cfire"></div><div class="pot"><div class="brew" id="brew"></div></div></div>
+      <div class="chair" aria-hidden="true"><svg viewBox="0 0 60 62" preserveAspectRatio="none">
+        <rect x="4" y="8" width="5" height="52" fill="#241708"/><rect x="51" y="8" width="5" height="52" fill="#241708"/>
+        <circle cx="6.5" cy="5.5" r="4.2" fill="#33200f"/><circle cx="53.5" cy="5.5" r="4.2" fill="#33200f"/>
+        <path d="M4 12 Q30 2 56 12 L56 19 Q30 9 4 19 Z" fill="#2e1e0c"/>
+        <rect x="9" y="25" width="42" height="5.5" fill="#2a1a0c"/><rect x="9" y="37" width="42" height="5.5" fill="#241708"/>
+        <rect x="4" y="8" width="2" height="52" fill="rgba(255,210,130,.18)"/>
+      </svg></div>
+      <div class="tdesk"></div>
+      <div class="dome" id="dome"></div>
+      <div class="tbooks" id="tbooks"></div>
+      <div class="hourglass" id="hourglass"></div>
+      <div id="slateRow"></div>
+      <div class="stand" style="left:11.5%" id="standL"></div>
+      <div class="stand" style="right:11.5%" id="standR"></div>
+    </div>
 
-    <section class="mdu sub" aria-label="Continue playing">
-      <div class="mdu-head"><span class="tag">MDU 3</span><span class="page">SYS SUMMARY</span></div>
-      <div class="screen">
-        <h4>CONTINUE <span>// TELEMETRY</span></h4>
-        <div id="sys"></div>
+    <!-- mid candles -->
+    <div class="layer" id="cndMid"></div>
+
+    <!-- easel side boards, standing in the room -->
+    <div class="layer lz-easel">
+      <div class="easel" id="easelL" style="left:2.5%;top:40.5%" role="button" aria-label="Side board, potions diagram"></div>
+      <div class="easel" id="easelR" style="right:2.5%;top:40.5%" role="button" aria-label="Side board, star chart"></div>
+    </div>
+    <!-- side walls -->
+    <div class="layer sidewall">
+      <div class="shelves" id="shelves">
+        <div class="sboard" style="bottom:52%"></div>
+        <div class="sboard" style="bottom:2%"></div>
       </div>
-    </section>
+      <div class="case" id="casebox">
+        <div class="sboard" style="bottom:52%"></div>
+        <div class="sboard" style="bottom:2%"></div>
+      </div>
+      <div class="portrait" id="port1" style="right:5%;top:10.5%"></div>
+    </div>
+
+    <!-- floor + desks -->
+    <div class="layer lz-floor">
+      <div class="floorwrap" id="floorwrap"><div class="floor"></div>
+        <svg class="runes" viewBox="0 0 200 200" aria-hidden="true">
+          <circle cx="100" cy="100" r="92" fill="none" stroke="#e8e4d2" stroke-width="2.4"/>
+          <circle cx="100" cy="100" r="80" fill="none" stroke="#e8e4d2" stroke-width="1.4"/>
+          <circle cx="100" cy="100" r="86" fill="none" stroke="#e8e4d2" stroke-width="7" stroke-dasharray="1.6 21.9"/>
+          <circle cx="100" cy="100" r="34" fill="none" stroke="#e8e4d2" stroke-width="1.6"/>
+          <path d="M100 66 L130 117 L70 117 Z" fill="none" stroke="#e8e4d2" stroke-width="1.8"/>
+          <path d="M100 134 L70 83 L130 83 Z" fill="none" stroke="#e8e4d2" stroke-width="1.8"/>
+        </svg>
+        <div id="desks"></div>
+      </div>
+    </div>
+
+    <!-- actors -->
+    <div class="layer lz-actors">
+      <div class="ghost" id="ghost"></div>
+      <div class="spark" id="spark" title="A stray spark…"></div>
+    </div>
+
   </div>
 
-  <div class="opsbar" role="group" aria-label="Filter units">
-    <span class="lbl">OPS</span>
-    <button class="key on" data-ops="all">ALL</button>
-    <button class="key" data-ops="daily">DAILY</button>
-    <button class="key" data-ops="arcade">ARCADE</button>
-    <button class="key" data-ops="puzzle">PUZZLE</button>
-    <button class="key" data-ops="long">LONG FORM</button>
+  <!-- foreground: your desk -->
+  <div class="forefx">
+    <div class="mydesk"></div>
+    <div id="cndNear"></div>
+    <div class="inkset" id="inkset"></div>
+    <div class="pass" id="pass"><div class="tag">Hall<br>Pass</div></div>
+    <div class="register" id="register">
+      <h5>Class Register</h5>
+      <div class="lrow"><b>TINY FAIRWAY</b><span>best 212 strokes · ★87</span></div>
+      <div class="lrow"><b>CANDY CASCADE</b><span>level 12 of 25</span></div>
+      <div class="lrow"><b>STARLIGHT DRUMS</b><span>best A · 96.2%</span></div>
+    </div>
   </div>
-
-  <div class="bankwrap">
-    <div class="bank-head"><span class="lbl">Display Bank</span><span class="cnt" id="bankCnt"></span></div>
-    <div class="bank" id="bank"></div>
-  </div>
-
+  <div class="veil" id="veil"></div>
+  <div class="tale" id="tale"></div>
+  <div class="hintline">The Classroom · a preview — tap everything</div>
 </div>
 
-<footer class="studio"><span class="lbl">Made by</span><span class="wm">WORKMAN DESIGNS</span><span class="lbl">More games coming</span></footer>
+<style>
+  .cauldron .pot{aspect-ratio:1.12;width:100%}
+  .jar .spec{position:absolute;border-radius:58% 42% 55% 45% / 48% 55% 45% 52%;
+    background:radial-gradient(circle at 34% 30%, rgba(30,46,32,.30), rgba(8,16,10,.48) 75%);
+    box-shadow:inset -2px -3px 5px rgba(255,255,255,.14)}
+  .pool{position:absolute;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%)}
+  .jar::after{content:"";position:absolute;left:0;right:-16%;bottom:-7px;height:9px;border-radius:50%;z-index:-1;
+    background:radial-gradient(ellipse, rgba(0,0,0,.42), transparent 70%);transform:skewX(-18deg);filter:blur(1.5px)}
+  .jar::before{content:"";position:absolute;left:15%;right:15%;bottom:-2px;height:4px;border-radius:50%;z-index:-1;
+    background:radial-gradient(ellipse, rgba(0,0,0,.55), transparent 70%)}
+  .desk .nameplate{position:relative}
+  .desk .nameplate::before,.desk .nameplate::after{content:"";position:absolute;top:50%;width:3px;height:3px;border-radius:50%;transform:translateY(-50%);
+    background:radial-gradient(circle at 35% 35%, #f0d896, #54400f 75%)}
+  .desk .nameplate::before{left:3px}
+  .desk .nameplate::after{right:3px}
+  .mydesk::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;border-radius:10px 10px 0 0;
+    background:linear-gradient(180deg, rgba(255,220,150,.38), rgba(255,220,150,0))}
+  .mydesk::after{content:"";position:absolute;left:0;right:0;top:16%;height:30%;pointer-events:none;
+    background:linear-gradient(180deg, transparent, rgba(255,200,110,.055), transparent)}
+  .register::before{content:"";position:absolute;inset:5px -8px -6px 6px;border-radius:3px;z-index:-1;transform:rotate(-1.8deg);
+    background:linear-gradient(175deg,#e9dcb4,#d9c48d);box-shadow:0 10px 22px rgba(0,0,0,.45), inset 0 0 0 1px rgba(154,116,52,.35)}
+  .vault::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(26% 36% at 44% 32%, rgba(255,180,90,.14), transparent 70%), radial-gradient(16% 24% at 63% 16%, rgba(255,180,90,.11), transparent 70%)}
+  .chand .spokes{position:absolute;inset:5%;border-radius:50%;pointer-events:none;
+    background:repeating-conic-gradient(rgba(12,10,8,.9) 0 2.5deg, transparent 2.5deg 45deg)}
+  .chand .hub{position:absolute;left:50%;top:50%;width:9px;height:9px;transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle at 38% 32%, #4a3d44, #141210)}
+  .chand .finial{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);width:7px;height:7px;border-radius:50% 50% 50% 4px;
+    background:radial-gradient(circle at 38% 32%, #4a3d44, #141210)}
+  .chand .ring::after{content:"";position:absolute;inset:17%;border-radius:50%;border:2px solid #241c14}
+  .chand .fl::before{content:"";position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);width:13px;height:5px;border-radius:50%;
+    background:radial-gradient(ellipse, #3a3d44, #141210)}
+  .slate3::after{content:"";position:absolute;left:6%;right:6%;bottom:-4px;height:4px;border-radius:2px;
+    background:linear-gradient(180deg,#4a3016,#241708);box-shadow:0 3px 5px rgba(0,0,0,.5)}
+  .tpanel{position:absolute;top:24%;width:33%;height:54%;border-radius:3px;pointer-events:none;
+    background:rgba(0,0,0,.13);box-shadow:inset 0 0 0 2px rgba(20,10,2,.55), inset 0 1px 0 rgba(255,220,150,.13)}
+  .candelabrum{position:absolute;left:36.5%;bottom:53.6%;width:6.5%;z-index:1;pointer-events:none}
+  .ghosts{position:absolute;inset:0;pointer-events:none}
+  .ghosts .gt{position:absolute;color:rgba(236,233,219,.07);font-family:'ChalkHand','Snell Roundhand','Brush Script MT',cursive;white-space:nowrap}
+  .ghosts .gsmear{position:absolute;border-radius:50%;background:radial-gradient(ellipse, rgba(236,233,219,.05), transparent 70%)}
+  .board .dust{position:absolute;left:5%;right:5%;bottom:-3px;height:6px;border-radius:50%;pointer-events:none;
+    background:radial-gradient(ellipse, rgba(236,233,219,.22), transparent 70%)}
+  .desk .book::before{content:"";position:absolute;right:0;top:2px;bottom:2px;width:5px;border-radius:0 2px 2px 0;
+    background:repeating-linear-gradient(0deg, rgba(122,95,50,.35) 0 1px, rgba(240,228,190,.45) 1px 2.6px)}
+  .desk .book::after{content:"";position:absolute;left:3px;right:3px;bottom:0;height:4px;
+    background:repeating-linear-gradient(90deg, rgba(122,95,50,.30) 0 1px, rgba(240,228,190,.45) 1px 2.6px)}
+</style>
+<script>
+'use strict';
+/* ================= data (the same fourteen tales) ================= */
+var G = [
+  ['CANDY CASCADE','CANDY','25 LEVELS','Swap, match and chain candy combos across 25 levels.','<path d="M12 3 L20 12 L12 21 L4 12 Z"/><path d="M12 7.5 L16 12 L12 16.5 L8 12 Z"/>',[],{label:'Level 12 of 25',frac:.44}],
+  ['BUBBLE HEX','BUBBLE','REVAMPED · DAILY','The Witchwood revamp: 30 levels, boss battles and a daily challenge.','<path d="M12 3 L19.5 7.5 L19.5 16.5 L12 21 L4.5 16.5 L4.5 7.5 Z"/><circle cx="12" cy="12" r="3"/>',[]],
+  ['BLOOM DEFENSE','BLOOM','DAILY · DEFENSE','Hold the lawn through 10 waves of weeds.','<circle cx="12" cy="12" r="3.4"/><path d="M12 3.6 V5.8 M12 18.2 V20.4 M3.6 12 H5.8 M18.2 12 H20.4 M6.1 6.1 L7.6 7.6 M16.4 16.4 L17.9 17.9 M17.9 6.1 L16.4 7.6 M7.6 16.4 L6.1 17.9"/>',[]],
+  ['NEON VOID','VOID','ARCADE','Twin-stick neon arena shooter. Thread the gravity wells. Don\u2019t blink.','<path d="M12 4 L21 20 L3 20 Z"/><path d="M12 11 L16.5 18 L7.5 18 Z"/>',['pick']],
+  ['ARROW SLIDE','ARROW','DAILY BOARDS','Tap each arrow to slide it clean off the grid — if its path is clear.','<path d="M4 18 L4 8 L14 8"/><path d="M11 4.5 L14.5 8 L11 11.5"/><path d="M14 15 L20 15 L20 20"/>',[]],
+  ['LIFE STORY','LIFE','4 SCENARIOS','Live a whole life one tap at a time. What will your obituary say?','<path d="M3 12 H8 L10.5 5.5 L13.5 18.5 L16 12 H21"/>',[]],
+  ['REEL EMPIRE','REEL','TYCOON','Run a movie studio from 1955 and chase the $1B dream.','<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="7.6" r="1.7"/><circle cx="12" cy="16.4" r="1.7"/><circle cx="7.6" cy="12" r="1.7"/><circle cx="16.4" cy="12" r="1.7"/>',[]],
+  ['PDAWG PUZZLES','PDAWG','DAILY PUZZLE','Hand-cut jigsaws on a real puzzle table — and your own photos.','<path d="M5 9 H8.8 a3.2 3.2 0 1 0 6.4 0 H19 V9.8 a2.6 2.6 0 1 0 0 5.2 V19.5 H5 Z"/>',[]],
+  ['WORD WELL','WELL','DAILY · VS BOT','Climb from one word to another, one letter per rung — mind the rope, and chase the par.','<circle cx="12" cy="12" r="8.5"/><path d="M8 8.5 L10 15 L12 10.5 L14 15 L16 8.5"/>',[]],
+  ['TINY FAIRWAY','FAIRWAY','NEW · DAILY','One-touch golf: drag back anywhere and let fly. The turtle judges.','<path d="M8 21 L8 4"/><path d="M8 4 L17 6.5 L8 9"/><path d="M3 21 L21 21"/>',['pick'],{label:'Best 212 strokes · ★87',frac:.66}],
+  ['SKYLARK','SKYLARK','NEW','A bush pilot\u2019s tale — fly short hops between tiny airstrips.','<path d="M3 15 L21 8 L15 21 L12 16 Z"/><path d="M12 16 L21 8"/>',['pick']],
+  ['DOMINOES','DOMINOES','NEW · VS HOUSE','The café-table classic: take the round off the House. First to 100.','<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 12 L18 12"/><circle cx="12" cy="7.5" r="1" fill="#6b4d1c"/>',[]],
+  ['CATHEDRAL','CATHEDRAL','OLD TIME RADIO','Old time radio on a 1940s cathedral set. 1,800+ episodes.','<path d="M5 21 L5 11 a7 6.5 0 0 1 14 0 L19 21"/><path d="M9 21 L9 12.5 a3 3 0 0 1 6 0 L15 21"/><path d="M3 21 L21 21"/>',[]],
+  ['STARLIGHT DRUMS','DRUMS','DAILY · RHYTHM','Tap the beat under a night sky — every true hit wakes a star.','<path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/>',[],{label:'Best A · 96.2%',frac:.96}]
+];
+</script>
+<script>
+'use strict';
+function el(html){ var d=document.createElement('div'); d.innerHTML=html; return d.firstElementChild; }
+function rnd(a,b){ return a + Math.random()*(b-a); }
+var stage=document.getElementById('stage'), world=document.getElementById('world');
 
-<script src="./hub.js?v=66"></script>
+/* ================= candle factory ================= */
+function candle(s){
+  var c=document.createElement('div'); c.className='cnd';
+  var halo=Math.round(46*s), fl=Math.round(15*s), fw=Math.max(3.5,Math.round(5.6*s)), ww=Math.max(2.6,5*s), wh=Math.round(15*s+4);
+  c.style.setProperty('--bb', rnd(4.2,7.6)+'s'); c.style.setProperty('--bdl', (-rnd(0,6))+'s'); c.style.setProperty('--ba', Math.round(rnd(4,9))+'px');
+  c.innerHTML=(s>=1.45 ? '<div class="holder" style="top:'+(wh+2)+'px"></div>' : '') +
+    '<div class="halo" style="width:'+halo+'px;height:'+halo+'px"></div>' +
+    '<div class="wax" style="width:'+ww+'px;height:'+wh+'px"></div>' +
+    '<div class="flame" style="width:'+fw+'px;height:'+fl+'px;--fd:'+rnd(2.3,4.1)+'s;--fdl:'+(-rnd(0,3.5))+'s"></div>';
+  return c;
+}
+function flare(){
+  document.body.classList.remove('hallflare'); void document.body.offsetWidth;
+  document.body.classList.add('hallflare');
+  setTimeout(function(){ document.body.classList.remove('hallflare'); },950);
+}
+/* far glow-points + mid clusters */
+(function(){
+  var far=document.getElementById('cndFar');
+  for(var i=0;i<7;i++){ var c=candle(rnd(.45,.7)); c.style.left=rnd(3,97)+'%'; c.style.top=rnd(3,11)+'%'; far.appendChild(c); }
+  var near=document.getElementById('cndNear');
+  [[8.5,80.5,1.7],[88,81.5,1.85]].forEach(function(p){ var c=candle(p[2]); c.style.left=p[0]+'%'; c.style.top=p[1]+'%'; near.appendChild(c); });
+  ['standL','standR'].forEach(function(id){
+    var st=document.getElementById(id);
+    [[34,-1],[63,-8]].forEach(function(p){ var c=candle(.72); c.style.left=p[0]+'%'; c.style.top=(14+p[1])+'%'; st.appendChild(c); });
+  });
+})();
+
+/* ================= chandeliers ================= */
+['chand1','chand2'].forEach(function(id,ci){
+  var ch=document.getElementById(id);
+  var nf=ci===0?8:6;
+  var html='<div class="chain"></div><div class="ring"></div><div class="spokes"'+(ci===1?' style="background:repeating-conic-gradient(rgba(12,10,8,.9) 0 3deg, transparent 3deg 60deg)"':'')+'></div><div class="hub"></div><div class="finial"></div>';
+  for(var i=0;i<nf;i++){
+    var a=i/nf*Math.PI*2, x=50+45*Math.cos(a), y=50+36*Math.sin(a);
+    html+='<div class="fl" style="left:'+x.toFixed(1)+'%;top:'+y.toFixed(1)+'%;--fd:'+rnd(2.2,3.8)+'s;--fdl:'+(-rnd(0,3))+'s"></div>';
+  }
+  ch.innerHTML=html;
+});
+/* the near ring hangs in the room, not on the far vault */
+(function(){
+  var ch1=document.getElementById('chand1');
+  document.getElementById('cndMid').appendChild(ch1);
+  ch1.style.left='27%'; ch1.style.top='5%'; ch1.style.width='34%';
+})();
+
+/* ================= quill, door, dome, hourglass, books, inkset ================= */
+document.getElementById('quill').innerHTML='<svg viewBox="0 0 40 60" style="width:100%;display:block">' +
+  '<path d="M34 3 C18 12 8 28 6 46 L4 57 L11 52 C26 44 34 24 34 3 Z" fill="#f2eee0"/>' +
+  '<path d="M32 8 C22 18 13 32 8 48" stroke="#b9b2a0" stroke-width="1.6" fill="none"/>' +
+  '<path d="M6 46 L4 57 L11 52" fill="#c99b3f"/></svg>';
+document.getElementById('door2').innerHTML='<svg viewBox="0 0 60 110" style="width:100%;display:block">' +
+  '<path d="M4 110 L4 34 A26 30 0 0 1 56 34 L56 110 Z" fill="#241708"/>' +
+  '<path d="M9 110 L9 36 A21 24 0 0 1 51 36 L51 110 Z" fill="#3a2413"/>' +
+  '<path d="M9 62 L51 62 M9 88 L51 88" stroke="#191008" stroke-width="4"/>' +
+  '<circle cx="43" cy="74" r="4" fill="none" stroke="#c99b3f" stroke-width="2.4"/>' +
+  '<path d="M15 102 L15 42 A14 15 0 0 1 28 31 L28 102 Z" fill="none" stroke="#241708" stroke-width="2.4"/>' +
+  '<path d="M33 102 L33 31 A14 15 0 0 1 46 42 L46 102 Z" fill="none" stroke="#241708" stroke-width="2.4"/></svg>';
+document.getElementById('dome').innerHTML='<svg viewBox="0 0 50 58" style="width:100%;display:block">' +
+  '<path d="M6 50 A19 21 0 0 1 44 50 Z" fill="rgba(200,225,255,.13)" stroke="rgba(220,238,255,.35)" stroke-width="1.4"/>' +
+  '<ellipse cx="17" cy="34" rx="3.4" ry="7" fill="rgba(255,255,255,.20)" transform="rotate(-14 17 34)"/>' +
+  '<circle cx="25" cy="40" r="7.5" fill="#d8cbae"/>' +
+  '<circle cx="22.2" cy="39" r="2.1" fill="#241708"/><circle cx="27.8" cy="39" r="2.1" fill="#241708"/>' +
+  '<path d="M22.5 46.5 L27.5 46.5 M23.5 44 L23.5 47 M26.5 44 L26.5 47" stroke="#8a7a58" stroke-width="1.1"/>' +
+  '<path d="M13 30 Q11 40 13 48" stroke="rgba(255,255,255,.32)" stroke-width="2.4" fill="none" stroke-linecap="round"/><ellipse cx="25" cy="52" rx="17" ry="2.8" fill="rgba(0,0,0,.35)"/><rect x="8" y="50" width="34" height="4.4" rx="2" fill="#54400f"/><rect x="5" y="54" width="40" height="3.4" rx="1.6" fill="#33240c"/></svg>';
+document.getElementById('hourglass').innerHTML='<svg viewBox="0 0 30 48" style="width:100%;display:block">' +
+  '<rect x="3" y="2" width="24" height="4" rx="2" fill="#54400f"/><rect x="3" y="42" width="24" height="4" rx="2" fill="#54400f"/>' +
+  '<path d="M7 6 L23 6 L16.5 23 L23 42 L7 42 L13.5 23 Z" fill="rgba(200,225,255,.14)" stroke="rgba(220,238,255,.4)" stroke-width="1.3"/>' +
+  '<path d="M9.5 12 L20.5 12 L15.8 22 L14.2 22 Z" fill="#e8cf8e"/>' +
+  '<path d="M11 36 L19 36 L20.5 40.5 L9.5 40.5 Z" fill="#e8cf8e"/></svg>';
+document.getElementById('tbooks').innerHTML='<div style="height:6px;border-radius:1px;background:#5e2430;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)"></div>' +
+  '<div style="height:5px;margin-top:2px;border-radius:1px;background:#274a75;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)"></div>' +
+  '<div style="height:5px;margin-top:2px;border-radius:1px;background:#54400f;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)"></div>';
+document.getElementById('inkset').innerHTML='<svg viewBox="0 0 60 44" style="width:100%;display:block">' +
+  '<ellipse cx="18" cy="34" rx="11" ry="7" fill="#101216" stroke="rgba(201,155,63,.55)" stroke-width="1.6"/>' +
+  '<ellipse cx="18" cy="31" rx="6.5" ry="3.6" fill="#05070c"/>' +
+  '<path d="M52 4 C42 12 34 22 30 34 L28 42 L34 37 C44 30 50 16 52 4 Z" fill="#e9e5d5"/>' +
+  '<path d="M50 8 C43 17 36 26 31 36" stroke="#b0a88f" stroke-width="1.3" fill="none"/></svg>';
+
+/* ================= the cauldron's fire, brew, steam ================= */
+(function(){
+  var cols=['radial-gradient(ellipse at 50% 72%, #ff5a1e 0%, rgba(255,90,30,.85) 34%, rgba(255,90,30,0) 68%)',
+            'radial-gradient(ellipse at 50% 72%, #ffb84d 0%, rgba(255,184,77,.8) 34%, rgba(255,184,77,0) 68%)',
+            'radial-gradient(ellipse at 50% 72%, #ffe9a8 0%, rgba(255,233,168,.8) 34%, rgba(255,233,168,0) 68%)'];
+  var fire=document.getElementById('cfire');
+  [[16,44,72,0],[40,52,92,1],[63,48,80,2],[82,38,60,0]].forEach(function(f){
+    var d=document.createElement('div'); d.className='fl2';
+    d.style.cssText='left:'+f[0]+'%;width:'+f[1]*0.42+'%;height:'+f[2]+'%;background:'+cols[f[3]]+';--fd:'+rnd(.6,1.1)+'s;--fdl:'+(-rnd(0,.7))+'s';
+    fire.appendChild(d);
+  });
+  var brew=document.getElementById('brew');
+  [[22,26,26],[46,52,34],[68,30,22],[56,64,18]].forEach(function(b,i){
+    var d=document.createElement('div'); d.className='bub';
+    d.style.cssText='left:'+b[0]+'%;top:'+b[1]+'%;width:'+b[2]+'%;aspect-ratio:1;--bd:'+rnd(2.1,3.4)+'s;--bdl:'+(-rnd(0,2))+'s';
+    brew.appendChild(d);
+  });
+  var pot=document.getElementById('cauldron');
+  for(var w=0;w<3;w++){
+    var s=document.createElement('div'); s.className='wisp';
+    s.style.cssText='left:'+(22+w*20)+'%;top:-6%;width:34%;height:44%;--wd:'+rnd(4.2,6.4)+'s;--wdl:'+(-rnd(0,4))+'s';
+    pot.appendChild(s);
+  }
+})();
+
+/* ================= honored slates on the master's desk ================= */
+(function(){
+  var row=document.getElementById('slateRow');
+  [10,3,9].forEach(function(idx,k){
+    var g=G[idx];
+    var h=document.createElement('div'); h.className='slate3';
+    h.style.left=(28.5+k*16.5)+'%';
+    h.innerHTML='<div class="scard">'+g[1]+'</div><div class="ssub">Tonight</div>';
+    h.addEventListener('click',function(){ openTale(idx); });
+    row.appendChild(h);
+  });
+})();
+
+/* ================= specimen jars ================= */
+var jarLines=[
+  'Something in the jar turns over in its sleep. Best not to tap twice.',
+  'The label on this one just says: DO NOT FEED.',
+  'A jar of bottled lightning, still faintly annoyed.',
+  'Pickled moonbeams. The master grades them by brightness.',
+  'Whatever that is, it has too many eyes, and all of them are polite.'
+];
+var jarIx=0;
+(function(){
+  var box=document.getElementById('shelves');
+  var defs=[
+    /* row 1 (on the upper board) */
+    {x:10,b:54,w:15,h:34,sh:'round',c:'#57d98a',g:'rgba(87,217,138,.4)',liq:62,spec:[50,58,44]},
+    {x:27,b:54,w:12,h:27,sh:'apot',c:'#e8a33d',g:'rgba(232,163,61,.4)',liq:54},
+    {x:42,b:54,w:16,h:37,sh:'flask',c:'#7de79b',g:'rgba(125,231,155,.35)',liq:70,spec:[38,64,30]},
+    {x:60,b:54,w:11,h:25,sh:'vial',c:'#5ab0e8',g:'rgba(90,176,232,.4)',liq:58},
+    {x:74,b:54,w:14,h:32,sh:'square',c:'#b48ce8',g:'rgba(180,140,232,.4)',liq:66,spec:[56,52,36],fwd:1},
+    {x:89,b:54,w:12,h:28,c:'#57d98a',g:'rgba(87,217,138,.35)',liq:50},
+    /* row 2 (on the lower board) */
+    {x:12,b:4,w:14,h:33,sh:'square',c:'#e85a7a',g:'rgba(232,90,122,.38)',liq:60,spec:[46,60,40]},
+    {x:29,b:4,w:16,h:38,sh:'round',c:'#57d98a',g:'rgba(87,217,138,.4)',liq:72},
+    {x:47,b:4,w:11,h:26,sh:'vial',c:'#e8cf8e',g:'rgba(232,207,142,.38)',liq:52},
+    {x:62,b:4,w:15,h:35,sh:'flask',c:'#3dd8c2',g:'rgba(61,216,194,.4)',liq:64,spec:[52,58,34]},
+    {x:79,b:4,w:12,h:29,sh:'apot',c:'#e8a33d',g:'rgba(232,163,61,.38)',liq:56},
+    {x:91,b:4,w:10,h:24,sh:'round',c:'#7de79b',g:'rgba(125,231,155,.35)',liq:48}
+  ];
+  defs.forEach(function(d,ix){
+    var j=document.createElement('div'); j.className='jar'+(d.b===54?' back':' front');
+    j.style.cssText='left:'+d.x+'%;bottom:'+d.b+'%;width:'+d.w+'%;height:'+d.h+'%;--jg:'+d.g;
+    j.innerHTML='<div class="glass'+(d.sh?' s-'+d.sh:'')+'"><div class="liquid" style="height:'+d.liq+'%;background:linear-gradient(90deg, rgba(0,0,0,.22), rgba(0,0,0,0) 26%, rgba(255,255,255,.11) 56%, rgba(0,0,0,0) 80%, rgba(0,0,0,.30)), radial-gradient(70% 26% at 50% 100%, rgba(255,255,255,.16), rgba(255,255,255,0) 70%), linear-gradient(180deg, rgba(0,0,0,.14), rgba(0,0,0,0) 14%), radial-gradient(60% 45% at 50% 26%, rgba(255,255,255,.20), rgba(255,255,255,0) 70%), linear-gradient(180deg,'+d.c+'dd,'+d.c+'99 55%,'+d.c+'59)"></div>' +
+      (d.liq>=58?'<div class="bubs" style="height:'+d.liq+'%"><i style="left:26%;--bd:'+(5.5+ix%3)+'s;--bdl:'+(-((ix*13)%50)/10)+'s"></i><i style="left:52%;--bd:'+(7+ix%4)+'s;--bdl:'+(-((ix*21)%60)/10)+'s"></i><i style="left:70%;--bd:'+(6.2+ix%2)+'s;--bdl:'+(-((ix*7)%40)/10)+'s"></i></div>':'') +
+      (d.spec?'<div class="spec" style="left:'+(d.spec[0]-d.spec[2]/2)+'%;top:'+(100-d.liq+6)+'%;width:'+d.spec[2]+'%;aspect-ratio:1;transform:rotate('+((ix*37)%26-13)+'deg)"></div>':'') +
+      (ix%2===0?'<div class="jlabel"></div>':'') + '</div><div class="shine"></div>'+(d.sh==='apot'?'<div class="stopper"></div>':'<div class="cork"></div>');
+    if(d.fwd){ j.style.transform='translateX(-50%) scale(1.14)'; j.style.zIndex='3'; j.style.filter='brightness(1.08)'; }
+    j.addEventListener('click',function(){
+      j.classList.add('glow'); setTimeout(function(){ j.classList.remove('glow'); },1700);
+      say(jarLines[jarIx++ % jarLines.length]);
+    });
+    box.appendChild(j);
+  });
+})();
+
+/* ================= the bookcase ================= */
+(function(){
+  var box=document.getElementById('casebox');
+  var cols=['#5e2430','#274a75','#54400f','#1f5138','#6b4423','#3c3152','#77572e','#43242e'];
+  var csi=7;
+  function crnd(a,b){ csi++; var v=Math.sin(csi*269.3)*43758.5453; v-=Math.floor(v); return a+v*(b-a); }
+  [54,4].forEach(function(bottom){
+    var x=3;
+    while(x<88){
+      var w=crnd(4.5,8), h=crnd(30,40);
+      var sp=document.createElement('div'); sp.className='spine';
+      sp.style.cssText='left:'+x+'%;bottom:'+bottom+'%;width:'+w+'%;height:'+h+'%;background:linear-gradient(90deg,'+cols[Math.floor(crnd(0,cols.length))]+',#00000033)';
+      if(crnd(0,1)<0.14) sp.style.transform='rotate(7deg)';
+      box.appendChild(sp);
+      x+=w+0.7;
+    }
+  });
+})();
+
+/* ================= the old master's portrait ================= */
+function portraitSvg(){
+  return '<div class="frame"><svg viewBox="0 0 60 76" style="width:100%;display:block">' +
+  '<rect width="60" height="76" fill="#2c2438"/>' +
+  '<defs><radialGradient id="skn" cx="42%" cy="32%" r="85%"><stop offset="0" stop-color="#eecfa8"/><stop offset=".68" stop-color="#d9b48e"/><stop offset="1" stop-color="#b0824f"/></radialGradient></defs>' +
+  '<ellipse cx="30" cy="86" rx="24" ry="30" fill="#3c3152"/>' +
+  '<circle cx="30" cy="34" r="13" fill="url(#skn)"/>' +
+  '<path d="M14 36 A16 17 0 0 1 46 36 L42 22 A13 12 0 0 0 18 22 Z" fill="#4a3a66"/>' +
+  '<g class="eyesShut"><path d="M22 34 Q25 36 28 34 M32 34 Q35 36 38 34" stroke="#43300f" stroke-width="1.5" fill="none" stroke-linecap="round"/></g>' +
+  '<g class="eyesOpen"><circle cx="25" cy="34" r="1.9" fill="#241708"/><circle cx="35" cy="34" r="1.9" fill="#241708"/></g>' +
+  '<path d="M26 44 Q30 46.5 34 44" stroke="#8a5f3a" stroke-width="1.5" fill="none" stroke-linecap="round"/>' +
+  '<rect width="60" height="76" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="5"/></svg></div>';
+}
+document.getElementById('port1').innerHTML=portraitSvg();
+document.getElementById('port1').addEventListener('click',function(){
+  var p=this;
+  p.classList.remove('wake'); void p.offsetWidth; p.classList.add('wake','awake');
+  setTimeout(function(){ p.classList.remove('awake'); },2600);
+  say('The old master opens one eye. \u201cFive points to whoever woke me,\u201d he lies, and sleeps again.');
+});
+
+/* ================= easel side boards (from the reference set) ================= */
+(function(){
+  var chalk='rgba(238,242,226,.55)';
+  var flask='<svg viewBox="0 0 60 70" fill="none" stroke="'+chalk+'" stroke-width="1.6" stroke-linecap="round">'
+    +'<path d="M26 5 h8 M30 5 v15 L18.5 45 a3.2 3.2 0 0 0 3 4.8 h17 a3.2 3.2 0 0 0 3-4.8 L30 20"/>'
+    +'<path d="M22.5 39.5 h15 l2.6 7.5 H19.9 Z" fill="rgba(140,230,170,.30)" stroke="none"/>'
+    +'<circle cx="27" cy="35" r="1.4"/><circle cx="33.5" cy="32" r="1.1"/><circle cx="30" cy="27" r="0.9"/>'
+    +'<path d="M48 10 l1.5 3.8 3.8 1.5 -3.8 1.5 -1.5 3.8 -1.5 -3.8 -3.8 -1.5 3.8 -1.5 Z" fill="rgba(238,242,226,.4)" stroke="none"/></svg>';
+  var stars='<svg viewBox="0 0 60 70" fill="none" stroke="'+chalk+'" stroke-width="1.4" stroke-linecap="round">'
+    +'<path d="M8 54 L20 39 L30 45 L40 27 L52 18" stroke-width="1.1"/>'
+    +'<circle cx="8" cy="54" r="2"/><circle cx="20" cy="39" r="2"/><circle cx="30" cy="45" r="2"/><circle cx="40" cy="27" r="3"/><circle cx="52" cy="18" r="2"/>'
+    +'<path d="M12 8 v7 M8.5 11.5 h7 M50 46 v7 M46.5 49.5 h7" stroke-width="1.1"/>'
+    +'<path d="M53 4 a5.5 5.5 0 1 0 3.5 9 A6.5 6.5 0 0 1 53 4 Z" fill="rgba(238,242,226,.30)" stroke="none"/></svg>';
+  function build(id, svg, lines){
+    var e=document.getElementById(id);
+    var h='<div class="slate2">'+svg;
+    lines.forEach(function(w,i){ h+='<div class="cl" style="left:'+(8+i*3)+'%;bottom:'+(7+i*6)+'%;width:'+w+'%"></div>'; });
+    h+='</div><div class="leg l"></div><div class="leg r"></div><div class="bar2"></div>';
+    e.innerHTML=h;
+  }
+  build('easelL', flask, [46,62,38]);
+  build('easelR', stars, [58,40,64]);
+  document.getElementById('easelL').addEventListener('click',function(){ say('The side board is mid-lesson \u2014 something green, judging by the diagram. Nobody has rubbed it out in weeks.'); });
+  document.getElementById('easelR').addEventListener('click',function(){ say('The star chart is pinned mid-lesson, the figure half-drawn. The master keeps starting it over.'); });
+})();
+
+/* ================= fourteen desks ================= */
+(function(){
+  var wrap=document.getElementById('desks');
+  var LAND=window.innerWidth>window.innerHeight;
+  var rows=LAND?[{n:4,y:0.5,xs:[34.5,44.5,55.5,65.5]},{n:4,y:7,xs:[34.5,44.5,55.5,65.5]},{n:3,y:13.5,xs:[39.5,49.8,60.2]},{n:3,y:20,xs:[39.5,49.8,60.2]}]
+               :[{n:4,y:8,xs:[34.5,44.5,55.5,65.5]},{n:4,y:20,xs:[34.5,44.5,55.5,65.5]},{n:3,y:30.5,xs:[39.5,49.8,60.2]},{n:3,y:40.5,xs:[39.5,49.8,60.2]}];
+  var gi=0;
+  rows.forEach(function(r){
+    r.xs.forEach(function(x){
+      var idx=gi++, g=G[idx], hue=(idx*47)%360;
+      var d=document.createElement('div');
+      d.className='desk'+(g[6]?' laden':'')+(g[5].indexOf('pick')>=0?' pick':'');
+      d.style.cssText='left:'+x+'%;top:'+r.y+'%';
+      d.setAttribute('data-i', idx);
+      d.innerHTML='<div class="dtop">' +
+        '<div class="book"><svg viewBox="0 0 24 24" style="stroke:hsl('+hue+',55%,32%)">'+g[4]+'</svg><div class="btitle">'+g[1]+'</div><div class="ribbon"></div></div>' +
+        (g[6]?'<div class="stack"><i style="background:#5e2430"></i><i style="background:#274a75"></i><i style="background:#54400f"></i></div>':'') +
+        '<div class="parch"></div><div class="inkwell"></div>' +
+        '</div>' +
+        '<div class="platewrap"><div class="nameplate'+(g[1].length>=8?' longn':'')+'">'+g[1]+'</div></div>';
+      /* pass 2: no two desks alike (seeded, stable) */
+      var v1=(Math.sin(idx*127.1)*43758.5453)%1; if(v1<0)v1+=1;
+      var v2=(Math.sin(idx*311.7)*12543.1234)%1; if(v2<0)v2+=1;
+      var v3=(Math.sin(idx*74.7)*9876.5432)%1; if(v3<0)v3+=1;
+      d.style.transform='translate(-50%,-50%) scale('+(0.98+v1*0.05).toFixed(2)+')';
+      d.querySelector('.dtop').style.filter='hue-rotate('+((v1*12-6).toFixed(1))+'deg) brightness('+(0.94+v2*0.11).toFixed(2)+')';
+      var bk=d.querySelector('.book');
+      bk.style.transform='translate(-50%,-50%) rotate('+((-5+v2*6).toFixed(1))+'deg)';
+      bk.style.width=(52+v3*8).toFixed(0)+'%';
+      /* pass 3: the book is an object — cover edge, real shadow, foxed pages */
+      bk.style.boxShadow='0 0 0 3px hsl('+hue+',42%,'+Math.round(21+v1*8)+'%), 0 6px 11px rgba(0,0,0,.52), inset 0 0 0 1px rgba(122,90,36,.4)';
+      bk.style.background='radial-gradient(circle at '+Math.round(20+v3*60)+'% '+Math.round(15+v1*40)+'%, rgba(160,120,60,'+(0.05+v2*0.10).toFixed(2)+'), transparent 46%), linear-gradient(90deg,#e7d9b4 0%,#f2e7c6 44%,#c9b384 50%,#f2e7c6 56%,#e2d2a8 100%)';
+      d.querySelector('.platewrap').style.transform='rotateX(-50deg) rotate('+((v3*3.2-1.6).toFixed(1))+'deg)';
+      d.querySelector('.nameplate').style.filter='brightness('+(0.92+v1*0.16).toFixed(2)+')';
+      d.addEventListener('click',function(){ openTale(idx); });
+      wrap.appendChild(d);
+    });
+  });
+})();
+
+/* ================= the board speaks (in chalk) ================= */
+var boardText=document.getElementById('boardText'), quillEl=document.getElementById('quill'), boardBusy=false;
+var saySeq=0, sayIv=null, sayTo=null;
+function say(text){
+  saySeq++;
+  var mySeq=saySeq;
+  if(sayIv){ clearInterval(sayIv); sayIv=null; }
+  if(sayTo){ clearTimeout(sayTo); sayTo=null; }
+  boardBusy=true;
+  boardText.classList.add('swap');
+  sayTo=setTimeout(function(){
+    sayTo=null;
+    if(mySeq!==saySeq) return;
+    boardText.textContent='';
+    boardText.classList.remove('swap');
+    var i=0, step=Math.max(13, Math.min(28, Math.round(2100/Math.max(1,text.length))));
+    quillEl.classList.remove('write'); void quillEl.offsetWidth;
+    quillEl.style.animation='quillWrite .18s ease-in-out infinite alternate';
+    quillEl.classList.add('write');
+    sayIv=setInterval(function(){
+      if(mySeq!==saySeq){ clearInterval(sayIv); sayIv=null; return; }
+      i++;
+      boardText.textContent=text.slice(0,i);
+      if(i>=text.length){ clearInterval(sayIv); sayIv=null; quillEl.classList.remove('write'); quillEl.style.animation=''; boardBusy=false; }
+    }, step);
+  },290);
+}
+var boardLines=[
+  'The board adds, in smaller chalk: attendance is taken by the room itself.',
+  'A line of chalk appears: \u201cNo eating the specimens.\u201d It underlines itself twice.',
+  'The board sketches tonight\u2019s sky in one corner, then thinks better of it and rubs it out.',
+  'Chalk dust settles. Somewhere in it, a footprint only ever walks one way.',
+  'The board writes: \u201cQuestions are just spells that haven\u2019t decided yet.\u201d'
+];
+setTimeout(function(){ say('Evening class is in session. Fourteen lessons wait at fourteen desks \u2014 tap a brass nameplate to look inside one.'); },1500);
+var boardIx=0;
+setInterval(function(){
+  if(document.getElementById('tale').classList.contains('on')) return;
+  say(boardLines[boardIx++ % boardLines.length]);
+},46000);
+document.getElementById('board').addEventListener('click',function(){
+  say(boardLines[boardIx++ % boardLines.length]);
+});
+
+/* pass 5: the board remembers old lessons */
+(function(){
+  var slate=document.querySelector('.board .slate');
+  var g=document.createElement('div'); g.className='ghosts';
+  g.innerHTML='<span class="gt" style="left:9%;top:55%;font-size:18px;transform:rotate(-1.4deg)">Lesson VI \u2014 on stars, and minding them</span>' +
+    '<span class="gt" style="right:8%;top:65%;font-size:11px;transform:rotate(1deg)">the moon, again</span>' +
+    '<span class="gt" style="left:12%;bottom:5%;font-size:10.5px;transform:rotate(-.6deg)">mind the \u2014\u2014\u2014</span>' +
+    '<svg style="position:absolute;right:10%;top:52%;width:34px;height:34px;opacity:.08" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="#ece9db" stroke-width="1.1"/><path d="M12 4 V20 M4 12 H20" stroke="#ece9db" stroke-width=".8"/></svg>' +
+    '<div class="gsmear" style="left:4%;top:44%;width:52%;height:20%"></div>' +
+    '<div class="gsmear" style="right:2%;top:8%;width:40%;height:26%"></div>';
+  slate.insertBefore(g, slate.firstChild);
+  var dust=document.createElement('div'); dust.className='dust';
+  document.getElementById('board').appendChild(dust);
+})();
+
+/* pass 6: the master's desk is furniture */
+(function(){
+  var td=document.querySelector('.tdesk');
+  [7,60].forEach(function(l){ var pn=document.createElement('div'); pn.className='tpanel'; pn.style.left=l+'%'; td.appendChild(pn); });
+  var cb=document.createElement('div'); cb.className='candelabrum';
+  cb.innerHTML='<svg viewBox="0 0 40 46" style="width:100%;display:block">' +
+    '<defs><linearGradient id="brs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a87f3e"/><stop offset="1" stop-color="#54400f"/></linearGradient></defs>' +
+    '<ellipse cx="20" cy="43" rx="9" ry="2.6" fill="url(#brs)"/>' +
+    '<rect x="18.6" y="12" width="2.8" height="31" fill="url(#brs)"/>' +
+    '<path d="M20 22 Q6 22 4.5 15 M20 22 Q34 22 35.5 15" stroke="url(#brs)" stroke-width="2.6" fill="none"/>' +
+    '<path d="M16.8 10 L23.2 10 L21.8 5 L18.2 5 Z" fill="url(#brs)"/>' +
+    '<path d="M1.3 13 L7.7 13 L6.3 8 L2.7 8 Z" fill="url(#brs)"/>' +
+    '<path d="M32.3 13 L38.7 13 L37.3 8 L33.7 8 Z" fill="url(#brs)"/></svg>';
+  document.querySelector('.farwall').appendChild(cb);
+  [[50,-4],[11,6],[89,6]].forEach(function(pt){ var c=candle(.55); c.style.left=pt[0]+'%'; c.style.top=pt[1]+'%'; cb.appendChild(c); });
+})();
+
+/* ================= the tale card ================= */
+var taleEl=document.getElementById('tale'), veil=document.getElementById('veil');
+function closeTale(){ taleEl.classList.remove('on'); veil.classList.remove('on'); }
+veil.addEventListener('click', closeTale);
+function openTale(i){
+  var g=G[i], hue=(i*47)%360, pr=g[6];
+  taleEl.innerHTML=
+    '<div class="portrait2" style="background:radial-gradient(90% 95% at 50% 18%, hsla('+hue+',62%,44%,.9), hsla('+hue+',58%,15%,.97) 78%)"><svg viewBox="0 0 24 24">'+g[4]+'</svg></div>' +
+    '<h2>'+g[0]+'</h2><div class="tcls">'+g[2]+'</div>' +
+    '<p class="tblurb">'+g[3]+'</p>' +
+    '<div class="tprog"><span>'+(pr?'Where you left off':'Not yet begun')+'</span><b>'+(pr?pr.label:'')+'</b></div>' +
+    '<div class="inkbar"><i style="width:'+(pr?Math.round(pr.frac*100):0)+'%"></i></div>' +
+    '<div class="sealrow"><button class="rtn" id="taleRtn">\u25C2 Return</button>' +
+    '<button class="seal" id="taleSeal">ENTER</button></div>';
+  taleEl.classList.add('on'); veil.classList.add('on');
+  document.getElementById('taleRtn').addEventListener('click', closeTale);
+  document.getElementById('taleSeal').addEventListener('click', function(){
+    this.classList.add('stamped'); flare();
+    setTimeout(function(){ closeTale(); say('This lesson isn\u2019t in session \u2014 for now. In the finished classroom, the lesson begins the moment you stamp.'); }, 680);
+  });
+}
+
+/* ================= the room answers ================= */
+var cauldronSaid=false;
+document.getElementById('cauldron').addEventListener('click',function(){
+  var c=this; c.classList.remove('burst'); void c.offsetWidth; c.classList.add('burst'); flare();
+  if(!cauldronSaid){ cauldronSaid=true; say('The master\u2019s cauldron has been working since 1847. Nobody remembers at what. It bubbles on, unbothered.'); }
+  else say('The brew turns the exact green of good news.');
+});
+document.getElementById('hourglass').addEventListener('click',function(){
+  this.classList.toggle('flip');
+  say('The hourglass flips itself back with a small bow. Time in this room is well trained.');
+});
+document.getElementById('dome').addEventListener('click',function(){
+  say('Under the dome, the skull is doing its best, which is nothing, perfectly.');
+});
+document.getElementById('door2').addEventListener('click',function(){
+  say('The classroom door is locked from the other side. Something out there is taking notes.');
+});
+document.getElementById('vaultHit').addEventListener('click',function(){
+  var st=document.getElementById('streak');
+  st.style.left=rnd(30,64)+'%'; st.style.top=rnd(3,12)+'%';
+  st.classList.remove('go'); void st.offsetWidth; st.classList.add('go');
+});
+document.getElementById('pass').addEventListener('click',function(){
+  say('The hall pass — your way back to the flight deck. In the finished classroom, it works both ways.');
+});
+document.getElementById('register').addEventListener('click',function(){
+  say('The class register keeps your place in every lesson. In the finished classroom it will hold your real progress.');
+});
+document.getElementById('casebox').addEventListener('click',function(){
+  say('The bookcase leans a little, the way old books do. The master reshelves it in his sleep, badly.');
+});
+document.querySelectorAll('.lancet').forEach(function(l){
+  l.addEventListener('click',function(){ say('Beyond the diamond glass, the night is doing its slow arithmetic of stars.'); });
+});
+
+/* the ghost */
+var ghost=document.getElementById('ghost');
+ghost.innerHTML='<svg viewBox="0 0 60 92" style="width:100%;display:block">' +
+  '<ellipse cx="30" cy="26" rx="13" ry="15" fill="rgba(220,228,255,.50)"/>' +
+  '<path d="M16 38 Q13 70 20 85 L25 77 L30 86 L35 77 L40 85 Q47 70 44 38 Q30 47 16 38 Z" fill="rgba(220,228,255,.32)"/>' +
+  '<circle cx="25" cy="25" r="2" fill="rgba(30,30,60,.55)"/><circle cx="35" cy="25" r="2" fill="rgba(30,30,60,.55)"/>' +
+  '<ellipse cx="30" cy="33" rx="2.6" ry="3.4" fill="rgba(30,30,60,.40)"/></svg>';
+function ghostCycle(){
+  ghost.classList.remove('fly','bow'); void ghost.offsetWidth;
+  ghost.classList.add('fly');
+  setTimeout(ghostCycle, 34000);
+}
+setTimeout(ghostCycle, 11000);
+ghost.addEventListener('click', function(){
+  if(!ghost.classList.contains('fly')) return;
+  ghost.classList.remove('fly'); ghost.classList.add('bow');
+  say('The ghost bows from the aisle. It sat in this class once, centuries ago, and never quite left.');
+  setTimeout(function(){ ghost.classList.remove('bow'); }, 850);
+});
+
+/* the stray spark */
+var spark=document.getElementById('spark'), sparkAlive=true;
+var sparkSpots=[[13,40],[9,31],[10,48],[36,6],[82,12],[52,52],[85,34],[64,56]];
+function sparkHop(){
+  if(!sparkAlive) return;
+  var a=sparkSpots[Math.floor(Math.random()*sparkSpots.length)];
+  spark.style.left='calc('+a[0]+'% - 5px)'; spark.style.top='calc('+a[1]+'% - 5px)';
+}
+spark.style.left='13%'; spark.style.top='40%';
+setInterval(sparkHop, 3600);
+spark.addEventListener('click', function(){
+  if(!sparkAlive) return;
+  sparkAlive=false; spark.style.opacity='0'; flare();
+  say('You caught the stray spark. Make a wish \u2014 quietly. The board repeats everything.');
+  setTimeout(function(){ sparkAlive=true; spark.style.opacity='1'; sparkHop(); }, 10000);
+});
+
+/* ================= pass 1: light lands ================= */
+(function(){
+  function pool(parent,x,y,w,bg,before){
+    var d=document.createElement('div'); d.className='pool';
+    d.style.cssText='left:'+x+'%;top:'+y+'%;width:'+w+'%;aspect-ratio:1.6;background:'+bg;
+    if(before) parent.insertBefore(d,before); else parent.appendChild(d);
+  }
+  var fw=document.querySelector('.farwall');
+  pool(fw,10,50,26,'radial-gradient(ellipse, rgba(255,180,90,.16), transparent 68%)');
+  pool(fw,90,50,26,'radial-gradient(ellipse, rgba(255,180,90,.16), transparent 68%)');
+  pool(fw,50,55,52,'radial-gradient(ellipse, rgba(255,190,100,.11), transparent 70%)');
+  pool(fw,13,51,30,'radial-gradient(ellipse, rgba(87,217,138,.15), transparent 68%)');
+  var fl=document.getElementById('floorwrap'), dk=document.getElementById('desks');
+  pool(fl,58,5,38,'radial-gradient(ellipse, rgba(160,190,255,.13), transparent 70%)',dk);
+  pool(fl,50,36,64,'radial-gradient(ellipse, rgba(255,180,90,.09), transparent 70%)',dk);
+  var d0=document.querySelector('.desk[data-i="0"] .dtop');
+  if(d0) d0.style.boxShadow='inset 3px 0 7px rgba(87,217,138,.28), inset 0 0 0 2px rgba(30,18,6,.7), inset 0 0 30px rgba(0,0,0,.35), inset 0 6px 14px rgba(255,205,120,.06), 0 10px 14px rgba(0,0,0,.35)';
+})();
+
+/* ================= the room leans ================= */
+var tx=0, ty=0, cx=0, cy=0, lastPtr=-9999;
+stage.addEventListener('pointermove', function(e){
+  tx=(e.clientX/window.innerWidth-.5)*2; ty=(e.clientY/window.innerHeight-.5)*2;
+  lastPtr=performance.now();
+});
+(function loop(t){
+  var idle=performance.now()-lastPtr>3500;
+  var gx=idle ? Math.sin(t/5200)*.30 : tx;
+  var gy=idle ? Math.cos(t/6800)*.22 : ty;
+  cx+=(gx-cx)*.045; cy+=(gy-cy)*.045;
+  world.style.setProperty('--px', cx.toFixed(3));
+  world.style.setProperty('--py', cy.toFixed(3));
+  requestAnimationFrame(loop);
+})(0);
+</script>
 </body>
 </html>
