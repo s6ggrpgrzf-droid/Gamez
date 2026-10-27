@@ -32,7 +32,6 @@
   .lz-floor{transform:translate(calc(var(--px,0) * -1.6px), calc(var(--py,0) * 1.1px)) scale(.969);
     perspective:950px;perspective-origin:50% 43%}
   .lz-actors{transform:translate(calc(var(--px,0) * 1.7px), calc(var(--py,0) * -1.1px)) scale(1.033)}
-  .lz-easel{transform:translate(calc(var(--px,0) * -2px), calc(var(--py,0) * 1.3px)) scale(.962)}
 
   /* --- the vault: dark oak ribs, ring chandeliers --- */
   .vault{position:absolute;left:-6%;right:-6%;top:-8%;height:46%;
@@ -223,7 +222,7 @@
   .jar .shine{position:absolute;left:15%;top:10%;width:12%;height:52%;border-radius:50%;
     background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.32) 30%, rgba(255,255,255,.10) 70%, rgba(255,255,255,0));transform:rotate(7deg)}
   .jar.glow .glass{box-shadow:inset 0 0 0 2px rgba(220,235,255,.2), 0 0 20px 5px var(--jg,rgba(120,255,170,.35))}
-  .easel{position:absolute;width:12.6%;aspect-ratio:.74;cursor:pointer}
+  .easel{position:absolute;width:12.6%;aspect-ratio:.74;cursor:pointer;pointer-events:auto}
   .easel .slate2{position:absolute;inset:0 0 13% 0;background:linear-gradient(165deg,#22352a,#182820 70%);border:4px solid #3d2a12;border-radius:3px;box-shadow:inset 0 0 0 1.6px rgba(0,0,0,.55), inset 0 0 14px rgba(0,0,0,.5), 0 8px 12px rgba(0,0,0,.5);overflow:hidden}
   .easel .slate2 svg{position:absolute;inset:5% 6%;width:88%;height:90%}
   .easel .leg{position:absolute;bottom:-1%;width:5px;height:17%;background:linear-gradient(90deg,#241708,#4a3016 55%,#241708);border-radius:2px}
@@ -336,7 +335,7 @@
   .forefx::after{content:"";position:absolute;inset:0;z-index:30;pointer-events:none;
     background:radial-gradient(115% 90% at 50% 42%, transparent 56%, rgba(2,2,6,.38) 100%),
                linear-gradient(0deg, rgba(0,0,0,.22), transparent 18%)}
-  .mydesk{position:absolute;left:-6%;right:-6%;bottom:-4%;height:22.5%;
+  .mydesk{position:absolute;left:-6%;right:-6%;bottom:-4%;height:22.5%;pointer-events:none;
     background:repeating-linear-gradient(90deg, rgba(0,0,0,.17) 0 2px, transparent 2px 72px),
                repeating-linear-gradient(0deg, rgba(255,220,160,.025) 0 2px, transparent 2px 7px),
                linear-gradient(180deg,#664226,#3a2413 55%,#201306);
@@ -419,6 +418,8 @@
   @keyframes stamp{0%{transform:scale(1)}40%{transform:scale(.84)}100%{transform:scale(1)}}
 
   @media (orientation:landscape) and (max-height:520px){
+    #easelL{left:9.05% !important;top:74.73% !important;width:8.18% !important}
+    #easelR{left:88.05% !important;top:71.33% !important;width:8.95% !important}
     #chand1{width:23% !important;left:4% !important;top:-2% !important}
     .vault{height:56%}
     .floorwrap{top:58%;height:82%}
@@ -513,11 +514,6 @@
     <!-- mid candles -->
     <div class="layer" id="cndMid"></div>
 
-    <!-- easel side boards, standing in the room -->
-    <div class="layer lz-easel">
-      <div class="easel" id="easelL" style="left:2.5%;top:40.5%" role="button" aria-label="Side board, potions diagram"></div>
-      <div class="easel" id="easelR" style="right:2.5%;top:40.5%" role="button" aria-label="Side board, star chart"></div>
-    </div>
     <!-- side walls -->
     <div class="layer sidewall">
       <div class="shelves" id="shelves">
@@ -556,6 +552,8 @@
   <!-- foreground: your desk -->
   <div class="forefx">
     <div class="mydesk"></div>
+    <div class="easel" id="easelL" style="left:0.771%;top:87.604%;width:20.12%" role="button" aria-label="Small board at your left elbow, potions diagram"></div>
+    <div class="easel" id="easelR" style="left:79.402%;top:87.604%;width:20.12%" role="button" aria-label="Small board at your right elbow, star chart"></div>
     <div id="cndNear"></div>
     <div class="inkset" id="inkset"></div>
     <div class="pass" id="pass"><div class="tag">Hall<br>Pass</div></div>
@@ -1068,8 +1066,8 @@ document.getElementById('port1').addEventListener('click',function(){
   }
   build('easelL', flask, [46,62,38]);
   build('easelR', stars, [58,40,64]);
-  document.getElementById('easelL').addEventListener('click',function(){ say('The side board is mid-lesson \u2014 something green, judging by the diagram. Nobody has rubbed it out in weeks.'); });
-  document.getElementById('easelR').addEventListener('click',function(){ say('The star chart is pinned mid-lesson, the figure half-drawn. The master keeps starting it over.'); });
+  document.getElementById('easelL').addEventListener('click',function(){ say('The little board at your elbow is mid-lesson \u2014 something green, judging by the diagram. Nobody has rubbed it out in weeks.'); });
+  document.getElementById('easelR').addEventListener('click',function(){ say('The star chart stands at your other elbow, pinned mid-lesson, the figure half-drawn. The master keeps starting it over.'); });
 })();
 
 /* ================= fourteen desks ================= */
