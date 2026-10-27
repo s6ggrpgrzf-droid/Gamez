@@ -397,6 +397,19 @@
   .tale .seal::before{content:"";position:absolute;inset:7px;border-radius:50%;border:1.5px solid rgba(255,217,168,.5)}
   .tale .seal:active{transform:scale(.9)}
   .tale .seal.stamped{animation:stamp .5s ease}
+  .tale.roll{padding:16px 18px 12px;max-height:84%;overflow-y:auto}
+  .tale.roll h2{font-size:clamp(16px,4.8vw,21px);margin-top:2px}
+  .tale.roll .rsub{text-align:center;margin-top:3px;font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:#7a5a24}
+  .rrow{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid rgba(122,90,36,.25);
+    padding:8px 2px 7px;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .rrow:active{background:rgba(122,90,36,.08)}
+  .rrow .rl1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .rrow .rnm{font-size:12.5px;letter-spacing:.08em;font-weight:700;white-space:nowrap}
+  .rrow .rmk{font-size:11px;font-style:italic;color:#6b4d1c;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rrow .inkbar{height:3px;margin-top:5px}
+  .rrow.none .rnm{color:rgba(67,48,15,.55)}
+  .rrow.none .rmk{color:rgba(107,77,28,.6)}
+  .tale.roll .rtnrow{margin-top:10px}
   @keyframes stamp{0%{transform:scale(1)}40%{transform:scale(.84)}100%{transform:scale(1)}}
 
   @media (orientation:landscape) and (max-height:520px){
@@ -549,6 +562,7 @@
   </div>
   <div class="veil" id="veil"></div>
   <div class="tale" id="tale"></div>
+  <div class="tale roll" id="roll"></div>
   <div class="hintline">The Classroom — tap everything</div>
 </div>
 
@@ -1160,7 +1174,7 @@ function greeting(){
 setTimeout(function(){ say(greeting()); },1500);
 var boardIx=0;
 setInterval(function(){
-  if(document.getElementById('tale').classList.contains('on')) return;
+  if(document.getElementById('tale').classList.contains('on') || rollEl.classList.contains('on')) return;
   say(boardLines[boardIx++ % boardLines.length]);
 },46000);
 document.getElementById('board').addEventListener('click',function(){
@@ -1203,6 +1217,27 @@ document.getElementById('board').addEventListener('click',function(){
 var taleEl=document.getElementById('tale'), veil=document.getElementById('veil');
 function closeTale(){ taleEl.classList.remove('on'); veil.classList.remove('on'); }
 veil.addEventListener('click', closeTale);
+var rollEl=document.getElementById('roll');
+function openRoll(){
+  var h='<h2>The Class Register</h2><div class="rsub">Fourteen lessons \u00b7 their true marks</div>';
+  for (var i=0;i<G.length;i++){
+    var pr=G[i][6];
+    h+='<button class="rrow'+(pr?'':' none')+'" data-i="'+i+'"><span class="rl1"><span class="rnm">'+G[i][0]+'</span><span class="rmk">'+(pr?pr.label:'Not yet begun')+'</span></span>' +
+       '<span class="inkbar"><i style="width:'+(pr?Math.round(pr.frac*100):0)+'%"></i></span></button>';
+  }
+  h+='<div class="rtnrow"><button class="rtn" id="rollRtn">\u25C2 Return</button></div>';
+  rollEl.innerHTML=h;
+  rollEl.classList.add('on'); veil.classList.add('on');
+  document.getElementById('rollRtn').addEventListener('click', closeRoll);
+  rollEl.querySelectorAll('.rrow').forEach(function(b){
+    b.addEventListener('click', function(){ var ix=+b.getAttribute('data-i'); closeRoll(); openTale(ix); });
+  });
+}
+function closeRoll(){
+  rollEl.classList.remove('on');
+  if(!taleEl.classList.contains('on')) veil.classList.remove('on');
+}
+veil.addEventListener('click', closeRoll);
 function openTale(i){
   var g=G[i], hue=(i*47)%360, pr=g[6];
   taleEl.innerHTML=
@@ -1248,9 +1283,7 @@ document.getElementById('vaultHit').addEventListener('click',function(){
 document.getElementById('pass').addEventListener('click',function(){
   say('The hall pass. You hardly need one here — every door in this room is yours.');
 });
-document.getElementById('register').addEventListener('click',function(){
-  say('The class register keeps your place in every lesson \u2014 and every mark in it is truly yours.');
-});
+document.getElementById('register').addEventListener('click',function(){ openRoll(); });
 document.getElementById('casebox').addEventListener('click',function(){
   say('The bookcase leans a little, the way old books do. The master reshelves it in his sleep, badly.');
 });
