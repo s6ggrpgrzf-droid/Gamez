@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>try{if(localStorage.getItem('gz_room')==='deck')location.replace('./deck.html');}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Classroom</title>
 <link rel="stylesheet" href="chalkfont.css">
@@ -369,6 +370,7 @@
     border:1px solid rgba(201,162,75,.5);color:#ecd28e;font-family:inherit;font-size:10px;
     letter-spacing:.24em;padding:8px 9px 8px 12px;border-radius:3px;cursor:pointer}
   .sndkey.off{color:rgba(236,210,142,.42);border-color:rgba(201,162,75,.25);text-decoration:line-through}
+  .sndkey.roomkey{right:calc(2.6% + 64px)}
   .tale{position:absolute;left:50%;top:50%;width:min(87%,400px);z-index:45;
     transform:translate(-50%,-46%) scale(.92);opacity:0;pointer-events:none;
     transition:transform .5s cubic-bezier(.2,1.25,.3,1), opacity .35s ease;
@@ -567,6 +569,7 @@
   <div class="veil" id="veil"></div>
   <div class="tale" id="tale"></div>
   <div class="tale roll" id="roll"></div>
+  <button class="sndkey roomkey" id="roomKey">DECK</button>
   <button class="sndkey" id="sndKey">SND</button>
   <div class="hintline">The Classroom — tap everything</div>
 </div>
@@ -1213,6 +1216,10 @@ sndKey.addEventListener('click', function(){
   try{ localStorage.setItem('hub_sound', soundOn?'on':'off'); }catch(e){}
   paintSnd();
   if(soundOn) sfxJar();
+});
+document.getElementById('roomKey').addEventListener('click', function(){
+  try{ localStorage.setItem('gz_room','deck'); }catch(e){}
+  location.href='./deck.html';
 });
 function say(text){
   saySeq++;
