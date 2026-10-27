@@ -874,6 +874,24 @@ function flare(){
   var ch1=document.getElementById('chand1');
   document.getElementById('cndMid').appendChild(ch1);
   ch1.style.left='27%'; ch1.style.top='5%'; ch1.style.width='34%';
+  /* the smaller ring hangs within the bigger one — one two-tier fixture.
+     Its seat is measured off the big ring's real box, not hand-computed
+     percentages: width resolves against the layer's width while top resolves
+     against its height, so only a measurement centers it at any aspect. */
+  var ch2=document.getElementById('chand2');
+  document.getElementById('cndMid').appendChild(ch2);
+  ch2.style.width='14%';
+  var chain2=ch2.querySelector('.chain');
+  function nestChand(){
+    var pw=ch1.offsetParent.clientWidth, ph=ch1.offsetParent.clientHeight;
+    var cx=ch1.offsetLeft+ch1.offsetWidth/2, cy=ch1.offsetTop+ch1.offsetHeight/2;
+    ch2.style.left=((cx-ch2.offsetWidth/2)/pw*100)+'%';
+    ch2.style.top=((cy-ch2.offsetHeight/2)/ph*100)+'%';
+    var need=(ch2.offsetTop+6)/ch2.offsetHeight*100;
+    chain2.style.top=(-need)+'%'; chain2.style.height=need+'%';
+  }
+  nestChand();
+  window.addEventListener('resize',nestChand);
 })();
 
 /* ================= quill, door, dome, hourglass, books, inkset ================= */
