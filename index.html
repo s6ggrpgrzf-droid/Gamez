@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="./art-cr.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./art-dm.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./art-sd.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-pt.css" media="print" onload="this.media='all'">
 <style>
   :root{
     --gold:#e3ac55; --gold-hi:#ffd98a; --gold-deep:#9a7434;
@@ -246,13 +247,18 @@
     background:linear-gradient(180deg,#5a3a1e,#33200f);box-shadow:0 4px 7px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,210,130,.18)}
   .spine{position:absolute;bottom:0;border-radius:2px 2px 1px 1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4), inset 2px 0 3px rgba(255,255,255,.06)}
   .spine::after{content:"";position:absolute;left:0;right:0;top:16%;height:2px;background:rgba(232,207,142,.4)}
-  .portrait{position:absolute;width:14.5%;cursor:pointer;filter:drop-shadow(0 7px 9px rgba(0,0,0,.55))}
-  .portrait .frame{border:4px solid #5f4520;border-radius:3px;overflow:hidden;
+  .portrait{position:absolute;width:14.5%;cursor:pointer;filter:drop-shadow(0 7px 9px rgba(0,0,0,.55));
+    transform-origin:50% -8%;animation:ptsway 8.5s ease-in-out infinite alternate}
+  @keyframes ptsway{from{transform:rotate(-.45deg)}to{transform:rotate(.45deg)}}
+  .portrait .ptimg{position:absolute;inset:0;background-size:cover;background-position:center}
+  .portrait .ptimg.awakeL{opacity:0;transition:opacity .35s}
+  .portrait.awake .ptimg.awakeL{opacity:1}
+  .portrait .ptglow{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(95% 72% at 50% 92%, rgba(255,186,92,.22), rgba(255,186,92,0) 62%);
+    animation:ptbreathe 5.2s ease-in-out infinite alternate}
+  @keyframes ptbreathe{from{opacity:.4}to{opacity:1}}
+  .portrait .frame{position:relative;aspect-ratio:60/76;border:4px solid #5f4520;border-radius:3px;overflow:hidden;
     box-shadow:inset 0 0 0 2px #c99b3f, inset 0 0 24px rgba(0,0,0,.55), 0 0 0 5px #241708}
-  .portrait .eyesOpen{opacity:0;transition:opacity .3s}
-  .portrait.awake .eyesOpen{opacity:1}
-  .portrait .eyesShut{transition:opacity .3s}
-  .portrait.awake .eyesShut{opacity:0}
   .portrait.wake{animation:wake .8s cubic-bezier(.3,1.8,.4,1)}
   @keyframes wake{0%{transform:rotate(0)}35%{transform:rotate(-2.4deg)}70%{transform:rotate(1.6deg)}100%{transform:rotate(0)}}
 
@@ -1041,16 +1047,7 @@ var jarIx=0;
 
 /* ================= the old master's portrait ================= */
 function portraitSvg(){
-  return '<div class="frame"><svg viewBox="0 0 60 76" style="width:100%;display:block">' +
-  '<rect width="60" height="76" fill="#2c2438"/>' +
-  '<defs><radialGradient id="skn" cx="42%" cy="32%" r="85%"><stop offset="0" stop-color="#eecfa8"/><stop offset=".68" stop-color="#d9b48e"/><stop offset="1" stop-color="#b0824f"/></radialGradient></defs>' +
-  '<ellipse cx="30" cy="86" rx="24" ry="30" fill="#3c3152"/>' +
-  '<circle cx="30" cy="34" r="13" fill="url(#skn)"/>' +
-  '<path d="M14 36 A16 17 0 0 1 46 36 L42 22 A13 12 0 0 0 18 22 Z" fill="#4a3a66"/>' +
-  '<g class="eyesShut"><path d="M22 34 Q25 36 28 34 M32 34 Q35 36 38 34" stroke="#43300f" stroke-width="1.5" fill="none" stroke-linecap="round"/></g>' +
-  '<g class="eyesOpen"><circle cx="25" cy="34" r="1.9" fill="#241708"/><circle cx="35" cy="34" r="1.9" fill="#241708"/></g>' +
-  '<path d="M26 44 Q30 46.5 34 44" stroke="#8a5f3a" stroke-width="1.5" fill="none" stroke-linecap="round"/>' +
-  '<rect width="60" height="76" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="5"/></svg></div>';
+  return '<div class="frame"><div class="ptimg pt-asleep"></div><div class="ptimg awakeL pt-awake"></div><div class="ptglow"></div></div>';
 }
 document.getElementById('port1').innerHTML=portraitSvg();
 document.getElementById('port1').addEventListener('click',function(){
