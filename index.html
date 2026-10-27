@@ -1149,7 +1149,15 @@ var boardLines=[
   'Chalk dust settles. Somewhere in it, a footprint only ever walks one way.',
   'The board writes: \u201cQuestions are just spells that haven\u2019t decided yet.\u201d'
 ];
-setTimeout(function(){ say('Evening class is in session. Fourteen lessons wait at fourteen desks \u2014 tap a brass nameplate to look inside one.'); },1500);
+function greeting(){
+  var h=new Date().getHours();
+  var head = h>=5 && h<11 ? 'Morning class. '
+    : h>=11 && h<17 ? 'Afternoon class is in session. '
+    : h>=17 && h<23 ? 'Evening class is in session. '
+    : 'The small hours, and the classroom is awake for them. ';
+  return head+'Fourteen lessons wait at fourteen desks \u2014 tap a brass nameplate to look inside one.';
+}
+setTimeout(function(){ say(greeting()); },1500);
 var boardIx=0;
 setInterval(function(){
   if(document.getElementById('tale').classList.contains('on')) return;
