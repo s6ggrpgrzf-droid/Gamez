@@ -6,6 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>The Classroom</title>
 <link rel="stylesheet" href="chalkfont.css">
+<link rel="stylesheet" href="./art-a.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-b.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-c.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-d.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-i.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-l.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-cr.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-dm.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-sd.css" media="print" onload="this.media='all'">
 <style>
   :root{
     --gold:#e3ac55; --gold-hi:#ffd98a; --gold-deep:#9a7434;
@@ -105,7 +114,7 @@
   .quill{position:absolute;right:-4.5%;bottom:2%;width:15%;max-width:52px;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(0,0,0,.5));
     animation:quillBob 3.6s ease-in-out infinite alternate;transition:transform .16s linear}
   @keyframes quillBob{from{transform:rotate(-3deg) translateY(0)}to{transform:rotate(2deg) translateY(-3px)}}
-  .quill.travel{animation:none}
+  .quill.travel{animation:none;transition:none}
   .door2{position:absolute;left:86.5%;top:13%;width:10.5%;height:31%;cursor:pointer;filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
   .dais{position:absolute;left:10%;right:10%;top:55%;height:14%;
     background:linear-gradient(180deg,#43301a,#2a1c0d 60%,#1c1107);border-radius:6px 6px 0 0;
@@ -273,6 +282,7 @@
   .desk .book{position:absolute;left:50%;top:40%;width:56%;aspect-ratio:1.45;transform:translate(-50%,-50%) rotate(-2deg);
     border-radius:2px;box-shadow:0 3px 7px rgba(0,0,0,.45), inset 0 0 0 1px rgba(122,90,36,.4);
     background:linear-gradient(90deg,#dec99c 0%,#ecdcb2 44%,#b3985e 50%,#ecdcb2 56%,#d3bd8a 100%)}
+  .desk .book .artfill{position:absolute;inset:0;border-radius:2px;overflow:hidden;background-size:cover;background-position:center}
   .desk .book svg{position:absolute;left:9%;top:50%;transform:translateY(-50%);width:36%;height:72%;
     fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
   .desk .book .btitle{position:absolute;right:7%;top:50%;transform:translateY(-50%);width:38%;text-align:center;
@@ -645,6 +655,7 @@ var G = [
 ];
 var U = ['./candy-cascade/','./bubble-hex/','./bloom-defense/','./neon-void/','./maze-trace/','./life-story/','./reel-empire/','./pdawg/','./word-well/','./tiny-fairway/','./skylark/','./dominoes/','https://s6ggrpgrzf-droid.github.io/Cathedral/','./starlight-drums/'];
 var IDS = ['candy-cascade','bubble-hex','bloom-defense','neon-void','maze-trace','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums'];
+var ART = ['candy-cascade','bubble-hex','bloom-defense','neon-void','arrow-slide','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums'];
 </script>
 <script>
 'use strict';
@@ -1090,25 +1101,22 @@ document.getElementById('port1').addEventListener('click',function(){
       d.style.cssText='left:'+x+'%;top:'+r.y+'%';
       d.setAttribute('data-i', idx);
       d.innerHTML='<div class="dtop">' +
-        '<div class="book"><svg viewBox="0 0 24 24" style="stroke:hsl('+hue+',60%,22%)">'+g[4]+'</svg><div class="btitle">'+g[1]+'</div><div class="ribbon"></div></div>' +
+        '<div class="book"><div class="artfill art art-'+ART[idx]+'">'+(ART[idx]==='cathedral'?'<i class="cr2"></i>':ART[idx]==='dominoes'?'<i class="dm2"></i>':'')+'</div><div class="ribbon"></div></div>' +
         (g[6]?'<div class="stack"><i style="background:#5e2430"></i><i style="background:#274a75"></i><i style="background:#54400f"></i></div>':'') +
         '<div class="parch"></div><div class="inkwell"></div>' +
-        '</div>' +
-        '<div class="platewrap"><div class="nameplate'+(g[1].length>=8?' longn':'')+'">'+g[1]+'</div></div>';
+        '</div>';
       /* pass 2: no two desks alike (seeded, stable) */
       var v1=(Math.sin(idx*127.1)*43758.5453)%1; if(v1<0)v1+=1;
       var v2=(Math.sin(idx*311.7)*12543.1234)%1; if(v2<0)v2+=1;
       var v3=(Math.sin(idx*74.7)*9876.5432)%1; if(v3<0)v3+=1;
       d.style.transform='translate(-50%,-50%) scale('+(0.98+v1*0.05).toFixed(2)+')';
-      d.querySelector('.dtop').style.filter='hue-rotate('+((v1*12-6).toFixed(1))+'deg) brightness('+(0.94+v2*0.11).toFixed(2)+')';
+      d.querySelector('.dtop').style.filter='brightness('+(0.94+v2*0.11).toFixed(2)+')';
       var bk=d.querySelector('.book');
       bk.style.transform='translate(-50%,-50%) rotate('+((-5+v2*6).toFixed(1))+'deg)';
       bk.style.width=(52+v3*8).toFixed(0)+'%';
       /* pass 3: the book is an object — cover edge, real shadow, foxed pages */
       bk.style.boxShadow='0 0 0 3px hsl('+hue+',42%,'+Math.round(21+v1*8)+'%), 0 6px 11px rgba(0,0,0,.52), inset 0 0 0 1px rgba(122,90,36,.4)';
       bk.style.background='radial-gradient(circle at '+Math.round(20+v3*60)+'% '+Math.round(15+v1*40)+'%, rgba(160,120,60,'+(0.05+v2*0.10).toFixed(2)+'), transparent 46%), linear-gradient(90deg,#dec99c 0%,#ecdcb2 44%,#b3985e 50%,#ecdcb2 56%,#d3bd8a 100%)';
-      d.querySelector('.platewrap').style.transform=LAND?('rotateX(-38deg) translateY(-'+((ti===0||ti===2)?9:4)+'px) rotate('+((v3*3.2-1.6).toFixed(1))+'deg)'):('rotateX(-50deg) rotate('+((v3*3.2-1.6).toFixed(1))+'deg)');
-      d.querySelector('.nameplate').style.filter='brightness('+(0.92+v1*0.16).toFixed(2)+')';
       d.addEventListener('click',function(){ openTale(idx); });
       wrap.appendChild(d);
     });
@@ -1119,11 +1127,13 @@ document.getElementById('port1').addEventListener('click',function(){
 var boardText=document.getElementById('boardText'), quillEl=document.getElementById('quill'), boardBusy=false;
 var saySeq=0, sayIv=null, sayTo=null;
 var boardEl=document.getElementById('board');
+var qtx=0, qty=0;
 function quillTo(px,py){
   var br=boardEl.getBoundingClientRect(), scale=br.width/boardEl.offsetWidth;
-  var lx=(px-br.left)/scale, ly=(py-br.top)/scale;
-  var nx=quillEl.offsetLeft+quillEl.offsetWidth*0.10, ny=quillEl.offsetTop+quillEl.offsetHeight*0.95;
-  quillEl.style.transform='translate('+((lx-nx).toFixed(1))+'px,'+((ly-ny).toFixed(1))+'px) rotate(-4deg)';
+  var qr=quillEl.getBoundingClientRect();
+  var nx=qr.left+qr.width*0.10, ny=qr.top+qr.height*0.95;
+  qtx+=(px-nx)/scale; qty+=(py-ny)/scale;
+  quillEl.style.transform='translate('+qtx.toFixed(1)+'px,'+qty.toFixed(1)+'px) rotate(-4deg)';
 }
 function quillStart(){
   var bt=boardText.getBoundingClientRect();
@@ -1139,10 +1149,7 @@ function quillCaret(i){
   if(r) quillTo(r.right+2, r.bottom-2);
 }
 function quillHome(){
-  var seq=saySeq;
-  quillEl.style.transition='transform .7s cubic-bezier(.3,.7,.3,1)';
-  quillEl.style.transform='';
-  setTimeout(function(){ if(seq===saySeq){ quillEl.classList.remove('travel'); quillEl.style.transition=''; } },720);
+  /* the quill stops where the writing ends, and rests there */
 }
 /* quiet sound \u2014 synthesized, sparse, silenced by the SND key */
 var AC=null, NOISE=null, lastChalk=0;
