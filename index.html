@@ -893,9 +893,10 @@ document.getElementById('inkset').innerHTML='<svg viewBox="0 0 60 44" style="wid
 })();
 
 /* ================= honored slates on the master's desk ================= */
-(function(){
+function buildSlates(idxs){
   var row=document.getElementById('slateRow');
-  [10,3,9].forEach(function(idx,k){
+  row.innerHTML='';
+  idxs.forEach(function(idx,k){
     var g=G[idx];
     var h=document.createElement('div'); h.className='slate3';
     h.style.left=(28.5+k*16.5)+'%';
@@ -903,6 +904,40 @@ document.getElementById('inkset').innerHTML='<svg viewBox="0 0 60 44" style="wid
     h.addEventListener('click',function(){ openTale(idx); });
     row.appendChild(h);
   });
+}
+buildSlates([10,3,9]);
+
+/* ============ tonight's picks: the fallback trio, replaced nightly ============ */
+function applyPicks(idxs){
+  if(!idxs || idxs.length!==3) return;
+  for (var i=0;i<G.length;i++){
+    var at=G[i][5].indexOf('pick');
+    if (idxs.indexOf(i)>=0 && at<0) G[i][5].push('pick');
+    if (idxs.indexOf(i)<0 && at>=0) G[i][5].splice(at,1);
+  }
+  var desks=document.querySelectorAll('.desk');
+  for (var j=0;j<desks.length && j<G.length;j++)
+    desks[j].classList.toggle('pick', G[j][5].indexOf('pick')>=0);
+  buildSlates(idxs);
+}
+(function(){
+  function dateKey(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  try {
+    var ctl=new AbortController();
+    var to=setTimeout(function(){ ctl.abort(); }, 6000);
+    fetch('https://gamez-ai.chaoticutopia84.workers.dev/g', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({kind:'arcadeeditorial', game:'hub', ctx:{date:dateKey()}}),
+      signal: ctl.signal
+    }).then(function(r){ clearTimeout(to); return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(!d || !d.picks || d.picks.length!==3) return;
+        var idxs=[], ok=true;
+        d.picks.forEach(function(pk){ var ix=IDS.indexOf(pk.game); if(ix<0 || idxs.indexOf(ix)>=0) ok=false; else idxs.push(ix); });
+        if(ok) applyPicks(idxs);
+      })
+      .catch(function(){ /* the fallback trio stays */ });
+  } catch(e){ /* the fallback trio stays */ }
 })();
 
 /* ================= specimen jars ================= */
