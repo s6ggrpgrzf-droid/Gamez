@@ -1243,7 +1243,7 @@ function say(text){
     if(mySeq!==saySeq) return;
     boardText.textContent='';
     boardText.classList.remove('swap');
-    var i=0, step=Math.max(18, Math.min(38, Math.round(2900/Math.max(1,text.length))));
+    var i=0, step=55;
     quillEl.classList.add('travel');
     quillStart();
     sayIv=setInterval(function(){
