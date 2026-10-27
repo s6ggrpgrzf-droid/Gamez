@@ -272,11 +272,11 @@
     background:linear-gradient(180deg,#33200f,#1e1206);box-shadow:0 6px 9px rgba(0,0,0,.4)}
   .desk .book{position:absolute;left:50%;top:40%;width:56%;aspect-ratio:1.45;transform:translate(-50%,-50%) rotate(-2deg);
     border-radius:2px;box-shadow:0 3px 7px rgba(0,0,0,.45), inset 0 0 0 1px rgba(122,90,36,.4);
-    background:linear-gradient(90deg,#e7d9b4 0%,#f2e7c6 44%,#c9b384 50%,#f2e7c6 56%,#e2d2a8 100%)}
+    background:linear-gradient(90deg,#dec99c 0%,#ecdcb2 44%,#b3985e 50%,#ecdcb2 56%,#d3bd8a 100%)}
   .desk .book svg{position:absolute;left:9%;top:50%;transform:translateY(-50%);width:36%;height:72%;
-    fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
+    fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
   .desk .book .btitle{position:absolute;right:7%;top:50%;transform:translateY(-50%);width:38%;text-align:center;
-    font-size:clamp(4.5px,1.15vw,7px);letter-spacing:.06em;color:#6b4d1c;text-transform:uppercase;line-height:1.35;font-weight:700}
+    font-size:clamp(4.5px,1.15vw,7px);letter-spacing:.06em;color:#4f3508;text-transform:uppercase;line-height:1.35;font-weight:700}
   .desk .book .ribbon{position:absolute;left:50%;top:0;width:7%;height:118%;transform:translateX(-50%);
     background:linear-gradient(180deg,#8c2432,#5e1622);clip-path:polygon(0 0,100% 0,100% 100%,50% 86%,0 100%);opacity:0}
   .desk.pick .book .ribbon{opacity:1}
@@ -294,10 +294,10 @@
     transform:rotateX(-50deg);transform-origin:50% 100%;text-align:center}
   .desk .nameplate{display:inline-block;padding:3px 7px 4px;border-radius:2px;white-space:nowrap;
     background:linear-gradient(180deg,#77602c,#4a3a14 60%,#5d4a1e);color:#f0d896;
-    font-size:clamp(6.5px,1.7vw,10px);font-weight:700;letter-spacing:.09em;text-transform:uppercase;line-height:1.2;
+    font-size:clamp(8px,2.05vw,11px);font-weight:700;letter-spacing:.09em;text-transform:uppercase;line-height:1.2;
     text-shadow:0 -1px 1px rgba(0,0,0,.7), 0 1px 0 rgba(255,240,200,.14);
     box-shadow:0 3px 6px rgba(0,0,0,.5), inset 0 0 0 1px rgba(240,216,150,.35), inset 0 1px 0 rgba(255,240,200,.3)}
-  .desk .nameplate.longn{font-size:6px;letter-spacing:.03em}
+  .desk .nameplate.longn{font-size:clamp(6.8px,1.75vw,9px);letter-spacing:.04em}
   .desk:active .nameplate{transform:translateY(-2px)}
   .desk .nameplate{transition:transform .25s ease}
 
@@ -336,9 +336,12 @@
     background:radial-gradient(115% 90% at 50% 42%, transparent 56%, rgba(2,2,6,.38) 100%),
                linear-gradient(0deg, rgba(0,0,0,.22), transparent 18%)}
   .mydesk{position:absolute;left:-6%;right:-6%;bottom:-4%;height:22.5%;pointer-events:none;
-    background:repeating-linear-gradient(90deg, rgba(0,0,0,.17) 0 2px, transparent 2px 72px),
-               repeating-linear-gradient(0deg, rgba(255,220,160,.025) 0 2px, transparent 2px 7px),
-               linear-gradient(180deg,#664226,#3a2413 55%,#201306);
+    background:radial-gradient(55% 95% at 84% 0%, rgba(255,183,84,.13), rgba(255,183,84,0) 62%),
+               radial-gradient(38% 80% at 10% 0%, rgba(255,170,70,.07), rgba(255,170,70,0) 60%),
+               repeating-linear-gradient(90deg, rgba(0,0,0,.17) 0 2px, transparent 2px 72px),
+               repeating-linear-gradient(0deg, rgba(255,220,160,.05) 0 2px, transparent 2px 7px),
+               repeating-linear-gradient(0deg, rgba(0,0,0,.06) 0 1px, transparent 1px 13px),
+               linear-gradient(180deg,#684428,#33200f 55%,#170c04);
     border-radius:10px 10px 0 0;box-shadow:inset 0 3px 0 rgba(255,220,150,.20), inset 0 14px 26px rgba(255,190,90,.06), 0 -18px 44px rgba(0,0,0,.5)}
   #cndNear{position:absolute;inset:0;pointer-events:none}
   .register{position:absolute;left:50%;bottom:5%;transform:translateX(-50%) rotate(.5deg);width:min(64%,340px);
@@ -425,12 +428,14 @@
     .floorwrap{top:58%;height:82%}
     .board{top:3%;height:44%}
     .dais{top:62%} .tdesk{top:53%}
-    .slate3{bottom:44.5%}
+    .slate3{bottom:42%}
     .dome{bottom:45.5%} .hourglass{bottom:45.8%} .tbooks{bottom:45.6%}
     .cauldron{top:44%}
     .stand{top:52%}
     .shelves{top:38%;height:24%} .case{top:38%;height:24%}
     .desk{width:7.6%}
+    .desk .platewrap{bottom:1.5%}
+    .desk .nameplate{padding:2px 6px 3px}
     .mydesk{height:19%}
     .register{bottom:1.2%;padding:7px 12px 6px;width:min(48%,320px)}
     .register .lrow{font-size:10.5px}
@@ -610,7 +615,7 @@
     background:rgba(0,0,0,.13);box-shadow:inset 0 0 0 2px rgba(20,10,2,.55), inset 0 1px 0 rgba(255,220,150,.13)}
   .candelabrum{position:absolute;left:36.5%;bottom:53.6%;width:6.5%;z-index:1;pointer-events:none}
   .ghosts{position:absolute;inset:0;pointer-events:none}
-  .ghosts .gt{position:absolute;color:rgba(236,233,219,.07);font-family:'ChalkHand','Snell Roundhand','Brush Script MT',cursive;white-space:nowrap}
+  .ghosts .gt{position:absolute;color:rgba(236,233,219,.05);font-family:'ChalkHand','Snell Roundhand','Brush Script MT',cursive;white-space:nowrap}
   .ghosts .gsmear{position:absolute;border-radius:50%;background:radial-gradient(ellipse, rgba(236,233,219,.05), transparent 70%)}
   .board .dust{position:absolute;left:5%;right:5%;bottom:-3px;height:6px;border-radius:50%;pointer-events:none;
     background:radial-gradient(ellipse, rgba(236,233,219,.22), transparent 70%)}
@@ -981,7 +986,7 @@ var jarIx=0;
     {x:89,b:54,w:12,h:28,c:'#57d98a',g:'rgba(87,217,138,.35)',liq:50},
     /* row 2 (on the lower board) */
     {x:12,b:4,w:14,h:33,sh:'square',c:'#e85a7a',g:'rgba(232,90,122,.38)',liq:60,spec:[46,60,40]},
-    {x:29,b:4,w:16,h:38,sh:'round',c:'#57d98a',g:'rgba(87,217,138,.4)',liq:72},
+    {x:29,b:4,w:16,h:38,sh:'round',c:'#43a866',g:'rgba(67,168,102,.3)',liq:72},
     {x:47,b:4,w:11,h:26,sh:'vial',c:'#e8cf8e',g:'rgba(232,207,142,.38)',liq:52},
     {x:62,b:4,w:15,h:35,sh:'flask',c:'#3dd8c2',g:'rgba(61,216,194,.4)',liq:64,spec:[52,58,34]},
     {x:79,b:4,w:12,h:29,sh:'apot',c:'#e8a33d',g:'rgba(232,163,61,.38)',liq:56},
@@ -1077,15 +1082,15 @@ document.getElementById('port1').addEventListener('click',function(){
   var rows=LAND?[{n:4,y:0.5,xs:[34.5,44.5,55.5,65.5]},{n:4,y:7,xs:[34.5,44.5,55.5,65.5]},{n:3,y:13.5,xs:[39.5,49.8,60.2]},{n:3,y:20,xs:[39.5,49.8,60.2]}]
                :[{n:4,y:8,xs:[34.5,44.5,55.5,65.5]},{n:4,y:20,xs:[34.5,44.5,55.5,65.5]},{n:3,y:30.5,xs:[39.5,49.8,60.2]},{n:3,y:40.5,xs:[39.5,49.8,60.2]}];
   var gi=0;
-  rows.forEach(function(r){
+  rows.forEach(function(r,ti){
     r.xs.forEach(function(x){
       var idx=gi++, g=G[idx], hue=(idx*47)%360;
       var d=document.createElement('div');
-      d.className='desk'+(g[6]?' laden':'')+(g[5].indexOf('pick')>=0?' pick':'');
+      d.className='desk t'+ti+(g[6]?' laden':'')+(g[5].indexOf('pick')>=0?' pick':'');
       d.style.cssText='left:'+x+'%;top:'+r.y+'%';
       d.setAttribute('data-i', idx);
       d.innerHTML='<div class="dtop">' +
-        '<div class="book"><svg viewBox="0 0 24 24" style="stroke:hsl('+hue+',55%,32%)">'+g[4]+'</svg><div class="btitle">'+g[1]+'</div><div class="ribbon"></div></div>' +
+        '<div class="book"><svg viewBox="0 0 24 24" style="stroke:hsl('+hue+',60%,22%)">'+g[4]+'</svg><div class="btitle">'+g[1]+'</div><div class="ribbon"></div></div>' +
         (g[6]?'<div class="stack"><i style="background:#5e2430"></i><i style="background:#274a75"></i><i style="background:#54400f"></i></div>':'') +
         '<div class="parch"></div><div class="inkwell"></div>' +
         '</div>' +
@@ -1101,8 +1106,8 @@ document.getElementById('port1').addEventListener('click',function(){
       bk.style.width=(52+v3*8).toFixed(0)+'%';
       /* pass 3: the book is an object — cover edge, real shadow, foxed pages */
       bk.style.boxShadow='0 0 0 3px hsl('+hue+',42%,'+Math.round(21+v1*8)+'%), 0 6px 11px rgba(0,0,0,.52), inset 0 0 0 1px rgba(122,90,36,.4)';
-      bk.style.background='radial-gradient(circle at '+Math.round(20+v3*60)+'% '+Math.round(15+v1*40)+'%, rgba(160,120,60,'+(0.05+v2*0.10).toFixed(2)+'), transparent 46%), linear-gradient(90deg,#e7d9b4 0%,#f2e7c6 44%,#c9b384 50%,#f2e7c6 56%,#e2d2a8 100%)';
-      d.querySelector('.platewrap').style.transform='rotateX(-50deg) rotate('+((v3*3.2-1.6).toFixed(1))+'deg)';
+      bk.style.background='radial-gradient(circle at '+Math.round(20+v3*60)+'% '+Math.round(15+v1*40)+'%, rgba(160,120,60,'+(0.05+v2*0.10).toFixed(2)+'), transparent 46%), linear-gradient(90deg,#dec99c 0%,#ecdcb2 44%,#b3985e 50%,#ecdcb2 56%,#d3bd8a 100%)';
+      d.querySelector('.platewrap').style.transform=LAND?('rotateX(-38deg) translateY(-'+((ti===0||ti===2)?9:4)+'px) rotate('+((v3*3.2-1.6).toFixed(1))+'deg)'):('rotateX(-50deg) rotate('+((v3*3.2-1.6).toFixed(1))+'deg)');
       d.querySelector('.nameplate').style.filter='brightness('+(0.92+v1*0.16).toFixed(2)+')';
       d.addEventListener('click',function(){ openTale(idx); });
       wrap.appendChild(d);
@@ -1273,10 +1278,10 @@ document.getElementById('board').addEventListener('click',function(){
 (function(){
   var slate=document.querySelector('.board .slate');
   var g=document.createElement('div'); g.className='ghosts';
-  g.innerHTML='<span class="gt" style="left:9%;top:55%;font-size:18px;transform:rotate(-1.4deg)">Lesson VI \u2014 on stars, and minding them</span>' +
-    '<span class="gt" style="right:8%;top:65%;font-size:11px;transform:rotate(1deg)">the moon, again</span>' +
+  g.innerHTML='<span class="gt" style="left:9%;top:71%;font-size:18px;transform:rotate(-1.4deg)">Lesson VI \u2014 on stars, and minding them</span>' +
+    '<span class="gt" style="right:8%;top:79%;font-size:11px;transform:rotate(1deg)">the moon, again</span>' +
     '<span class="gt" style="left:12%;bottom:5%;font-size:10.5px;transform:rotate(-.6deg)">mind the \u2014\u2014\u2014</span>' +
-    '<svg style="position:absolute;right:10%;top:52%;width:34px;height:34px;opacity:.08" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="#ece9db" stroke-width="1.1"/><path d="M12 4 V20 M4 12 H20" stroke="#ece9db" stroke-width=".8"/></svg>' +
+    '<svg style="position:absolute;right:10%;top:66%;width:34px;height:34px;opacity:.06" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="#ece9db" stroke-width="1.1"/><path d="M12 4 V20 M4 12 H20" stroke="#ece9db" stroke-width=".8"/></svg>' +
     '<div class="gsmear" style="left:4%;top:44%;width:52%;height:20%"></div>' +
     '<div class="gsmear" style="right:2%;top:8%;width:40%;height:26%"></div>';
   slate.insertBefore(g, slate.firstChild);
