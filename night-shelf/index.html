@@ -222,6 +222,45 @@
     #menu .recordline{grid-column:2; margin-top:12px}
     #menu .fine{grid-column:1 / -1; margin-top:12px}
   }
+/* ===== candlelight polish layer ===== */
+#fxlight,#fxvig{position:fixed;inset:0;pointer-events:none;will-change:opacity;animation:fxfade 2.6s ease-out both}
+#fxlight{z-index:55;background:radial-gradient(70% 50% at 50% 40%,rgba(255,178,92,.17),rgba(255,178,92,.05) 55%,rgba(255,178,92,0) 76%)}
+#fxvig{z-index:56;background:radial-gradient(125% 105% at 50% 46%,rgba(0,0,0,0) 50%,rgba(0,0,0,.44) 100%)}
+#fxc{position:fixed;inset:0;width:100%;height:100%;z-index:150;pointer-events:none}
+@keyframes fxfade{from{opacity:0}}
+/* tiles: free ones catch the light, the chosen one breathes */
+.tile .face::before{content:'';position:absolute;inset:-30%;pointer-events:none;opacity:0;
+  background:linear-gradient(105deg,rgba(255,236,190,0) 42%,rgba(255,236,190,.22) 50%,rgba(255,236,190,0) 58%);transform:translateX(-120%)}
+.tile.free .face::before{animation:fxglint 10s ease-in-out infinite;animation-delay:var(--d,0s)}
+@keyframes fxglint{0%{transform:translateX(-120%);opacity:0}4%{opacity:1}15%{transform:translateX(120%);opacity:0}100%{transform:translateX(120%);opacity:0}}
+.tile.free .face{box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -9px 13px rgba(0,0,0,.55),inset 1px 0 0 rgba(255,255,255,.07),inset -1px 0 0 rgba(0,0,0,.4),0 0 0 1px rgba(230,194,92,.1)}
+.tile.sel .face{box-shadow:0 0 0 1.5px var(--gold2),0 0 16px rgba(230,194,92,.4),inset 0 1px 0 rgba(255,255,255,.2),inset 0 -9px 13px rgba(0,0,0,.5);animation:fxsel 1.2s ease-in-out infinite}
+@keyframes fxsel{50%{box-shadow:0 0 0 1.5px var(--gold2),0 0 28px rgba(230,194,92,.66),inset 0 1px 0 rgba(255,255,255,.24),inset 0 -9px 13px rgba(0,0,0,.5)}}
+@media(hover:hover){.tile.free:not(.sel):hover .face{transform:translate(-.5px,-2px);filter:brightness(1.14)}}
+/* numbers and words answer what you did */
+.fxtick{animation:fxtick .45s ease-out}
+@keyframes fxtick{0%{transform:translateY(-3px);color:#fff3cf;text-shadow:0 0 12px rgba(230,194,92,.9)}100%{transform:none;text-shadow:0 0 0 transparent}}
+.traypile.fxland{animation:fxland .6s ease-out}
+@keyframes fxland{30%{filter:drop-shadow(0 0 10px rgba(230,194,92,.85))}}
+#whisper.fxsay{animation:fxsay .8s ease-out}
+@keyframes fxsay{from{opacity:0;transform:translateY(4px)}}
+/* the wick end glows and flickers */
+.candleline .track{overflow:visible}
+.candleline .burn{position:relative}
+.candleline .burn::after{content:'';position:absolute;right:-5px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;
+  background:radial-gradient(circle,#fff7da 0%,#ffc65a 40%,rgba(255,160,50,0) 72%);animation:fxflame .22s ease-in-out infinite alternate}
+@keyframes fxflame{from{transform:scale(.8);opacity:.75}to{transform:scale(1.25);opacity:1}}
+/* titles catch the light once in a while */
+.brand h1,#menu h2{background:linear-gradient(100deg,#b9ab86 0%,#b9ab86 38%,#fff3cf 50%,#b9ab86 62%,#b9ab86 100%);background-size:260% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:fxsheen 11s ease-in-out infinite}
+@keyframes fxsheen{0%,55%{background-position:120% 0}100%{background-position:-20% 0}}
+#endcard.on h2{animation:fxarrive 1.5s cubic-bezier(.2,.7,.2,1) .15s both}
+@keyframes fxarrive{from{letter-spacing:.9em;opacity:0;filter:blur(7px)}to{opacity:1;filter:blur(0)}}
+#endStars span:not(.unlit){animation:fxstar 1s ease-out both}
+#endStars span:nth-child(1){animation-delay:.9s}#endStars span:nth-child(2){animation-delay:1.35s}#endStars span:nth-child(3){animation-delay:1.8s}
+@keyframes fxstar{from{opacity:0;transform:scale(.4);filter:brightness(2.6)}60%{transform:scale(1.25)}to{opacity:1;transform:none;filter:drop-shadow(0 0 7px rgba(230,194,92,.7))}}
+.entry{transition:box-shadow .25s,filter .25s,border-color .25s,transform .12s}
+@media(hover:hover){.entry:hover{box-shadow:0 0 22px rgba(230,194,92,.2);border-color:rgba(230,194,92,.5)}.entry.prime:hover{filter:brightness(1.08)}}
 </style>
 </head>
 <body>
@@ -1086,6 +1125,112 @@ window.__game = {
     refresh(); if (game.status === 'won') onWin();
   },
 };
+</script>
+<script>
+/* ===== candlelight polish layer: light, dust, embers ===== */
+(function () {
+  function mk(t, id) { var e = document.createElement(t); e.id = id; document.body.appendChild(e); return e; }
+  var L = mk('div', 'fxlight'), V = mk('div', 'fxvig'), C = mk('canvas', 'fxc'), g = C.getContext('2d');
+  var W, H, D, P = [], M = [], boost = 0, fl = 1, flT = 1, last = performance.now();
+  var COL = ['#ffd98a', '#ffbf5a', '#fff0c4', '#e6c25c'];
+  function size() { D = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; C.width = W * D; C.height = H * D; g.setTransform(D, 0, 0, D, 0, 0); }
+  addEventListener('resize', size); size();
+  for (var i = 0; i < 24; i++) M.push({ x: Math.random(), y: Math.random(), s: .6 + Math.random() * 1.1, v: .004 + Math.random() * .01, ph: Math.random() * 6.28 });
+  function pulse(el, c) { if (!el) return; el.classList.remove(c); void el.offsetWidth; el.classList.add(c); }
+  function ember(x, y, vx, vy, gr, life, en) {
+    P.push({ x: x, y: y, vx: vx, vy: vy, g: gr, a: 0, l: life, s: .8 + Math.random() * 1.5, c: (en && Math.random() < .4) ? en : COL[(Math.random() * 4) | 0] });
+    if (P.length > 260) P.splice(0, P.length - 260);
+  }
+  function burst(x, y, n, en, sp, gr) {
+    for (var i = 0; i < n; i++) { var a = Math.random() * 6.283, s = (.35 + Math.random() * .65) * sp; ember(x, y, Math.cos(a) * s, Math.sin(a) * s - .03, gr, 550 + Math.random() * 650, en); }
+  }
+  function ring(x, y, r1) { P.push({ ring: 1, x: x, y: y, r0: 4, r1: r1, a: 0, l: 520 }); }
+  function center(el) { var r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  function trail(a, b, delay, en) {
+    for (var i = 1; i <= 7; i++) (function (i) {
+      setTimeout(function () { var u = i / 8, e = 1 - Math.pow(1 - u, 2); ember(a.x + (b.x - a.x) * e, a.y + (b.y - a.y) * e - 30 * Math.sin(Math.PI * u), (Math.random() - .5) * .03, .02, -.00002, 420, en); }, delay + i * 52);
+    })(i);
+  }
+  function land(x, y) { ring(x, y, 26); burst(x, y, 10, null, .16, -.00003); pulse($('traypile'), 'fxland'); pulse($('traycount'), 'fxtick'); }
+
+  var _fly = flyPair;
+  flyPair = function (a, b) {
+    try {
+      var s0 = slotPoint(trayFaces.length, 0), s1 = slotPoint(trayFaces.length, 1), sl = [s0, s1];
+      [a, b].forEach(function (id, k) {
+        var el = tileEls[id], c = center(el), en = (el.style.getPropertyValue('--en') || '').trim();
+        burst(c.x, c.y, 16, en, .22, -.00004); ring(c.x, c.y, 36); trail(c, sl[k], k * 70, en);
+      });
+      boost = Math.min(1.2, boost + .5);
+      setTimeout(function () { land(s1.x, s1.y); }, 520);
+    } catch (e) {}
+    return _fly.apply(this, arguments);
+  };
+  var _bb = buildBoard;
+  buildBoard = function () {
+    var r = _bb.apply(this, arguments);
+    boost = .8;
+    tileEls.forEach(function (el) { el.style.setProperty('--d', (-Math.random() * 9).toFixed(2) + 's'); });
+    return r;
+  };
+  var _win = onWin;
+  onWin = function () {
+    var r = _win.apply(this, arguments);
+    boost = 1.4;
+    var b = $('board').getBoundingClientRect(), n = 0;
+      var id = setInterval(function () {
+        for (var i = 0; i < 7; i++) ember(b.left + Math.random() * b.width, b.bottom - Math.random() * b.height * .3, (Math.random() - .5) * .05, -(.06 + Math.random() * .14), -.00002, 1500 + Math.random() * 1500);
+        if (++n > 34) clearInterval(id);
+      }, 85);
+      [0, 380, 760, 1150].forEach(function (d) {
+        setTimeout(function () { var x = b.left + b.width * (.2 + .6 * Math.random()), y = b.top + b.height * (.15 + .4 * Math.random()); burst(x, y, 34, null, .3, .00009); ring(x, y, 60); }, d);
+      });
+    return r;
+  };
+  [['stLeft'], ['stFree']].forEach(function (a) {
+    var el = $(a[0]), v = el.textContent;
+    new MutationObserver(function () { if (el.textContent !== v) { v = el.textContent; pulse(el, 'fxtick'); } }).observe(el, { childList: true, characterData: true, subtree: true });
+  });
+  var wh = $('whisper'), wv = wh.textContent;
+  new MutationObserver(function () { if (wh.textContent !== wv) { wv = wh.textContent; pulse(wh, 'fxsay'); } }).observe(wh, { childList: true, characterData: true, subtree: true });
+
+  function frame(t) {
+    requestAnimationFrame(frame);
+    var dt = Math.min(50, t - last); last = t;
+    flT += (Math.random() - .5) * .16; flT = Math.max(.8, Math.min(1.12, flT)); fl += (flT - fl) * .1;
+    boost *= Math.pow(.992, dt);
+    var f = playing ? Math.max(0, 1 - elapsed / BURN) : 1;
+    var li = (.45 + .55 * f) * fl + boost;
+    L.style.opacity = Math.min(1, li * .75).toFixed(3);
+    V.style.opacity = (.5 + .5 * (1 - f)).toFixed(3);
+    g.clearRect(0, 0, W, H); g.globalCompositeOperation = 'lighter';
+    g.fillStyle = 'rgb(255,214,150)';
+    for (var i = 0; i < M.length; i++) {
+      var m = M[i]; m.y -= m.v * dt / H * 16; if (m.y < -.02) { m.y = 1.02; m.x = Math.random(); }
+      var x = (m.x + Math.sin(t * .0003 + m.ph) * .02) * W, y = m.y * H;
+      var d = Math.hypot((x - W / 2) / (W * .75), (y - H * .42) / (H * .6));
+      var al = Math.max(0, 1 - d) * (.2 + .25 * Math.sin(t * .0016 + m.ph)) * Math.min(1, li);
+      if (al < .01) continue;
+      g.globalAlpha = al; g.beginPath(); g.arc(x, y, m.s, 0, 6.283); g.fill();
+    }
+    var k = Math.pow(.9985, dt);
+    for (var j = P.length - 1; j >= 0; j--) {
+      var p = P[j]; p.a += dt;
+      if (p.a >= p.l) { P.splice(j, 1); continue; }
+      var u = p.a / p.l;
+      if (p.ring) {
+        var r = p.r0 + (p.r1 - p.r0) * (1 - Math.pow(1 - u, 3));
+        g.globalAlpha = .55 * (1 - u); g.strokeStyle = '#ffce78'; g.lineWidth = 1.4; g.beginPath(); g.arc(p.x, p.y, r, 0, 6.283); g.stroke(); continue;
+      }
+      p.vx *= k; p.vy = p.vy * k + p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      var al2 = (1 - u) * (1 - u);
+      g.fillStyle = p.c; g.globalAlpha = al2 * .25; g.beginPath(); g.arc(p.x, p.y, p.s * 3, 0, 6.283); g.fill();
+      g.globalAlpha = al2 * .95; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.283); g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+  requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>
