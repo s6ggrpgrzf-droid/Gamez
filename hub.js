@@ -67,7 +67,10 @@ var GAMES = [
     blurb:'Old time radio on a 1940s cathedral set. Power it on, drag the needle through the static, and land on whatever’s on the air tonight — suspense, sci-fi, noir, comedy. 1,800+ episodes.' },
   { id:'starlight-drums', name:'STARLIGHT DRUMS', cls:'DAILY · RHYTHM', ops:['daily','arcade'], href:'./starlight-drums/',
     glyph:'<path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/>',
-    blurb:'Tap the beat under a night sky: two drums, real songs, and every true hit wakes a star — light them all and the Swan completes. One daily sky for everyone, an endless rotation after.' }
+    blurb:'Tap the beat under a night sky: two drums, real songs, and every true hit wakes a star — light them all and the Swan completes. One daily sky for everyone, an endless rotation after.' },
+  { id:'night-shelf', name:'THE NIGHT SHELF', cls:'DAILY · SOLITAIRE', ops:['daily','puzzle'], href:'./night-shelf/',
+    glyph:'<path d="M12 2.8 v2.4"/><path d="M12 5.2 c1.3 1.5 1.3 2.9 0 3.8 c-1.3-.9-1.3-2.3 0-3.8 Z"/><rect x="8.2" y="10.5" width="7.6" height="10" rx="1.4"/><path d="M5 21.5 H19"/>',
+    blurb:'Mahjong solitaire by candlelight: the real Turtle, all 144 tiles, traditional faces on black lacquer. One deal a night for the whole world — clear it before the candle gutters and sign the keepers’ ledger.' }
 ];
 function byId(id) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].id === id) return GAMES[i]; return null; }
 
@@ -96,7 +99,7 @@ var LINKS = [['dominoes', 'neon-void'], ['neon-void', 'tiny-fairway'],
 var LABOVE = { 'neon-void': 1 };
 var SHORT = {'candy-cascade':'CANDY','bubble-hex':'BUBBLE','bloom-defense':'BLOOM','neon-void':'VOID',
   'maze-trace':'ARROW','word-well':'WELL','pdawg':'PDAWG','life-story':'LIFE','reel-empire':'REEL',
-  'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS'};
+  'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS','night-shelf':'SHELF'};
 function xy(p) { return (window.innerWidth > window.innerHeight) ? [p[2], p[3]] : [p[0], p[1]]; }
 function twkStyle(id, dim, lit) {
   var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
@@ -318,6 +321,13 @@ function progressFor(id) {
       if (!tf || !tf.holes) return null;
       var tst = tf.stars || 0, th = tf.holes;
       return { label: '⛳ best ' + tf.strokes + ' strokes · ★' + tst, frac: Math.min(1, tst / (th * 3)) };
+    }
+    if (id === 'night-shelf') {
+      var nsr = readJSON('ns_records_v1');
+      if (!nsr || !nsr.cleared) return null;
+      var nlb = nsr.best != null ? ' · best ' + Math.floor(nsr.best / 60) + ':' + ('0' + (nsr.best % 60)).slice(-2) : '';
+      var nst = (nsr.daily && nsr.daily.streak >= 2) ? ' · 🔥 ' + nsr.daily.streak + ' nights' : '';
+      return { label: '🕯 ' + nsr.cleared + (nsr.cleared === 1 ? ' shelf' : ' shelves') + ' cleared' + nlb + nst, frac: Math.min(1, nsr.cleared / 10) };
     }
     if (id === 'starlight-drums') {
       var sd = readJSON('sd-records-v1');
@@ -650,7 +660,7 @@ function callUp(id, via) {
     '<dt>DATA</dt><dd class="dataVal"></dd>';
   var bar = pr ? '<div class="bar"><i style="width:' + Math.round(pr.frac * 100) + '%"></i></div>' : '';
   var verb = id === 'cathedral' ? 'LISTEN' : 'PLAY';
-  var cssArt = id === 'cathedral' || id === 'dominoes' || id === 'starlight-drums';
+  var cssArt = id === 'cathedral' || id === 'dominoes' || id === 'starlight-drums' || id === 'night-shelf';
   var artChild = id === 'cathedral' ? '<i class="cr2"></i>' : id === 'dominoes' ? '<i class="dm2"></i>' : '';
   var feed = '<div class="feed" aria-hidden="true"><div class="feedpar"><div class="artimg art-' + id + (cssArt ? ' cssart' : '') + '">' + artChild + '</div></div>' +
     '<div class="feedshade"></div><div class="feedhud"><span>EXT CAM · ' + SHORT[id] + '</span><span class="fl">FEED &#9679;</span></div><div class="feedband"></div></div>';
