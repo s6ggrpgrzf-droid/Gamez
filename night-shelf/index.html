@@ -69,6 +69,7 @@
   .charface .tag{position:absolute; top:7%; left:10%; font-size:calc(var(--tw) * .27); font-family:Georgia,serif; opacity:.75}
   .tile.held .face{filter:brightness(.8)}
   .tile.held .art, .tile.held .charface{opacity:.58}
+  .tile.held.dotf .art{opacity:.82}
   .tile.free .art svg{filter:drop-shadow(0 0 2.6px var(--en))}
   .tile.free .charface .lit{text-shadow:0 0 7px var(--en)}
   .tile.spotdim .face{filter:brightness(.5) saturate(.6) !important}
@@ -126,6 +127,8 @@
   .tbtn.gold{color:var(--gold); display:inline-flex; align-items:center; gap:8px}
   .tbtn.gold::before{content:''; width:6px; height:6px; flex:none; transform:rotate(45deg); background:#c9a959; box-shadow:0 0 8px rgba(230,194,92,.5)}
   .tbtn .n{color:var(--gold2)}
+  body.tutoring #btnDoor, body.tutoring #btnDoor + i{display:none}
+  body.tutoring #btnShuffle{opacity:.35}
   .toolbar i{width:3px; height:3px; border-radius:50%; background:rgba(201,169,89,.55); flex:none}
 
   .stuckbar{display:none; align-items:center; gap:8px 16px; justify-content:center; flex-wrap:wrap; position:relative; z-index:9;
@@ -163,6 +166,8 @@
   .orn b{width:7px; height:7px; background:var(--gold); transform:rotate(45deg); box-shadow:0 0 9px rgba(230,194,92,.65)}
   #menu::before{content:''; position:absolute; inset:10px; border:1px solid rgba(201,169,89,.32); pointer-events:none; z-index:5}
   #menu::after{content:''; position:absolute; inset:15px; border:1px solid rgba(201,169,89,.15); pointer-events:none; z-index:5}
+  #endcard::before{content:''; position:absolute; inset:10px; border:1px solid rgba(201,169,89,.32); pointer-events:none}
+  #endcard::after{content:''; position:absolute; inset:15px; border:1px solid rgba(201,169,89,.15); pointer-events:none}
   .miniBoardWrap{position:relative; width:fit-content; margin:20px auto 2px}
   .board.cover{width:min(84vw,330px)}
   #miniBoard{display:block}
@@ -188,6 +193,17 @@
   .entry.prime .t{color:#e8c56a}
   .entry.prime .a{color:rgba(232,197,106,.55)}
   .recordline{margin-top:24px; font-size:12.5px; color:#6f6a5e; font-style:italic; text-wrap:balance}
+  #endBoard{margin-top:18px}
+  #endBoard:empty{display:none}
+  #endBoard .btitle{font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:#8d8672; text-align:center; margin-bottom:6px}
+  #endBoard .brank{text-align:center; color:var(--gold2); font-size:13px; margin-bottom:4px}
+  #endBoard .brow{display:flex; justify-content:space-between; gap:12px; padding:6px 2px; border-bottom:1px solid rgba(201,169,89,.14); font-size:13.5px; color:#b8b2a4}
+  #endBoard .brow b{color:#e6ddc4; font-weight:600}
+  #endBoard .brow.me{color:var(--gold2)}
+  #endBoard .bempty{text-align:center; font-size:12.5px; font-style:italic; color:#6f6a5e; padding:6px 0}
+  #endBoard .bform{display:flex; gap:10px; justify-content:center; align-items:center; margin-top:8px}
+  #endBoard input{background:none; border:0; border-bottom:1px solid rgba(201,169,89,.45); color:#e6ddc4; font:inherit; font-size:14px; padding:5px 2px; width:150px; outline:none}
+  #endBoard .bform button{background:none; border:1px solid rgba(201,169,89,.4); color:var(--gold); padding:6px 10px; font:inherit; font-size:10px; letter-spacing:.2em; text-transform:uppercase; cursor:pointer}
   .sheet .fine{font-size:10.5px; color:#6e695d; margin-top:20px; line-height:1.6; letter-spacing:.03em}
   .stars{display:flex; gap:16px; justify-content:center; margin:14px 0 4px}
   .stars svg{width:26px; height:38px}
@@ -221,6 +237,7 @@
     #menu .entries{grid-column:2; margin-top:10px}
     #menu .recordline{grid-column:2; margin-top:12px}
     #menu .fine{grid-column:1 / -1; margin-top:12px}
+  #menu .fine{color:#948e7f}
   }
 /* ===== candlelight polish layer ===== */
 #fxlight,#fxvig{position:fixed;inset:0;pointer-events:none;will-change:opacity;animation:fxfade 2.6s ease-out both}
@@ -235,7 +252,7 @@
 @keyframes fxglint{0%{transform:translateX(-120%);opacity:0}4%{opacity:1}15%{transform:translateX(120%);opacity:0}100%{transform:translateX(120%);opacity:0}}
 .tile.free .face{box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -9px 13px rgba(0,0,0,.55),inset 1px 0 0 rgba(255,255,255,.07),inset -1px 0 0 rgba(0,0,0,.4),0 0 0 1px rgba(230,194,92,.1)}
 .tile.sel .face{box-shadow:0 0 0 1.5px var(--gold2),0 0 16px rgba(230,194,92,.4),inset 0 1px 0 rgba(255,255,255,.2),inset 0 -9px 13px rgba(0,0,0,.5);animation:fxsel 1.2s ease-in-out infinite}
-@keyframes fxsel{50%{box-shadow:0 0 0 1.5px var(--gold2),0 0 28px rgba(230,194,92,.66),inset 0 1px 0 rgba(255,255,255,.24),inset 0 -9px 13px rgba(0,0,0,.5)}}
+@keyframes fxsel{50%{box-shadow:0 0 0 1.5px var(--gold2),0 0 18px rgba(230,194,92,.5),inset 0 1px 0 rgba(255,255,255,.24),inset 0 -9px 13px rgba(0,0,0,.5)}}
 @media(hover:hover){.tile.free:not(.sel):hover .face{transform:translate(-.5px,-2px);filter:brightness(1.14)}}
 /* numbers and words answer what you did */
 .fxtick{animation:fxtick .45s ease-out}
@@ -318,6 +335,7 @@
       <button class="tbtn" id="btnUndo">Undo</button><i></i>
       <button class="tbtn" id="btnShuffle">Reshuffle <span class="n" id="shLeft">1</span></button><i></i>
       <button class="tbtn" id="btnSound">Sound on</button><i></i>
+      <button class="tbtn" id="btnDoor">The door</button><i></i>
       <button class="tbtn gold" id="btnNew">New shelf</button>
     </nav>
   </div>
@@ -336,6 +354,7 @@
     <div class="entries">
       <button class="entry" id="btnTeach"><span class="seal" aria-hidden="true"></span><span class="t">The teaching shelf</span><span class="a" id="teachVal">a short lesson · 14 tiles</span></button>
       <button class="entry prime" id="btnStart"><span class="seal" aria-hidden="true"></span><span class="t">Begin a new shelf</span><span class="a">144 tiles</span></button>
+      <button class="entry" id="btnDaily"><span class="seal" aria-hidden="true"></span><span class="t">Tonight's shelf</span><span class="a" id="dailyVal">one deal, the whole world</span></button>
       <button class="entry" id="btnContinue" style="display:none"><span class="seal" aria-hidden="true"></span><span class="t">The shelf I left</span><span class="a" id="continueVal"></span></button>
     </div>
     <p class="recordline" id="recordline"></p>
@@ -351,6 +370,7 @@
     <div class="stars" id="endStars"></div>
     <p class="endstats" id="endStats"></p>
     <p class="recordline" id="endRecord"></p>
+    <div id="endBoard"></div>
     <div class="entries">
       <button class="entry prime" id="btnAgain"><span class="seal" aria-hidden="true"></span><span class="t">Another shelf</span><span class="a">a fresh deal</span></button>
       <button class="entry" id="btnMenu2"><span class="seal" aria-hidden="true"></span><span class="t">Back to the door</span><span class="a">the shelf</span></button>
@@ -547,6 +567,7 @@ const sfxWin = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .3
 const SAVE_KEY = 'ns_save_v3', REC_KEY = 'ns_records_v1';
 const BURN = 1800;
 let game = null, selected = -1, elapsed = 0, playing = false, tileEls = [], trayFaces = [], prevStatus = 'playing';
+let dailyDate = null, pendingDaily = null;
 const fmtTime = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 function records() { try { return JSON.parse(localStorage.getItem(REC_KEY)) || { cleared: 0, best: null }; } catch (e) { return { cleared: 0, best: null }; } }
 function saveRecords(r) { localStorage.setItem(REC_KEY, JSON.stringify(r)); }
@@ -558,7 +579,7 @@ function save() {
   const removed = game.tiles.filter(t => t.removed).map(t => t.id);
   localStorage.setItem(SAVE_KEY, JSON.stringify({
     v: 3, seed: game.seed, faces: game.tiles.map(t => t.face), removed,
-    moves: flat === removed.length ? game.moves : [], reshuffles: game.reshuffles, elapsed, trayFaces,
+    moves: flat === removed.length ? game.moves : [], reshuffles: game.reshuffles, elapsed, trayFaces, daily: dailyDate,
   }));
 }
 function loadSave() {
@@ -619,11 +640,12 @@ function refresh() {
     el.classList.toggle('gone', t.removed && !flying.has(t.id));
     el.classList.toggle('free', !t.removed && freeSet.has(t.id));
     el.classList.toggle('held', !t.removed && !freeSet.has(t.id));
+    el.classList.toggle('dotf', parseFace(t.face).kind === 'dot');
     el.classList.toggle('sel', t.id === selected);
   }
   $('stLeft').textContent = NS.remainingCount(game);
   $('stFree').textContent = NS.availableMoves(game).length;
-  $('stTime').textContent = fmtTime(elapsed);
+  $('stTime').textContent = fmtTime(Math.max(0, BURN - elapsed));
   const frac = Math.max(0, 1 - elapsed / BURN);
   $('burn').style.width = (frac * 100) + '%';
   $('candleline').style.opacity = elapsed >= BURN ? .45 : 1;
@@ -641,8 +663,10 @@ function refresh() {
 }
 
 let trayShown = -1;
-function miniPos(i) {
-  return { left: 2 + (i % 6) * 15 + ((i * 13) % 5), bottom: Math.floor(i / 6) * 8, rot: ((i * 37) % 17) - 8 };
+function miniPos(i, n) {
+  const cols = Math.min(n === undefined ? 6 : n, 6);
+  const off = Math.max(0, (118 - ((cols - 1) * 15 + 25)) / 2);
+  return { left: off + 2 + (i % 6) * 15 + ((i * 13) % 5), bottom: Math.floor(i / 6) * 8, rot: ((i * 37) % 17) - 8 };
 }
 function renderTray() {
   if (trayFaces.length === trayShown) return;
@@ -650,7 +674,7 @@ function renderTray() {
   const pile = $('traypile');
   const show = trayFaces.slice(-30);
   pile.innerHTML = show.map((f, i) => {
-    const p = miniPos(i);
+    const p = miniPos(i, show.length);
     return '<span class="mini" style="left:' + p.left + 'px;bottom:' + p.bottom + 'px;transform:rotate(' + p.rot + 'deg)">' + faceHTML(f) + '</span>';
   }).join('');
   $('traycount').textContent = (trayFaces.length / 2) + (trayFaces.length === 2 ? ' pair kept' : ' pairs kept');
@@ -666,7 +690,7 @@ const flightPairs = [];
 function slotPoint(count, k) {
   const pile = $('traypile').getBoundingClientRect();
   const total = count + 2, start = total - Math.min(total, 30);
-  const p = miniPos(count + k - start);
+  const p = miniPos(count + k - start, Math.min(total, 30));
   return { x: pile.left + p.left + 8.5, y: pile.top + pile.height - p.bottom - 10.5, rot: p.rot };
 }
 function flyPair(aId, bId) {
@@ -858,6 +882,7 @@ function onWin() {
   const frac = Math.max(0, 1 - elapsed / BURN);
   const stars = frac > .5 ? 3 : frac > .22 ? 2 : 1;
   const rec = records(); rec.cleared += 1; if (rec.best === null || elapsed < rec.best) rec.best = elapsed; saveRecords(rec);
+  dailyKept(rec);
   flare();
   $('endStars').innerHTML = [1, 2, 3].map(i => '<span class="' + (i <= stars ? '' : 'unlit') + '">' + STAR_CANDLE + '</span>').join('');
   $('endSub').textContent = stars === 3 ? 'and the candle hardly noticed' : stars === 2 ? 'with candle to spare' : 'by the last inch of candle — but clear is clear';
@@ -868,6 +893,8 @@ function onWin() {
 
 function startGame(seed, resume) {
   exitTutVisuals(); wakeDepth();
+  if (resume) { dailyDate = resume.daily || null; } else { dailyDate = pendingDaily; pendingDaily = null; }
+  $('endBoard').innerHTML = '';
   game = NS.newGame(seed);
   selected = -1; elapsed = 0; trayFaces = []; prevStatus = 'playing';
   if (resume && resume.v === 3) {
@@ -886,6 +913,94 @@ function startGame(seed, resume) {
 }
 
 /* ---------- controls ---------- */
+/* ---- tonight's shelf: one deal for the whole world, and the keepers' ledger ---- */
+const ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+function arcadeFetch(path, body, cb) {
+  let done = false, timer = null;
+  const fin = (e, d) => { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } };
+  timer = setTimeout(() => fin(new Error('timeout')), 10000);
+  try {
+    fetch(ARCADE + path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {})
+      .then(r => r.json()).then(d => fin(null, d)).catch(e => fin(e));
+  } catch (e) { fin(e); }
+}
+function escBoard(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function dailyKept(rec) {
+  if (!dailyDate) return;
+  const d = rec.daily || { date: '', streak: 0, best: null, lastTime: null, dealt: '', dealtLocal: '' };
+  if (d.date !== dailyDate) {
+    const y = new Date(Date.parse(dailyDate + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
+    d.streak = d.date === y ? d.streak + 1 : 1;
+    d.date = dailyDate;
+  }
+  d.lastTime = elapsed;
+  if (d.best === null || elapsed < d.best) d.best = elapsed;
+  rec.daily = d; saveRecords(rec);
+  submitDaily();
+}
+function submitDaily() {
+  const box = $('endBoard'); if (!box || !dailyDate) return;
+  const board = 'daily-' + dailyDate;
+  const score = Math.max(1, 3600 - elapsed);
+  let name = ''; try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+  function render(top, rank, me) {
+    let h = '<div class="btitle">Tonight&rsquo;s shelf &mdash; the keepers&rsquo; ledger</div>';
+    if (rank > 0) h += '<div class="brank">You stand #' + rank + ' tonight</div>';
+    if (top && top.length) {
+      h += top.slice(0, 5).map((e, i) => '<div class="brow' + (e.name === me ? ' me' : '') + '"><span>' + (i + 1) + '. ' + escBoard(e.name) + '</span><b>' + fmtTime(Math.max(0, 3600 - e.score)) + '</b></div>').join('');
+    } else {
+      h += '<div class="bempty">The board is out of reach tonight &mdash; your time still stands in the ledger.</div>';
+    }
+    box.innerHTML = h;
+  }
+  function go(n) {
+    box.innerHTML = '<div class="bempty">Writing your name in the ledger&hellip;</div>';
+    arcadeFetch('/score', { game: 'night-shelf', board, name: n, score }, (err, res) => {
+      if (res && res.top) render(res.top, res.rank, n);
+      else arcadeFetch('/scores?game=night-shelf&board=' + encodeURIComponent(board), null, (e2, d2) => render(d2 && d2.top, 0, n));
+    });
+  }
+  if (name) { go(name); return; }
+  box.innerHTML = '<div class="btitle">Tonight&rsquo;s shelf &mdash; the keepers&rsquo; ledger</div>' +
+    '<div class="bform"><input id="nsName" maxlength="12" placeholder="Your name, keeper" autocomplete="off">' +
+    '<button id="nsJoin" type="button">Enter the ledger</button></div>';
+  const join = () => {
+    const v = $('nsName').value.trim().slice(0, 12);
+    if (!v) return;
+    try { localStorage.setItem('arcade_name', v); } catch (e) {}
+    go(v);
+  };
+  $('nsJoin').addEventListener('click', join);
+  $('nsName').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+}
+let dailyBusy = false;
+$('btnDaily').addEventListener('click', () => {
+  if (dailyBusy) return; dailyBusy = true; ac();
+  const isoLocal = () => { const ds = new Date(); return ds.getFullYear() + '-' + String(ds.getMonth() + 1).padStart(2, '0') + '-' + String(ds.getDate()).padStart(2, '0'); };
+  function beginDaily(date, seed) {
+    dailyBusy = false;
+    const rec = records();
+    const d = rec.daily || { date: '', streak: 0, best: null, lastTime: null, dealt: '', dealtLocal: '' };
+    d.dealt = date; d.dealtLocal = isoLocal(); rec.daily = d; saveRecords(rec);
+    pendingDaily = date;
+    startGame(seed);
+  }
+  let done = false;
+  const fail = () => {
+    if (done) return; done = true;
+    const iso = isoLocal();
+    let h = 2166136261; const s = 'night-shelf|' + iso;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    beginDaily(iso, (h >>> 0) % 2147483646);
+  };
+  const to = setTimeout(fail, 9000);
+  try {
+    fetch(ARCADE + '/daily?game=night-shelf').then(r => r.json()).then(d => {
+      if (done) return; done = true; clearTimeout(to);
+      if (d && typeof d.seed === 'number' && d.date) beginDaily(d.date, d.seed % 2147483646); else fail();
+    }).catch(() => { clearTimeout(to); fail(); });
+  } catch (e) { clearTimeout(to); fail(); }
+});
 $('btnStart').addEventListener('click', () => { ac(); startGame((Date.now() % 2147483646) + 1); });
 $('btnContinue').addEventListener('click', () => { const s = loadSave(); if (s) { ac(); startGame(s.seed, s); } });
 $('btnAgain').addEventListener('click', () => {
@@ -895,13 +1010,27 @@ $('btnAgain').addEventListener('click', () => {
 $('btnTeach').addEventListener('click', () => { ac(); startTutorial(); });
 $('btnMenu2').addEventListener('click', () => location.reload());
 let askCb = null;
-function askNew(cb) { $('askText').textContent = 'Leave this shelf and set a new one?'; askCb = cb; $('askbar').classList.add('on'); }
+function askSay(text, yes, no, cb) {
+  $('askText').textContent = text;
+  const setLabel = (btn, s) => { const n = [...btn.childNodes].filter(x => x.nodeType === 3).pop(); if (n) n.nodeValue = s; };
+  setLabel($('btnAskYes'), yes); setLabel($('btnAskNo'), no);
+  askCb = cb; $('askbar').classList.add('on');
+}
+function askNew(cb) { askSay('Leave this shelf and set a new one?', 'Set a new one', 'Keep this shelf', cb); }
 $('btnAskYes').addEventListener('click', () => { $('askbar').classList.remove('on'); if (askCb) { const cb = askCb; askCb = null; cb(); } });
 $('btnAskNo').addEventListener('click', () => { $('askbar').classList.remove('on'); askCb = null; });
 $('btnNew').addEventListener('click', () => {
   if (tut) { location.reload(); return; }
   if (game && NS.remainingCount(game) < 144 && game.status === 'playing') { askNew(() => startGame((Date.now() % 2147483646) + 3)); return; }
   startGame((Date.now() % 2147483646) + 3);
+});
+$('btnDoor').addEventListener('click', () => {
+  if (tut) { location.reload(); return; }
+  if (game && NS.remainingCount(game) < 144 && game.status === 'playing') {
+    askSay('Leave this shelf where it stands?', 'To the door', 'Stay at the shelf', () => { save(); location.reload(); });
+    return;
+  }
+  save(); location.reload();
 });
 $('btnUndo').addEventListener('click', () => {
   if (!game || !game.moves.length) return;
@@ -968,7 +1097,7 @@ boardEl.addEventListener('pointerdown', e => {
 setInterval(() => {
   if (playing && game && !tut && game.status !== 'won' && !document.hidden) {
     elapsed++;
-    $('stTime').textContent = fmtTime(elapsed);
+    $('stTime').textContent = fmtTime(Math.max(0, BURN - elapsed));
     const frac = Math.max(0, 1 - elapsed / BURN);
     $('burn').style.width = (frac * 100) + '%';
     if (elapsed % 10 === 0) save();
@@ -1018,9 +1147,9 @@ setInterval(() => {
       gr = g.createLinearGradient(x, y, x + tw * .5, y + th);
       gr.addColorStop(0, '#24272b'); gr.addColorStop(.48, '#141619'); gr.addColorStop(1, '#0c0d0f');
       g.fillStyle = gr; rr(g, x, y, tw, th, 4 * k); g.fill();
-      if (!free) { g.fillStyle = 'rgba(0,0,0,.05)'; rr(g, x, y, tw, th, 4 * k); g.fill(); }
+      if (!free) { g.fillStyle = 'rgba(0,0,0,.02)'; rr(g, x, y, tw, th, 4 * k); g.fill(); }
       g.save(); rr(g, x, y, tw, th, 4 * k); g.clip();
-      g.globalAlpha = free ? 1 : .9;
+      g.globalAlpha = free ? 1 : .95;
       const p = parseFace(t.face), art = faceArt(t.face);
       const img = artImg(t.face);
       if (img && img.complete && img.naturalWidth) {
@@ -1068,6 +1197,16 @@ setInterval(() => {
   } else {
     $('btnTeach').classList.add('prime');
     $('btnStart').classList.remove('prime');
+  }
+  const dl = rec.daily;
+  const nowD = new Date();
+  const isoToday = nowD.getFullYear() + '-' + String(nowD.getMonth() + 1).padStart(2, '0') + '-' + String(nowD.getDate()).padStart(2, '0');
+  if (dl && dl.dealtLocal === isoToday && dl.date === dl.dealt) {
+    $('dailyVal').textContent = 'cleared tonight · ' + fmtTime(dl.lastTime) + (dl.streak > 1 ? ' · ' + dl.streak + ' nights running' : '');
+  } else if (dl && dl.dealtLocal === isoToday) {
+    $('dailyVal').textContent = 'dealt · still standing';
+  } else {
+    $('dailyVal').textContent = 'one deal, the whole world · ' + nowD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
   const s = loadSave();
   if (s) {
@@ -1133,7 +1272,7 @@ window.__game = {
   var L = mk('div', 'fxlight'), V = mk('div', 'fxvig'), C = mk('canvas', 'fxc'), g = C.getContext('2d');
   var W, H, D, P = [], M = [], boost = 0, fl = 1, flT = 1, last = performance.now();
   var COL = ['#ffd98a', '#ffbf5a', '#fff0c4', '#e6c25c'];
-  function size() { D = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; C.width = W * D; C.height = H * D; g.setTransform(D, 0, 0, D, 0, 0); }
+  function size() { D = Math.min(1.5, devicePixelRatio || 1); W = innerWidth; H = innerHeight; C.width = W * D; C.height = H * D; g.setTransform(D, 0, 0, D, 0, 0); }
   addEventListener('resize', size); size();
   for (var i = 0; i < 24; i++) M.push({ x: Math.random(), y: Math.random(), s: .6 + Math.random() * 1.1, v: .004 + Math.random() * .01, ph: Math.random() * 6.28 });
   function pulse(el, c) { if (!el) return; el.classList.remove(c); void el.offsetWidth; el.classList.add(c); }
