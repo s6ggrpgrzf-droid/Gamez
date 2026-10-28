@@ -2,7 +2,13 @@
 /* The Night Shelf — pure sim. No DOM, no canvas: testable headless in node.
    Geometry: half-tile units; every tile's footprint is 2x2.
    Turtle layout coordinates adapted from an MIT-licensed reference
-   (secaicandido/mahjong, (c) Claudio Candido) — data only. */
+   (secaicandido/mahjong, (c) Claudio Candido) — data only.
+
+   Faces are the traditional mahjong set, dealt whole: the three suits
+   (Dots, Bamboo, Characters, 1-9), the four Winds and the three Dragons,
+   four copies each; the four Flowers and the four Seasons, one each.
+   Matching is by kind: identical faces match, and — as tradition allows —
+   any Flower matches any Flower, any Season any Season. */
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -32,8 +38,40 @@ function buildLayout() {
 }
 
 const LAYOUT = buildLayout();
-const FAMILIES = ['moon', 'vial', 'herb', 'key', 'candle', 'bell', 'moth', 'scroll'];
-const FACE_COUNT = 72; // 8 families x 9 ranks; face id = family*9 + (rank-1); each face dealt exactly twice
+
+/* ---------- the traditional faces ---------- */
+const SUITS = ['dot', 'bam', 'char'];
+const WIND_FACES = ['windE', 'windS', 'windW', 'windN'];
+const DRAGON_FACES = ['dragR', 'dragG', 'dragW'];
+const FLOWER_FACES = ['flo1', 'flo2', 'flo3', 'flo4'];
+const SEASON_FACES = ['sea1', 'sea2', 'sea3', 'sea4'];
+
+/* The match group of a face: Flowers share one group, Seasons share one,
+   everything else matches only itself. */
+function matchKey(face) {
+  if (typeof face === 'string') {
+    if (face.startsWith('flo')) return 'FLOWERS';
+    if (face.startsWith('sea')) return 'SEASONS';
+  }
+  return face;
+}
+function facesMatch(a, b) { return matchKey(a) === matchKey(b); }
+
+/* The 72 pairings a full set deals into. Identical faces pair with
+   themselves; the Flowers and Seasons pair within their own four. */
+function pairSpecs() {
+  const specs = [];
+  for (const s of SUITS) for (let n = 1; n <= 9; n++) { specs.push([s + n, s + n]); specs.push([s + n, s + n]); }
+  for (const f of WIND_FACES.concat(DRAGON_FACES)) { specs.push([f, f]); specs.push([f, f]); }
+  specs.push(['flo1', 'flo2'], ['flo3', 'flo4'], ['sea1', 'sea2'], ['sea3', 'sea4']);
+  return specs;
+}
+/* Face -> copies in a fresh set (144 tiles in all). */
+const CENSUS = (() => {
+  const c = {};
+  for (const [a, b] of pairSpecs()) { c[a] = (c[a] || 0) + 1; c[b] = (c[b] || 0) + 1; }
+  return c;
+})();
 
 function overlaps(a, b) { return a.x < b.x + 2 && a.x + 2 > b.x && a.y < b.y + 2 && a.y + 2 > b.y; }
 function yOverlap(a, b) { return a.y < b.y + 2 && a.y + 2 > b.y; }
@@ -65,25 +103,26 @@ function shuffled(arr, rand) {
   return arr;
 }
 
-/* Deal by construction: walk the layout down in legal pairs. The recorded
-   order is a proof the shelf can be cleared — a loss is never the deal's fault. */
+/* Deal by construction: walk the layout down in legal pairs, dealing one
+   pair spec onto each. The recorded order is a proof the shelf can be
+   cleared — a loss is never the deal's fault. */
 function dealFaces(seed) {
   const rand = mulberry32(seed);
   const pos = LAYOUT;
   for (let attempt = 0; attempt < 800; attempt++) {
-    const faces = shuffled(Array.from({ length: FACE_COUNT }, (_, i) => i), rand);
+    const specs = shuffled(pairSpecs(), rand);
     const standing = new Set(pos.map((_, i) => i));
     const assign = new Array(pos.length);
     const order = [];
     let ok = true;
-    for (let pair = 0; pair < FACE_COUNT; pair++) {
+    for (let pair = 0; pair < specs.length; pair++) {
       const free = [];
       for (const i of standing) if (isFreePos(i, standing, pos)) free.push(i);
       if (free.length < 2) { ok = false; break; }
       const a = free[Math.floor(rand() * free.length)];
       let b = a;
       while (b === a) b = free[Math.floor(rand() * free.length)];
-      assign[a] = faces[pair]; assign[b] = faces[pair];
+      assign[a] = specs[pair][0]; assign[b] = specs[pair][1];
       standing.delete(a); standing.delete(b);
       order.push([a, b]);
     }
@@ -114,13 +153,14 @@ function tileFree(game, tile) {
 function freeTiles(game) { return game.tiles.filter(t => tileFree(game, t)); }
 
 function availableMoves(game) {
-  const byFace = new Map();
+  const byKey = new Map();
   for (const t of freeTiles(game)) {
-    if (!byFace.has(t.face)) byFace.set(t.face, []);
-    byFace.get(t.face).push(t.id);
+    const k = matchKey(t.face);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(t.id);
   }
   const out = [];
-  for (const ids of byFace.values()) if (ids.length >= 2) out.push([ids[0], ids[1]]);
+  for (const ids of byKey.values()) if (ids.length >= 2) out.push([ids[0], ids[1]]);
   return out;
 }
 
@@ -135,7 +175,7 @@ function refreshStatus(game) {
 
 function applyMove(game, a, b) {
   const ta = game.tiles[a], tb = game.tiles[b];
-  if (!ta || !tb || a === b || ta.face !== tb.face) return false;
+  if (!ta || !tb || a === b || !facesMatch(ta.face, tb.face)) return false;
   if (!tileFree(game, ta) || !tileFree(game, tb)) return false;
   ta.removed = true; tb.removed = true;
   game.moves.push([a, b]);
@@ -157,27 +197,40 @@ function hint(game) {
   return moves.length ? moves[0] : null;
 }
 
-/* Reshuffle the standing tiles by the same construction: the faces on the
-   table are whole pairs (pairs only ever leave together), so the remainder
-   can always be re-dealt into a clearable arrangement. Clears undo history:
-   the shelf you had is gone; this is a new arrangement of what's left. */
+/* Reshuffle the standing tiles by the same construction. What stands is
+   always whole match-groups (pairs only ever leave together), so the
+   remainder re-forms into pair specs — identical faces together, Flowers
+   and Seasons paired within their four — and can always be re-dealt into
+   a clearable arrangement. Clears undo history and records the new
+   solution the construction walked. */
 function reshuffle(game, seedSalt) {
   if (game.reshuffles < 1) return false;
   const standingIds = game.tiles.filter(t => !t.removed).map(t => t.id);
-  if (standingIds.length < 2) return false;
+  if (standingIds.length < 2 || standingIds.length % 2 !== 0) return false;
   const rand = mulberry32((game.seed ^ 0x9E3779B9) + (seedSalt || 0));
-  const pairFaces = [];
-  const counts = new Map();
+  const byKey = new Map();
   for (const id of standingIds) {
-    const f = game.tiles[id].face;
-    counts.set(f, (counts.get(f) || 0) + 1);
+    const f = game.tiles[id].face, k = matchKey(f);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(f);
   }
-  for (const [f, c] of counts) { if (c % 2 !== 0) return false; for (let k = 0; k < c / 2; k++) pairFaces.push(f); }
+  const specs = [];
+  for (const [k, faces] of byKey) {
+    if (faces.length % 2 !== 0) return false;
+    if (k === 'FLOWERS' || k === 'SEASONS') {
+      const fs = shuffled(faces.slice(), rand);
+      for (let i = 0; i < fs.length; i += 2) specs.push([fs[i], fs[i + 1]]);
+    } else {
+      for (let i = 0; i < faces.length; i += 2) specs.push([faces[i], faces[i]]);
+    }
+  }
+  if (specs.length * 2 !== standingIds.length) return false;
   const pos = game.tiles;
   for (let attempt = 0; attempt < 800; attempt++) {
-    const bag = shuffled(pairFaces.slice(), rand);
+    const bag = shuffled(specs.slice(), rand);
     const standing = new Set(standingIds);
     const assign = new Map();
+    const order = [];
     let ok = true;
     for (let k = 0; k < bag.length; k++) {
       const free = [];
@@ -186,12 +239,14 @@ function reshuffle(game, seedSalt) {
       const a = free[Math.floor(rand() * free.length)];
       let b = a;
       while (b === a) b = free[Math.floor(rand() * free.length)];
-      assign.set(a, bag[k]); assign.set(b, bag[k]);
+      assign.set(a, bag[k][0]); assign.set(b, bag[k][1]);
       standing.delete(a); standing.delete(b);
+      order.push([a, b]);
     }
     if (ok) {
       for (const [id, f] of assign) game.tiles[id].face = f;
       game.moves = [];
+      game.solution = order;
       game.reshuffles -= 1;
       game.status = 'playing';
       return true;
@@ -229,6 +284,6 @@ function heldReason(game, tile) {
   return left && right ? 'shut' : 'free';
 }
 
-const NS = { mulberry32, LAYOUT, FAMILIES, FACE_COUNT, overlaps, yOverlap, isFreePos, dealFaces, newGame, customGame, heldReason, tileFree, freeTiles, availableMoves, remainingCount, refreshStatus, applyMove, undo, hint, reshuffle };
+const NS = { mulberry32, LAYOUT, SUITS, WIND_FACES, DRAGON_FACES, FLOWER_FACES, SEASON_FACES, CENSUS, matchKey, facesMatch, pairSpecs, overlaps, yOverlap, isFreePos, dealFaces, newGame, customGame, heldReason, tileFree, freeTiles, availableMoves, remainingCount, reshuffle, refreshStatus, applyMove, undo, hint };
 if (typeof module !== 'undefined' && module.exports) module.exports = NS;
 if (typeof window !== 'undefined') window.NS = NS;
