@@ -33,7 +33,7 @@
   .stat.sep{width:1px; min-width:0; height:30px; margin-top:2px; background:rgba(201,169,89,.22)}
 
   /* the shelf floats in the dark; the light pools under it */
-  .scene{position:relative; flex:1; display:flex; align-items:center; justify-content:center; perspective:1150px; min-height:0}
+  .scene{position:relative; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; perspective:1150px; min-height:0}
   .tilt{position:relative; transform-style:flat; will-change:transform; width:100%; display:flex; justify-content:center}
   .boardzone{position:relative; display:flex; justify-content:center}
   .boardglow{position:absolute; left:50%; top:52%; width:112%; max-width:560px; aspect-ratio:2.1; transform:translate(-50%,-50%);
@@ -67,8 +67,8 @@
   .charface .cn{font-size:calc(var(--tw) * .36); margin-bottom:calc(var(--tw) * .08)}
   .charface .wan{font-size:calc(var(--tw) * .54)}
   .charface .tag{position:absolute; top:7%; left:10%; font-size:calc(var(--tw) * .27); font-family:Georgia,serif; opacity:.75}
-  .tile.held .face{filter:brightness(.68)}
-  .tile.held .art, .tile.held .charface{opacity:.36}
+  .tile.held .face{filter:brightness(.8)}
+  .tile.held .art, .tile.held .charface{opacity:.58}
   .tile.free .art svg{filter:drop-shadow(0 0 2.6px var(--en))}
   .tile.free .charface .lit{text-shadow:0 0 7px var(--en)}
   .tile.spotdim .face{filter:brightness(.5) saturate(.6) !important}
@@ -123,22 +123,28 @@
     color:#9a927f; padding:12px 7px; min-height:44px; cursor:pointer; white-space:nowrap}
   .tbtn:active{transform:scale(.96)}
   .tbtn:disabled{opacity:.35; cursor:default}
-  .tbtn.gold{color:var(--gold)}
+  .tbtn.gold{color:var(--gold); display:inline-flex; align-items:center; gap:8px}
+  .tbtn.gold::before{content:''; width:6px; height:6px; flex:none; transform:rotate(45deg); background:#c9a959; box-shadow:0 0 8px rgba(230,194,92,.5)}
   .tbtn .n{color:var(--gold2)}
   .toolbar i{width:3px; height:3px; border-radius:50%; background:rgba(201,169,89,.55); flex:none}
 
-  .stuckbar{display:none; align-items:center; gap:10px; justify-content:center; flex-wrap:wrap; position:relative; z-index:9;
-    margin:10px auto 0; padding:10px 14px; border:1px solid rgba(201,169,89,.4); border-radius:12px;
-    background:rgba(10,11,12,.92); font-size:14.5px; max-width:660px; color:var(--ink)}
+  .stuckbar{display:none; align-items:center; gap:8px 16px; justify-content:center; flex-wrap:wrap; position:relative; z-index:9;
+    margin:12px auto 0; padding:11px 14px 12px; border-top:1px solid rgba(201,169,89,.35); border-bottom:1px solid rgba(201,169,89,.35);
+    background:rgba(5,6,7,.88); font-size:14.5px; max-width:660px; color:var(--ink)}
   .stuckbar.on{display:flex}
-  .sbtn{appearance:none; border:1px solid rgba(201,169,89,.45); background:rgba(20,22,24,.6); color:var(--ink);
-    font:inherit; font-size:12.5px; letter-spacing:.06em; padding:10px 16px; border-radius:999px; cursor:pointer; min-height:44px}
-  .sbtn.primary{background:linear-gradient(180deg,#dcb356,#b4832e); color:#241a05; border-color:#e8c877; font-weight:700}
-  .sbtn:active{transform:scale(.97)}
+  .stuckbar>span{font-style:italic; color:#a89f8c}
+  .sbtn{appearance:none; border:0; background:none; color:var(--ink); display:inline-flex; align-items:center; gap:9px;
+    font:inherit; font-size:13px; letter-spacing:.04em; padding:10px 4px; cursor:pointer; min-height:44px}
+  .sbtn .seal{width:6px; height:6px; flex:none; transform:rotate(45deg); border:1px solid rgba(201,169,89,.65)}
+  .sbtn.primary{color:#e8c56a}
+  .sbtn.primary .seal{background:#c9a959; box-shadow:0 0 8px rgba(230,194,92,.5); border-color:#e6c25c}
+  .sbtn:active{color:#f0d488}
+  .sbtn:active .seal{background:#c9a959; box-shadow:0 0 8px rgba(230,194,92,.5); border-color:#e6c25c}
 
   /* ===== the door and the end of the night: black, hairlines, one fan of tiles ===== */
   .overlay{position:fixed; inset:0; z-index:100; display:none; overflow-y:auto;
-    background:radial-gradient(90% 90% at 50% 38%, rgba(6,7,8,.95), rgba(0,0,0,.99)); padding:16px;
+    background:radial-gradient(120% 85% at 50% 30%, rgba(230,198,120,.07), rgba(0,0,0,0) 55%),
+               radial-gradient(90% 90% at 50% 38%, #0a0b0d, #030405 78%); padding:16px;
     opacity:0; transition:opacity .45s ease}
   .overlay.on{display:flex; opacity:1}
   .sheet{margin:auto; width:100%; max-width:540px; text-align:center; padding:10px 6px 20px;
@@ -160,26 +166,28 @@
   .miniBoardWrap{position:relative; width:fit-content; margin:20px auto 2px}
   .board.cover{width:min(84vw,330px)}
   .board.cover .tile{pointer-events:none; cursor:default}
+  .board.cover .tile.held .face{filter:brightness(.95)}
+  .board.cover .tile.held .art, .board.cover .tile.held .charface{opacity:.9}
   .miniTray{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:11px}
   #miniMinis{display:flex; gap:3px}
   #miniMinis .mini{position:relative}
   .miniTray .micro{font-size:8.5px; letter-spacing:.3em; text-transform:uppercase; color:#77705f}
-  .entries{margin:14px auto 2px; max-width:340px; text-align:left}
-  .entry{display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
-    border:1px solid rgba(201,169,89,.32); border-radius:10px;
-    background:linear-gradient(165deg,#17191d,#0a0b0d);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 8px 18px rgba(0,0,0,.5);
-    font:inherit; color:#ddd5c2; font-size:15.5px; padding:14px 16px; margin-top:10px; cursor:pointer; text-align:left}
-  .entries .entry:first-child{margin-top:0}
-  .entry .a{font-size:11.5px; color:#77705f; font-style:italic; white-space:nowrap}
+  .entries{margin:14px auto 2px; max-width:340px; text-align:left; border-top:1px solid rgba(201,169,89,.22)}
+  .entry{display:flex; align-items:center; gap:12px; width:100%;
+    border:0; border-bottom:1px solid rgba(201,169,89,.22); background:none;
+    font:inherit; color:#ddd5c2; font-size:15.5px; padding:14px 4px 13px; cursor:pointer; text-align:left;
+    transition:background .18s ease}
+  .entry .seal{width:7px; height:7px; flex:none; transform:rotate(45deg); border:1px solid rgba(201,169,89,.65)}
+  .entry .a{margin-left:auto; font-size:11.5px; color:#8b8474; font-style:italic; white-space:nowrap}
   .entry .t{white-space:nowrap}
-  .entry:active{transform:scale(.99)}
-  .entry.prime{background:linear-gradient(180deg,#dcb356,#b4832e); border-color:#e8c877;
-    box-shadow:inset 0 1px 0 rgba(255,246,214,.7), 0 8px 18px rgba(0,0,0,.5)}
-  .entry.prime .t{color:#241a05; font-weight:700}
-  .entry.prime .a{color:rgba(36,26,5,.62)}
+  .entry:active{background:linear-gradient(90deg, rgba(216,188,120,.07), rgba(216,188,120,0) 72%); border-bottom-color:rgba(201,169,89,.5)}
+  .entry:active .seal{background:#c9a959; box-shadow:0 0 9px rgba(230,194,92,.55); border-color:#e6c25c}
+  .entry:active .t{color:#f0d488}
+  .entry.prime .seal{background:#c9a959; box-shadow:0 0 9px rgba(230,194,92,.55); border-color:#e6c25c}
+  .entry.prime .t{color:#e8c56a}
+  .entry.prime .a{color:rgba(232,197,106,.55)}
   .recordline{margin-top:24px; font-size:12.5px; color:#6f6a5e; font-style:italic; text-wrap:balance}
-  .sheet .fine{font-size:10.5px; color:#4c483f; margin-top:20px; line-height:1.6; letter-spacing:.03em}
+  .sheet .fine{font-size:10.5px; color:#6e695d; margin-top:20px; line-height:1.6; letter-spacing:.03em}
   .stars{display:flex; gap:16px; justify-content:center; margin:14px 0 4px}
   .stars svg{width:26px; height:38px}
   .stars .unlit{opacity:.22; filter:grayscale(1)}
@@ -192,10 +200,11 @@
     .stage{padding-top:6px}
     .stats{margin-top:3px}
     .stat b{font-size:16px}
-    .board{width:min(62vw, calc((100dvh - 184px) * 1.534))}
-    .board.teaching{width:min(62vw, calc((100dvh - 184px) * 1.211))}
-    .board.cover{width:min(300px, calc((100dvh - 210px) * 1.534))}
+    .board{width:min(62vw, calc((100dvh - 196px) * 1.534))}
+    .board.teaching{width:min(62vw, calc((100dvh - 196px) * 1.211))}
+    .board.cover{width:min(300px, calc((100dvh - 130px) * 1.534))}
     .trayrow{margin-top:3px}
+    .traypile{height:44px}
     .candleline{margin-top:4px}
     .candleline .l{display:none}
     .toolbar{margin-top:2px}
@@ -203,6 +212,14 @@
       text-align:left; padding:4px 8px; background:rgba(5,6,7,.72); border-radius:6px; font-size:13px}
     body.tutoring #coachDots{position:absolute; top:56px; right:14px; margin:0}
     .stuckbar{position:absolute; left:50%; transform:translateX(-50%); bottom:56px; z-index:30; margin:0; width:max-content; max-width:92vw}
+    #menu .sheet{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:26px; align-items:start; max-width:780px; padding-bottom:6px}
+    #menu .miniBoardWrap{grid-column:1; grid-row:1 / span 5; margin:4px 0 0}
+    #menu .orn{grid-column:2; margin:0 0 8px}
+    #menu h2{grid-column:2; font-size:21px}
+    #menu .sub{grid-column:2}
+    #menu .entries{grid-column:2; margin-top:10px}
+    #menu .recordline{grid-column:2; margin-top:12px}
+    #menu .fine{grid-column:1 / -1; margin-top:12px}
   }
 </style>
 </head>
@@ -231,25 +248,24 @@
           <div class="board" id="board" aria-label="Mahjong shelf"></div>
         </div>
       </div>
+      <div class="trayrow">
+        <div class="traypile" id="traypile"></div>
+        <div class="traymeta">
+          <div class="micro">The keeper's tray</div>
+          <div class="tally" id="traycount">0 pairs kept</div>
+        </div>
+      </div>
     </div>
 
     <div id="coachDots" aria-hidden="true"></div>
 
-    <div class="trayrow">
-      <div class="traypile" id="traypile"></div>
-      <div class="traymeta">
-        <div class="micro">The keeper's tray</div>
-        <div class="tally" id="traycount">0 pairs kept</div>
-      </div>
-    </div>
-
     <div class="whisper" id="whisper">The shelf is set and the shop is quiet. Two of a kind, both standing free — lift them away.</div>
 
-    <div class="stuckbar askbar" id="askbar"><span id="askText"></span><button class="sbtn primary" id="btnAskYes">Set a new one</button><button class="sbtn" id="btnAskNo">Keep this shelf</button></div>
+    <div class="stuckbar askbar" id="askbar"><span id="askText"></span><button class="sbtn primary" id="btnAskYes"><span class="seal" aria-hidden="true"></span>Set a new one</button><button class="sbtn" id="btnAskNo"><span class="seal" aria-hidden="true"></span>Keep this shelf</button></div>
     <div class="stuckbar" id="stuckbar">
       <span>No pair stands free — the shelf has closed its hand.</span>
-      <button class="sbtn primary" id="btnStuckShuffle">Use the reshuffle</button>
-      <button class="sbtn" id="btnStuckNew">New shelf</button>
+      <button class="sbtn primary" id="btnStuckShuffle"><span class="seal" aria-hidden="true"></span>Use the reshuffle</button>
+      <button class="sbtn" id="btnStuckNew"><span class="seal" aria-hidden="true"></span>New shelf</button>
     </div>
 
     <div class="candleline" id="candleline">
@@ -278,9 +294,9 @@
       <div class="miniTray"><span id="miniMinis"></span><span class="micro">the night is young</span></div>
     </div>
     <div class="entries">
-      <button class="entry" id="btnTeach"><span class="t">The teaching shelf</span><span class="a" id="teachVal">a short lesson · 14 tiles</span></button>
-      <button class="entry prime" id="btnStart"><span class="t">Begin a new shelf</span><span class="a">144 tiles</span></button>
-      <button class="entry" id="btnContinue" style="display:none"><span class="t">The shelf I left</span><span class="a" id="continueVal"></span></button>
+      <button class="entry" id="btnTeach"><span class="seal" aria-hidden="true"></span><span class="t">The teaching shelf</span><span class="a" id="teachVal">a short lesson · 14 tiles</span></button>
+      <button class="entry prime" id="btnStart"><span class="seal" aria-hidden="true"></span><span class="t">Begin a new shelf</span><span class="a">144 tiles</span></button>
+      <button class="entry" id="btnContinue" style="display:none"><span class="seal" aria-hidden="true"></span><span class="t">The shelf I left</span><span class="a" id="continueVal"></span></button>
     </div>
     <p class="recordline" id="recordline"></p>
     <p class="fine">Dealt fair by construction — every shelf can be cleared, so a loss is never the deal's fault.<br>Turtle layout data adapted from an MIT-licensed reference (C. Cândido); everything else was made in this room.</p>
@@ -296,8 +312,8 @@
     <p class="endstats" id="endStats"></p>
     <p class="recordline" id="endRecord"></p>
     <div class="entries">
-      <button class="entry prime" id="btnAgain"><span class="t">Another shelf</span><span class="a">a fresh deal</span></button>
-      <button class="entry" id="btnMenu2"><span class="t">Back to the door</span><span class="a">the shelf</span></button>
+      <button class="entry prime" id="btnAgain"><span class="seal" aria-hidden="true"></span><span class="t">Another shelf</span><span class="a">a fresh deal</span></button>
+      <button class="entry" id="btnMenu2"><span class="seal" aria-hidden="true"></span><span class="t">Back to the door</span><span class="a">the shelf</span></button>
     </div>
   </div>
 </div>
@@ -309,7 +325,7 @@ const $ = id => document.getElementById(id);
 const boardEl = $('board'), whisperEl = $('whisper');
 
 /* ---------- the traditional faces, drawn as enamel inlay ---------- */
-const SAPP = '#6ea8ff', EMER = '#43d68a', RUBY = '#ef5049', PEARL = '#ddd5c0', GOLD = '#e8c56a', ROSE = '#f0a6c0';
+const SAPP = '#84b8ff', EMER = '#43d68a', RUBY = '#ef5049', PEARL = '#ddd5c0', GOLD = '#e8c56a', ROSE = '#f0a6c0';
 const NUMW = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
 const WIND_NAME = { E: 'East', S: 'South', W: 'West', N: 'North' };
 const FLOWER_NAME = ['Plum', 'Orchid', 'Chrysanthemum', 'Bamboo'];
@@ -690,7 +706,7 @@ function tutWin() {
   $('endStars').innerHTML = '';
   $('endStats').textContent = 'Fourteen tiles, seven pairs — free, rested-on, and shut in. The real shelf is the same, only taller: one hundred and forty-four.';
   $('endRecord').textContent = 'The teaching shelf will wait by the door whenever you want it again.';
-  $('btnAgain').querySelector('span').textContent = 'Begin the real shelf';
+  $('btnAgain').querySelector('.t').textContent = 'Begin the real shelf';
   setTimeout(() => $('endcard').classList.add('on'), 700);
 }
 function startTutorial() {
@@ -769,7 +785,7 @@ function onTile(id) {
 function onWin() {
   playing = false; wakeDepth(); sfxWin(); save();
   $('endTitle').textContent = 'THE SHELF STANDS CLEAR';
-  $('btnAgain').querySelector('span').textContent = 'Another shelf';
+  $('btnAgain').querySelector('.t').textContent = 'Another shelf';
   const frac = Math.max(0, 1 - elapsed / BURN);
   const stars = frac > .5 ? 3 : frac > .22 ? 2 : 1;
   const rec = records(); rec.cleared += 1; if (rec.best === null || elapsed < rec.best) rec.best = elapsed; saveRecords(rec);
@@ -804,7 +820,7 @@ function startGame(seed, resume) {
 $('btnStart').addEventListener('click', () => { ac(); startGame((Date.now() % 2147483646) + 1); });
 $('btnContinue').addEventListener('click', () => { const s = loadSave(); if (s) { ac(); startGame(s.seed, s); } });
 $('btnAgain').addEventListener('click', () => {
-  if (endIsTut) { endIsTut = false; $('btnAgain').querySelector('span').textContent = 'Another shelf'; }
+  if (endIsTut) { endIsTut = false; $('btnAgain').querySelector('.t').textContent = 'Another shelf'; }
   startGame((Date.now() % 2147483646) + 7);
 });
 $('btnTeach').addEventListener('click', () => { ac(); startTutorial(); });
