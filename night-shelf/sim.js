@@ -200,6 +200,35 @@ function reshuffle(game, seedSalt) {
   return false;
 }
 
-const NS = { mulberry32, LAYOUT, FAMILIES, FACE_COUNT, overlaps, yOverlap, isFreePos, dealFaces, newGame, tileFree, freeTiles, availableMoves, remainingCount, refreshStatus, applyMove, undo, hint, reshuffle };
+/* A hand-laid game on any position list — the teaching shelf lives here.
+   faces[i] is the face dealt to position i. */
+function customGame(positions, faces) {
+  return {
+    seed: -1,
+    tiles: positions.map((p, i) => ({ id: i, x: p.x, y: p.y, z: p.z, face: faces[i], removed: false })),
+    solution: null,
+    moves: [],
+    reshuffles: 0,
+    status: 'playing',
+  };
+}
+
+/* Why a tile stays: 'covered' (a tile rests on it), 'shut' (closed on both
+   long sides), or 'free'. The coach teaches by naming the reason. */
+function heldReason(game, tile) {
+  if (tile.removed) return 'free';
+  let left = false, right = false;
+  for (const o of game.tiles) {
+    if (o === tile || o.removed) continue;
+    if (o.z > tile.z && overlaps(o, tile)) return 'covered';
+    if (o.z === tile.z && yOverlap(o, tile)) {
+      if (o.x < tile.x && o.x + 2 > tile.x - 1) left = true;
+      if (o.x > tile.x && o.x < tile.x + 3) right = true;
+    }
+  }
+  return left && right ? 'shut' : 'free';
+}
+
+const NS = { mulberry32, LAYOUT, FAMILIES, FACE_COUNT, overlaps, yOverlap, isFreePos, dealFaces, newGame, customGame, heldReason, tileFree, freeTiles, availableMoves, remainingCount, refreshStatus, applyMove, undo, hint, reshuffle };
 if (typeof module !== 'undefined' && module.exports) module.exports = NS;
 if (typeof window !== 'undefined') window.NS = NS;
