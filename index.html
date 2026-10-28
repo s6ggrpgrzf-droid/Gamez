@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="./art-dm.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./art-sd.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./art-pt.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-ns.css" media="print" onload="this.media='all'">
 <style>
   :root{
     --gold:#e3ac55; --gold-hi:#ffd98a; --gold-deep:#9a7434;
@@ -661,11 +662,12 @@ var G = [
   ['SKYLARK','SKYLARK','NEW','A bush pilot\u2019s tale — fly short hops between tiny airstrips.','<path d="M3 15 L21 8 L15 21 L12 16 Z"/><path d="M12 16 L21 8"/>',['pick']],
   ['DOMINOES','DOMINOES','NEW · VS HOUSE','The café-table classic: take the round off the House. First to 100.','<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 12 L18 12"/><circle cx="12" cy="7.5" r="1" fill="#6b4d1c"/>',[]],
   ['CATHEDRAL','CATHEDRAL','OLD TIME RADIO','Old time radio on a 1940s cathedral set. 1,800+ episodes.','<path d="M5 21 L5 11 a7 6.5 0 0 1 14 0 L19 21"/><path d="M9 21 L9 12.5 a3 3 0 0 1 6 0 L15 21"/><path d="M3 21 L21 21"/>',[]],
-  ['STARLIGHT DRUMS','DRUMS','DAILY · RHYTHM','Tap the beat under a night sky — every true hit wakes a star.','<path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/>',[],{label:'Best A · 96.2%',frac:.96}]
+  ['STARLIGHT DRUMS','DRUMS','DAILY · RHYTHM','Tap the beat under a night sky — every true hit wakes a star.','<path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/>',[],{label:'Best A · 96.2%',frac:.96}],
+  ['THE NIGHT SHELF','SHELF','DAILY · SOLITAIRE','The real Turtle — 144 tiles by candlelight. Match the free pairs, mind the candle, and keep tonight’s deal: one shelf, the whole world, a new one at midnight.','<path d="M12 2.8 v2.4"/><path d="M12 5.2 c1.3 1.5 1.3 2.9 0 3.8 c-1.3-.9-1.3-2.3 0-3.8 Z"/><rect x="8.2" y="10.5" width="7.6" height="10" rx="1.4"/><path d="M5 21.5 H19"/>',[]]
 ];
-var U = ['./candy-cascade/','./bubble-hex/','./bloom-defense/','./neon-void/','./maze-trace/','./life-story/','./reel-empire/','./pdawg/','./word-well/','./tiny-fairway/','./skylark/','./dominoes/','https://s6ggrpgrzf-droid.github.io/Cathedral/','./starlight-drums/'];
-var IDS = ['candy-cascade','bubble-hex','bloom-defense','neon-void','maze-trace','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums'];
-var ART = ['candy-cascade','bubble-hex','bloom-defense','neon-void','arrow-slide','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums'];
+var U = ['./candy-cascade/','./bubble-hex/','./bloom-defense/','./neon-void/','./maze-trace/','./life-story/','./reel-empire/','./pdawg/','./word-well/','./tiny-fairway/','./skylark/','./dominoes/','https://s6ggrpgrzf-droid.github.io/Cathedral/','./starlight-drums/','./night-shelf/'];
+var IDS = ['candy-cascade','bubble-hex','bloom-defense','neon-void','maze-trace','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums','night-shelf'];
+var ART = ['candy-cascade','bubble-hex','bloom-defense','neon-void','arrow-slide','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums','night-shelf'];
 </script>
 <script>
 'use strict';
@@ -786,6 +788,13 @@ function progressFor(id) {
       if (!tf || !tf.holes) return null;
       var tst = tf.stars || 0, th = tf.holes;
       return { label: '⛳ best ' + tf.strokes + ' strokes · ★' + tst, frac: Math.min(1, tst / (th * 3)) };
+    }
+    if (id === 'night-shelf') {
+      var nsr = readJSON('ns_records_v1');
+      if (!nsr || !nsr.cleared) return null;
+      var nlb = nsr.best != null ? ' · best ' + Math.floor(nsr.best / 60) + ':' + ('0' + (nsr.best % 60)).slice(-2) : '';
+      var nst = (nsr.daily && nsr.daily.streak >= 2) ? ' · 🔥 ' + nsr.daily.streak + ' nights' : '';
+      return { label: '🕯 ' + nsr.cleared + (nsr.cleared === 1 ? ' shelf' : ' shelves') + ' cleared' + nlb + nst, frac: Math.min(1, nsr.cleared / 10) };
     }
     if (id === 'starlight-drums') {
       var sd = readJSON('sd-records-v1');
@@ -1119,8 +1128,8 @@ document.getElementById('port1').addEventListener('click',function(){
 (function(){
   var wrap=document.getElementById('desks');
   var LAND=window.innerWidth>window.innerHeight;
-  var rows=LAND?[{n:4,y:0.5,xs:[34.5,44.5,55.5,65.5]},{n:4,y:7,xs:[34.5,44.5,55.5,65.5]},{n:3,y:13.5,xs:[39.5,49.8,60.2]},{n:3,y:20,xs:[39.5,49.8,60.2]}]
-               :[{n:4,y:8,xs:[34.5,44.5,55.5,65.5]},{n:4,y:20,xs:[34.5,44.5,55.5,65.5]},{n:3,y:30.5,xs:[39.5,49.8,60.2]},{n:3,y:40.5,xs:[39.5,49.8,60.2]}];
+  var rows=LAND?[{n:4,y:0.5,xs:[34.5,44.5,55.5,65.5]},{n:4,y:7,xs:[34.5,44.5,55.5,65.5]},{n:3,y:13.5,xs:[39.5,49.8,60.2]},{n:4,y:20,xs:[34.5,44.5,55.5,65.5]}]
+               :[{n:4,y:8,xs:[34.5,44.5,55.5,65.5]},{n:4,y:20,xs:[34.5,44.5,55.5,65.5]},{n:3,y:30.5,xs:[39.5,49.8,60.2]},{n:4,y:40.5,xs:[34.5,44.5,55.5,65.5]}];
   var gi=0;
   rows.forEach(function(r,ti){
     r.xs.forEach(function(x){
@@ -1298,7 +1307,7 @@ function greeting(){
     : h>=11 && h<17 ? 'Afternoon class is in session. '
     : h>=17 && h<23 ? 'Evening class is in session. '
     : 'The small hours, and the classroom is awake for them. ';
-  return head+'Fourteen lessons wait at fourteen desks \u2014 tap a brass nameplate to look inside one.';
+  return head+'Fifteen lessons wait at fifteen desks \u2014 tap a desk to look inside one.';
 }
 setTimeout(function(){ say(greeting()); },1500);
 var boardIx=0;
