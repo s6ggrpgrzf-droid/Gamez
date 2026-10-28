@@ -372,15 +372,23 @@ const DOTPOS = {
   9: [[5.5, 6], [12, 6], [18.5, 6], [5.5, 15], [12, 15], [18.5, 15], [5.5, 24], [12, 24], [18.5, 24]],
 };
 function ring(cx, cy, r, cols) {
-  return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + cols[0] + '" stroke-width="' + (r * .34) + '"/>' +
+  let petals = '';
+  for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + .26; petals += '<circle cx="' + (cx + r * .8 * Math.cos(a)).toFixed(1) + '" cy="' + (cy + r * .8 * Math.sin(a)).toFixed(1) + '" r="' + (r * .12).toFixed(2) + '" fill="' + cols[1] + '" opacity=".5"/>'; }
+  return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + cols[0] + '" stroke-width="' + (r * .34) + '"/>' + petals +
          '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * .58) + '" fill="none" stroke="' + cols[1] + '" stroke-width="' + (r * .3) + '"/>' +
          '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * .24) + '" fill="' + cols[2] + '"/>';
 }
 function dotSVG(n) {
   if (n === 1) {
     let petals = '';
-    for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; petals += '<circle cx="' + (12 + 8.1 * Math.cos(a)).toFixed(1) + '" cy="' + (15 + 8.1 * Math.sin(a)).toFixed(1) + '" r="1.7" fill="none" stroke="' + GOLD + '" stroke-width="1.1"/>'; }
-    return '<svg viewBox="0 0 24 30">' + petals + ring(12, 15, 5.9, [SAPP, EMER, RUBY]) + '</svg>';
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, px = 12 + 6.7 * Math.cos(a), py = 15 + 6.7 * Math.sin(a); petals += '<ellipse cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" rx="1.15" ry="2.05" fill="' + (k % 2 ? SAPP : EMER) + '" opacity=".9" transform="rotate(' + (a * 180 / Math.PI + 90).toFixed(0) + ' ' + px.toFixed(1) + ' ' + py.toFixed(1) + ')"/>'; }
+    return '<svg viewBox="0 0 24 30">' +
+      '<circle cx="12" cy="15" r="9.4" fill="none" stroke="' + GOLD + '" stroke-width="1.6"/>' +
+      '<circle cx="12" cy="15" r="8.3" fill="none" stroke="' + RUBY + '" stroke-width=".75" opacity=".85"/>' + petals +
+      '<circle cx="12" cy="15" r="4.5" fill="none" stroke="' + GOLD + '" stroke-width="1.05"/>' +
+      '<polygon points="12,12.1 14.5,13.9 13.6,16.9 10.4,16.9 9.5,13.9" fill="' + SAPP + '"/>' +
+      '<polygon points="12,12.1 14.5,13.9 10.4,16.9" fill="#ffffff" opacity=".28"/>' +
+      '<circle cx="12" cy="15" r=".85" fill="' + RUBY + '"/></svg>';
   }
   const r = n <= 3 ? 3.1 : n <= 6 ? 2.8 : 2.4;
   const tri = [[SAPP, EMER, RUBY], [EMER, RUBY, SAPP], [RUBY, SAPP, EMER]];
@@ -388,26 +396,34 @@ function dotSVG(n) {
 }
 /* bamboo: green sticks with a node line; the One is the sparrow */
 function stick(x, y, h, col) {
-  const w = 3.6, x0 = (x - w / 2).toFixed(1);
-  return '<g><rect x="' + x0 + '" y="' + (y - h / 2).toFixed(1) + '" width="' + w + '" height="' + h + '" rx="1.8" fill="' + col + '"/>' +
-         '<rect x="' + x0 + '" y="' + (y - h / 2).toFixed(1) + '" width="' + (w / 2) + '" height="' + h + '" rx="1.8" fill="#ffffff" opacity=".16"/>' +
-         '<line x1="' + x0 + '" y1="' + y + '" x2="' + (x + w / 2).toFixed(1) + '" y2="' + y + '" stroke="#06281a" stroke-width=".9"/></g>';
+  const w = 3.6, x0 = x - w / 2, y0 = y - h / 2;
+  let out = '<g><rect x="' + x0.toFixed(1) + '" y="' + y0.toFixed(1) + '" width="' + w + '" height="' + h + '" rx="1.8" fill="' + col + '"/>' +
+            '<rect x="' + x0.toFixed(1) + '" y="' + y0.toFixed(1) + '" width="' + (w / 2) + '" height="' + h + '" rx="1.8" fill="#ffffff" opacity=".15"/>';
+  for (let i = 1; i <= 2; i++) {
+    const ny = y0 + h * i / 3;
+    out += '<rect x="' + (x0 - .35).toFixed(1) + '" y="' + (ny - .5).toFixed(1) + '" width="' + (w + .7) + '" height="1" rx=".5" fill="' + col + '"/>' +
+           '<rect x="' + (x0 - .35).toFixed(1) + '" y="' + (ny + .05).toFixed(1) + '" width="' + (w + .7) + '" height=".5" rx=".25" fill="#06281a" opacity=".55"/>';
+  }
+  return out + '</g>';
 }
 function bamSVG(n) {
   if (n === 1) {
     return '<svg viewBox="0 0 24 30">' +
-      '<rect x="3.6" y="23.6" width="17" height="2.5" rx="1.25" fill="#2f9e66"/>' +
-      '<line x1="12.2" y1="23.6" x2="12.2" y2="26.1" stroke="#0a3d24" stroke-width="1"/>' +
-      '<path d="M18.6 23.4c-2.5-1.7-5.4-2.1-8.2-1.3 2.5 1.7 5.4 2.1 8.2 1.3Z" fill="' + EMER + '" opacity=".65"/>' +
-      '<g fill="' + EMER + '" opacity=".9"><rect x="4.4" y="14.2" width="6.6" height="2.1" rx="1.05" transform="rotate(40 7.7 15.2)"/><rect x="4" y="16.6" width="7" height="2.1" rx="1.05" transform="rotate(25 7.5 17.6)"/></g>' +
-      '<circle cx="12.6" cy="10.8" r="5.7" fill="' + EMER + '"/>' +
-      '<path d="M10.2 5.6c.3-1.6 1.4-2.7 3-3.1-.4 1.2-.4 2.3 0 3.4-1-.4-2-.5-3-.3Z" fill="' + EMER + '"/>' +
-      '<path d="M17.4 6.8l3.9 1.4-3.7 1.5c.1-1 .0-2-.2-2.9Z" fill="' + GOLD + '"/>' +
-      '<path d="M8.4 9.2c2.1-1.7 5-1.6 6.9.2-2 1.8-5 1.7-6.9-.2Z" fill="' + GOLD + '" opacity=".92"/>' +
-      '<circle cx="14.9" cy="8.9" r=".95" fill="#0a0f0c"/><circle cx="15.2" cy="8.6" r=".3" fill="#ffffff"/>' +
-      '<line x1="11.6" y1="16.2" x2="11.9" y2="23.4" stroke="' + GOLD + '" stroke-width=".9"/>' +
-      '<line x1="13.8" y1="16.3" x2="14.6" y2="23.4" stroke="' + GOLD + '" stroke-width=".9"/>' +
-      '<circle cx="6.6" cy="27.6" r="1.05" fill="' + RUBY + '"/><circle cx="10.2" cy="28.2" r=".8" fill="' + RUBY + '" opacity=".75"/></svg>';
+      '<path d="M17.8 19.6c.4-2.2 1.8-3.8 4-4.6-.2 2.3-1.6 3.9-4 4.6Z" fill="' + EMER + '" opacity=".75"/>' +
+      '<path d="M15.9 20.2c-.3-2.1.4-4 2-5.4.5 2.2-.2 4.1-2 5.4Z" fill="' + EMER + '" opacity=".55"/>' +
+      '<path d="M15.9 16.9c2.3 2.6 4 5.8 4.9 9.4-1.2.3-2.4.1-3.5-.5-1.1-2.9-1.6-5.9-1.4-8.9Z" fill="' + SAPP + '"/>' +
+      '<path d="M14.7 17.6c1.6 2.9 2.5 6 2.8 9.3-1.2.1-2.4-.3-3.4-1-.5-2.8-.2-5.6.6-8.3Z" fill="' + EMER + '"/>' +
+      '<line x1="2.6" y1="25.8" x2="21.4" y2="20.6" stroke="' + EMER + '" stroke-width="2.5" stroke-linecap="round"/>' +
+      '<g stroke="#06281a" stroke-width=".95"><line x1="8.2" y1="27.3" x2="8.6" y2="24.7"/><line x1="14.6" y1="25.6" x2="15" y2="23"/></g>' +
+      '<path d="M6.5 10.6C6 14.2 7.9 17.7 11.4 18.7c3.2.9 5.9-.8 6.1-3.8.2-3.1-2.2-5.4-5.4-5.8-2.6-.3-5.2.3-5.6 1.5Z" fill="' + EMER + '"/>' +
+      '<ellipse cx="7.7" cy="11.6" rx="1.25" ry="1.7" fill="' + RUBY + '" opacity=".85" transform="rotate(18 7.7 11.6)"/>' +
+      '<path d="M10.4 10.7c2.9-.4 5.3 1.4 5.6 4.1-2.2.9-4.7.3-6.1-1.3-.7-1-.4-2.2.5-2.8Z" fill="' + SAPP + '"/>' +
+      '<path d="M11.2 12.3c1.2-.1 2.4.4 3.2 1.3M10.8 13.9c1.1 0 2.2.5 2.9 1.3" stroke="' + GOLD + '" stroke-width=".55" fill="none" opacity=".85"/>' +
+      '<circle cx="8.9" cy="9" r="2.9" fill="' + EMER + '"/>' +
+      '<path d="M6.1 8.5 3.4 9.5l2.8 1.1c.3-.7.2-1.4-.1-2.1Z" fill="' + GOLD + '"/>' +
+      '<circle cx="8.2" cy="8.6" r=".62" fill="#0a0f0c"/><circle cx="8.45" cy="8.35" r=".22" fill="#ffffff"/>' +
+      '<path d="M10.9 18.4l.7 4.8M13.6 18.2l.7 4.3" stroke="' + GOLD + '" stroke-width=".8" fill="none"/>' +
+      '<circle cx="5.9" cy="27.9" r="1.05" fill="' + RUBY + '"/><circle cx="9.3" cy="28.4" r=".8" fill="' + RUBY + '" opacity=".75"/></svg>';
   }
   const P = {
     2: [[12, 8, EMER], [12, 22, SAPP]], 3: [[12, 7.5, EMER], [7.5, 21.5, EMER], [16.5, 21.5, EMER]],
@@ -432,6 +448,19 @@ const NUMCHAR = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
 const WINDCHAR = { E: '東', S: '南', W: '西', N: '北' };
 const FLOWERCHAR = ['梅', '蘭', '菊', '竹'];
 const SEASONCHAR = ['春', '夏', '秋', '冬'];
+function faSVG() {
+  return '<svg viewBox="0 0 24 30"><g fill="none" stroke="' + EMER + '" stroke-width="1.75" stroke-linecap="round">' +
+    '<path d="M13.8 4.8l-.9 1.6"/>' +
+    '<path d="M12.6 6.2C10.5 8 8.6 9.6 6.4 10.8"/>' +
+    '<path d="M6.2 10.9c3.8-.7 8.3-.8 12.4-.2"/>' +
+    '<path d="M6.6 12.6l-.7 1.5"/><path d="M17.9 12.4l.8 1.5"/>' +
+    '<path d="M8.3 13.4c-.4 3.6-.6 7.4-.4 11.2"/>' +
+    '<path d="M8.1 17.6l3.8-.3"/><path d="M8 21.6l4.1-.3"/><path d="M11.9 17.3l.2 4"/>' +
+    '<path d="M15.8 12.2c-.4 1.8-.7 3.4-1.2 5"/>' +
+    '<path d="M19.6 18.9C17.5 21.5 15.2 23.8 12.4 25.6"/>' +
+    '<path d="M15.9 20.2c1.3 1.8 2.7 3.4 4.3 4.7"/>' +
+    '<path d="M13.4 19.4c2.2-.9 4.4-1.1 6.6-.5"/></g></svg>';
+}
 function faceArt(face) {
   const p = parseFace(face);
   if (p.kind === 'dot') return { html: '<div class="art">' + dotSVG(p.n) + '</div>', en: SAPP };
@@ -439,8 +468,8 @@ function faceArt(face) {
   if (p.kind === 'char') return { html: '<div class="charface"><span class="cn lit" style="color:' + SAPP + '">' + NUMCHAR[p.n - 1] + '</span><span class="wan lit" style="color:' + RUBY + '">萬</span></div>', en: RUBY };
   if (p.kind === 'wind') return { html: '<div class="charface"><span class="big lit" style="color:' + PEARL + '">' + WINDCHAR[p.w] + '</span></div>', en: PEARL };
   if (p.kind === 'drag' && p.d === 'R') return { html: '<div class="charface"><span class="big lit" style="color:' + RUBY + '">中</span></div>', en: RUBY };
-  if (p.kind === 'drag' && p.d === 'G') return { html: '<div class="charface"><span class="big lit" style="color:' + EMER + '">發</span></div>', en: EMER };
-  if (p.kind === 'drag') return { html: '<div class="art"><svg viewBox="0 0 24 30"><rect x="5" y="6.5" width="14" height="17" rx="1.6" fill="none" stroke="' + SAPP + '" stroke-width="1.7"/><rect x="8.4" y="10" width="7.2" height="10" rx="1" fill="none" stroke="' + SAPP + '" stroke-width="1.1" opacity=".65"/></svg></div>', en: SAPP };
+  if (p.kind === 'drag' && p.d === 'G') return { html: '<div class="art">' + faSVG() + '</div>', en: EMER };
+  if (p.kind === 'drag') return { html: '<div class="art"><svg viewBox="0 0 24 30"><rect x="4.6" y="6" width="14.8" height="18" rx="1.4" fill="none" stroke="' + SAPP + '" stroke-width="1.8"/><g fill="' + SAPP + '"><rect x="5.2" y="6.6" width="1.8" height="1.8"/><rect x="17" y="6.6" width="1.8" height="1.8"/><rect x="5.2" y="21.6" width="1.8" height="1.8"/><rect x="17" y="21.6" width="1.8" height="1.8"/></g><rect x="7.9" y="9.7" width="8.2" height="10.6" rx=".9" fill="none" stroke="' + SAPP + '" stroke-width="1" opacity=".7"/><path d="M12 13.4 13.5 15 12 16.6 10.5 15Z" fill="none" stroke="' + SAPP + '" stroke-width=".8" opacity=".85"/></svg></div>', en: SAPP };
   if (p.kind === 'flo') return { html: '<div class="charface"><span class="tag" style="color:' + PEARL + '">' + p.i + '</span><span class="big lit" style="color:' + ROSE + '">' + FLOWERCHAR[p.i - 1] + '</span></div>', en: ROSE };
   return { html: '<div class="charface"><span class="tag" style="color:' + PEARL + '">' + p.i + '</span><span class="big lit" style="color:' + GOLD + '">' + SEASONCHAR[p.i - 1] + '</span></div>', en: GOLD };
 }
