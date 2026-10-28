@@ -115,6 +115,7 @@
     background:linear-gradient(180deg,#8a6a34,#5e451d); box-shadow:0 3px 6px rgba(0,0,0,.5)}
 
   /* ===== the tiles: ivory on resin, standing in real light ===== */
+  .flytile{pointer-events:none}
   .tile{position:absolute; margin:0; padding:0; border:0; background:none; cursor:pointer; touch-action:manipulation;
     opacity:0; transform:translateY(11px); transition:opacity .4s ease, transform .48s cubic-bezier(.2,1.25,.35,1)}
   .tile.in{opacity:1; transform:translateY(0)}
@@ -140,6 +141,13 @@
     background:radial-gradient(circle at 36% 30%, rgba(255,255,255,.55), transparent 42%), currentColor;
     box-shadow:inset 0 -1px 1.5px rgba(0,0,0,.35)}
   .tile .pips i.off::before{background:transparent; box-shadow:none}
+  .board.teaching{aspect-ratio:11.6/7.6; width:min(92vw, calc((100dvh - 252px) * 1.526))}
+  body.tutoring .candle3d{visibility:hidden}
+  .tile.spotdim .face{filter:saturate(.72) brightness(.68) !important}
+  #coachDots{display:none; position:relative; z-index:9; margin:10px auto 0; width:fit-content;
+    letter-spacing:.5em; font-size:11px; color:rgba(232,200,119,.35)}
+  body.tutoring #coachDots{display:block}
+  #coachDots .on{color:var(--gold2)}
   .tile.held .face{filter:saturate(.8) brightness(.9)}
   .tile.held .body{filter:brightness(.82)}
   .tile.sel{z-index:9000 !important}
@@ -231,6 +239,7 @@
     .tilt{justify-content:flex-start}
     .counter{max-width:calc(100% - 102px); margin-right:auto; padding:10px 10px 46px}
     .board{width:min(calc(100vw - 176px), calc((100dvh - 116px) * 1.795))}
+    .board.teaching{width:min(calc(100vw - 176px), calc((100dvh - 116px) * 1.526))}
     .toolbar{position:absolute; right:10px; top:86px; width:88px; flex-direction:column; flex-wrap:nowrap; padding:8px}
     .toolbar .btn{width:100%; padding:8px 4px; font-size:12.5px; min-height:38px}
     .whisperstrip{position:absolute; left:14px; bottom:6px; margin:0; max-width:54%}
@@ -330,6 +339,7 @@
       <div class="motes" id="motes"></div>
     </div>
 
+    <div id="coachDots" aria-hidden="true"></div>
     <div class="whisperstrip" id="whisper">The shelf is set and the shop is quiet. Two of a kind, both standing free — lift them away.</div>
 
     <div class="toolbar">
@@ -362,6 +372,7 @@
     <div class="rule"></div>
     <p class="story">After closing, the shop belongs to its keeper. One hundred and forty-four curios stand on the counter in the old Turtle's shape, and by candlelight you take them down two at a time — a tile and its match, each one standing <em>free</em>: nothing resting on it, and a long side open to the air. Clear the shelf before the candle burns down, and the night is yours.</p>
     <div class="entries">
+      <button class="entry" id="btnTeach"><span>The teaching shelf</span><span class="dots"></span><span class="val" id="teachVal">a short lesson · 14 tiles</span></button>
       <button class="entry prime" id="btnStart"><span>Begin a new shelf</span><span class="dots"></span><span class="val">144 tiles</span></button>
       <button class="entry" id="btnContinue" style="display:none"><span>Take up the shelf I left</span><span class="dots"></span><span class="val" id="continueVal"></span></button>
     </div>
@@ -442,7 +453,7 @@ function records() { try { return JSON.parse(localStorage.getItem(REC_KEY)) || {
 function saveRecords(r) { localStorage.setItem(REC_KEY, JSON.stringify(r)); }
 
 function save() {
-  if (!game) return;
+  if (!game || tut) return;
   if (game.status === 'won') { localStorage.removeItem(SAVE_KEY); return; }
   const flat = game.moves.reduce((n, m) => n + m.length, 0);
   const removed = game.tiles.filter(t => t.removed).map(t => t.id);
@@ -463,15 +474,15 @@ function buildBoard() {
   for (const t of game.tiles) {
     const el = document.createElement('button');
     el.className = 'tile'; el.type = 'button'; el.dataset.id = t.id;
-    el.style.left = ((t.x + 1 - t.z * .22) / 31.6 * 100) + '%';
-    el.style.top = ((t.y + 1 - t.z * .22) / 17.6 * 100) + '%';
-    el.style.width = (2 / 31.6 * 100) + '%';
-    el.style.height = (2 / 17.6 * 100) + '%';
+    const SP = game.space || { W: 31.6, H: 17.6 };
+    el.style.left = ((t.x + 1 - t.z * .22) / SP.W * 100) + '%';
+    el.style.top = ((t.y + 1 - t.z * .22) / SP.H * 100) + '%';
+    el.style.width = (2 / SP.W * 100) + '%';
+    el.style.height = (2 / SP.H * 100) + '%';
     el.style.zIndex = t.z * 1000 + t.y * 8 + t.x;
     el.innerHTML = '<span class="body"></span><span class="face">' + faceHTML(t.face) + '</span>';
     el.querySelector('.body').style.boxShadow = '0 ' + (3 + t.z * 2.6) + 'px ' + (7 + t.z * 4.5) + 'px rgba(0,0,0,' + (.34 + t.z * .05) + ')';
     el.setAttribute('aria-label', FAM_NAMES[Math.floor(t.face / 9)] + ' ' + (t.face % 9 + 1));
-    el.addEventListener('click', () => onTile(t.id));
     boardEl.appendChild(el); tileEls.push(el);
   }
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -546,6 +557,97 @@ function flyPair(aId, bId, face) {
   });
 }
 
+/* ---------- the teaching shelf (pass 2) ---------- */
+const TUT_POS = [
+  {x:0,y:0,z:0},{x:2,y:0,z:0},{x:4,y:0,z:0},{x:6,y:0,z:0},{x:4,y:0,z:1},
+  {x:0,y:2,z:0},{x:2,y:2,z:0},{x:4,y:2,z:0},{x:6,y:2,z:0},{x:8,y:2,z:0},
+  {x:2,y:4,z:0},{x:4,y:4,z:0},{x:3,y:2,z:1},{x:3,y:2,z:2},
+];
+const TUT_FACES = [4, 33, 33, 4, 11, 21, 63, 21, 44, 11, 46, 63, 44, 46];
+let tut = null, endIsTut = false;
+function tutDots() {
+  if (!tut) { $('coachDots').innerHTML = ''; return; }
+  const d = [tut.pairs > 0, tut.pairs > 0, tut.sawCovered && tut.sawSide, NS.remainingCount(game) <= 4];
+  $('coachDots').innerHTML = d.map(on => '<span class="' + (on ? 'on' : '') + '">●</span>').join('');
+}
+function coachIntro() {
+  say('A short lesson, keeper to keeper. Some of these tiles stand free — see how they catch the light. Take two of a kind, together.');
+  for (const t of game.tiles) {
+    const el = tileEls[t.id];
+    if (NS.tileFree(game, t)) { el.classList.remove('hinted'); void el.offsetWidth; el.classList.add('hinted'); }
+    else el.classList.add('spotdim');
+  }
+}
+function clearSpot() { tileEls.forEach(el => el.classList.remove('spotdim')); }
+function tutHeld(reason) {
+  if (!tut || tut.held) return;
+  tut.held = true;
+  if (reason === 'covered') say('That one stays — a tile is resting on it. What rests on a tile holds it fast; free the one above first.');
+  else say('That one is shut in on both sides. It isn’t covered — it’s crowded. Open a side and it’s yours.');
+}
+function tutAfterMove(before) {
+  if (!tut) return;
+  tut.pairs = game.moves.length;
+  clearSpot();
+  const nowFree = new Set(NS.freeTiles(game).map(t => t.id));
+  const newly = [...nowFree].filter(id => !before.free.has(id) && !game.tiles[id].removed);
+  const wokeCovered = newly.find(id => before.reason.get(id) === 'covered');
+  const wokeSide = newly.find(id => before.reason.get(id) === 'shut');
+  let lawSpoke = false;
+  if (wokeCovered !== undefined && !tut.sawCovered) {
+    tut.sawCovered = true; lawSpoke = true;
+    say('There — the ' + FAM_NAMES[Math.floor(game.tiles[wokeCovered].face / 9)] + ' stands free now. The tile that rested on it is gone. First law of the shelf: nothing lifts while something rests on it.');
+  } else if (wokeSide !== undefined && !tut.sawSide) {
+    tut.sawSide = true; lawSpoke = true;
+    say('And that one was shut in — now a side stands open. Second law: a crowded tile waits for an opening, and every pair you lift makes one.');
+  }
+  if (!lawSpoke && !tut.motion && tut.pairs >= 1) {
+    tut.motion = true;
+    say('Into the tray they go — that’s the whole motion. Pairs, lifted together, and the shelf rearranges itself around the space they leave.');
+  }
+  if (NS.remainingCount(game) <= 4 && !tut.finish) {
+    tut.finish = true;
+    say('Nearly clear. If you lose the thread, Hint knows a pair, and Undo takes back the last lift. Finish the shelf, keeper.');
+    for (const id of ['btnHint', 'btnUndo']) { const b = $(id); b.classList.remove('hinted'); }
+    tone(880, 0, .12, .06); tone(880, .18, .12, .06);
+  }
+  tutDots();
+}
+function tutWin() {
+  playing = false;
+  localStorage.setItem('ns_tutorial_done', '1');
+  sfxWin();
+  $('lightwash').classList.add('flare'); $('flame').classList.add('flare');
+  setTimeout(() => { $('lightwash').classList.remove('flare'); $('flame').classList.remove('flare'); }, 1500);
+  endIsTut = true;
+  $('endTitle').textContent = 'THE LESSON IS LEARNED';
+  $('endSub').textContent = 'the shelf holds no secrets from you now';
+  $('endStars').innerHTML = '';
+  $('endStats').textContent = 'Fourteen tiles, seven pairs — free, rested-on, and shut in. The real shelf is the same, only taller: one hundred and forty-four.';
+  $('endRecord').textContent = 'The teaching shelf will wait in the ledger whenever you want it again.';
+  $('btnAgain').querySelector('span').textContent = 'Begin the real shelf';
+  setTimeout(() => $('endcard').classList.add('on'), 700);
+}
+function startTutorial() {
+  game = NS.customGame(TUT_POS, TUT_FACES);
+  game.space = { W: 11.6, H: 7.6 };
+  tut = { pairs: 0, held: false, motion: false, sawCovered: false, sawSide: false, finish: false };
+  selected = -1; elapsed = 0; trayFaces = []; prevStatus = 'playing';
+  document.body.classList.add('tutoring');
+  boardEl.classList.add('teaching');
+  $('btnNew').textContent = 'Leave the lesson';
+  buildBoard(); refresh(); playing = true;
+  $('menu').classList.remove('on'); $('endcard').classList.remove('on');
+  tutDots(); coachIntro();
+}
+function exitTutVisuals() {
+  tut = null;
+  document.body.classList.remove('tutoring');
+  boardEl.classList.remove('teaching');
+  $('btnNew').textContent = 'New shelf';
+  $('coachDots').innerHTML = '';
+}
+
 /* ---------- play ---------- */
 const PAIR_LINES = [
   'Away together, into the tray.',
@@ -560,11 +662,16 @@ function onTile(id) {
   if (!playing || !game || game.status === 'won') return;
   const t = game.tiles[id];
   if (t.removed) return;
+  const before = tut ? {
+    free: new Set(NS.freeTiles(game).map(x => x.id)),
+    reason: new Map(game.tiles.map(x => [x.id, NS.heldReason(game, x)])),
+  } : null;
   if (!NS.tileFree(game, t)) {
     const el = tileEls[id];
     el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
     sfxHeld();
     say('Held fast. Either something rests on it, or it\u2019s shut in on both sides.');
+    if (tut) tutHeld(NS.heldReason(game, t));
     return;
   }
   if (selected === -1) { selected = id; sfxSelect(); refresh(); return; }
@@ -577,7 +684,8 @@ function onTile(id) {
       sfxPair(); flyPair(a, b, t.face);
       say('A pair of ' + fam + 's. ' + (NS.remainingCount(game) ? PAIR_LINES[game.moves.length % PAIR_LINES.length] : ''));
       refresh(); save();
-      if (game.status === 'won') onWin();
+      if (tut) tutAfterMove(before);
+      if (game.status === 'won') { if (tut) tutWin(); else onWin(); }
       else if (game.status === 'stuck') say('The shelf has closed its hand. One reshuffle remains, if you want it.');
     }
   } else {
@@ -589,6 +697,8 @@ function onTile(id) {
 
 function onWin() {
   playing = false; sfxWin(); save();
+  $('endTitle').textContent = 'THE SHELF STANDS CLEAR';
+  $('btnAgain').querySelector('span').textContent = 'Another shelf';
   const frac = Math.max(0, 1 - elapsed / BURN);
   const stars = frac > .5 ? 3 : frac > .22 ? 2 : 1;
   const rec = records(); rec.cleared += 1; if (rec.best === null || elapsed < rec.best) rec.best = elapsed; saveRecords(rec);
@@ -602,6 +712,7 @@ function onWin() {
 }
 
 function startGame(seed, resume) {
+  exitTutVisuals();
   game = NS.newGame(seed);
   selected = -1; elapsed = 0; trayFaces = []; prevStatus = 'playing';
   if (resume) {
@@ -630,9 +741,17 @@ function startGame(seed, resume) {
 /* ---------- controls ---------- */
 $('btnStart').addEventListener('click', () => { ac(); startGame((Date.now() % 2147483646) + 1); });
 $('btnContinue').addEventListener('click', () => { const s = loadSave(); if (s) { ac(); startGame(s.seed, s); } });
-$('btnAgain').addEventListener('click', () => startGame((Date.now() % 2147483646) + 7));
+$('btnAgain').addEventListener('click', () => {
+  if (endIsTut) { endIsTut = false; $('btnAgain').querySelector('span').textContent = 'Another shelf'; startGame((Date.now() % 2147483646) + 7); }
+  else startGame((Date.now() % 2147483646) + 7);
+});
+$('btnTeach').addEventListener('click', () => { ac(); startTutorial(); });
 $('btnMenu2').addEventListener('click', () => location.reload());
-$('btnNew').addEventListener('click', () => { if (game && NS.remainingCount(game) < 144 && game.status === 'playing' && !confirm('Leave this shelf and set a new one?')) return; startGame((Date.now() % 2147483646) + 3); });
+$('btnNew').addEventListener('click', () => {
+  if (tut) { location.reload(); return; }
+  if (game && NS.remainingCount(game) < 144 && game.status === 'playing' && !confirm('Leave this shelf and set a new one?')) return;
+  startGame((Date.now() % 2147483646) + 3);
+});
 $('btnUndo').addEventListener('click', () => {
   if (game && NS.undo(game)) {
     selected = -1; trayFaces.length = Math.max(0, trayFaces.length - 2);
@@ -664,9 +783,30 @@ $('btnSound').addEventListener('click', function () {
 });
 $('btnSound').textContent = soundOn ? 'Sound on' : 'Sound off';
 
+/* One hit-test for the whole board, in layout space: the topmost standing
+   tile whose box holds the point takes the tap. (Per-tile listeners proved
+   unreliable where stacks overlap — composited layers blur their own hit
+   regions; layout boxes do not lie.) */
+boardEl.addEventListener('pointerdown', e => {
+  if (!playing || !game) return;
+  const r = boardEl.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  let best = null;
+  for (const t of game.tiles) {
+    if (t.removed) continue;
+    const el = tileEls[t.id];
+    if (!el) continue;
+    const x0 = el.offsetLeft, y0 = el.offsetTop;
+    if (px >= x0 && px < x0 + el.offsetWidth && py >= y0 && py < y0 + el.offsetHeight) {
+      if (!best || t.z > best.z || (t.z === best.z && (t.x + t.y) > (best.x + best.y))) best = t;
+    }
+  }
+  if (best) onTile(best.id);
+});
+
 /* the candle only burns while the keeper is at the shelf */
 setInterval(() => {
-  if (playing && game && game.status !== 'won' && !document.hidden) {
+  if (playing && game && !tut && game.status !== 'won' && !document.hidden) {
     elapsed++;
     $('stTime').textContent = fmtTime(elapsed);
     const frac = Math.max(0, 1 - elapsed / BURN);
@@ -684,6 +824,12 @@ setInterval(() => {
   $('recordline').textContent = rec.cleared > 0
     ? 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared · the best of them at ' + fmtTime(rec.best)
     : 'The ledger is blank. Tonight could change that.';
+  if (localStorage.getItem('ns_tutorial_done')) {
+    $('teachVal').textContent = 'replay the lesson · 14 tiles';
+  } else {
+    $('btnTeach').classList.add('prime');
+    $('btnStart').classList.remove('prime');
+  }
   const s = loadSave();
   if (s) {
     const remaining = s.v === 2 ? 144 - s.removed.length : 144 - s.moves.length * 2;
@@ -729,6 +875,8 @@ window.__game = {
   freePair: () => NS.hint(game),
   tap: id => onTile(id),
   start: seed => startGame(seed || 99),
+  tutStart: () => startTutorial(),
+  tutOrder: [[0,3],[4,9],[1,2],[13,10],[12,8],[7,5],[6,11]],
   fastWin: () => {
     if (!game) return;
     for (const [a, b] of game.solution) {
