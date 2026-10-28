@@ -845,14 +845,15 @@ $('btnSound').textContent = soundOn ? 'Sound on' : 'Sound off';
    regions; layout boxes do not lie.) */
 boardEl.addEventListener('pointerdown', e => {
   if (!playing || !game) return;
-  const r = boardEl.getBoundingClientRect();
-  const SP = game.space || { W: 31.6, H: 17.6 };
-  const px = e.clientX - r.left, py = e.clientY - r.top;
+  /* Each tile's rendered rect is the truth a finger sees — including the
+     room's residual lean and the deal-in settle, which board-level math
+     cannot know. The reads batch into a single layout pass (no writes
+     intervene), and the topmost tile whose rect holds the point wins. */
   let best = null;
   for (const t of game.tiles) {
     if (t.removed) continue;
-    const x0 = (t.x + 1 - t.z * .22) / SP.W * r.width, y0 = (t.y + 1 - t.z * .22) / SP.H * r.height;
-    if (px >= x0 && px < x0 + 2 / SP.W * r.width && py >= y0 && py < y0 + 2 / SP.H * r.height) {
+    const r = tileEls[t.id].getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom) {
       if (!best || t.z > best.z || (t.z === best.z && (t.x + t.y) > (best.x + best.y))) best = t;
     }
   }
