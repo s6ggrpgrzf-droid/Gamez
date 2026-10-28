@@ -835,7 +835,7 @@ setInterval(function () {
 (function () {
   var bank = document.getElementById('bank');
   if (!bank) return;
-  document.getElementById('bankCnt').textContent = '14 UNITS · TAP TO CALL UP';
+  document.getElementById('bankCnt').textContent = GAMES.length + ' UNITS · TAP TO CALL UP';
   bank.innerHTML = GAMES.map(function (g) {
     var pr = progressFor(g.id);
     var fl = flownFor(g.id);
@@ -873,7 +873,7 @@ setInterval(function () {
       if (f === 'all') {
         bank.classList.remove('dim');
         bank.querySelectorAll('.tile').forEach(function (t) { t.classList.remove('hit'); });
-        ccSay('OPS · ALL · 14 UNITS REPORTING', 2000);
+        ccSay('OPS · ALL · ' + GAMES.length + ' UNITS REPORTING', 2000);
         return;
       }
       bank.classList.add('dim');
