@@ -247,6 +247,63 @@
     #menu .fine{grid-column:1 / -1; margin-top:12px}
   #menu .fine{color:#948e7f}
   }
+  /* ===== the menu is the shop: a sign over the door, the shelf in its
+     candle-glow, and the keeper's ledger open on the counter. Nothing
+     tappable reads as writing — every choice is a plaque set into the
+     page, and the shelf left standing is the book's ribbon. ===== */
+  #menu::before, #menu::after{display:none}
+  #menu .sheet{max-width:430px; padding:14px 10px 8px; display:flex; flex-direction:column; align-items:center}
+  #menu .orn{margin:2px 0 7px}
+  #menu .orn i{display:none}
+  #menu .sheet h2{font-size:14.5px; letter-spacing:.34em; text-indent:.34em; color:#d8c491; -webkit-text-fill-color:#d8c491; -webkit-background-clip:initial; background-clip:initial; background-size:auto; align-self:center; background-image:linear-gradient(180deg,#1c1913,#12100b); border:1px solid rgba(201,169,89,.38); padding:9px 16px 8px; box-shadow:0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(232,197,106,.14)}
+  #menu .sub{font-size:11.5px; margin-top:7px; color:#8d8672}
+  #menu .miniBoardWrap{margin:20px 0 0; position:relative}
+  #menu .board.cover{width:min(94vw,392px)}
+  #menu .miniBoardWrap::after{content:''; position:absolute; left:6%; right:6%; bottom:-16px; height:22px; background:radial-gradient(50% 100% at 50% 0%, rgba(0,0,0,.65), transparent 70%); pointer-events:none}
+  #menu .miniTray{margin-top:15px}
+  #menu .entries{position:relative; margin:26px auto 0; width:100%; max-width:404px; text-align:left; box-sizing:border-box; border-top:1px solid rgba(201,169,89,.4);
+    display:grid; grid-template-columns:1fr 1fr; column-gap:22px; row-gap:11px; padding:20px 18px 14px;
+    background:
+      linear-gradient(90deg, rgba(255,235,190,.028) 0%, rgba(255,235,190,0) 44%, rgba(0,0,0,.5) 49.4%, rgba(0,0,0,.62) 50%, rgba(0,0,0,.5) 50.6%, rgba(255,235,190,0) 56%, rgba(255,235,190,.028) 100%),
+      repeating-linear-gradient(180deg, transparent 0 33px, rgba(201,169,89,.05) 33px 34px),
+      linear-gradient(180deg,#151419,#101014 70%,#0c0c0f);
+    box-shadow:0 -14px 34px rgba(0,0,0,.5), 0 18px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(232,197,106,.1)}
+  #menu .recordline{grid-column:1 / -1; grid-row:1; margin:0 0 3px; padding-bottom:11px; border-bottom:1px solid rgba(201,169,89,.22); font-size:13.5px; color:#a89f8c; text-align:left}
+  #menu .entries .entry{border:1px solid rgba(201,169,89,.5); border-bottom:1px solid rgba(201,169,89,.5); border-radius:2px; padding:10px 11px 11px; min-height:0; min-width:0; box-sizing:border-box; flex-wrap:wrap; row-gap:0;
+    background:linear-gradient(180deg,#201d16,#151310 60%,#100e0b);
+    box-shadow:inset 0 1px 0 rgba(232,197,106,.16), inset 0 -2px 0 rgba(0,0,0,.55), 0 3px 7px rgba(0,0,0,.55)}
+  #menu .entries .entry:active{transform:translateY(1px); background:linear-gradient(180deg,#282219,#1a1712 60%,#131109)}
+  #menu .entries .entry .t{white-space:normal; font-size:14px; min-width:0}
+  #menu .entries .entry .a{flex:0 0 100%; padding-left:19px; margin:1px 0 0; white-space:normal; overflow-wrap:break-word; font-size:11.5px}
+  #menu #btnStart{grid-column:1; grid-row:2}
+  #menu #btnDaily{grid-column:1; grid-row:3}
+  #menu #btnMonth{grid-column:2; grid-row:2}
+  #menu #btnShelves{grid-column:2; grid-row:3}
+  #menu #btnTeach{grid-column:1 / -1; grid-row:4; margin-top:2px; justify-content:center}
+  #menu #btnTeach .a{flex:none; padding-left:8px}
+  /* the ribbon: the shelf left standing, bookmarking the book */
+  #menu #btnContinue{position:absolute; top:-13px; right:22px; width:auto; z-index:3;
+    flex-direction:column; align-items:flex-start; gap:0; padding:6px 11px 9px;
+    background:linear-gradient(180deg,#5d1f1c,#471512); border:0; border-radius:0;
+    clip-path:polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.5)); box-shadow:none}
+  #menu #btnContinue .seal{display:none}
+  #menu #btnContinue .t{white-space:nowrap; font-size:12.5px; color:#e9d9b8}
+  #menu #btnContinue .a{flex:none; padding:0; margin:0; white-space:nowrap; font-size:10px; color:#c9a795}
+  #menu .fine{margin-top:16px; font-size:10px; line-height:1.7; color:#6f6a5e; max-width:330px}
+  @media (orientation:landscape) and (max-height:500px){
+    #menu .sheet{display:grid; grid-template-columns:minmax(0,320px) minmax(0,1fr); column-gap:26px; align-items:start; max-width:820px; padding:4px 14px 2px}
+    #menu .orn{grid-column:1; grid-row:1; justify-self:center; margin-bottom:5px}
+    #menu .sheet h2{grid-column:1; grid-row:2; justify-self:center}
+    #menu .sub{grid-column:1; grid-row:3; text-align:center}
+    #menu .miniBoardWrap{grid-column:1; grid-row:4; margin-top:8px}
+    #menu .board.cover{width:min(252px, calc((100dvh - 216px) * 1.534))}
+    #menu .miniTray{margin-top:8px}
+    #menu .sub{margin-top:4px}
+    #menu .sheet h2{padding-top:7px; padding-bottom:6px}
+    #menu .entries{grid-column:2; grid-row:1 / span 5; margin-top:14px; padding-top:14px; padding-bottom:10px; row-gap:9px}
+    #menu .fine{grid-column:1 / -1; margin-top:6px}
+  }
 /* ===== candlelight polish layer ===== */
 #fxlight,#fxvig{position:fixed;inset:0;pointer-events:none;will-change:opacity;animation:fxfade 2.6s ease-out both}
 #fxlight{z-index:55;background:radial-gradient(70% 50% at 50% 40%,rgba(255,178,92,.17),rgba(255,178,92,.05) 55%,rgba(255,178,92,0) 76%)}
@@ -360,6 +417,7 @@
       <div class="miniTray"><span id="miniMinis"></span><span class="micro">the night is young</span></div>
     </div>
     <div class="entries">
+      <p class="recordline" id="recordline"></p>
       <button class="entry" id="btnTeach"><span class="seal" aria-hidden="true"></span><span class="t">The teaching shelf</span><span class="a" id="teachVal">a short lesson · 14 tiles</span></button>
       <button class="entry prime" id="btnStart"><span class="seal" aria-hidden="true"></span><span class="t">Begin a new shelf</span><span class="a">144 tiles</span></button>
       <button class="entry" id="btnDaily"><span class="seal" aria-hidden="true"></span><span class="t">Tonight's shelf</span><span class="a" id="dailyVal">one deal, the whole world</span></button>
@@ -367,7 +425,6 @@
       <button class="entry" id="btnShelves"><span class="seal" aria-hidden="true"></span><span class="t">Other shelves</span><span class="a">five shapes keep here</span></button>
       <button class="entry" id="btnContinue" style="display:none"><span class="seal" aria-hidden="true"></span><span class="t">The shelf I left</span><span class="a" id="continueVal"></span></button>
     </div>
-    <p class="recordline" id="recordline"></p>
     <p class="fine">Dealt fair by construction — every shelf can be cleared, so a loss is never the deal's fault.<br>Turtle layout data adapted from an MIT-licensed reference (C. Cândido); everything else was made in this room.</p>
   </div>
 </div>
