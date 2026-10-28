@@ -166,7 +166,9 @@
   @keyframes hintPulse{50%{box-shadow:inset 0 0 0 2.5px var(--gold2), inset 0 1.5px 0 rgba(255,255,255,.9), 0 0 18px rgba(232,200,119,.85)}}
   .tile.gone{opacity:0 !important; transition:none; pointer-events:none}
   .tile.shake .face{animation:shake .3s ease}
-  @keyframes shake{0%,100%{margin-left:0}30%{margin-left:-2px}65%{margin-left:2px}}
+  @keyframes shake{0%,100%{transform:translateX(0)}30%{transform:translateX(-1.8px)}65%{transform:translateX(1.8px)}}
+  .tile.revive .face{animation:reviveIn .26s ease-out}
+  @keyframes reviveIn{from{opacity:0; transform:translateY(7px) scale(.93)}}
   .flyclone{position:fixed; z-index:200; pointer-events:none; border-radius:16%;
     box-shadow:3px 8px 18px rgba(0,0,0,.5)}
 
@@ -478,6 +480,7 @@ function loadSave() {
 
 /* ---------- the board ---------- */
 function buildBoard() {
+  flying.clear(); flightPairs.length = 0; trayShown = -1;
   boardEl.innerHTML = ''; tileEls = [];
   for (const t of game.tiles) {
     const el = document.createElement('button');
@@ -509,7 +512,7 @@ function refresh() {
   const freeSet = new Set(NS.freeTiles(game).map(t => t.id));
   for (const t of game.tiles) {
     const el = tileEls[t.id];
-    el.classList.toggle('gone', t.removed);
+    el.classList.toggle('gone', t.removed && !flying.has(t.id));
     el.classList.toggle('free', !t.removed && freeSet.has(t.id));
     el.classList.toggle('held', !t.removed && !freeSet.has(t.id));
     el.classList.toggle('sel', t.id === selected);
@@ -533,7 +536,10 @@ function refresh() {
   renderTray();
 }
 
+let trayShown = -1;
 function renderTray() {
+  if (trayFaces.length === trayShown) return;
+  trayShown = trayFaces.length;
   const pile = $('traypile');
   const show = trayFaces.slice(-30);
   pile.innerHTML = show.map((f, i) => {
@@ -546,24 +552,52 @@ function renderTray() {
 
 function say(t) { whisperEl.textContent = t; }
 
-/* a matched pair rises and flies to the keeper's tray */
-function flyPair(aId, bId, face) {
-  const tray = $('traypile').getBoundingClientRect();
-  const tx = tray.left + tray.width / 2, ty = tray.top + tray.height / 2;
+/* A matched pair rises and flies to the keeper's tray — the tiles themselves,
+   staggered, arcing down to the very slots their minis will occupy. The board
+   settles around the space as they lift; the chime lands when they do. */
+const flying = new Set();
+const flightPairs = [];
+function slotPoint(count, k) {
+  const pile = $('traypile').getBoundingClientRect();
+  const total = count + 2, start = total - Math.min(total, 30);
+  const i = count + k - start;
+  const left = 2 + (i % 6) * 16 + ((i * 13) % 5), bottom = Math.floor(i / 6) * 8, rot = ((i * 37) % 17) - 8;
+  return { x: pile.left + left + 9.5, y: pile.top + pile.height - bottom - 11.5, rot };
+}
+function flyPair(aId, bId) {
+  const pair = [aId, bId];
+  flightPairs.push(pair);
   [aId, bId].forEach((id, k) => {
     const el = tileEls[id], r = el.getBoundingClientRect();
-    const c = el.cloneNode(true);
-    c.classList.remove('sel', 'hinted'); c.classList.add('flyclone');
-    c.style.cssText += ';left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;opacity:1;transform:none;transition:none;margin:0';
-    document.body.appendChild(c);
-    const dx = tx - (r.left + r.width / 2) + (k ? 9 : -9), dy = ty - (r.top + r.height / 2);
-    const anim = c.animate([
+    const slot = slotPoint(trayFaces.length, k);
+    flying.add(id);
+    el.style.zIndex = 9500 + k;
+    const dx = slot.x - (r.left + r.width / 2), dy = slot.y - (r.top + r.height / 2);
+    const sc = Math.max(.3, 19.5 / r.width);
+    const anim = el.animate([
       { transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 1 },
-      { transform: 'translate(' + dx * .45 + 'px,' + (dy * .45 - 34) + 'px) scale(1.06) rotate(' + (k ? 3 : -3) + 'deg)', opacity: 1, offset: .45 },
-      { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.3) rotate(' + (k ? 10 : -10) + 'deg)', opacity: .92 },
-    ], { duration: 560 + k * 70, easing: 'cubic-bezier(.3,.65,.3,1)', delay: k * 60, fill: 'forwards' });
-    anim.onfinish = () => { c.remove(); if (k === 1) { trayFaces.push(game.tiles[aId].face, game.tiles[bId].face); sfxLand(); renderTray(); save(); } };
+      { transform: 'translate(' + (dx * .12) + 'px,' + (dy * .1 - 13) + 'px) scale(1.05) rotate(0deg)', opacity: 1, offset: .22 },
+      { transform: 'translate(' + (dx * .55) + 'px,' + (dy * .5 - 26) + 'px) scale(' + ((1 + sc) / 2).toFixed(3) + ') rotate(' + (slot.rot * .5) + 'deg)', opacity: 1, offset: .62 },
+      { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + sc.toFixed(3) + ') rotate(' + slot.rot + 'deg)', opacity: .96 },
+    ], { duration: 430, delay: k * 70, easing: 'cubic-bezier(.32,.6,.25,1)', fill: 'forwards' });
+    anim.onfinish = () => {
+      anim.cancel();
+      flying.delete(id);
+      el.style.zIndex = '';
+      const ix = flightPairs.indexOf(pair); if (ix >= 0) flightPairs.splice(ix, 1);
+      if (k === 1 && game.tiles[aId].removed && game.tiles[bId].removed) { trayFaces.push(game.tiles[aId].face, game.tiles[bId].face); sfxPair(); renderTray(); save(); }
+      refresh();
+    };
   });
+}
+function cancelFlights(landIt, except) {
+  if (landIt) for (const pr of flightPairs) {
+    if (except && pr[0] === except[0] && pr[1] === except[1]) continue;
+    if (game && game.tiles[pr[0]].removed && game.tiles[pr[1]].removed) trayFaces.push(game.tiles[pr[0]].face, game.tiles[pr[1]].face);
+  }
+  for (const id of [...flying]) tileEls[id].getAnimations().forEach(a => a.cancel());
+  flying.clear(); flightPairs.length = 0;
+  renderTray();
 }
 
 /* ---------- the teaching shelf (pass 2) ---------- */
@@ -623,7 +657,7 @@ function tutAfterMove(before) {
   tutDots();
 }
 function tutWin() {
-  playing = false;
+  playing = false; wakeDepth();
   localStorage.setItem('ns_tutorial_done', '1');
   sfxWin();
   $('lightwash').classList.add('flare'); $('flame').classList.add('flare');
@@ -638,6 +672,7 @@ function tutWin() {
   setTimeout(() => $('endcard').classList.add('on'), 700);
 }
 function startTutorial() {
+  wakeDepth();
   game = NS.customGame(TUT_POS, TUT_FACES);
   game.space = { W: 11.6, H: 7.6 };
   tut = { pairs: 0, held: false, motion: false, sawCovered: false, sawSide: false, finish: false };
@@ -690,7 +725,7 @@ function onTile(id) {
     const fam = FAM_NAMES[Math.floor(t.face / 9)];
     const a = selected, b = id; selected = -1;
     if (NS.applyMove(game, a, b)) {
-      sfxPair(); flyPair(a, b, t.face);
+      sfxSelect(); flyPair(a, b);
       say('A pair of ' + fam + 's. ' + (NS.remainingCount(game) ? PAIR_LINES[game.moves.length % PAIR_LINES.length] : ''));
       refresh(); save();
       if (tut) tutAfterMove(before);
@@ -705,7 +740,7 @@ function onTile(id) {
 }
 
 function onWin() {
-  playing = false; sfxWin(); save();
+  playing = false; wakeDepth(); sfxWin(); save();
   $('endTitle').textContent = 'THE SHELF STANDS CLEAR';
   $('btnAgain').querySelector('span').textContent = 'Another shelf';
   const frac = Math.max(0, 1 - elapsed / BURN);
@@ -721,7 +756,7 @@ function onWin() {
 }
 
 function startGame(seed, resume) {
-  exitTutVisuals();
+  exitTutVisuals(); wakeDepth();
   game = NS.newGame(seed);
   selected = -1; elapsed = 0; trayFaces = []; prevStatus = 'playing';
   if (resume) {
@@ -766,9 +801,16 @@ $('btnNew').addEventListener('click', () => {
   startGame((Date.now() % 2147483646) + 3);
 });
 $('btnUndo').addEventListener('click', () => {
-  if (game && NS.undo(game)) {
-    selected = -1; trayFaces.length = Math.max(0, trayFaces.length - 2);
+  if (!game || !game.moves.length) return;
+  const m = game.moves[game.moves.length - 1];
+  const midFlight = flying.has(m[0]) || flying.has(m[1]);
+  cancelFlights(true, m);
+  if (NS.undo(game)) {
+    selected = -1;
+    if (!midFlight) trayFaces.length = Math.max(0, trayFaces.length - 2);
+    trayShown = -1;
     sfxUndo(); say('Back they go, as if they\u2019d never left.'); refresh(); save();
+    for (const id of m) { const el = tileEls[id]; el.classList.remove('revive'); void el.offsetWidth; el.classList.add('revive'); }
   }
 });
 $('btnHint').addEventListener('click', () => {
@@ -780,6 +822,7 @@ $('btnHint').addEventListener('click', () => {
 });
 function doShuffle() {
   if (!game) return;
+  cancelFlights(true);
   if (NS.reshuffle(game, Date.now() % 100000)) {
     selected = -1;
     for (const t of game.tiles) tileEls[t.id].querySelector('.face').innerHTML = faceHTML(t.face);
@@ -803,14 +846,13 @@ $('btnSound').textContent = soundOn ? 'Sound on' : 'Sound off';
 boardEl.addEventListener('pointerdown', e => {
   if (!playing || !game) return;
   const r = boardEl.getBoundingClientRect();
+  const SP = game.space || { W: 31.6, H: 17.6 };
   const px = e.clientX - r.left, py = e.clientY - r.top;
   let best = null;
   for (const t of game.tiles) {
     if (t.removed) continue;
-    const el = tileEls[t.id];
-    if (!el) continue;
-    const x0 = el.offsetLeft, y0 = el.offsetTop;
-    if (px >= x0 && px < x0 + el.offsetWidth && py >= y0 && py < y0 + el.offsetHeight) {
+    const x0 = (t.x + 1 - t.z * .22) / SP.W * r.width, y0 = (t.y + 1 - t.z * .22) / SP.H * r.height;
+    if (px >= x0 && px < x0 + 2 / SP.W * r.width && py >= y0 && py < y0 + 2 / SP.H * r.height) {
       if (!best || t.z > best.z || (t.z === best.z && (t.x + t.y) > (best.x + best.y))) best = t;
     }
   }
@@ -854,26 +896,36 @@ setInterval(() => {
 })();
 
 /* ---------- depth: the planes lean, the light follows ---------- */
+let wakeDepth = () => {};
 (function depth() {
   const scene = $('scene'), tilt = $('tilt'), candle = $('candleEl'), tray = $('tray'), mat = $('matwrap'), wash = $('lightwash');
-  let tx = 0, ty = 0, cx = 0, cy = 0, lastTouch = 0;
+  let tx = 0, ty = 0, cx = 0, cy = 0, lastTouch = 0, still = 0, sleeping = false;
+  function wake() { if (sleeping) { sleeping = false; still = 0; requestAnimationFrame(loop); } }
+  wakeDepth = wake;
   scene.addEventListener('pointermove', e => {
     const r = scene.getBoundingClientRect();
     tx = ((e.clientX - r.left) / r.width - .5) * 2;
     ty = ((e.clientY - r.top) / r.height - .5) * 2;
     lastTouch = performance.now();
+    wake();
   });
+  scene.addEventListener('pointerdown', wake);
   scene.addEventListener('pointerleave', () => { tx = 0; ty = 0; });
-  (function loop(t) {
-    if (performance.now() - lastTouch > 2600) { tx = Math.sin(t * .00021) * .3; ty = Math.cos(t * .00017) * .22; }
-    cx += (tx - cx) * .055; cy += (ty - cy) * .055;
+  function loop(t) {
+    if (!playing && performance.now() - lastTouch > 2600) { tx = Math.sin(t * .00021) * .3; ty = Math.cos(t * .00017) * .22; }
+    const calm = playing ? .1 : 1;
+    const ex = tx * calm, ey = ty * calm;
+    cx += (ex - cx) * .055; cy += (ey - cy) * .055;
     tilt.style.transform = 'rotateX(' + (-cy * 2.1).toFixed(3) + 'deg) rotateY(' + (cx * 2.5).toFixed(3) + 'deg)';
     candle.style.transform = 'translate(' + (cx * 6).toFixed(2) + 'px,' + (cy * 4).toFixed(2) + 'px)';
     tray.style.transform = 'translate(' + (cx * 4).toFixed(2) + 'px,' + (cy * 3).toFixed(2) + 'px)';
     mat.style.transform = 'translate(' + (cx * 1.6).toFixed(2) + 'px,' + (cy * 1.2).toFixed(2) + 'px)';
     wash.style.transform = 'translate(' + (cx * -7).toFixed(2) + 'px,' + (cy * -5).toFixed(2) + 'px)';
+    if (playing && Math.abs(ex - cx) < .0012 && Math.abs(ey - cy) < .0012) { if (++still > 70) { sleeping = true; return; } }
+    else still = 0;
     requestAnimationFrame(loop);
-  })(0);
+  }
+  requestAnimationFrame(loop);
   const motes = $('motes');
   let html = '';
   for (let i = 0; i < 14; i++) {
