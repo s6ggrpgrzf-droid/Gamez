@@ -84,19 +84,22 @@
     100%{transform:translate(var(--mx,14px),-46px); opacity:0}}
 
   /* props in the near plane: the keeper's tray and the candle */
-  .tray{position:absolute; left:12px; bottom:8px; z-index:8; width:118px; pointer-events:none}
-  .traybody{position:relative; height:52px; border-radius:8px;
+  .tray{position:absolute; left:10px; bottom:6px; z-index:8; width:118px; pointer-events:none}
+  .traybody{position:relative; height:46px; border-radius:8px;
     background:linear-gradient(180deg,#59391d,#3c2510);
     box-shadow:inset 0 2px 0 rgba(255,226,170,.16), inset 0 -10px 16px rgba(0,0,0,.6), 0 8px 16px rgba(0,0,0,.5)}
   .traybody::before{content:""; position:absolute; inset:5px 6px auto; height:26px; border-radius:5px;
     background:linear-gradient(180deg,#241503,#31200a); box-shadow:inset 0 3px 7px rgba(0,0,0,.85)}
-  .traypile{position:absolute; left:8px; right:8px; bottom:20px; height:44px}
+  .traypile{position:absolute; left:7px; right:7px; bottom:4px; height:38px}
+  .traytally{position:absolute; top:-8px; right:-7px; z-index:3; background:linear-gradient(180deg,#e8c877,#b98a2e);
+    color:#241a08; font-size:9.5px; font-weight:700; letter-spacing:.03em; padding:2px 8px; border-radius:9px;
+    box-shadow:0 3px 7px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,246,214,.8)}
   .mini{position:absolute; width:19px; height:23px; border-radius:3.5px;
     background:linear-gradient(155deg,#faf3dd,#e7d9b8);
     box-shadow:inset 0 0 0 1px rgba(122,94,40,.4), 1px 2px 0 #0d3d2d, 2px 3px 5px rgba(0,0,0,.45);
     display:flex; align-items:center; justify-content:center}
   .mini svg{width:78%; height:78%}
-  .traylabel{margin-top:4px; text-align:center; font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:rgba(239,230,207,.55)}
+  .traylabel{margin-top:5px; text-align:center; white-space:nowrap; font-size:9px; letter-spacing:.13em; text-transform:uppercase; color:rgba(239,230,207,.55)}
   .candle3d{position:absolute; right:16px; bottom:6px; z-index:8; width:40px; display:flex; flex-direction:column; align-items:center; pointer-events:none}
   .candle3d .flame{width:12px; height:19px; border-radius:50% 50% 50% 50%/62% 62% 38% 38%;
     background:radial-gradient(ellipse at 50% 78%, #fff6cf 0%, #ffd76e 42%, rgba(255,140,30,0) 84%);
@@ -151,12 +154,13 @@
   .tile.held .face{filter:saturate(.8) brightness(.9)}
   .tile.held .body{filter:brightness(.82)}
   .tile.sel{z-index:9000 !important}
-  .tile.sel .face{transform:translate(-1.5px,-3.5px);
+  .tile.sel .face{transform:translate(-2px,-6px);
     box-shadow:
       inset 0 1.5px 0 rgba(255,255,255,.9),
       inset 0 -4px 6px rgba(122,94,40,.2),
       inset 0 0 0 2px var(--gold),
-      0 0 16px rgba(232,200,119,.55)}
+      0 0 16px rgba(232,200,119,.55),
+      0 20px 26px rgba(232,200,119,.38)}
   .tile.sel .body{transform:translate(1.5px,2.5px)}
   .tile.hinted .face{animation:hintPulse .62s ease-in-out 3}
   @keyframes hintPulse{50%{box-shadow:inset 0 0 0 2.5px var(--gold2), inset 0 1.5px 0 rgba(255,255,255,.9), 0 0 18px rgba(232,200,119,.85)}}
@@ -176,7 +180,7 @@
     padding:10px; border-radius:13px;
     background:linear-gradient(180deg,#3a2716,#241708);
     box-shadow:inset 0 1px 0 rgba(255,226,170,.13), inset 0 -12px 20px rgba(0,0,0,.5), 0 12px 24px rgba(0,0,0,.4)}
-  .btn{appearance:none; border:1px solid rgba(201,155,63,.55); background:linear-gradient(180deg,#22371f,#152414);
+  .btn{appearance:none; white-space:nowrap; border:1px solid rgba(201,155,63,.55); background:linear-gradient(180deg,#22371f,#152414);
     color:var(--ink); font:inherit; font-size:13.5px; letter-spacing:.05em; padding:9px 15px; border-radius:999px;
     cursor:pointer; min-height:42px; box-shadow:inset 0 1px 0 rgba(239,230,207,.1), 0 3px 7px rgba(0,0,0,.4)}
   .btn:active{transform:scale(.96)}
@@ -189,10 +193,11 @@
   .stuckbar.on{display:flex}
 
   /* ===== ledger cards: menu and the end of the night ===== */
-  .overlay{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center;
+  .overlay{position:fixed; inset:0; z-index:100; display:none; overflow-y:auto;
     background:radial-gradient(90% 90% at 50% 40%, rgba(10,26,16,.66), rgba(4,10,6,.9)); padding:16px;
     opacity:0; transition:opacity .45s ease}
   .overlay.on{display:flex; opacity:1}
+  .overlay .ledger{margin:auto}
   .ledger{position:relative; width:100%; max-width:540px; text-align:center; padding:34px 30px 26px; border-radius:6px;
     color:var(--inkdark);
     background:
@@ -221,11 +226,12 @@
   .entries{margin:14px auto 2px; max-width:430px; text-align:left}
   .entry{display:flex; align-items:baseline; gap:8px; width:100%; background:none; border:0; font:inherit;
     color:var(--inkdark); font-size:16.5px; padding:9px 2px; cursor:pointer; text-align:left}
-  .entry .dots{flex:1; border-bottom:2px dotted rgba(122,94,40,.45); transform:translateY(-3px)}
+  .entry .dots{flex:1; min-width:10px; border-bottom:2px dotted rgba(122,94,40,.45); transform:translateY(-3px)}
+  .entry > span:first-child{white-space:nowrap}
   .entry .val{font-size:13.5px; color:#7a6435; font-style:italic; white-space:nowrap}
   .entry:active{transform:scale(.99)}
   .entry.prime{font-weight:700; color:#54400d}
-  .recordline{margin-top:12px; font-size:13px; color:#7a6435; font-style:italic}
+  .recordline{margin-top:12px; font-size:13px; color:#7a6435; font-style:italic; text-wrap:balance}
   .ledger .fine{font-size:11px; color:#8a7440; margin-top:14px; line-height:1.5}
   .stars{display:flex; gap:12px; justify-content:center; margin:10px 0 2px}
   .stars svg{width:30px; height:44px}
@@ -238,11 +244,13 @@
     footer{display:none}
     .tilt{justify-content:flex-start}
     .counter{max-width:calc(100% - 102px); margin-right:auto; padding:10px 10px 46px}
-    .board{width:min(calc(100vw - 176px), calc((100dvh - 116px) * 1.795))}
-    .board.teaching{width:min(calc(100vw - 176px), calc((100dvh - 116px) * 1.526))}
+    .board{width:min(calc(100vw - 176px), calc((100dvh - 166px) * 1.795))}
+    .board.teaching{width:min(calc(100vw - 176px), calc((100dvh - 166px) * 1.526))}
     .toolbar{position:absolute; right:10px; top:86px; width:88px; flex-direction:column; flex-wrap:nowrap; padding:8px}
-    .toolbar .btn{width:100%; padding:8px 4px; font-size:12.5px; min-height:38px}
+    .toolbar .btn{width:100%; padding:8px 4px; font-size:11.5px; min-height:38px}
     .whisperstrip{position:absolute; left:14px; bottom:6px; margin:0; max-width:54%}
+    body.tutoring #coachDots{position:absolute; top:63px; right:116px; margin:0; z-index:9}
+    .tray{transform:scale(.88); transform-origin:bottom left}
     .stuckbar{position:absolute; left:50%; transform:translateX(-50%); bottom:54px; z-index:30; margin:0}
   }
 </style>
@@ -324,9 +332,8 @@
             <div class="board" id="board" aria-label="Mahjong shelf"></div>
           </div>
           <div class="tray" id="tray">
-            <div class="traybody"></div>
-            <div class="traypile" id="traypile"></div>
-            <div class="traylabel">The keeper's tray · <span id="traycount">0 pairs kept</span></div>
+            <div class="traybody"><div class="traypile" id="traypile"></div><div class="traytally" id="traycount">0 pairs</div></div>
+            <div class="traylabel">The keeper's tray</div>
           </div>
           <div class="candle3d" id="candleEl">
             <div class="flame" id="flame"></div>
@@ -350,6 +357,7 @@
       <button class="btn" id="btnNew">New shelf</button>
     </div>
 
+    <div class="stuckbar askbar" id="askbar"><span id="askText"></span><button class="btn gold" id="btnAskYes">Set a new one</button><button class="btn" id="btnAskNo">Keep this shelf</button></div>
     <div class="stuckbar" id="stuckbar">
       <span>No pair stands free — the shelf has closed its hand.</span>
       <button class="btn primary" id="btnStuckShuffle">Use the reshuffle</button>
@@ -374,7 +382,7 @@
     <div class="entries">
       <button class="entry" id="btnTeach"><span>The teaching shelf</span><span class="dots"></span><span class="val" id="teachVal">a short lesson · 14 tiles</span></button>
       <button class="entry prime" id="btnStart"><span>Begin a new shelf</span><span class="dots"></span><span class="val">144 tiles</span></button>
-      <button class="entry" id="btnContinue" style="display:none"><span>Take up the shelf I left</span><span class="dots"></span><span class="val" id="continueVal"></span></button>
+      <button class="entry" id="btnContinue" style="display:none"><span>The shelf I left</span><span class="dots"></span><span class="val" id="continueVal"></span></button>
     </div>
     <p class="recordline" id="recordline"></p>
     <p class="fine">Dealt fair by construction — every shelf can be cleared, so a loss is never the deal's fault.<br>Turtle layout data adapted from an MIT-licensed reference (C. Cândido); everything else was made in this room.</p>
@@ -483,6 +491,7 @@ function buildBoard() {
     el.innerHTML = '<span class="body"></span><span class="face">' + faceHTML(t.face) + '</span>';
     el.querySelector('.body').style.boxShadow = '0 ' + (3 + t.z * 2.6) + 'px ' + (7 + t.z * 4.5) + 'px rgba(0,0,0,' + (.34 + t.z * .05) + ')';
     el.setAttribute('aria-label', FAM_NAMES[Math.floor(t.face / 9)] + ' ' + (t.face % 9 + 1));
+    el.addEventListener('click', e => { if (e.detail === 0) onTile(t.id); });
     boardEl.appendChild(el); tileEls.push(el);
   }
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -532,7 +541,7 @@ function renderTray() {
     const left = 2 + col * 16 + ((i * 13) % 5), bottom = row * 8, rot = ((i * 37) % 17) - 8;
     return '<span class="mini" style="left:' + left + 'px;bottom:' + bottom + 'px;transform:rotate(' + rot + 'deg)"><svg><use href="#g-' + NS.FAMILIES[Math.floor(f / 9)] + '"/></svg></span>';
   }).join('');
-  $('traycount').textContent = (trayFaces.length / 2) + (trayFaces.length === 2 ? ' pair kept' : ' pairs kept');
+  $('traycount').textContent = (trayFaces.length / 2) + (trayFaces.length === 2 ? ' pair' : ' pairs');
 }
 
 function say(t) { whisperEl.textContent = t; }
@@ -747,9 +756,13 @@ $('btnAgain').addEventListener('click', () => {
 });
 $('btnTeach').addEventListener('click', () => { ac(); startTutorial(); });
 $('btnMenu2').addEventListener('click', () => location.reload());
+let askCb = null;
+function askNew(cb) { $('askText').textContent = 'Leave this shelf and set a new one?'; askCb = cb; $('askbar').classList.add('on'); }
+$('btnAskYes').addEventListener('click', () => { $('askbar').classList.remove('on'); if (askCb) { const cb = askCb; askCb = null; cb(); } });
+$('btnAskNo').addEventListener('click', () => { $('askbar').classList.remove('on'); askCb = null; });
 $('btnNew').addEventListener('click', () => {
   if (tut) { location.reload(); return; }
-  if (game && NS.remainingCount(game) < 144 && game.status === 'playing' && !confirm('Leave this shelf and set a new one?')) return;
+  if (game && NS.remainingCount(game) < 144 && game.status === 'playing') { askNew(() => startGame((Date.now() % 2147483646) + 3)); return; }
   startGame((Date.now() % 2147483646) + 3);
 });
 $('btnUndo').addEventListener('click', () => {
@@ -833,8 +846,9 @@ setInterval(() => {
   const s = loadSave();
   if (s) {
     const remaining = s.v === 2 ? 144 - s.removed.length : 144 - s.moves.length * 2;
-    const pct = Math.max(0, Math.round(100 * (1 - (s.elapsed || 0) / BURN)));
-    $('continueVal').textContent = remaining + ' tiles standing · candle at ' + pct + '%';
+    const cfrac = Math.max(0, 1 - (s.elapsed || 0) / BURN);
+    const cword = cfrac > .9 ? 'untouched' : cfrac > .5 ? 'burning true' : cfrac > .22 ? 'well down' : 'nearly gone';
+    $('continueVal').textContent = remaining + ' standing · candle ' + cword;
     $('btnContinue').style.display = '';
   }
 })();
