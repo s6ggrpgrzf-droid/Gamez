@@ -20,6 +20,13 @@ function mulberry32(seed) {
   };
 }
 
+const range2 = (a, b) => { const o = []; for (let i = a; i <= b; i += 2) o.push(i); return o; };
+function gridInto(p, z, xs, ys) { for (const y of ys) for (const x of xs) p.push({ x, y, z }); }
+function ringInto(p, z, xs, ys) {
+  for (const x of xs) { p.push({ x, y: ys[0], z }); p.push({ x, y: ys[ys.length - 1], z }); }
+  for (let i = 1; i < ys.length - 1; i++) { p.push({ x: xs[0], y: ys[i], z }); p.push({ x: xs[xs.length - 1], y: ys[i], z }); }
+}
+
 function buildLayout() {
   const p = [];
   const range = (a, b) => { const o = []; for (let i = a; i <= b; i += 2) o.push(i); return o; };
@@ -38,6 +45,49 @@ function buildLayout() {
 }
 
 const LAYOUT = buildLayout();
+
+/* The other shelves — classic shapes in the same half-unit language, each
+   exactly 144 slots so the whole traditional set deals onto any of them.
+   The Turtle stays the shelf itself: the daily, the cover, the default. */
+function buildPyramid() {
+  const p = [];
+  gridInto(p, 0, range2(2, 22), range2(2, 14));
+  gridInto(p, 1, range2(4, 20), range2(4, 12));
+  gridInto(p, 2, range2(6, 18), range2(6, 10));
+  p.push({ x: 12, y: 8, z: 3 });
+  return p;
+}
+function buildFortress() {
+  const p = [];
+  gridInto(p, 0, range2(0, 22), range2(0, 14));
+  ringInto(p, 1, range2(0, 22), range2(0, 14));
+  gridInto(p, 1, range2(8, 14), range2(6, 8));
+  p.push({ x: 0, y: 0, z: 2 }, { x: 22, y: 0, z: 2 }, { x: 0, y: 14, z: 2 }, { x: 22, y: 14, z: 2 });
+  return p;
+}
+function buildSpider() {
+  const p = [];
+  gridInto(p, 0, range2(10, 24), range2(4, 16));
+  gridInto(p, 1, range2(12, 22), range2(6, 14));
+  gridInto(p, 2, range2(16, 18), range2(8, 10));
+  for (const y of [4, 8, 12, 16]) { gridInto(p, 0, range2(2, 8), [y]); gridInto(p, 0, range2(26, 32), [y]); }
+  for (const y of [2, 18]) { gridInto(p, 0, range2(2, 8), [y]); gridInto(p, 0, range2(26, 32), [y]); }
+  p.push({ x: 34, y: 8, z: 0 }, { x: 34, y: 12, z: 0 }, { x: 0, y: 2, z: 0 }, { x: 34, y: 2, z: 0 }, { x: 0, y: 18, z: 0 }, { x: 34, y: 18, z: 0 });
+  return p;
+}
+function buildArena() {
+  const p = [];
+  gridInto(p, 0, range2(0, 8), range2(0, 14));
+  gridInto(p, 0, range2(18, 26), range2(0, 14));
+  gridInto(p, 0, range2(10, 16), range2(0, 2));
+  gridInto(p, 0, range2(10, 16), range2(12, 14));
+  gridInto(p, 1, range2(0, 4), range2(2, 12));
+  gridInto(p, 1, range2(22, 26), range2(2, 12));
+  gridInto(p, 1, range2(10, 16), range2(6, 8));
+  p.push({ x: 2, y: 6, z: 2 }, { x: 2, y: 8, z: 2 }, { x: 24, y: 6, z: 2 }, { x: 24, y: 8, z: 2 });
+  return p;
+}
+const LAYOUTS = { turtle: LAYOUT, pyramid: buildPyramid(), fortress: buildFortress(), spider: buildSpider(), arena: buildArena() };
 
 /* ---------- the traditional faces ---------- */
 const SUITS = ['dot', 'bam', 'char'];
@@ -106,9 +156,9 @@ function shuffled(arr, rand) {
 /* Deal by construction: walk the layout down in legal pairs, dealing one
    pair spec onto each. The recorded order is a proof the shelf can be
    cleared — a loss is never the deal's fault. */
-function dealFaces(seed) {
+function dealFaces(seed, pos) {
   const rand = mulberry32(seed);
-  const pos = LAYOUT;
+  pos = pos || LAYOUT;
   for (let attempt = 0; attempt < 800; attempt++) {
     const specs = shuffled(pairSpecs(), rand);
     const standing = new Set(pos.map((_, i) => i));
@@ -131,14 +181,20 @@ function dealFaces(seed) {
   throw new Error('dealer could not construct a shelf');
 }
 
-function newGame(seed) {
-  const dealt = dealFaces(seed);
+function newGame(seed, layoutName) {
+  const name = LAYOUTS[layoutName] ? layoutName : 'turtle';
+  const pos = LAYOUTS[name];
+  const dealt = dealFaces(seed, pos);
+  let mx = 0, my = 0;
+  for (const p of pos) { if (p.x > mx) mx = p.x; if (p.y > my) my = p.y; }
   return {
     seed,
-    tiles: LAYOUT.map((p, i) => ({ id: i, x: p.x, y: p.y, z: p.z, face: dealt.assign[i], removed: false })),
+    layout: name,
+    space: { W: mx + 3.6, H: my + 3.6 },
+    tiles: pos.map((p, i) => ({ id: i, x: p.x, y: p.y, z: p.z, face: dealt.assign[i], removed: false })),
     solution: dealt.order,
     moves: [],        // [[tileIdA, tileIdB], ...]
-    reshuffles: 1,
+    reshuffles: 0,    // a count of reshuffles USED — they are unlimited and free; the ledger notes them
     status: 'playing', // 'playing' | 'won' | 'stuck'
   };
 }
@@ -204,7 +260,6 @@ function hint(game) {
    a clearable arrangement. Clears undo history and records the new
    solution the construction walked. */
 function reshuffle(game, seedSalt) {
-  if (game.reshuffles < 1) return false;
   const standingIds = game.tiles.filter(t => !t.removed).map(t => t.id);
   if (standingIds.length < 2 || standingIds.length % 2 !== 0) return false;
   const rand = mulberry32((game.seed ^ 0x9E3779B9) + (seedSalt || 0));
@@ -247,7 +302,7 @@ function reshuffle(game, seedSalt) {
       for (const [id, f] of assign) game.tiles[id].face = f;
       game.moves = [];
       game.solution = order;
-      game.reshuffles -= 1;
+      game.reshuffles += 1;
       game.status = 'playing';
       return true;
     }
@@ -284,6 +339,6 @@ function heldReason(game, tile) {
   return left && right ? 'shut' : 'free';
 }
 
-const NS = { mulberry32, LAYOUT, SUITS, WIND_FACES, DRAGON_FACES, FLOWER_FACES, SEASON_FACES, CENSUS, matchKey, facesMatch, pairSpecs, overlaps, yOverlap, isFreePos, dealFaces, newGame, customGame, heldReason, tileFree, freeTiles, availableMoves, remainingCount, reshuffle, refreshStatus, applyMove, undo, hint };
+const NS = { mulberry32, LAYOUT, LAYOUTS, SUITS, WIND_FACES, DRAGON_FACES, FLOWER_FACES, SEASON_FACES, CENSUS, matchKey, facesMatch, pairSpecs, overlaps, yOverlap, isFreePos, dealFaces, newGame, customGame, heldReason, tileFree, freeTiles, availableMoves, remainingCount, reshuffle, refreshStatus, applyMove, undo, hint };
 if (typeof module !== 'undefined' && module.exports) module.exports = NS;
 if (typeof window !== 'undefined') window.NS = NS;

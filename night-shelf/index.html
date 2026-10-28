@@ -42,7 +42,7 @@
   .boardglow.flare{animation:glowflare 1.4s ease-out}
   @keyframes glowflare{0%{opacity:1}30%{opacity:1.9}100%{opacity:1}}
   .boardglow.gutter{opacity:.4}
-  .board{position:relative; width:min(93vw, calc((100dvh - 336px) * 1.534)); aspect-ratio:31.6/20.6; --tw:22px}
+  .board{position:relative; width:min(93vw, calc((100dvh - 336px) * var(--spr, 1.534))); aspect-ratio:var(--spa, 31.6/20.6); --tw:22px}
   .board.teaching{aspect-ratio:11.6/9.58; width:min(92vw, calc((100dvh - 336px) * 1.211))}
 
   /* ===== the tiles: black lacquer, enamel inlay ===== */
@@ -193,6 +193,14 @@
   .entry.prime .t{color:#e8c56a}
   .entry.prime .a{color:rgba(232,197,106,.55)}
   .recordline{margin-top:24px; font-size:12.5px; color:#6f6a5e; font-style:italic; text-wrap:balance}
+  #monthSheet, #shelfSheet{z-index:120}
+  #shelfList{margin-top:14px; text-align:left}
+  #monthList{margin-top:14px; text-align:left; max-height:46vh; overflow-y:auto}
+  .mrow{display:flex; justify-content:space-between; align-items:baseline; gap:12px; width:100%; background:none; border:0; border-bottom:1px solid rgba(201,169,89,.14); color:var(--ink); font:inherit; font-size:14.5px; padding:10px 2px; cursor:pointer; text-align:left}
+  .mrow .s{color:#8d8672; font-size:12.5px; font-style:italic; white-space:nowrap}
+  .mrow.kept .s{color:var(--gold2); font-style:normal}
+  .mrow:active{transform:scale(.99)}
+  #shareText{margin-top:14px; font-size:13px; line-height:1.6; color:#b8b2a4; white-space:pre-line; -webkit-user-select:text; user-select:text}
   #endBoard{margin-top:18px}
   #endBoard:empty{display:none}
   #endBoard .btitle{font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:#8d8672; text-align:center; margin-bottom:6px}
@@ -217,7 +225,7 @@
     .stage{padding-top:6px}
     .stats{margin-top:3px}
     .stat b{font-size:16px}
-    .board{width:min(62vw, calc((100dvh - 196px) * 1.534))}
+    .board{width:min(62vw, calc((100dvh - 196px) * var(--spr, 1.534)))}
     .board.teaching{width:min(62vw, calc((100dvh - 196px) * 1.211))}
     .board.cover{width:min(300px, calc((100dvh - 130px) * 1.534))}
     .trayrow{margin-top:3px}
@@ -355,10 +363,36 @@
       <button class="entry" id="btnTeach"><span class="seal" aria-hidden="true"></span><span class="t">The teaching shelf</span><span class="a" id="teachVal">a short lesson · 14 tiles</span></button>
       <button class="entry prime" id="btnStart"><span class="seal" aria-hidden="true"></span><span class="t">Begin a new shelf</span><span class="a">144 tiles</span></button>
       <button class="entry" id="btnDaily"><span class="seal" aria-hidden="true"></span><span class="t">Tonight's shelf</span><span class="a" id="dailyVal">one deal, the whole world</span></button>
+      <button class="entry" id="btnMonth"><span class="seal" aria-hidden="true"></span><span class="t">The month's shelves</span><span class="a" id="monthVal">the nights so far</span></button>
+      <button class="entry" id="btnShelves"><span class="seal" aria-hidden="true"></span><span class="t">Other shelves</span><span class="a">five shapes keep here</span></button>
       <button class="entry" id="btnContinue" style="display:none"><span class="seal" aria-hidden="true"></span><span class="t">The shelf I left</span><span class="a" id="continueVal"></span></button>
     </div>
     <p class="recordline" id="recordline"></p>
     <p class="fine">Dealt fair by construction — every shelf can be cleared, so a loss is never the deal's fault.<br>Turtle layout data adapted from an MIT-licensed reference (C. Cândido); everything else was made in this room.</p>
+  </div>
+</div>
+
+<div class="overlay" id="monthSheet">
+  <div class="sheet">
+    <h2>THE MONTH'S SHELVES</h2>
+    <p class="sub" id="monthSub">the nights so far</p>
+    <div class="rule"></div>
+    <div id="monthList"></div>
+    <div class="entries">
+      <button class="entry" id="btnMonthClose"><span class="seal" aria-hidden="true"></span><span class="t">Back to the door</span><span class="a">the shelf</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="shelfSheet">
+  <div class="sheet">
+    <h2>OTHER SHELVES</h2>
+    <p class="sub">Tonight's shelf is always the Turtle. The others keep their own hours — every one dealt fair, every one clearable.</p>
+    <div class="rule"></div>
+    <div id="shelfList"></div>
+    <div class="entries">
+      <button class="entry" id="btnShelfClose"><span class="seal" aria-hidden="true"></span><span class="t">Back to the door</span><span class="a">the shelf</span></button>
+    </div>
   </div>
 </div>
 
@@ -372,13 +406,15 @@
     <p class="recordline" id="endRecord"></p>
     <div id="endBoard"></div>
     <div class="entries">
+      <button class="entry" id="btnShare" style="display:none"><span class="seal" aria-hidden="true"></span><span class="t">Share the night</span><span class="a" id="shareVal">the result, for passing on</span></button>
       <button class="entry prime" id="btnAgain"><span class="seal" aria-hidden="true"></span><span class="t">Another shelf</span><span class="a">a fresh deal</span></button>
       <button class="entry" id="btnMenu2"><span class="seal" aria-hidden="true"></span><span class="t">Back to the door</span><span class="a">the shelf</span></button>
     </div>
+    <p id="shareText" style="display:none"></p>
   </div>
 </div>
 
-<script src="./sim.js?v=20261028m"></script>
+<script src="./sim.js?v=20261028n"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -567,7 +603,7 @@ const sfxWin = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .3
 const SAVE_KEY = 'ns_save_v3', REC_KEY = 'ns_records_v1';
 const BURN = 1800;
 let game = null, selected = -1, elapsed = 0, playing = false, tileEls = [], trayFaces = [], prevStatus = 'playing';
-let dailyDate = null, pendingDaily = null;
+let dailyDate = null, pendingDaily = null, shareInfo = null;
 const fmtTime = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 function records() { try { return JSON.parse(localStorage.getItem(REC_KEY)) || { cleared: 0, best: null }; } catch (e) { return { cleared: 0, best: null }; } }
 function saveRecords(r) { localStorage.setItem(REC_KEY, JSON.stringify(r)); }
@@ -578,8 +614,8 @@ function save() {
   const flat = game.moves.reduce((n, m) => n + m.length, 0);
   const removed = game.tiles.filter(t => t.removed).map(t => t.id);
   localStorage.setItem(SAVE_KEY, JSON.stringify({
-    v: 3, seed: game.seed, faces: game.tiles.map(t => t.face), removed,
-    moves: flat === removed.length ? game.moves : [], reshuffles: game.reshuffles, elapsed, trayFaces, daily: dailyDate,
+    v: 3, seed: game.seed, layout: game.layout || 'turtle', faces: game.tiles.map(t => t.face), removed,
+    moves: flat === removed.length ? game.moves : [], reshuffles: game.reshuffles, reshUsed: game.reshuffles, elapsed, trayFaces, daily: dailyDate,
   }));
 }
 function loadSave() {
@@ -602,6 +638,10 @@ function buildBoard() {
   const glowEl = $('boardglow');
   if (glowEl.animate) { glowEl.getAnimations().forEach(a => a.cancel()); glowEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 950, easing: 'cubic-bezier(.22,.61,.36,1)' }); }
   const SP = game.space || { W: 31.6, H: 17.6 };
+  if (SP.W !== 31.6 || SP.H !== 17.6) {
+    boardEl.style.setProperty('--spa', SP.W + ' / ' + (SP.H + 3));
+    boardEl.style.setProperty('--spr', (SP.W / (SP.H + 3)).toFixed(3));
+  } else { boardEl.style.removeProperty('--spa'); boardEl.style.removeProperty('--spr'); }
   for (const t of game.tiles) {
     const el = document.createElement('button');
     el.className = 'tile'; el.type = 'button'; el.dataset.id = t.id;
@@ -650,7 +690,7 @@ function refresh() {
   $('burn').style.width = (frac * 100) + '%';
   $('candleline').style.opacity = elapsed >= BURN ? .45 : 1;
   $('shLeft').textContent = game.reshuffles;
-  $('btnShuffle').disabled = game.reshuffles < 1 || game.status !== 'playing';
+  $('btnShuffle').disabled = game.status !== 'playing';
   $('btnUndo').disabled = game.moves.length === 0;
   $('btnHint').disabled = game.status !== 'playing';
   $('stuckbar').classList.toggle('on', game.status === 'stuck');
@@ -866,7 +906,7 @@ function onTile(id) {
       refresh(); save();
       if (tut) tutAfterMove(before);
       if (game.status === 'won') { if (tut) tutWin(); else onWin(); }
-      else if (game.status === 'stuck') say('The shelf has closed its hand. One reshuffle remains, if you want it.');
+      else if (game.status === 'stuck') say('The shelf has closed its hand. A reshuffle will deal what stands back into reach.');
     }
   } else {
     selected = id; sfxSelect();
@@ -886,23 +926,28 @@ function onWin() {
   flare();
   $('endStars').innerHTML = [1, 2, 3].map(i => '<span class="' + (i <= stars ? '' : 'unlit') + '">' + STAR_CANDLE + '</span>').join('');
   $('endSub').textContent = stars === 3 ? 'and the candle hardly noticed' : stars === 2 ? 'with candle to spare' : 'by the last inch of candle — but clear is clear';
-  $('endStats').textContent = 'Down in ' + fmtTime(elapsed) + ' — all seventy-two pairs in the tray.';
+  $('endStats').textContent = 'Down in ' + fmtTime(elapsed) + ' — all seventy-two pairs in the tray.' +
+    (game.reshuffles > 0 ? ' The keeper reshuffled ' + (game.reshuffles === 1 ? 'once' : game.reshuffles === 2 ? 'twice' : game.reshuffles + ' times') + ' along the way.' : '');
   $('endRecord').textContent = 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared · the best of them at ' + fmtTime(rec.best);
+  shareInfo = dailyDate ? { date: dailyDate, t: elapsed, stars, resh: game.reshuffles } : null;
+  $('btnShare').style.display = shareInfo ? '' : 'none';
+  $('shareText').style.display = 'none';
+  $('shareVal').textContent = 'the result, for passing on';
   setTimeout(() => $('endcard').classList.add('on'), 800);
 }
 
-function startGame(seed, resume) {
+function startGame(seed, resume, layoutName) {
   exitTutVisuals(); wakeDepth();
   if (resume) { dailyDate = resume.daily || null; } else { dailyDate = pendingDaily; pendingDaily = null; }
   $('endBoard').innerHTML = '';
-  game = NS.newGame(seed);
+  game = NS.newGame(seed, layoutName || (resume && resume.layout) || 'turtle');
   selected = -1; elapsed = 0; trayFaces = []; prevStatus = 'playing';
   if (resume && resume.v === 3) {
     elapsed = resume.elapsed || 0;
     game.tiles.forEach((t, i) => t.face = resume.faces[i]);
     for (const id of resume.removed) game.tiles[id].removed = true;
     game.moves = resume.moves || [];
-    game.reshuffles = resume.reshuffles;
+    game.reshuffles = resume.reshUsed !== undefined ? resume.reshUsed : (resume.reshuffles === 0 ? 1 : 0);
     trayFaces = resume.trayFaces || [];
     NS.refreshStatus(game);
   }
@@ -927,14 +972,19 @@ function arcadeFetch(path, body, cb) {
 function escBoard(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function dailyKept(rec) {
   if (!dailyDate) return;
-  const d = rec.daily || { date: '', streak: 0, best: null, lastTime: null, dealt: '', dealtLocal: '' };
-  if (d.date !== dailyDate) {
-    const y = new Date(Date.parse(dailyDate + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
-    d.streak = d.date === y ? d.streak + 1 : 1;
-    d.date = dailyDate;
+  const d = rec.daily || { date: '', streak: 0, best: null, lastTime: null, dealt: '', dealtLocal: '', days: {} };
+  if (!d.days) d.days = {};
+  const prev = d.days[dailyDate];
+  if (!prev || elapsed < prev.t) d.days[dailyDate] = { t: elapsed };
+  if (dailyDate === new Date().toISOString().slice(0, 10)) {
+    if (d.date !== dailyDate) {
+      const y = new Date(Date.parse(dailyDate + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
+      d.streak = d.date === y ? d.streak + 1 : 1;
+      d.date = dailyDate;
+    }
+    d.lastTime = elapsed;
+    if (d.best === null || elapsed < d.best) d.best = elapsed;
   }
-  d.lastTime = elapsed;
-  if (d.best === null || elapsed < d.best) d.best = elapsed;
   rec.daily = d; saveRecords(rec);
   submitDaily();
 }
@@ -973,6 +1023,19 @@ function submitDaily() {
   $('nsJoin').addEventListener('click', join);
   $('nsName').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
 }
+/* The world's deal for any date, reckoned the same way the arcade reckons
+   it: SHA-256 of "night-shelf|<date>", first word, big-endian — verified
+   identical to the worker's seed, so a past night deals the exact shelf
+   the world got, offline or on. FNV is the last resort. */
+function seedForDate(date) {
+  const s = 'night-shelf|' + date;
+  const fnv = () => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % 2147483646; };
+  try {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
+      .then(buf => new DataView(buf).getUint32(0, false) % 2147483646)
+      .catch(fnv);
+  } catch (e) { return Promise.resolve(fnv()); }
+}
 let dailyBusy = false;
 $('btnDaily').addEventListener('click', () => {
   if (dailyBusy) return; dailyBusy = true; ac();
@@ -987,11 +1050,9 @@ $('btnDaily').addEventListener('click', () => {
   }
   let done = false;
   const fail = () => {
-    if (done) return; done = true;
-    const iso = isoLocal();
-    let h = 2166136261; const s = 'night-shelf|' + iso;
-    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-    beginDaily(iso, (h >>> 0) % 2147483646);
+    if (done) return;
+    const date = new Date().toISOString().slice(0, 10);
+    seedForDate(date).then(seed => { if (done) return; done = true; beginDaily(date, seed); });
   };
   const to = setTimeout(fail, 9000);
   try {
@@ -1001,6 +1062,72 @@ $('btnDaily').addEventListener('click', () => {
     }).catch(() => { clearTimeout(to); fail(); });
   } catch (e) { clearTimeout(to); fail(); }
 });
+function playDaily(date) {
+  $('monthSheet').classList.remove('on');
+  const sv = loadSave();
+  if (sv && sv.daily === date) { ac(); startGame(sv.seed, sv); return; }
+  if (dailyBusy) return; dailyBusy = true; ac();
+  seedForDate(date).then(seed => { dailyBusy = false; pendingDaily = date; startGame(seed); });
+}
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function monthStats() {
+  const dl = (records().daily) || {};
+  const days = dl.days || {};
+  const today = new Date().toISOString().slice(0, 10);
+  const kept = Object.keys(days).filter(k => k.startsWith(today.slice(0, 7))).length;
+  return { kept, elapsedDays: Number(today.slice(8, 10)), monthName: MONTH_NAMES[Number(today.slice(5, 7)) - 1] };
+}
+function openMonth() {
+  ac();
+  const dl = (records().daily) || {};
+  const days = dl.days || {};
+  const sv = loadSave();
+  const today = new Date().toISOString().slice(0, 10), prefix = today.slice(0, 7), last = Number(today.slice(8, 10));
+  const st = monthStats();
+  $('monthSub').textContent = st.monthName + ' — ' + (st.kept ? st.kept + ' of ' + st.elapsedDays + ' nights kept' : 'no nights kept yet');
+  const list = $('monthList'); list.innerHTML = '';
+  for (let day = 1; day <= last; day++) {
+    const date = prefix + '-' + String(day).padStart(2, '0');
+    const wd = DAY_NAMES[new Date(Date.parse(date + 'T12:00:00Z')).getUTCDay()];
+    const row = document.createElement('button');
+    row.className = 'mrow' + (days[date] ? ' kept' : '');
+    const state = days[date] ? 'kept · ' + fmtTime(days[date].t)
+      : (sv && sv.daily === date) ? 'standing · in the tray'
+      : (date === today ? 'tonight · unopened' : 'unopened');
+    row.innerHTML = '<span class="d"></span><span class="s"></span>';
+    row.querySelector('.d').textContent = wd + ' ' + day + (date === today ? ' · tonight' : '');
+    row.querySelector('.s').textContent = state;
+    row.addEventListener('click', () => playDaily(date));
+    list.appendChild(row);
+  }
+  $('monthSheet').classList.add('on');
+}
+const SHELF_META = [
+  ['turtle', 'The Turtle', 'the shelf itself · the keeper\u2019s own shape'],
+  ['pyramid', 'The Pyramid', 'a stack that narrows to one last stone'],
+  ['fortress', 'The Fortress', 'walls, a raised court, four towers'],
+  ['spider', 'The Spider', 'a wide body on eight long legs'],
+  ['arena', 'The Arena', 'two stands facing across a court'],
+];
+function openShelves() {
+  ac();
+  const list = $('shelfList'); list.innerHTML = '';
+  for (const [key, name, line] of SHELF_META) {
+    const row = document.createElement('button');
+    row.className = 'mrow';
+    row.innerHTML = '<span class="d"></span><span class="s"></span>';
+    row.querySelector('.d').textContent = name;
+    row.querySelector('.s').textContent = line;
+    row.addEventListener('click', () => { $('shelfSheet').classList.remove('on'); ac(); startGame((Date.now() % 2147483646) + 3, null, key); });
+    list.appendChild(row);
+  }
+  $('shelfSheet').classList.add('on');
+}
+$('btnShelves').addEventListener('click', openShelves);
+$('btnShelfClose').addEventListener('click', () => $('shelfSheet').classList.remove('on'));
+$('btnMonth').addEventListener('click', openMonth);
+$('btnMonthClose').addEventListener('click', () => $('monthSheet').classList.remove('on'));
 $('btnStart').addEventListener('click', () => { ac(); startGame((Date.now() % 2147483646) + 1); });
 $('btnContinue').addEventListener('click', () => { const s = loadSave(); if (s) { ac(); startGame(s.seed, s); } });
 $('btnAgain').addEventListener('click', () => {
@@ -1008,6 +1135,16 @@ $('btnAgain').addEventListener('click', () => {
   startGame((Date.now() % 2147483646) + 7);
 });
 $('btnTeach').addEventListener('click', () => { ac(); startTutorial(); });
+$('btnShare').addEventListener('click', () => {
+  if (!shareInfo) return; ac();
+  const dstr = new Date(Date.parse(shareInfo.date + 'T12:00:00Z')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const resh = shareInfo.resh > 0 ? ' · reshuffled ' + (shareInfo.resh === 1 ? 'once' : shareInfo.resh === 2 ? 'twice' : shareInfo.resh + ' times') : '';
+  const text = 'The Night Shelf · ' + dstr + ' — clear in ' + fmtTime(shareInfo.t) + ' · ' + '\u{1F56F}\uFE0F'.repeat(shareInfo.stars) + resh + '\nhttps://s6ggrpgrzf-droid.github.io/Gamez/night-shelf/';
+  const showText = () => { const el = $('shareText'); el.textContent = text; el.style.display = ''; $('shareVal').textContent = 'long-press the line to copy'; };
+  if (navigator.share) navigator.share({ text }).then(() => { $('shareVal').textContent = 'the night travels'; }).catch(() => {});
+  else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => { $('shareVal').textContent = 'copied — pass it on'; }).catch(showText);
+  else showText();
+});
 $('btnMenu2').addEventListener('click', () => location.reload());
 let askCb = null;
 function askSay(text, yes, no, cb) {
@@ -1054,6 +1191,7 @@ $('btnHint').addEventListener('click', () => {
 });
 function doShuffle() {
   if (!game) return;
+  if (tut) { say('No reshuffles in the lesson — the shelf is small, and it is honest.'); return; }
   cancelFlights(true);
   if (NS.reshuffle(game, Date.now() % 100000)) {
     selected = -1;
@@ -1065,7 +1203,7 @@ function doShuffle() {
     }
     sfxPair(); say('The keeper gathers what\u2019s left and deals it anew. It can still be cleared. It always could.');
     refresh(); save();
-  } else say('The one reshuffle is spent.');
+  } else say('Nothing to gather — the shelf stands as it is.');
 }
 $('btnShuffle').addEventListener('click', doShuffle);
 $('btnStuckShuffle').addEventListener('click', doShuffle);
@@ -1208,6 +1346,7 @@ setInterval(() => {
   } else {
     $('dailyVal').textContent = 'one deal, the whole world · ' + nowD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
+  { const ms = monthStats(); $('monthVal').textContent = ms.kept ? ms.kept + ' of ' + ms.elapsedDays + ' nights kept in ' + ms.monthName : 'a new month, unopened'; }
   const s = loadSave();
   if (s) {
     const remaining = 144 - s.removed.length;
