@@ -251,11 +251,15 @@
     transform-origin:50% -8%;animation:ptsway 8.5s ease-in-out infinite alternate}
   @keyframes ptsway{from{transform:rotate(-.45deg)}to{transform:rotate(.45deg)}}
   .portrait .ptimg{position:absolute;inset:0;background-size:cover;background-position:center}
+  .portrait .ptimg.asleepL{transform-origin:50% 68%;animation:ptbreath 2.3s ease-in-out infinite alternate}
+  @keyframes ptbreath{from{transform:scale(1) translateY(0)}to{transform:scale(1.02) translateY(-.6%)}}
+  .portrait .frame{transition:transform 1.1s ease}
+  .portrait.stir .frame{transform:translateY(1.5px) rotate(.15deg)}
   .portrait .ptimg.awakeL{opacity:0;transition:opacity .35s}
   .portrait.awake .ptimg.awakeL{opacity:1}
   .portrait .ptglow{position:absolute;inset:0;pointer-events:none;
     background:radial-gradient(95% 72% at 50% 92%, rgba(255,186,92,.22), rgba(255,186,92,0) 62%);
-    animation:ptbreathe 5.2s ease-in-out infinite alternate}
+    animation:ptbreathe 2.3s ease-in-out infinite alternate}
   @keyframes ptbreathe{from{opacity:.4}to{opacity:1}}
   .portrait .frame{position:relative;aspect-ratio:60/76;border:4px solid #5f4520;border-radius:3px;overflow:hidden;
     box-shadow:inset 0 0 0 2px #c99b3f, inset 0 0 24px rgba(0,0,0,.55), 0 0 0 5px #241708}
@@ -1065,9 +1069,19 @@ var jarIx=0;
 
 /* ================= the old master's portrait ================= */
 function portraitSvg(){
-  return '<div class="frame"><div class="ptimg pt-asleep"></div><div class="ptimg awakeL pt-awake"></div><div class="ptglow"></div></div>';
+  return '<div class="frame"><div class="ptimg asleepL pt-asleep"></div><div class="ptimg awakeL pt-awake"></div><div class="ptglow"></div></div>';
 }
 document.getElementById('port1').innerHTML=portraitSvg();
+(function(){
+  var p=document.getElementById('port1');
+  (function stirLoop(){
+    setTimeout(function(){
+      p.classList.add('stir');
+      setTimeout(function(){ p.classList.remove('stir'); },1150);
+      stirLoop();
+    }, 26000+Math.random()*18000);
+  })();
+})();
 document.getElementById('port1').addEventListener('click',function(){
   var p=this;
   p.classList.remove('wake'); void p.offsetWidth; p.classList.add('wake','awake');
