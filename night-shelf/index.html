@@ -165,6 +165,7 @@
   #menu::after{content:''; position:absolute; inset:15px; border:1px solid rgba(201,169,89,.15); pointer-events:none; z-index:5}
   .miniBoardWrap{position:relative; width:fit-content; margin:20px auto 2px}
   .board.cover{width:min(84vw,330px)}
+  #miniBoard{display:block}
   .board.cover .tile{pointer-events:none; cursor:default}
   .board.cover .tile.held .face{filter:brightness(.95)}
   .board.cover .tile.held .art, .board.cover .tile.held .charface{opacity:.9}
@@ -290,7 +291,7 @@
     <p class="sub">a mahjong solitaire for the small hours</p>
     <div class="miniBoardWrap">
       <div class="boardglow"></div>
-      <div class="board cover" id="miniBoard" aria-hidden="true"></div>
+      <canvas class="board cover" id="miniBoard" aria-hidden="true"></canvas>
       <div class="miniTray"><span id="miniMinis"></span><span class="micro">the night is young</span></div>
     </div>
     <div class="entries">
@@ -913,15 +914,82 @@ setInterval(() => {
   const keptFaces = [];
   for (const [a, b] of mg.solution.slice(0, 12)) { mg.tiles[a].removed = mg.tiles[b].removed = true; keptFaces.push(mg.tiles[a].face, mg.tiles[b].face); }
   const mb = $('miniBoard');
-  mb.innerHTML = mg.tiles.filter(t => !t.removed).map(t => {
-    const art = faceArt(t.face);
-    const free = NS.tileFree(mg, t);
-    return '<div class="tile in ' + (free ? 'free' : 'held') + '" style="--en:' + art.en +
-      ';left:' + ((t.x + 1 - t.z * .22) / 31.6 * 100) + '%;top:' + ((t.y + 1 - t.z * .22) / 17.6 * 100) +
-      '%;width:' + (2 / 31.6 * 100) + '%;z-index:' + (t.z * 1000 + t.y * 8 + t.x) +
-      '"><span class="body" style="box-shadow:0 ' + (3 + t.z * 2.6) + 'px ' + (7 + t.z * 4.5) + 'px rgba(0,0,0,' + (.34 + t.z * .05) + ')"></span><span class="face">' + art.html + '</span></div>';
-  }).join('');
-  requestAnimationFrame(() => { if (mb.clientWidth) mb.style.setProperty('--tw', (mb.clientWidth * 2 / 31.6).toFixed(1) + 'px'); });
+  /* The cover is painted, not built. The live-tile version put 120 filtered,
+     shadowed tile elements into the first frame and iOS killed the renderer
+     for it ('a problem repeatedly occurred'); one canvas is one layer and
+     cannot do that. Same deal, same twelve pairs kept, same lit faces. */
+  const coverTiles = mg.tiles.filter(t => !t.removed)
+    .map(t => ({ t, free: NS.tileFree(mg, t) }))
+    .sort((a, b) => (a.t.z - b.t.z) || (a.t.y - b.t.y) || (a.t.x - b.t.x));
+  const artImgs = {};
+  function artImg(face) {
+    if (face in artImgs) return artImgs[face];
+    const m = faceArt(face).html.match(/<svg[\s\S]*<\/svg>/);
+    if (!m) return (artImgs[face] = null);
+    const img = new Image();
+    img.onload = () => paintCover();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(m[0].replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="300" '));
+    return (artImgs[face] = img);
+  }
+  function rr(g, x, y, w, h, r) {
+    g.beginPath(); g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+  }
+  function paintCover() {
+    const W = 990, H = Math.round(W * 20.6 / 31.6);
+    if (mb.width !== W) { mb.width = W; mb.height = H; }
+    const g = mb.getContext('2d'); if (!g) return;
+    g.clearRect(0, 0, W, H);
+    const tw = W * 2 / 31.6, th = tw * 1.26, k = W / 330;
+    for (const { t, free } of coverTiles) {
+      const x = (t.x + 1 - t.z * .22) / 31.6 * W, y = (t.y + 1 - t.z * .22) / 17.6 * H;
+      let gr = g.createLinearGradient(x, y, x + tw, y + th);
+      gr.addColorStop(0, '#26292d'); gr.addColorStop(.7, '#0a0b0c');
+      g.fillStyle = gr; rr(g, x + 2.5 * k, y + 4 * k, tw, th, 4 * k); g.fill();
+      gr = g.createLinearGradient(x, y, x + tw * .5, y + th);
+      gr.addColorStop(0, '#24272b'); gr.addColorStop(.48, '#141619'); gr.addColorStop(1, '#0c0d0f');
+      g.fillStyle = gr; rr(g, x, y, tw, th, 4 * k); g.fill();
+      if (!free) { g.fillStyle = 'rgba(0,0,0,.05)'; rr(g, x, y, tw, th, 4 * k); g.fill(); }
+      g.save(); rr(g, x, y, tw, th, 4 * k); g.clip();
+      g.globalAlpha = free ? 1 : .9;
+      const p = parseFace(t.face), art = faceArt(t.face);
+      const img = artImg(t.face);
+      if (img && img.complete && img.naturalWidth) {
+        const aw = tw * .88, ah = th * .9, sc = Math.min(aw / 240, ah / 300);
+        g.drawImage(img, x + (tw - 240 * sc) / 2, y + (th - 300 * sc) / 2, 240 * sc, 300 * sc);
+      } else if (!img) {
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        if (free) { g.shadowColor = art.en; g.shadowBlur = 7 * k; }
+        const cx = x + tw / 2, cy = y + th / 2;
+        if (p.kind === 'char') {
+          g.fillStyle = SAPP; g.font = (tw * .36) + 'px MJSerif, serif';
+          g.fillText(NUMCHAR[p.n - 1], cx, cy - .31 * tw);
+          g.fillStyle = RUBY; g.font = (tw * .54) + 'px MJSerif, serif';
+          g.fillText('萬', cx, cy + .22 * tw);
+        } else {
+          g.fillStyle = p.kind === 'wind' ? PEARL : p.kind === 'drag' ? (p.d === 'R' ? RUBY : EMER) : p.kind === 'flo' ? ROSE : GOLD;
+          g.font = (tw * .56) + 'px MJSerif, serif';
+          g.fillText(p.kind === 'wind' ? WINDCHAR[p.w] : p.kind === 'drag' ? (p.d === 'R' ? '中' : '發') : p.kind === 'flo' ? FLOWERCHAR[p.i - 1] : SEASONCHAR[p.i - 1], cx, cy);
+          if (p.kind === 'flo' || p.kind === 'sea') {
+            g.shadowBlur = 0; g.globalAlpha = (free ? 1 : .9) * .75;
+            g.fillStyle = PEARL; g.font = (tw * .27) + 'px Georgia, serif';
+            g.textAlign = 'left'; g.textBaseline = 'top';
+            g.fillText(p.i, x + tw * .1, y + th * .07);
+          }
+        }
+        g.shadowBlur = 0;
+      }
+      g.restore();
+      g.save(); rr(g, x, y, tw, th, 4 * k); g.clip();
+      gr = g.createLinearGradient(x, y, x + tw, y + th * .3);
+      gr.addColorStop(0, 'rgba(255,255,255,.11)'); gr.addColorStop(.44, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(x, y, tw, th);
+      g.restore();
+    }
+  }
+  paintCover();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => paintCover());
   $('miniMinis').innerHTML = keptFaces.slice(-10).map(f => '<span class="mini">' + faceHTML(f) + '</span>').join('');
   const rec = records();
   $('recordline').textContent = rec.cleared > 0
