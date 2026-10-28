@@ -38,7 +38,7 @@
   .boardzone{position:relative; display:flex; justify-content:center}
   .boardglow{position:absolute; left:50%; top:52%; width:112%; max-width:560px; aspect-ratio:2.1; transform:translate(-50%,-50%);
     background:radial-gradient(50% 50% at 50% 50%, rgba(226,196,120,.10), rgba(226,196,120,.028) 55%, transparent 72%);
-    filter:blur(6px); pointer-events:none; transition:opacity .5s}
+    filter:blur(6px); pointer-events:none; transition:opacity .9s ease}
   .boardglow.flare{animation:glowflare 1.4s ease-out}
   @keyframes glowflare{0%{opacity:1}30%{opacity:1.9}100%{opacity:1}}
   .boardglow.gutter{opacity:.4}
@@ -48,8 +48,8 @@
   /* ===== the tiles: black lacquer, enamel inlay ===== */
   .tile{position:absolute; margin:0; padding:0; border:0; background:none; cursor:pointer; touch-action:manipulation;
     aspect-ratio:1/1.26; filter:drop-shadow(3px 7px 7px rgba(0,0,0,.5));
-    opacity:0; transform:translateY(11px); transition:opacity .4s ease, transform .48s cubic-bezier(.2,1.25,.35,1)}
-  .tile.in{opacity:1; transform:translateY(0)}
+    opacity:0; transition:opacity .55s ease-out}
+  .tile.in{opacity:1}
   .tile .body{position:absolute; inset:0; transform:translate(2.5px,4px); border-radius:4px;
     background:linear-gradient(160deg,#26292d,#0a0b0c 70%);
     transition:transform .16s ease}
@@ -144,24 +144,40 @@
   .sheet{margin:auto; width:100%; max-width:540px; text-align:center; padding:10px 6px 20px;
     animation:cardIn .55s cubic-bezier(.2,1.2,.3,1)}
   @keyframes cardIn{from{transform:translateY(16px); opacity:0}to{transform:translateY(0); opacity:1}}
-  .sheet h2{margin:0; font-size:clamp(19px,5.6vw,25px); font-weight:normal; letter-spacing:.38em; text-indent:.38em; color:#ece5d3}
+  .sheet h2{margin:0; font-size:clamp(19px,5.6vw,25px); font-weight:normal; letter-spacing:.38em; text-indent:.38em;
+    background:linear-gradient(180deg,#f4e2a0 0%,#dcbd63 52%,#9a7c33 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent}
   .sheet .sub{font-style:italic; color:#8f887a; font-size:13.5px; margin:9px 0 0}
   .sheet .rule{height:1px; width:150px; margin:20px auto 4px;
     background:linear-gradient(90deg, transparent, rgba(201,169,89,.45), transparent)}
   .sheet p{font-size:14.5px; line-height:1.6; color:#b6ae9c; margin:10px 0}
-  .hero{position:relative; width:330px; height:186px; margin:0 auto 4px}
-  .heroglow{position:absolute; left:50%; top:46%; width:330px; height:230px; transform:translate(-50%,-50%);
-    background:radial-gradient(50% 50% at 50% 50%, rgba(230,194,92,.12), transparent 68%); filter:blur(8px)}
-  .hero .tile{--tw:96px; width:96px; opacity:1; transform:none; transition:none}
-  .entries{margin:12px auto 2px; max-width:340px; text-align:left}
+  .orn{display:flex; align-items:center; justify-content:center; gap:11px; margin:2px 0 16px}
+  .orn i{display:block; width:56px; height:1px; background:linear-gradient(90deg, transparent, rgba(201,169,89,.65))}
+  .orn i:last-child{background:linear-gradient(90deg, rgba(201,169,89,.65), transparent)}
+  .orn b{width:7px; height:7px; background:var(--gold); transform:rotate(45deg); box-shadow:0 0 9px rgba(230,194,92,.65)}
+  #menu::before{content:''; position:absolute; inset:10px; border:1px solid rgba(201,169,89,.32); pointer-events:none; z-index:5}
+  #menu::after{content:''; position:absolute; inset:15px; border:1px solid rgba(201,169,89,.15); pointer-events:none; z-index:5}
+  .miniBoardWrap{position:relative; width:fit-content; margin:20px auto 2px}
+  .board.cover{width:min(84vw,330px)}
+  .board.cover .tile{pointer-events:none; cursor:default}
+  .miniTray{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:11px}
+  #miniMinis{display:flex; gap:3px}
+  #miniMinis .mini{position:relative}
+  .miniTray .micro{font-size:8.5px; letter-spacing:.3em; text-transform:uppercase; color:#77705f}
+  .entries{margin:14px auto 2px; max-width:340px; text-align:left}
   .entry{display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
-    background:none; border:0; border-bottom:1px solid rgba(201,169,89,.16); font:inherit;
-    color:#ddd5c2; font-size:15.5px; padding:13px 2px; cursor:pointer; text-align:left}
-  .entry:first-child{border-top:1px solid rgba(201,169,89,.16)}
+    border:1px solid rgba(201,169,89,.32); border-radius:10px;
+    background:linear-gradient(165deg,#17191d,#0a0b0d);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 8px 18px rgba(0,0,0,.5);
+    font:inherit; color:#ddd5c2; font-size:15.5px; padding:14px 16px; margin-top:10px; cursor:pointer; text-align:left}
+  .entries .entry:first-child{margin-top:0}
   .entry .a{font-size:11.5px; color:#77705f; font-style:italic; white-space:nowrap}
   .entry .t{white-space:nowrap}
   .entry:active{transform:scale(.99)}
-  .entry.prime .t{color:var(--gold2)}
+  .entry.prime{background:linear-gradient(180deg,#dcb356,#b4832e); border-color:#e8c877;
+    box-shadow:inset 0 1px 0 rgba(255,246,214,.7), 0 8px 18px rgba(0,0,0,.5)}
+  .entry.prime .t{color:#241a05; font-weight:700}
+  .entry.prime .a{color:rgba(36,26,5,.62)}
   .recordline{margin-top:24px; font-size:12.5px; color:#6f6a5e; font-style:italic; text-wrap:balance}
   .sheet .fine{font-size:10.5px; color:#4c483f; margin-top:20px; line-height:1.6; letter-spacing:.03em}
   .stars{display:flex; gap:16px; justify-content:center; margin:14px 0 4px}
@@ -178,6 +194,7 @@
     .stat b{font-size:16px}
     .board{width:min(62vw, calc((100dvh - 184px) * 1.534))}
     .board.teaching{width:min(62vw, calc((100dvh - 184px) * 1.211))}
+    .board.cover{width:min(300px, calc((100dvh - 210px) * 1.534))}
     .trayrow{margin-top:3px}
     .candleline{margin-top:4px}
     .candleline .l{display:none}
@@ -252,10 +269,14 @@
 
 <div class="overlay on" id="menu">
   <div class="sheet">
-    <div class="hero" id="hero"><div class="heroglow"></div></div>
+    <div class="orn" aria-hidden="true"><i></i><b></b><i></i></div>
     <h2>THE NIGHT SHELF</h2>
     <p class="sub">a mahjong solitaire for the small hours</p>
-    <div class="rule"></div>
+    <div class="miniBoardWrap">
+      <div class="boardglow"></div>
+      <div class="board cover" id="miniBoard" aria-hidden="true"></div>
+      <div class="miniTray"><span id="miniMinis"></span><span class="micro">the night is young</span></div>
+    </div>
     <div class="entries">
       <button class="entry" id="btnTeach"><span class="t">The teaching shelf</span><span class="a" id="teachVal">a short lesson · 14 tiles</span></button>
       <button class="entry prime" id="btnStart"><span class="t">Begin a new shelf</span><span class="a">144 tiles</span></button>
@@ -471,6 +492,9 @@ window.addEventListener('resize', fitType);
 function buildBoard() {
   flying.clear(); flightPairs.length = 0; trayShown = -1;
   boardEl.innerHTML = ''; tileEls = [];
+  /* the pool of light rises as the shelf arrives (WAAPI: no class-timing traps) */
+  const glowEl = $('boardglow');
+  if (glowEl.animate) { glowEl.getAnimations().forEach(a => a.cancel()); glowEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 950, easing: 'cubic-bezier(.22,.61,.36,1)' }); }
   const SP = game.space || { W: 31.6, H: 17.6 };
   for (const t of game.tiles) {
     const el = document.createElement('button');
@@ -488,13 +512,17 @@ function buildBoard() {
     boardEl.appendChild(el); tileEls.push(el);
   }
   fitType();
+  /* The shelf arrives the way light does: nothing travels, nothing bounces.
+     Tiles are seated from the first frame and simply brighten — a whisper
+     of layer-by-layer lag inside one shared fade, while the pool of light
+     under the board rises to meet them. */
   requestAnimationFrame(() => requestAnimationFrame(() => {
     tileEls.forEach((el, i) => {
       const t = game.tiles[i];
-      el.style.transitionDelay = Math.min(1050, t.z * 150 + (t.x + t.y) * 11) + 'ms';
+      el.style.transitionDelay = Math.min(280, t.z * 55 + (t.x + t.y) * 2.4) + 'ms';
       el.classList.add('in');
     });
-    setTimeout(() => tileEls.forEach(el => el.style.transitionDelay = ''), 1700);
+    setTimeout(() => tileEls.forEach(el => el.style.transitionDelay = ''), 1400);
   }));
 }
 
@@ -864,14 +892,21 @@ setInterval(() => {
 
 /* ---------- menu dressing: the fan, the records, the doorway back ---------- */
 (function dressMenu() {
-  const fanFaces = [
-    { f: 'char4', x: 2, r: -13, dim: true, z: 3 }, { f: 'dragR', x: 56, r: -7, z: 3 }, { f: 'dot1', x: 114, r: 0, z: 5 },
-    { f: 'windE', x: 172, r: 7, z: 4 }, { f: 'bam1', x: 224, r: 13, dim: true, z: 3 },
-  ];
-  $('hero').insertAdjacentHTML('beforeend', fanFaces.map(h => {
-    const art = faceArt(h.f);
-    return '<div class="tile free' + (h.dim ? ' held' : '') + '" style="--en:' + art.en + ';left:' + h.x + 'px;top:26px;transform:rotate(' + h.r + 'deg);z-index:' + h.z + '"><span class="body"></span><span class="face">' + art.html + '</span></div>';
-  }).join(''));
+  /* the cover is the game itself: a real Turtle, mid-shelf, dealt by the sim */
+  const mg = NS.newGame(20261028);
+  const keptFaces = [];
+  for (const [a, b] of mg.solution.slice(0, 12)) { mg.tiles[a].removed = mg.tiles[b].removed = true; keptFaces.push(mg.tiles[a].face, mg.tiles[b].face); }
+  const mb = $('miniBoard');
+  mb.innerHTML = mg.tiles.filter(t => !t.removed).map(t => {
+    const art = faceArt(t.face);
+    const free = NS.tileFree(mg, t);
+    return '<div class="tile in ' + (free ? 'free' : 'held') + '" style="--en:' + art.en +
+      ';left:' + ((t.x + 1 - t.z * .22) / 31.6 * 100) + '%;top:' + ((t.y + 1 - t.z * .22) / 17.6 * 100) +
+      '%;width:' + (2 / 31.6 * 100) + '%;z-index:' + (t.z * 1000 + t.y * 8 + t.x) +
+      '"><span class="body" style="box-shadow:0 ' + (3 + t.z * 2.6) + 'px ' + (7 + t.z * 4.5) + 'px rgba(0,0,0,' + (.34 + t.z * .05) + ')"></span><span class="face">' + art.html + '</span></div>';
+  }).join('');
+  requestAnimationFrame(() => { if (mb.clientWidth) mb.style.setProperty('--tw', (mb.clientWidth * 2 / 31.6).toFixed(1) + 'px'); });
+  $('miniMinis').innerHTML = keptFaces.slice(-10).map(f => '<span class="mini">' + faceHTML(f) + '</span>').join('');
   const rec = records();
   $('recordline').textContent = rec.cleared > 0
     ? 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared · the best of them at ' + fmtTime(rec.best)
