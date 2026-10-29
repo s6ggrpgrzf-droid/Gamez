@@ -16,7 +16,7 @@
   const DPR = Math.min(2, window.devicePixelRatio || 1);
   let W = 0, H = 0;
   const SET_WIDE = { main: { x: 0.146, y: 0.600 }, second: { x: 0.877, y: 0.550, c: '239,80,73' }, lineY: 0.872 };
-  const SET_PORTRAIT = { main: { x: 0.185, y: 0.843 }, second: { x: 0.400, y: 0.245, c: '67,214,138' }, lineY: 0.968 };
+  const SET_PORTRAIT = { main: { x: 0.185, y: 0.850 }, second: { x: 0.400, y: 0.334, c: '67,214,138' }, lineY: 0.968 };
   const set = () => (W > H * 1.4 ? SET_WIDE : SET_PORTRAIT);
 
   const motes = [];
