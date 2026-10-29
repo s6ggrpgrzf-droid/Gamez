@@ -523,6 +523,41 @@
    was already overridden by MENU BUTTONS v3 or the Cinzel layer. */
 #menu #btnContinue .t{letter-spacing:.02em; line-height:1.16}
 </style>
+
+<style>
+/* ===== TILES, CUT AND LIT (design study, Oct 29) =====
+   The keeper's tiles under tonight's light: the worker is untouched —
+   every colour below is read from the vars it already sets (--rimA and
+   each tile's own pigment, --en). Depth from the slab and the sim's own
+   geometry, never from filters: the one bounded exception (the free
+   tiles' pigment glow) predates this layer and is unchanged. */
+/* the slab viewpoint: the face rides up-left on its body, so the body's
+   lower-right reads as the tile's side, falling to black */
+.tile .face{inset:-1px 2px 3px -1px}
+.tile .body{background:linear-gradient(168deg,#2c3036 0%,#141619 55%,#000 130%)}
+/* held tiles cool toward smoked jade; free tiles keep the black lacquer */
+.tile.held .face{background:linear-gradient(155deg,#17231d 0%,#0c130e 48%,#060806 100%)}
+/* a free tile's top edge catches tonight's light, blended with its pigment */
+.tile.free .face{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--rimA) 60%,var(--en)),inset 0 -9px 13px rgba(0,0,0,.55),inset 1px 0 0 color-mix(in srgb,var(--rimA) 22%,transparent),inset -1px 0 0 rgba(0,0,0,.4),0 0 0 1px color-mix(in srgb,var(--rimA) 30%,transparent),0 0 14px color-mix(in srgb,var(--rimA) 10%,transparent)}
+.tile.sel .face{box-shadow:0 0 0 1.5px var(--gold2),0 0 16px rgba(230,194,92,.4),inset 0 1px 0 color-mix(in srgb,var(--rimA) 60%,var(--en)),inset 0 -9px 13px rgba(0,0,0,.5)}
+.tile.sel .body{transform:translate(3.5px,6.5px)}
+/* occlusion: the shadow of whatever the sim says holds the tile */
+.tile .ao{position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:0; transition:opacity .35s ease}
+.tile.aot .ao{background:linear-gradient(180deg,rgba(2,4,6,.66),rgba(2,4,6,0) 58%)}
+.tile.aol .ao{background:linear-gradient(90deg,rgba(2,4,6,.5),rgba(2,4,6,0) 46%)}
+.tile.aor .ao{background:linear-gradient(270deg,rgba(2,4,6,.5),rgba(2,4,6,0) 46%)}
+.tile.aol.aor .ao{background:linear-gradient(90deg,rgba(2,4,6,.5),rgba(2,4,6,0) 46%),linear-gradient(270deg,rgba(2,4,6,.5),rgba(2,4,6,0) 46%)}
+/* engraving: a carved pass below and a light-catch pass above the pigment */
+.tile .art .carve{opacity:.5}
+.tile .art .carve [fill]:not([fill="none"]){fill:#02040a}
+.tile .art .carve [stroke]:not([stroke="none"]){stroke:#02040a}
+.tile .art .catch{opacity:.13}
+.tile .art .catch [fill]:not([fill="none"]){fill:#eaf6ff}
+.tile .art .catch [stroke]:not([stroke="none"]){stroke:#eaf6ff}
+/* characters are type; their carving is a letterpress shadow */
+.charface .lit{text-shadow:0 1px 0 rgba(0,0,0,.55),0 -1px 1px rgba(215,235,255,.14)}
+.tile.free .charface .lit{text-shadow:0 0 7px var(--en),0 1px 0 rgba(0,0,0,.55),0 -1px 1px rgba(215,235,255,.14)}
+</style>
 </head>
 <body>
 
@@ -784,7 +819,14 @@ function faSVG() {
     '<path d="M15.9 20.2c1.3 1.8 2.7 3.4 4.3 4.7"/>' +
     '<path d="M13.4 19.4c2.2-.9 4.4-1.1 6.6-.5"/></g></svg>';
 }
-function faceArt(face) {
+function engraveSVG(html) {
+  const i = html.indexOf('<svg'); if (i < 0) return html;
+  const j = html.indexOf('>', i), k = html.lastIndexOf('</svg>');
+  if (j < 0 || k < 0) return html;
+  const inner = html.slice(j + 1, k);
+  return html.slice(0, j + 1) + '<g class="carve" transform="translate(0 .5)">' + inner + '</g><g class="catch" transform="translate(0 -.45)">' + inner + '</g><g class="pig">' + inner + '</g>' + html.slice(k);
+}
+function faceArtRaw(face) {
   const p = parseFace(face);
   if (p.kind === 'dot') return { html: '<div class="art">' + dotSVG(p.n) + '</div>', en: SAPP };
   if (p.kind === 'bam') return { html: '<div class="art">' + bamSVG(p.n) + '</div>', en: EMER };
@@ -796,6 +838,7 @@ function faceArt(face) {
   if (p.kind === 'flo') return { html: '<div class="charface"><span class="tag" style="color:' + PEARL + '">' + p.i + '</span><span class="big lit" style="color:' + ROSE + '">' + FLOWERCHAR[p.i - 1] + '</span></div>', en: ROSE };
   return { html: '<div class="charface"><span class="tag" style="color:' + PEARL + '">' + p.i + '</span><span class="big lit" style="color:' + GOLD + '">' + SEASONCHAR[p.i - 1] + '</span></div>', en: GOLD };
 }
+function faceArt(face) { const a = faceArtRaw(face); return { en: a.en, html: engraveSVG(a.html) }; }
 function faceHTML(face) { return faceArt(face).html; }
 
 /* ---------- sound: lacquer knock first, chime second ---------- */
@@ -877,7 +920,7 @@ function buildBoard() {
     el.style.zIndex = t.z * 1000 + t.y * 8 + t.x;
     const art = faceArt(t.face);
     el.style.setProperty('--en', art.en);
-    el.innerHTML = '<span class="body"></span><span class="face">' + art.html + '</span>';
+    el.innerHTML = '<span class="body"></span><span class="face">' + art.html + '<span class="ao"></span></span>';
     el.querySelector('.body').style.boxShadow = '0 ' + (3 + t.z * 2.6) + 'px ' + (7 + t.z * 4.5) + 'px rgba(0,0,0,' + (.34 + t.z * .05) + ')';
     el.setAttribute('aria-label', bareName(t.face));
     el.addEventListener('click', e => { if (e.detail === 0) onTile(t.id); });
@@ -908,6 +951,25 @@ function refresh() {
     el.classList.toggle('held', !t.removed && !freeSet.has(t.id));
     el.classList.toggle('dotf', parseFace(t.face).kind === 'dot');
     el.classList.toggle('sel', t.id === selected);
+  }
+  for (const t of game.tiles) {
+    const el = tileEls[t.id], ao = el.querySelector('.ao');
+    if (!ao) continue;
+    let top = false, left = false, right = false;
+    if (!t.removed) {
+      for (const o of game.tiles) {
+        if (o === t || o.removed) continue;
+        if (o.z > t.z && NS.overlaps(o, t)) { top = true; break; }
+        if (o.z === t.z && NS.yOverlap(o, t)) {
+          if (o.x < t.x && o.x + 2 > t.x - 1) left = true;
+          if (o.x > t.x && o.x < t.x + 3) right = true;
+        }
+      }
+    }
+    el.classList.toggle('aot', top);
+    el.classList.toggle('aol', !top && left);
+    el.classList.toggle('aor', !top && right);
+    ao.style.opacity = top ? .95 : (left && right) ? .8 : (left || right) ? .38 : 0;
   }
   $('stLeft').textContent = NS.remainingCount(game);
   $('stFree').textContent = NS.availableMoves(game).length;
@@ -967,19 +1029,23 @@ function flyPair(aId, bId) {
     flying.add(id);
     el.style.zIndex = 9500 + k;
     const dx = slot.x - (r.left + r.width / 2), dy = slot.y - (r.top + r.height / 2);
+    const bodyEl = el.querySelector('.body'), zT = game.tiles[id].z;
+    if (bodyEl) { bodyEl.style.transition = 'box-shadow .16s ease'; bodyEl.style.boxShadow = '0 16px 24px rgba(0,0,0,.36)'; }
     const sc = Math.max(.3, 17 / r.width);
     const anim = el.animate([
       { transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 1 },
-      { transform: 'translate(' + (dx * .12) + 'px,' + (dy * .1 - 13) + 'px) scale(1.05) rotate(0deg)', opacity: 1, offset: .22 },
+      { transform: 'translate(' + (dx * .03 - 2) + 'px,' + (dy * .02 - 8) + 'px) scale(1.045) rotate(0deg)', opacity: 1, offset: .14 },
+      { transform: 'translate(' + (dx * .05 - 2) + 'px,' + (dy * .04 - 10) + 'px) scale(1.05) rotate(0deg)', opacity: 1, offset: .3 },
       { transform: 'translate(' + (dx * .55) + 'px,' + (dy * .5 - 26) + 'px) scale(' + ((1 + sc) / 2).toFixed(3) + ') rotate(' + (slot.rot * .5) + 'deg)', opacity: 1, offset: .62 },
       { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + sc.toFixed(3) + ') rotate(' + slot.rot + 'deg)', opacity: .96 },
-    ], { duration: 430, delay: k * 70, easing: 'cubic-bezier(.32,.6,.25,1)', fill: 'forwards' });
+    ], { duration: 540, delay: k * 70, easing: 'cubic-bezier(.32,.6,.25,1)', fill: 'forwards' });
     anim.onfinish = () => {
       anim.cancel();
+      if (bodyEl) bodyEl.style.boxShadow = '0 ' + (3 + zT * 2.6) + 'px ' + (7 + zT * 4.5) + 'px rgba(0,0,0,' + (.34 + zT * .05) + ')';
       flying.delete(id);
       el.style.zIndex = '';
       const ix = flightPairs.indexOf(pair); if (ix >= 0) flightPairs.splice(ix, 1);
-      if (k === 1 && game.tiles[aId].removed && game.tiles[bId].removed) { trayFaces.push(game.tiles[aId].face, game.tiles[bId].face); sfxPair(); renderTray(); save(); }
+      if (k === 1 && game.tiles[aId].removed && game.tiles[bId].removed) { trayFaces.push(game.tiles[aId].face, game.tiles[bId].face); sfxPair(); renderTray(); const minis = $('traypile').querySelectorAll('.mini'); for (let mi = Math.max(0, minis.length - 2); mi < minis.length; mi++) minis[mi].animate([{ marginBottom: '-1.5px' }, { marginBottom: '.8px', offset: .55 }, { marginBottom: '0px' }], { duration: 210, easing: 'ease-out' }); save(); }
       refresh();
     };
   });
