@@ -577,9 +577,15 @@
 #menu .sheet h2{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:600}
 #menu .sub{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:500; font-style:normal}
 #menu #coverNote{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:500}
-#menu .entries .recordline{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:500}
+#menu .entries .recordline{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:500; font-style:normal}
 #menu .entries .entry .t{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:600}
 #menu .entries .entry .a{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:500}
+#menu #btnContinue .t{font-family:'NS Cinzel',Didot,'Bodoni MT',serif; font-weight:600}
+/* Cinzel runs wider than the Didone it replaced: fit the plate titles and
+   captions to one line each (audit, Oct 29 — his go). Selectors mirror his
+   v3 forms so these win on order, not on weight. */
+#menu .entries .entry:not(#btnContinue) .t{font-size:14px; letter-spacing:-.005em; padding-right:6px}
+#menu .entries .entry:not(#btnContinue) .a{font-size:10.5px; letter-spacing:-.01em}
 </style>
 </head>
 <body>
