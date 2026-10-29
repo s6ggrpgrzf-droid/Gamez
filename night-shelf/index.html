@@ -47,6 +47,42 @@
   .board{position:relative; width:min(93vw, calc((100dvh - 336px) * var(--spr, 1.534))); aspect-ratio:var(--spa, 31.6/20.6); --tw:22px}
   .board.teaching{aspect-ratio:11.6/9.58; width:min(92vw, calc((100dvh - 336px) * 1.211))}
 
+  /* ===== the glass shelf (v2, Jimmy's pick 2026-10-28): the tiles
+     rest on smoked glass — layered gradients only, no backdrop-filter
+     (iOS rule). A lit rim, a top light band, a two-streak sheen, light
+     pooled under the tile mass, and the slab's front edge lit in the
+     game's own neon, sapphire to emerald, with a faint cast beneath. */
+  .board{
+    border-radius:12px;
+    border:1px solid rgba(170,212,255,.32);
+    background:
+      linear-gradient(180deg, rgba(215,238,255,.13), rgba(215,238,255,0) 13%),
+      linear-gradient(115deg, rgba(255,255,255,0) 26%, rgba(255,255,255,.115) 43%, rgba(255,255,255,.030) 52%, rgba(255,255,255,0) 64%),
+      linear-gradient(112deg, rgba(255,255,255,0) 58%, rgba(255,255,255,.085) 63%, rgba(255,255,255,0) 68%),
+      radial-gradient(76% 56% at 50% 40%, rgba(110,165,255,.115), rgba(110,165,255,0) 72%),
+      linear-gradient(0deg, rgba(67,214,138,.055), rgba(67,214,138,0) 22%),
+      linear-gradient(168deg, rgba(170,210,255,.125), rgba(130,160,225,.045) 38%, rgba(8,10,18,.12) 80%, rgba(0,0,0,.30));
+    box-shadow:
+      inset 0 1px 0 rgba(220,240,255,.34),
+      inset 0 0 0 1px rgba(190,220,255,.06),
+      inset 0 -1px 0 rgba(0,0,0,.55),
+      inset 0 0 52px rgba(80,120,210,.09),
+      0 18px 42px rgba(0,0,0,.50),
+      0 26px 48px rgba(70,140,255,.10),
+      0 0 46px rgba(90,140,255,.085);
+  }
+  .board::before{
+    content:""; position:absolute; top:0; left:4%; right:4%; height:1px;
+    background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.45) 14%, rgba(255,255,255,.45) 86%, rgba(255,255,255,0));
+    pointer-events:none;
+  }
+  .board::after{
+    content:""; position:absolute; left:2%; right:2%; bottom:-2px; height:4px; border-radius:2px;
+    background:linear-gradient(90deg, rgba(132,184,255,0), rgba(132,184,255,.98) 15%, rgba(67,214,138,1) 50%, rgba(132,184,255,.98) 85%, rgba(132,184,255,0));
+    box-shadow:0 0 17px rgba(110,180,255,.70), 0 3px 26px rgba(80,160,255,.40), 0 7px 42px rgba(67,214,138,.22);
+    pointer-events:none;
+  }
+
   /* ===== the tiles: black lacquer, enamel inlay ===== */
   .tile{position:absolute; margin:0; padding:0; border:0; background:none; cursor:pointer; touch-action:manipulation;
     aspect-ratio:1/1.26; filter:drop-shadow(3px 7px 7px rgba(0,0,0,.5));
