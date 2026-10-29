@@ -250,8 +250,9 @@
     .trayrow{margin-top:3px}
     .traypile{height:44px}
     .toolbar{margin-top:2px}
-    .whisper{position:absolute; left:12px; top:54px; margin:0; max-width:290px; min-height:0;
-      text-align:left; padding:4px 8px; background:rgba(5,6,7,.72); border-radius:6px; font-size:13px}
+    .whisper{position:absolute; left:50%; transform:translateX(-50%); bottom:2px; top:auto; margin:0;
+      width:max-content; max-width:94vw; min-height:0;
+      text-align:center; padding:4px 10px; background:none; border-radius:0; font-size:13.5px}
     body.tutoring #coachDots{position:absolute; top:56px; right:14px; margin:0}
     .stuckbar{position:absolute; left:50%; transform:translateX(-50%); bottom:56px; z-index:30; margin:0; width:max-content; max-width:92vw}
     #menu .sheet{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:26px; align-items:start; max-width:780px; padding-bottom:6px}
@@ -923,16 +924,19 @@ function refresh() {
 }
 
 let trayShown = -1;
+/* Kept pairs rest upright in two readable rows — the freshest six pairs,
+   faces showing (developer-review item, Oct 29). The old heap buried each
+   row 13px under the next; the tally line still counts every pair kept. */
 function miniPos(i, n) {
   const cols = Math.min(n === undefined ? 6 : n, 6);
-  const off = Math.max(0, (118 - ((cols - 1) * 15 + 25)) / 2);
-  return { left: off + 2 + (i % 6) * 15 + ((i * 13) % 5), bottom: Math.floor(i / 6) * 8, rot: ((i * 37) % 17) - 8 };
+  const off = Math.max(0, (118 - ((cols - 1) * 18 + 17)) / 2);
+  return { left: off + (i % 6) * 18, bottom: Math.floor(i / 6) * 15, rot: ((i * 29) % 5) - 2 };
 }
 function renderTray() {
   if (trayFaces.length === trayShown) return;
   trayShown = trayFaces.length;
   const pile = $('traypile');
-  const show = trayFaces.slice(-30);
+  const show = trayFaces.slice(-12);
   pile.innerHTML = show.map((f, i) => {
     const p = miniPos(i, show.length);
     return '<span class="mini" style="left:' + p.left + 'px;bottom:' + p.bottom + 'px;transform:rotate(' + p.rot + 'deg)">' + faceHTML(f) + '</span>';
@@ -949,8 +953,8 @@ const flying = new Set();
 const flightPairs = [];
 function slotPoint(count, k) {
   const pile = $('traypile').getBoundingClientRect();
-  const total = count + 2, start = total - Math.min(total, 30);
-  const p = miniPos(count + k - start, Math.min(total, 30));
+  const total = count + 2, start = total - Math.min(total, 12);
+  const p = miniPos(count + k - start, Math.min(total, 12));
   return { x: pile.left + p.left + 8.5, y: pile.top + pile.height - p.bottom - 10.5, rot: p.rot };
 }
 function flyPair(aId, bId) {
@@ -1167,7 +1171,11 @@ function startGame(seed, resume, layoutName) {
   }
   buildBoard(); refresh(); playing = true;
   $('menu').classList.remove('on'); $('endcard').classList.remove('on');
-  say(resume ? 'The shelf as you left it — the neon kept its hum, and remembers.' : 'The shelf is set and the shop is quiet. Two of a kind, both standing free — lift them away.');
+  if (resume) say('The shelf as you left it — the neon kept its hum, and remembers.');
+  else if (!localStorage.getItem('ns_gloss')) {
+    localStorage.setItem('ns_gloss', '1');
+    say('The shelf is set and the shop is quiet. Two of a kind, both standing free — lift them away. At the right, pairs in reach — how many you can lift right now.');
+  } else say('The shelf is set and the shop is quiet. Two of a kind, both standing free — lift them away.');
   save();
 }
 
@@ -1413,7 +1421,7 @@ function doShuffle() {
       el.style.setProperty('--en', art.en);
       el.setAttribute('aria-label', bareName(t.face));
     }
-    sfxPair(); say('The keeper gathers what\u2019s left and deals it anew. It can still be cleared. It always could.');
+    sfxPair(); say('The keeper gathers what\u2019s left and deals it anew. It can still be cleared \u2014 it always could. But the road back closes: no undo walks past a reshuffle.');
     refresh(); save();
   } else say('Nothing to gather — the shelf stands as it is.');
 }
@@ -1469,7 +1477,7 @@ setInterval(() => {
     ? 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared'
     : 'The ledger is blank. Tonight could change that.';
   if (localStorage.getItem('ns_tutorial_done')) {
-    $('teachVal').textContent = 'replay the lesson · 14 tiles';
+    $('teachVal').textContent = 'the lesson · 14 tiles';
   } else {
     $('btnTeach').classList.add('prime');
     $('btnStart').classList.remove('prime');
