@@ -86,10 +86,11 @@
 
   /* ===== the tiles: black lacquer, enamel inlay ===== */
   .tile{position:absolute; margin:0; padding:0; border:0; background:none; cursor:pointer; touch-action:manipulation;
-    aspect-ratio:1/1.26; filter:drop-shadow(3px 7px 7px rgba(0,0,0,.5));
+    aspect-ratio:1/1.26;
     opacity:0; transition:opacity .55s ease-out}
   .tile.in{opacity:1}
   .tile .body{position:absolute; inset:0; transform:translate(2.5px,4px); border-radius:4px;
+    box-shadow:1px 3px 8px rgba(0,0,0,.55);
     background:linear-gradient(160deg,#26292d,#0a0b0c 70%);
     transition:transform .16s ease}
   .tile .face{position:absolute; inset:0; border-radius:4px; overflow:hidden; display:block;
