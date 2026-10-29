@@ -317,6 +317,21 @@
   #menu .sheet h2::before{left:16%}
   #menu .sheet h2::after{right:16%}
   @keyframes signSway{from{transform:rotate(.45deg)} to{transform:rotate(-.45deg)}}
+  /* The painted room (scene.js): the menu's hero is a place now, not a
+     picture of the board — shelves, jars, moonlight, the lit candle. */
+  #menu .miniBoardWrap{width:min(94vw, 430px)}
+  #menu .miniBoardWrap::after{display:none}
+  #menu #sceneCv{display:block;width:100%;height:432px;border-radius:6px;
+    border:1px solid #2a1e10;box-shadow:0 18px 44px rgba(0,0,0,.6), inset 0 0 0 1px rgba(232,197,106,.15), inset 0 0 60px rgba(0,0,0,.5);
+    animation:sceneIn 1s ease-out both}
+  @keyframes sceneIn{from{opacity:0}to{opacity:1}}
+  #menu .sceneNote{margin-top:11px;text-align:center}
+  #menu #coverNote{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:#8a8271}
+  @media (orientation:landscape) and (max-height:520px){
+    #menu #sceneCv{height:164px}
+    #menu .miniBoardWrap{width:100%}
+    #menu .sceneNote{display:none}
+  }
   #menu .fine{margin-top:46px; padding:8px 14px; background:linear-gradient(180deg, #241b11, #1a1209);
     border:1px solid rgba(232,197,106,.18); color:#a08e67;
     text-shadow:0 -1px 0 rgba(0,0,0,.9), 0 1px 0 rgba(255,220,150,.07)}
@@ -331,7 +346,7 @@
     #menu .sub{margin-top:4px}
     #menu .sheet h2{padding-top:7px; padding-bottom:6px}
     #menu .entries{grid-column:2; grid-row:1 / span 5; margin-top:14px; padding-top:14px; padding-bottom:9px; row-gap:8px}
-    #menu .fine{grid-column:1 / -1; margin-top:6px; padding:4px 10px; line-height:1.42}
+    #menu .fine{grid-column:2; grid-row:6; justify-self:stretch; margin-top:5px; padding:2px 10px; line-height:1.3}
   }
 /* ===== candlelight polish layer ===== */
 #fxlight,#fxvig{position:fixed;inset:0;pointer-events:none;will-change:opacity;animation:fxfade 2.6s ease-out both}
@@ -441,9 +456,8 @@
     <h2>THE NIGHT SHELF</h2>
     <p class="sub">a mahjong solitaire for the small hours</p>
     <div class="miniBoardWrap">
-      <div class="boardglow"></div>
-      <canvas class="board cover" id="miniBoard" aria-hidden="true"></canvas>
-      <div class="miniTray"><span id="miniMinis"></span><span class="micro" id="coverNote">the night is young</span></div>
+      <canvas id="sceneCv" aria-hidden="true"></canvas>
+      <p class="sceneNote"><span id="coverNote">the night is young</span></p>
     </div>
     <div class="entries">
       <p class="recordline" id="recordline"></p>
@@ -1331,105 +1345,24 @@ setInterval(() => {
 /* ---------- menu dressing: the fan, the records, the doorway back ---------- */
 (function dressMenu() {
   /* the cover is the game itself: a real Turtle, mid-shelf, dealt by the sim */
-  const mb = $('miniBoard');
-  /* The cover is painted, not built. The live-tile version put 120 filtered,
-     shadowed tile elements into the first frame and iOS killed the renderer
-     for it ('a problem repeatedly occurred'); one canvas is one layer and
-     cannot do that. And the cover is a window, not a photograph: it shows
-     the shelf as it truly stands — your half-kept shelf if one is standing,
-     tonight's shelf if the night is already kept, the classic deal else. */
-  let mg = NS.newGame(20261028);
-  let keptFaces = [];
-  for (const [a, b] of mg.solution.slice(0, 12)) { mg.tiles[a].removed = mg.tiles[b].removed = true; keptFaces.push(mg.tiles[a].face, mg.tiles[b].face); }
+  /* The menu's hero is a painted room now (scene.js): shelves of jars and
+     tiles over the lit candle, a moonlit window for the cool light. The
+     room still remembers, the way the old painted cover taught it to:
+     the eight tiles in the painting wear the faces of the pairs in your
+     tray when a shelf stands, tonight's faces when the night is already
+     kept, the classic eight otherwise — and the caption under the
+     painting carries the same news the tray used to. One canvas, one
+     layer: the iOS lesson from the tile-hero crash still holds. */
+  const SCENE_DEFAULTS = ['dragG', 'char5', 'windE', 'bam1', 'dot1', 'dragR', 'char9', 'dot5'];
   const svCover = loadSave();
-  if (svCover) {
-    mg = NS.newGame(svCover.seed, svCover.layout);
-    mg.tiles.forEach((t, i) => t.face = svCover.faces[i]);
-    for (const id of svCover.removed) mg.tiles[id].removed = true;
-    keptFaces = svCover.trayFaces || [];
-  }
-  let coverTiles = [];
-  function setCover(game, kept, note) {
-    mg = game; keptFaces = kept;
-    coverTiles = mg.tiles.filter(t => !t.removed)
-      .map(t => ({ t, free: NS.tileFree(mg, t) }))
-      .sort((a, b) => (a.t.z - b.t.z) || (a.t.y - b.t.y) || (a.t.x - b.t.x));
-    const SP = mg.space || { W: 31.6, H: 17.6 };
-    mb.style.aspectRatio = (SP.W !== 31.6 || SP.H !== 17.6) ? (SP.W + ' / ' + (SP.H + 3)) : '';
-    $('miniMinis').innerHTML = keptFaces.slice(-10).map(f => '<span class="mini">' + faceHTML(f) + '</span>').join('');
+  function showScene(kept, note) {
+    const faces = SCENE_DEFAULTS.slice();
+    (kept || []).slice(0, 8).forEach((f, i) => { faces[i] = f; });
     if (note) $('coverNote').textContent = note;
+    if (window.__sceneSet) window.__sceneSet(faces);
+    else window.__scenePending = faces;
   }
-  const artImgs = {};
-  function artImg(face) {
-    if (face in artImgs) return artImgs[face];
-    const m = faceArt(face).html.match(/<svg[\s\S]*<\/svg>/);
-    if (!m) return (artImgs[face] = null);
-    const img = new Image();
-    img.onload = () => paintCover();
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(m[0].replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="300" '));
-    return (artImgs[face] = img);
-  }
-  function rr(g, x, y, w, h, r) {
-    g.beginPath(); g.moveTo(x + r, y);
-    g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
-    g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
-  }
-  function paintCover() {
-    const SP = mg.space || { W: 31.6, H: 17.6 };
-    const W = 990, H = Math.round(W * (SP.H + 3) / SP.W);
-    if (mb.width !== W) { mb.width = W; mb.height = H; }
-    const g = mb.getContext('2d'); if (!g) return;
-    g.clearRect(0, 0, W, H);
-    const tw = W * 2 / SP.W, th = tw * 1.26, k = W / 330;
-    for (const { t, free } of coverTiles) {
-      const x = (t.x + 1 - t.z * .22) / SP.W * W, y = (t.y + 1 - t.z * .22) / SP.H * H;
-      let gr = g.createLinearGradient(x, y, x + tw, y + th);
-      gr.addColorStop(0, '#26292d'); gr.addColorStop(.7, '#0a0b0c');
-      g.fillStyle = gr; rr(g, x + 2.5 * k, y + 4 * k, tw, th, 4 * k); g.fill();
-      gr = g.createLinearGradient(x, y, x + tw * .5, y + th);
-      gr.addColorStop(0, '#24272b'); gr.addColorStop(.48, '#141619'); gr.addColorStop(1, '#0c0d0f');
-      g.fillStyle = gr; rr(g, x, y, tw, th, 4 * k); g.fill();
-      if (!free) { g.fillStyle = 'rgba(0,0,0,.02)'; rr(g, x, y, tw, th, 4 * k); g.fill(); }
-      g.save(); rr(g, x, y, tw, th, 4 * k); g.clip();
-      g.globalAlpha = free ? 1 : .95;
-      const p = parseFace(t.face), art = faceArt(t.face);
-      const img = artImg(t.face);
-      if (img && img.complete && img.naturalWidth) {
-        const aw = tw * .88, ah = th * .9, sc = Math.min(aw / 240, ah / 300);
-        g.drawImage(img, x + (tw - 240 * sc) / 2, y + (th - 300 * sc) / 2, 240 * sc, 300 * sc);
-      } else if (!img) {
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        if (free) { g.shadowColor = art.en; g.shadowBlur = 7 * k; }
-        const cx = x + tw / 2, cy = y + th / 2;
-        if (p.kind === 'char') {
-          g.fillStyle = SAPP; g.font = (tw * .36) + 'px MJSerif, serif';
-          g.fillText(NUMCHAR[p.n - 1], cx, cy - .31 * tw);
-          g.fillStyle = RUBY; g.font = (tw * .54) + 'px MJSerif, serif';
-          g.fillText('萬', cx, cy + .22 * tw);
-        } else {
-          g.fillStyle = p.kind === 'wind' ? PEARL : p.kind === 'drag' ? (p.d === 'R' ? RUBY : EMER) : p.kind === 'flo' ? ROSE : GOLD;
-          g.font = (tw * .56) + 'px MJSerif, serif';
-          g.fillText(p.kind === 'wind' ? WINDCHAR[p.w] : p.kind === 'drag' ? (p.d === 'R' ? '中' : '發') : p.kind === 'flo' ? FLOWERCHAR[p.i - 1] : SEASONCHAR[p.i - 1], cx, cy);
-          if (p.kind === 'flo' || p.kind === 'sea') {
-            g.shadowBlur = 0; g.globalAlpha = (free ? 1 : .9) * .75;
-            g.fillStyle = PEARL; g.font = (tw * .27) + 'px Georgia, serif';
-            g.textAlign = 'left'; g.textBaseline = 'top';
-            g.fillText(p.i, x + tw * .1, y + th * .07);
-          }
-        }
-        g.shadowBlur = 0;
-      }
-      g.restore();
-      g.save(); rr(g, x, y, tw, th, 4 * k); g.clip();
-      gr = g.createLinearGradient(x, y, x + tw, y + th * .3);
-      gr.addColorStop(0, 'rgba(255,255,255,.11)'); gr.addColorStop(.44, 'rgba(255,255,255,0)');
-      g.fillStyle = gr; g.fillRect(x, y, tw, th);
-      g.restore();
-    }
-  }
-  setCover(mg, keptFaces, svCover ? 'the shelf as you left it' : null);
-  paintCover();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => paintCover());
+  showScene(svCover ? (svCover.trayFaces || []) : [], svCover ? 'the shelf as you left it' : null);
   const rec = records();
   $('recordline').textContent = rec.cleared > 0
     ? 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared · the best of them at ' + fmtTime(rec.best)
@@ -1455,8 +1388,7 @@ setInterval(() => {
       const dg = NS.newGame(seed);
       const keptAll = [];
       for (const [a, b] of dg.solution) keptAll.push(dg.tiles[a].face, dg.tiles[b].face);
-      setCover(dg, keptAll, 'tonight\u2019s shelf — kept in ' + fmtTime(dl.lastTime));
-      paintCover();
+      showScene(keptAll, 'tonight\u2019s shelf — kept in ' + fmtTime(dl.lastTime));
     });
   }
   { const ms = monthStats(); $('monthVal').textContent = ms.kept ? ms.kept + ' of ' + ms.elapsedDays + ' nights kept in ' + ms.monthName : 'a new month, unopened'; }
@@ -1632,5 +1564,6 @@ window.__game = {
   requestAnimationFrame(frame);
 })();
 </script>
+<script src="./scene.js?v=20261028a"></script>
 </body>
 </html>
