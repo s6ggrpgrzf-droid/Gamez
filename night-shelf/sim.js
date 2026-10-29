@@ -153,32 +153,19 @@ function shuffled(arr, rand) {
   return arr;
 }
 
-/* Deal by construction: walk the layout down in legal pairs, dealing one
-   pair spec onto each. The recorded order is a proof the shelf can be
-   cleared — a loss is never the deal's fault. */
+/* Deal at random, the old way (his call, 2026-10-29 — option C): the
+   whole set shuffled and laid onto the shelf as it falls. No solution is
+   recorded, because none is promised: most shelves can be cleared, some
+   cannot, and the free reshuffle answers a shelf that walls you in. */
 function dealFaces(seed, pos) {
   const rand = mulberry32(seed);
   pos = pos || LAYOUT;
-  for (let attempt = 0; attempt < 800; attempt++) {
-    const specs = shuffled(pairSpecs(), rand);
-    const standing = new Set(pos.map((_, i) => i));
-    const assign = new Array(pos.length);
-    const order = [];
-    let ok = true;
-    for (let pair = 0; pair < specs.length; pair++) {
-      const free = [];
-      for (const i of standing) if (isFreePos(i, standing, pos)) free.push(i);
-      if (free.length < 2) { ok = false; break; }
-      const a = free[Math.floor(rand() * free.length)];
-      let b = a;
-      while (b === a) b = free[Math.floor(rand() * free.length)];
-      assign[a] = specs[pair][0]; assign[b] = specs[pair][1];
-      standing.delete(a); standing.delete(b);
-      order.push([a, b]);
-    }
-    if (ok) return { assign, order };
-  }
-  throw new Error('dealer could not construct a shelf');
+  const faces = [];
+  for (const [a, b] of pairSpecs()) { faces.push(a, b); }
+  shuffled(faces, rand);
+  const assign = new Array(pos.length);
+  for (let i = 0; i < pos.length; i++) assign[i] = faces[i];
+  return { assign, order: null };
 }
 
 function newGame(seed, layoutName) {
@@ -282,61 +269,23 @@ function hint(game) {
   return best;
 }
 
-/* Reshuffle the standing tiles by the same construction. What stands is
-   always whole match-groups (pairs only ever leave together), so the
-   remainder re-forms into pair specs — identical faces together, Flowers
-   and Seasons paired within their four — and can always be re-dealt into
-   a clearable arrangement. Clears undo history and records the new
-   solution the construction walked. */
+/* Reshuffle: the standing tiles' own faces, shuffled among the standing
+   positions — the same tiles re-dealt at random, exactly as a fresh shelf
+   is dealt. What stands is always whole match-groups (pairs only ever
+   leave together), so the faces still pair up; whether the new
+   arrangement can be cleared is the deal's luck, as it is on any shelf.
+   Clears undo history; no solution is recorded. */
 function reshuffle(game, seedSalt) {
   const standingIds = game.tiles.filter(t => !t.removed).map(t => t.id);
   if (standingIds.length < 2 || standingIds.length % 2 !== 0) return false;
   const rand = mulberry32((game.seed ^ 0x9E3779B9) + (seedSalt || 0));
-  const byKey = new Map();
-  for (const id of standingIds) {
-    const f = game.tiles[id].face, k = matchKey(f);
-    if (!byKey.has(k)) byKey.set(k, []);
-    byKey.get(k).push(f);
-  }
-  const specs = [];
-  for (const [k, faces] of byKey) {
-    if (faces.length % 2 !== 0) return false;
-    if (k === 'FLOWERS' || k === 'SEASONS') {
-      const fs = shuffled(faces.slice(), rand);
-      for (let i = 0; i < fs.length; i += 2) specs.push([fs[i], fs[i + 1]]);
-    } else {
-      for (let i = 0; i < faces.length; i += 2) specs.push([faces[i], faces[i]]);
-    }
-  }
-  if (specs.length * 2 !== standingIds.length) return false;
-  const pos = game.tiles;
-  for (let attempt = 0; attempt < 800; attempt++) {
-    const bag = shuffled(specs.slice(), rand);
-    const standing = new Set(standingIds);
-    const assign = new Map();
-    const order = [];
-    let ok = true;
-    for (let k = 0; k < bag.length; k++) {
-      const free = [];
-      for (const i of standing) if (isFreePos(i, standing, pos)) free.push(i);
-      if (free.length < 2) { ok = false; break; }
-      const a = free[Math.floor(rand() * free.length)];
-      let b = a;
-      while (b === a) b = free[Math.floor(rand() * free.length)];
-      assign.set(a, bag[k][0]); assign.set(b, bag[k][1]);
-      standing.delete(a); standing.delete(b);
-      order.push([a, b]);
-    }
-    if (ok) {
-      for (const [id, f] of assign) game.tiles[id].face = f;
-      game.moves = [];
-      game.solution = order;
-      game.reshuffles += 1;
-      game.status = 'playing';
-      return true;
-    }
-  }
-  return false;
+  const faces = shuffled(standingIds.map(id => game.tiles[id].face), rand);
+  standingIds.forEach((id, i) => { game.tiles[id].face = faces[i]; });
+  game.moves = [];
+  game.solution = null;
+  game.reshuffles += 1;
+  game.status = 'playing';
+  return true;
 }
 
 /* A hand-laid game on any position list — the teaching shelf lives here.
