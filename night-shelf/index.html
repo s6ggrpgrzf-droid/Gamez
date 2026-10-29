@@ -446,6 +446,33 @@
 /* The ribbon's text gets the same print treatment */
 #menu #btnContinue .t{font-family:Didot,'Bodoni MT','Playfair Display',Georgia,serif; font-size:15px; letter-spacing:.02em}
 #menu #btnContinue .a{text-transform:uppercase; letter-spacing:.16em; font-size:8.5px; font-style:normal}
+/* Completed depth: an extruded bronze-lacquer edge under each plate, real press travel */
+#menu .entries .entry:not(#btnContinue){
+  background:
+    linear-gradient(180deg, rgba(255,228,166,.16), rgba(255,228,166,0) 42%),
+    radial-gradient(130% 95% at 16% 0%, rgba(255,216,146,.13), rgba(255,216,146,0) 55%),
+    linear-gradient(180deg,#2e271b,#17130e 58%,#100d08);
+  box-shadow:
+    inset 0 0 0 3px rgba(8,7,5,.9),
+    inset 0 0 0 4px rgba(201,169,89,.38),
+    inset 0 1px 0 rgba(248,226,168,.5),
+    inset 0 -3px 5px rgba(0,0,0,.55),
+    0 1px 0 #57431f,
+    0 2px 0 #44351a,
+    0 3px 0 #322612,
+    0 4px 0 #211a0d,
+    0 12px 20px rgba(0,0,0,.66);
+}
+#menu .entries .entry:not(#btnContinue):active{
+  transform:translateY(3px);
+  box-shadow:
+    inset 0 0 0 3px rgba(8,7,5,.9),
+    inset 0 0 0 4px rgba(201,169,89,.3),
+    inset 0 1px 0 rgba(248,226,168,.28),
+    inset 0 -2px 4px rgba(0,0,0,.5),
+    0 1px 0 #322612,
+    0 5px 10px rgba(0,0,0,.6);
+}
 /* The record line stays the book's handwriting, lifted a touch */
 #menu .recordline{color:#b3a98f; font-size:14px}
 </style>
@@ -516,11 +543,11 @@
     </div>
     <div class="entries">
       <p class="recordline" id="recordline"></p>
-      <button class="entry" id="btnTeach"><span class="seal" aria-hidden="true"></span><span class="t">The teaching shelf</span><span class="a" id="teachVal">a short lesson · 14 tiles</span></button>
-      <button class="entry prime" id="btnStart"><span class="seal" aria-hidden="true"></span><span class="t">Begin a new shelf</span><span class="a">144 tiles</span></button>
-      <button class="entry" id="btnDaily"><span class="seal" aria-hidden="true"></span><span class="t">Tonight's shelf</span><span class="a" id="dailyVal">one deal, the whole world</span></button>
-      <button class="entry" id="btnMonth"><span class="seal" aria-hidden="true"></span><span class="t">The month's shelves</span><span class="a" id="monthVal">the nights so far</span><span class="dots" id="monthDots" aria-hidden="true"></span></button>
-      <button class="entry" id="btnShelves"><span class="seal" aria-hidden="true"></span><span class="t">Other shelves</span><span class="a">five shapes keep here</span></button>
+      <button class="entry" id="btnTeach"><span class="seal" aria-hidden="true"></span><span class="t">Teaching shelf</span><span class="a" id="teachVal">14 tiles</span></button>
+      <button class="entry prime" id="btnStart"><span class="seal" aria-hidden="true"></span><span class="t">New shelf</span><span class="a">144 tiles</span></button>
+      <button class="entry" id="btnDaily"><span class="seal" aria-hidden="true"></span><span class="t">Tonight's shelf</span><span class="a" id="dailyVal">one deal, worldwide</span></button>
+      <button class="entry" id="btnMonth"><span class="seal" aria-hidden="true"></span><span class="t">Month's shelves</span><span class="a" id="monthVal">the nights so far</span><span class="dots" id="monthDots" aria-hidden="true"></span></button>
+      <button class="entry" id="btnShelves"><span class="seal" aria-hidden="true"></span><span class="t">Other shelves</span><span class="a">five shapes</span></button>
       <button class="entry" id="btnContinue" style="display:none"><span class="seal" aria-hidden="true"></span><span class="t">The shelf I left</span><span class="a" id="continueVal"></span></button>
     </div>
     <p class="fine">Dealt fair by construction — every shelf can be cleared, so a loss is never the deal's fault.<br>Turtle layout data adapted from an MIT-licensed reference (C. Cândido); everything else was made in this room.</p>
@@ -1406,16 +1433,16 @@ setInterval(() => {
   const nowD = new Date();
   const isoToday = nowD.getFullYear() + '-' + String(nowD.getMonth() + 1).padStart(2, '0') + '-' + String(nowD.getDate()).padStart(2, '0');
   if (dl && dl.dealtLocal === isoToday && dl.date === dl.dealt) {
-    $('dailyVal').textContent = 'cleared tonight' + (dl.streak > 1 ? ' · ' + dl.streak + ' nights running' : '');
+    $('dailyVal').textContent = 'kept tonight' + (dl.streak > 1 ? ' · ' + dl.streak + ' nights' : '');
   } else if (dl && dl.dealtLocal === isoToday) {
     $('dailyVal').textContent = 'dealt · still standing';
   } else {
-    $('dailyVal').textContent = 'one deal, the whole world · ' + nowD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    $('dailyVal').textContent = 'one deal, worldwide · ' + nowD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
   if (!svCover && dl && dl.dealtLocal === isoToday && dl.date === dl.dealt) {
     showScene('tonight\u2019s shelf \u2014 kept');
   }
-  { const ms = monthStats(); $('monthVal').textContent = ms.kept ? ms.kept + ' of ' + ms.elapsedDays + ' nights kept in ' + ms.monthName : 'a new month, unopened'; }
+  { const ms = monthStats(); $('monthVal').textContent = ms.kept ? ms.kept + ' of ' + ms.elapsedDays + ' kept' : 'unopened'; }
   $('btnDaily').classList.toggle('kept', !!(dl && dl.dealtLocal === isoToday && dl.date === dl.dealt));
   { const ms = monthStats(); const dotsEl = $('monthDots');
     if (ms.elapsedDays > 0) {
