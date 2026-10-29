@@ -632,7 +632,7 @@
       <button class="entry" id="btnShelves"><span class="seal" aria-hidden="true"></span><span class="t">Other shelves</span><span class="a">five shapes</span></button>
       <button class="entry" id="btnContinue" style="display:none"><span class="seal" aria-hidden="true"></span><span class="t">The shelf I left</span><span class="a" id="continueVal"></span></button>
     </div>
-    <p class="fine">Dealt fair by construction — every shelf can be cleared, so a loss is never the deal's fault.<br>Turtle layout data adapted from an MIT-licensed reference (C. Cândido); everything else was made in this room.</p>
+    <p class="fine">Dealt at random, the old way — some shelves can't be cleared, and when one walls you in, the reshuffle is free.<br>Turtle layout data adapted from an MIT-licensed reference (C. Cândido); everything else was made in this room.</p>
   </div>
 </div>
 
@@ -677,7 +677,7 @@
   </div>
 </div>
 
-<script src="./sim.js?v=20261029a"></script>
+<script src="./sim.js?v=20261029b"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -1688,8 +1688,11 @@ window.__game = {
   tutOrder: [[0,3],[4,9],[1,2],[13,10],[12,8],[7,5],[6,11]],
   fastWin: () => {
     if (!game) return;
-    for (const [a, b] of game.solution) {
-      if (!game.tiles[a].removed) { NS.applyMove(game, a, b); trayFaces.push(game.tiles[a].face, game.tiles[b].face); }
+    for (let step = 0; step < 600 && game.status !== 'won'; step++) {
+      const mv = NS.hint(game);
+      if (!mv) { NS.reshuffle(game, step + 1); continue; }
+      NS.applyMove(game, mv[0], mv[1]); trayFaces.push(game.tiles[mv[0]].face, game.tiles[mv[1]].face);
+      NS.refreshStatus(game);
     }
     refresh(); if (game.status === 'won') onWin();
   },
