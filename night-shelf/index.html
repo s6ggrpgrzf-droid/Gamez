@@ -45,7 +45,7 @@
   @keyframes glowflare{0%{opacity:1}30%{opacity:1.9}100%{opacity:1}}
   .boardglow.gutter{opacity:.4}
   .board{position:relative; width:min(93vw, calc((100dvh - 336px) * var(--spr, 1.534))); aspect-ratio:var(--spa, 31.6/20.6); --tw:22px}
-  .board.teaching{aspect-ratio:11.6/9.58; width:min(92vw, calc((100dvh - 336px) * 1.211))}
+  .board.teaching{aspect-ratio:11.6/9.2; width:min(92vw, calc((100dvh - 336px) * 1.261))}
 
   /* ===== the glass shelf (v2, Jimmy's pick 2026-10-28): the tiles
      rest on smoked glass — layered gradients only, no backdrop-filter
@@ -199,15 +199,6 @@
   #endcard::before{content:''; position:absolute; inset:10px; border:1px solid rgba(201,169,89,.32); pointer-events:none}
   #endcard::after{content:''; position:absolute; inset:15px; border:1px solid rgba(201,169,89,.15); pointer-events:none}
   .miniBoardWrap{position:relative; width:fit-content; margin:20px auto 2px}
-  .board.cover{width:min(84vw,330px)}
-  #miniBoard{display:block}
-  .board.cover .tile{pointer-events:none; cursor:default}
-  .board.cover .tile.held .face{filter:brightness(.95)}
-  .board.cover .tile.held .art, .board.cover .tile.held .charface{opacity:.9}
-  .miniTray{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:11px}
-  #miniMinis{display:flex; gap:3px}
-  #miniMinis .mini{position:relative}
-  .miniTray .micro{font-size:8.5px; letter-spacing:.3em; text-transform:uppercase; color:#77705f}
   .entries{margin:14px auto 2px; max-width:340px; text-align:left; border-top:1px solid rgba(201,169,89,.22)}
   .entry{display:flex; align-items:center; gap:12px; width:100%;
     border:0; border-bottom:1px solid rgba(201,169,89,.22); background:none;
@@ -253,8 +244,7 @@
     .stats{margin-top:3px}
     .stat b{font-size:16px}
     .board{width:min(62vw, calc((100dvh - 196px) * var(--spr, 1.534)))}
-    .board.teaching{width:min(62vw, calc((100dvh - 196px) * 1.211))}
-    .board.cover{width:min(300px, calc((100dvh - 130px) * 1.534))}
+    .board.teaching{width:min(62vw, calc((100dvh - 196px) * 1.261))}
     .trayrow{margin-top:3px}
     .traypile{height:44px}
     .toolbar{margin-top:2px}
@@ -283,9 +273,7 @@
   #menu .sheet h2{font-size:14.5px; letter-spacing:.34em; text-indent:.34em; color:#d8c491; -webkit-text-fill-color:#d8c491; -webkit-background-clip:initial; background-clip:initial; background-size:auto; align-self:center; background-image:linear-gradient(180deg,#1c1913,#12100b); border:1px solid rgba(201,169,89,.38); padding:9px 16px 8px; box-shadow:0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(232,197,106,.14)}
   #menu .sub{font-size:11.5px; margin-top:7px; color:#8d8672}
   #menu .miniBoardWrap{margin:20px 0 0; position:relative}
-  #menu .board.cover{width:min(94vw,392px)}
   #menu .miniBoardWrap::after{content:''; position:absolute; left:6%; right:6%; bottom:-16px; height:22px; background:radial-gradient(50% 100% at 50% 0%, rgba(0,0,0,.65), transparent 70%); pointer-events:none}
-  #menu .miniTray{margin-top:15px}
   #menu .entries{position:relative; margin:26px auto 0; width:100%; max-width:404px; text-align:left; box-sizing:border-box; border-top:1px solid rgba(201,169,89,.4);
     display:grid; grid-template-columns:1fr 1fr; column-gap:22px; row-gap:11px; padding:20px 18px 14px;
     background:
@@ -369,8 +357,6 @@
     #menu .sheet h2{grid-column:1; grid-row:2; justify-self:center}
     #menu .sub{grid-column:1; grid-row:3; text-align:center}
     #menu .miniBoardWrap{grid-column:1; grid-row:4; margin-top:8px}
-    #menu .board.cover{width:min(252px, calc((100dvh - 216px) * 1.534))}
-    #menu .miniTray{margin-top:8px}
     #menu .sub{margin-top:4px}
     #menu .sheet h2{padding-top:7px; padding-bottom:6px}
     #menu .entries{grid-column:2; grid-row:1 / span 5; margin-top:14px; padding-top:14px; padding-bottom:9px; row-gap:8px}
@@ -1239,7 +1225,7 @@ $('btnShare').addEventListener('click', () => {
   const resh = shareInfo.resh > 0 ? ' · reshuffled ' + (shareInfo.resh === 1 ? 'once' : shareInfo.resh === 2 ? 'twice' : shareInfo.resh + ' times') : '';
   const text = 'The Night Shelf · ' + dstr + ' — tonight\u2019s shelf, kept' + resh + '\nhttps://s6ggrpgrzf-droid.github.io/Gamez/night-shelf/';
   const showText = () => { const el = $('shareText'); el.textContent = text; el.style.display = ''; $('shareVal').textContent = 'long-press the line to copy'; };
-  if (navigator.share) navigator.share({ text }).then(() => { $('shareVal').textContent = 'the night travels'; }).catch(() => {});
+  if (navigator.share) navigator.share({ text }).then(() => { $('shareVal').textContent = 'the night travels'; }).catch(showText);
   else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => { $('shareVal').textContent = 'copied — pass it on'; }).catch(showText);
   else showText();
 });
@@ -1443,7 +1429,7 @@ window.__game = {
 (function () {
   function mk(t, id) { var e = document.createElement(t); e.id = id; document.body.appendChild(e); return e; }
   var L = mk('div', 'fxlight'), V = mk('div', 'fxvig'), C = mk('canvas', 'fxc'), g = C.getContext('2d');
-  var W, H, D, P = [], M = [], boost = 0, fl = 1, flT = 1, last = performance.now();
+  var W, H, D, P = [], M = [], boost = 0, fl = 1, last = performance.now();
   var COL = ['#a9ccff', '#84b8ff', '#8ff0bc', '#f6b8d0'];
   function size() { D = Math.min(1.5, devicePixelRatio || 1); W = innerWidth; H = innerHeight; C.width = W * D; C.height = H * D; g.setTransform(D, 0, 0, D, 0, 0); }
   addEventListener('resize', size); size();
@@ -1544,6 +1530,6 @@ window.__game = {
   requestAnimationFrame(frame);
 })();
 </script>
-<script src="./scene.js?v=20261028c"></script>
+<script src="./scene.js?v=20261028d"></script>
 </body>
 </html>
