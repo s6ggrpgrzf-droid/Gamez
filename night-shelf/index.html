@@ -396,89 +396,6 @@
 @media(hover:hover){.entry:hover{box-shadow:0 0 22px rgba(230,194,92,.2);border-color:rgba(230,194,92,.5)}.entry.prime:hover{filter:brightness(1.08)}}
 </style>
 <style>
-/* ===== the plaque layer: defined menu buttons + print type ===== */
-/* Definition: inlaid double frame, bevelled lacquer plate, real cast shadow */
-#menu .entries .entry{
-  border:1px solid rgba(222,196,128,.85);
-  border-bottom:3px solid rgba(120,94,40,.6);
-  border-radius:5px;
-  padding:13px 14px 12px;
-  align-items:flex-start;
-  background:
-    radial-gradient(130% 95% at 16% 0%, rgba(255,216,146,.14), rgba(255,216,146,0) 55%),
-    linear-gradient(180deg,#2b2519,#17130e 58%,#100d08);
-  box-shadow:
-    inset 0 0 0 3px rgba(8,7,5,.9),
-    inset 0 0 0 4px rgba(201,169,89,.38),
-    inset 0 1px 0 rgba(244,220,160,.4),
-    0 7px 16px rgba(0,0,0,.62);
-}
-#menu .entries .entry:active{
-  transform:translateY(2px);
-  background:
-    radial-gradient(130% 95% at 16% 0%, rgba(255,216,146,.1), rgba(255,216,146,0) 55%),
-    linear-gradient(180deg,#241e14,#14100b 58%,#0d0a07);
-  box-shadow:
-    inset 0 0 0 3px rgba(8,7,5,.9),
-    inset 0 0 0 4px rgba(201,169,89,.3),
-    inset 0 1px 0 rgba(244,220,160,.22),
-    0 2px 6px rgba(0,0,0,.6);
-}
-/* The seal becomes a bezel-set stone: filled, ringed, catching light */
-#menu .entries .entry .seal{
-  width:9px; height:9px; margin-top:6px;
-  border:1px solid rgba(238,205,116,.9);
-  background:radial-gradient(circle at 38% 32%, #ffeda6, #dcb356 58%, #8a6a24);
-  box-shadow:0 0 8px rgba(230,194,92,.4), inset 0 0 2px rgba(90,64,8,.7);
-}
-/* Type: Didone display face (Didot on iOS), engraved tracked captions */
-#menu .entries .entry .t{
-  font-family:Didot,'Bodoni MT','Playfair Display',Georgia,'Iowan Old Style',serif;
-  font-size:16.5px; line-height:1.16; letter-spacing:.015em; color:#eee5cb;
-}
-#menu .entries .entry .a{
-  font-style:normal; text-transform:uppercase; letter-spacing:.17em;
-  font-size:9px; line-height:1.5; color:#ab9257; padding-left:22px; margin-top:4px;
-}
-#menu #btnTeach .a{padding-left:9px; margin-top:0}
-#menu #btnTeach{align-items:center}
-#menu #btnTeach .seal{margin-top:0}
-#menu .entries .entry.prime .t{color:#f4d67c}
-#menu .entries .entry.prime .a{color:rgba(232,197,106,.75)}
-/* The ribbon's text gets the same print treatment */
-#menu #btnContinue .t{font-family:Didot,'Bodoni MT','Playfair Display',Georgia,serif; font-size:15px; letter-spacing:.02em}
-#menu #btnContinue .a{text-transform:uppercase; letter-spacing:.16em; font-size:8.5px; font-style:normal}
-/* Completed depth: an extruded bronze-lacquer edge under each plate, real press travel */
-#menu .entries .entry:not(#btnContinue){
-  background:
-    linear-gradient(180deg, rgba(255,228,166,.16), rgba(255,228,166,0) 42%),
-    radial-gradient(130% 95% at 16% 0%, rgba(255,216,146,.13), rgba(255,216,146,0) 55%),
-    linear-gradient(180deg,#2e271b,#17130e 58%,#100d08);
-  box-shadow:
-    inset 0 0 0 3px rgba(8,7,5,.9),
-    inset 0 0 0 4px rgba(201,169,89,.38),
-    inset 0 1px 0 rgba(248,226,168,.5),
-    inset 0 -3px 5px rgba(0,0,0,.55),
-    0 1px 0 #57431f,
-    0 2px 0 #44351a,
-    0 3px 0 #322612,
-    0 4px 0 #211a0d,
-    0 12px 20px rgba(0,0,0,.66);
-}
-#menu .entries .entry:not(#btnContinue):active{
-  transform:translateY(3px);
-  box-shadow:
-    inset 0 0 0 3px rgba(8,7,5,.9),
-    inset 0 0 0 4px rgba(201,169,89,.3),
-    inset 0 1px 0 rgba(248,226,168,.28),
-    inset 0 -2px 4px rgba(0,0,0,.5),
-    0 1px 0 #322612,
-    0 5px 10px rgba(0,0,0,.6);
-}
-/* The record line stays the book's handwriting, lifted a touch */
-#menu .recordline{color:#b3a98f; font-size:14px}
-</style>
-<style>
 /* v3 substrate (Pip's, under his layer): when prime moves to the lesson for a
    first-time player, New shelf must still flow by order like the other plates —
    the book-era rule pinned it to column 1, row 2 and broke the grid. */
@@ -598,6 +515,11 @@
   #menu .scenePaint{height:auto; aspect-ratio:704/977; background-size:100% 100%}
   #menu .entries{margin-top:14px; padding:16px; border-radius:18px; background:rgba(8,7,5,.92)}
 }
+/* Rescued from the removed plaque layer (cascade cleanup, Oct 29): the
+   differ proved these two declarations were still solely the plaque
+   layer's gift to the resume bar's title. Everything else it declared
+   was already overridden by MENU BUTTONS v3 or the Cinzel layer. */
+#menu #btnContinue .t{letter-spacing:.02em; line-height:1.16}
 </style>
 </head>
 <body>
