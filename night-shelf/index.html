@@ -39,8 +39,9 @@
   .scene{position:relative; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; perspective:1150px; min-height:0}
   .tilt{position:relative; transform-style:flat; will-change:transform; width:100%; display:flex; justify-content:center}
   .boardzone{position:relative; display:flex; justify-content:center}
+:root{--rimA:#84b8ff; --rimB:#43d68a}
   .boardglow{position:absolute; left:50%; top:52%; width:112%; max-width:560px; aspect-ratio:2.1; transform:translate(-50%,-50%);
-    background:radial-gradient(50% 50% at 50% 50%, rgba(110,165,255,.13), rgba(67,214,138,.035) 55%, transparent 72%);
+    background:radial-gradient(50% 50% at 50% 50%, color-mix(in srgb, var(--rimA) 13%, transparent), color-mix(in srgb, var(--rimB) 3.5%, transparent) 55%, transparent 72%);
     filter:blur(6px); pointer-events:none; transition:opacity .9s ease}
   .boardglow.flare{animation:glowflare 1.4s ease-out}
   @keyframes glowflare{0%{opacity:1}30%{opacity:1.9}100%{opacity:1}}
@@ -60,8 +61,8 @@
       linear-gradient(180deg, rgba(215,238,255,.13), rgba(215,238,255,0) 13%),
       linear-gradient(115deg, rgba(255,255,255,0) 26%, rgba(255,255,255,.115) 43%, rgba(255,255,255,.030) 52%, rgba(255,255,255,0) 64%),
       linear-gradient(112deg, rgba(255,255,255,0) 58%, rgba(255,255,255,.085) 63%, rgba(255,255,255,0) 68%),
-      radial-gradient(76% 56% at 50% 40%, rgba(110,165,255,.115), rgba(110,165,255,0) 72%),
-      linear-gradient(0deg, rgba(67,214,138,.055), rgba(67,214,138,0) 22%),
+      radial-gradient(76% 56% at 50% 40%, color-mix(in srgb, var(--rimA) 11.5%, transparent), transparent 72%),
+      linear-gradient(0deg, color-mix(in srgb, var(--rimB) 5.5%, transparent), transparent 22%),
       linear-gradient(168deg, rgba(170,210,255,.125), rgba(130,160,225,.045) 38%, rgba(8,10,18,.12) 80%, rgba(0,0,0,.30));
     box-shadow:
       inset 0 1px 0 rgba(220,240,255,.34),
@@ -79,8 +80,8 @@
   }
   .board::after{
     content:""; position:absolute; left:2%; right:2%; bottom:-2px; height:4px; border-radius:2px;
-    background:linear-gradient(90deg, rgba(132,184,255,0), rgba(132,184,255,.98) 15%, rgba(67,214,138,1) 50%, rgba(132,184,255,.98) 85%, rgba(132,184,255,0));
-    box-shadow:0 0 17px rgba(110,180,255,.70), 0 3px 26px rgba(80,160,255,.40), 0 7px 42px rgba(67,214,138,.22);
+    background:linear-gradient(90deg, transparent, var(--rimA) 15%, var(--rimB) 50%, var(--rimA) 85%, transparent);
+    box-shadow:0 0 17px color-mix(in srgb, var(--rimA) 70%, transparent), 0 3px 26px color-mix(in srgb, var(--rimA) 40%, transparent), 0 7px 42px color-mix(in srgb, var(--rimB) 22%, transparent);
     pointer-events:none;
   }
 
@@ -367,7 +368,7 @@
   }
 /* ===== neon polish layer (candlelight until 2026-10-28 — the light changed; the choreography stayed) ===== */
 #fxlight,#fxvig{position:fixed;inset:0;pointer-events:none;will-change:opacity;animation:fxfade 2.6s ease-out both}
-#fxlight{z-index:55;background:radial-gradient(70% 50% at 50% 40%,rgba(96,165,255,.15),rgba(67,214,138,.045) 55%,rgba(96,165,255,0) 76%)}
+#fxlight{z-index:55;background:radial-gradient(70% 50% at 50% 40%,color-mix(in srgb, var(--rimA) 15%, transparent),color-mix(in srgb, var(--rimB) 4.5%, transparent) 55%,transparent 76%)}
 #fxvig{z-index:56;background:radial-gradient(125% 105% at 50% 46%,rgba(0,0,0,0) 50%,rgba(0,0,0,.44) 100%)}
 #fxc{position:fixed;inset:0;width:100%;height:100%;z-index:150;pointer-events:none}
 @keyframes fxfade{from{opacity:0}}
@@ -384,7 +385,7 @@
 .fxtick{animation:fxtick .45s ease-out}
 @keyframes fxtick{0%{transform:translateY(-3px);color:#fff3cf;text-shadow:0 0 12px rgba(230,194,92,.9)}100%{transform:none;text-shadow:0 0 0 transparent}}
 .traypile.fxland{animation:fxland .6s ease-out}
-@keyframes fxland{30%{filter:drop-shadow(0 0 10px rgba(110,180,255,.85))}}
+@keyframes fxland{30%{filter:drop-shadow(0 0 10px color-mix(in srgb, var(--rimA) 85%, transparent))}}
 #whisper.fxsay{animation:fxsay .8s ease-out}
 @keyframes fxsay{from{opacity:0;transform:translateY(4px)}}
 /* titles catch the light once in a while */
@@ -1182,6 +1183,64 @@ function startGame(seed, resume, layoutName) {
 /* ---------- controls ---------- */
 /* ---- tonight's shelf: one deal for the whole world, and the keepers' ledger ---- */
 const ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+
+/* ---------- tonight's light: the shop relights nightly, worldwide ----------
+   One mood script per date from the gamez-ai worker's nightlight kind —
+   the same light for every keeper. It directs only the light: the menu
+   hum's colors, tempo, motes and drift (scene.js reads window.NS_LIGHT),
+   the board's rim via --rimA/--rimB, and the painting's caption line.
+   Underneath it, six authored house moods rotate by a date hash, so the
+   shop relights even with no network at all; today's original sapphire
+   and emerald are the default the CSS vars boot with. Nothing here can
+   block or break the game: the fetch is timed, typed, and silent. */
+const AI = 'https://gamez-ai.chaoticutopia84.workers.dev';
+var tonightLine = '';
+const HOUSE_MOODS = [
+  { name: 'The House Light', line: 'tonight the shop hums sapphire and emerald', halo: [96, 165, 255], deep: [70, 120, 235], core: [190, 225, 255], secondP: [67, 214, 138], secondW: [239, 80, 73], dust: '#d7e9ff', spark: [170, 215, 255], rimA: '#84b8ff', rimB: '#43d68a', hum: 1, motes: 10, drift: 0, sparkEvery: 5 },
+  { name: 'Violet Hour', line: 'tonight the shop burns violet', halo: [150, 110, 255], deep: [95, 70, 220], core: [216, 196, 255], secondP: [255, 110, 190], secondW: [255, 120, 90], dust: '#e3d9ff', spark: [205, 180, 255], rimA: '#8a5cff', rimB: '#ff6ec7', hum: 0.85, motes: 12, drift: -0.4, sparkEvery: 6 },
+  { name: 'Lamplight Amber', line: 'tonight the shop glows like lamplight', halo: [255, 176, 84], deep: [214, 120, 44], core: [255, 226, 170], secondP: [120, 220, 150], secondW: [255, 96, 80], dust: '#ffe9c4', spark: [255, 205, 130], rimA: '#ffb054', rimB: '#78dc96', hum: 0.8, motes: 8, drift: 0.3, sparkEvery: 7 },
+  { name: 'Rose Neon', line: 'tonight the shop blushes rose', halo: [255, 110, 160], deep: [220, 60, 130], core: [255, 200, 220], secondP: [120, 200, 255], secondW: [255, 170, 90], dust: '#ffd9e8', spark: [255, 170, 200], rimA: '#ff6ea8', rimB: '#78c8ff', hum: 1.05, motes: 12, drift: 0.2, sparkEvery: 4.5 },
+  { name: 'Deep Teal', line: 'tonight the shop breathes teal', halo: [64, 200, 190], deep: [30, 140, 160], core: [190, 245, 235], secondP: [255, 190, 90], secondW: [255, 110, 120], dust: '#d2f5ef', spark: [160, 240, 225], rimA: '#40c8be', rimB: '#ffbe5a', hum: 0.9, motes: 9, drift: -0.3, sparkEvery: 5.5 },
+  { name: 'Moonwhite', line: 'tonight the shop goes quiet and silver', halo: [190, 205, 255], deep: [130, 150, 220], core: [245, 248, 255], secondP: [150, 230, 200], secondW: [255, 180, 160], dust: '#ffffff', spark: [230, 238, 255], rimA: '#becdff', rimB: '#96e6c8', hum: 0.8, motes: 14, drift: 0.1, sparkEvery: 7 }
+];
+function moodOk(m) {
+  return m && Array.isArray(m.halo) && m.halo.length === 3 && Array.isArray(m.deep) && Array.isArray(m.core)
+    && Array.isArray(m.secondP) && Array.isArray(m.secondW) && Array.isArray(m.spark)
+    && typeof m.dust === 'string' && typeof m.rimA === 'string' && typeof m.rimB === 'string' && typeof m.line === 'string';
+}
+function applyMood(m) {
+  if (!moodOk(m)) return;
+  window.NS_LIGHT = { halo: m.halo.join(','), deep: m.deep.join(','), core: m.core.join(','), secondP: m.secondP.join(','), secondW: m.secondW.join(','), dust: m.dust, spark: m.spark.join(','), hum: +m.hum || 1, motes: m.motes | 0, drift: +m.drift || 0, sparkEvery: +m.sparkEvery || 5 };
+  document.documentElement.style.setProperty('--rimA', m.rimA);
+  document.documentElement.style.setProperty('--rimB', m.rimB);
+  tonightLine = m.line || '';
+  if (typeof dressMenu === 'function' && $('menu').classList.contains('on')) dressMenu();
+}
+function lightBoot() {
+  const now = new Date();
+  const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem('ns_light_v1')); } catch (e) { }
+  if (cached && cached.date === today && moodOk(cached.mood)) applyMood(cached.mood);
+  else {
+    let hh = 0; const s = 'nightlight|' + today;
+    for (let i = 0; i < s.length; i++) hh = ((hh * 31) + s.charCodeAt(i)) >>> 0;
+    applyMood(HOUSE_MOODS[hh % HOUSE_MOODS.length]);
+  }
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), 2500);
+  fetch(AI + '/g', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'nightlight', game: 'night-shelf', ctx: { date: today } }), signal: ctl.signal })
+    .then(r => r.json())
+    .then(d => {
+      clearTimeout(to);
+      if (moodOk(d)) {
+        try { localStorage.setItem('ns_light_v1', JSON.stringify({ date: today, mood: d })); } catch (e) { }
+        applyMood(d);
+      }
+    })
+    .catch(() => { });
+}
+lightBoot();
 function arcadeFetch(path, body, cb) {
   let done = false, timer = null;
   const fin = (e, d) => { if (!done) { done = true; if (timer) clearTimeout(timer); cb(e, d); } };
@@ -1471,7 +1530,7 @@ setInterval(() => {
      the old painted cover: in the caption beneath the painting. */
   const svCover = loadSave();
   function showScene(note) { if (note) $('coverNote').textContent = note; }
-  showScene(svCover ? 'the shelf as you left it' : null);
+  showScene(svCover ? 'the shelf as you left it' : (typeof tonightLine !== 'undefined' && tonightLine ? tonightLine : null));
   const rec = records();
   $('recordline').textContent = rec.cleared > 0
     ? 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared'
@@ -1666,6 +1725,6 @@ window.__game = {
   requestAnimationFrame(frame);
 })();
 </script>
-<script src="./scene.js?v=20261028d"></script>
+<script src="./scene.js?v=20261029a"></script>
 </body>
 </html>
