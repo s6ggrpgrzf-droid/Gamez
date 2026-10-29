@@ -587,6 +587,17 @@
 #menu .entries .entry:not(#btnContinue) .t{font-size:14px; letter-spacing:-.005em; padding-right:6px}
 #menu .entries .entry:not(#btnContinue) .a{font-size:10.5px; letter-spacing:-.01em}
 </style>
+<style>
+/* ===== PAINTING, STACKED (his pick #2 from the painting study, Oct 29) =====
+   Portrait only: the painting stands whole above the tray — its own natural
+   proportions (704:977), no crop, no overlap, no fade. The tray goes back to
+   being a tray: full radius, even padding, a plain gap below the painting.
+   Landscape already stacks painting beside tray and is untouched. */
+@media (orientation:portrait){
+  #menu .scenePaint{height:auto; aspect-ratio:704/977; background-size:100% 100%}
+  #menu .entries{margin-top:14px; padding:16px; border-radius:18px; background:rgba(8,7,5,.92)}
+}
+</style>
 </head>
 <body>
 
