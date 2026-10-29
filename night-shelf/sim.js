@@ -248,9 +248,38 @@ function undo(game) {
   return true;
 }
 
+/* The hint earns its keep (developer-review fix 2, Oct 29). Every pairing
+   of free matching tiles is scored by how many standing tiles it sets
+   free — the move that opens the shelf — tie-broken by how much the pair
+   was holding down in total. Returns [idA, idB] or null. The old hint
+   returned the first pair in list order, which could quietly be the
+   worst move on the board. */
 function hint(game) {
-  const moves = availableMoves(game);
-  return moves.length ? moves[0] : null;
+  const free = freeTiles(game);
+  const byKey = new Map();
+  for (const t of free) {
+    const k = matchKey(t.face);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(t);
+  }
+  const freeNow = new Set(free.map(t => t.id));
+  let best = null, bestFreed = -1, bestHold = -1;
+  for (const group of byKey.values()) {
+    if (group.length < 2) continue;
+    for (let i = 0; i < group.length; i++) for (let j = i + 1; j < group.length; j++) {
+      const a = group[i], b = group[j];
+      a.removed = b.removed = true;
+      let freed = 0;
+      for (const t of game.tiles) if (!t.removed && !freeNow.has(t.id) && tileFree(game, t)) freed++;
+      let hold = 0;
+      for (const t of game.tiles) if (!t.removed && (overlaps(t, a) || overlaps(t, b))) hold++;
+      a.removed = b.removed = false;
+      if (freed > bestFreed || (freed === bestFreed && hold > bestHold)) {
+        bestFreed = freed; bestHold = hold; best = [a.id, b.id];
+      }
+    }
+  }
+  return best;
 }
 
 /* Reshuffle the standing tiles by the same construction. What stands is
