@@ -39,7 +39,7 @@
   .tilt{position:relative; transform-style:flat; will-change:transform; width:100%; display:flex; justify-content:center}
   .boardzone{position:relative; display:flex; justify-content:center}
   .boardglow{position:absolute; left:50%; top:52%; width:112%; max-width:560px; aspect-ratio:2.1; transform:translate(-50%,-50%);
-    background:radial-gradient(50% 50% at 50% 50%, rgba(226,196,120,.10), rgba(226,196,120,.028) 55%, transparent 72%);
+    background:radial-gradient(50% 50% at 50% 50%, rgba(110,165,255,.13), rgba(67,214,138,.035) 55%, transparent 72%);
     filter:blur(6px); pointer-events:none; transition:opacity .9s ease}
   .boardglow.flare{animation:glowflare 1.4s ease-out}
   @keyframes glowflare{0%{opacity:1}30%{opacity:1.9}100%{opacity:1}}
@@ -148,14 +148,6 @@
   .whisper{position:relative; z-index:9; margin:13px auto 0; padding:0 22px; max-width:560px; min-height:42px;
     font-style:italic; font-size:14.5px; line-height:1.55; text-align:center; color:#a89f8c}
 
-  /* the candle, become a line of light */
-  .candleline{position:relative; z-index:9; margin:12px auto 0; width:76%; max-width:330px}
-  .candleline .track{height:2px; background:rgba(201,169,89,.14); border-radius:2px}
-  .candleline .burn{height:100%; width:100%; border-radius:2px; background:linear-gradient(90deg,#8a6d2f,#e6c25c);
-    box-shadow:0 0 8px rgba(230,194,92,.55); transition:width 1s linear}
-  .candleline .l{margin-top:7px; text-align:center; font-size:8px; letter-spacing:.3em; text-transform:uppercase; color:#77705f}
-  .candleline.gutter .burn{filter:brightness(.45)}
-  .candleline.flare .burn{box-shadow:0 0 16px rgba(230,194,92,.95)}
 
   .toolbar{position:relative; z-index:9; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:9px; flex-wrap:wrap}
   .tbtn{appearance:none; background:none; border:0; font:inherit; font-size:10px; letter-spacing:.24em; text-transform:uppercase;
@@ -251,9 +243,6 @@
   #endBoard input{background:none; border:0; border-bottom:1px solid rgba(201,169,89,.45); color:#e6ddc4; font:inherit; font-size:14px; padding:5px 2px; width:150px; outline:none}
   #endBoard .bform button{background:none; border:1px solid rgba(201,169,89,.4); color:var(--gold); padding:6px 10px; font:inherit; font-size:10px; letter-spacing:.2em; text-transform:uppercase; cursor:pointer}
   .sheet .fine{font-size:10.5px; color:#6e695d; margin-top:20px; line-height:1.6; letter-spacing:.03em}
-  .stars{display:flex; gap:16px; justify-content:center; margin:14px 0 4px}
-  .stars svg{width:26px; height:38px}
-  .stars .unlit{opacity:.22; filter:grayscale(1)}
   .endstats{font-size:15px; color:#cfc7b2}
 
   @media (orientation:landscape) and (max-height:520px){
@@ -268,8 +257,6 @@
     .board.cover{width:min(300px, calc((100dvh - 130px) * 1.534))}
     .trayrow{margin-top:3px}
     .traypile{height:44px}
-    .candleline{margin-top:4px}
-    .candleline .l{display:none}
     .toolbar{margin-top:2px}
     .whisper{position:absolute; left:12px; top:54px; margin:0; max-width:290px; min-height:0;
       text-align:left; padding:4px 8px; background:rgba(5,6,7,.72); border-radius:6px; font-size:13px}
@@ -286,7 +273,7 @@
   #menu .fine{color:#948e7f}
   }
   /* ===== the menu is the shop: a sign over the door, the shelf in its
-     candle-glow, and the keeper's ledger open on the counter. Nothing
+     neon glow, and the keeper's ledger open on the counter. Nothing
      tappable reads as writing — every choice is a plaque set into the
      page, and the shelf left standing is the book's ribbon. ===== */
   #menu::before, #menu::after{display:none}
@@ -356,7 +343,7 @@
   #menu .sheet h2::after{right:16%}
   @keyframes signSway{from{transform:rotate(.45deg)} to{transform:rotate(-.45deg)}}
   /* The painting (scene-art.css): the menu's hero is a real painting now,
-     the classroom portrait's method — a still, rich room with the candle's
+     the classroom portrait's method — a still, rich room with the neon's
      living light laid over it by a small canvas (scene.js). */
   #menu .miniBoardWrap{width:min(94vw, 430px)}
   #menu .miniBoardWrap::after{display:none}
@@ -389,18 +376,18 @@
     #menu .entries{grid-column:2; grid-row:1 / span 5; margin-top:14px; padding-top:14px; padding-bottom:9px; row-gap:8px}
     #menu .fine{grid-column:2; grid-row:6; justify-self:stretch; margin-top:5px; padding:2px 10px; line-height:1.3}
   }
-/* ===== candlelight polish layer ===== */
+/* ===== neon polish layer (candlelight until 2026-10-28 — the light changed; the choreography stayed) ===== */
 #fxlight,#fxvig{position:fixed;inset:0;pointer-events:none;will-change:opacity;animation:fxfade 2.6s ease-out both}
-#fxlight{z-index:55;background:radial-gradient(70% 50% at 50% 40%,rgba(255,178,92,.17),rgba(255,178,92,.05) 55%,rgba(255,178,92,0) 76%)}
+#fxlight{z-index:55;background:radial-gradient(70% 50% at 50% 40%,rgba(96,165,255,.15),rgba(67,214,138,.045) 55%,rgba(96,165,255,0) 76%)}
 #fxvig{z-index:56;background:radial-gradient(125% 105% at 50% 46%,rgba(0,0,0,0) 50%,rgba(0,0,0,.44) 100%)}
 #fxc{position:fixed;inset:0;width:100%;height:100%;z-index:150;pointer-events:none}
 @keyframes fxfade{from{opacity:0}}
 /* tiles: free ones catch the light, the chosen one breathes */
 .tile .face::before{content:'';position:absolute;inset:-30%;pointer-events:none;opacity:0;
-  background:linear-gradient(105deg,rgba(255,236,190,0) 42%,rgba(255,236,190,.22) 50%,rgba(255,236,190,0) 58%);transform:translateX(-120%)}
+  background:linear-gradient(105deg,rgba(215,238,255,0) 42%,rgba(215,238,255,.22) 50%,rgba(215,238,255,0) 58%);transform:translateX(-120%)}
 .tile.free .face::before{animation:fxglint 10s ease-in-out infinite;animation-delay:var(--d,0s)}
 @keyframes fxglint{0%{transform:translateX(-120%);opacity:0}4%{opacity:1}15%{transform:translateX(120%);opacity:0}100%{transform:translateX(120%);opacity:0}}
-.tile.free .face{box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -9px 13px rgba(0,0,0,.55),inset 1px 0 0 rgba(255,255,255,.07),inset -1px 0 0 rgba(0,0,0,.4),0 0 0 1px rgba(230,194,92,.1)}
+.tile.free .face{box-shadow:inset 0 1px 0 rgba(205,230,255,.26),inset 0 -9px 13px rgba(0,0,0,.55),inset 1px 0 0 rgba(255,255,255,.07),inset -1px 0 0 rgba(0,0,0,.4),0 0 0 1px rgba(140,190,255,.12)}
 .tile.sel .face{box-shadow:0 0 0 1.5px var(--gold2),0 0 16px rgba(230,194,92,.4),inset 0 1px 0 rgba(255,255,255,.2),inset 0 -9px 13px rgba(0,0,0,.5);animation:fxsel 1.2s ease-in-out infinite}
 @keyframes fxsel{50%{box-shadow:0 0 0 1.5px var(--gold2),0 0 18px rgba(230,194,92,.5),inset 0 1px 0 rgba(255,255,255,.24),inset 0 -9px 13px rgba(0,0,0,.5)}}
 @media(hover:hover){.tile.free:not(.sel):hover .face{transform:translate(-.5px,-2px);filter:brightness(1.14)}}
@@ -408,24 +395,15 @@
 .fxtick{animation:fxtick .45s ease-out}
 @keyframes fxtick{0%{transform:translateY(-3px);color:#fff3cf;text-shadow:0 0 12px rgba(230,194,92,.9)}100%{transform:none;text-shadow:0 0 0 transparent}}
 .traypile.fxland{animation:fxland .6s ease-out}
-@keyframes fxland{30%{filter:drop-shadow(0 0 10px rgba(230,194,92,.85))}}
+@keyframes fxland{30%{filter:drop-shadow(0 0 10px rgba(110,180,255,.85))}}
 #whisper.fxsay{animation:fxsay .8s ease-out}
 @keyframes fxsay{from{opacity:0;transform:translateY(4px)}}
-/* the wick end glows and flickers */
-.candleline .track{overflow:visible}
-.candleline .burn{position:relative}
-.candleline .burn::after{content:'';position:absolute;right:-5px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;
-  background:radial-gradient(circle,#fff7da 0%,#ffc65a 40%,rgba(255,160,50,0) 72%);animation:fxflame .22s ease-in-out infinite alternate}
-@keyframes fxflame{from{transform:scale(.8);opacity:.75}to{transform:scale(1.25);opacity:1}}
 /* titles catch the light once in a while */
 .brand h1,#menu h2{background:linear-gradient(100deg,#b9ab86 0%,#b9ab86 38%,#fff3cf 50%,#b9ab86 62%,#b9ab86 100%);background-size:260% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:fxsheen 11s ease-in-out infinite}
 @keyframes fxsheen{0%,55%{background-position:120% 0}100%{background-position:-20% 0}}
 #endcard.on h2{animation:fxarrive 1.5s cubic-bezier(.2,.7,.2,1) .15s both}
 @keyframes fxarrive{from{letter-spacing:.9em;opacity:0;filter:blur(7px)}to{opacity:1;filter:blur(0)}}
-#endStars span:not(.unlit){animation:fxstar 1s ease-out both}
-#endStars span:nth-child(1){animation-delay:.9s}#endStars span:nth-child(2){animation-delay:1.35s}#endStars span:nth-child(3){animation-delay:1.8s}
-@keyframes fxstar{from{opacity:0;transform:scale(.4);filter:brightness(2.6)}60%{transform:scale(1.25)}to{opacity:1;transform:none;filter:drop-shadow(0 0 7px rgba(230,194,92,.7))}}
 .entry{transition:box-shadow .25s,filter .25s,border-color .25s,transform .12s}
 @media(hover:hover){.entry:hover{box-shadow:0 0 22px rgba(230,194,92,.2);border-color:rgba(230,194,92,.5)}.entry.prime:hover{filter:brightness(1.08)}}
 </style>
@@ -437,14 +415,12 @@
     <header>
       <div class="brand">
         <h1>THE NIGHT SHELF</h1>
-        <p>the keeper's mahjong, by candlelight</p>
+        <p>the keeper's mahjong, by neon light</p>
       </div>
       <div class="stats">
         <div class="stat"><b id="stLeft">144</b><span>Standing</span></div>
         <div class="stat sep"></div>
         <div class="stat"><b id="stFree">0</b><span>In reach</span></div>
-        <div class="stat sep"></div>
-        <div class="stat"><b id="stTime">0:00</b><span>By candle</span></div>
       </div>
     </header>
 
@@ -475,10 +451,6 @@
       <button class="sbtn" id="btnStuckNew"><span class="seal" aria-hidden="true"></span>New shelf</button>
     </div>
 
-    <div class="candleline" id="candleline">
-      <div class="track"><div class="burn" id="burn"></div></div>
-      <div class="l">The candle</div>
-    </div>
 
     <nav class="toolbar">
       <button class="tbtn" id="btnHint">Hint</button><i></i>
@@ -540,9 +512,8 @@
 <div class="overlay" id="endcard">
   <div class="sheet">
     <h2 id="endTitle">THE SHELF STANDS CLEAR</h2>
-    <p class="sub" id="endSub">and the candle still burns</p>
+    <p class="sub" id="endSub">and the shelf stands empty, glowing</p>
     <div class="rule"></div>
-    <div class="stars" id="endStars"></div>
     <p class="endstats" id="endStats"></p>
     <p class="recordline" id="endRecord"></p>
     <div id="endBoard"></div>
@@ -742,10 +713,8 @@ const sfxWin = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .3
 
 /* ---------- state, save, records ---------- */
 const SAVE_KEY = 'ns_save_v3', REC_KEY = 'ns_records_v1';
-const BURN = 1800;
-let game = null, selected = -1, elapsed = 0, playing = false, tileEls = [], trayFaces = [], prevStatus = 'playing';
+let game = null, selected = -1, playing = false, tileEls = [], trayFaces = [], prevStatus = 'playing';
 let dailyDate = null, pendingDaily = null, shareInfo = null;
-const fmtTime = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 function records() { try { return JSON.parse(localStorage.getItem(REC_KEY)) || { cleared: 0, best: null }; } catch (e) { return { cleared: 0, best: null }; } }
 function saveRecords(r) { localStorage.setItem(REC_KEY, JSON.stringify(r)); }
 
@@ -756,7 +725,7 @@ function save() {
   const removed = game.tiles.filter(t => t.removed).map(t => t.id);
   localStorage.setItem(SAVE_KEY, JSON.stringify({
     v: 3, seed: game.seed, layout: game.layout || 'turtle', faces: game.tiles.map(t => t.face), removed,
-    moves: flat === removed.length ? game.moves : [], reshuffles: game.reshuffles, reshUsed: game.reshuffles, elapsed, trayFaces, daily: dailyDate,
+    moves: flat === removed.length ? game.moves : [], reshuffles: game.reshuffles, reshUsed: game.reshuffles, trayFaces, daily: dailyDate,
   }));
 }
 function loadSave() {
@@ -826,18 +795,14 @@ function refresh() {
   }
   $('stLeft').textContent = NS.remainingCount(game);
   $('stFree').textContent = NS.availableMoves(game).length;
-  $('stTime').textContent = fmtTime(Math.max(0, BURN - elapsed));
-  const frac = Math.max(0, 1 - elapsed / BURN);
-  $('burn').style.width = (frac * 100) + '%';
-  $('candleline').style.opacity = elapsed >= BURN ? .45 : 1;
   $('shLeft').textContent = game.reshuffles;
   $('btnShuffle').disabled = game.status !== 'playing';
   $('btnUndo').disabled = game.moves.length === 0;
   $('btnHint').disabled = game.status !== 'playing';
   $('stuckbar').classList.toggle('on', game.status === 'stuck');
   if (game.status === 'stuck' && prevStatus !== 'stuck') {
-    $('candleline').classList.add('gutter'); $('boardglow').classList.add('gutter');
-    setTimeout(() => { $('candleline').classList.remove('gutter'); $('boardglow').classList.remove('gutter'); }, 1700);
+    $('boardglow').classList.add('gutter');
+    setTimeout(() => { $('boardglow').classList.remove('gutter'); }, 1700);
   }
   prevStatus = game.status;
   renderTray();
@@ -965,10 +930,9 @@ function tutAfterMove(before) {
   }
   tutDots();
 }
-const STAR_CANDLE = '<svg viewBox="0 0 24 34"><path fill="#e8a33d" d="M12 1c1.8 2.4 2.8 4.1 2.8 6a2.8 2.8 0 1 1-5.6 0C9.2 5.1 10.2 3.4 12 1Z"/><path fill="#ffe9b0" d="M12 4.6c.9 1.2 1.3 2.1 1.3 3a1.3 1.3 0 1 1-2.6 0c0-.9.4-1.8 1.3-3Z"/><rect x="6.4" y="12" width="11.2" height="19" rx="1.6" fill="#cbb27f"/><rect x="4.4" y="31" width="15.2" height="2.2" rx="1" fill="#8a6a34"/></svg>';
 function flare() {
-  $('boardglow').classList.add('flare'); $('candleline').classList.add('flare');
-  setTimeout(() => { $('boardglow').classList.remove('flare'); $('candleline').classList.remove('flare'); }, 1500);
+  $('boardglow').classList.add('flare');
+  setTimeout(() => { $('boardglow').classList.remove('flare'); }, 1500);
 }
 function tutWin() {
   playing = false; wakeDepth();
@@ -977,7 +941,6 @@ function tutWin() {
   endIsTut = true;
   $('endTitle').textContent = 'THE LESSON IS LEARNED';
   $('endSub').textContent = 'the shelf holds no secrets from you now';
-  $('endStars').innerHTML = '';
   $('endStats').textContent = 'Fourteen tiles, seven pairs — free, rested-on, and shut in. The real shelf is the same, only taller: one hundred and forty-four.';
   $('endRecord').textContent = 'The teaching shelf will wait by the door whenever you want it again.';
   $('btnAgain').querySelector('.t').textContent = 'Begin the real shelf';
@@ -988,7 +951,7 @@ function startTutorial() {
   game = NS.customGame(TUT_POS, TUT_FACES);
   game.space = { W: 11.6, H: 7.6 };
   tut = { pairs: 0, held: false, motion: false, sawCovered: false, sawSide: false, finish: false };
-  selected = -1; elapsed = 0; trayFaces = []; prevStatus = 'playing';
+  selected = -1; trayFaces = []; prevStatus = 'playing';
   document.body.classList.add('tutoring');
   boardEl.classList.add('teaching');
   $('btnNew').textContent = 'Leave the lesson';
@@ -1008,7 +971,7 @@ function exitTutVisuals() {
 const PAIR_LINES = [
   'Away together, into the tray.',
   'The shelf breathes a little easier.',
-  'Two of a kind. The candle approves, quietly.',
+  'Two of a kind. The neon approves, quietly.',
   'Somewhere below, a space opens that was shut a moment ago.',
   'The tray fills. The shelf empties. As it should be.',
   'Lifted clean. Not a sound from the shop.',
@@ -1060,17 +1023,14 @@ function onWin() {
   playing = false; wakeDepth(); sfxWin(); save();
   $('endTitle').textContent = 'THE SHELF STANDS CLEAR';
   $('btnAgain').querySelector('.t').textContent = 'Another shelf';
-  const frac = Math.max(0, 1 - elapsed / BURN);
-  const stars = frac > .5 ? 3 : frac > .22 ? 2 : 1;
-  const rec = records(); rec.cleared += 1; if (rec.best === null || elapsed < rec.best) rec.best = elapsed; saveRecords(rec);
+  const rec = records(); rec.cleared += 1; saveRecords(rec);
   dailyKept(rec);
   flare();
-  $('endStars').innerHTML = [1, 2, 3].map(i => '<span class="' + (i <= stars ? '' : 'unlit') + '">' + STAR_CANDLE + '</span>').join('');
-  $('endSub').textContent = stars === 3 ? 'and the candle hardly noticed' : stars === 2 ? 'with candle to spare' : 'by the last inch of candle — but clear is clear';
-  $('endStats').textContent = 'Down in ' + fmtTime(elapsed) + ' — all seventy-two pairs in the tray.' +
-    (game.reshuffles > 0 ? ' The keeper reshuffled ' + (game.reshuffles === 1 ? 'once' : game.reshuffles === 2 ? 'twice' : game.reshuffles + ' times') + ' along the way.' : '');
-  $('endRecord').textContent = 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared · the best of them at ' + fmtTime(rec.best);
-  shareInfo = dailyDate ? { date: dailyDate, t: elapsed, stars, resh: game.reshuffles } : null;
+  $('endSub').textContent = 'and the shelf stands empty, glowing';
+  $('endStats').textContent = 'All seventy-two pairs in the tray.' +
+    (game.reshuffles > 0 ? ' The keeper reshuffled ' + (game.reshuffles === 1 ? 'once' : game.reshuffles === 2 ? 'twice' : game.reshuffles + ' times') + ' along the way.' : ' Not one reshuffle needed.');
+  $('endRecord').textContent = 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared.';
+  shareInfo = dailyDate ? { date: dailyDate, resh: game.reshuffles } : null;
   $('btnShare').style.display = shareInfo ? '' : 'none';
   $('shareText').style.display = 'none';
   $('shareVal').textContent = 'the result, for passing on';
@@ -1082,9 +1042,8 @@ function startGame(seed, resume, layoutName) {
   if (resume) { dailyDate = resume.daily || null; } else { dailyDate = pendingDaily; pendingDaily = null; }
   $('endBoard').innerHTML = '';
   game = NS.newGame(seed, layoutName || (resume && resume.layout) || 'turtle');
-  selected = -1; elapsed = 0; trayFaces = []; prevStatus = 'playing';
+  selected = -1; trayFaces = []; prevStatus = 'playing';
   if (resume && resume.v === 3) {
-    elapsed = resume.elapsed || 0;
     game.tiles.forEach((t, i) => t.face = resume.faces[i]);
     for (const id of resume.removed) game.tiles[id].removed = true;
     game.moves = resume.moves || [];
@@ -1094,7 +1053,7 @@ function startGame(seed, resume, layoutName) {
   }
   buildBoard(); refresh(); playing = true;
   $('menu').classList.remove('on'); $('endcard').classList.remove('on');
-  say(resume ? 'The shelf as you left it — and the candle, patient as ever, remembers.' : 'The shelf is set and the shop is quiet. Two of a kind, both standing free — lift them away.');
+  say(resume ? 'The shelf as you left it — the neon kept its hum, and remembers.' : 'The shelf is set and the shop is quiet. Two of a kind, both standing free — lift them away.');
   save();
 }
 
@@ -1116,15 +1075,13 @@ function dailyKept(rec) {
   const d = rec.daily || { date: '', streak: 0, best: null, lastTime: null, dealt: '', dealtLocal: '', days: {} };
   if (!d.days) d.days = {};
   const prev = d.days[dailyDate];
-  if (!prev || elapsed < prev.t) d.days[dailyDate] = { t: elapsed };
+  if (!prev) d.days[dailyDate] = { kept: true };
   if (dailyDate === new Date().toISOString().slice(0, 10)) {
     if (d.date !== dailyDate) {
       const y = new Date(Date.parse(dailyDate + 'T12:00:00Z') - 864e5).toISOString().slice(0, 10);
       d.streak = d.date === y ? d.streak + 1 : 1;
       d.date = dailyDate;
     }
-    d.lastTime = elapsed;
-    if (d.best === null || elapsed < d.best) d.best = elapsed;
   }
   rec.daily = d; saveRecords(rec);
   submitDaily();
@@ -1132,15 +1089,15 @@ function dailyKept(rec) {
 function submitDaily() {
   const box = $('endBoard'); if (!box || !dailyDate) return;
   const board = 'daily-' + dailyDate;
-  const score = Math.max(1, 3600 - elapsed);
+  const score = 3600; // a keep is a keep — the ledger lists keepers, not times
   let name = ''; try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
   function render(top, rank, me) {
     let h = '<div class="btitle">Tonight&rsquo;s shelf &mdash; the keepers&rsquo; ledger</div>';
     if (rank > 0) h += '<div class="brank">You stand #' + rank + ' tonight</div>';
     if (top && top.length) {
-      h += top.slice(0, 5).map((e, i) => '<div class="brow' + (e.name === me ? ' me' : '') + '"><span>' + (i + 1) + '. ' + escBoard(e.name) + '</span><b>' + fmtTime(Math.max(0, 3600 - e.score)) + '</b></div>').join('');
+      h += top.slice(0, 5).map((e, i) => '<div class="brow' + (e.name === me ? ' me' : '') + '"><span>' + (i + 1) + '. ' + escBoard(e.name) + '</span><b>kept</b></div>').join('');
     } else {
-      h += '<div class="bempty">The board is out of reach tonight &mdash; your time still stands in the ledger.</div>';
+      h += '<div class="bempty">The board is out of reach tonight &mdash; your keep still stands in the ledger.</div>';
     }
     box.innerHTML = h;
   }
@@ -1233,7 +1190,7 @@ function openMonth() {
     const wd = DAY_NAMES[new Date(Date.parse(date + 'T12:00:00Z')).getUTCDay()];
     const row = document.createElement('button');
     row.className = 'mrow' + (days[date] ? ' kept' : '');
-    const state = days[date] ? 'kept · ' + fmtTime(days[date].t)
+    const state = days[date] ? 'kept'
       : (sv && sv.daily === date) ? 'standing · in the tray'
       : (date === today ? 'tonight · unopened' : 'unopened');
     row.innerHTML = '<span class="d"></span><span class="s"></span>';
@@ -1280,7 +1237,7 @@ $('btnShare').addEventListener('click', () => {
   if (!shareInfo) return; ac();
   const dstr = new Date(Date.parse(shareInfo.date + 'T12:00:00Z')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   const resh = shareInfo.resh > 0 ? ' · reshuffled ' + (shareInfo.resh === 1 ? 'once' : shareInfo.resh === 2 ? 'twice' : shareInfo.resh + ' times') : '';
-  const text = 'The Night Shelf · ' + dstr + ' — clear in ' + fmtTime(shareInfo.t) + ' · ' + '\u{1F56F}\uFE0F'.repeat(shareInfo.stars) + resh + '\nhttps://s6ggrpgrzf-droid.github.io/Gamez/night-shelf/';
+  const text = 'The Night Shelf · ' + dstr + ' — tonight\u2019s shelf, kept' + resh + '\nhttps://s6ggrpgrzf-droid.github.io/Gamez/night-shelf/';
   const showText = () => { const el = $('shareText'); el.textContent = text; el.style.display = ''; $('shareVal').textContent = 'long-press the line to copy'; };
   if (navigator.share) navigator.share({ text }).then(() => { $('shareVal').textContent = 'the night travels'; }).catch(() => {});
   else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => { $('shareVal').textContent = 'copied — pass it on'; }).catch(showText);
@@ -1372,14 +1329,13 @@ boardEl.addEventListener('pointerdown', e => {
   if (best) onTile(best.id);
 });
 
-/* the candle only burns while the keeper is at the shelf */
+/* no clock at the shelf — neon doesn't burn down. The heartbeat
+   only keeps the save fresh while the keeper plays. */
+let beats = 0;
 setInterval(() => {
   if (playing && game && !tut && game.status !== 'won' && !document.hidden) {
-    elapsed++;
-    $('stTime').textContent = fmtTime(Math.max(0, BURN - elapsed));
-    const frac = Math.max(0, 1 - elapsed / BURN);
-    $('burn').style.width = (frac * 100) + '%';
-    if (elapsed % 10 === 0) save();
+    beats++;
+    if (beats % 10 === 0) save();
   }
 }, 1000);
 
@@ -1387,7 +1343,7 @@ setInterval(() => {
 (function dressMenu() {
   /* the cover is the game itself: a real Turtle, mid-shelf, dealt by the sim */
   /* The menu's hero is a real painting now (scene-art.css) — the classroom
-     portrait's method: a still, rich room, with the candle's light alive
+     portrait's method: a still, rich room, with the neon's hum alive
      over the varnish (scene.js). A baked painting's tiles cannot change
      with the game, so the room's memory lives where it also lived under
      the old painted cover: in the caption beneath the painting. */
@@ -1396,7 +1352,7 @@ setInterval(() => {
   showScene(svCover ? 'the shelf as you left it' : null);
   const rec = records();
   $('recordline').textContent = rec.cleared > 0
-    ? 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared · the best of them at ' + fmtTime(rec.best)
+    ? 'The ledger so far: ' + rec.cleared + (rec.cleared === 1 ? ' shelf' : ' shelves') + ' cleared'
     : 'The ledger is blank. Tonight could change that.';
   if (localStorage.getItem('ns_tutorial_done')) {
     $('teachVal').textContent = 'replay the lesson · 14 tiles';
@@ -1408,14 +1364,14 @@ setInterval(() => {
   const nowD = new Date();
   const isoToday = nowD.getFullYear() + '-' + String(nowD.getMonth() + 1).padStart(2, '0') + '-' + String(nowD.getDate()).padStart(2, '0');
   if (dl && dl.dealtLocal === isoToday && dl.date === dl.dealt) {
-    $('dailyVal').textContent = 'cleared tonight · ' + fmtTime(dl.lastTime) + (dl.streak > 1 ? ' · ' + dl.streak + ' nights running' : '');
+    $('dailyVal').textContent = 'cleared tonight' + (dl.streak > 1 ? ' · ' + dl.streak + ' nights running' : '');
   } else if (dl && dl.dealtLocal === isoToday) {
     $('dailyVal').textContent = 'dealt · still standing';
   } else {
     $('dailyVal').textContent = 'one deal, the whole world · ' + nowD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
   if (!svCover && dl && dl.dealtLocal === isoToday && dl.date === dl.dealt) {
-    showScene('tonight\u2019s shelf — kept in ' + fmtTime(dl.lastTime));
+    showScene('tonight\u2019s shelf \u2014 kept');
   }
   { const ms = monthStats(); $('monthVal').textContent = ms.kept ? ms.kept + ' of ' + ms.elapsedDays + ' nights kept in ' + ms.monthName : 'a new month, unopened'; }
   $('btnDaily').classList.toggle('kept', !!(dl && dl.dealtLocal === isoToday && dl.date === dl.dealt));
@@ -1430,9 +1386,7 @@ setInterval(() => {
   const s = loadSave();
   if (s) {
     const remaining = 144 - s.removed.length;
-    const cfrac = Math.max(0, 1 - (s.elapsed || 0) / BURN);
-    const cword = cfrac > .9 ? 'untouched' : cfrac > .5 ? 'burning true' : cfrac > .22 ? 'well down' : 'nearly gone';
-    $('continueVal').textContent = remaining + ' standing · candle ' + cword;
+    $('continueVal').textContent = remaining + ' standing';
     $('btnContinue').style.display = '';
   }
 })();
@@ -1485,12 +1439,12 @@ window.__game = {
 };
 </script>
 <script>
-/* ===== candlelight polish layer: light, dust, embers ===== */
+/* ===== neon polish layer: light, dust, sparks ===== */
 (function () {
   function mk(t, id) { var e = document.createElement(t); e.id = id; document.body.appendChild(e); return e; }
   var L = mk('div', 'fxlight'), V = mk('div', 'fxvig'), C = mk('canvas', 'fxc'), g = C.getContext('2d');
   var W, H, D, P = [], M = [], boost = 0, fl = 1, flT = 1, last = performance.now();
-  var COL = ['#ffd98a', '#ffbf5a', '#fff0c4', '#e6c25c'];
+  var COL = ['#a9ccff', '#84b8ff', '#8ff0bc', '#f6b8d0'];
   function size() { D = Math.min(1.5, devicePixelRatio || 1); W = innerWidth; H = innerHeight; C.width = W * D; C.height = H * D; g.setTransform(D, 0, 0, D, 0, 0); }
   addEventListener('resize', size); size();
   for (var i = 0; i < 24; i++) M.push({ x: Math.random(), y: Math.random(), s: .6 + Math.random() * 1.1, v: .004 + Math.random() * .01, ph: Math.random() * 6.28 });
@@ -1555,14 +1509,14 @@ window.__game = {
   function frame(t) {
     requestAnimationFrame(frame);
     var dt = Math.min(50, t - last); last = t;
-    flT += (Math.random() - .5) * .16; flT = Math.max(.8, Math.min(1.12, flT)); fl += (flT - fl) * .1;
+    fl = .95 + .05 * Math.sin(t * .0011) + .02 * Math.sin(t * .00037 + 1.7); // the hum: a slow swell, never a flame's flutter
     boost *= Math.pow(.992, dt);
-    var f = playing ? Math.max(0, 1 - elapsed / BURN) : 1;
+    var f = 1; // neon doesn't burn down — the light is the light, all night
     var li = (.45 + .55 * f) * fl + boost;
     L.style.opacity = Math.min(1, li * .75).toFixed(3);
     V.style.opacity = (.5 + .5 * (1 - f)).toFixed(3);
     g.clearRect(0, 0, W, H); g.globalCompositeOperation = 'lighter';
-    g.fillStyle = 'rgb(255,214,150)';
+    g.fillStyle = 'rgb(190,220,255)';
     for (var i = 0; i < M.length; i++) {
       var m = M[i]; m.y -= m.v * dt / H * 16; if (m.y < -.02) { m.y = 1.02; m.x = Math.random(); }
       var x = (m.x + Math.sin(t * .0003 + m.ph) * .02) * W, y = m.y * H;
@@ -1578,7 +1532,7 @@ window.__game = {
       var u = p.a / p.l;
       if (p.ring) {
         var r = p.r0 + (p.r1 - p.r0) * (1 - Math.pow(1 - u, 3));
-        g.globalAlpha = .55 * (1 - u); g.strokeStyle = '#ffce78'; g.lineWidth = 1.4; g.beginPath(); g.arc(p.x, p.y, r, 0, 6.283); g.stroke(); continue;
+        g.globalAlpha = .55 * (1 - u); g.strokeStyle = '#a9ccff'; g.lineWidth = 1.4; g.beginPath(); g.arc(p.x, p.y, r, 0, 6.283); g.stroke(); continue;
       }
       p.vx *= k; p.vy = p.vy * k + p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
       var al2 = (1 - u) * (1 - u);
@@ -1590,6 +1544,6 @@ window.__game = {
   requestAnimationFrame(frame);
 })();
 </script>
-<script src="./scene.js?v=20261028b"></script>
+<script src="./scene.js?v=20261028c"></script>
 </body>
 </html>
