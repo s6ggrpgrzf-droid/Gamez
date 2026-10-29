@@ -766,22 +766,32 @@ function stick(x, y, h, col) {
 }
 function bamSVG(n) {
   if (n === 1) {
-    return '<svg viewBox="0 0 24 30">' +
-      '<path d="M17.8 19.6c.4-2.2 1.8-3.8 4-4.6-.2 2.3-1.6 3.9-4 4.6Z" fill="' + EMER + '" opacity=".75"/>' +
-      '<path d="M15.9 20.2c-.3-2.1.4-4 2-5.4.5 2.2-.2 4.1-2 5.4Z" fill="' + EMER + '" opacity=".55"/>' +
-      '<path d="M15.9 16.9c2.3 2.6 4 5.8 4.9 9.4-1.2.3-2.4.1-3.5-.5-1.1-2.9-1.6-5.9-1.4-8.9Z" fill="' + SAPP + '"/>' +
-      '<path d="M14.7 17.6c1.6 2.9 2.5 6 2.8 9.3-1.2.1-2.4-.3-3.4-1-.5-2.8-.2-5.6.6-8.3Z" fill="' + EMER + '"/>' +
-      '<line x1="2.6" y1="25.8" x2="21.4" y2="20.6" stroke="' + EMER + '" stroke-width="2.5" stroke-linecap="round"/>' +
-      '<g stroke="#06281a" stroke-width=".95"><line x1="8.2" y1="27.3" x2="8.6" y2="24.7"/><line x1="14.6" y1="25.6" x2="15" y2="23"/></g>' +
-      '<path d="M6.5 10.6C6 14.2 7.9 17.7 11.4 18.7c3.2.9 5.9-.8 6.1-3.8.2-3.1-2.2-5.4-5.4-5.8-2.6-.3-5.2.3-5.6 1.5Z" fill="' + EMER + '"/>' +
-      '<ellipse cx="7.7" cy="11.6" rx="1.25" ry="1.7" fill="' + RUBY + '" opacity=".85" transform="rotate(18 7.7 11.6)"/>' +
-      '<path d="M10.4 10.7c2.9-.4 5.3 1.4 5.6 4.1-2.2.9-4.7.3-6.1-1.3-.7-1-.4-2.2.5-2.8Z" fill="' + SAPP + '"/>' +
-      '<path d="M11.2 12.3c1.2-.1 2.4.4 3.2 1.3M10.8 13.9c1.1 0 2.2.5 2.9 1.3" stroke="' + GOLD + '" stroke-width=".55" fill="none" opacity=".85"/>' +
-      '<circle cx="8.9" cy="9" r="2.9" fill="' + EMER + '"/>' +
-      '<path d="M6.1 8.5 3.4 9.5l2.8 1.1c.3-.7.2-1.4-.1-2.1Z" fill="' + GOLD + '"/>' +
-      '<circle cx="8.2" cy="8.6" r=".62" fill="#0a0f0c"/><circle cx="8.45" cy="8.35" r=".22" fill="#ffffff"/>' +
-      '<path d="M10.9 18.4l.7 4.8M13.6 18.2l.7 4.3" stroke="' + GOLD + '" stroke-width=".8" fill="none"/>' +
-      '<circle cx="5.9" cy="27.9" r="1.05" fill="' + RUBY + '"/><circle cx="9.3" cy="28.4" r=".8" fill="' + RUBY + '" opacity=".75"/></svg>';
+    return '<svg viewBox=\"0 0 24 30\">' +
+      '<path d=\"M11.2 18.2c-2.3 3-3.7 6-4.1 9.3 2.1-1.9 3.6-4.7 4.7-8.4Z\" fill=\"' + EMER + '\" opacity=\".92\"/>' +
+      '<path d=\"M12.6 18.6c-1.4 3.4-1.9 6.7-1.5 10 1.6-2.4 2.4-5.5 2.3-9.2Z\" fill=\"' + EMER + '\"/>' +
+      '<path d=\"M14 18.4c-.5 3.3-.2 6.5.9 9.5 1-2.7.9-5.9-.3-9.3Z\" fill=\"' + SAPP + '\" opacity=\".85\"/>' +
+      '<line x1=\"3.2\" y1=\"23.8\" x2=\"20.8\" y2=\"19.4\" stroke=\"' + EMER + '\" stroke-width=\"1.15\" stroke-linecap=\"round\"/>' +
+      '<path d=\"M15.6 20.6c1.2-1.7 2.8-2.7 4.7-3-.6 1.9-1.9 3.3-3.8 4.1Z\" fill=\"' + EMER + '\"/>' +
+      '<path d=\"M15.2 21.1c.3 1.6 1.2 2.9 2.6 3.8.1-1.7-.6-3.1-1.9-4.2Z\" fill=\"' + EMER + '\" opacity=\".8\"/>' +
+      '<path d=\"M10.7 17.6l.4 4M13.4 17l1 3.4\" stroke=\"' + GOLD + '\" stroke-width=\".6\" fill=\"none\"/>' +
+      '<ellipse cx=\"12.3\" cy=\"12.6\" rx=\"4.6\" ry=\"6.3\" fill=\"none\" stroke=\"' + EMER + '\" stroke-width=\"1.05\" transform=\"rotate(-8 12.3 12.6)\"/>' +
+      '<g fill=\"none\" stroke=\"' + EMER + '\" stroke-width=\".62\" opacity=\".85\">' +
+      '<path d=\"M9.7 10.6c-.3 1.7-.1 3.4.6 5\"/>' +
+      '<path d=\"M10.9 15.9c1 .5 2.2.7 3.4.5\"/>' +
+      '<path d=\"M10.3 13.4c.9.5 2 .6 3 .4\"/>' +
+      '</g>' +
+      '<path d=\"M12.9 8.4c2.7 1 4.1 3.5 3.7 6.3-.3 2.4-1.8 4-4 4.6 1-3.6.9-7.2-.3-10.7Z\" fill=\"none\" stroke=\"' + SAPP + '\" stroke-width=\"1\"/>' +
+      '<g fill=\"none\" stroke=\"' + SAPP + '\" stroke-width=\".62\" opacity=\".9\">' +
+      '<path d=\"M13.5 11.9c1.3.2 2.3 1 2.7 2.1\"/>' +
+      '<path d=\"M13.3 15.2c1.2.1 2.1.8 2.5 1.8\"/>' +
+      '</g>' +
+      '<circle cx=\"8.6\" cy=\"6.2\" r=\"2.6\" fill=\"none\" stroke=\"' + EMER + '\" stroke-width=\"1.05\"/>' +
+      '<path d=\"M10.7 8c.4.8.7 1.7.8 2.7\" stroke=\"' + EMER + '\" stroke-width=\".8\" fill=\"none\"/>' +
+      '<path d=\"M9.6 3.9c.3-1.1 1-1.9 2-2.4.1 1.1-.3 2-1.1 2.7Z\" fill=\"' + RUBY + '\"/>' +
+      '<path d=\"M11.2 3.6c.6-.9 1.4-1.5 2.4-1.7-.2 1-.8 1.8-1.7 2.3Z\" fill=\"' + RUBY + '\" opacity=\".85\"/>' +
+      '<path d=\"M8.4 4.2c0-1.1.4-2 1.2-2.7.4 1 .3 2-.3 2.9Z\" fill=\"' + RUBY + '\" opacity=\".7\"/>' +
+      '<path d=\"M6.3 5.6 4.1 6.7l2.3.9c.2-.66.1-1.32-.1-2Z\" fill=\"' + GOLD + '\"/>' +
+      '<circle cx=\"8.2\" cy=\"5.8\" r=\".68\" fill=\"' + RUBY + '\"/>' + '</svg>';
   }
   const P = {
     2: [[12, 8, EMER], [12, 22, SAPP]], 3: [[12, 7.5, EMER], [7.5, 21.5, EMER], [16.5, 21.5, EMER]],
