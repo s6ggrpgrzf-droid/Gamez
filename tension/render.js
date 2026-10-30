@@ -303,10 +303,10 @@ function createRenderer(canvas) {
     gl.viewport(0, 0, w, h);
     const aspect = w / h;
     const fov = aspect < 0.8 ? 0.98 : aspect < 1.3 ? 0.82 : 0.68;
-    const dist = aspect < 0.8 ? 11.5 : aspect < 1.3 ? 10.2 : 9.4;
+    const dist = aspect < 0.8 ? 13.4 : aspect < 1.3 ? 10.2 : 9.4;
     proj = mPersp(fov, aspect, 0.1, 60);
     const sway = Math.sin(view3.time * 0.00023) * 0.35;
-    camPos = [sway, 0.55 + Math.sin(view3.time * 0.00017) * 0.12, dist];
+    camPos = [sway, 0.3 + Math.sin(view3.time * 0.00017) * 0.12, dist];
     curSway = sway;
     view = mMul(mTrans(-camPos[0], -camPos[1], -camPos[2]), mRotX(-0.05));
 
