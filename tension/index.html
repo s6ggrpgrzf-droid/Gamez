@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Tension</title>
-<link rel="stylesheet" href="font-fraunces.css?v=20261029a">
+<link rel="stylesheet" href="font-fraunces.css?v=20261029b">
 <style>
   :root{
     --bone:#e9e3d3; --dim:#97907e; --faint:#5d594f;
@@ -196,9 +196,9 @@
   </div>
 </div>
 
-<script src="sim.js?v=20261029a"></script>
-<script src="render.js?v=20261029a"></script>
-<script src="audio.js?v=20261029a"></script>
+<script src="sim.js?v=20261029b"></script>
+<script src="render.js?v=20261029b"></script>
+<script src="audio.js?v=20261029b"></script>
 <script>
 'use strict';
 /* TENSION — shell: the ladder, input, the loop.
@@ -287,6 +287,7 @@ let snapAt = -1e9, openedAt = 0;
 let frozen = false, frozenTime = 0;
 let creakNext = 0;
 let saidFirstSet = false, saidOverset = false, saidFalse = false;
+let saidStuck = false, lastActivity = 0;
 
 /* ---------- the tray ---------- */
 const rowsEl = document.getElementById('rows');
@@ -439,6 +440,7 @@ function beginPlay(label) {
   input.pin = Math.floor(lock.stacks.length / 2); input.push = 0; input.tension = 0;
   snapAt = -1e9;
   saidFirstSet = false; saidOverset = false; saidFalse = false;
+  saidStuck = false; lastActivity = performance.now();
   buildTicks(); syncTicks();
   document.getElementById('hudChapter').textContent = label;
   whisperEl.classList.remove('show');
@@ -576,7 +578,7 @@ function recomputeInput() {
   }
   if (pick) {
     const dy = pick.startY - pick.y;
-    input.push = clamp01(dy / 130);
+    input.push = clamp01(dy / 105);
     const np = pinFromClientX(pick.x);
     if (np !== input.pin && input.push < 0.15) {
       input.pin = np;
@@ -626,15 +628,19 @@ function buzz(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch (e
 function handleEvents(now) {
   for (const ev of TN.drainEvents(lock)) {
     switch (ev.type) {
-      case 'tick': audio.tick(ev.pin); break;
+      case 'tick':
+        // the binder sounds heavy — the tell the game is played by
+        if (ev.pin === TN.binderIndex(lock) && lock.stacks[ev.pin].state === 'down') audio.tickHeavy(ev.pin);
+        else audio.tick(ev.pin);
+        break;
       case 'ridge': audio.ridge(ev.pin); break;
       case 'set':
-        audio.set(ev.pin); buzz(12); syncTicks();
+        audio.set(ev.pin); buzz(12); syncTicks(); lastActivity = now;
         if (!saidFirstSet) { saidFirstSet = true; whisper('One set', 'The plug gave — feel for the next to bind'); }
         else if (lock.sets === lock.stacks.length - 1) whisper('One more');
         break;
       case 'falseset':
-        audio.falseset(ev.pin); buzz(8); syncTicks();
+        audio.falseset(ev.pin); buzz(8); syncTicks(); lastActivity = now;
         if (!saidFalse) { saidFalse = true; whisper('A false set', 'The plug rolled back — ease off as you lift'); }
         else whisper('A false set', 'Ease off as you lift');
         break;
@@ -760,6 +766,10 @@ function frame(now) {
     }
   }
   if (mode === 'open' && zenMode && now - openedAt > 2700) startZen();
+  if (mode === 'play' && !zenMode && !saidStuck && lock.sets === 0 && now - lastActivity > 7000) {
+    saidStuck = true;
+    whisper('One pin sounds heavy', 'That one binds — push it through its click', 3800);
+  }
   const snapT = snapAt > 0 ? Math.min(1, (now - snapAt) / 650) : 0;
   const openT = mode === 'open' ? Math.min(1, (now - openedAt) / 1150) : 0;
   const openEase = openT * openT * (3 - 2 * openT);
