@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Tension</title>
+<link rel="stylesheet" href="font-fraunces.css?v=20261029a">
+<style>
+  :root{
+    --bone:#e9e3d3; --dim:#97907e; --faint:#5d594f;
+    --brass:#c9a45c; --brass-dim:rgba(201,164,92,.38);
+    --ink:#070708;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; background:var(--ink); overflow:hidden; }
+  body{ font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--bone);
+        -webkit-user-select:none; user-select:none; }
+  #stage{ position:fixed; inset:0; touch-action:none; }
+  canvas{ display:block; width:100%; height:100%; }
+
+  .caps{ text-transform:uppercase; letter-spacing:.38em; font-size:10px; font-weight:600; }
+  .hairline{ height:1px; background:linear-gradient(90deg, transparent, var(--brass-dim), transparent); }
+  .diamond{ width:7px; height:7px; transform:rotate(45deg); border:1px solid var(--brass);
+            display:inline-block; transition:background .3s, box-shadow .3s; }
+  .diamond.on{ background:var(--brass); box-shadow:0 0 8px rgba(201,164,92,.55); }
+
+  .btn{ pointer-events:auto; cursor:pointer; padding:16px 42px 16px calc(42px + .38em);
+        color:var(--bone); background:linear-gradient(180deg,#191a1f,#101014);
+        border:1px solid var(--brass-dim); letter-spacing:.38em; font-size:11px; font-weight:600;
+        text-transform:uppercase; transition:border-color .25s, box-shadow .25s, transform .12s; }
+  .btn:active{ transform:scale(.975); border-color:var(--brass); box-shadow:0 0 22px rgba(201,164,92,.22) inset, 0 0 14px rgba(201,164,92,.18); }
+  .btn.small{ padding:13px 24px 13px calc(24px + .38em); font-size:10px; }
+
+  /* ---------- the tray (menu) ---------- */
+  #menu{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center;
+         justify-content:flex-end; padding:0 28px calc(3.5vh + env(safe-area-inset-bottom)); pointer-events:none; }
+  #menu .plate{ pointer-events:none; display:flex; flex-direction:column; align-items:center; text-align:center; width:100%; }
+  #menu h1{ font-family:'Fraunces',Georgia,serif; font-weight:560; font-variation-settings:'opsz' 144;
+            font-size:min(17vw, 88px); letter-spacing:.14em; margin-left:.14em; line-height:1;
+            color:var(--bone); text-shadow:0 2px 30px rgba(0,0,0,.8); }
+  #menu .rule{ width:min(62vw,340px); margin:18px 0 14px; position:relative; }
+  #menu .rule .diamond{ position:absolute; left:50%; top:-3.5px; margin-left:-4.5px; background:var(--brass); }
+  #menu .sub{ color:var(--dim); }
+  #rows{ margin-top:22px; display:flex; flex-direction:column; align-items:center; width:100%; }
+  .chrow{ pointer-events:auto; cursor:pointer; display:flex; align-items:center; gap:16px;
+          width:min(86vw, 400px); padding:12px 18px; margin-top:9px; text-align:left;
+          background:linear-gradient(180deg,#15161a,#0e0e11); border:1px solid rgba(201,164,92,.22);
+          transition:border-color .25s, transform .12s; }
+  .chrow:active{ transform:scale(.985); border-color:var(--brass); }
+  .chrow .num{ font-family:'Fraunces',Georgia,serif; font-weight:560; font-size:21px; color:var(--brass); width:34px; text-align:center; }
+  .chrow .cname{ letter-spacing:.3em; font-size:10px; font-weight:600; text-transform:uppercase; color:var(--bone); }
+  .chrow .cmedal{ margin-left:auto; letter-spacing:.3em; font-size:9px; font-weight:600; color:var(--brass); text-transform:uppercase; white-space:nowrap; }
+  .chrow .cmedal.none{ color:var(--faint); }
+  .chrow.locked{ opacity:.34; pointer-events:none; }
+  .chrow.locked .num{ color:var(--dim); }
+  .chrow.daily{ border-color:rgba(201,164,92,.55); background:linear-gradient(180deg,#1a1a20,#111116); }
+  .chrow.daily .num{ font-size:15px; letter-spacing:.06em; width:auto; }
+  .chrow .csub{ display:block; margin-top:4px; letter-spacing:.24em; font-size:8.5px; color:var(--dim); text-transform:uppercase; }
+  #menu .fine{ color:var(--faint); letter-spacing:.22em; margin-top:16px; font-size:9px; text-transform:uppercase; }
+  #bodiesWrap{ margin-top:20px; display:flex; flex-direction:column; align-items:center; }
+  #bodiesWrap .blabel{ color:var(--faint); }
+  #bodies{ display:flex; gap:9px; margin-top:10px; }
+  .chip{ pointer-events:auto; cursor:pointer; display:flex; align-items:center; gap:8px;
+         padding:8px 12px; background:linear-gradient(180deg,#14151a,#0d0d10);
+         border:1px solid rgba(201,164,92,.18); transition:border-color .25s, transform .12s; }
+  .chip:active{ transform:scale(.96); }
+  .chip.sel{ border-color:var(--brass); }
+  .chip .sw{ width:11px; height:11px; transform:rotate(45deg); border:1px solid rgba(255,255,255,.28); }
+  .chip .cn{ letter-spacing:.22em; font-size:8.5px; font-weight:600; text-transform:uppercase; color:var(--dim); }
+  .chip.sel .cn{ color:var(--bone); }
+  .traylinks{ margin-top:15px; color:var(--faint); }
+  .traylinks span{ pointer-events:auto; cursor:pointer; padding:6px 8px; }
+  .traylinks span:active{ color:var(--bone); }
+  #zenLine{ position:fixed; left:0; right:0; bottom:calc(15vh + env(safe-area-inset-bottom)); text-align:center;
+            font-family:'Fraunces',Georgia,serif; font-weight:420; font-size:21px; letter-spacing:.06em;
+            color:var(--bone); opacity:0; transition:opacity .9s; pointer-events:none; }
+  #zenLine.show{ opacity:.92; }
+
+  /* ---------- chapter intro ---------- */
+  #intro{ position:fixed; inset:0; display:none; flex-direction:column; align-items:center;
+          justify-content:flex-end; padding:0 30px calc(6vh + env(safe-area-inset-bottom)); text-align:center; }
+  #intro .chnum{ color:var(--brass); }
+  #intro h2{ font-family:'Fraunces',Georgia,serif; font-weight:540; font-variation-settings:'opsz' 144;
+             font-size:min(11vw,52px); letter-spacing:.1em; margin:12px 0 10px; line-height:1.05; }
+  #intro .spec{ color:var(--dim); }
+  #intro .iline{ font-family:'Fraunces',Georgia,serif; font-weight:380; font-size:16.5px; line-height:1.6;
+                 color:var(--bone); max-width:330px; margin-top:18px; }
+  #intro .btn{ margin-top:28px; }
+  #intro .traylink{ margin-top:20px; color:var(--faint); cursor:pointer; pointer-events:auto; }
+  #intro .traylink:active{ color:var(--bone); }
+
+  /* ---------- HUD ---------- */
+  #hud{ position:fixed; inset:0; pointer-events:none; opacity:0; transition:opacity .6s; }
+  #hud.show{ opacity:1; }
+  #hud .top{ position:absolute; top:calc(14px + env(safe-area-inset-top)); left:0; right:0;
+             display:flex; flex-direction:column; align-items:center; gap:11px; }
+  #hud .chapter{ color:var(--dim); }
+  #ticks{ display:flex; gap:14px; }
+  #whisper{ position:absolute; left:0; right:0; bottom:calc(9vh + env(safe-area-inset-bottom));
+            text-align:center; color:var(--bone); opacity:0; transition:opacity .45s; padding:0 30px; }
+  #whisper.show{ opacity:.92; }
+  #whisper .wsub{ display:block; margin-top:7px; color:var(--dim); letter-spacing:.3em; font-size:9px; }
+  #quit{ position:absolute; top:calc(10px + env(safe-area-inset-top)); right:8px; pointer-events:auto;
+         cursor:pointer; color:var(--faint); font-size:17px; padding:10px 12px; line-height:1; }
+  #quit:active{ color:var(--bone); }
+
+  /* ---------- open plate ---------- */
+  #openPlate{ position:fixed; inset:0; display:flex; flex-direction:column; align-items:center;
+              justify-content:flex-end; padding:0 28px calc(5vh + env(safe-area-inset-bottom));
+              opacity:0; pointer-events:none; transition:opacity .8s .25s; }
+  #openPlate.show{ opacity:1; pointer-events:auto; }
+  #openPlate h2{ font-family:'Fraunces',Georgia,serif; font-weight:520; font-variation-settings:'opsz' 144;
+                 font-size:min(15vw,72px); letter-spacing:.22em; margin-left:.22em; }
+  #openPlate .medal{ color:var(--brass); margin-top:16px; }
+  #openPlate .medal.none{ color:var(--faint); }
+  #openPlate .stats{ color:var(--dim); margin-top:10px; text-align:center; line-height:2; }
+  #openPlate .row{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  #openPlate .btn{ margin-top:24px; }
+  #openRemark{ font-family:'Fraunces',Georgia,serif; font-weight:380; font-size:16px; line-height:1.55;
+               color:var(--bone); max-width:340px; text-align:center; margin-top:16px; min-height:1.55em; }
+  #openBoard{ margin-top:20px; width:min(86vw, 360px); text-align:center; }
+  #openBoard .btitle{ color:var(--dim); letter-spacing:.3em; font-size:9px; font-weight:600; text-transform:uppercase; margin-bottom:9px; }
+  #openBoard .brank{ color:var(--brass); letter-spacing:.26em; font-size:9.5px; font-weight:600; text-transform:uppercase; margin-bottom:9px; }
+  #openBoard .brow{ display:flex; justify-content:space-between; padding:6px 4px; border-top:1px solid rgba(201,164,92,.16);
+                    letter-spacing:.18em; font-size:10px; text-transform:uppercase; color:var(--dim); }
+  #openBoard .brow b{ color:var(--bone); font-weight:600; }
+  #openBoard .brow.me{ color:var(--brass); }
+  #openBoard .brow.me b{ color:var(--brass); }
+  #openBoard .bempty{ color:var(--faint); letter-spacing:.2em; font-size:9px; text-transform:uppercase; line-height:1.9; }
+  #openBoard .bform{ display:flex; gap:10px; justify-content:center; }
+  #openBoard input{ background:#101014; border:1px solid var(--brass-dim); color:var(--bone); padding:11px 14px;
+                    letter-spacing:.14em; font-size:12px; width:170px; outline:none; text-transform:uppercase; }
+  #openBoard button{ background:linear-gradient(180deg,#191a1f,#101014); border:1px solid var(--brass-dim); color:var(--bone);
+                     letter-spacing:.26em; font-size:9.5px; font-weight:600; text-transform:uppercase; padding:11px 16px; cursor:pointer; }
+
+  @media (max-height: 500px){
+    #menu h1{ font-size:40px; }
+    #menu .rule{ margin:10px 0 8px; }
+    #rows{ margin-top:10px; }
+    .chrow{ padding:7px 14px; margin-top:6px; }
+    #menu .fine{ display:none; }
+    #bodiesWrap, .traylinks{ display:none; }
+    #intro h2{ font-size:34px; }
+    #intro .iline{ font-size:14.5px; margin-top:10px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="gl"></canvas></div>
+
+<div id="menu">
+  <div class="plate">
+    <h1>TENSION</h1>
+    <div class="rule hairline"><span class="diamond"></span></div>
+    <div class="sub caps">A lock, opened by ear</div>
+    <div id="rows"></div>
+    <div id="bodiesWrap">
+      <div class="blabel caps">The body</div>
+      <div id="bodies"></div>
+    </div>
+    <div class="traylinks caps"><span id="soundToggle">Sound — On</span></div>
+    <div class="fine">The ladder &middot; five locks &middot; learn each one</div>
+  </div>
+</div>
+
+<div id="intro">
+  <div class="chnum caps" id="introNum"></div>
+  <h2 id="introName"></h2>
+  <div class="spec caps" id="introSpec"></div>
+  <div class="iline" id="introLine"></div>
+  <button class="btn" id="btnLock">Begin the lock</button>
+  <div class="traylink caps" id="btnTray2">The tray</div>
+</div>
+
+<div id="zenLine"></div>
+
+<div id="hud">
+  <div class="top">
+    <div class="chapter caps" id="hudChapter"></div>
+    <div id="ticks"></div>
+  </div>
+  <div id="whisper" class="caps"></div>
+  <div id="quit" title="Back to the tray">&#10005;</div>
+</div>
+
+<div id="openPlate">
+  <h2>OPEN</h2>
+  <div class="medal caps" id="openMedal"></div>
+  <div class="stats caps" id="openStats"></div>
+  <div id="openRemark"></div>
+  <div id="openBoard"></div>
+  <div class="row">
+    <button class="btn small" id="btnAgain">The lock again</button>
+    <button class="btn small" id="btnNext">Next chapter</button>
+    <button class="btn small" id="btnTray">The tray</button>
+  </div>
+</div>
+
+<script src="sim.js?v=20261029a"></script>
+<script src="render.js?v=20261029a"></script>
+<script src="audio.js?v=20261029a"></script>
+<script>
+'use strict';
+/* TENSION — shell: the ladder, input, the loop.
+ *
+ * One-finger grammar (Chapters I–IV): touch and hold to keep tension.
+ * Slide to the pin you mean. Push up to lift it. Drag down past where
+ * you started to ease the tension off — that is how a false set, and
+ * an overset, are forgiven. Chapter V splits the hands: a left thumb
+ * owns the wrench, the right hand works the pick.
+ */
+const canvas = document.getElementById('gl');
+const renderer = TNR.createRenderer(canvas);
+const audio = TNA.createAudio();
+const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
+const MEDAL_RANK = { BRONZE: 1, SILVER: 2, GOLD: 3 };
+
+/* ---------- progress ---------- */
+let progress = { unlocked: 1, medals: {}, best: {} };
+try {
+  const saved = JSON.parse(localStorage.getItem('tn_progress_v1') || 'null');
+  if (saved && saved.unlocked) progress = saved;
+} catch (e) {}
+function saveProgress() { try { localStorage.setItem('tn_progress_v1', JSON.stringify(progress)); } catch (e) {} }
+
+/* ---------- the daily lock, the lore worker, the board ---------- */
+const AI = 'https://gamez-ai.chaoticutopia84.workers.dev';
+const ARCADE = 'https://gamez-arcade.chaoticutopia84.workers.dev';
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function timedFetch(url, body, ms) {
+  return new Promise(resolve => {
+    const ctl = new AbortController();
+    const to = setTimeout(() => { ctl.abort(); resolve(null); }, ms || 2600);
+    fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal } : { signal: ctl.signal })
+      .then(r => r.json()).then(d => { clearTimeout(to); resolve(d); })
+      .catch(() => { clearTimeout(to); resolve(null); });
+  });
+}
+function loreFetch(ctx) {
+  return timedFetch(AI + '/g', { kind: 'locklore', game: 'tension', ctx }, 2800)
+    .then(d => (d && typeof d.line === 'string' && d.line.length >= 8) ? d.line : null)
+    .catch(() => null);
+}
+/* authored fallbacks: the lore is an enhancement, never a dependency */
+const PROVENANCE_FALLBACKS = [
+  'A stationmaster\u2019s cabinet lock, opened twice a day for fifty years and never once forced.',
+  'The back-gate lock of a walled garden, older than the wall\u2019s last rebuilding.',
+  'A sea-chest lock, brass gone green at the edges, still guarding charts of a coast that moved.',
+  'A schoolmaster\u2019s desk lock. Inside: confiscated treasures, returned at term\u2019s end.',
+  'The strongbox of a travelling clockmaker, who trusted pins more than people.',
+  'A chapel door lock, oiled every Easter, patient with a thousand cold hands.',
+];
+const REMARK_FALLBACKS = {
+  swift: ['In and out like weather. The pins hardly knew you were there.', 'Swift hands, quiet pins. The ledger approves.'],
+  clean: ['Not one lie believed. That is the whole craft.', 'Clean work. The lock respects you for it.'],
+  hardwon: ['It fought, and you stayed. That counts for more than speed.', 'Hard won is still won. The keeper nods.'],
+  broken: ['A pick for a lock is a fair trade, most nights.', 'Steel breaks. Hands learn. The lock opened.'],
+};
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function remarkBucket(lk) {
+  if (lk.breaks > 0) return 'broken';
+  if (lk.oversets === 0 && lk.timeMs < 60000) return 'swift';
+  if (lk.oversets === 0) return 'clean';
+  return 'hardwon';
+}
+
+/* daily records: days opened, the streak, the best score */
+let dailyRec = { days: {}, streak: 0, date: '' };
+try {
+  const saved = JSON.parse(localStorage.getItem('tn_daily_v1') || 'null');
+  if (saved && saved.days) dailyRec = saved;
+} catch (e) {}
+function saveDaily() { try { localStorage.setItem('tn_daily_v1', JSON.stringify(dailyRec)); } catch (e) {} }
+let playingDaily = false;
+let dailyInfo = null; // { date, dl } for the current day
+let zenMode = false, zenCount = 0;
+
+/* ---------- state ---------- */
+let mode = 'menu';               // menu | intro | play | open
+let chapter = TN.CHAPTERS[0];
+let lock = TN.chapterLock(chapter);
+const input = { pin: 2, push: 0, tension: 0 };
+let snapAt = -1e9, openedAt = 0;
+let frozen = false, frozenTime = 0;
+let creakNext = 0;
+let saidFirstSet = false, saidOverset = false, saidFalse = false;
+
+/* ---------- the tray ---------- */
+const rowsEl = document.getElementById('rows');
+function renderTray() {
+  rowsEl.innerHTML = '';
+  // tonight's lock, above the ladder
+  {
+    const date = todayKey();
+    const dl = TN.dailyLock(date);
+    const kept = dailyRec.days[date];
+    const row = document.createElement('div');
+    row.className = 'chrow daily';
+    const status = kept ? 'Kept · ' + kept.score : (dailyRec.streak > 0 ? 'Streak ' + dailyRec.streak : 'Unopened');
+    row.innerHTML = '<span class="num">&#10022;</span>' +
+      '<span><span class="cname">Tonight\u2019s Lock</span>' +
+      '<span class="csub">' + dl.spec + '</span></span>' +
+      '<span class="cmedal' + (kept ? '' : ' none') + '">' + status + '</span>';
+    row.addEventListener('click', () => { audio.unlock(); audio.tap(); openDailyIntro(); });
+    rowsEl.appendChild(row);
+  }
+  for (const ch of TN.CHAPTERS) {
+    const row = document.createElement('div');
+    const locked = ch.n > progress.unlocked;
+    row.className = 'chrow' + (locked ? ' locked' : '');
+    const medal = progress.medals[ch.n];
+    row.innerHTML = '<span class="num">' + ROMAN[ch.n - 1] + '</span>' +
+      '<span class="cname">' + ch.name + '</span>' +
+      '<span class="cmedal' + (medal ? '' : ' none') + '">' + (locked ? 'Sealed' : medal || 'Unopened') + '</span>';
+    if (!locked) row.addEventListener('click', () => { audio.unlock(); audio.tap(); openIntro(ch); });
+    rowsEl.appendChild(row);
+  }
+  // zen: below the ladder, off the record entirely
+  {
+    const row = document.createElement('div');
+    row.className = 'chrow';
+    row.innerHTML = '<span class="num">&#10023;</span>' +
+      '<span><span class="cname">Zen</span>' +
+      '<span class="csub">No score &middot; no stakes</span></span>' +
+      '<span class="cmedal none">The feel alone</span>';
+    row.addEventListener('click', () => { audio.unlock(); audio.tap(); startZen(); });
+    rowsEl.appendChild(row);
+  }
+}
+
+/* ---------- the bodies: one lock, several metals ---------- */
+const BODIES_META = [
+  { id: 'brass', name: 'House Brass', accent: '#c9a45c', sw: 'linear-gradient(135deg,#8a6a30,#e0b96a)' },
+  { id: 'blued', name: 'Blued Steel', accent: '#9db8d6', sw: 'linear-gradient(135deg,#2c3a4e,#7d94b4)' },
+  { id: 'verdigris', name: 'Verdigris', accent: '#7fc9a8', sw: 'linear-gradient(135deg,#1f4d3a,#69b893)' },
+];
+let bodyId = 'brass';
+try { bodyId = localStorage.getItem('tn_body_v1') || 'brass'; } catch (e) {}
+function applyBody(id) {
+  bodyId = id;
+  renderer.setBody(id);
+  const meta = BODIES_META.find(b => b.id === id) || BODIES_META[0];
+  document.documentElement.style.setProperty('--brass', meta.accent);
+  try { localStorage.setItem('tn_body_v1', id); } catch (e) {}
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('sel', c.dataset.body === id));
+}
+function renderBodies() {
+  const wrap = document.getElementById('bodies');
+  wrap.innerHTML = '';
+  for (const b of BODIES_META) {
+    const chip = document.createElement('div');
+    chip.className = 'chip'; chip.dataset.body = b.id;
+    chip.innerHTML = '<span class="sw" style="background:' + b.sw + '"></span><span class="cn">' + b.name + '</span>';
+    chip.addEventListener('click', () => { audio.unlock(); audio.tap(); applyBody(b.id); });
+    wrap.appendChild(chip);
+  }
+}
+
+/* ---------- intro ---------- */
+const introEl = document.getElementById('intro');
+let introAction = null;
+function openIntro(ch) {
+  introAction = () => startChapter(ch);
+  chapter = ch;
+  lock = TN.chapterLock(ch);
+  mode = 'intro';
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('openPlate').classList.remove('show');
+  document.getElementById('hud').classList.remove('show');
+  document.getElementById('introNum').textContent = 'Chapter ' + ROMAN[ch.n - 1] + ' of ' + ROMAN[TN.CHAPTERS.length - 1];
+  document.getElementById('introName').textContent = ch.name;
+  document.getElementById('introSpec').textContent = ch.spec;
+  document.getElementById('introLine').textContent = ch.line;
+  introEl.style.display = 'flex';
+}
+/* tonight's provenance: the worker's line when it comes, an authored
+   one until then and whenever the network is silent */
+let provenanceLine = '';
+function openDailyIntro() {
+  const date = todayKey();
+  const dl = TN.dailyLock(date);
+  dailyInfo = { date, dl };
+  lock = dl.lock;
+  introAction = () => startDaily();
+  mode = 'intro';
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('openPlate').classList.remove('show');
+  document.getElementById('hud').classList.remove('show');
+  const nice = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  document.getElementById('introNum').textContent = 'The daily lock';
+  document.getElementById('introName').textContent = nice;
+  document.getElementById('introSpec').textContent = dl.spec + ' · one hand';
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem('tn_lore_v1') || 'null'); } catch (e) {}
+  const fallback = PROVENANCE_FALLBACKS[hashStr('prov|' + date) % PROVENANCE_FALLBACKS.length];
+  provenanceLine = (cached && cached.date === date && cached.line) ? cached.line : fallback;
+  document.getElementById('introLine').textContent = provenanceLine;
+  introEl.style.display = 'flex';
+  loreFetch({ mode: 'provenance', date, cabinet: dl.spec.toLowerCase() }).then(line => {
+    if (line && mode === 'intro' && dailyInfo && dailyInfo.date === date) {
+      provenanceLine = line;
+      document.getElementById('introLine').textContent = line;
+      try { localStorage.setItem('tn_lore_v1', JSON.stringify({ date, line })); } catch (e) {}
+    }
+  });
+}
+document.getElementById('btnLock').addEventListener('click', () => { audio.unlock(); if (introAction) introAction(); });
+document.getElementById('btnTray2').addEventListener('click', toMenu);
+
+/* ---------- play ---------- */
+const ticksEl = document.getElementById('ticks');
+function buildTicks() {
+  ticksEl.innerHTML = '';
+  for (let i = 0; i < lock.stacks.length; i++) {
+    const d = document.createElement('span'); d.className = 'diamond'; ticksEl.appendChild(d);
+  }
+}
+function syncTicks() {
+  const kids = ticksEl.children;
+  for (let i = 0; i < kids.length; i++) kids[i].classList.toggle('on', lock.stacks[i].state === 'set');
+}
+const whisperEl = document.getElementById('whisper');
+let whisperTimer = 0;
+function whisper(main, sub, holdMs) {
+  if (zenMode) return; // zen is not coached
+  whisperEl.innerHTML = main + (sub ? '<span class="wsub">' + sub + '</span>' : '');
+  whisperEl.classList.add('show');
+  clearTimeout(whisperTimer);
+  whisperTimer = setTimeout(() => whisperEl.classList.remove('show'), holdMs || 2700);
+}
+function fmtTime(ms) {
+  const s = Math.floor(ms / 1000);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function beginPlay(label) {
+  input.pin = Math.floor(lock.stacks.length / 2); input.push = 0; input.tension = 0;
+  snapAt = -1e9;
+  saidFirstSet = false; saidOverset = false; saidFalse = false;
+  buildTicks(); syncTicks();
+  document.getElementById('hudChapter').textContent = label;
+  whisperEl.classList.remove('show');
+  document.getElementById('openRemark').textContent = '';
+  document.getElementById('openBoard').innerHTML = '';
+  document.getElementById('zenLine').classList.remove('show');
+  mode = 'play';
+  introEl.style.display = 'none';
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('openPlate').classList.remove('show');
+  document.getElementById('hud').classList.add('show');
+}
+function startChapter(ch) {
+  chapter = ch;
+  playingDaily = false;
+  zenMode = false;
+  lock = TN.chapterLock(ch);
+  beginPlay('Chapter ' + ROMAN[ch.n - 1] + ' — ' + ch.name);
+  if (ch.two) whisper('Two hands now', 'Left thumb: tension — right hand: the pick', 3800);
+  else if (ch.n === 1) whisper('Hold to keep tension', 'Slide to a pin — push up to lift it', 3600);
+}
+function startDaily() {
+  const date = todayKey();
+  const dl = TN.dailyLock(date);
+  dailyInfo = { date, dl };
+  playingDaily = true;
+  zenMode = false;
+  lock = dl.lock;
+  beginPlay('Tonight\u2019s Lock');
+}
+/* zen: a gentle lock, then another, then another. The pick never
+   breaks here; nothing is written down anywhere. */
+const ZEN_LINES = ['Opened.', 'The pins rest.', 'Again.', 'Quiet work.', 'The lock forgets you.'];
+const zenLineEl = document.getElementById('zenLine');
+function zenSay(text, holdMs) {
+  zenLineEl.textContent = text;
+  zenLineEl.classList.add('show');
+  clearTimeout(zenSay._t);
+  zenSay._t = setTimeout(() => zenLineEl.classList.remove('show'), holdMs || 2100);
+}
+function startZen() {
+  zenMode = true;
+  playingDaily = false;
+  const r = Math.random();
+  const kinds = r < 0.35 ? { spool: 1 } : r < 0.5 ? { serrated: 1 } : undefined;
+  lock = TN.createLock((Math.random() * 0x7fffffff) | 0, {
+    pins: 5, kinds, pickStrength: 1e9, bindMin: 0.7, bindMax: 3.6,
+  });
+  beginPlay('Zen');
+  zenSay(zenCount === 0 ? 'No score. No stakes.' : ZEN_LINES[zenCount % ZEN_LINES.length], 2400);
+}
+function toMenu() {
+  mode = 'menu';
+  zenMode = false;
+  chapter = TN.CHAPTERS[0];
+  lock = TN.chapterLock(chapter);
+  renderTray();
+  introEl.style.display = 'none';
+  document.getElementById('menu').style.display = 'flex';
+  document.getElementById('openPlate').classList.remove('show');
+  document.getElementById('hud').classList.remove('show');
+}
+document.getElementById('btnAgain').addEventListener('click', () => { audio.unlock(); if (playingDaily) startDaily(); else startChapter(chapter); });
+document.getElementById('btnTray').addEventListener('click', toMenu);
+document.getElementById('quit').addEventListener('click', toMenu);
+document.getElementById('btnNext').addEventListener('click', () => {
+  const next = TN.CHAPTERS[chapter.n]; // chapters are 1-based; index n is the next
+  if (next) openIntro(next);
+});
+
+/* ---------- tonight's board (the arcade ledger) ---------- */
+function escBoard(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function submitDailyBoard(score) {
+  const box = document.getElementById('openBoard');
+  if (!box || !dailyInfo) return;
+  const board = 'daily-' + dailyInfo.date;
+  let name = '';
+  try { name = (localStorage.getItem('arcade_name') || '').trim(); } catch (e) {}
+  function render(top, rank, me) {
+    let h = '<div class="btitle">Tonight\u2019s lock — the board</div>';
+    if (rank > 0) h += '<div class="brank">You stand #' + rank + ' tonight</div>';
+    if (top && top.length) {
+      h += top.slice(0, 5).map((e, i) => '<div class="brow' + (e.name === me ? ' me' : '') + '"><span>' + (i + 1) + '. ' + escBoard(e.name) + '</span><b>' + (+e.score) + '</b></div>').join('');
+    } else {
+      h += '<div class="bempty">The board is out of reach tonight — your opening still stands in the ledger.</div>';
+    }
+    box.innerHTML = h;
+  }
+  function go(n) {
+    box.innerHTML = '<div class="bempty">Writing your name on the board&hellip;</div>';
+    timedFetch(ARCADE + '/score', { game: 'tension', board, name: n, score }, 9000).then(res => {
+      if (res && res.top) render(res.top, res.rank, n);
+      else timedFetch(ARCADE + '/scores?game=tension&board=' + encodeURIComponent(board), null, 9000)
+        .then(d2 => render(d2 && d2.top, 0, n));
+    });
+  }
+  if (name) { go(name); return; }
+  box.innerHTML = '<div class="btitle">Tonight\u2019s lock — the board</div>' +
+    '<div class="bform"><input id="tnName" maxlength="12" placeholder="Your name" autocomplete="off">' +
+    '<button id="tnJoin" type="button">Enter</button></div>';
+  const join = () => {
+    const inp = document.getElementById('tnName');
+    const v = inp.value.trim().slice(0, 12);
+    if (!v) return;
+    try { localStorage.setItem('arcade_name', v); } catch (e) {}
+    go(v);
+  };
+  document.getElementById('tnJoin').addEventListener('click', join);
+  document.getElementById('tnName').addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+}
+
+/* ---------- pointer input: a map of hands ---------- */
+const stage = document.getElementById('stage');
+const ptrs = new Map(); // id -> { role, startX, startY, x, y }
+let lastScrape = 0;
+const clamp01 = v => Math.max(0, Math.min(1, v));
+function pinFromClientX(cx) {
+  const r = canvas.getBoundingClientRect();
+  const aspect = r.width / r.height;
+  const fov = aspect < 0.8 ? 0.98 : aspect < 1.3 ? 0.82 : 0.68;
+  const dist = aspect < 0.8 ? 11.5 : aspect < 1.3 ? 10.2 : 9.4;
+  const visW = 2 * dist * Math.tan(fov / 2) * aspect;
+  const wx = ((cx - r.left) / r.width - 0.5) * visW;
+  const PX = TNR.pinXArr(lock.stacks.length);
+  let best = 0, bd = 1e9;
+  for (let i = 0; i < PX.length; i++) { const d = Math.abs(PX[i] - wx); if (d < bd) { bd = d; best = i; } }
+  return best;
+}
+function recomputeInput() {
+  let ten = null, pick = null;
+  for (const p of ptrs.values()) {
+    if (p.role === 'tension') ten = p;
+    else if (p.role === 'pick') pick = p;
+    else { ten = p; pick = p; }
+  }
+  if (pick) {
+    const dy = pick.startY - pick.y;
+    input.push = clamp01(dy / 130);
+    const np = pinFromClientX(pick.x);
+    if (np !== input.pin && input.push < 0.15) {
+      input.pin = np;
+      const nowMs = performance.now();
+      if (nowMs - lastScrape > 75) { audio.scrape(); lastScrape = nowMs; }
+    }
+  } else input.push = 0;
+  if (ten) {
+    const dy = ten.startY - ten.y;
+    const ease = clamp01(-dy / 115);
+    if (ten.role === 'tension') {
+      const more = clamp01(dy / 170);
+      input.tension = clamp01(0.84 - ease * 0.76 + more * 0.16);
+    } else {
+      input.tension = 0.84 - ease * 0.76;
+    }
+  } else input.tension = 0;
+}
+stage.addEventListener('pointerdown', e => {
+  audio.unlock();
+  if (mode !== 'play') return;
+  const r = canvas.getBoundingClientRect();
+  let role = 'both';
+  // the wrench thumb anchors low in the left corner and stays there;
+  // the pick is grabbed on the lock itself, anywhere along it
+  if (chapter.two) role =
+    (e.clientX - r.left) < r.width * 0.38 && (e.clientY - r.top) > r.height * 0.66 ? 'tension' : 'pick';
+  ptrs.set(e.pointerId, { role, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY });
+  try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+  if (role !== 'tension') input.pin = pinFromClientX(e.clientX);
+  recomputeInput();
+});
+stage.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId);
+  if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+  recomputeInput();
+});
+function endPointer(e) {
+  if (ptrs.delete(e.pointerId)) recomputeInput();
+}
+stage.addEventListener('pointerup', endPointer);
+stage.addEventListener('pointercancel', endPointer);
+
+/* ---------- events -> sound, words, the mark ---------- */
+function buzz(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
+function handleEvents(now) {
+  for (const ev of TN.drainEvents(lock)) {
+    switch (ev.type) {
+      case 'tick': audio.tick(ev.pin); break;
+      case 'ridge': audio.ridge(ev.pin); break;
+      case 'set':
+        audio.set(ev.pin); buzz(12); syncTicks();
+        if (!saidFirstSet) { saidFirstSet = true; whisper('One set', 'The plug gave — feel for the next to bind'); }
+        else if (lock.sets === lock.stacks.length - 1) whisper('One more');
+        break;
+      case 'falseset':
+        audio.falseset(ev.pin); buzz(8); syncTicks();
+        if (!saidFalse) { saidFalse = true; whisper('A false set', 'The plug rolled back — ease off as you lift'); }
+        else whisper('A false set', 'Ease off as you lift');
+        break;
+      case 'slip':
+        audio.slip(ev.pin);
+        whisper('It slipped off the lip', 'Feather it — ease and lift together');
+        break;
+      case 'give': audio.give(); break;
+      case 'overset':
+        audio.overset(); buzz([18, 40, 18]); syncTicks();
+        if (!saidOverset) { saidOverset = true; whisper('Overset', 'Drag down to ease off, until it falls'); }
+        else whisper('Overset', 'Ease off until it falls');
+        break;
+      case 'drop': audio.drop(ev.pin); syncTicks(); whisper('It dropped', 'Tension holds what you win'); break;
+      case 'fall': audio.fall(ev.pin); break;
+      case 'snap': audio.snap(); buzz(45); snapAt = now; whisper('The pick snapped', 'A fresh one slides in'); break;
+      case 'pickin': audio.pickin(); break;
+      case 'open': {
+        if (zenMode) {
+          audio.open(); buzz(20);
+          openedAt = now; mode = 'open';
+          zenCount++;
+          zenSay(ZEN_LINES[zenCount % ZEN_LINES.length], 2300);
+          break;
+        }
+        audio.open(); buzz([25, 60, 40]);
+        openedAt = now; mode = 'open';
+        const baseObj = playingDaily ? { base: TN.DAILY_BASE } : chapter;
+        const score = TN.scoreFor(baseObj, lock);
+        const medal = TN.medalFor(baseObj, lock);
+        if (playingDaily) {
+          const date = dailyInfo ? dailyInfo.date : todayKey();
+          if (!dailyRec.days[date] || score > dailyRec.days[date].score) dailyRec.days[date] = { score };
+          if (dailyRec.date !== date) {
+            const y = new Date(Date.parse(date + 'T12:00:00') - 864e5);
+            const yKey = y.getFullYear() + '-' + String(y.getMonth() + 1).padStart(2, '0') + '-' + String(y.getDate()).padStart(2, '0');
+            dailyRec.streak = dailyRec.date === yKey ? dailyRec.streak + 1 : 1;
+            dailyRec.date = date;
+          }
+          saveDaily();
+          // the keeper's remark: an authored line now, the worker's when it comes
+          const bucket = remarkBucket(lock);
+          const remEl = document.getElementById('openRemark');
+          const fb = REMARK_FALLBACKS[bucket];
+          remEl.textContent = fb[hashStr('rem|' + date) % fb.length];
+          loreFetch({ mode: 'remark', date, bucket }).then(line => {
+            if (line && mode === 'open') remEl.textContent = line;
+          });
+          submitDailyBoard(score);
+        } else {
+          if (medal && (!progress.medals[chapter.n] || MEDAL_RANK[medal] > MEDAL_RANK[progress.medals[chapter.n]]))
+            progress.medals[chapter.n] = medal;
+          if (!progress.best[chapter.n] || score > progress.best[chapter.n]) progress.best[chapter.n] = score;
+          if (chapter.n === progress.unlocked && chapter.n < TN.CHAPTERS.length) progress.unlocked = chapter.n + 1;
+          saveProgress();
+        }
+        renderTray();
+        const medalEl = document.getElementById('openMedal');
+        medalEl.textContent = medal ? 'The keeper\u2019s mark — ' + medal : 'No mark — opened, and that is enough';
+        medalEl.className = 'medal caps' + (medal ? '' : ' none');
+        const parts = [fmtTime(lock.timeMs), 'Score ' + score];
+        parts.push(lock.oversets === 0 ? 'No oversets' : lock.oversets + (lock.oversets === 1 ? ' overset' : ' oversets'));
+        parts.push(lock.breaks === 0 ? 'Pick unbroken' : lock.breaks + (lock.breaks === 1 ? ' pick broken' : ' picks broken'));
+        document.getElementById('openStats').textContent = parts.join('  ·  ');
+        document.getElementById('btnNext').style.display =
+          !playingDaily && chapter.n < TN.CHAPTERS.length ? '' : 'none';
+        document.getElementById('openPlate').classList.add('show');
+        document.getElementById('hud').classList.remove('show');
+        break;
+      }
+    }
+  }
+}
+
+/* ---------- the loop: fixed-step sim, render every frame ---------- */
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(canvas.clientWidth * dpr);
+  canvas.height = Math.round(canvas.clientHeight * dpr);
+}
+window.addEventListener('resize', resize);
+resize();
+renderTray();
+renderBodies();
+applyBody(bodyId);
+/* the sound toggle: remembered, like everything on the tray */
+{
+  const soundEl = document.getElementById('soundToggle');
+  const syncLabel = () => { soundEl.textContent = audio.muted ? 'Sound — Off' : 'Sound — On'; };
+  let startMuted = false;
+  try { startMuted = localStorage.getItem('tn_mute_v1') === '1'; } catch (e) {}
+  audio.setMuted(startMuted); syncLabel();
+  soundEl.addEventListener('click', () => {
+    audio.unlock();
+    audio.setMuted(!audio.muted);
+    try { localStorage.setItem('tn_mute_v1', audio.muted ? '1' : '0'); } catch (e) {}
+    syncLabel();
+    if (!audio.muted) audio.tap();
+  });
+}
+/* prefetch tonight's provenance while the tray is up, so the intro
+   usually opens with the worker's line already in hand */
+{
+  const date = todayKey();
+  loreFetch({ mode: 'provenance', date, cabinet: TN.dailyLock(date).spec.toLowerCase() }).then(line => {
+    if (line) try { localStorage.setItem('tn_lore_v1', JSON.stringify({ date, line })); } catch (e) {}
+  });
+}
+
+let last = performance.now(), acc = 0;
+const STEP = 1 / 120;
+function frame(now) {
+  requestAnimationFrame(frame);
+  let dt = (now - last) / 1000; last = now;
+  dt = Math.min(dt, 0.1);
+  const t = frozen ? frozenTime : now;
+  if (!frozen && mode === 'play') {
+    acc += dt;
+    while (acc >= STEP) { TN.step(lock, input, STEP); acc -= STEP; }
+    handleEvents(now);
+    if (lock.stress > 0.68 && input.push > 0.05 && now > creakNext) {
+      audio.creak(); creakNext = now + 120 + Math.random() * 130;
+    }
+  }
+  if (mode === 'open' && zenMode && now - openedAt > 2700) startZen();
+  const snapT = snapAt > 0 ? Math.min(1, (now - snapAt) / 650) : 0;
+  const openT = mode === 'open' ? Math.min(1, (now - openedAt) / 1150) : 0;
+  const openEase = openT * openT * (3 - 2 * openT);
+  if (renderer) renderer.frame({
+    lock, activePin: mode === 'play' ? input.pin : Math.floor(lock.stacks.length / 2),
+    push: mode === 'play' ? input.push : 0,
+    tensionIn: mode === 'play' ? input.tension : 0.12,
+    openT: openEase, snapT: lock.snapLock > 0 ? snapT : 0, time: t,
+  });
+}
+requestAnimationFrame(frame);
+
+/* test hooks (house pattern: state, not pixels) */
+window.__game = {
+  get mode() { return mode; }, get lock() { return lock; }, get chapter() { return chapter; },
+  get progress() { return progress; }, input,
+  startChapter, openIntro, toMenu, startDaily, openDailyIntro, startZen, applyBody,
+  get dailyRec() { return dailyRec; },
+  get zenMode() { return zenMode; }, get zenCount() { return zenCount; },
+  /* a zen lock, opened by the taught rules — for the quiet plate */
+  stageZenOpen() {
+    startZen();
+    const before = lock;
+    let t = 0;
+    while (lock.status !== 'open' && t < 240) {
+      let inp;
+      if (lock.stacks.some(s => s.state === 'over')) inp = { pin: -1, push: 0, tension: 0 };
+      else {
+        const b = TN.binderIndex(lock);
+        if (b < 0) break;
+        inp = lock.stacks[b].state === 'false'
+          ? { pin: b, push: 0.7, tension: 0.4 }
+          : { pin: b, push: 1, tension: 0.8 };
+      }
+      TN.step(lock, inp, STEP);
+      t += STEP;
+    }
+    handleEvents(performance.now());
+    return { opened: lock.status === 'open', sameLock: lock === before, plateShown: document.getElementById('openPlate').classList.contains('show') };
+  },
+  pinX(i) {
+    const r = canvas.getBoundingClientRect();
+    const aspect = r.width / r.height;
+    const fov = aspect < 0.8 ? 0.98 : aspect < 1.3 ? 0.82 : 0.68;
+    const dist = aspect < 0.8 ? 11.5 : aspect < 1.3 ? 10.2 : 9.4;
+    const visW = 2 * dist * Math.tan(fov / 2) * aspect;
+    return r.left + (TNR.pinXArr(lock.stacks.length)[i] / visW + 0.5) * r.width;
+  },
+  freeze(t) { frozen = true; frozenTime = t === undefined ? 1400 : t; },
+  unfreeze() { frozen = false; },
+  /* a composed chapter-I tableau: two pins set, the binder at 70% */
+  stage() {
+    startChapter(TN.CHAPTERS[0]);
+    const order = lock.stacks.map((s, i) => [s.bind, i]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+    const stepN = (inp, secs) => { const n = Math.round(secs / STEP); for (let i = 0; i < n; i++) TN.step(lock, inp, STEP); TN.drainEvents(lock); };
+    for (const ix of [order[0], order[1]]) {
+      for (let t = 0; t < 8 && lock.stacks[ix].state !== 'set'; t += STEP)
+        TN.step(lock, { pin: ix, push: 1, tension: 0.8 }, STEP);
+      TN.drainEvents(lock);
+      stepN({ pin: ix, push: 0, tension: 0.8 }, 0.2);
+    }
+    const b = TN.binderIndex(lock);
+    const target = lock.stacks[b].need * 0.7;
+    for (let t = 0; t < 8 && lock.stacks[b].lift < target; t += STEP)
+      TN.step(lock, { pin: b, push: 0.55, tension: 0.8 }, STEP);
+    TN.drainEvents(lock);
+    input.pin = b; input.push = 0.55; input.tension = 0.8;
+    lock.tension = 0.8;
+    syncTicks();
+    return { binder: b, order };
+  },
+  /* the spool, caught: chapter III with its binder in a false set */
+  stageSpool() {
+    startChapter(TN.CHAPTERS[2]);
+    for (let g = 0; g < 12; g++) {
+      const b = TN.binderIndex(lock);
+      if (b < 0 || lock.stacks[b].kind === 'spool') break;
+      for (let t = 0; t < 8 && lock.stacks[b].state !== 'set'; t += STEP)
+        TN.step(lock, { pin: b, push: 1, tension: 0.8 }, STEP);
+      TN.drainEvents(lock);
+    }
+    const b = TN.binderIndex(lock);
+    for (let t = 0; t < 8 && lock.stacks[b].state !== 'false'; t += STEP)
+      TN.step(lock, { pin: b, push: 1, tension: 0.8 }, STEP);
+    TN.drainEvents(lock);
+    for (let i = 0; i < 60; i++) TN.step(lock, { pin: b, push: 0, tension: 0.8 }, STEP);
+    TN.drainEvents(lock);
+    input.pin = b; input.push = 0; input.tension = 0.8;
+    lock.tension = 0.8;
+    syncTicks();
+    return { spool: b, state: lock.stacks[b].state, plug: lock.plug };
+  },
+  /* tonight's lock, opened by the taught rules — for the open plate */
+  stageDailyOpen() {
+    startDaily();
+    let t = 0;
+    while (lock.status !== 'open' && t < 240) {
+      let inp;
+      if (lock.stacks.some(s => s.state === 'over')) inp = { pin: -1, push: 0, tension: 0 };
+      else {
+        const b = TN.binderIndex(lock);
+        if (b < 0) break;
+        inp = lock.stacks[b].state === 'false'
+          ? { pin: b, push: 0.7, tension: 0.4 }
+          : { pin: b, push: 1, tension: 0.8 };
+      }
+      TN.step(lock, inp, STEP);
+      t += STEP;
+    }
+    handleEvents(performance.now());
+    return { status: lock.status, simSeconds: Math.round(t), date: dailyInfo && dailyInfo.date };
+  },
+};
+</script>
+</body>
+</html>
