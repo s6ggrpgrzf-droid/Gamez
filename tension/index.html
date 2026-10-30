@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Tension</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#060607">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tension">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="font-fraunces.css?v=20261030c">
 <style>
   :root{
@@ -238,6 +245,12 @@
   @media (max-height: 740px){ .chrow .num{ width:24px; height:24px; } .chrow{ padding-top:7px; padding-bottom:7px; margin-top:8px; } }
   @media (max-height: 500px){ .chrow .num{ width:20px; height:20px; } .chrow .num::before{ inset:3px; }
     .chrow{ padding-top:5px; padding-bottom:5px; margin-top:6px; } .chrow .cmedal{ padding:3px 7px 3px calc(7px + .3em); } }
+  /* installed-app fit: keep the masthead and the chapter head
+     clear of the notch when running from the home screen */
+  @media (display-mode: standalone){
+    #menu{ padding-top: max(29px, calc(env(safe-area-inset-top) + 14px)); }
+    #hud{ top: max(14px, calc(env(safe-area-inset-top) + 2px)); }
+  }
 </style>
 </head>
 <body>
@@ -1157,6 +1170,11 @@ window.__game = {
     return { status: lock.status, simSeconds: Math.round(t), date: dailyInfo && dailyInfo.date };
   },
 };
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+}
 </script>
 </body>
 </html>
