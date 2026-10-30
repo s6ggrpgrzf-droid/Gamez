@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Tension</title>
-<link rel="stylesheet" href="font-fraunces.css?v=20261029b">
+<link rel="stylesheet" href="font-fraunces.css?v=20261030a">
 <style>
   :root{
     --bone:#e9e3d3; --dim:#97907e; --faint:#5d594f;
@@ -71,6 +71,10 @@
   .traylinks{ margin-top:15px; color:var(--faint); }
   .traylinks span{ pointer-events:auto; cursor:pointer; padding:6px 8px; }
   .traylinks span:active{ color:var(--bone); }
+  #skipStep{ position:absolute; right:16px; bottom:calc(19vh + env(safe-area-inset-bottom));
+            font-size:10.5px; letter-spacing:.22em; color:var(--faint); cursor:pointer;
+            pointer-events:auto; padding:12px 6px; display:none; }
+  #skipStep.show{ display:block; }
   #zenLine{ position:fixed; left:0; right:0; bottom:calc(15vh + env(safe-area-inset-bottom)); text-align:center;
             font-family:'Fraunces',Georgia,serif; font-weight:420; font-size:21px; letter-spacing:.06em;
             color:var(--bone); opacity:0; transition:opacity .9s; pointer-events:none; }
@@ -179,7 +183,8 @@
     <div class="chapter caps" id="hudChapter"></div>
     <div id="ticks"></div>
   </div>
-  <div id="whisper" class="caps"></div>
+  <div id="skipStep" class="caps">Skip this lesson &#8250;</div>
+<div id="whisper" class="caps"></div>
   <div id="quit" title="Back to the tray">&#10005;</div>
 </div>
 
@@ -196,18 +201,19 @@
   </div>
 </div>
 
-<script src="sim.js?v=20261029b"></script>
-<script src="render.js?v=20261029b"></script>
-<script src="audio.js?v=20261029b"></script>
+<script src="sim.js?v=20261030a"></script>
+<script src="render.js?v=20261030a"></script>
+<script src="audio.js?v=20261030a"></script>
 <script>
 'use strict';
 /* TENSION — shell: the ladder, input, the loop.
  *
  * One-finger grammar (Chapters I–IV): touch and hold to keep tension.
  * Slide to the pin you mean. Push up to lift it. Drag down past where
- * you started to ease the tension off — that is how a false set, and
- * an overset, are forgiven. Chapter V splits the hands: a left thumb
- * owns the wrench, the right hand works the pick.
+ * you started to ease the tension off — that is how an overset is
+ * forgiven. A false set is worked the other way: the caught pin props
+ * the plug, so keep the tension on and push it home. Chapter V splits
+ * the hands: a left thumb owns the wrench, the right hand works the pick.
  */
 const canvas = document.getElementById('gl');
 const renderer = TNR.createRenderer(canvas);
@@ -293,6 +299,17 @@ let saidStuck = false, lastActivity = 0;
 const rowsEl = document.getElementById('rows');
 function renderTray() {
   rowsEl.innerHTML = '';
+  // the teaching lock: above everything until it has been kept once
+  {
+    const row = document.createElement('div');
+    row.className = 'chrow' + (teachDone ? '' : ' daily');
+    row.innerHTML = '<span class="num">&#9670;</span>' +
+      '<span><span class="cname">The Teaching Lock</span>' +
+      '<span class="csub">Learn the craft by hand</span></span>' +
+      '<span class="cmedal' + (teachDone ? '' : ' none') + '">' + (teachDone ? 'Kept' : 'Begin here') + '</span>';
+    row.addEventListener('click', () => { audio.unlock(); audio.tap(); openTeachIntro(); });
+    rowsEl.appendChild(row);
+  }
   // tonight's lock, above the ladder
   {
     const date = todayKey();
@@ -443,6 +460,8 @@ function beginPlay(label) {
   saidStuck = false; lastActivity = performance.now();
   buildTicks(); syncTicks();
   document.getElementById('hudChapter').textContent = label;
+  document.getElementById('btnAgain').textContent = 'The lock again';
+  document.getElementById('btnNext').textContent = 'Next chapter';
   whisperEl.classList.remove('show');
   document.getElementById('openRemark').textContent = '';
   document.getElementById('openBoard').innerHTML = '';
@@ -492,9 +511,161 @@ function startZen() {
   beginPlay('Zen');
   zenSay(zenCount === 0 ? 'No score. No stakes.' : ZEN_LINES[zenCount % ZEN_LINES.length], 2400);
 }
+/* ---------- the teaching lock: the verbs, one at a time ----------
+   Two small locks that cannot hurt you: three plain pins, then four
+   with a spool in them. The line at the bottom says what to do and
+   waits until you have done it. Nothing is scored; finishing is
+   remembered, and the tray points here until it has been kept. */
+let teachMode = false, teachStep = 0, teachPhase = 'A';
+let teachHold = 0, teachFalsePin = -1, teachBeatAt = 0, teachConfirmed = false;
+let teachDone = false;
+try { teachDone = localStorage.getItem('tn_teach_v1') === '1'; } catch (e) {}
+function teachLockA() {
+  return TN.createLock(42, { pins: 3, needMin: 1.6, needMax: 3.1, oversetMargin: 1.15, stressGain: 0.25, pickStrength: 1e9 });
+}
+function teachLockB() {
+  return TN.createLock(555, { pins: 4, kinds: { spool: 1 }, needMin: 1.6, needMax: 3.2, oversetMargin: 1.3, stressGain: 0.3, pickStrength: 1e9 });
+}
+const TEACH_TEXT = [
+  ['Hold', 'Touch the lock and keep holding — feel the plug strain against the pins'],
+  ['Lift', 'Slide to a pin and push it up. It rises, and it falls back — nothing holds it yet'],
+  ['Listen', 'Work the pins one by one. One ticks low and heavy — it is carrying the plug'],
+  ['Set', 'Push the heavy one through its click — then stop'],
+  ['Overset', 'Now ruin it: take a set pin and shove it, hard, past its click'],
+  ['Ease', 'The lock is jammed. Drag down, below where you started, until the pin falls free'],
+  ['Open it', 'Now pick it — by ear, the way you were taught'],
+  ['The liar', 'One of these four is a spool. Set what you can — and watch the plug'],
+  ['The tell', 'There: the plug rolled back as it caught. A true set never rolls back'],
+  ['The prop', 'The caught pin props the plug open. Keep the tension on and push it home — firmly'],
+  ['Open it', 'Finish it. You know everything this lock can teach'],
+];
+function teachSay() {
+  const t = TEACH_TEXT[teachStep];
+  whisperEl.innerHTML = t[0] + '<span class="wsub">' + t[1] + '</span>';
+  whisperEl.classList.add('show');
+  clearTimeout(whisperTimer);
+}
+function teachAdvance() {
+  if (teachStep >= TEACH_TEXT.length - 1) return;
+  teachStep++;
+  teachHold = 0; teachConfirmed = false;
+  if (teachStep === 8) teachBeatAt = performance.now();
+  teachSay();
+  audio.tap();
+}
+function openTeachIntro() {
+  introAction = () => startTeach();
+  chapter = TN.CHAPTERS[0];
+  lock = teachLockA();
+  mode = 'intro';
+  document.getElementById('menu').style.display = 'none';
+  document.getElementById('openPlate').classList.remove('show');
+  document.getElementById('hud').classList.remove('show');
+  document.getElementById('introNum').textContent = 'The teaching lock';
+  document.getElementById('introName').textContent = 'Learn It By Hand';
+  document.getElementById('introSpec').textContent = 'Two small locks \· nothing can break';
+  document.getElementById('introLine').textContent = 'The craft, one verb at a time. The line at the bottom tells you what to do — and waits until you have done it.';
+  introEl.style.display = 'flex';
+}
+function startTeach() {
+  teachMode = true; playingDaily = false; zenMode = false;
+  chapter = TN.CHAPTERS[0];
+  teachPhase = 'A'; teachStep = 0; teachHold = 0; teachFalsePin = -1; teachConfirmed = false;
+  lock = teachLockA();
+  beginPlay('The Teaching Lock');
+  document.getElementById('skipStep').classList.add('show');
+  teachSay();
+}
+function teachTransitionB() {
+  audio.open(); buzz(20);
+  teachPhase = 'B'; teachStep = 7; teachHold = 0; teachFalsePin = -1; teachConfirmed = false;
+  lock = teachLockB();
+  beginPlay('The Teaching Lock — the liar');
+  document.getElementById('skipStep').classList.add('show');
+  teachSay();
+}
+function completeTeach(now) {
+  teachDone = true;
+  try { localStorage.setItem('tn_teach_v1', '1'); } catch (e) {}
+  audio.open(); buzz([25, 60, 40]);
+  openedAt = now; mode = 'open';
+  document.getElementById('skipStep').classList.remove('show');
+  whisperEl.classList.remove('show');
+  const medalEl = document.getElementById('openMedal');
+  medalEl.textContent = 'The teaching lock — kept';
+  medalEl.className = 'medal caps';
+  document.getElementById('openStats').textContent = 'Hold \· Listen \· Set \· Ease \· Prop \· Open';
+  document.getElementById('openRemark').textContent = 'That is the whole of it. The ladder is yours.';
+  document.getElementById('openBoard').innerHTML = '';
+  document.getElementById('btnAgain').textContent = 'Again';
+  const next = document.getElementById('btnNext');
+  next.textContent = 'Chapter I'; next.style.display = '';
+  renderTray();
+  document.getElementById('openPlate').classList.add('show');
+  document.getElementById('hud').classList.remove('show');
+}
+function teachOnEvent(ev) {
+  if (ev.type === 'set') {
+    if (teachStep === 3) teachAdvance();
+    else if (teachStep === 9 && ev.pin === teachFalsePin) teachAdvance();
+  } else if (ev.type === 'overset') {
+    if (teachStep === 4) teachAdvance();
+  } else if (ev.type === 'falseset') {
+    if (teachStep === 7) { teachFalsePin = ev.pin; teachAdvance(); }
+  } else if (ev.type === 'open') {
+    if (teachPhase === 'A') teachTransitionB();
+    else completeTeach(performance.now());
+  }
+}
+function teachFrame(now, dt) {
+  if (!teachMode || mode !== 'play') return;
+  switch (teachStep) {
+    case 0:
+      teachHold = input.tension > 0.5 ? teachHold + dt : 0;
+      if (teachHold > 0.9) teachAdvance();
+      break;
+    case 1:
+      if (lock.stacks.some(s => s.lift > 1.3)) teachAdvance();
+      break;
+    case 2: {
+      const b = TN.binderIndex(lock);
+      if (!teachConfirmed && b >= 0 && input.pin === b && input.push > 0.38) {
+        teachConfirmed = true; teachHold = 0;
+        whisperEl.innerHTML = 'That one<span class="wsub">Hear the knock in it? That is the binder</span>';
+      }
+      if (teachConfirmed) { teachHold += dt; if (teachHold > 0.8) teachAdvance(); }
+      break;
+    }
+    case 3:
+      if (lock.sets >= 1) teachAdvance();
+      break;
+    case 4:
+      if (lock.stacks.some(s => s.state === 'over')) teachAdvance();
+      break;
+    case 5:
+      if (!lock.stacks.some(s => s.state === 'over')) teachAdvance();
+      break;
+    case 8:
+      if (teachFalsePin >= 0 && lock.stacks[teachFalsePin].state === 'set') { teachStep = 9; teachAdvance(); }
+      else if (now - teachBeatAt > 2800) teachAdvance();
+      break;
+    case 9:
+      if (teachFalsePin >= 0 && lock.stacks[teachFalsePin].state === 'set') teachAdvance();
+      break;
+  }
+}
+function skipTeach() {
+  if (!teachMode) return;
+  audio.tap();
+  if (teachStep === 6) teachTransitionB();
+  else if (teachStep === 10) completeTeach(performance.now());
+  else teachAdvance();
+}
+
 function toMenu() {
   mode = 'menu';
-  zenMode = false;
+  zenMode = false; teachMode = false;
+  document.getElementById('skipStep').classList.remove('show');
   chapter = TN.CHAPTERS[0];
   lock = TN.chapterLock(chapter);
   renderTray();
@@ -503,10 +674,12 @@ function toMenu() {
   document.getElementById('openPlate').classList.remove('show');
   document.getElementById('hud').classList.remove('show');
 }
-document.getElementById('btnAgain').addEventListener('click', () => { audio.unlock(); if (playingDaily) startDaily(); else startChapter(chapter); });
+document.getElementById('btnAgain').addEventListener('click', () => { audio.unlock(); if (teachMode) { startTeach(); return; } if (playingDaily) startDaily(); else startChapter(chapter); });
 document.getElementById('btnTray').addEventListener('click', toMenu);
+document.getElementById('skipStep').addEventListener('click', () => { audio.unlock(); skipTeach(); });
 document.getElementById('quit').addEventListener('click', toMenu);
 document.getElementById('btnNext').addEventListener('click', () => {
+  if (teachMode) { teachMode = false; document.getElementById('skipStep').classList.remove('show'); openIntro(TN.CHAPTERS[0]); return; }
   const next = TN.CHAPTERS[chapter.n]; // chapters are 1-based; index n is the next
   if (next) openIntro(next);
 });
@@ -627,6 +800,8 @@ stage.addEventListener('pointercancel', endPointer);
 function buzz(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
 function handleEvents(now) {
   for (const ev of TN.drainEvents(lock)) {
+    if (teachMode && ev.type === 'open') { teachOnEvent(ev); continue; }
+    if (teachMode) teachOnEvent(ev);
     switch (ev.type) {
       case 'tick':
         // the binder sounds heavy — the tell the game is played by
@@ -636,27 +811,27 @@ function handleEvents(now) {
       case 'ridge': audio.ridge(ev.pin); break;
       case 'set':
         audio.set(ev.pin); buzz(12); syncTicks(); lastActivity = now;
-        if (!saidFirstSet) { saidFirstSet = true; whisper('One set', 'The plug gave — feel for the next to bind'); }
-        else if (lock.sets === lock.stacks.length - 1) whisper('One more');
+        if (!saidFirstSet) { saidFirstSet = true; if (!teachMode) whisper('One set', 'The plug gave — feel for the next to bind'); }
+        else if (!teachMode && lock.sets === lock.stacks.length - 1) whisper('One more');
         break;
       case 'falseset':
         audio.falseset(ev.pin); buzz(8); syncTicks(); lastActivity = now;
-        if (!saidFalse) { saidFalse = true; whisper('A false set', 'The plug rolled back — ease off as you lift'); }
-        else whisper('A false set', 'Ease off as you lift');
+        if (!saidFalse) { saidFalse = true; if (!teachMode) whisper('A false set', 'The plug rolled back — the pin props it there. Push it home'); }
+        else if (!teachMode) whisper('A false set', 'It props the plug — push it home');
         break;
       case 'slip':
         audio.slip(ev.pin);
-        whisper('It slipped off the lip', 'Feather it — ease and lift together');
+        if (!teachMode) whisper('It slipped off the lip', 'Feather it — a firm push, never a shove');
         break;
       case 'give': audio.give(); break;
       case 'overset':
         audio.overset(); buzz([18, 40, 18]); syncTicks();
-        if (!saidOverset) { saidOverset = true; whisper('Overset', 'Drag down to ease off, until it falls'); }
-        else whisper('Overset', 'Ease off until it falls');
+        if (!saidOverset) { saidOverset = true; if (!teachMode) whisper('Overset', 'Drag down to ease off, until it falls'); }
+        else if (!teachMode) whisper('Overset', 'Ease off until it falls');
         break;
-      case 'drop': audio.drop(ev.pin); syncTicks(); whisper('It dropped', 'Tension holds what you win'); break;
+      case 'drop': audio.drop(ev.pin); syncTicks(); if (!teachMode) whisper('It dropped', 'Tension holds what you win'); break;
       case 'fall': audio.fall(ev.pin); break;
-      case 'snap': audio.snap(); buzz(45); snapAt = now; whisper('The pick snapped', 'A fresh one slides in'); break;
+      case 'snap': audio.snap(); buzz(45); snapAt = now; if (!teachMode) whisper('The pick snapped', 'A fresh one slides in'); break;
       case 'pickin': audio.pickin(); break;
       case 'open': {
         if (zenMode) {
@@ -766,7 +941,8 @@ function frame(now) {
     }
   }
   if (mode === 'open' && zenMode && now - openedAt > 2700) startZen();
-  if (mode === 'play' && !zenMode && !saidStuck && lock.sets === 0 && now - lastActivity > 7000) {
+  if (teachMode) teachFrame(now, dt);
+  if (mode === 'play' && !zenMode && !teachMode && !saidStuck && lock.sets === 0 && now - lastActivity > 7000) {
     saidStuck = true;
     whisper('One pin sounds heavy', 'That one binds — push it through its click', 3800);
   }
@@ -787,6 +963,9 @@ window.__game = {
   get mode() { return mode; }, get lock() { return lock; }, get chapter() { return chapter; },
   get progress() { return progress; }, input,
   startChapter, openIntro, toMenu, startDaily, openDailyIntro, startZen, applyBody,
+  startTeach, openTeachIntro, skipTeach,
+  get teachMode() { return teachMode; }, get teachStep() { return teachStep; },
+  get teachPhase() { return teachPhase; }, get teachDone() { return teachDone; },
   get dailyRec() { return dailyRec; },
   get zenMode() { return zenMode; }, get zenCount() { return zenCount; },
   /* a zen lock, opened by the taught rules — for the quiet plate */
