@@ -282,6 +282,7 @@ function createRenderer(canvas) {
   setBody('brass');
 
   let proj = mIdent(), view = mIdent(), camPos = [0, 0, 10];
+  let curSway = 0;
   function draw(m, model, color, shine, alpha) {
     const mvp = mMul(proj, mMul(view, model));
     gl.uniformMatrix4fv(U.mvp, false, mvp);
@@ -306,6 +307,7 @@ function createRenderer(canvas) {
     proj = mPersp(fov, aspect, 0.1, 60);
     const sway = Math.sin(view3.time * 0.00023) * 0.35;
     camPos = [sway, 0.55 + Math.sin(view3.time * 0.00017) * 0.12, dist];
+    curSway = sway;
     view = mMul(mTrans(-camPos[0], -camPos[1], -camPos[2]), mRotX(-0.05));
 
     // backdrop
@@ -409,7 +411,7 @@ function createRenderer(canvas) {
       draw(M.box, compose(PX[Math.max(0, view3.activePin)] + t * 1.4, FLOOR_Y + 0.4 - t * t * 2.4, 0.3, 0, 0, t * 5, 0.5, 0.05, 0.045), STEEL_D, 30);
     }
   }
-  return { frame, setBody };
+  return { frame, setBody, sway: () => curSway };
 }
 
 const TNR = { createRenderer, PIN_X, VIS, pinXArr };
