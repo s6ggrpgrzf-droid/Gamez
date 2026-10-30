@@ -90,7 +90,7 @@ function createLock(seed, cfg) {
     stress: 0,            // pick stress 0..1
     status: 'locked',     // locked | open
     timeMs: 0, breaks: 0, oversets: 0, sets: 0,
-    starveTime: 0, dropClock: 0, snapLock: 0,
+    starveTime: 0, dropClock: 0, snapLock: 0, giveAcc: 0,
     events: [],
   };
 }
@@ -151,7 +151,10 @@ function step(lock, input, dt) {
   }
   const prevPlug = lock.plug;
   lock.plug += (plugTarget - lock.plug) * Math.min(1, 14 * dt);
-  if (lock.plug - prevPlug > 0.05 && !jammed) emit(lock, 'give');
+  if (!jammed && lock.plug > prevPlug) {
+    lock.giveAcc += lock.plug - prevPlug;
+    if (lock.giveAcc >= 0.25) { lock.giveAcc = 0; emit(lock, 'give'); }
+  }
 
   const binder = binderIndex(lock);
 
@@ -274,7 +277,7 @@ function step(lock, input, dt) {
         for (let i = 0; i < lock.stacks.length; i++)
           if (lock.stacks[i].state === 'set' && (victim < 0 || lock.stacks[i].setAt > lock.stacks[victim].setAt)) victim = i;
         if (victim >= 0) {
-          lock.stacks[victim].state = 'down'; lock.stacks[victim].lift = 0; lock.sets--;
+          lock.stacks[victim].state = 'down'; lock.stacks[victim].lift = Math.max(0, lock.stacks[victim].need - 0.3); lock.sets--;
           emit(lock, 'drop', victim);
         }
       }
@@ -369,11 +372,11 @@ function dailyLock(dateStr) {
   return { lock, seed, pins, kinds, base: DAILY_BASE, spec: cabinetSpec(pins, kinds) };
 }
 function scoreFor(ch, lock) {
-  return Math.max(0, Math.round(ch.base - (lock.timeMs / 1000) * 4 - lock.oversets * 60 - lock.breaks * 120));
+  return Math.max(0, Math.round(ch.base - (lock.timeMs / 1000) * 5 - lock.oversets * 60 - lock.breaks * 120));
 }
 function medalFor(ch, lock) {
   const s = scoreFor(ch, lock) / ch.base;
-  return s >= 0.75 ? 'GOLD' : s >= 0.55 ? 'SILVER' : s >= 0.35 ? 'BRONZE' : null;
+  return s >= 0.8 ? 'GOLD' : s >= 0.55 ? 'SILVER' : s >= 0.35 ? 'BRONZE' : null;
 }
 
 const TN = { mulberry32, DEFAULTS, createLock, step, binderIndex, drainEvents, CHAPTERS, chapterLock, scoreFor, medalFor, dailyLock, dailySeed, cabinetSpec, DAILY_BASE };
