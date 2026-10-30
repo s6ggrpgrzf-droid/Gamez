@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="./art-sd.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./art-pt.css" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./art-ns.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="./art-tn.css" media="print" onload="this.media='all'">
 <style>
   :root{
     --gold:#e3ac55; --gold-hi:#ffd98a; --gold-deep:#9a7434;
@@ -663,11 +664,12 @@ var G = [
   ['DOMINOES','DOMINOES','NEW · VS HOUSE','The café-table classic: take the round off the House. First to 100.','<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 12 L18 12"/><circle cx="12" cy="7.5" r="1" fill="#6b4d1c"/>',[]],
   ['CATHEDRAL','CATHEDRAL','OLD TIME RADIO','Old time radio on a 1940s cathedral set. 1,800+ episodes.','<path d="M5 21 L5 11 a7 6.5 0 0 1 14 0 L19 21"/><path d="M9 21 L9 12.5 a3 3 0 0 1 6 0 L15 21"/><path d="M3 21 L21 21"/>',[]],
   ['STARLIGHT DRUMS','DRUMS','DAILY · RHYTHM','Tap the beat under a night sky — every true hit wakes a star.','<path d="M12 3 L14 9.5 L21 10 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 10 L10 9.5 Z"/>',[],{label:'Best A · 96.2%',frac:.96}],
-  ['THE NIGHT SHELF','SHELF','DAILY · SOLITAIRE','The real Turtle — 144 tiles by neon light. Match the free pairs, mind the candle, and keep tonight’s deal: one shelf, the whole world, a new one at midnight.','<path d="M12 2.8 v2.4"/><path d="M12 5.2 c1.3 1.5 1.3 2.9 0 3.8 c-1.3-.9-1.3-2.3 0-3.8 Z"/><rect x="8.2" y="10.5" width="7.6" height="10" rx="1.4"/><path d="M5 21.5 H19"/>',[]]
+  ['THE NIGHT SHELF','SHELF','DAILY · SOLITAIRE','The real Turtle — 144 tiles by neon light. Match the free pairs, mind the candle, and keep tonight’s deal: one shelf, the whole world, a new one at midnight.','<path d="M12 2.8 v2.4"/><path d="M12 5.2 c1.3 1.5 1.3 2.9 0 3.8 c-1.3-.9-1.3-2.3 0-3.8 Z"/><rect x="8.2" y="10.5" width="7.6" height="10" rx="1.4"/><path d="M5 21.5 H19"/>',[]],
+  ['TENSION','TENSION','DAILY · BY EAR','A lock, opened by ear — five chapters up a locksmith’s ladder, and one new lock for the whole world each night. Feel for the pin that binds; beware the ones that lie.','<path d="M7 10.5 V7.5 a5 5 0 0 1 10 0 V10.5"/><rect x="5" y="10.5" width="14" height="9.5" rx="1.6"/><circle cx="12" cy="14.2" r="1.6"/><path d="M12 15.4 v2.2"/>',[]]
 ];
-var U = ['./candy-cascade/','./bubble-hex/','./bloom-defense/','./neon-void/','./maze-trace/','./life-story/','./reel-empire/','./pdawg/','./word-well/','./tiny-fairway/','./skylark/','./dominoes/','https://s6ggrpgrzf-droid.github.io/Cathedral/','./starlight-drums/','./night-shelf/'];
-var IDS = ['candy-cascade','bubble-hex','bloom-defense','neon-void','maze-trace','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums','night-shelf'];
-var ART = ['candy-cascade','bubble-hex','bloom-defense','neon-void','arrow-slide','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums','night-shelf'];
+var U = ['./candy-cascade/','./bubble-hex/','./bloom-defense/','./neon-void/','./maze-trace/','./life-story/','./reel-empire/','./pdawg/','./word-well/','./tiny-fairway/','./skylark/','./dominoes/','https://s6ggrpgrzf-droid.github.io/Cathedral/','./starlight-drums/','./night-shelf/','./tension/'];
+var IDS = ['candy-cascade','bubble-hex','bloom-defense','neon-void','maze-trace','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums','night-shelf','tension'];
+var ART = ['candy-cascade','bubble-hex','bloom-defense','neon-void','arrow-slide','life-story','reel-empire','pdawg','word-well','tiny-fairway','skylark','dominoes','cathedral','starlight-drums','night-shelf','tension'];
 </script>
 <script>
 'use strict';
@@ -817,6 +819,16 @@ function progressFor(id) {
       if (!ds || !(ds.w || ds.l)) return null;
       var played = (ds.w || 0) + (ds.l || 0);
       return { label: 'W ' + (ds.w || 0) + ' · L ' + (ds.l || 0), frac: Math.min(1, played / 20) };
+    }
+    if (id === 'tension') {
+      var tp = readJSON('tn_progress_v1'), td = readJSON('tn_daily_v1');
+      var med = tp && tp.medals ? Object.keys(tp.medals).length : 0;
+      var tst2 = td && td.streak ? td.streak : 0;
+      if (!med && !tst2) return null;
+      var tparts = [];
+      if (med) tparts.push(med + ' of 5 chapters medalled');
+      if (tst2 >= 2) tparts.push('🔥 ' + tst2 + ' nights');
+      return { label: tparts.join(' \u00b7 '), frac: med ? Math.min(1, med / 5) : Math.min(1, tst2 / 30) };
     }
   } catch (e) { return null; }
   return null;
