@@ -47,6 +47,7 @@ const DEFAULTS = {
   stressGain: 0.55,               // stress/sec while straining hard
   stressDecay: 0.5,               // stress/sec recovery
   snapLockTime: 0.9,              // seconds while a fresh pick slides in
+  pickStrength: 1,                // stress at which the pick snaps (zen and the teaching lock deal unbreakable picks)
   maxGive: 6.0,                   // degrees the plug can give under full tension
   spoolCatch: 0.34,               // lift below the shear point where a spool's waist catches
   spoolEase: 0.5,                 // at or below this tension a caught spool can be worked through
@@ -160,13 +161,18 @@ function step(lock, input, dt) {
     if (s.state === 'over') continue;
     const inContact = lock.snapLock <= 0 && pin === i && push > 0.02;
     if (s.state === 'false') {
-      // a caught security pin. Ease the tension into its working window
-      // and keep lifting, and it slides home; ease too far and it drops
-      // out of the catch; force a mushroom and it slips off the lip.
-      const ease = s.kind === 'shroom' ? C.shroomEase : C.spoolEase;
+      // a caught security pin props the plug in its working window —
+      // the pin holds the counter-rotation itself, so the wrench hand
+      // does not have to hold the window open (one finger cannot ease
+      // and push at the same time). Keep tension on and push, and it
+      // slides home; let the tension fall away and it drops out of
+      // the catch; force a mushroom against a hard wrench and it
+      // slips off the lip.
       if (T < C.easeOff) {
         s.state = 'down'; s.lift = Math.max(0, s.need - 0.7); emit(lock, 'drop', i);
-      } else if (inContact && T <= ease) {
+      } else if (inContact && s.kind === 'shroom' && T > 0.72 && push > 0.8) {
+        s.state = 'down'; s.lift = s.need * 0.45; emit(lock, 'slip', i);
+      } else if (inContact) {
         s.lift = Math.min(s.need + C.topOut, s.lift + C.liftRate * 0.45 * push * dt);
         if (s.lift >= s.need) {
           s.state = 'set'; s.setAt = lock.timeMs; lock.sets++;
@@ -175,8 +181,6 @@ function step(lock, input, dt) {
             lock.status = 'open'; emit(lock, 'open'); return;
           }
         }
-      } else if (inContact && s.kind === 'shroom' && T > 0.72 && push > 0.8) {
-        s.state = 'down'; s.lift = s.need * 0.45; emit(lock, 'slip', i);
       }
       continue;
     }
@@ -286,12 +290,13 @@ function step(lock, input, dt) {
       else if (pin === binder && T > 0.85 && s.lift > s.need * 0.8) strain = 0.8;
       else if (s.lift >= s.need + C.topOut - 0.02) strain = 0.9;
     } else if (s.state === 'false') {
-      const ease = s.kind === 'shroom' ? C.shroomEase : C.spoolEase;
-      if (T > ease) strain = 0.5; // forcing a caught pin only bends the pick
+      // working a caught spool through its prop is the craft itself;
+      // forcing a mushroom against a hard wrench is what bends picks
+      if (s.kind === 'shroom' && T > C.shroomEase) strain = 0.5;
     }
   }
   lock.stress = Math.max(0, Math.min(1.05, lock.stress + (strain > 0 ? strain * C.stressGain * dt * 2 : -C.stressDecay * dt)));
-  if (lock.stress >= 1) {
+  if (lock.stress >= C.pickStrength) {
     lock.stress = 0; lock.breaks++; lock.snapLock = C.snapLockTime;
     emit(lock, 'snap');
   }
@@ -311,7 +316,7 @@ const CHAPTERS = [
     line: 'One more pin, and the tolerances tighten.' },
   { n: 3, name: 'The Spool', pins: 5, seed: 303, two: false, base: 950, kinds: { spool: 2 }, cfg: {},
     spec: 'Five pins · two spools',
-    line: 'A spool lies. It will feel set — it is not. Watch the plug roll back, then ease off as you lift.' },
+    line: 'A spool lies. It will feel set — it is not. Watch the plug roll back: the caught pin props it there. Keep your nerve and push it home.' },
   { n: 4, name: 'Serrations', pins: 6, seed: 404, two: false, base: 1150, kinds: { serrated: 2, spool: 1 },
     cfg: { bindMin: 0.8, bindMax: 3.6 },
     spec: 'Six pins · two serrated · one spool',
