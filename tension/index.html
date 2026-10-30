@@ -159,6 +159,79 @@
     #intro .iline{ font-size:14.5px; margin-top:10px; }
     #whisper{ bottom:auto; top:60px; }
   }
+
+  /* ---------- UI POLISH — every button its own presence ----------
+     One tactile family for everything tappable: a lacquer plate with
+     a lit top edge and a deep resting shadow; a press that travels
+     one pixel and collapses the shadow, like a key on an instrument.
+     Fields sink, buttons lift, the chosen chip rises. Brass stays
+     inlay and lettering — never a fill. */
+  .btn, .chip, .chrow, #openBoard button{
+    box-shadow: inset 0 1px 0 rgba(233,227,211,.07), inset 0 -1px 0 rgba(201,164,92,.28),
+                0 10px 24px rgba(0,0,0,.45);
+  }
+  .btn:active, .chip:active, .chrow:active, #openBoard button:active{
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 0 rgba(233,227,211,.04), inset 0 -1px 0 rgba(201,164,92,.4),
+                0 3px 8px rgba(0,0,0,.5);
+  }
+  /* the primary verb carries a brass diamond */
+  .btn::before{ content:'\25C6'; color:var(--brass); font-size:8px; margin-right:14px; vertical-align:2px; }
+  #btnAgain{ border-color:rgba(201,164,92,.65); }
+  #btnTray{ color:var(--dim); }
+  .btn:focus-visible, .chip:focus-visible, .chrow:focus-visible,
+  #quit:focus-visible, #skipStep:focus-visible{ outline:1px solid var(--brass); outline-offset:2px; }
+
+  /* tray rows: the numeral sits in a diamond seal */
+  .chrow{ transition:border-color .25s, transform .12s, box-shadow .25s;
+          padding-top:10px; padding-bottom:10px; margin-top:8px; }
+  .chrow .num{ position:relative; flex:0 0 auto; width:28px; height:28px;
+               display:flex; align-items:center; justify-content:center; }
+  .chrow .num::before{ content:''; position:absolute; inset:4px; transform:rotate(45deg);
+                       border:1px solid rgba(201,164,92,.4); }
+  .chrow.locked .num::before{ border-color:rgba(233,227,211,.14); }
+  .chrow .num.glyph{ width:22px; font-size:16px; }
+  .chrow .num.glyph::before{ display:none; }
+  .chrow:active{ border-color:rgba(201,164,92,.6); }
+  /* earned words sit in an inlay lozenge */
+  .chrow .cmedal{ border:1px solid rgba(201,164,92,.38); padding:5px 8px 5px calc(8px + .3em); }
+  .chrow .cmedal.none{ border-color:rgba(233,227,211,.13); }
+
+  /* body chips: the chosen one rises */
+  .chip{ transition:border-color .25s, transform .15s, box-shadow .25s; }
+  .chip.sel{ transform:translateY(-1px); border-color:var(--brass);
+             box-shadow: inset 0 1px 0 rgba(233,227,211,.09), inset 0 -1px 0 rgba(201,164,92,.45),
+                         0 14px 28px rgba(0,0,0,.55); }
+  .chip .sw{ width:12px; height:12px; box-shadow:0 0 0 3px rgba(233,227,211,.06); }
+
+  /* quiet text becomes a quiet plate — still unmistakably a button */
+  .traylinks span, #intro .traylink{
+    display:inline-block; padding:10px 18px 10px calc(18px + .3em);
+    border:1px solid rgba(201,164,92,.18); background:rgba(233,227,211,.02);
+    box-shadow: inset 0 1px 0 rgba(233,227,211,.05), 0 6px 16px rgba(0,0,0,.4);
+    transition:border-color .25s, transform .12s; }
+  .traylinks span:active, #intro .traylink:active{ transform:translateY(1px); border-color:rgba(201,164,92,.5); color:var(--bone); }
+  #openBoard input{ box-shadow: inset 0 2px 8px rgba(0,0,0,.65); }
+
+  #openPlate{ visibility:hidden; transition:opacity .8s .25s, visibility 0s linear 1s; }
+  #openPlate.show{ visibility:visible; transition:opacity .8s .25s; }
+  #hud:not(.show) #quit{ visibility:hidden; }
+
+  /* the quit becomes a ringed button; the skip, a small plate */
+  #quit{ width:38px; height:38px; padding:0; display:flex; align-items:center; justify-content:center;
+         border:1px solid rgba(233,227,211,.18); border-radius:50%;
+         background:linear-gradient(180deg,#14151a,#0c0c0f);
+         box-shadow: inset 0 1px 0 rgba(233,227,211,.06), 0 6px 16px rgba(0,0,0,.45);
+         transition:border-color .25s, transform .12s; }
+  #quit:active{ transform:translateY(1px); border-color:rgba(201,164,92,.55); }
+  #skipStep{ padding:11px 14px 11px calc(14px + .22em); border:1px solid rgba(201,164,92,.3);
+             background:linear-gradient(180deg,#14151a,#0c0c0f); color:var(--dim);
+             box-shadow: inset 0 1px 0 rgba(233,227,211,.06), 0 8px 20px rgba(0,0,0,.45); }
+  #skipStep:active{ transform:translateY(1px); color:var(--bone); }
+
+  @media (max-height: 740px){ .chrow .num{ width:24px; height:24px; } .chrow{ padding-top:7px; padding-bottom:7px; margin-top:8px; } }
+  @media (max-height: 500px){ .chrow .num{ width:20px; height:20px; } .chrow .num::before{ inset:3px; }
+    .chrow{ padding-top:5px; padding-bottom:5px; margin-top:6px; } .chrow .cmedal{ padding:3px 7px 3px calc(7px + .3em); } }
 </style>
 </head>
 <body>
@@ -316,9 +389,9 @@ function renderTray() {
   {
     const row = document.createElement('div');
     row.className = 'chrow' + (teachDone ? '' : ' daily');
-    row.innerHTML = '<span class="num">&#9670;</span>' +
+    row.innerHTML = '<span class="num glyph">&#9670;</span>' +
       '<span><span class="cname">The Teaching Lock</span>' +
-      '<span class="csub">Learn the craft by hand</span></span>' +
+      '<span class="csub">The craft, by hand</span></span>' +
       '<span class="cmedal' + (teachDone ? '' : ' none') + '">' + (teachDone ? 'Kept' : 'Begin here') + '</span>';
     row.addEventListener('click', () => { audio.unlock(); audio.tap(); openTeachIntro(); });
     rowsEl.appendChild(row);
@@ -331,7 +404,7 @@ function renderTray() {
     const row = document.createElement('div');
     row.className = 'chrow daily';
     const status = kept ? 'Kept · ' + kept.score : (dailyRec.streak > 0 ? 'Streak ' + dailyRec.streak : 'Unopened');
-    row.innerHTML = '<span class="num">&#10022;</span>' +
+    row.innerHTML = '<span class="num glyph">&#10022;</span>' +
       '<span><span class="cname">Tonight\u2019s Lock</span>' +
       '<span class="csub">' + dl.spec + '</span></span>' +
       '<span class="cmedal' + (kept ? '' : ' none') + '">' + status + '</span>';
@@ -353,7 +426,7 @@ function renderTray() {
   {
     const row = document.createElement('div');
     row.className = 'chrow';
-    row.innerHTML = '<span class="num">&#10023;</span>' +
+    row.innerHTML = '<span class="num glyph">&#10023;</span>' +
       '<span><span class="cname">Zen</span>' +
       '<span class="csub">No score &middot; no stakes</span></span>' +
       '<span class="cmedal none">The feel alone</span>';
