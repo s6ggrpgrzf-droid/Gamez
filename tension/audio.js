@@ -79,6 +79,16 @@ function createAudio() {
       noise(0.07, 'lowpass', 750, 0.8, 0.4);
       tone('sine', 140, 60, 0.11, 0.3);
     },
+    /* the binder's tick: lower, duller, with a knock in it — the pin
+       that is carrying the plug sounds like it. This is the tell the
+       whole game is played by. */
+    tickHeavy(pin) {
+      const now = performance.now();
+      if (now - lastTick < 34) return;
+      lastTick = now;
+      noise(0.03, 'bandpass', 950 + pin * 60, 2, 0.3);
+      tone('sine', 170, 95, 0.05, 0.16);
+    },
     /* a serration ridge: all click, no body — a lie told thinly */
     ridge(pin) {
       noise(0.014, 'highpass', 3900 + pin * 240, 1, 0.13);
