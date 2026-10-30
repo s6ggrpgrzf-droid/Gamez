@@ -33,13 +33,15 @@ const DEFAULTS = {
   needMin: 1.4, needMax: 4.0,     // shear-point heights, arbitrary units
   bindMin: 0.6, bindMax: 4.2,     // degrees of plug turn at which a stack binds
   oversetMargin: 0.95,            // lift past the shear point that oversets (a human needs ~0.28s after the click)
+  setCatchMs: 300,                // after the click, the driver sits hard on the ledge for this long
+  setCatchDrag: 0.15,             // and the climb toward overset crawls at this fraction meanwhile
   topOut: 1.25,                   // lift past need where the stack hits the top
-  liftRate: 3.4,                  // units/sec at full push (binder: slower, it resists)
-  binderDrag: 0.55,               // the binder lifts at this fraction — it feels stiff
+  liftRate: 4.6,                  // units/sec at full push (binder: slower, it resists)
+  binderDrag: 0.7,                // the binder lifts at this fraction — it feels stiff
   springRate: 9.0,                // exponential fall rate of an unheld stack
   tensionRate: 7.0,               // how fast actual tension chases the input
   holdTension: 0.18,              // below this, set stacks are living on borrowed time
-  dropGrace: 0.35,                // seconds of starved tension before sets start dropping
+  dropGrace: 0.5,                 // seconds of starved tension before sets start dropping
   dropInterval: 0.13,             // seconds between drops once they start
   easeOff: 0.35,                  // tension below this lets an overset stack fall
   stressGain: 0.55,               // stress/sec while straining hard
@@ -181,9 +183,13 @@ function step(lock, input, dt) {
     if (s.state === 'set') {
       // a set stack still rides the pick: keep pushing and the key pin
       // climbs into the shear line and oversets the stack you just won;
-      // let go and it settles back onto the plug ledge, still set
+      // let go and it settles back onto the plug ledge, still set.
+      // For a breath after the click the driver sits hard on the ledge:
+      // the climb crawls, and a hand has time to hear the click and stop.
       if (inContact) {
-        s.lift = Math.min(s.need + C.topOut, s.lift + C.liftRate * push * dt);
+        const justSet = s.setAt > 0 && lock.timeMs - s.setAt < C.setCatchMs;
+        const climb = C.liftRate * (justSet ? C.setCatchDrag : 1);
+        s.lift = Math.min(s.need + C.topOut, s.lift + climb * push * dt);
         if (s.lift >= s.need + C.oversetMargin) {
           s.state = 'over'; s.setAt = -1; lock.sets--; lock.oversets++;
           emit(lock, 'overset', i);
@@ -296,11 +302,11 @@ function drainEvents(lock) { const e = lock.events; lock.events = []; return e; 
 /* The ladder. Chapter locks are FIXED seeds: a lock you can learn,
    the way you learn a real one. Fresh locks belong to the daily. */
 const CHAPTERS = [
-  { n: 1, name: 'Plain Pins', pins: 5, seed: 101, two: false, base: 600, kinds: null, cfg: {},
+  { n: 1, name: 'Plain Pins', pins: 5, seed: 101, two: false, base: 600, kinds: null, cfg: { oversetMargin: 1.6, stressGain: 0.3 },
     spec: 'Five pins · all plain',
     line: 'Five plain drivers. The order is there to be felt.' },
   { n: 2, name: 'Six Pins', pins: 6, seed: 202, two: false, base: 850, kinds: null,
-    cfg: { needMin: 1.2, needMax: 4.4, bindMin: 0.8, bindMax: 3.4 },
+    cfg: { needMin: 1.2, needMax: 4.4, bindMin: 0.8, bindMax: 3.4, oversetMargin: 1.3, stressGain: 0.42 },
     spec: 'Six pins · all plain · tighter tolerances',
     line: 'One more pin, and the tolerances tighten.' },
   { n: 3, name: 'The Spool', pins: 5, seed: 303, two: false, base: 950, kinds: { spool: 2 }, cfg: {},
