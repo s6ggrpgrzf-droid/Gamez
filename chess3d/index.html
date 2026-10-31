@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Chess 3D — Gamez</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20261031b">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gradW" x1="0" y1="0" x2="0.65" y2="1">
+      <stop offset="0" stop-color="#fdf6dd"/><stop offset=".4" stop-color="#eedcae"/>
+      <stop offset=".75" stop-color="#d3af74"/><stop offset="1" stop-color="#a97f42"/>
+    </linearGradient>
+    <linearGradient id="gradB" x1="0" y1="0" x2="0.65" y2="1">
+      <stop offset="0" stop-color="#77644a"/><stop offset=".48" stop-color="#3a2a16"/>
+      <stop offset=".82" stop-color="#1c1106"/><stop offset="1" stop-color="#0d0702"/>
+    </linearGradient>
+    <linearGradient id="gradG" x1="0" y1="0" x2="0.65" y2="1">
+      <stop offset="0" stop-color="#ffeec2"/><stop offset=".55" stop-color="#d8b46a"/><stop offset="1" stop-color="#96762f"/>
+    </linearGradient>
+  </defs>
+</svg>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">♞ <span>CHESS</span></div>
+    <div id="statusLine">White to move</div>
+  </header>
+
+  <main id="layout">
+    <section id="boardZone">
+      <div class="playerBar" id="barTop">
+        <span class="pName" id="nameTop">Opponent</span>
+        <span class="captured" id="capTop"></span>
+        <span class="matDiff" id="matTop"></span>
+        <span class="think" id="thinkTop">thinking…</span>
+      </div>
+      <div id="glWrap">
+        <canvas id="gl" aria-label="Chess board"></canvas>
+        <div id="promoSheet" class="hidden">
+          <div class="promoTitle">Promote to</div>
+          <div class="promoRow" id="promoRow"></div>
+        </div>
+      </div>
+      <div class="playerBar" id="barBottom">
+        <span class="pName" id="nameBottom">You</span>
+        <span class="captured" id="capBottom"></span>
+        <span class="matDiff" id="matBottom"></span>
+        <span class="think" id="thinkBottom">thinking…</span>
+      </div>
+      <div id="actions">
+        <button id="btnUndo" class="act">↩ Undo</button>
+        <button id="btnHint" class="act">Hint</button>
+        <button id="btnFlip" class="act">Flip</button>
+        <button id="btnView" class="act">Top view</button>
+        <button id="btnSound" class="act">Sound on</button>
+        <button id="btnResign" class="act danger">Resign</button>
+        <button id="btnNew" class="act">New game</button>
+      </div>
+    </section>
+    <aside id="panel">
+      <div id="movesHead">Moves</div>
+      <ol id="moveList"></ol>
+    </aside>
+  </main>
+</div>
+
+<div id="setup" class="sheet">
+  <div class="sheetCard">
+    <div class="setupGlyph">♞</div>
+    <h1>Chess</h1>
+    <p class="tag">One board. No clock, no account — just the game.</p>
+    <div class="grp">
+      <div class="grpLabel">Play against</div>
+      <div class="seg" id="segMode">
+        <button data-v="ai" class="on">The computer</button>
+        <button data-v="2p">A friend — same phone</button>
+      </div>
+    </div>
+    <div class="grp" id="grpLevel">
+      <div class="grpLabel">Opponent</div>
+      <div id="levelList"></div>
+    </div>
+    <div class="grp">
+      <div class="grpLabel">Your side</div>
+      <div class="seg" id="segSide">
+        <button data-v="w" class="on">White</button>
+        <button data-v="random">Random</button>
+        <button data-v="b">Black</button>
+      </div>
+    </div>
+    <button id="btnPlay">Play</button>
+    <button id="btnContinue" class="hidden">Continue your game</button>
+    <button id="btnDaily" class="ghostBtn">Today's challenge</button>
+    <p class="dailyLine" id="dailyLine"></p>
+  </div>
+</div>
+
+<div id="endSheet" class="sheet hidden">
+  <div class="sheetCard">
+    <div class="setupGlyph" id="endGlyph">♔</div>
+    <h1 id="endTitle">Checkmate</h1>
+    <p class="tag" id="endText"></p>
+    <button id="btnRematch">Rematch</button>
+    <button id="btnEndNew" class="ghostBtn">Change setup</button>
+  </div>
+</div>
+
+<script>
+window.__threeReady = (async () => {
+  if (window.THREE) return;
+  try {
+    const parts = [];
+    for (let i = 1; i <= 9; i++) { const r = await fetch('three-' + i + '.b64?v=20261031b'); if (!r.ok) throw new Error('part'); parts.push(await r.text()); }
+    const bin = atob(parts.join(''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    await new Promise((res, rej) => { const s = document.createElement('script'); s.src = URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' })); s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  } catch (e) {
+    await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'three.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  }
+})();
+</script>
+<script src="sim.js?v=20261031a"></script>
+<script src="pieces.js?v=20261031a"></script>
+<script>
+window.__threeReady.then(() => {
+  const load = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.body.appendChild(s); });
+  return load('scene3d.js?v=20261031b').then(() => load('game3d.js?v=20261031b'));
+}).catch(() => {});
+</script>
+</body>
+</html>
