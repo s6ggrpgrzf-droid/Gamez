@@ -14,6 +14,7 @@ window.S3 = (() => {
   let animNote = null; // {move, prevB}
   let viewMode = 'seat', flipped = false;
   let az = 0, el = 0; // orbit offsets
+  let zoomCur = 1, zoomT = 1; // pinch/wheel zoom: 1 = the framed view, smaller = closer
   let camPos = null, camTgt = null; // smoothed
   let checkMarker = null;
   let dragGroup = null;
@@ -395,6 +396,8 @@ window.S3 = (() => {
       : { pos: new T.Vector3(0, 14.2, 2.6 * side), tgt: new T.Vector3(0, 0, 0.1 * side) };
   }
   function setView(v) { viewMode = v; }
+  function zoomBy(f) { zoomT = Math.max(0.42, Math.min(1.35, zoomT * f)); }
+  function setZoom(z) { zoomT = Math.max(0.42, Math.min(1.35, z)); }
   function setFlipped(f) { flipped = f; }
   function orbitBy(dx, dy) {
     az = Math.max(-0.55, Math.min(0.55, az - dx * 0.004));
@@ -413,10 +416,11 @@ window.S3 = (() => {
     // orbit: swing around the target, lift/drop with el
     const off = p.clone().sub(ps.tgt);
     const ang = Math.atan2(off.x, off.z) + az;
-    const rad = Math.hypot(off.x, off.z);
+    zoomCur += (zoomT - zoomCur) * 0.14;
+    const rad = Math.hypot(off.x, off.z) * zoomCur;
     p.x = ps.tgt.x + Math.sin(ang) * rad;
     p.z = ps.tgt.z + Math.cos(ang) * rad;
-    p.y = Math.max(2.2, ps.pos.y + el);
+    p.y = Math.max(1.6, ps.pos.y * zoomCur + el);
     if (!camPos) { camPos = p.clone(); camTgt = ps.tgt.clone(); }
     camPos.lerp(p, 0.09); camTgt.lerp(ps.tgt, 0.12);
     camera.position.copy(camPos); camera.lookAt(camTgt);
@@ -463,6 +467,6 @@ window.S3 = (() => {
     }
   }
   function endDrag() { dragGroup = null; }
-  return { init, buildAll, sync, noteMove, pick, project, setView, setFlipped, orbitBy, liftDrag, moveDrag, endDrag, resize, intro, attend, bounce, salute,
+  return { init, buildAll, sync, noteMove, pick, project, setView, setFlipped, orbitBy, zoomBy, setZoom, liftDrag, moveDrag, endDrag, resize, intro, attend, bounce, salute,
     get viewMode() { return viewMode; } };
 })();

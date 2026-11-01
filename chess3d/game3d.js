@@ -276,7 +276,18 @@ $('promoSheet').addEventListener('pointerdown', e => { if (e.target === $('promo
 /* input: tap-tap + drag */
 function sqFromPoint(x, y) { return S3.pick(x, y); }
 let bgDown = null;
+const pointers = new Map();
+let pinchD = 0;
 boardEl.addEventListener('pointerdown', e => {
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) { // second finger down: the camera takes over, any piece drag is put back
+    if (drag) { if (drag.active) { S3.endDrag(); render(); } drag = null; }
+    bgDown = null;
+    const [a, b] = [...pointers.values()];
+    pinchD = Math.hypot(a.x - b.x, a.y - b.y);
+    return;
+  }
+  if (pointers.size > 2) return;
   bgDown = { x: e.clientX, y: e.clientY };
   if (!humanTurn() || thinking) return;
   const sq = sqFromPoint(e.clientX, e.clientY); if (sq < 0) return;
@@ -288,6 +299,13 @@ boardEl.addEventListener('pointerdown', e => {
   } else { selected = -1; render(); }
 });
 boardEl.addEventListener('pointermove', e => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinchD && pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d > 0) { S3.zoomBy(pinchD / d); pinchD = d; }
+    return;
+  }
   if (drag) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (!drag.moved && Math.hypot(dx, dy) < 9) return;
@@ -300,6 +318,8 @@ boardEl.addEventListener('pointermove', e => {
   }
 });
 function endDrag(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchD = 0;
   bgDown = null;
   if (!drag) return;
   const wasActive = drag.active, from = drag.from;
@@ -314,7 +334,8 @@ function endDrag(e) {
   drag = null;
 }
 boardEl.addEventListener('pointerup', endDrag);
-boardEl.addEventListener('pointercancel', () => { bgDown = null; if (drag && drag.active) { S3.endDrag(); render(); } drag = null; });
+boardEl.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); if (pointers.size < 2) pinchD = 0; bgDown = null; if (drag && drag.active) { S3.endDrag(); render(); } drag = null; });
+boardEl.addEventListener('wheel', e => { e.preventDefault(); S3.zoomBy(e.deltaY > 0 ? 1.12 : 0.89); }, { passive: false });
 
 /* actions */
 $('btnUndo').onclick = () => {
