@@ -283,6 +283,7 @@
   .runes{position:absolute;left:50%;top:57%;width:54%;aspect-ratio:1;transform:translate(-50%,-50%);opacity:.15;pointer-events:none}
   #desks{position:absolute;inset:0;transform-style:preserve-3d;pointer-events:none}
   #desks .desk{pointer-events:auto}
+  .desk.wide5{width:8.4%}
   .desk{position:absolute;width:9.8%;transform:translate(-50%,-50%);cursor:pointer;pointer-events:auto;transform-style:preserve-3d}
   .desk .dtop{position:relative;border-radius:4px;padding-bottom:58%;
     background:linear-gradient(90deg, rgba(255,214,140,.05), rgba(255,214,140,0) 30%, rgba(255,214,140,.04) 55%, rgba(255,214,140,0) 82%),
@@ -1158,14 +1159,14 @@ document.getElementById('port1').addEventListener('click',function(){
 (function(){
   var wrap=document.getElementById('desks');
   var LAND=window.innerWidth>window.innerHeight;
-  var rows=LAND?[{n:4,y:0.5,xs:[34.5,44.5,55.5,65.5]},{n:4,y:7,xs:[34.5,44.5,55.5,65.5]},{n:4,y:13.5,xs:[34.5,44.5,55.5,65.5]},{n:5,y:20,xs:[29.5,39.8,50,60.2,70.5]}]
-               :[{n:4,y:8,xs:[34.5,44.5,55.5,65.5]},{n:4,y:20,xs:[34.5,44.5,55.5,65.5]},{n:4,y:30.5,xs:[34.5,44.5,55.5,65.5]},{n:5,y:40.5,xs:[29.5,39.8,50,60.2,70.5]}];
+  var rows=LAND?[{n:4,y:0.5,xs:[34.5,44.5,55.5,65.5]},{n:5,y:7,xs:[32.8,41.4,50,58.6,67.2]},{n:4,y:13.5,xs:[34.5,44.5,55.5,65.5]},{n:4,y:20,xs:[34.5,44.5,55.5,65.5]}]
+               :[{n:4,y:8,xs:[34.5,44.5,55.5,65.5]},{n:5,y:20,xs:[32.8,41.4,50,58.6,67.2]},{n:4,y:30.5,xs:[34.5,44.5,55.5,65.5]},{n:4,y:40.5,xs:[34.5,44.5,55.5,65.5]}];
   var gi=0;
   rows.forEach(function(r,ti){
     r.xs.forEach(function(x){
       var idx=gi++, g=G[idx], hue=(idx*47)%360;
       var d=document.createElement('div');
-      d.className='desk t'+ti+(g[6]?' laden':'')+(g[5].indexOf('pick')>=0?' pick':'');
+      d.className='desk t'+ti+(ti===1?' wide5':'')+(g[6]?' laden':'')+(g[5].indexOf('pick')>=0?' pick':'');
       d.style.cssText='left:'+x+'%;top:'+r.y+'%';
       d.setAttribute('data-i', idx);
       d.innerHTML='<div class="dtop">' +
@@ -1337,7 +1338,7 @@ function greeting(){
     : h>=11 && h<17 ? 'Afternoon class is in session. '
     : h>=17 && h<23 ? 'Evening class is in session. '
     : 'The small hours, and the classroom is awake for them. ';
-  return head+'Fifteen lessons wait at fifteen desks \u2014 tap a desk to look inside one.';
+  return head+'Seventeen lessons wait at seventeen desks \u2014 tap a desk to look inside one.';
 }
 setTimeout(function(){ say(greeting()); },1500);
 var boardIx=0;
