@@ -76,7 +76,7 @@ var GAMES = [
     blurb:'Lockpicking by feel and by ear: five chapters up a locksmith’s ladder — plain pins, spools that lie, serrations that click and say nothing. One new lock for the whole world each night, and a keeper who remarks on your work.' },
   { id:'chess', name:'CHESS', cls:'DAILY · VS COMPUTER', ops:['daily','puzzle'], href:'./chess/',
     glyph:'<path d="M7 20.5v-3.6c0-2.7 1.4-4.4 4.3-5.5L8.7 8.6C7.4 6.6 7.9 4 10 2.3L11.5 1l2.5 2.7 2.8-1.7c1.2 2.6 1.9 5.1 1.9 7.9v5.1c2.3.9 3.6 2.6 3.6 5v3.5Z"/>',
-    blurb:'The royal game, drawn deep: a walnut and brass club board, a Staunton set with real presence, and four strengths of opponent from Beginner to Master. One daily pairing for the whole world.' }
+    blurb:'The royal game, drawn deep: a black lacquer board seamed with gold, an ivory and ebony Staunton set, and four strengths of opponent from Beginner to Master. One daily pairing for the whole world.' }
 ];
 function byId(id) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].id === id) return GAMES[i]; return null; }
 
