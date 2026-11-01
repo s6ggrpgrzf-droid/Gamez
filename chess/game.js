@@ -97,6 +97,7 @@ function buildBoard() {
     el.className = 'sq ' + (((f + r) % 2 === 0) ? 'light' : 'dark');
     el.dataset.sq = idx;
     if ((d >> 3) === 7) { const c = document.createElement('span'); c.className = 'fcoord'; c.textContent = 'abcdefgh'[f]; el.appendChild(c); }
+    if (idx === 0 || idx === 7 || idx === 56 || idx === 63) { const sm = document.createElement('span'); sm.className = 'seam' + ((idx === 7 || idx === 56) ? ' flip' : ''); el.appendChild(sm); }
     boardEl.appendChild(el);
   });
   buildFrameCoords();

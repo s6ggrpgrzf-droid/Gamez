@@ -1,11 +1,11 @@
 'use strict';
 /* Drawn Staunton-style pieces — original vector shapes in a 45x45 box.
    Palettes come from gradient defs in index.html (gradW ivory, gradB ebony, gradG brass).
-   Every piece stands on a turned base over a green baize pad. */
+   Every piece stands on a turned base over an antique-gold disc. */
 const PIECES = (() => {
   const base = '<path class="bd" d="M10.2 38.6c0-1.8 2.2-2.7 12.3-2.7s12.3.9 12.3 2.7-2.2 2.7-12.3 2.7-12.3-.9-12.3-2.7Z"/>' +
     '<path class="bd" d="M13.8 36.1c0-1.5 1.9-2.3 8.7-2.3s8.7.8 8.7 2.3-1.9 2.2-8.7 2.2-8.7-.7-8.7-2.2Z"/>' +
-    '<ellipse cx="22.5" cy="42.6" rx="13.4" ry="1.7" fill="#17351f"/>';
+    '<ellipse cx="22.5" cy="42.6" rx="13.4" ry="1.7" fill="#5c4718"/>';
   const body = (inner) => '<svg viewBox="0 0 45 45" aria-hidden="true">' + inner + base + '</svg>';
   const P = {
     p: body('<circle class="bd" cx="22.5" cy="14.6" r="5.4"/>' +
