@@ -74,9 +74,9 @@ var GAMES = [
   { id:'tension', name:'TENSION', cls:'DAILY · BY EAR', ops:['daily','puzzle'], href:'./tension/',
     glyph:'<path d="M7 10.5 V7.5 a5 5 0 0 1 10 0 V10.5"/><rect x="5" y="10.5" width="14" height="9.5" rx="1.6"/><circle cx="12" cy="14.2" r="1.6"/><path d="M12 15.4 v2.2"/>',
     blurb:'Lockpicking by feel and by ear: five chapters up a locksmith’s ladder — plain pins, spools that lie, serrations that click and say nothing. One new lock for the whole world each night, and a keeper who remarks on your work.' },
-  { id:'chess', name:'CHESS', cls:'DAILY · VS COMPUTER', ops:['daily','puzzle'], href:'./chess3d/',
+  { id:'chess', name:'CHESS', cls:'DAILY · VS COMPUTER', ops:['daily','puzzle'], href:'./chess/',
     glyph:'<path d="M7 20.5v-3.6c0-2.7 1.4-4.4 4.3-5.5L8.7 8.6C7.4 6.6 7.9 4 10 2.3L11.5 1l2.5 2.7 2.8-1.7c1.2 2.6 1.9 5.1 1.9 7.9v5.1c2.3.9 3.6 2.6 3.6 5v3.5Z"/>',
-    blurb:'The royal game in real 3D: a black lacquer board inlaid with gold seams, a turned Staunton set, and four strengths of opponent from Beginner to Master. One daily pairing for the whole world.' }
+    blurb:'The royal game, drawn deep: a walnut and brass club board, a Staunton set with real presence, and four strengths of opponent from Beginner to Master. One daily pairing for the whole world.' }
 ];
 function byId(id) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].id === id) return GAMES[i]; return null; }
 
