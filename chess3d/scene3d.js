@@ -27,9 +27,9 @@ window.S3 = (() => {
     MAT.w = new T.MeshPhysicalMaterial({ color: 0xe9dcbc, roughness: 0.42, clearcoat: 0.55, clearcoatRoughness: 0.4 });
     MAT.b = new T.MeshPhysicalMaterial({ color: 0x1a1512, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.22 });
     MAT.gold = new T.MeshStandardMaterial({ color: GOLD, metalness: 1, roughness: 0.3, emissive: 0x5a4310, emissiveIntensity: 0.38 });
-    MAT.light = new T.MeshPhysicalMaterial({ color: 0xdcc9a0, roughness: 0.68, clearcoat: 0.05, clearcoatRoughness: 0.5 });
-    MAT.dark = new T.MeshPhysicalMaterial({ color: 0x0c0a09, roughness: 0.32, clearcoat: 0.45, clearcoatRoughness: 0.48 });
-    MAT.frame = new T.MeshPhysicalMaterial({ color: 0x070606, roughness: 0.46, clearcoat: 0.45, clearcoatRoughness: 0.48 });
+    MAT.light = new T.MeshStandardMaterial({ color: 0xd6bd90, roughness: 0.82, metalness: 0 });
+    MAT.dark = new T.MeshPhysicalMaterial({ color: 0x0c0a09, roughness: 0.55, clearcoat: 0.15, clearcoatRoughness: 0.6 });
+    MAT.frame = new T.MeshPhysicalMaterial({ color: 0x070606, roughness: 0.55, clearcoat: 0.2, clearcoatRoughness: 0.6 });
     MAT.slit = new T.MeshStandardMaterial({ color: 0x060505, roughness: 0.9 });
     return MAT;
   }
@@ -108,12 +108,12 @@ window.S3 = (() => {
     renderer.shadowMap.type = T.PCFSoftShadowMap;
     renderer.outputEncoding = T.sRGBEncoding;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.95;
+    renderer.toneMappingExposure = 0.92;
     scene = new T.Scene();
     camera = new T.PerspectiveCamera(40, 1, 0.1, 100);
     const M = mats();
     scene.add(new T.HemisphereLight(0xe8ecff, 0x120d08, 0.30));
-    const key = new T.DirectionalLight(0xffd9a3, 0.85);
+    const key = new T.DirectionalLight(0xffd9a3, 0.78);
     key.position.set(5, 9, 4); key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.camera.left = -6.5; key.shadow.camera.right = 6.5; key.shadow.camera.top = 6.5; key.shadow.camera.bottom = -6.5;
@@ -121,8 +121,7 @@ window.S3 = (() => {
     scene.add(key);
     const fill = new T.DirectionalLight(0xbfd0ff, 0.15); fill.position.set(-6, 4, -6); scene.add(fill);
     const rim = new T.DirectionalLight(0xffe6b8, 0.38); rim.position.set(-2, 6, -8); scene.add(rim);
-    const glow = new T.PointLight(0xffc37a, 0.12, 24); glow.position.set(0, 4.4, 6.2); scene.add(glow);
-    // shadow catcher under the box
+        // shadow catcher under the box
     const sh = new T.Mesh(new T.CircleGeometry(11, 40), new T.ShadowMaterial({ opacity: 0.42 }));
     sh.rotation.x = -Math.PI / 2; sh.position.y = -0.52; sh.receiveShadow = true; scene.add(sh);
     boardGroup = new T.Group(); scene.add(boardGroup);
