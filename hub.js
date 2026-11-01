@@ -73,7 +73,10 @@ var GAMES = [
     blurb:'Mahjong solitaire by candlelight: the real Turtle, all 144 tiles, traditional faces on black lacquer. One deal a night for the whole world — clear it before the candle gutters and sign the keepers’ ledger.' },
   { id:'tension', name:'TENSION', cls:'DAILY · BY EAR', ops:['daily','puzzle'], href:'./tension/',
     glyph:'<path d="M7 10.5 V7.5 a5 5 0 0 1 10 0 V10.5"/><rect x="5" y="10.5" width="14" height="9.5" rx="1.6"/><circle cx="12" cy="14.2" r="1.6"/><path d="M12 15.4 v2.2"/>',
-    blurb:'Lockpicking by feel and by ear: five chapters up a locksmith’s ladder — plain pins, spools that lie, serrations that click and say nothing. One new lock for the whole world each night, and a keeper who remarks on your work.' }
+    blurb:'Lockpicking by feel and by ear: five chapters up a locksmith’s ladder — plain pins, spools that lie, serrations that click and say nothing. One new lock for the whole world each night, and a keeper who remarks on your work.' },
+  { id:'chess', name:'CHESS', cls:'DAILY · VS COMPUTER', ops:['daily','puzzle'], href:'./chess3d/',
+    glyph:'<path d="M7 20.5v-3.6c0-2.7 1.4-4.4 4.3-5.5L8.7 8.6C7.4 6.6 7.9 4 10 2.3L11.5 1l2.5 2.7 2.8-1.7c1.2 2.6 1.9 5.1 1.9 7.9v5.1c2.3.9 3.6 2.6 3.6 5v3.5Z"/>',
+    blurb:'The royal game in real 3D: a black lacquer board inlaid with gold seams, a turned Staunton set, and four strengths of opponent from Beginner to Master. One daily pairing for the whole world.' }
 ];
 function byId(id) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].id === id) return GAMES[i]; return null; }
 
@@ -102,7 +105,7 @@ var LINKS = [['dominoes', 'neon-void'], ['neon-void', 'tiny-fairway'],
 var LABOVE = { 'neon-void': 1 };
 var SHORT = {'candy-cascade':'CANDY','bubble-hex':'BUBBLE','bloom-defense':'BLOOM','neon-void':'VOID',
   'maze-trace':'ARROW','word-well':'WELL','pdawg':'PDAWG','life-story':'LIFE','reel-empire':'REEL',
-  'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS','night-shelf':'SHELF','tension':'TENSION'};
+  'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS','night-shelf':'SHELF','tension':'TENSION','chess':'CHESS'};
 function xy(p) { return (window.innerWidth > window.innerHeight) ? [p[2], p[3]] : [p[0], p[1]]; }
 function twkStyle(id, dim, lit) {
   var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
@@ -341,6 +344,22 @@ function progressFor(id) {
       if (med) tparts.push(med + ' of 5 chapters medalled');
       if (tst2 >= 2) tparts.push('🔥 ' + tst2 + ' nights');
       return { label: tparts.join(' \u00b7 '), frac: med ? Math.min(1, med / 5) : Math.min(1, tst2 / 30) };
+    }
+    if (id === 'chess') {
+      var cd = readJSON('chess_daily_v1');
+      if (!cd || !cd.plays) return null;
+      var days = Object.keys(cd.plays).length;
+      if (!days) return null;
+      var cwins = cd.wins || 0;
+      var cst = 0;
+      var cdates = Object.keys(cd.plays).sort();
+      var clast = cd.plays[cdates[cdates.length - 1]];
+      if (clast && clast.streak) cst = clast.streak;
+      var cparts = [];
+      cparts.push(days + (days === 1 ? ' daily' : ' dailies'));
+      if (cwins) cparts.push(cwins + ' won');
+      if (cst >= 2) cparts.push('\uD83D\uDD25 ' + cst + ' days');
+      return { label: cparts.join(' \u00b7 '), frac: Math.min(1, days / 20) };
     }
     if (id === 'starlight-drums') {
       var sd = readJSON('sd-records-v1');
@@ -673,7 +692,7 @@ function callUp(id, via) {
     '<dt>DATA</dt><dd class="dataVal"></dd>';
   var bar = pr ? '<div class="bar"><i style="width:' + Math.round(pr.frac * 100) + '%"></i></div>' : '';
   var verb = id === 'cathedral' ? 'LISTEN' : 'PLAY';
-  var cssArt = id === 'cathedral' || id === 'dominoes' || id === 'starlight-drums' || id === 'night-shelf' || id === 'tension';
+  var cssArt = id === 'cathedral' || id === 'dominoes' || id === 'starlight-drums' || id === 'night-shelf' || id === 'tension' || id === 'chess';
   var artChild = id === 'cathedral' ? '<i class="cr2"></i>' : id === 'dominoes' ? '<i class="dm2"></i>' : '';
   var feed = '<div class="feed" aria-hidden="true"><div class="feedpar"><div class="artimg art-' + id + (cssArt ? ' cssart' : '') + '">' + artChild + '</div></div>' +
     '<div class="feedshade"></div><div class="feedhud"><span>EXT CAM · ' + SHORT[id] + '</span><span class="fl">FEED &#9679;</span></div><div class="feedband"></div></div>';
