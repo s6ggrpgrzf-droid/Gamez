@@ -198,10 +198,23 @@ function tone(f0, f1, dur, gain, type, when) {
   o.connect(g).connect(AC.destination);
   o.start(t); o.stop(t + dur + 0.02);
 }
+let noiseBuf = null;
+function noiseBurst(dur, freq, gain, when, q) {
+  if (!soundOn || !AC) return;
+  if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate * 0.5, AC.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const t = AC.currentTime + (when || 0);
+  const src = AC.createBufferSource(); src.buffer = noiseBuf;
+  const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q || 0.9;
+  const g = AC.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(AC.destination); src.start(t); src.stop(t + dur + 0.02);
+}
 function sfx(kind) {
   if (!soundOn) return;
   ensureAudio(); if (!AC) return;
   if (kind === 'move') tone(300, 130, 0.09, 0.20);
+  else if (kind === 'clatter') { tone(190, 70, 0.12, 0.26); noiseBurst(0.16, 850, 0.20, 0.01); tone(130, 60, 0.1, 0.16, 'triangle', 0.07); noiseBurst(0.1, 500, 0.10, 0.09); }
+  else if (kind === 'knight') { tone(300, 130, 0.08, 0.20); tone(240, 110, 0.09, 0.17, 'triangle', 0.1); }
+  else if (kind === 'rumble') noiseBurst(0.28, 170, 0.13, 0, 0.6);
   else if (kind === 'capture') { tone(210, 80, 0.13, 0.26); tone(140, 70, 0.1, 0.15, 'triangle', 0.03); }
   else if (kind === 'castle') { tone(300, 130, 0.08, 0.18); tone(300, 130, 0.08, 0.18, 'triangle', 0.1); }
   else if (kind === 'check') { tone(1175, 1150, 0.16, 0.07, 'sine'); tone(1760, 1720, 0.12, 0.04, 'sine', 0.01); }
@@ -210,13 +223,17 @@ function sfx(kind) {
 }
 function doMove(m) {
   S3.noteMove(m, game.b.slice());
+  const pieceBefore = game.b[m.from];
+  const wasKnight = !!pieceBefore && pieceBefore.toLowerCase() === 'n';
+  const moveDist = Math.max(Math.abs((m.to & 7) - (m.from & 7)), Math.abs((m.to >> 3) - (m.from >> 3)));
   const wasCapture = !!(m.cap || m.epCap);
   const san = S.applyMove(game, m);
   movesUci.push(uciOf(m));
   lastMove = m; selected = -1; hintPair = null; resignArmed = false; $('btnResign').classList.remove('armed'); $('btnResign').textContent = 'Resign';
   refreshLegal(); render();
   animateSlide(m);
-  sfx(game.over ? 'end' : san.includes('+') || san.includes('#') ? 'check' : m.castle ? 'castle' : wasCapture ? 'capture' : 'move');
+  sfx(game.over ? 'end' : san.includes('+') || san.includes('#') ? 'check' : m.castle ? 'castle' : wasCapture ? 'clatter' : wasKnight ? 'knight' : 'move');
+  if (!game.over && !wasCapture && !m.castle && moveDist >= 4) sfx('rumble');
   if (navigator.vibrate) navigator.vibrate(wasCapture ? [10, 30, 10] : 8);
   if (game.over) { showEnd(); return; }
   maybeAi();
@@ -266,7 +283,7 @@ boardEl.addEventListener('pointerdown', e => {
   const p = game.b[sq];
   if (selected >= 0 && sq !== selected && legalCache.some(m => m.from === selected && m.to === sq)) { tryMove(selected, sq); return; }
   if (p && (settings.mode === '2p' ? (p === p.toUpperCase() ? 'w' : 'b') === game.turn : (p === p.toUpperCase() ? 'w' : 'b') === humanSide)) {
-    selected = sq; hintPair = null; render(); sfx('select');
+    selected = sq; hintPair = null; render(); sfx('select'); S3.attend(sq, legalCache.filter(m => m.from === sq).map(m => m.to));
     drag = { from: sq, x: e.clientX, y: e.clientY, moved: false, active: false };
   } else { selected = -1; render(); }
 });
@@ -313,7 +330,7 @@ $('btnHint').onclick = async () => {
   thinking = true; render();
   const res = await askAi('hint');
   thinking = false;
-  if (res) { hintPair = res; helpUsed++; render(); setTimeout(() => { hintPair = null; render(); }, 1600); }
+  if (res) { hintPair = res; helpUsed++; render(); S3.bounce(res.from); setTimeout(() => { hintPair = null; render(); }, 1600); }
   else render();
 };
 $('btnFlip').onclick = () => { flipped = !flipped; buildBoard(); render(); };
@@ -347,6 +364,7 @@ $('btnNew').onclick = () => { $('setup').classList.remove('hidden'); refreshCont
 
 function showEnd() {
   const o = game.over; if (!o) return;
+  S3.salute(o.result === '1-0' ? 'w' : o.result === '0-1' ? 'b' : null);
   $('endGlyph').innerHTML = PIECES[o.result === '1/2-1/2' ? 'k' : 'q'];
   $('endTitle').textContent = o.reason === 'checkmate' ? 'Checkmate' : o.reason === 'resign' ? 'Resigned' : 'Draw';
   let who = '';

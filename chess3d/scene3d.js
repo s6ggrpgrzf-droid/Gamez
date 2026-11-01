@@ -18,6 +18,7 @@ window.S3 = (() => {
   let checkMarker = null;
   let dragGroup = null;
   let started = false;
+  let prevCheckSq = -1;
 
   const GOLD = 0xd8b46a;
   const MAT = {};
@@ -41,8 +42,8 @@ window.S3 = (() => {
     p: BASE.concat([[0.24, 0.24], [0.20, 0.30], [0.155, 0.36], [0.21, 0.40], [0.225, 0.44], [0.165, 0.47], [0.10, 0.50], [0.20, 0.56], [0.235, 0.66], [0.20, 0.78], [0.10, 0.86], [0.001, 0.885]]),
     r: BASE.concat([[0.26, 0.26], [0.24, 0.34], [0.235, 0.52], [0.27, 0.58], [0.28, 0.64], [0.30, 0.68], [0.30, 0.80], [0.235, 0.80], [0.225, 0.72]]),
     b: BASE.concat([[0.23, 0.26], [0.185, 0.34], [0.16, 0.44], [0.215, 0.50], [0.22, 0.54], [0.15, 0.57], [0.185, 0.66], [0.17, 0.78], [0.10, 0.92], [0.001, 1.0]]),
-    q: BASE.concat([[0.25, 0.26], [0.20, 0.36], [0.175, 0.52], [0.16, 0.66], [0.21, 0.74], [0.26, 0.80], [0.30, 0.86], [0.315, 0.92], [0.255, 0.945], [0.20, 0.90]]),
-    k: BASE.concat([[0.26, 0.26], [0.21, 0.38], [0.185, 0.56], [0.175, 0.72], [0.225, 0.80], [0.28, 0.86], [0.30, 0.94], [0.235, 0.97], [0.18, 0.94]]),
+    q: BASE.concat([[0.25, 0.26], [0.20, 0.36], [0.175, 0.52], [0.16, 0.66], [0.21, 0.74], [0.26, 0.80], [0.30, 0.86], [0.315, 0.92], [0.255, 0.945], [0.20, 0.90], [0.001, 0.915]]),
+    k: BASE.concat([[0.26, 0.26], [0.21, 0.38], [0.185, 0.56], [0.175, 0.72], [0.225, 0.80], [0.28, 0.86], [0.30, 0.94], [0.235, 0.97], [0.18, 0.94], [0.001, 0.955]]),
     nBase: BASE.concat([[0.24, 0.24], [0.22, 0.30]])
   };
   const GEO = {};
@@ -189,11 +190,17 @@ window.S3 = (() => {
   function dotMesh(idx, color, isRing) {
     const p = sqPos(idx);
     const geo = isRing ? new T.RingGeometry(0.32, 0.44, 36) : new T.CircleGeometry(0.145, 24);
-    const m = new T.Mesh(geo, new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false, side: T.DoubleSide }));
+    // depthTest off: a move dot is a promise — it stays visible even where a
+    // tall neighbour stands between the seated camera and the target square
+    const m = new T.Mesh(geo, new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, side: T.DoubleSide }));
     m.rotation.x = -Math.PI / 2; m.position.set(p.x, BASE_Y + 0.014, p.z);
     markersGroup.add(m); return m;
   }
   function sync(st) {
+    if (st.checkSq !== prevCheckSq) {
+      if (st.checkSq >= 0) { const kg = pieceMap.get(st.checkSq); if (kg) flinchPiece(kg); }
+      prevCheckSq = st.checkSq;
+    }
     while (markersGroup.children.length) markersGroup.remove(markersGroup.children[0]);
     checkMarker = null;
     if (st.lastMove) { plane(st.lastMove.from, GOLD, 0.20); plane(st.lastMove.to, GOLD, 0.26); }
@@ -215,11 +222,19 @@ window.S3 = (() => {
       if (g) {
         pieceMap.delete(move.from); pieceMap.set(move.to, g);
         const p = sqPos(move.to);
-        tweenPos(g, p.x, BASE_Y, p.z, 300, true);
+        const dist = Math.max(Math.abs((move.to & 7) - (move.from & 7)), Math.abs((move.to >> 3) - (move.from >> 3)));
+        const wantT = desired.get(move.to);
+        const isCap0 = !!(move.cap || move.epCap);
+        tweenPos(g, p.x, BASE_Y, p.z, isCap0 ? 300 : Math.min(520, 280 + dist * 45), true,
+          wantT && wantT.toLowerCase() === 'n' ? 0.85 : isCap0 ? 0.3 : 0.55, isCap0 ? strikeEase : undefined);
         const want = desired.get(move.to);
         if (want && g.userData.piece !== want) setTimeout(() => { if (pieceMap.get(move.to) === g) replacePiece(move.to, want); }, 310);
       }
-      if (capG && capG !== g) { pieceMap.delete(capIdx); tweenShrink(capG, () => { piecesGroup.remove(capG); }); }
+      if (capG && capG !== g) {
+        pieceMap.delete(capIdx);
+        const fp = sqPos(move.from), tp2 = sqPos(move.to);
+        setTimeout(() => topplePiece(capG, tp2.x - fp.x, tp2.z - fp.z), 130);
+      }
       if (move.castle) {
         const r = move.from >> 3;
         const rf = move.castle === 'K' || move.castle === 'k' ? 7 : 0, rt = move.castle === 'K' || move.castle === 'k' ? 5 : 3;
@@ -231,17 +246,96 @@ window.S3 = (() => {
         if (grp === g || grp === capG) continue;
         const want = desired.get(idx);
         if (!want || grp.userData.piece !== want) { piecesGroup.remove(grp); pieceMap.delete(idx); }
-        else { const p = sqPos(idx); grp.position.set(p.x, BASE_Y, p.z); }
+        else { const p = sqPos(idx); grp.position.set(p.x, BASE_Y, p.z); grp.quaternion.identity(); grp.scale.set(1, 1, 1); }
       }
       for (const [idx, p] of desired) if (!pieceMap.has(idx)) addPiece(idx, p);
     } else {
       for (const [idx, grp] of [...pieceMap]) {
         const want = desired.get(idx);
         if (!want || grp.userData.piece !== want) { piecesGroup.remove(grp); pieceMap.delete(idx); }
-        else if (grp !== dragGroup) { const p = sqPos(idx); grp.position.set(p.x, BASE_Y, p.z); }
+        else if (grp !== dragGroup) { const p = sqPos(idx); grp.position.set(p.x, BASE_Y, p.z); grp.quaternion.identity(); grp.scale.set(1, 1, 1); }
       }
       for (const [idx, p] of desired) if (!pieceMap.has(idx)) addPiece(idx, p);
     }
+  }
+  /* the living set: topples, flinches, manners, salutes */
+  function topplePiece(g, dx, dz) {
+    const len = Math.hypot(dx, dz) || 1; dx /= len; dz /= len;
+    const fx = g.position.x, fz = g.position.z;
+    const axis = new T.Vector3(dz, 0, -dx);
+    const band = new T.Mesh(GEO.band || (GEO.band = new T.TorusGeometry(0.31, 0.018, 8, 40)),
+      new T.MeshBasicMaterial({ color: GOLD, transparent: true, opacity: 0 }));
+    band.rotation.x = Math.PI / 2; band.position.y = 0.40; g.add(band);
+    addTween(g, 560, (e, k) => {
+      g.quaternion.setFromAxisAngle(axis, 1.72 * e);
+      g.position.set(fx + dx * 0.17 * e, BASE_Y + Math.sin(e * Math.PI) * 0.05 - 0.02 * e, fz + dz * 0.17 * e);
+      band.material.opacity = Math.sin(Math.min(1, k * 1.5) * Math.PI) * 0.95;
+    }, () => {
+      g.remove(band); band.material.dispose();
+      setTimeout(() => tweenShrink(g, () => piecesGroup.remove(g)), 240);
+    });
+  }
+  function flinchPiece(g) {
+    let ring = null;
+    g.traverse(o => { if (!ring && o.geometry && o.geometry.type === 'TorusGeometry') ring = o; });
+    const axis = new T.Vector3(1, 0, 0.35).normalize();
+    addTween(g, 420, (e, k) => {
+      g.quaternion.setFromAxisAngle(axis, Math.sin(k * Math.PI * 3) * (1 - k) * 0.085);
+      if (ring) { const sc = 1 + Math.sin(Math.min(1, k) * Math.PI) * 0.3; ring.scale.set(sc, sc, 1); }
+    }, () => { g.quaternion.identity(); if (ring) ring.scale.set(1, 1, 1); });
+  }
+  function attend(idx, targets) {
+    const g = pieceMap.get(idx); if (!g) return;
+    const piece = g.userData.piece, isN = piece.toLowerCase() === 'n';
+    let targetYaw = g.rotation.y;
+    if (isN && targets && targets.length) {
+      let cx = 0, cz = 0;
+      for (const tIdx of targets) { const p = sqPos(tIdx); cx += p.x; cz += p.z; }
+      cx /= targets.length; cz /= targets.length;
+      const dx = cx - g.position.x, dz = cz - g.position.z;
+      if (Math.hypot(dx, dz) > 0.05) {
+        const sg = piece === 'N' ? -1 : 1;
+        targetYaw = Math.atan2(sg * dx, sg * dz);
+      }
+    }
+    let dYaw = targetYaw - g.rotation.y;
+    while (dYaw > Math.PI) dYaw -= Math.PI * 2;
+    while (dYaw < -Math.PI) dYaw += Math.PI * 2;
+    const startYaw = g.rotation.y;
+    addTween(g, 210, e => {
+      if (dragGroup === g) g.position.y = 1.05; else g.position.y = BASE_Y + 0.13 * e;
+      if (isN) g.rotation.y = startYaw + dYaw * e;
+    });
+  }
+  function bounce(idx) {
+    const g = pieceMap.get(idx); if (!g || dragGroup === g) return;
+    addTween(g, 560, (e, k) => { g.position.y = BASE_Y + Math.abs(Math.sin(k * Math.PI * 2)) * 0.16 * (1 - k * 0.3); });
+  }
+  function salute(winner) {
+    const kings = {}, army = { w: [], b: [] };
+    for (const g of pieceMap.values()) {
+      const p = g.userData.piece, c = p === p.toUpperCase() ? 'w' : 'b';
+      army[c].push(g); if (p.toLowerCase() === 'k') kings[c] = g;
+    }
+    const bow = (kg, toward, ang) => {
+      if (!kg || !toward) return;
+      const dx = toward.position.x - kg.position.x, dz = toward.position.z - kg.position.z;
+      const len = Math.hypot(dx, dz) || 1;
+      const axis = new T.Vector3(dz / len, 0, -dx / len);
+      addTween(kg, 750, e => { kg.quaternion.setFromAxisAngle(axis, ang * e); });
+    };
+    setTimeout(() => {
+      if (winner) {
+        const loser = winner === 'w' ? 'b' : 'w';
+        bow(kings[loser], kings[winner], 0.55);
+        army[winner].forEach((g, i) => setTimeout(() => {
+          const home = sqPos(g.userData.sq), sx = g.position.x, sz = g.position.z;
+          addTween(g, 820, (e, k) => {
+            g.position.set(sx + (home.x - sx) * e, BASE_Y + Math.sin(Math.min(1, k) * Math.PI) * 0.075, sz + (home.z - sz) * e);
+          });
+        }, i * 45));
+      } else { bow(kings.w, kings.b, 0.38); bow(kings.b, kings.w, 0.38); }
+    }, 380);
   }
   function addPiece(idx, p) {
     const color = p === p.toUpperCase() ? 'w' : 'b';
@@ -259,10 +353,15 @@ window.S3 = (() => {
   }
   function noteMove(m, prevB) { animNote = { move: m, prevB }; }
   /* --- animation --- */
-  function tweenPos(g, x, y, z, dur, arc) {
+  function tweenPos(g, x, y, z, dur, arc, arcH, easeFn) {
     tweens = tweens.filter(t => t.g !== g);
-    tweens.push({ g, fx: g.position.x, fy: g.position.y, fz: g.position.z, tx: x, ty: y, tz: z, t: 0, dur, arc });
+    tweens.push({ g, fx: g.position.x, fy: g.position.y, fz: g.position.z, tx: x, ty: y, tz: z, t: 0, dur, arc, arcH, easeFn });
   }
+  function addTween(g, dur, fn, onDone) {
+    tweens = tweens.filter(t => t.g !== g);
+    tweens.push({ g, fn, t: 0, dur, onDone });
+  }
+  const strikeEase = k => k < 0.62 ? 0.84 * Math.pow(k / 0.62, 2) : 0.84 + 0.16 * (1 - Math.pow(1 - (k - 0.62) / 0.38, 2));
   function tweenShrink(g, onDone) {
     tweens = tweens.filter(t => t.g !== g);
     tweens.push({ g, shrink: true, t: 0, dur: 190, onDone });
@@ -273,8 +372,10 @@ window.S3 = (() => {
       t.t += dt;
       const k = Math.min(1, t.t / t.dur), e = ease(k);
       if (t.shrink) { const s = 1 - e * 0.9; t.g.scale.set(s, s * (1 - e * 0.4), s); t.g.position.y = BASE_Y - e * 0.1; }
+      else if (t.fn) { t.fn(e, k); }
       else {
-        t.g.position.set(t.fx + (t.tx - t.fx) * e, t.fy + (t.ty - t.fy) * e + (t.arc ? Math.sin(e * Math.PI) * 0.55 : 0), t.fz + (t.tz - t.fz) * e);
+        const ee = t.easeFn ? t.easeFn(k) : e;
+        t.g.position.set(t.fx + (t.tx - t.fx) * ee, t.fy + (t.ty - t.fy) * ee + (t.arc ? Math.sin(ee * Math.PI) * (t.arcH != null ? t.arcH : 0.55) : 0), t.fz + (t.tz - t.fz) * ee);
       }
       if (k >= 1) { tweens.splice(tweens.indexOf(t), 1); if (t.onDone) t.onDone(); }
     }
@@ -363,6 +464,6 @@ window.S3 = (() => {
     }
   }
   function endDrag() { dragGroup = null; }
-  return { init, buildAll, sync, noteMove, pick, project, setView, setFlipped, orbitBy, liftDrag, moveDrag, endDrag, resize, intro,
+  return { init, buildAll, sync, noteMove, pick, project, setView, setFlipped, orbitBy, liftDrag, moveDrag, endDrag, resize, intro, attend, bounce, salute,
     get viewMode() { return viewMode; } };
 })();
