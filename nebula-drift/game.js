@@ -1749,6 +1749,8 @@
   var meteorInfo = { shower: null, meanSec: 400 };
   function planMeteors(date, lst, toBase) {
     meteorInfo.shower = null; meteorInfo.best = 0;
+    meteorInfo.endLabel = null; meteorInfo.tailName = null; meteorInfo.tailUntil = null;
+    var winBest = null, winFall = -1, winSh = null;
     var d = date;
     var doy = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000);
     var rate = 9; /* sporadics, per hour, one patch of sky */
@@ -1763,7 +1765,17 @@
       var altF = aa.alt < 0 ? 0.45 : (aa.alt < 25 ? 0.75 : 1);
       var add = sh.zhr * fall * altF * 2.0;
       if (add > 4) { rate += add; if (!meteorInfo.shower || add > meteorInfo.best) { meteorInfo.shower = sh.name; meteorInfo.best = add; } }
+      if (fall > winFall) { winFall = fall; winSh = sh; }
     });
+    /* the window outlasts the naming rate: a shower in its tail is
+     * still in the sky, and the almanac should say so — with the
+     * last night it can honestly promise (peak + half - 1) */
+    if (winSh) {
+      var yrW = date.getFullYear();
+      winBest = new Date(yrW, 0, winSh.peak + winSh.half - 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (meteorInfo.shower === winSh.name) meteorInfo.endLabel = winBest;
+      else { meteorInfo.tailName = winSh.name; meteorInfo.tailUntil = winBest; }
+    }
     meteorInfo.meanSec = Math.max(14, Math.min(400, 3600 / rate));
     if (meteorInfo.shower) {
       var shD = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
@@ -2001,6 +2013,8 @@
       riseNote: dayNote(rise), setNote: dayNote(set),
       planetsUp: planetPts.filter(function (pl) { return pl.alt > 0; }).map(function (pl) { return pl.name; }),
       shower: meteorInfo.shower, showerPeak: meteorInfo.peakLabel || null,
+      showerEnd: meteorInfo.endLabel || null,
+      tailName: meteorInfo.tailName || null, tailUntil: meteorInfo.tailUntil || null,
       full: full ? fmtDay(full) : null, newMoon: newM ? fmtDay(newM) : null,
       riseD: rise, setD: set
     };
@@ -3001,7 +3015,8 @@
       if (almanac.rise) logRow(body, 'Moonrise', almanac.rise + (almanac.riseNote ? ' · ' + almanac.riseNote : ''));
       if (almanac.set) logRow(body, 'Moonset', almanac.set + (almanac.setNote ? ' · ' + almanac.setNote : ''));
       if (almanac.planetsUp.length) logRow(body, 'Planets riding', almanac.planetsUp.join(' · '));
-      if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : ''));
+      if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : '') + (almanac.shower === 'Orionids' && almanac.showerEnd ? ' · until ' + almanac.showerEnd : ''));
+      else if (almanac.tailName) logRow(body, 'Showers', almanac.tailName + ' — until ' + almanac.tailUntil + (almanac.tailName === 'Orionids' ? ' · best before dawn' : ''));
       var issLine = issAlmanacLine(); if (issLine) logRow(body, 'Space station', issLine);
       if (auroraWatch) logRow(body, 'Aurora watch', 'Kp ' + auroraWatch.kp + ' storm ' + (auroraWatch.forecast ? 'forecast' : 'under way') + ' — strongest near ' + fmtClock(new Date(auroraWatch.atMs)) + '. Look low to the north.');
       if (almanac.full) logRow(body, 'Full moon', almanac.full);
