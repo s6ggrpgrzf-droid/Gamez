@@ -178,3 +178,35 @@ body.checklit #boardFrame{box-shadow:0 24px 48px rgba(0,0,0,.7),0 6px 14px rgba(
   #panel #actions{width:100%;max-width:none;margin-top:auto;flex-wrap:wrap}
   #moveList{columns:1}
 }
+
+/* --- Starfall skin: deep space room, star-metal vs obsidian squares,
+   holo-blue move dots, crimson capture rings. Painted, never reflected. --- */
+body.set-star{background:
+  radial-gradient(70% 45% at 78% 12%,rgba(96,60,160,.16),transparent 70%),
+  radial-gradient(60% 40% at 15% 80%,rgba(30,90,140,.14),transparent 70%),
+  radial-gradient(120% 90% at 50% 0%,#0a0d1d 0%,#05060f 55%,#020208 100%)}
+body.set-star::before{background:
+  radial-gradient(1.6px 1.6px at 12% 22%,rgba(255,255,255,.85) 50%,transparent 51%),
+  radial-gradient(1.2px 1.2px at 84% 14%,rgba(255,255,255,.7) 50%,transparent 51%),
+  radial-gradient(1.4px 1.4px at 66% 38%,rgba(200,225,255,.8) 50%,transparent 51%),
+  radial-gradient(1.1px 1.1px at 30% 64%,rgba(255,255,255,.6) 50%,transparent 51%),
+  radial-gradient(1.5px 1.5px at 92% 58%,rgba(255,255,255,.75) 50%,transparent 51%),
+  radial-gradient(1.1px 1.1px at 48% 86%,rgba(210,230,255,.65) 50%,transparent 51%),
+  radial-gradient(1.3px 1.3px at 6% 88%,rgba(255,255,255,.7) 50%,transparent 51%),
+  radial-gradient(1px 1px at 40% 10%,rgba(255,255,255,.55) 50%,transparent 51%),
+  radial-gradient(58% 40% at 50% 33%,rgba(140,180,255,.10),transparent 70%)}
+body.set-star .sq.light{background:linear-gradient(150deg,#e8eef8,#c3d2e6 65%,#9db1cc);box-shadow:inset 0 2px 0 rgba(255,255,255,.7),inset 0 -3px 4px rgba(50,80,120,.3),inset 2px 0 3px rgba(255,255,255,.25),inset -2px 0 3px rgba(50,80,120,.15)}
+body.set-star .sq.dark{background:linear-gradient(115deg,rgba(160,200,255,.10) 0%,transparent 46%),linear-gradient(150deg,#232a3d,#0c101e 58%,#03040a);box-shadow:inset 0 2px 0 rgba(180,210,255,.13),inset 0 -3px 4px rgba(0,0,0,.65),inset 2px 0 3px rgba(180,210,255,.05),inset -2px 0 3px rgba(0,0,0,.45)}
+body.set-star .sq.light .coord,body.set-star .sq.light .fcoord{color:#46608a}
+body.set-star .sq.dark .coord,body.set-star .sq.dark .fcoord{color:#b9cfee}
+body.set-star .dot{background:rgba(70,190,255,.55)}
+body.set-star .ring{border-color:rgba(255,64,72,.8)}
+body.set-star .seam{display:none}
+body.set-star .pcw .bd{fill:url(#gradS);stroke:#22344c}
+body.set-star .pcb .bd{fill:url(#gradV);stroke:#000}
+body.set-star .pcw .dt{stroke:rgba(40,80,140,.6)}
+body.set-star .pcb .dt{stroke:rgba(255,120,100,.75)}
+body.set-star .pcw .dtf{fill:#2f9fd8}
+body.set-star .pcb .dtf{fill:#ff5340}
+body.set-star svg ellipse[cy="42.6"]{fill:#2c4258}
+body.set-star .sq.last::after{background:rgba(90,180,255,.30)}
