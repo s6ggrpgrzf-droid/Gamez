@@ -96,6 +96,75 @@ const COURT = (() => {
   };
   return C;
 })();
-const PIECE_SETS = { staunton: PIECES, court: COURT };
+
+/* Starfall — original space-opera set for the lacquer board: star-troopers,
+   a shield tower, a mech-steed knight, a cloaked oracle, a star-captain
+   queen and an emperor king. Genre-evoked only; every figure is ours.
+   Same 45x45 box, same base, same paint classes. Palettes swap to
+   gradS/gradV under body.set-star in style.css. */
+const STARFALL = (() => {
+  const base = '<path class="bd" d="M10.2 38.6c0-1.8 2.2-2.7 12.3-2.7s12.3.9 12.3 2.7-2.2 2.7-12.3 2.7-12.3-.9-12.3-2.7Z"/>' +
+    '<path class="bd" d="M13.8 36.1c0-1.5 1.9-2.3 8.7-2.3s8.7.8 8.7 2.3-1.9 2.2-8.7 2.2-8.7-.7-8.7-2.2Z"/>' +
+    '<ellipse cx="22.5" cy="42.6" rx="13.4" ry="1.7" fill="#5c4718"/>';
+  const body = (inner) => '<svg viewBox="0 0 45 45" aria-hidden="true">' + inner + base + '</svg>';
+  const S = {
+    p: body('<path class="bd" d="M16.6 12.4a5.9 5.9 0 0 1 11.8 0Z"/>' +
+      '<path class="dtf" d="M18.2 11.4h8.6v1.7h-8.6Z"/>' +
+      '<circle class="bd" cx="22.5" cy="15.4" r="2.8"/>' +
+      '<circle class="bd" cx="16.6" cy="20.8" r="1.9"/><circle class="bd" cx="28.4" cy="20.8" r="1.9"/>' +
+      '<path class="bd" d="M17.8 19.4 15.4 36h14.2l-2.4-16.6c-1.5-1.2-7.9-1.2-9.4 0Z"/>' +
+      '<path class="dt" d="M18.8 27.6h7.4" fill="none" stroke-width="1.1"/>' +
+      '<circle class="dtf" cx="22.5" cy="23.8" r="1.2"/>'),
+    r: body('<path class="bd" d="M14 13.5V6.8h4.4v2.7h3.1V6.8h3.1v2.7h3.1V6.8H32v6.7Z"/>' +
+      '<path class="dt" d="M29.8 6.8V3.4" fill="none" stroke-width="1.3" stroke-linecap="round"/>' +
+      '<circle class="dtf" cx="29.8" cy="2.4" r=".95"/>' +
+      '<path class="bd" d="M15.8 17.6c0-1.6 3-2.5 6.7-2.5s6.7.9 6.7 2.5-3 2.4-6.7 2.4-6.7-.8-6.7-2.4Z"/>' +
+      '<path class="bd" d="M16.6 17.8 15.2 36h14.6l-1.4-18.2Z"/>' +
+      '<path class="dtf" d="M18.4 21.6h8.2v1.8h-8.2Z"/>' +
+      '<path class="bd" d="M15 24.5l-3.2 4.6h3.6Z"/><path class="bd" d="M30 24.5l3.2 4.6h-3.6Z"/>'),
+    n: body('<ellipse class="bd" cx="24" cy="16" rx="10.5" ry="6.4" transform="rotate(-38 24 16)"/>' +
+      '<circle class="bd" cx="30.5" cy="22.5" r="5.6"/>' +
+      '<ellipse class="bd" cx="14.5" cy="9.5" rx="7" ry="4.1" transform="rotate(-52 14.5 9.5)"/>' +
+      '<ellipse class="bd" cx="9.6" cy="5.4" rx="5.2" ry="3" transform="rotate(-28 9.6 5.4)"/>' +
+      '<ellipse class="bd" cx="5.6" cy="7.8" rx="3" ry="2" transform="rotate(-20 5.6 7.8)"/>' +
+      '<path class="bd" d="M11.5 2.4 13.4.4l.5 3.2Z"/><path class="bd" d="M15 3.2 17.2 1.8l0 3.2Z"/>' +
+      '<path class="bd" d="M21.5 2.2 18.6 5.6l3 .4-3.2 3.4 3.2.6-3 4-2.4-2.7c.7-4 2.4-6.9 5.3-9.1Z"/>' +
+      '<circle class="dtf" cx="10.2" cy="4.8" r="1.05"/>' +
+      '<path class="dt" d="M17.5 13.5l5.5 3.2" fill="none" stroke-width="1.1"/>' +
+      '<path class="bd" d="M13.5 15.5c-3 1.5-4 4-2.5 6.5l2.4-1.2c-1-1.8-.4-3.4 1.6-4.4Z"/>' +
+      '<path class="bd" d="M16.8 17.6c-2.6 1.9-2.9 4.4-1.2 6.4l2.1-1.6c-1.2-1.6-1-3.2.6-4.4Z"/>' +
+      '<path class="bd" d="M31 24l3.5 5.5-.5 6.5h-2.8l.2-5.5-2.6-4.5Z"/>' +
+      '<path class="bd" d="M27.5 25.5l2.3 5-.4 5.5h-2.6l.2-6-2-3.2Z"/>' +
+      '<path class="bd" d="M33.8 18.5c3.7 3.5 4.5 10 2.4 17.5h-2.8c1.4-6.5.6-12-1.8-15.5Z"/>' +
+      '<path class="dtf" d="M19.8 10.6l7.7 3.4-1.7 5.3-7.2-3Z"/>'),
+    b: body('<path class="dt" d="M33.4 34V12.5" fill="none" stroke-width="1.6" stroke-linecap="round"/>' +
+      '<circle class="bd" cx="33.4" cy="9.8" r="2.7"/>' +
+      '<circle class="dtf" cx="33.4" cy="9.8" r="1.2"/>' +
+      '<path class="bd" d="M22.5 2.8c4.6 3.8 7.2 7.6 7.2 12.4H15.3c0-4.8 2.6-8.6 7.2-12.4Z"/>' +
+      '<circle class="dtf" cx="20.2" cy="12.8" r=".9"/><circle class="dtf" cx="24.8" cy="12.8" r=".9"/>' +
+      '<path class="bd" d="M17 16.8 13.8 36h17.4L28 16.8c-1.6-1.2-9.4-1.2-11 0Z"/>' +
+      '<path class="dt" d="M22.5 20.5v12.5" fill="none" stroke-width="1.1"/>' +
+      '<circle class="bd" cx="22.5" cy="21.4" r="1.6"/>'),
+    q: body('<circle class="dtf" cx="11" cy="10.6" r="1.15"/><circle class="dtf" cx="16.6" cy="8.2" r="1.15"/><circle class="dtf" cx="22.5" cy="7.2" r="1.3"/><circle class="dtf" cx="28.4" cy="8.2" r="1.15"/><circle class="dtf" cx="34" cy="10.6" r="1.15"/>' +
+      '<path class="bd" d="M11.4 12.8h22.2l-1.4 3.4H12.8Z"/>' +
+      '<circle class="bd" cx="22.5" cy="15.6" r="3"/>' +
+      '<path class="bd" d="M17.8 13.2c.2 3-.4 5.4-1.5 7.8l2.1 1c1-2.9 1.3-5.9.9-8.8ZM27.2 13.2c-.2 3 .4 5.4 1.5 7.8l-2.1 1c-1-2.9-1.3-5.9-.9-8.8Z"/>' +
+      '<path class="dt" d="M34 33.5V16.8" fill="none" stroke-width="1.5" stroke-linecap="round"/>' +
+      '<circle class="bd" cx="34" cy="13.8" r="2.7"/>' +
+      '<ellipse class="dt" cx="34" cy="13.8" rx="4.8" ry="1.5" transform="rotate(-18 34 13.8)" fill="none" stroke-width="1.1"/>' +
+      '<path class="bd" d="M17.4 20.4c-2.4 4.6-4.2 9.8-5.2 15.6h21.6c-1-5.8-2.8-11-5.2-15.6-1.4-1.4-9.8-1.4-11.2 0Z"/>' +
+      '<path class="dt" d="M18.4 23.6c1.3 1.5 2.7 2.2 4.1 2.2s2.8-.7 4.1-2.2" fill="none" stroke-width="1.2" stroke-linecap="round"/>' +
+      '<circle class="dtf" cx="22.5" cy="26.6" r="1.1"/>'),
+    k: body('<circle class="dtf" cx="22.5" cy="1.9" r="1"/>' +
+      '<path class="bd" d="M14.8 11.5 16.5 4.6l3.5 3.9 2.5-5.1 2.5 5.1 3.5-3.9 1.7 6.9-.8 2.7H15.6Z"/>' +
+      '<circle class="bd" cx="22.5" cy="16.6" r="3.3"/>' +
+      '<path class="bd" d="M15.6 20.4 12.6 36h19.8l-3-15.6-2.9-2.3c-2.5 1-5.5 1-8 0Z"/>' +
+      '<path class="dt" d="M22.5 21.5V34" fill="none" stroke-width="1.1"/>' +
+      '<circle class="dtf" cx="22.5" cy="25.6" r="1.7"/>' +
+      '<ellipse class="dt" cx="22.5" cy="25.6" rx="3.6" ry="1.3" transform="rotate(-18 22.5 25.6)" fill="none" stroke-width="1"/>')
+  };
+  return S;
+})();
+const PIECE_SETS = { staunton: PIECES, court: COURT, starfall: STARFALL };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = PIECES;
