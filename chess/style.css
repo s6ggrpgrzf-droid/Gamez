@@ -210,3 +210,10 @@ body.set-star .pcw .dtf{fill:#2f9fd8}
 body.set-star .pcb .dtf{fill:#ff5340}
 body.set-star svg ellipse[cy="42.6"]{fill:#2c4258}
 body.set-star .sq.last::after{background:rgba(90,180,255,.30)}
+
+/* short portrait phones (SE-class): shrink the board and the ledger so the
+   whole table fits — nothing clipped at the top, nothing scrolled away */
+@media (orientation:portrait) and (max-height:700px){
+  #boardZone{--bw:min(96vw,calc(100dvh - 355px),560px)}
+  #panel{flex-basis:104px}
+}
