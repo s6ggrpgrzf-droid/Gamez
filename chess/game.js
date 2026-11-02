@@ -46,6 +46,19 @@ function recordDaily(res) {
   } catch (e) {}
   return rec.plays[daily.date];
 }
+let pieceSetName = 'staunton';
+try { if (localStorage.getItem('chess_set_v1') === 'court') pieceSetName = 'court'; } catch (e) {}
+function applySet(name) {
+  pieceSetName = name;
+  const src = PIECE_SETS[name];
+  for (const k of Object.keys(PIECES)) PIECES[k] = src[k];
+  document.body.classList.toggle('set-court', name === 'court');
+  try { localStorage.setItem('chess_set_v1', name); } catch (e) {}
+  for (const x of $('segSet').children) x.classList.toggle('on', x.dataset.v === name);
+  buildLevels();
+  document.querySelector('.setupGlyph').innerHTML = PIECES.n;
+  if (movesUci.length || document.querySelector('#board .piece')) render();
+}
 function refreshDailyLine() {
   const p = dailyPairing(todayStr());
   const rec = dailyRecords(); const played = rec.plays && rec.plays[p.date];
@@ -443,14 +456,18 @@ function segWire(id, fn) {
 }
 segWire('segMode', v => { settings.mode = v; $('grpLevel').style.opacity = v === 'ai' ? '1' : '.35'; $('grpLevel').style.pointerEvents = v === 'ai' ? '' : 'none'; });
 segWire('segSide', v => { settings.side = v; });
+segWire('segSet', v => applySet(v));
 const lvList = $('levelList');
-S.LEVELS.forEach((L, i) => {
-  const b = document.createElement('button');
-  b.className = 'levelBtn' + (i === settings.level ? ' on' : '');
-  b.innerHTML = '<span class="lvGlyph pcg">' + PIECES[['p', 'n', 'r', 'q'][i]] + '</span><span><span class="lvName">' + L.name + '</span><span class="lvBlurb">' + L.blurb + '</span></span>';
-  b.onclick = () => { settings.level = i; for (const x of lvList.children) x.classList.toggle('on', x === b); };
-  lvList.appendChild(b);
-});
+function buildLevels() {
+  lvList.innerHTML = '';
+  S.LEVELS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.className = 'levelBtn' + (i === settings.level ? ' on' : '');
+    b.innerHTML = '<span class="lvGlyph pcg">' + PIECES[['p', 'n', 'r', 'q'][i]] + '</span><span><span class="lvName">' + L.name + '</span><span class="lvBlurb">' + L.blurb + '</span></span>';
+    b.onclick = () => { settings.level = i; for (const x of lvList.children) x.classList.toggle('on', x === b); };
+    lvList.appendChild(b);
+  });
+}
 function startGame(cfg) {
   settings = Object.assign({}, cfg);
   humanSide = settings.mode === '2p' ? 'w' : settings.side === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : settings.side;
@@ -491,8 +508,9 @@ $('btnContinue').onclick = () => {
   }
 };
 /* test hook */
-window.__chess = { get game() { return game; }, get settings() { return settings; }, startGame, sim: S };
+window.__chess = { get game() { return game; }, get settings() { return settings; }, get pieceSet() { return pieceSetName; }, startGame, sim: S };
 document.querySelector('.setupGlyph').innerHTML = PIECES.n;
 document.querySelector('.setupGlyph').classList.add('pcg');
 $('endGlyph').classList.add('pcg');
+applySet(pieceSetName);
 buildBoard(); refreshLegal(); render(); refreshContinue(); syncSoundBtn(); placeActions();
