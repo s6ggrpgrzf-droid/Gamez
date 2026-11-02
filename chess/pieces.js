@@ -33,4 +33,69 @@ const PIECES = (() => {
   };
   return P;
 })();
+
+/* The Court — figurative set drawn for the lacquer board: robed people for the
+   court, a warder for the rook, foot soldiers for pawns, and a horse rearing
+   back for the knight. Same 45x45 box, same base, same paint classes. */
+const COURT = (() => {
+  const base = '<path class="bd" d="M10.2 38.6c0-1.8 2.2-2.7 12.3-2.7s12.3.9 12.3 2.7-2.2 2.7-12.3 2.7-12.3-.9-12.3-2.7Z"/>' +
+    '<path class="bd" d="M13.8 36.1c0-1.5 1.9-2.3 8.7-2.3s8.7.8 8.7 2.3-1.9 2.2-8.7 2.2-8.7-.7-8.7-2.2Z"/>' +
+    '<ellipse cx="22.5" cy="42.6" rx="13.4" ry="1.7" fill="#5c4718"/>';
+  const body = (inner) => '<svg viewBox="0 0 45 45" aria-hidden="true">' + inner + base + '</svg>';
+  const C = {
+    p: body('<path class="bd" d="M16.9 12.2a5.6 5.6 0 0 1 11.2 0Z"/>' +
+      '<path class="dt" d="M15.9 12.4h13.2" fill="none" stroke-width="1.2"/>' +
+      '<circle class="bd" cx="22.5" cy="15.2" r="2.9"/>' +
+      '<path class="bd" d="M17.6 19.4 15.2 36h14.6l-2.4-16.6c-1.5-1.3-8.3-1.3-9.8 0Z"/>' +
+      '<path class="bd" d="M31.4 2.8 33.2 8h-3.6Z"/>' +
+      '<path class="dt" d="M31.4 8v27" fill="none" stroke-width="1.5" stroke-linecap="round"/>' +
+      '<circle class="bd" cx="14.8" cy="25.4" r="4.7"/>' +
+      '<circle class="dtf" cx="14.8" cy="25.4" r="1.5"/>'),
+    r: body('<path class="bd" d="M16.2 11.4 22.5 3.4l6.3 8Z"/>' +
+      '<path class="dt" d="M22.5 11.4v4.4" fill="none" stroke-width="1.3"/>' +
+      '<path class="bd" d="M17.4 11.4h10.2l-.8 4.8H18.2Z"/>' +
+      '<path class="bd" d="M16.8 19.6 14.8 36h15.4l-2-16.4c-1.6-1.2-9.8-1.2-11.4 0Z"/>' +
+      '<path class="bd" d="M15.3 19.2h14.4v7.6c0 4.6-3.4 8-7.2 9.4-3.8-1.4-7.2-4.8-7.2-9.4Z"/>' +
+      '<path class="dtf" d="M21.2 21.4h2.6v3h3v2.6h-3v4.4h-2.6V27h-3v-2.6h3Z"/>'),
+    n: body('<ellipse class="bd" cx="24" cy="16" rx="10.5" ry="6.4" transform="rotate(-38 24 16)"/>' +
+      '<circle class="bd" cx="30.5" cy="22.5" r="5.6"/>' +
+      '<ellipse class="bd" cx="14.5" cy="9.5" rx="7" ry="4.1" transform="rotate(-52 14.5 9.5)"/>' +
+      '<ellipse class="bd" cx="9.6" cy="5.4" rx="5.2" ry="3" transform="rotate(-28 9.6 5.4)"/>' +
+      '<ellipse class="bd" cx="5.6" cy="7.8" rx="3" ry="2" transform="rotate(-20 5.6 7.8)"/>' +
+      '<path class="bd" d="M11.5 2.4 13.4.4l.5 3.2Z"/><path class="bd" d="M15 3.2 17.2 1.8l0 3.2Z"/>' +
+      '<path class="bd" d="M21 2.6 17.8 5.4l3.2.8-3.6 3.2 3.4.9-3.4 3.8-2.2-2.9c.8-3.9 2.6-6.6 5.8-8.6Z"/>' +
+      '<circle class="dtf" cx="10.2" cy="4.8" r="1.05"/>' +
+      '<path class="bd" d="M13.5 15.5c-3 1.5-4 4-2.5 6.5l2.4-1.2c-1-1.8-.4-3.4 1.6-4.4Z"/>' +
+      '<path class="bd" d="M16.8 17.6c-2.6 1.9-2.9 4.4-1.2 6.4l2.1-1.6c-1.2-1.6-1-3.2.6-4.4Z"/>' +
+      '<path class="bd" d="M31 24l3.5 5.5-.5 6.5h-2.8l.2-5.5-2.6-4.5Z"/>' +
+      '<path class="bd" d="M27.5 25.5l2.3 5-.4 5.5h-2.6l.2-6-2-3.2Z"/>' +
+      '<path class="bd" d="M33.8 18.5c3.7 3.5 4.5 10 2.4 17.5h-2.8c1.4-6.5.6-12-1.8-15.5Z"/>' +
+      '<path class="dtf" d="M19.8 10.6l7.7 3.4-1.7 5.3-7.2-3Z"/>'),
+    b: body('<path class="bd" d="M16.8 13 22.5 2.6 28.2 13l-1 3H17.8Z"/>' +
+      '<path class="dtf" d="M21.4 7.6h2.2v1.8h1.8v2.2H23.6v1.8h-2.2V11.6H19.6V9.4h1.8Z"/>' +
+      '<circle class="bd" cx="22.5" cy="18.6" r="2.9"/>' +
+      '<path class="bd" d="M17.2 22.8 14.8 36h15.4l-2.4-13.2c-1.5-1.3-9.1-1.3-10.6 0Z"/>' +
+      '<path class="dt" d="M33.6 34V13.5c0-2.4-1.8-3.8-3.6-3.4" fill="none" stroke-width="1.6" stroke-linecap="round"/>' +
+      '<path class="bd" d="M11.6 22.6h5.6v7h-5.6Z"/>' +
+      '<path class="dt" d="M14.4 24.2v3.8M12.6 26.1h3.6" fill="none" stroke-width="1.1"/>'),
+    q: body('<path class="bd" d="M16.8 10l1.6-3.2 2.1 2.4 2-3.2 2 3.2 2.1-2.4 1.6 3.2-.4 2H17.2Z"/>' +
+      '<circle class="dtf" cx="22.5" cy="10.8" r="1.3"/>' +
+      '<path class="bd" d="M17.6 12.4c.2 3-.4 5.6-1.6 8.2l2.2 1c1.1-3 1.4-6.2 1-9.2ZM27.4 12.4c-.2 3 .4 5.6 1.6 8.2l-2.2 1c-1.1-3-1.4-6.2-1-9.2Z"/>' +
+      '<circle class="bd" cx="22.5" cy="15.2" r="3.1"/>' +
+      '<path class="bd" d="M17.4 20.4c-2.2 4.4-3.9 9.6-4.8 15.6h19.8c-.9-6-2.6-11.2-4.8-15.6-1.4-1.4-8.8-1.4-10.2 0Z"/>' +
+      '<path class="dt" d="M18.4 23.6c1.3 1.5 2.7 2.2 4.1 2.2s2.8-.7 4.1-2.2" fill="none" stroke-width="1.2" stroke-linecap="round"/>' +
+      '<circle class="dtf" cx="22.5" cy="26.6" r="1.1"/>'),
+    k: body('<path class="dtf" d="M21.6 0h1.8v1.8h1.8V3.6H23.4V5.4h-1.8V3.6H19.8V1.8h1.8Z"/>' +
+      '<path class="bd" d="M14.6 10.4 16.2 5.4l2.6 3.2 1.9-3.4 1.8 3.4 1.9-3.4 1.9 3.4 2.6-3.2 1.6 5-.6 2.4H15.2Z"/>' +
+      '<circle class="bd" cx="22.5" cy="15.8" r="3.4"/>' +
+      '<circle class="bd" cx="33" cy="14.6" r="3.1"/>' +
+      '<path class="dtf" d="M32.1 9.4h1.8v1.7h1.7v1.8h-1.7v1.7h-1.8v-1.7h-1.7V11.1h1.7Z"/>' +
+      '<path class="bd" d="M29.4 16.8l2-1.8 1.2 1-1.4 2.2Z"/>' +
+      '<path class="bd" d="M15.8 20.2 12.8 36h19.4l-3-15.8-2.9-2.2c-2.2.9-5.4.9-7.6 0Z"/>' +
+      '<path class="dt" d="M22.5 22v11.6" fill="none" stroke-width="1.1"/>')
+  };
+  return C;
+})();
+const PIECE_SETS = { staunton: PIECES, court: COURT };
+
 if (typeof module !== 'undefined' && module.exports) module.exports = PIECES;
