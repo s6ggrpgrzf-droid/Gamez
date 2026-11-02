@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Sugar Trail</title>
+<meta name="theme-color" content="#fff3df">
+<link rel="stylesheet" href="style.css?v=20261101d">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <button id="btnMenu" class="iconbtn" aria-label="Back to setup">‹</button>
+    <div id="title">Sugar Trail</div>
+    <button id="btnView" class="iconbtn wide" aria-label="Toggle whole-board view">Map</button>
+  </header>
+
+  <!-- SETUP -->
+  <section id="scene-setup">
+    <div class="hero">
+      <div class="hero-emoji" aria-hidden="true">🍬</div>
+      <h1>Sugar Trail</h1>
+      <p class="tag">Draw a card. Hop the colors.<br>First to the Castle wins.</p>
+    </div>
+    <div class="modecard" id="modeSolo" role="button" tabindex="0">
+      <div class="modehead"><span class="dot" style="background:#e2452e"></span> Race the Sweet Tooths</div>
+      <p>You against auto travelers. They draw on their own — no waiting, no mercy from the picture cards.</p>
+      <div class="seg" id="segAuto">
+        <button data-n="1">1 rival</button><button data-n="2">2 rivals</button><button data-n="3" class="on">3 rivals</button>
+      </div>
+    </div>
+    <div class="modecard" id="modePass" role="button" tabindex="0">
+      <div class="modehead"><span class="dot" style="background:#2775d6"></span> Pass &amp; Play</div>
+      <p>Friends on this phone. Pass it around the table — the phone calls whose turn it is.</p>
+      <div class="seg" id="segHumans">
+        <button data-n="2" class="on">2 players</button><button data-n="3">3 players</button><button data-n="4">4 players</button>
+      </div>
+    </div>
+    <div class="modecard" id="modeDaily" role="button" tabindex="0">
+      <div class="modehead"><span class="dot" style="background:#f2b41c"></span> Today’s Race</div>
+      <p>One shuffled deck for the whole world today. Beat Fizz, Pop and Gummy on it and keep the streak alive.</p>
+      <div class="dailyline" id="dailyLine">Loading today’s race…</div>
+    </div>
+    <button id="btnStart">Start the Race</button>
+    <p class="fineprint">134 sweet spaces · 66 cards · 2 shortcuts · watch out for licorice — it costs you a turn.</p>
+  </section>
+
+  <!-- PLAY -->
+  <section id="scene-play" hidden>
+    <div id="standings"></div>
+    <div id="turnline">Your turn</div>
+    <div id="boardwrap"><canvas id="board"></canvas></div>
+    <div id="cardzone">
+      <div id="card" class="empty"><div class="cardhint">Tap Draw to flip a card</div></div>
+      <div id="eventline">The trail is waiting.</div>
+    </div>
+    <button id="btnDraw">Draw a Card</button>
+  </section>
+
+  <!-- WIN -->
+  <div id="winveil" hidden>
+    <div id="wincard">
+      <div class="hero-emoji" aria-hidden="true">🏰</div>
+      <h2 id="wintext">You reached the Castle!</h2>
+      <p id="winsub"></p>
+      <button id="btnAgain">Race Again</button>
+      <button id="btnSetup2" class="ghost">Change Racers</button>
+    </div>
+  </div>
+</div>
+<script src="sim.js?v=20261101d"></script>
+<script src="path-data.js?v=20261101d"></script>
+<script src="game.js?v=20261101d"></script>
+</body>
+</html>
