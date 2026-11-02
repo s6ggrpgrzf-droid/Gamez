@@ -217,3 +217,29 @@ body.set-star .sq.last::after{background:rgba(90,180,255,.30)}
   #boardZone{--bw:min(96vw,calc(100dvh - 355px),560px)}
   #panel{flex-basis:104px}
 }
+
+/* --- Starfall traffic: the board stays a solid console; the war goes on
+   beneath it. Original silhouettes — cross-wing fighters, crescent fighters,
+   one slow wedge capital ship, one round freighter — crossing behind the
+   furniture, ghosting through the ledger, which becomes a viewport. --- */
+#traffic{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;display:none}
+body.set-star #traffic{display:block}
+#traffic .hull{fill:#0a1322;stroke:rgba(150,190,255,.45);stroke-width:1}
+#traffic .glow{fill:#6fd3ff}
+#traffic .glowR{fill:#ff6a55}
+#traffic .ship{position:absolute;left:0;will-change:transform;animation:flyX linear infinite}
+#traffic .ship.rev{animation-name:flyXr}
+#traffic .ship svg{display:block;animation:bob 5.2s ease-in-out infinite alternate}
+@keyframes flyX{from{transform:translateX(-22vw)}to{transform:translateX(118vw)}}
+@keyframes flyXr{from{transform:translateX(118vw) scaleX(-1)}to{transform:translateX(-22vw) scaleX(-1)}}
+@keyframes bob{from{transform:translateY(-3px) rotate(-1.2deg)}to{transform:translateY(3px) rotate(1.2deg)}}
+#traffic .sh1{top:5%;width:52px;animation-duration:31s;animation-delay:-7s}
+#traffic .sh2{top:63%;width:64px;animation-duration:38s;animation-delay:-19s}
+#traffic .sh3{top:74%;width:40px;animation-duration:47s;animation-delay:-30s}
+#traffic .sh4{top:86%;width:44px;animation-duration:27s;animation-delay:-13s}
+#traffic .sh5{top:93%;width:34px;animation-duration:55s;animation-delay:-41s}
+#traffic .sh6{top:55%;width:190px;opacity:.55;animation-duration:95s;animation-delay:-58s}
+#traffic .sh7{top:80%;width:74px;opacity:.8;animation-duration:70s;animation-delay:-24s}
+body.set-star #board{background:#04060d}
+body.set-star .playerBar{background:linear-gradient(180deg,#141b2e,#070a14)}
+body.set-star #panel{background:linear-gradient(180deg,rgba(12,17,34,.66),rgba(6,8,18,.72))}
