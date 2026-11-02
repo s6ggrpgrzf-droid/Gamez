@@ -47,12 +47,13 @@ function recordDaily(res) {
   return rec.plays[daily.date];
 }
 let pieceSetName = 'staunton';
-try { if (localStorage.getItem('chess_set_v1') === 'court') pieceSetName = 'court'; } catch (e) {}
+try { const sv = localStorage.getItem('chess_set_v1'); if (sv === 'court' || sv === 'starfall') pieceSetName = sv; } catch (e) {}
 function applySet(name) {
   pieceSetName = name;
   const src = PIECE_SETS[name];
   for (const k of Object.keys(PIECES)) PIECES[k] = src[k];
   document.body.classList.toggle('set-court', name === 'court');
+  document.body.classList.toggle('set-star', name === 'starfall');
   try { localStorage.setItem('chess_set_v1', name); } catch (e) {}
   for (const x of $('segSet').children) x.classList.toggle('on', x.dataset.v === name);
   buildLevels();
