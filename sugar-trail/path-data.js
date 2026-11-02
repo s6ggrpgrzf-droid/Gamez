@@ -13,7 +13,7 @@ const PAWN_FRACTION = 0.48;
 
 const BOARDS = {
   portrait: {
-    imgW: 1120, imgH: 2240, file: 'board-portrait.jpg?v=20261101c', parts: 7, prefix: 'p',
+    imgW: 1120, imgH: 2240, file: 'board-portrait.jpg?v=20261101c', parts: 7, prefix: 'p', startXY: [0.978, 0.048],
     samples: [
       [0.969, 0.115, 0.210], [0.946, 0.315, 0.185], [0.930, 0.485, 0.165],
       [0.909, 0.635, 0.150], [0.885, 0.735, 0.135], [0.859, 0.795, 0.120],
@@ -42,7 +42,7 @@ const BOARDS = {
     ],
   },
   wide: {
-    imgW: 2240, imgH: 1120, file: 'board-wide.jpg?v=20261101c', parts: 7, prefix: 'w',
+    imgW: 2240, imgH: 1120, file: 'board-wide.jpg?v=20261101c', parts: 7, prefix: 'w', startXY: [0.962, 0.150],
     samples: [
       [0.945, 0.245, 0.150], [0.885, 0.375, 0.125], [0.855, 0.460, 0.105],
       [0.835, 0.555, 0.095], [0.815, 0.635, 0.085], [0.775, 0.700, 0.075],
@@ -84,8 +84,11 @@ function buildStones(board) {
     const w = dense[j][2] + (dense[j + 1][2] - dense[j][2]) * f;
     stones.push({ i: k, x, y, widthPx: w, dia: w, ratio: PAWN_FRACTION });
   }
-  // the whole party gathers on the great first stone
-  const start = { x: stones[0].x, y: stones[0].y, widthPx: stones[0].widthPx, dia: stones[0].dia };
+  // the party gathers at the trail mouth, just before the first stone —
+  // so the opening hop always travels, even onto a same-colour first stone
+  const start = board.startXY
+    ? { x: board.startXY[1] * board.imgW, y: board.startXY[0] * board.imgH, widthPx: stones[0].widthPx, dia: stones[0].dia }
+    : { x: stones[0].x, y: stones[0].y, widthPx: stones[0].widthPx, dia: stones[0].dia };
   return { stones, spacing, total, start };
 }
 

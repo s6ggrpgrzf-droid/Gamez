@@ -238,7 +238,7 @@ function refreshChrome() {
   S.players.forEach((p, i) => {
     const c = document.createElement('span');
     c.className = 'chip' + (S.turn === i && !S.over ? ' turn' : '');
-    c.innerHTML = '<span class="cdot" style="background:' + PAWN_HEX[p.pawn] + '"></span>' + p.name + ' · ' + Math.max(0, Math.round(p.pos / SIM.CASTLE * 100)) + '%';
+    c.innerHTML = '<span class="cdot" style="background:' + PAWN_HEX[p.pawn] + '"></span>' + p.name + ' · ' + Math.max(0, Math.round((p.pos + 1) / (SIM.CASTLE + 1) * 100)) + '%';
     st.appendChild(c);
   });
   $('#turnline').textContent = S.over
