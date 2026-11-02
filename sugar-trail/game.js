@@ -1,8 +1,9 @@
 'use strict';
-/* Sugar Trail — painted-board edition. The board is two gouache
- * paintings; the pieces live on each painting's own traced dirt path
- * (path-data.js) and are size-capped inside the trail width there.
- * All rules live in sim.js (window.ST) and are untouched by the scenery. */
+/* Sugar Trail — painted-board edition. The board IS two gouache
+ * paintings whose trails are painted candy stones; the 134 spaces ride
+ * each painting's traced stone chain (path-data.js) and pawns are sized
+ * from the stone they stand on. All rules live in sim.js (window.ST),
+ * untouched by the scenery. */
 const SIM = window.ST;
 const PATHS = window.PD;
 const $ = s => document.querySelector(s);
@@ -74,8 +75,14 @@ function applySetupBg() {
 }
 function pickBoard() {
   const wrap = $('#boardwrap');
-  boardKey = wrap.clientWidth > wrap.clientHeight ? 'wide' : 'portrait';
-  board = boardCache[boardKey];
+  const want = wrap.clientWidth > wrap.clientHeight ? 'wide' : 'portrait';
+  const alt = want === 'wide' ? 'portrait' : 'wide';
+  boardKey = want;
+  board = boardCache[want];
+  if ((!board || !board.img.naturalWidth) && boardCache[alt] && boardCache[alt].img.naturalWidth) {
+    boardKey = alt;
+    board = boardCache[alt];
+  }
 }
 function stonePos(i) {
   if (!board) return { x: 0, y: 0, dia: 18, widthPx: 100 };
@@ -85,6 +92,7 @@ function stonePos(i) {
 
 /* ---------- state ---------- */
 let S = null;               // sim state
+let raceSeq = 0;            // bumped on race start/exit; stale async callbacks check it
 let phase = 'setup';        // setup | idle | anim | over
 let view = 'follow';        // follow | over
 let anim = null;
@@ -208,6 +216,7 @@ function startGame() {
   }
 }
 function beginRace(seed) {
+  raceSeq++;
   raceMode = mode;
   const defs = [];
   if (mode === 'pass') {
@@ -262,17 +271,18 @@ function showCard(card) {
 }
 function maybeAuto() {
   if (!S || S.over || phase !== 'idle') return;
-  if (cur().kind === 'auto') setTimeout(() => takeTurnUI(), 750);
+  if (cur().kind === 'auto') { const seq = raceSeq; setTimeout(() => { if (seq === raceSeq) takeTurnUI(); }, 750); }
 }
 function takeTurnUI() {
   if (!S || S.over || phase !== 'idle') return;
   phase = 'anim';
   refreshChrome();
   const ev = SIM.takeTurn(S);
+  const seq = raceSeq;
   if (ev.type === 'skip') {
     sfx.skip();
     say(ev.name + ' is stuck in licorice — turn skipped.');
-    setTimeout(() => { phase = S.over ? 'over' : 'idle'; refreshChrome(); maybeAuto(); }, 900);
+    setTimeout(() => { if (seq !== raceSeq || !S) return; phase = S.over ? 'over' : 'idle'; refreshChrome(); maybeAuto(); }, 900);
     return;
   }
   if (ev.type !== 'move') { phase = 'idle'; return; }
@@ -280,6 +290,7 @@ function takeTurnUI() {
   showCard(ev.card);
   say(describeEv(ev));
   animateEvent(ev, () => {
+    if (seq !== raceSeq || !S) return;
     if (ev.win) return onWin(ev);
     if (ev.shortcut) { sfx.short(); say(ev.name + ' rode the ' + (SHORTCUT_NAMES[ev.shortcut.from] || 'shortcut') + ' — whoosh, far ahead!'); }
     else if (ev.licorice) { sfx.skip(); say('Licorice! ' + ev.name + ' will miss a turn.'); }
@@ -325,6 +336,10 @@ function onWin(ev) {
 
 /* ---------- animation ---------- */
 function animateEvent(ev, cb) {
+  if (Math.abs(ev.landed - ev.from) > 14) { // picture-card leaps: fly, don't walk the whole trail
+    flyPawn(ev.player, ev.from, ev.landed, cb, Math.min(1400, 650 + Math.abs(ev.landed - ev.from) * 9));
+    return;
+  }
   const chain = [];
   if (ev.landed !== ev.from) {
     const step = ev.landed > ev.from ? 1 : -1;
@@ -335,13 +350,15 @@ function animateEvent(ev, cb) {
   const hopMs = Math.max(45, Math.min(HOP_MS, 1700 / Math.max(chain.length, 1)));
   anim = { pi: ev.player, chain, t: 0, idx: 0, fromPos: renderPos[ev.player], last: 0, then, hopMs };
 }
-function flyPawn(pi, fromIdx, toIdx, cb) {
+function flyPawn(pi, fromIdx, toIdx, cb, dur) {
+  const seq = raceSeq;
   flyFocus = pi;
   const fromP = { ...stonePos(fromIdx) };
   const toP = stonePos(toIdx);
   const t0 = performance.now();
   const fly = now => {
-    const f = Math.min((now - t0) / 550, 1);
+    if (seq !== raceSeq) { flyFocus = -1; return; }
+    const f = Math.min((now - t0) / (dur || 550), 1);
     const e = f * (2 - f);
     renderPos[pi] = { fx: fromP.x + (toP.x - fromP.x) * e, fy: fromP.y + (toP.y - fromP.y) * e, arc: Math.sin(f * Math.PI) * 60 };
     if (f < 1) requestAnimationFrame(fly);
@@ -462,7 +479,8 @@ function draw() {
     const widthHere = st.widthPx || base.widthPx || 100;
     const slot = SLOT_OFF[i % 4];
     const px = base.x + slot[0] * diaHere, py = base.y + slot[1] * diaHere;
-    const pd = Math.min(diaHere * PATHS.PAWN_FRACTION, (cv.height / cam.s) * 0.15);
+    let pd = Math.min(diaHere * PATHS.PAWN_FRACTION, (cv.height / cam.s) * 0.15);
+    if (view === 'over') pd = Math.max(pd, 30); // map view: far stones are tiny — keep every traveler findable
     drawPawn(px, py - (hops[i] || 0) * 7 - (base.arc || 0), pd / 2, PAWN_HEX[p.pawn], S.turn === i && !S.over);
   }
 }
@@ -485,7 +503,12 @@ function drawPawn(x, y, r, hex, active) {
 function resize() {
   const wrap = $('#boardwrap');
   if (!wrap || !wrap.clientWidth) return;
+  const prevKey = boardKey;
   pickBoard();
+  if (prevKey !== boardKey && S && !$('#scene-play').hidden) {
+    const fi = anim ? renderPos[anim.pi] : renderPos[S.turn];
+    snapCamTo(resolvePos(fi == null ? -1 : fi), true);
+  }
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = Math.round(wrap.clientWidth * dpr);
   cv.height = Math.round(wrap.clientHeight * dpr);
@@ -504,9 +527,10 @@ $('#btnView').addEventListener('click', () => {
   const focus = S ? resolvePos(renderPos[S.turn]) : stonePos(-1);
   snapCamTo(focus, false);
 });
-$('#btnMenu').addEventListener('click', () => { S = null; phase = 'setup'; showScene(false); });
+$('#btnMenu').addEventListener('click', exitToSetup);
+function exitToSetup() { raceSeq++; S = null; phase = 'setup'; anim = null; flyFocus = -1; showScene(false); }
 $('#btnAgain').addEventListener('click', () => { $('#winveil').hidden = true; startGame(); });
-$('#btnSetup2').addEventListener('click', () => { $('#winveil').hidden = true; S = null; phase = 'setup'; showScene(false); });
+$('#btnSetup2').addEventListener('click', () => { $('#winveil').hidden = true; exitToSetup(); });
 buildSetup();
 updateDailyLine();
 requestAnimationFrame(frame);
