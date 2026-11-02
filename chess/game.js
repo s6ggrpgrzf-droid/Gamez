@@ -40,6 +40,7 @@ function recordDaily(res) {
   rec.wins = (rec.wins || 0) + (res === 'win' ? 1 : 0);
   try { localStorage.setItem('chess_daily_v1', JSON.stringify(rec)); } catch (e) {}
   const score = res === 'win' ? 700 + daily.level * 100 : res === 'draw' ? 300 + daily.level * 25 : 50;
+  if (daily.noPost) return rec.plays[daily.date];
   try {
     const name = (localStorage.getItem('arcade_name') || 'You').slice(0, 12);
     fetch('https://gamez-arcade.chaoticutopia84.workers.dev/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game: 'chess', board: 'daily-' + daily.date, name, score }) }).catch(() => {});
@@ -71,14 +72,25 @@ function refreshDailyLine() {
 try {
   worker = new Worker('ai-worker.js?v=20261101a');
   worker.onmessage = e => { workerOK = true; onAiMessage(e.data); };
-  worker.onerror = () => { workerOK = false; };
+  worker.onerror = () => {
+    workerOK = false; workerFailed = true;
+    if (pendingAi) { const p = pendingAi; pendingAi = null; clearTimeout(aiFuse); fallbackAi(p.msg, p.resolve); }
+  };
 } catch (e) { workerOK = false; }
-let pendingAi = null; // {kind:'move'|'hint', resolve}
+let pendingAi = null; // {kind:'move'|'hint', resolve, msg}
+let aiSeq = 0, ignoreNextAi = false, aiFuse = null, workerFailed = false;
 function askAi(kind) {
   return new Promise(resolve => {
-    pendingAi = { kind, resolve };
     const msg = { fen: S.toFEN(game), level: settings.level, hint: kind === 'hint', seed: daily && kind === 'move' ? ((daily.seed ^ Math.imul(movesUci.length + 1, 2654435761)) >>> 0) : null };
-    if (worker) { try { worker.postMessage(msg); setTimeout(() => { if (pendingAi && pendingAi.kind === kind && !workerOK) fallbackAi(msg, resolve); }, 60); return; } catch (e) { /* fall through */ } }
+    pendingAi = { kind, resolve, msg };
+    if (worker && !workerFailed) {
+      try {
+        worker.postMessage(msg);
+        aiFuse = setTimeout(() => { if (pendingAi) { const p = pendingAi; pendingAi = null; ignoreNextAi = true; fallbackAi(p.msg, p.resolve); } }, 5000);
+        return;
+      } catch (e) { /* fall through */ }
+    }
+    pendingAi = null;
     fallbackAi(msg, resolve);
   });
 }
@@ -90,8 +102,9 @@ function fallbackAi(msg, resolve) {
   }, 30);
 }
 function onAiMessage(data) {
+  if (ignoreNextAi) { ignoreNextAi = false; return; }
   if (!pendingAi) return;
-  const p = pendingAi; pendingAi = null; p.resolve(data);
+  const p = pendingAi; pendingAi = null; clearTimeout(aiFuse); p.resolve(data);
 }
 
 function displayOrder() {
@@ -196,6 +209,7 @@ function render() {
   }
   ml.scrollTop = ml.scrollHeight;
   $('btnUndo').disabled = !movesUci.length || thinking;
+  $('btnResign').disabled = thinking || !!game.over;
   $('btnHint').disabled = !!game.over || thinking || (settings.mode === 'ai' && game.turn !== humanSide);
   // lit moments: the room dims on check; the winner's plate warms at the end
   const chkNow = !game.over && S.inCheck(game, game.turn);
@@ -205,8 +219,10 @@ function render() {
   $('barBottom').classList.toggle('winner', winColor === botColor);
   saveGame();
 }
+let liveGame = false; // true once a game is started or loaded this session
 function saveGame() {
   try {
+    if (!liveGame) return; // boot/setup renders must never wipe a stored save
     if (!movesUci.length) { localStorage.removeItem('chess_save_v1'); return; }
     localStorage.setItem('chess_save_v1', JSON.stringify({ movesUci, settings, humanSide, helpUsed, daily }));
   } catch (e) {}
@@ -224,6 +240,7 @@ function loadSave() {
       S.applyMove(game, m); movesUci.push(u); lastMove = m;
     }
     flipped = settings.mode === 'ai' && humanSide === 'b';
+    liveGame = true;
     return true;
   } catch (e) { return false; }
 }
@@ -302,9 +319,11 @@ function animateSlide(m) {
 function maybeAi() {
   if (settings.mode !== 'ai' || game.over || game.turn === humanSide) return;
   thinking = true; render();
+  const mySeq = ++aiSeq;
   const wait = 350 + Math.random() * 500;
   setTimeout(async () => {
     const res = await askAi('move');
+    if (mySeq !== aiSeq) return; // a newer game/undo superseded this one
     thinking = false;
     if (!res) { render(); return; }
     const m = S.legalMoves(game).find(x => x.from === res.from && x.to === res.to && (x.promo || null) === res.promo) || S.legalMoves(game).find(x => x.from === res.from && x.to === res.to);
@@ -377,17 +396,23 @@ function endDrag(e) {
   drag = null; if (!wasDrag) return;
 }
 boardEl.addEventListener('pointerup', endDrag);
+window.addEventListener('pointerup', endDrag);
 boardEl.addEventListener('pointercancel', () => { if (drag && drag.ghost) { drag.ghost.remove(); const src = boardEl.querySelector('[data-sq="' + drag.from + '"] .piece'); if (src) src.style.opacity = ''; } drag = null; });
 
 /* actions */
-$('btnUndo').onclick = () => {
+function doUndo() {
   if (thinking || !movesUci.length) return;
+  if (game.over && daily) { // a take-back reopens the day: re-record locally, never re-post
+    try { const rec = dailyRecords(); if (rec.plays) delete rec.plays[daily.date]; localStorage.setItem('chess_daily_v1', JSON.stringify(rec)); } catch (e) {}
+    daily.noPost = true;
+  }
   const n = settings.mode === 'ai' ? Math.min(2, movesUci.length) : 1;
   for (let i = 0; i < n; i++) { S.undoMove(game); movesUci.pop(); }
-  lastMove = null; selected = -1; game.over = null;
-  // recompute lastMove marker from scratch
+  lastMove = null; selected = -1; game.over = null; aiSeq++;
   refreshLegal(); render(); $('endSheet').classList.add('hidden');
-};
+}
+$('btnUndo').onclick = doUndo;
+$('btnTakeBack').onclick = doUndo;
 $('btnHint').onclick = async () => {
   if (game.over || thinking) return;
   thinking = true; render();
@@ -415,7 +440,7 @@ function placeActions() {
 let rzT = null;
 window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(placeActions, 120); });
 $('btnResign').onclick = () => {
-  if (game.over) return;
+  if (game.over || thinking) return;
   if (!resignArmed) { resignArmed = true; $('btnResign').classList.add('armed'); $('btnResign').textContent = 'Sure?'; setTimeout(() => { resignArmed = false; $('btnResign').classList.remove('armed'); $('btnResign').textContent = 'Resign'; }, 2600); return; }
   const loser = settings.mode === 'ai' ? humanSide : game.turn;
   game.over = { result: loser === 'w' ? '0-1' : '1-0', reason: 'resign', text: (loser === 'w' ? 'White' : 'Black') + ' resigned' };
@@ -442,7 +467,8 @@ function showEnd() {
     dailyTxt = " Today's challenge: " + (res === 'win' ? 'won' : res === 'draw' ? 'drawn' : 'lost') + ' against ' + S.LEVELS[daily.level].name + (entry.streak > 1 ? ' — day streak ' + entry.streak : '') + '.';
   }
   $('endText').textContent = who + o.text + '.' + extra + dailyTxt;
-  setTimeout(() => $('endSheet').classList.remove('hidden'), 650);
+  $('btnTakeBack').style.display = movesUci.length ? '' : 'none';
+  setTimeout(() => { if (game.over) $('endSheet').classList.remove('hidden'); }, 650);
 }
 $('btnRematch').onclick = () => { $('endSheet').classList.add('hidden'); startGame(settings); };
 $('btnEndNew').onclick = () => { $('endSheet').classList.add('hidden'); $('setup').classList.remove('hidden'); refreshContinue(); };
@@ -473,6 +499,7 @@ function startGame(cfg) {
   settings = Object.assign({}, cfg);
   humanSide = settings.mode === '2p' ? 'w' : settings.side === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : settings.side;
   game = S.parseFEN(S.START_FEN);
+  liveGame = true; aiSeq++;
   movesUci = []; lastMove = null; selected = -1; hintPair = null; helpUsed = 0; thinking = false;
   flipped = settings.mode === 'ai' && humanSide === 'b';
   buildBoard(); refreshLegal(); render();
