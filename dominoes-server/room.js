@@ -103,7 +103,10 @@ export function handleHello(room, seat, name) {
   if (room.seats[0] && room.seats[1] && room.phase === 'lobby') {
     startGame(room);
   }
-  res.broadcast = { t: 'state', state: null }; // per-seat snapshot filled by caller
+  // No snapshot for a one-player lobby — there is no game to show yet, and
+  // an early state made the host's client leave the lobby (and its room
+  // code) before the second player arrived.
+  res.broadcast = room.sim ? { t: 'state', state: null } : null; // per-seat snapshot filled by caller
   return { seat, res };
 }
 

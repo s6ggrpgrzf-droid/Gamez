@@ -301,7 +301,8 @@ button{font-family:var(--font-b);}
 .slip .brass-btn{margin-top:14px;padding:14px 44px;font-size:16px;}
 .slip ul{text-align:left;font-size:14px;line-height:1.65;margin:12px 4px 6px 20px;color:#3a2f1d;}
 .slip .fine{font-size:12px;font-style:italic;color:#8a6f3c;margin-top:10px;}
-#lobby-code{font-family:var(--font-d);font-weight:700;font-size:52px;letter-spacing:.35em;color:#7a5a1e;margin:4px 0 2px;text-indent:.35em;}
+#lobby-code{font-family:var(--font-d);font-weight:700;font-size:52px;letter-spacing:.35em;color:#7a5a1e;margin:4px 0 2px;text-indent:.35em;user-select:text;-webkit-user-select:text;}
+#lobby-copy{margin:8px auto 4px;padding:10px 26px;font-size:13px;}
 .lobby-input{display:block;width:100%;box-sizing:border-box;margin:10px 0 2px;padding:13px 14px;font-size:17px;
   font-family:var(--font-b);text-align:center;color:#3a2a10;background:#fffdf6;border:1.5px solid rgba(120,95,60,.5);
   border-radius:12px;outline:none;}
@@ -496,6 +497,7 @@ button{font-family:var(--font-b);}
         <div id="lobby-code-row" class="hidden">
           <div class="fine">Share this code with your friend</div>
           <div id="lobby-code">––––</div>
+          <button id="lobby-copy" class="brass-btn" type="button">Copy Code</button>
         </div>
         <div id="lobby-join-row">
           <input id="lobby-join" class="lobby-input" maxlength="4" placeholder="Room code" autocomplete="off" autocapitalize="characters">
@@ -1159,6 +1161,18 @@ if (typeof window !== 'undefined') window.DomSim = api;
     if (NETG.ws && NETG.ws.readyState === 1) { try { NETG.ws.send(JSON.stringify(m)); } catch (e) {} }
   }
   function netStatus(html) { $('lobby-status').innerHTML = html; }
+  function showWaitingRoom(code) {
+    if (code) {
+      NETG.code = code;
+      $('lobby-code').textContent = code;
+      $('lobby-code-row').classList.remove('hidden');
+    }
+    $('lobby-join-row').classList.add('hidden');
+    $('lobby-create').classList.add('hidden');
+    $('lobby-name').classList.add('hidden');
+    openLobby();
+    netStatus('<span class="spin"></span>Waiting for your friend…');
+  }
   function netConnect(code, seat, onFail) {
     netDisconnect();
     NETG.code = code;
@@ -1284,6 +1298,17 @@ if (typeof window !== 'undefined') window.DomSim = api;
   }
 
   async function onNetState(st) {
+    if (!st) return;
+    // The server announces a one-player room before the game exists. That
+    // snapshot belongs in the lobby, not on the table: keep the room code
+    // up until the second player arrives and a real game snapshot follows.
+    if (st.phase === 'lobby' || st.simPhase === 'lobby' || !st.seatsFull) {
+      NETG.state = null;
+      NETG.names = [st.names[0] || 'Player 1', st.names[1] || 'Player 2'];
+      NETG.seat = st.you;
+      showWaitingRoom(st.code || NETG.code);
+      return;
+    }
     const prev = NETG.state;
     NETG.state = st;
     NETG.names = [st.names[0] || 'Player 1', st.names[1] || 'Player 2'];
@@ -1463,6 +1488,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
     $('lobby-create').classList.remove('hidden');
     $('lobby-join-row').classList.remove('hidden');
     $('lobby-code-row').classList.add('hidden');
+    $('lobby-name').classList.remove('hidden');
     netStatus('');
   }
   function netLeave() {
@@ -2613,14 +2639,25 @@ if (typeof window !== 'undefined') window.DomSim = api;
       const r = await fetch(netHttp() + '/create?mode=' + MODE + '&target=' + SET.target);
       const j = await r.json();
       if (!j || !j.code) throw new Error('no code');
-      $('lobby-code').textContent = j.code;
-      $('lobby-code-row').classList.remove('hidden');
-      $('lobby-join-row').classList.add('hidden');
-      $('lobby-create').classList.add('hidden');
-      netStatus('<span class="spin"></span>Waiting for your friend…');
+      showWaitingRoom(j.code);
       netConnect(j.code, -1);
     } catch (e) {
       netStatus('Could not reach the game server. Check your connection and try again.');
+    }
+  });
+  $('lobby-copy').addEventListener('click', async () => {
+    AU.ensure(); AU.uiTap(); buzz(8);
+    const code = (NETG.code || $('lobby-code').textContent || '').trim();
+    if (!/^[A-Z0-9]{4}$/.test(code)) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      netStatus('Code copied — send it to your friend. Waiting for them to join…');
+    } catch (e) {
+      const range = document.createRange();
+      range.selectNodeContents($('lobby-code'));
+      const sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      netStatus('Code selected — copy it and send it to your friend.');
     }
   });
   $('lobby-join-btn').addEventListener('click', () => {
