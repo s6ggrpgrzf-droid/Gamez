@@ -1150,6 +1150,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
   const NETG = {
     ws: null, code: null, seat: 0, names: ['Player 1', 'Player 2'],
     state: null, pending: null, endShown: null, wantSeat: -1, name: 'Player',
+    retries: 0,
   };
   try { const nm = localStorage.getItem(LS_NETNAME); if (nm) NETG.name = nm; } catch (e) {}
   function netUrl() {
@@ -1172,6 +1173,25 @@ if (typeof window !== 'undefined') window.DomSim = api;
     $('lobby-name').classList.add('hidden');
     openLobby();
     netStatus('<span class="spin"></span>Waiting for your friend…');
+  }
+  // While the host waits in the lobby, the phone may suspend the page
+  // (switching apps to send the code is the natural flow) and the socket
+  // can die quietly. Reclaim the seat automatically so the game-start
+  // snapshot still reaches the host when the friend joins.
+  function lobbyReconnect() {
+    if (PLAYERS !== 3 || uiPhase !== 'title' || !NETG.code) return;
+    if ($('lobby-code-row').classList.contains('hidden')) return;
+    if (NETG.ws && NETG.ws.readyState <= 1) return;
+    if (NETG.retries >= 6) {
+      netStatus('Connection lost — tap Cancel and create the room again.');
+      return;
+    }
+    NETG.retries++;
+    const seat = NETG.welcomed ? NETG.seat : -1;
+    netStatus('<span class="spin"></span>Reconnecting…');
+    setTimeout(() => {
+      if (uiPhase === 'title' && NETG.code && !NETG.ws) netConnect(NETG.code, seat);
+    }, 1200);
   }
   function netConnect(code, seat, onFail) {
     netDisconnect();
@@ -1197,6 +1217,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
       if (NETG.ws === ws) {
         NETG.ws = null;
         if (uiPhase !== 'title') netDropped();
+        else lobbyReconnect();
       }
     };
     ws.onerror = () => { try { ws.close(); } catch (e) {} };
@@ -1227,6 +1248,7 @@ if (typeof window !== 'undefined') window.DomSim = api;
       NETG.seat = m.you;
       NETG.wantSeat = -1;
       NETG.welcomed = true;
+      NETG.retries = 0;
       netStatus('<span class="spin"></span>Waiting for your friend…');
       return;
     }
@@ -2712,7 +2734,10 @@ if (typeof window !== 'undefined') window.DomSim = api;
   function onResize() { sizeFx(); if (uiPhase !== 'title') { layout(false); fitRack(); } }
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', () => setTimeout(onResize, 200));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { pdown = null; } });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { pdown = null; }
+    else lobbyReconnect();
+  });
   sizeFx();
   syncSound();
   wireSettings();

@@ -44,15 +44,41 @@ export class DominoRoom {
     else await this.ctx.storage.delete('simSnap');
   }
 
+  // A Durable Object can be evicted and rebuilt while its WebSockets stay
+  // connected (hibernation). The in-memory seat slots are lost in a rebuild,
+  // so each socket also carries its seat as an attachment, and the live
+  // socket for a seat is looked up from the runtime when the slot is empty.
+  seatOf(ws) {
+    try {
+      const a = ws.deserializeAttachment ? ws.deserializeAttachment() : null;
+      return a && (a.seat === 0 || a.seat === 1) ? a.seat : -1;
+    } catch (e) { return -1; }
+  }
+
+  liveSockets() {
+    const map = [null, null];
+    if (this.ctx.getWebSockets) {
+      for (const ws of this.ctx.getWebSockets()) {
+        const s = this.seatOf(ws);
+        if (s >= 0 && !map[s]) map[s] = ws;
+      }
+    }
+    for (const s of [0, 1]) if (this.sockets[s]) map[s] = this.sockets[s];
+    this.sockets = map;
+    return map;
+  }
+
   sendTo(seat, msg) {
-    const ws = this.sockets[seat];
+    const ws = this.liveSockets()[seat];
     if (!ws) return;
     try { ws.send(JSON.stringify(msg)); } catch (e) { /* dead socket */ }
   }
 
   broadcastState() {
+    if (!this.room) return;
+    const live = this.liveSockets();
     for (const seat of [0, 1]) {
-      if (!this.sockets[seat] || !this.room) continue;
+      if (!live[seat]) continue;
       this.sendTo(seat, { t: 'state', state: publicState(this.room, seat) });
     }
   }
@@ -96,10 +122,12 @@ export class DominoRoom {
       try { ws.send(JSON.stringify({ t: 'error', msg: 'Room expired.' })); } catch (e) {}
       return;
     }
-    const liveSeat = this.sockets[0] === ws ? 0 : this.sockets[1] === ws ? 1 : -1;
+    let liveSeat = this.sockets[0] === ws ? 0 : this.sockets[1] === ws ? 1 : this.seatOf(ws);
+    if (liveSeat >= 0) this.sockets[liveSeat] = ws; // rehydrate the slot after a rebuild
     if (msg.t === 'hello') {
       const want = (msg.seat === 0 || msg.seat === 1) ? msg.seat : -1;
-      if (want >= 0 && this.sockets[want] && this.sockets[want] !== ws) {
+      const live = this.liveSockets();
+      if (want >= 0 && live[want] && live[want] !== ws) {
         try { ws.send(JSON.stringify({ t: 'error', msg: 'Seat is taken.' })); } catch (e) {}
         return;
       }
@@ -110,6 +138,7 @@ export class DominoRoom {
       }
       this.pending = this.pending.filter((s) => s !== ws);
       this.sockets[seat] = ws;
+      if (ws.serializeAttachment) { try { ws.serializeAttachment({ seat }); } catch (e) {} }
       await this.save();
       this.deliver(res, seat);
       await this.save();
@@ -135,7 +164,8 @@ export class DominoRoom {
   }
 
   async alarm() {
-    if (!this.sockets[0] && !this.sockets[1]) {
+    const live = this.liveSockets();
+    if (!live[0] && !live[1]) {
       await this.ctx.storage.deleteAll();
     } else {
       await this.ctx.storage.setAlarm(Date.now() + ROOM_TTL_MS);
