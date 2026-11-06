@@ -1742,15 +1742,30 @@
     { name: 'Eta Aquariids', peak: 125, half: 19, zhr: 50, ra: 22.45, dec: -1.0 },
     { name: 'Perseids', peak: 224, half: 19, zhr: 110, ra: 3.13, dec: 58.0 },
     { name: 'Orionids', peak: 294, half: 18, zhr: 20, ra: 6.32, dec: 15.5 },
-    { name: 'Leonids', peak: 321, half: 12, zhr: 15, ra: 10.13, dec: 21.8 },
+    { name: 'Southern Taurids', peak: 308, peakEnd: 309, half: 16, zhr: 5, ra: 3.63, dec: 12.9 },
+    { name: 'Northern Taurids', peak: 315, peakEnd: 316, half: 14, zhr: 5, ra: 3.87, dec: 22.4 },
+    { name: 'Leonids', peak: 321, peakEnd: 322, half: 12, zhr: 15, ra: 10.13, dec: 21.8 },
     { name: 'Geminids', peak: 347, half: 10, zhr: 130, ra: 7.55, dec: 32.3 },
     { name: 'Ursids', peak: 356, half: 5, zhr: 10, ra: 14.50, dec: 75.7 }
   ];
   var meteorInfo = { shower: null, meanSec: 400 };
+  function fmtDoy(yr, doy) {
+    return new Date(yr, 0, doy).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  /* a peak that spans two nights names both: "Nov 4–5" */
+  function peakLabelFor(sh, yr) {
+    if (!sh.peakEnd) return fmtDoy(yr, sh.peak);
+    var a = new Date(yr, 0, sh.peak), b = new Date(yr, 0, sh.peakEnd);
+    if (a.getMonth() === b.getMonth())
+      return a.toLocaleDateString('en-US', { month: 'short' }) + ' ' + a.getDate() + '–' + b.getDate();
+    return fmtDoy(yr, sh.peak) + ' – ' + fmtDoy(yr, sh.peakEnd);
+  }
   function planMeteors(date, lst, toBase) {
     meteorInfo.shower = null; meteorInfo.best = 0;
     meteorInfo.endLabel = null; meteorInfo.tailName = null; meteorInfo.tailUntil = null;
+    meteorInfo.list = null;
     var winBest = null, winFall = -1, winSh = null;
+    var inWin = [];
     var d = date;
     var doy = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000);
     var rate = 9; /* sporadics, per hour, one patch of sky */
@@ -1766,21 +1781,39 @@
       var add = sh.zhr * fall * altF * 2.0;
       if (add > 4) { rate += add; if (!meteorInfo.shower || add > meteorInfo.best) { meteorInfo.shower = sh.name; meteorInfo.best = add; } }
       if (fall > winFall) { winFall = fall; winSh = sh; }
+      /* still honestly in its window (the edge night itself, where
+       * the falloff reaches zero, no longer counts) */
+      if (dd < sh.half) inWin.push(sh);
     });
     /* the window outlasts the naming rate: a shower in its tail is
      * still in the sky, and the almanac should say so — with the
-     * last night it can honestly promise (peak + half - 1) */
-    if (winSh) {
-      var yrW = date.getFullYear();
-      winBest = new Date(yrW, 0, winSh.peak + winSh.half - 1).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (meteorInfo.shower === winSh.name) meteorInfo.endLabel = winBest;
-      else { meteorInfo.tailName = winSh.name; meteorInfo.tailUntil = winBest; }
+     * last night it can honestly promise (peak + half - 1). The
+     * named shower's own window sets its end label; the tail line
+     * belongs to the strongest shower still in its window when
+     * nothing is named. */
+    var yrW = date.getFullYear();
+    if (meteorInfo.shower) {
+      var shW = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
+      meteorInfo.endLabel = fmtDoy(yrW, shW.peak + shW.half - 1);
+    } else if (winSh) {
+      winBest = fmtDoy(yrW, winSh.peak + winSh.half - 1);
+      meteorInfo.tailName = winSh.name; meteorInfo.tailUntil = winBest;
+    }
+    /* November after the Orionids: the Taurid branches and the
+     * Leonids share the sky, so the almanac lists the season —
+     * every shower still in its window, each with its peak —
+     * instead of leaving the row to a fading tail. Scoped to the
+     * Taurids' stretch, and the Orionids keep their own row. */
+    if (inWin.length >= 2 &&
+        inWin.some(function (x) { return x.name === 'Southern Taurids' || x.name === 'Northern Taurids'; }) &&
+        !inWin.some(function (x) { return x.name === 'Orionids'; })) {
+      meteorInfo.list = inWin.slice().sort(function (a, b) { return a.peak - b.peak; })
+        .map(function (x) { return { name: x.name, peak: peakLabelFor(x, yrW) }; });
     }
     meteorInfo.meanSec = Math.max(14, Math.min(400, 3600 / rate));
     if (meteorInfo.shower) {
       var shD = SHOWERS.find(function (x) { return x.name === meteorInfo.shower; });
-      var yr = date.getFullYear();
-      meteorInfo.peakLabel = new Date(yr, 0, shD.peak).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      meteorInfo.peakLabel = peakLabelFor(shD, yrW);
     }
     meteorInfo.radiantDir = null;
     if (meteorInfo.shower) {
@@ -2015,6 +2048,7 @@
       shower: meteorInfo.shower, showerPeak: meteorInfo.peakLabel || null,
       showerEnd: meteorInfo.endLabel || null,
       tailName: meteorInfo.tailName || null, tailUntil: meteorInfo.tailUntil || null,
+      showerList: meteorInfo.list || null,
       full: full ? fmtDay(full) : null, newMoon: newM ? fmtDay(newM) : null,
       riseD: rise, setD: set
     };
@@ -3015,7 +3049,8 @@
       if (almanac.rise) logRow(body, 'Moonrise', almanac.rise + (almanac.riseNote ? ' · ' + almanac.riseNote : ''));
       if (almanac.set) logRow(body, 'Moonset', almanac.set + (almanac.setNote ? ' · ' + almanac.setNote : ''));
       if (almanac.planetsUp.length) logRow(body, 'Planets riding', almanac.planetsUp.join(' · '));
-      if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : '') + (almanac.shower === 'Orionids' && almanac.showerEnd ? ' · until ' + almanac.showerEnd : ''));
+      if (almanac.showerList) logRow(body, 'Showers', almanac.showerList.map(function (s) { return s.name + ' — peak ' + s.peak; }).join(' · '));
+      else if (almanac.shower) logRow(body, 'Showers', almanac.shower + (almanac.showerPeak ? ' — peak ' + almanac.showerPeak : '') + (almanac.shower === 'Orionids' && almanac.showerEnd ? ' · until ' + almanac.showerEnd : ''));
       else if (almanac.tailName) logRow(body, 'Showers', almanac.tailName + ' — until ' + almanac.tailUntil + (almanac.tailName === 'Orionids' ? ' · best before dawn' : ''));
       var issLine = issAlmanacLine(); if (issLine) logRow(body, 'Space station', issLine);
       if (auroraWatch) logRow(body, 'Aurora watch', 'Kp ' + auroraWatch.kp + ' storm ' + (auroraWatch.forecast ? 'forecast' : 'under way') + ' — strongest near ' + fmtClock(new Date(auroraWatch.atMs)) + '. Look low to the north.');
