@@ -756,6 +756,17 @@ setInterval(function () {
   sfxBrush();
 }, 30000);
 
+/* the called-up unit's feed re-acquires on a living cadence,
+   so the camera never sits still long enough to read as a still */
+setInterval(function () {
+  var fb = document.querySelector('.feed .feedband');
+  if (fb) {
+    fb.classList.remove('go');
+    void fb.getBoundingClientRect();
+    fb.classList.add('go');
+  }
+}, 9000);
+
 /* ---------- MDU 2: flight plan (editorial picks; AI replaces when it lands) ---------- */
 (function () {
   var el = document.getElementById('fpln');
