@@ -1,7 +1,11 @@
-/* THE GILDED HOUR — Pass 1 core.
-   A 15-question show for 2-4 players at one table: Round 1 The Open Table,
-   Round 2 The Hot Seat, Round 3 The Vault. Pure show logic + DOM rendering.
-   Sim never touches the clock directly: the rAF loop feeds dt into step(). */
+/* THE GILDED HOUR — Pass B format.
+   A 15-question party show for 2-4 players at one table. ONE VERB: ANSWER.
+   Everybody answers every question with a finger-vote (hold up 1-4 fingers);
+   the host taps in who had it right. Round 1 The Warm-Up x6, Round 2 Double
+   Money x6, Round 3 The Big Finish x3 (public 1-3 chip bets). Five of the
+   fifteen are guess questions: closest-number shouts and most-people-say
+   surveys. One lifeline only: Cut Two, one per player per show. Nobody can
+   ever lose money. Pure show logic + DOM rendering; the rAF loop feeds dt. */
 (function () {
   "use strict";
 
@@ -24,52 +28,114 @@
   function round10(n) { return Math.max(0, Math.round(n / 10) * 10); }
   function money(n) { return (n < 0 ? "-$" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US"); }
   function mplus(n) { return "+" + money(n); }
-  function mminus(n) { return "\u2212" + money(n); }
 
   /* ---------- constants ---------- */
   var PCOLORS = ["var(--p0)", "var(--p1)", "var(--p2)", "var(--p3)"];
+  /* category colours — the study palette; the question's category takes
+     over the slabs, chip, value figures and spotlight pool */
+  var CATSTYLE = {
+    "Movies":           { hi: "#F0568C", mid: "#E8437C", lo: "#C2255C", sh: "#8E1E47", rgb: "232,67,124" },
+    "TV":               { hi: "#5AB0FF", mid: "#2E9BFF", lo: "#1B7FD4", sh: "#0F5E94", rgb: "46,155,255" },
+    "Music":            { hi: "#B983F0", mid: "#9B5DE5", lo: "#7C3AC9", sh: "#55239E", rgb: "155,93,229" },
+    "Ads & Jingles":    { hi: "#FFA25E", mid: "#FF8C42", lo: "#E56F1D", sh: "#A34D0E", rgb: "255,140,66" },
+    "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#27AE54", sh: "#177A38", rgb: "62,207,110" },
+    "Saturday Morning": { hi: "#FFD76A", mid: "#FFC93C", lo: "#F0A90B", sh: "#A87408", rgb: "255,201,60" },
+    "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#0FA3A0", sh: "#076B6E", rgb: "23,190,187" }
+  };
+  function catStyle(cat) { return CATSTYLE[cat] || CATSTYLE["Movies"]; }
+  var CATTX = { "Ads & Jingles": "#431A04", "Toys & Games": "#0B3D1C", "Saturday Morning": "#4A3200", "The Dial-Up Years": "#063A3B" };
+  function applyCat(cat) {
+    var cs = catStyle(cat), g = $("scr-game");
+    if (!g) return;
+    g.style.setProperty("--cat", cs.mid);
+    g.style.setProperty("--cat-hi", cs.hi);
+    g.style.setProperty("--cat-lo", cs.lo);
+    g.style.setProperty("--cat-sh", cs.sh);
+    g.style.setProperty("--cat-rgb", cs.rgb);
+    g.style.setProperty("--cat-tx", CATTX[cat] || "#FFF6E8");
+  }
   var PNAMES = ["Player One", "Player Two", "Player Three", "Player Four"];
-  var R1_VALUES = { easy: 100, medium: 200, hard: 300 };
-  var R2_VALUES = { easy: 200, medium: 400, hard: 600 };
-  var R1_COUNT = 7, R2_COUNT = 7;
-  var QTIME = 20, STEAL_TIME = 8, VAULT_TIME = 30;
+  var BASE_VALUES = { easy: 100, medium: 200, hard: 300 };
+  var R1_COUNT = 6, R2_COUNT = 6, R3_COUNT = 3;
+  var QTIME = 20, NUM_TIME = 30;
+  /* difficulty shape per round (guess slots override by schedule) */
+  var R1_DIFFS = ["easy", "easy", "medium", "easy", "medium", "hard"];
+  var R2_DIFFS = ["medium", "easy", "hard", "medium", "hard", "medium"];
+  var R3_DIFFS = ["medium", "hard", "medium"];
+  /* exactly five guess questions: round:qInRound (0-based), interleaved,
+     never first or last in a round */
+  var GUESS_SLOTS = ["1:1", "1:4", "2:2", "2:5", "3:1"];
 
-  /* ---------- host lines (original writing) ---------- */
+  /* ---------- host lines (original writing — Sterling the playmate) ---------- */
   var HOST = {
     open: [
-      "Good evening. I am Sterling. Fifteen questions, one table, no mercy for the confident.",
-      "Welcome to The Gilded Hour. I keep the questions; you keep your dignity — for now."
+      "Good evening, I'm Sterling. Fifteen questions, everybody plays, and nobody goes home poorer. Those are the house rules — I invented them, so they're excellent.",
+      "Welcome to The Gilded Hour: the questions are older than your first car and twice as reliable. I'm Sterling. Let's make some money."
     ],
     r1: [
-      "Round One. The Open Table. Gentle money, public answers, and steals for the quick-tongued.",
-      "We begin at the Open Table. Discuss if you must. Commit if you dare."
+      "Round One — the Warm-Up. Easy money, loud opinions. Fingers at the ready, table.",
+      "The Warm-Up. Six questions to loosen the wrists and the wallets. I pick the categories — the wheel and I have an understanding."
     ],
     r2: [
-      "Round Two. The Hot Seat. The money doubles, wrong answers now cost you, and everyone here holds a needle with your name on it.",
-      "The Hot Seat. Lifelines are live, needles are loaded, and I am legally required to enjoy this."
+      "Round Two — Double Money. Everything pays twice, and your Cut Two is live. Spend it wisely; there is exactly one.",
+      "Double Money. The questions get nosier and the money gets louder. Sterling believes in you. Sterling believes in everybody. It's a flaw."
     ],
     r3: [
-      "The Vault. One category, one question, and everything you have earned, wagered in the dark.",
-      "We come to it at last. The Vault does not care how you got here. Only what you risk."
+      "The Big Finish. Three questions, three bets, and zero ways to lose money. This show is a terrible casino and a wonderful friend.",
+      "Three questions left. Bet on yourselves — out loud, so the room can hold you to it."
     ],
-    correctFast: ["{name}. Correct, and quickly. The table is impressed despite itself.", "{name} — correct before the echo faded. Noted."],
-    correct: ["{name}. Correct. The gold moves, as it should.", "Correct, {name}. Sterling approves, quietly."],
-    correctSlow: ["Correct, {name} — eventually. The clock filed a complaint.", "{name} gets there in the end. Drama is a strategy, I suppose."],
-    wrong: ["{name}. No. The correct answer was standing right there, waving.", "Incorrect, {name}. Bold. Wrong, but bold."],
-    timeout: ["Time, {name}. The question has left the building.", "The clock wins that one, {name}. It usually does."],
-    stealCall: ["A steal is open. Shout your name before someone with confidence does."],
-    stealGood: ["Stolen by {name}. Ruthless. Correct, too, which helps.", "{name} takes it. That is how tables turn."],
-    stealBad: ["{name} reaches — and grasps air. The question retires undefeated."],
-    needle: ["{by} plays the Needle on {name}. Five seconds. The room leans in.", "The Needle, from {by}. {name}, your evening just shortened."],
-    needleBackfire: ["{name} answers anyway. {by}, the Needle cuts the hand that throws it."],
-    foolsGold: ["{name} has found the Fool's Gold — the wrong answer that pays. I hid one in every Hot Seat. This one is spent."],
-    cut: ["{name} cuts two answers. The field narrows; the nerve, presumably, holds."],
-    tableTalk: ["{name} asks the table. Argue well — the clock is holding its breath."],
-    secondClock: ["{name} buys eight seconds. Time, as ever, is money."],
-    wagerSet: ["Wagers are locked. The Vault will now judge everyone's judgement."],
-    vaultReveal: ["{name} wagered {amt}. Let us see what the Vault thinks of that."],
-    winner: ["{name} takes the Gilded Hour. The vault opens, the table applauds, and I — I almost smiled."],
-    tie: ["Level. Of course. One question, sudden death, first hand up takes it."]
+    spin: [
+      "The wheel turns… and stops where it stops. {cat}! Blame the wheel.",
+      "{cat}! The wheel has spoken. The wheel is never wrong, merely smug."
+    ],
+    read: [
+      "Here's one from {cat}. Fingers limber, memories unlocked.",
+      "{cat}, coming up. Somewhere in this room is a misspent youth about to pay off."
+    ],
+    vote: [
+      "Fingers up! Three, two, one — SHOW ME!",
+      "Hands in the air like you actually know this one. Three, two, one — show me!"
+    ],
+    mark: [
+      "Right — who had it? Tap their seats. Generosity is allowed; honesty is encouraged.",
+      "Call it fairly, table. Tap the seats that earned it."
+    ],
+    allHit: [
+      "EVERYBODY. The whole table, paid in full. I shall alert the newspapers.",
+      "A clean sweep! Drinks are on the house. The house is me. The drinks are imaginary."
+    ],
+    someHit: [
+      "{name} had it — and has company. The finger-vote never lies. Usually.",
+      "Paid out to the sharp-eyed. The rest of you: beautiful confidence, wrong answer."
+    ],
+    allMiss: [
+      "Nobody. Not one finger. The question retires undefeated, and slightly smug about it.",
+      "The whole table looked straight at that one and blinked. It happens to the best rooms. Once."
+    ],
+    numQ: [
+      "Closest number wins this one. No options, no hiding — just a number and the courage to shout it.",
+      "A numbers question. Shout your best guess when I call it — the nearest shout takes the money."
+    ],
+    numHit: [
+      "{name} called it closest. Somewhere, a maths teacher just felt a small disturbance of pride.",
+      "Closest shout: {name}. The number has been respected, and so have you."
+    ],
+    numMiss: [
+      "Nobody got near it. The number remains at large.",
+      "Those guesses were… geographically diverse. No winner this time."
+    ],
+    cut: [
+      "{name} spends the Cut Two! Two wrong answers leave the building. Security will escort them out.",
+      "Cut Two, called by {name}. Half the lying is over — the other half is up to you."
+    ],
+    bet: [
+      "Bets out loud, please. One, two or three chips on yourself. Confidence is free; chips are a hundred dollars.",
+      "The Big Finish wants your bet and your bravado in equal measure. Declare your bets — the room is listening, and it will remember."
+    ],
+    winner: [
+      "{name} takes the Gilded Hour! The confetti is real, the money is imaginary, and the glory is legally binding.",
+      "And the Hour belongs to {name}. Table, applaud. {name}, bow. I shall pretend not to enjoy this."
+    ]
   };
   function hostSay(kind, vars) {
     var line = pick(HOST[kind] || ["…"]);
@@ -81,6 +147,200 @@
   function $(id) { return document.getElementById(id); }
   function el(html) { var d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
   function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  /* ---------- marquee bulbs (study): spaced around a frame, chasing ---------- */
+  function buildBulbs(frame) {
+    if (!frame || frame.dataset.bulbs) return;
+    var w = frame.clientWidth, h = frame.clientHeight;
+    if (!w || !h) return;
+    frame.dataset.bulbs = "1";
+    var spacing = 44, n = 0, x, y, b;
+    function add(bx, by) {
+      b = document.createElement("span");
+      b.className = "bulb" + (n++ % 2 ? " b" : "");
+      b.style.left = bx + "px"; b.style.top = by + "px";
+      frame.appendChild(b);
+    }
+    for (x = spacing / 2; x < w; x += spacing) { add(x, 0); add(x, h); }
+    for (y = spacing; y < h - 4; y += spacing) { add(0, y); add(w, y); }
+  }
+
+  /* ---------- the cast (original flat illustration, from the study) ---------- */
+  var STERLING_BODY =
+    '<path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z" fill="#241331"/>' +
+    '<path d="M136,198 L184,198 L160,288 Z" fill="#FFF6E8"/>' +
+    '<path d="M128,196 L160,240 L136,306 L114,212 Z" fill="#3A2150"/>' +
+    '<path d="M192,196 L160,240 L184,306 L206,212 Z" fill="#3A2150"/>' +
+    '<path d="M160,208 L131,193 Q124,208 131,223 Z" fill="#E8437C"/>' +
+    '<path d="M160,208 L189,193 Q196,208 189,223 Z" fill="#E8437C"/>' +
+    '<rect x="151" y="199" width="18" height="18" rx="6" fill="#FFC93C"/>' +
+    '<rect x="146" y="158" width="28" height="42" rx="9" fill="#E89A63"/>' +
+    '<circle cx="94" cy="124" r="13" fill="#F6B183"/>' +
+    '<circle cx="226" cy="124" r="13" fill="#F6B183"/>' +
+    '<ellipse cx="160" cy="118" rx="64" ry="70" fill="#F6B183"/>' +
+    '<path d="M94,112 C90,44 126,26 160,26 C196,26 230,46 226,112 C222,80 206,64 186,68 C168,80 150,60 128,66 C106,72 98,88 94,112 Z" fill="#2A1530"/>' +
+    '<path d="M112,56 Q142,36 178,44 Q142,46 112,56 Z" fill="#452A5E" opacity=".85"/>' +
+    '<ellipse cx="160" cy="128" rx="7" ry="10" fill="#E89A63"/>' +
+    '<ellipse cx="110" cy="142" rx="11" ry="6.5" fill="#FF9D8A" opacity=".5"/>' +
+    '<ellipse cx="210" cy="142" rx="11" ry="6.5" fill="#FF9D8A" opacity=".5"/>';
+  function sterlingSVG(variant, cls) {
+    var inner = "";
+    if (variant === "present") {
+      inner =
+        '<path d="M252,250 Q298,262 308,302" stroke="#4E2C68" stroke-width="29" stroke-linecap="round" fill="none"/>' +
+        '<circle cx="309" cy="307" r="14" fill="#F6B183"/>' + STERLING_BODY +
+        '<rect x="110" y="80" width="38" height="11" rx="5.5" transform="rotate(-11 129 86)" fill="#2A1530"/>' +
+        '<rect x="172" y="80" width="38" height="11" rx="5.5" transform="rotate(11 191 86)" fill="#2A1530"/>' +
+        '<circle cx="131" cy="110" r="6.5" fill="#2A1530"/><circle cx="189" cy="110" r="6.5" fill="#2A1530"/>' +
+        '<circle cx="129" cy="108" r="2" fill="#FFF6E8"/><circle cx="187" cy="108" r="2" fill="#FFF6E8"/>' +
+        '<path d="M114,142 Q160,190 206,142 Q160,161 114,142 Z" fill="#7C2D3E"/>' +
+        '<path d="M122,145 Q160,165 198,145 Q160,155 122,145 Z" fill="#FFFFFF"/>';
+    } else { /* smirk — standings commentator, arms crossed */
+      inner = STERLING_BODY +
+        '<rect x="92" y="256" width="136" height="27" rx="13.5" transform="rotate(17 160 270)" fill="#2E1A40"/>' +
+        '<rect x="92" y="256" width="136" height="27" rx="13.5" transform="rotate(-17 160 270)" fill="#241331"/>' +
+        '<rect x="110" y="78" width="38" height="11" rx="5.5" transform="rotate(-7 129 84)" fill="#2A1530"/>' +
+        '<rect x="172" y="92" width="38" height="11" rx="5.5" transform="rotate(3 191 98)" fill="#2A1530"/>' +
+        '<circle cx="131" cy="110" r="6.5" fill="#2A1530"/><circle cx="189" cy="110" r="6.5" fill="#2A1530"/>' +
+        '<circle cx="129" cy="108" r="2" fill="#FFF6E8"/><circle cx="187" cy="108" r="2" fill="#FFF6E8"/>' +
+        '<path d="M124,150 Q162,166 198,140" stroke="#7C2D3E" stroke-width="6.5" stroke-linecap="round" fill="none"/>';
+    }
+    return '<svg class="' + (cls || "sterling sterling-md") + '" viewBox="0 0 320 380" aria-label="Sterling">' + inner + "</svg>";
+  }
+
+  /* player avatars: four designs x neutral / cheer / slump.
+     Design 2 (deep skin) uses cream eye-whites and bold features so the
+     face reads at couch distance — the study's low-contrast fix. */
+  function avatarSVG(i, state) {
+    var open = '<svg class="avatar" viewBox="0 0 120 124" aria-hidden="true">';
+    var sweat = '<path d="M98,18 C104,29 106,35 98,41 C90,35 92,29 98,18 Z" fill="#7FD4FF"/><circle cx="95.5" cy="32" r="2" fill="#E8FAFF"/>';
+    var s = "";
+    if (i === 0) { /* green — the grinner */
+      if (state === "cheer") {
+        s = '<path d="M20,102 Q0,80 6,52" stroke="#35D461" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+          '<path d="M100,102 Q120,80 114,52" stroke="#35D461" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+          '<circle cx="6" cy="47" r="8.5" fill="#F2B183"/><circle cx="114" cy="47" r="8.5" fill="#F2B183"/>';
+      }
+      s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#35D461"/>' +
+        '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
+        '<rect x="51" y="66" width="18" height="18" rx="6" fill="#D98E57"/>' +
+        '<circle cx="60" cy="46" r="28" fill="#F2B183"/>' +
+        '<path d="M32,44 C32,22 46,14 60,14 C74,14 88,22 88,44 C84,30 74,26 60,26 C46,26 36,30 32,44 Z" fill="#2A1530"/>';
+      if (state === "cheer") {
+        s += '<path d="M41,47 Q49,40 57,47" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+          '<path d="M63,47 Q71,40 79,47" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+          '<path d="M44,58 Q60,80 76,58 Q60,67 44,58 Z" fill="#7C2D3E"/>' +
+          '<path d="M52,68 Q60,74 68,68 Q60,71 52,68 Z" fill="#FF8FA3"/>';
+      } else if (state === "slump") {
+        s += '<rect x="39" y="35" width="16" height="5.5" rx="2.75" transform="rotate(16 47 38)" fill="#2A1530"/>' +
+          '<rect x="65" y="35" width="16" height="5.5" rx="2.75" transform="rotate(-16 73 38)" fill="#2A1530"/>' +
+          '<path d="M40,48 Q49,55 58,48" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+          '<path d="M62,48 Q71,55 80,48" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+          '<path d="M48,64 Q55,60 60,64 Q65,68 72,64" stroke="#7C2D3E" stroke-width="3.5" stroke-linecap="round" fill="none"/>' + sweat;
+        return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
+      } else {
+        s += '<rect x="40" y="33" width="15" height="5.5" rx="2.75" transform="rotate(-6 47 36)" fill="#2A1530"/>' +
+          '<rect x="65" y="33" width="15" height="5.5" rx="2.75" transform="rotate(6 72 36)" fill="#2A1530"/>' +
+          '<circle cx="49" cy="46" r="3.4" fill="#2A1530"/><circle cx="71" cy="46" r="3.4" fill="#2A1530"/>' +
+          '<path d="M45,58 Q60,72 75,58 Q60,65 45,58 Z" fill="#7C2D3E"/>' +
+          '<path d="M49,59.5 Q60,66 71,59.5 Q60,62.5 49,59.5 Z" fill="#FFF"/>';
+      }
+      return open + s + "</svg>";
+    }
+    if (i === 1) { /* blue — cool shades */
+      if (state === "cheer") {
+        s = '<path d="M20,102 Q0,80 6,52" stroke="#38B6FF" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+          '<path d="M100,102 Q120,80 114,52" stroke="#38B6FF" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+          '<circle cx="6" cy="47" r="8.5" fill="#B96F3E"/><circle cx="114" cy="47" r="8.5" fill="#B96F3E"/>';
+      }
+      s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#38B6FF"/>' +
+        '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
+        '<rect x="51" y="66" width="18" height="18" rx="6" fill="#9A5527"/>' +
+        '<circle cx="60" cy="46" r="28" fill="#B96F3E"/>' +
+        '<path d="M31,42 C33,20 46,13 60,13 C74,13 87,20 89,42 L89,47 C70,39 50,39 31,47 Z" fill="#177FBF"/>' +
+        '<rect x="24" y="45" width="72" height="8" rx="4" fill="#0F5E94"/>' +
+        '<rect x="36" y="40" width="20" height="13" rx="6" fill="#1D0B26"/>' +
+        '<rect x="64" y="40" width="20" height="13" rx="6" fill="#1D0B26"/>' +
+        '<rect x="54" y="44" width="12" height="4" fill="#1D0B26"/>' +
+        '<rect x="39" y="42.5" width="9" height="3.5" rx="1.75" transform="rotate(-18 43 44)" fill="#FFF" opacity=".35"/>';
+      if (state === "cheer") {
+        s += '<path d="M45,58 Q60,72 75,58 Q60,65 45,58 Z" fill="#5E2408"/>' +
+          '<path d="M49,59.5 Q60,66 71,59.5 Q60,62.5 49,59.5 Z" fill="#FFF"/>';
+      } else if (state === "slump") {
+        s += '<path d="M50,66 L70,66" stroke="#401F0E" stroke-width="4" stroke-linecap="round"/>' + sweat;
+        return open + '<g transform="translate(0 4) rotate(-3 60 60)">' + s + "</g></svg>";
+      } else {
+        s += '<path d="M48,63 Q62,69 74,59" stroke="#401F0E" stroke-width="4" stroke-linecap="round" fill="none"/>';
+      }
+      return open + s + "</svg>";
+    }
+    if (i === 2) { /* coral — determined, deep skin, high-contrast features */
+      if (state === "cheer") {
+        s = '<path d="M20,102 Q0,80 6,52" stroke="#FF6B5E" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+          '<path d="M100,102 Q120,80 114,52" stroke="#FF6B5E" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+          '<circle cx="6" cy="47" r="8.5" fill="#8A4B26"/><circle cx="114" cy="47" r="8.5" fill="#8A4B26"/>';
+      }
+      s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#FF6B5E"/>' +
+        '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
+        '<rect x="51" y="66" width="18" height="18" rx="6" fill="#6B3418"/>' +
+        '<circle cx="60" cy="48" r="28" fill="#8A4B26"/>' +
+        '<circle cx="40" cy="28" r="11" fill="#1E0F26"/><circle cx="60" cy="20" r="13" fill="#1E0F26"/>' +
+        '<circle cx="80" cy="28" r="11" fill="#1E0F26"/><circle cx="30" cy="40" r="9" fill="#1E0F26"/>' +
+        '<circle cx="90" cy="40" r="9" fill="#1E0F26"/>';
+      if (state === "cheer") {
+        s += '<path d="M41,49 Q49,41 57,49" stroke="#FFE9D6" stroke-width="4" stroke-linecap="round" fill="none"/>' +
+          '<path d="M63,49 Q71,41 79,49" stroke="#FFE9D6" stroke-width="4" stroke-linecap="round" fill="none"/>' +
+          '<path d="M45,60 Q60,73 75,60 Q60,67 45,60 Z" fill="#4A1E08"/>' +
+          '<path d="M49,61.5 Q60,67 71,61.5 Q60,64 49,61.5 Z" fill="#FFF"/>';
+      } else if (state === "slump") {
+        s += '<rect x="39" y="38" width="16" height="6" rx="3" transform="rotate(-16 47 41)" fill="#241105"/>' +
+          '<rect x="65" y="38" width="16" height="6" rx="3" transform="rotate(16 73 41)" fill="#241105"/>' +
+          '<path d="M40,54 Q49,61 58,54" stroke="#FFE9D6" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+          '<path d="M62,54 Q71,61 80,54" stroke="#FFE9D6" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+          '<path d="M48,70 Q55,66 60,70 Q65,74 72,70" stroke="#FFE9D6" stroke-width="3.5" stroke-linecap="round" fill="none"/>' + sweat;
+        return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
+      } else {
+        s += '<rect x="39" y="35" width="16" height="6" rx="3" transform="rotate(14 47 38)" fill="#241105"/>' +
+          '<rect x="65" y="35" width="16" height="6" rx="3" transform="rotate(-14 73 38)" fill="#241105"/>' +
+          '<ellipse cx="49" cy="48" rx="6" ry="4.6" fill="#FFF6E8"/><ellipse cx="71" cy="48" rx="6" ry="4.6" fill="#FFF6E8"/>' +
+          '<circle cx="49" cy="48" r="2.6" fill="#1D0D05"/><circle cx="71" cy="48" r="2.6" fill="#1D0D05"/>' +
+          '<path d="M46,62 Q60,71 74,61" stroke="#2A1206" stroke-width="4.5" stroke-linecap="round" fill="none"/>';
+      }
+      return open + s + "</svg>";
+    }
+    /* purple — the coiled newcomer */
+    if (state === "cheer") {
+      s = '<path d="M20,102 Q0,80 6,52" stroke="#B07FE8" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+        '<path d="M100,102 Q120,80 114,52" stroke="#B07FE8" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+        '<circle cx="6" cy="47" r="8.5" fill="#C68642"/><circle cx="114" cy="47" r="8.5" fill="#C68642"/>';
+    }
+    s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#B07FE8"/>' +
+      '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
+      '<rect x="51" y="66" width="18" height="18" rx="6" fill="#A66A2E"/>' +
+      '<circle cx="60" cy="46" r="28" fill="#C68642"/>' +
+      '<path d="M32,42 C32,22 46,14 60,14 C74,14 88,22 88,42 C84,29 74,25 60,25 C46,25 36,29 32,42 Z" fill="#17101F"/>' +
+      '<circle cx="46" cy="15" r="7" fill="#17101F"/><circle cx="60" cy="11" r="8" fill="#17101F"/><circle cx="74" cy="15" r="7" fill="#17101F"/>';
+    if (state === "cheer") {
+      s += '<path d="M41,47 Q49,40 57,47" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+        '<path d="M63,47 Q71,40 79,47" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+        '<path d="M44,58 Q60,80 76,58 Q60,67 44,58 Z" fill="#5E2408"/>' +
+        '<path d="M52,68 Q60,74 68,68 Q60,71 52,68 Z" fill="#FF8FA3"/>';
+    } else if (state === "slump") {
+      s += '<rect x="39" y="35" width="16" height="5.5" rx="2.75" transform="rotate(16 47 38)" fill="#17101F"/>' +
+        '<rect x="65" y="35" width="16" height="5.5" rx="2.75" transform="rotate(-16 73 38)" fill="#17101F"/>' +
+        '<path d="M40,48 Q49,55 58,48" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+        '<path d="M62,48 Q71,55 80,48" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+        '<path d="M48,64 Q55,60 60,64 Q65,68 72,64" stroke="#5E2408" stroke-width="3.5" stroke-linecap="round" fill="none"/>' + sweat;
+      return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
+    } else {
+      s += '<rect x="40" y="33" width="15" height="5.5" rx="2.75" transform="rotate(-6 47 36)" fill="#17101F"/>' +
+        '<rect x="65" y="33" width="15" height="5.5" rx="2.75" transform="rotate(6 72 36)" fill="#17101F"/>' +
+        '<circle cx="49" cy="46" r="3.4" fill="#241105"/><circle cx="71" cy="46" r="3.4" fill="#241105"/>' +
+        '<path d="M45,58 Q60,72 75,58 Q60,65 45,58 Z" fill="#5E2408"/>' +
+        '<path d="M49,59.5 Q60,66 71,59.5 Q60,62.5 49,59.5 Z" fill="#FFF"/>';
+    }
+    return open + s + "</svg>";
+  }
 
   /* ---------- sound (synthesized with WebAudio only — no files) ---------- */
   var Snd = {
@@ -134,9 +394,8 @@
         else if (kind === "correct") { this.tone(659.25, 0.16, "triangle", 0.4, 0); this.tone(987.77, 0.34, "triangle", 0.4, 0.09); }
         else if (kind === "gold") { var g = [1318.5, 1567.98, 2093.0]; for (i = 0; i < g.length; i++) this.tone(g[i], 0.22, "sine", 0.3, i * 0.06); }
         else if (kind === "wrong") { this.tone(220.0, 0.32, "sawtooth", 0.15, 0, 207.65); this.tone(110.0, 0.36, "sine", 0.3, 0.02); }
-        else if (kind === "steal") { this.tone(880.0, 0.09, "square", 0.13, 0); this.tone(880.0, 0.12, "square", 0.13, 0.13); }
-        else if (kind === "needle") { this.tone(1567.98, 0.3, "square", 0.09, 0, 280.0); this.tone(2637.0, 0.1, "sine", 0.15, 0); }
-        else if (kind === "door") { this.noise(0.8, 0.5, 220); this.tone(55.0, 0.7, "sine", 0.5, 0, 38.0); }
+        else if (kind === "spin") { for (i = 0; i < 5; i++) this.tone(520 + i * 90, 0.07, "square", 0.07, i * 0.09); }
+        else if (kind === "vote") { this.tone(392.0, 0.12, "triangle", 0.32, 0); this.tone(392.0, 0.12, "triangle", 0.32, 0.45); this.tone(392.0, 0.12, "triangle", 0.32, 0.9); this.tone(783.99, 0.42, "triangle", 0.36, 1.35); }
         else if (kind === "finale") { var c = [523.25, 659.25, 783.99, 1046.5]; for (i = 0; i < c.length; i++) this.tone(c[i], 1.5, "triangle", 0.19, i * 0.05); this.tone(261.63, 1.6, "sine", 0.22, 0); }
         else if (kind === "tick") { this.tone(64.0, 0.07, "sine", 0.5, 0); }
       } catch (e) {}
@@ -145,18 +404,11 @@
   };
   Snd.init();
 
-  /* ---------- production state (Pass 3) ---------- */
+  /* ---------- production state (Pass 3 machinery, format-neutral) ---------- */
   var dispScore = [], writtenScore = [];
   var pageHidden = false, lastShownValue = null, coldTimer = null;
+  var spinTimer = null, voteTimer = null;
   function setLight(state) { var g = $("scr-game"); if (g) g.setAttribute("data-light", state); }
-  function setSpot(x, y) {
-    var spot = $("spot"); if (!spot) return;
-    spot.style.background = "radial-gradient(46% 62% at " + x + "% " + y + "%, rgba(232,205,141,.20), rgba(232,205,141,.06) 45%, transparent 70%)";
-  }
-  function fxNeedle() {
-    var n = $("needleFx"); if (!n) return;
-    n.classList.remove("strike"); void n.offsetWidth; n.classList.add("strike");
-  }
   /* fortune rail: displayed totals tween toward real scores */
   function stepFortune(dt) {
     if (!G) return;
@@ -179,13 +431,11 @@
       }
     });
   }
-  /* live question value: the very figure resolveAnswer banks (elapsed-based decay) */
+  /* live question value: the very figure the reveal banks (elapsed-based decay) */
   function drawValue() {
     var vEl = $("qValue");
-    if (!vEl || !G || !G.cur || G.cur.value <= 0) return;
-    var base = G.phase === "stealQ" ? STEAL_TIME : QTIME;
-    var v = earned(G.cur.value, G.cur.elapsed, base);
-    if (G.phase === "stealQ") v = round10(v * 0.5);
+    if (!vEl || !G || !G.cur || G.cur.value <= 0 || G.cur.betRound) return;
+    var v = earned(G.cur.value, G.cur.elapsed, G.cur.clockTotal || QTIME);
     if (v !== lastShownValue) {
       lastShownValue = v;
       vEl.textContent = money(v);
@@ -193,14 +443,12 @@
       if (wrap) {
         wrap.classList.toggle("low", v <= G.cur.value * 0.6);
         wrap.classList.remove("bump"); void wrap.offsetWidth; wrap.classList.add("bump");
-        var lab = wrap.querySelector("small");
-        if (lab) lab.textContent = G.phase === "stealQ" ? "THE STEAL TAKES" : "QUESTION VALUE";
       }
     }
   }
   /* gold leaf finale — pooled particles, capped, no per-frame allocation */
   var leaves = { active: false, parts: [], cv: null, cx: null, dpr: 1 };
-  var LEAF_COLORS = ["#c6a45e", "#e8cd8d", "#a8853f", "#f2e2ac"];
+  var LEAF_COLORS = ["#E8437C", "#2E9BFF", "#9B5DE5", "#FF8C42", "#3ECF6E", "#FFC93C", "#17BEBB", "#FFD76A"];
   function resetLeaf(p, scatter) {
     var cv = leaves.cv; if (!cv) return;
     p.x = Math.random() * cv.width;
@@ -247,11 +495,11 @@
   function saveSeen() {
     try { localStorage.setItem("gh_seen_v1", JSON.stringify(Object.keys(seen).map(Number))); } catch (e) {}
   }
-  var pools = {}; // "cat|diff" -> shuffled [ids]
+  var pools = {}; // "cat|diff" -> shuffled [ids] — multiple-choice questions only
   function poolFor(cat, diff) {
     var key = cat + "|" + diff;
     if (!pools[key]) {
-      var ids = BANK.filter(function (q) { return q.cat === cat && q.diff === diff; }).map(function (q) { return q.id; });
+      var ids = BANK.filter(function (q) { return q.cat === cat && q.diff === diff && !q.kind; }).map(function (q) { return q.id; });
       var fresh = ids.filter(function (id) { return !seen[id]; });
       pools[key] = shuffle(fresh.length >= 1 ? fresh : ids.slice());
     }
@@ -260,13 +508,33 @@
   function drawQuestion(cat, diff) {
     var p = poolFor(cat, diff);
     if (!p.length) { p = poolFor(cat, diff); } // rebuilt above on exhaustion
-    if (!p.length) { // fall back: any question of this difficulty, then any at all
-      var any = BANK.filter(function (q) { return q.diff === diff && !seen[q.id]; });
-      if (!any.length) any = BANK.slice();
+    if (!p.length) { // fall back: any unseen question of this difficulty, then any at all
+      var any = BANK.filter(function (q) { return q.diff === diff && !q.kind && !seen[q.id]; });
+      if (!any.length) any = BANK.filter(function (q) { return !q.kind; });
       var q = pick(any); seen[q.id] = 1; return q;
     }
     var id = p.pop(); seen[id] = 1;
     return BANK[id];
+  }
+  /* the five guess slots: kinds shuffled (2 num + 2 survey + 1 swing),
+     ids drawn per kind, unseen preferred */
+  function buildGuessSchedule() {
+    function idsFor(kind) {
+      var all = BANK.filter(function (q) { return q.kind === kind; }).map(function (q) { return q.id; });
+      var fresh = all.filter(function (id) { return !seen[id]; });
+      return shuffle(fresh.length ? fresh : all.slice());
+    }
+    var nums = idsFor("num"), survs = idsFor("survey");
+    var kinds = shuffle(["num", "num", "survey", "survey", rng() < 0.5 ? "num" : "survey"]);
+    var map = {};
+    GUESS_SLOTS.forEach(function (slot, i) {
+      var src = kinds[i] === "num" ? nums : survs;
+      if (!src.length) src = kinds[i] === "num" ? survs : nums;
+      var id = src.pop();
+      if (id == null) return;
+      map[slot] = id; seen[id] = 1;
+    });
+    return map;
   }
 
   /* ---------- game state ---------- */
@@ -274,20 +542,21 @@
   function newGame(names) {
     return {
       players: names.map(function (nm, i) {
-        return { name: nm, color: PCOLORS[i], score: 0,
-                 life: { cut: 1, table: 1, clock: 1 }, needle: 1, wager: 0, vaultAns: -1 };
+        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1 };
       }),
-      round: 1, qInRound: 0, turn: 0,
-      phase: "intro",           // intro|pick|question|steal|reveal|wager|vaultQ|vaultReveal|over
+      round: 1, qInRound: 0,
+      phase: "intro",           // intro|spin|bet|question|vote-count|vote|reveal|over
       cur: null,                // current question runtime
-      openFloor: {},            // R1 slots that are open floor
-      boobyRoundQ: 2 + ri(4),   // which R2 question (0-based) hides the Fool's Gold
-      vaultCat: null, vaultQ: null, wagerIdx: 0, revealIdx: 0, order: [],
-      tied: null
+      guess: null,              // "round:qInRound" -> bank id for the 5 guess slots
+      lastStand: {              // standings snapshot for race delta chips
+        scores: names.map(function () { return 0; }),
+        ranks: names.reduce(function (m, _n, i) { m[i] = i; return m; }, {})
+      }
     };
   }
 
-  /* ---------- seats ---------- */
+  /* ---------- seats (the podium row) ---------- */
+  function seatsVisible(v) { var g = $("scr-game"); if (g) g.classList.toggle("noseats", !v); }
   function renderSeats() {
     var top = $("seatsTop"), bot = $("seatsBottom");
     top.innerHTML = ""; bot.innerHTML = "";
@@ -296,37 +565,29 @@
     G.players.forEach(function (p, i) {
       var shown = money(Math.round(dispScore[i] != null ? dispScore[i] : p.score));
       writtenScore[i] = shown;
-      var s = el('<div class="seat" data-seat="' + i + '">' +
-        '<span class="name-dot" style="background:' + p.color + '"></span>' +
-        '<span class="seat-info"><span class="seat-name">' + esc(p.name) + '</span><br>' +
-        '<span class="seat-score">' + shown + '</span> ' +
-        '<span class="tag">' + tagsFor(i) + '</span></span></div>');
+      var state = "neutral";
+      if (G.phase === "reveal" && G.cur && G.cur.marks) state = G.cur.marks[i] ? "cheer" : "slump";
+      var s = el('<div class="seat pod' + i + '" data-seat="' + i + '">' +
+        '<div class="seat-ava">' + avatarSVG(i, state) + "</div>" +
+        '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
+        '<span class="seat-score">' + shown + '</span>' +
+        '<span class="tag">' + tagsFor(i) + "</span></div></div>");
       if (p.score === bestScore && bestScore > 0) s.classList.add("lead");
-      if (G.cur && G.cur.active === i && (G.phase === "question" || G.phase === "pick")) s.classList.add("active");
-      if (G.phase === "steal" && G.cur && i !== G.cur.active) s.classList.add("stealable");
+      if (G.cur && G.cur.marks && G.cur.marks[i]) s.classList.add("gotit");
       s.addEventListener("click", function () { onSeatTap(i); });
-      // TV-first landscape: last two seats along the top edge, first two along the bottom
-      if (i < 2) bot.appendChild(s); else top.appendChild(s);
+      bot.appendChild(s);
     });
-    if (G.round === 2 && G.cur && G.cur.active >= 0) {
-      var ase = document.querySelector('.seat[data-seat="' + G.cur.active + '"]');
-      var tbl = $("table");
-      if (ase && tbl) {
-        var sr = ase.getBoundingClientRect(), tr = tbl.getBoundingClientRect();
-        if (tr.width && tr.height) {
-          setSpot((sr.left + sr.width / 2 - tr.left) / tr.width * 100,
-                  (sr.top + sr.height / 2 - tr.top) / tr.height * 100);
-        }
-      }
-    }
   }
   function tagsFor(i) {
     var p = G.players[i], t = [];
-    if (p.needle > 0) t.push("NEEDLE");
-    if (p.life.cut > 0) t.push("CUT");
-    if (p.life.table > 0) t.push("TABLE");
-    if (p.life.clock > 0) t.push("+8s");
+    t.push(p.cut > 0 ? "CUT TWO" : "CUT SPENT");
+    if (G.round === 3) t.push("BET " + p.bet + (p.bet === 1 ? " CHIP" : " CHIPS"));
     return t.join(" · ");
+  }
+  function onSeatTap(i) {
+    if (!G || !G.cur || G.phase !== "vote") return;
+    if (G.cur.marks[i]) delete G.cur.marks[i]; else G.cur.marks[i] = 1;
+    renderSeats();
   }
 
   /* ---------- clock ---------- */
@@ -375,20 +636,48 @@
   function stage(html) { var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; }
   function standingsHTML() {
     var order = G.players.map(function (p, i) { return i; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
-    var rows = order.map(function (pi, pos) {
-      var p = G.players[pi];
-      return '<div class="stand-row' + (pos === 0 ? " lead" : "") + '"><span class="pos">' + (pos + 1) + '</span>' +
-        '<span class="name-dot" style="background:' + p.color + '"></span><span class="nm">' + esc(p.name) + '</span>' +
-        '<span class="sc">' + money(p.score) + "</span></div>";
+    var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
+    var prev = G.lastStand;
+    var disp = order.slice();
+    if (disp.length > 1) { var t = disp[0]; disp[0] = disp[1]; disp[1] = t; } // 2nd, 1st, 3rd, 4th
+    var pods = disp.map(function (pi) {
+      var p = G.players[pi], pos = ranks[pi];
+      var chips = "";
+      if (prev) {
+        var gain = p.score - prev.scores[pi];
+        var rd = prev.ranks[pi] - pos;
+        if (gain > 0) chips += '<span class="gain-chip">' + mplus(gain) + "</span>";
+        if (rd > 0) chips += '<span class="delta up">▲ ' + rd + "</span>";
+        else if (rd < 0) chips += '<span class="delta down">▼ ' + (-rd) + "</span>";
+      }
+      var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
+      return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
+        '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + chips +
+        avatarSVG(pi, pos === 0 ? "cheer" : "neutral") +
+        '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
     }).join("");
-    return '<div class="standings">' + rows + "</div>";
+    var leadName = G.players[order[0]].name, lastName = G.players[order[order.length - 1]].name;
+    var line = order[0] === order[order.length - 1]
+      ? "Dead level at the top. The kitchen is everybody's tonight."
+      : esc(leadName) + " is cooking. " + esc(lastName) + " — the kitchen is still open.";
+    G.lastStand = { scores: G.players.map(function (p) { return p.score; }), ranks: ranks };
+    return '<div class="race-wrap"><div class="race-stage">' +
+      '<div class="race-sterling"><div class="bubble bubble-stand">' + line + "</div>" + sterlingSVG("smirk") + "</div>" +
+      '<div class="race-podiums">' +
+      '<svg class="swap-arrows" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="M28,34 Q40,4 54,10" fill="none" stroke="#35D461" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="3 2.6" opacity=".55"/>' +
+      '<path d="M54,10 l-4.4,.4 M54,10 l-1.2,4.2" stroke="#35D461" stroke-width="1.1" stroke-linecap="round" opacity=".55"/>' +
+      '<path d="M58,8 Q70,32 82,28" fill="none" stroke="#FF6B5E" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="3 2.6" opacity=".45"/></svg>' +
+      pods + "</div></div></div>";
   }
   function updateTop() {
-    var labels = { 1: "ROUND 1 · THE OPEN TABLE", 2: "ROUND 2 · THE HOT SEAT", 3: "ROUND 3 · THE VAULT" };
+    var labels = { 1: "ROUND 1 · THE WARM-UP", 2: "ROUND 2 · DOUBLE MONEY", 3: "ROUND 3 · THE BIG FINISH" };
     $("roundLabel").textContent = labels[G.round];
-    var n = G.round === 1 ? G.qInRound + 1 : G.round === 2 ? R1_COUNT + G.qInRound + 1 : 15;
+    var n = G.round === 1 ? G.qInRound + 1 : G.round === 2 ? R1_COUNT + G.qInRound + 1 : R1_COUNT + R2_COUNT + G.qInRound + 1;
     $("qCounter").textContent = "QUESTION " + Math.min(n, 15) + " OF 15";
   }
+  function speedFrac(elapsed, total) { return Math.max(0, Math.min(1, 1 - elapsed / total)); }
+  function earned(value, elapsed, total) { return round10(value * (0.5 + 0.5 * speedFrac(elapsed, total))); }
 
   /* ---------- show flow ---------- */
   function showScreen(id) {
@@ -398,10 +687,7 @@
   function startShow(names) {
     G = newGame(names);
     pools = {};
-    // choose the two open-floor slots in Round 1
-    var slots = shuffle([1, 2, 3, 4, 5, 6]).slice(0, 2);
-    slots.forEach(function (s) { G.openFloor[s] = 1; });
-    G.vaultCat = pick(CATS);
+    G.guess = buildGuessSchedule();
     showScreen("scr-game");
     setLight("open");
     stopLeaves();
@@ -414,549 +700,362 @@
     var letters = "THE GILDED HOUR".split("").map(function (ch, i) {
       return '<span class="co-l" style="animation-delay:' + (i * 45) + 'ms">' + (ch === " " ? "&nbsp;" : ch) + "</span>";
     }).join("");
-    stage('<div class="coldopen"><div class="co-sweep"></div>' +
+    stage('<div class="coldopen"><div class="co-marquee marquee"><div class="co-sweep"></div>' +
       '<div class="co-kicker">STERLING PRESENTS</div>' +
       '<div class="co-title">' + letters + "</div>" +
-      '<div class="co-sub">Fifteen questions · one table · the clock is money</div></div>');
+      '<div class="co-sub">Fifteen questions · everybody plays · the clock is money</div></div></div>');
+    buildBulbs(document.querySelector(".co-marquee"));
+    seatsVisible(false);
     coldTimer = setTimeout(function () { if (G && G.phase === "coldopen") roundIntro(); }, 2100);
   }
   function roundIntro() {
     G.phase = "intro"; setLight(G.round === 1 ? "open" : G.round === 2 ? "hot" : "vault");
+    seatsVisible(false);
     updateTop(); renderSeats();
-    var titles = { 1: "THE OPEN TABLE", 2: "THE HOT SEAT", 3: "THE VAULT" };
+    var titles = { 1: "THE WARM-UP", 2: "DOUBLE MONEY", 3: "THE BIG FINISH" };
     var texts = {
-      1: "Seven questions. Take turns choosing a category and a value — easy $100, medium $200, hard $300. A fast correct answer pays in full; a slow one, half — the money drains with the clock, so watch the figure fall. Miss, and the table may steal. Twice this round, the floor is open: first name shouted takes the question.",
-      2: "Seven questions at double stakes — $200, $400, $600. Wrong answers now cost half the value. Your lifelines are live: Cut Two, Ask the Table, Second Clock. And each of you holds one Needle: play it during a rival's question to cut them to five seconds. Somewhere in this round hides the Fool's Gold — one wrong answer that pays the question's value to whoever picks it.",
-      3: "One question, from the category of " + G.vaultCat + ". Each of you wagers in secret — pass the phone, keep it covered — then answers in secret. Correct: the wager is added. Wrong: it is taken. Everything else was rehearsal."
+      1: "Six questions, and everybody answers every one. Sterling spins the category — the wheel and he have an understanding. Easy pays $100, medium $200, hard $300, and the value drains while the room thinks, so commit early. When the clock stops: fingers up, show 1, 2, 3 or 4. Everyone holding the right fingers banks the money. Twice this round, a closest-number question: no options, just shout a number — the nearest shout takes it.",
+      2: "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it before the fingers go up and two wrong answers vanish for everybody. Spend it like it's the last one. It is.",
+      3: "Three questions. Before each one, bet on yourself out loud: 1, 2 or 3 chips — a chip is $100. Get it right and the bet pays in full: no drain, no deductions. Get it wrong and you lose nothing but face. Nobody leaves this show poorer than they arrived. That is the whole trick of it."
     };
     stage('<div class="bumper"><div class="round-kicker">ROUND ' + G.round + "</div>" +
       '<div class="round-title">' + titles[G.round] + "</div>" +
       '<p class="round-text">' + texts[G.round] + "</p>" +
       (G.round > 1 ? standingsHTML() : "") +
-      '<button class="btn-gold" id="btnRoundGo">' + (G.round === 3 ? "TO THE VAULT" : "BEGIN ROUND " + G.round) + "</button></div>");
+      '<button class="btn-gold" id="btnRoundGo">' + (G.round === 1 ? "START THE WARM-UP" : G.round === 2 ? "DOUBLE IT" : "TO THE BIG FINISH") + "</button></div>");
     hostSay("r" + G.round);
-    $("btnRoundGo").addEventListener("click", function () {
-      if (G.round === 3) startWagers(); else nextQuestion();
-    });
+    $("btnRoundGo").addEventListener("click", function () { nextQuestion(); });
   }
   function nextQuestion() {
     if (G.round === 1 && G.qInRound >= R1_COUNT) { G.round = 2; G.qInRound = 0; roundIntro(); return; }
     if (G.round === 2 && G.qInRound >= R2_COUNT) { G.round = 3; G.qInRound = 0; roundIntro(); return; }
-    var isOpen = G.round === 1 && !!G.openFloor[G.qInRound];
-    var active = G.turn % G.players.length;
-    G.turn++;
-    if (isOpen) beginOpenFloor();
-    else beginPick(active);
+    if (G.round === 3 && G.qInRound >= R3_COUNT) { finishShow(); return; }
+    var gid = G.guess ? G.guess[G.round + ":" + G.qInRound] : null;
+    if (gid != null) G.cur = makeCur(BANK[gid], BANK[gid].kind);
+    else G.cur = makeCur(drawNormal(), "mcq");
+    if (G.round === 3) betBeat(); else spinBeat();
   }
-  function makeOffers() {
-    var cats = shuffle(CATS.slice()).slice(0, 3);
-    var diffs = shuffle(["easy", "medium", "hard"]);
-    return cats.map(function (c, i) { return { cat: c, diff: diffs[i] }; });
+  function drawNormal() {
+    var pat = G.round === 1 ? R1_DIFFS : G.round === 2 ? R2_DIFFS : R3_DIFFS;
+    return drawQuestion(pick(CATS), pat[G.qInRound] || "medium");
   }
-  function beginPick(active) {
-    G.phase = "pick";
-    G.cur = { active: active, offers: makeOffers(), elapsed: 0 };
-    updateTop(); renderSeats();
-    var p = G.players[active];
-    var tiles = G.cur.offers.map(function (o, i) {
-      var val = (G.round === 1 ? R1_VALUES : R2_VALUES)[o.diff];
-      return '<button class="cat-tile" data-offer="' + i + '"><span class="cat-name">' + esc(o.cat) + '</span>' +
-        '<span class="cat-val">' + o.diff.toUpperCase() + " · $" + val + "</span></button>";
-    }).join("");
-    stage('<div class="q-cat">' + esc(p.name.toUpperCase()) + " TO CHOOSE</div>" +
-      '<div class="q-text" style="font-size:clamp(19px,3vw,25px)">Pick the question, ' + esc(p.name) + ".</div>" +
-      '<div class="cat-row">' + tiles + "</div>");
-    document.querySelectorAll("[data-offer]").forEach(function (b) {
-      b.addEventListener("click", function () { chooseOffer(parseInt(b.getAttribute("data-offer"), 10)); });
-    });
-  }
-  function beginOpenFloor() {
-    G.phase = "claim";
-    G.cur = { active: -1, offers: null, elapsed: 0, openFloor: true };
-    updateTop(); renderSeats();
-    // draw first, then let the room claim it
-    var offer = pick(makeOffers());
-    var q = drawQuestion(offer.cat, offer.diff);
-    setupQuestion(q, offer, -1);
-    G.cur.openFloor = true;
-    stage(questionHTML("OPEN FLOOR — first name shouted claims it. Tap the claimant's seat.") +
-      '<p class="round-text" style="margin-top:10px">Waiting for a claim…</p>');
-    // no clock until claimed
-  }
-  function chooseOffer(i) {
-    var o = G.cur.offers[i];
-    var q = drawQuestion(o.cat, o.diff);
-    setupQuestion(q, o, G.cur.active);
-    askCurrent();
-  }
-  function setupQuestion(q, offer, active) {
-    var opts = shuffle([{ t: q.a, ok: true }].concat(q.w.map(function (w) { return { t: w, ok: false }; })));
+  function makeCur(q, kind) {
+    var diff = q.diff || "medium";
+    var betRound = G.round === 3;
     var cur = {
-      q: q, cat: offer.cat, diff: offer.diff,
-      value: (G.round === 1 ? R1_VALUES : R2_VALUES)[offer.diff],
-      opts: opts, active: active, elapsed: 0, picked: -1,
-      needledBy: -1, cutUsed: false, foolsIdx: -1, resolved: false
+      q: q, kind: kind, cat: q.cat, diff: diff,
+      value: betRound ? 0 : BASE_VALUES[diff] * (G.round === 2 ? 2 : 1),
+      elapsed: 0, clockTotal: kind === "num" ? NUM_TIME : QTIME,
+      opts: null, marks: {}, resolved: false, cutUsed: false,
+      betRound: betRound, bankValue: 0
     };
-    lastShownValue = null;
-    if (G.round === 2 && G.qInRound === G.boobyRoundQ) {
-      var wrongIdxs = opts.map(function (o, i) { return o.ok ? -1 : i; }).filter(function (i) { return i >= 0; });
-      cur.foolsIdx = pick(wrongIdxs);
+    if (kind !== "num") {
+      cur.opts = shuffle([{ t: q.a, ok: true }].concat(q.w.map(function (w) { return { t: w, ok: false }; })));
     }
-    G.cur = cur;
+    lastShownValue = null;
+    return cur;
   }
-  function questionHTML(forWhom) {
+
+  /* ---------- the spin (Sterling chooses the category — pure theatre) ---------- */
+  function spinBeat() {
+    G.phase = "spin";
+    seatsVisible(true);
+    updateTop(); renderSeats();
+    var chips = CATS.map(function (c) {
+      var cs = catStyle(c);
+      return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + esc(c) + "</span>";
+    }).join("");
+    stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
+      '<div class="cat-row">' + chips + "</div>" +
+      '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
+    hostSay("spin", { cat: G.cur.cat });
+    Snd.play("spin");
+    var ticks = 0, totalTicks = 10 + ri(3);
+    clearInterval(spinTimer);
+    spinTimer = setInterval(function () {
+      if (!G || G.phase !== "spin") { clearInterval(spinTimer); spinTimer = null; return; }
+      ticks++;
+      var cat = ticks >= totalTicks ? G.cur.cat : CATS[ticks % CATS.length];
+      document.querySelectorAll(".cat-chip").forEach(function (ch) {
+        ch.classList.toggle("sel", ch.getAttribute("data-cat") === cat);
+      });
+      if (ticks >= totalTicks) {
+        clearInterval(spinTimer); spinTimer = null;
+        setTimeout(function () { if (G && G.phase === "spin") askCurrent(); }, 350);
+      }
+    }, 85);
+  }
+
+  /* ---------- the Big Finish bet beat ---------- */
+  function betBeat() {
+    G.phase = "bet";
+    seatsVisible(true);
+    updateTop(); renderSeats();
+    var rows = G.players.map(function (p, i) {
+      return '<div class="name-row bet-row" style="--pc:var(--p' + i + ')"><span class="name-dot" style="background:' + p.color + '"></span>' +
+        '<span style="flex:1;text-align:left">' + esc(p.name) + "</span>" +
+        '<button class="chip" data-bet="' + i + '|-1">− 1</button>' +
+        '<span class="bet-amt" id="betAmt' + i + '">' + p.bet + (p.bet === 1 ? " CHIP" : " CHIPS") + " · " + money(p.bet * 100) + "</span>" +
+        '<button class="chip" data-bet="' + i + '|1">+ 1</button></div>';
+    }).join("");
+    stage('<div class="round-kicker">THE BIG FINISH · QUESTION ' + (G.qInRound + 1) + " OF 3</div>" +
+      '<p class="round-text">Bet on yourself, out loud — 1, 2 or 3 chips. A chip is $100. Right pays the bet; wrong costs nothing but pride.</p>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;width:min(480px,94vw);margin:8px auto">' + rows + "</div>" +
+      '<button class="btn-gold" id="btnBetsDone">BETS ARE IN — SPIN THE CATEGORY</button>');
+    hostSay("bet");
+    document.querySelectorAll("[data-bet]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var parts = b.getAttribute("data-bet").split("|");
+        var pi = parseInt(parts[0], 10), p = G.players[pi];
+        p.bet = Math.max(1, Math.min(3, p.bet + parseInt(parts[1], 10)));
+        var amt = $("betAmt" + pi);
+        if (amt) amt.textContent = p.bet + (p.bet === 1 ? " CHIP" : " CHIPS") + " · " + money(p.bet * 100);
+        renderSeats();
+      });
+    });
+    $("btnBetsDone").addEventListener("click", spinBeat);
+  }
+
+  /* ---------- asking ---------- */
+  function questionHTML() {
     var c = G.cur;
     var btns = c.opts.map(function (o, i) {
-      return '<button class="ans-btn" data-ans="' + i + '"' + (o.gone ? " disabled" : "") + '>' +
-        '<span class="letter">' + "ABCD"[i] + '</span><span>' + esc(o.t) + "</span></button>";
+      return '<button class="ans-btn' + (o.gone ? " dim" : "") + '" style="--d:' + (i * 0.09).toFixed(2) + 's" disabled>' +
+        '<span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + "</span></button>";
     }).join("");
-    return '<div class="q-cat">' + esc(c.cat.toUpperCase()) + " · " + c.diff.toUpperCase() + " · " + money(c.value) + "</div>" +
+    var head = c.kind === "survey" ? "MOST PEOPLE SAY…" : c.diff.toUpperCase();
+    return '<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">' + head + "</span></div>" +
       '<div class="q-text">' + esc(c.q.q) + "</div>" +
-      (c.value > 0 && !c.sudden ? '<div class="q-value"><small>QUESTION VALUE</small><span id="qValue">' + money(c.value) + "</span></div>" : "") +
-      '<div class="q-for">' + esc(forWhom) + "</div>" + timerHTML() +
-      '<div class="answers">' + btns + "</div>" + toolsHTML();
+      '<div class="q-meta">' +
+      (c.betRound
+        ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
+        : '<div class="q-value"><small>QUESTION VALUE</small><span id="qValue">' + money(c.value) + "</span></div>") +
+      timerHTML() + "</div>" +
+      '<div class="answers pop-in">' + btns + "</div>" + toolsHTML();
+  }
+  function numHTML() {
+    var c = G.cur;
+    return '<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">CLOSEST NUMBER</span></div>' +
+      '<div class="q-text">' + esc(c.q.q) + "</div>" +
+      '<div class="q-meta">' +
+      (c.betRound
+        ? '<div class="q-for">Bets are on — the closest shout takes their bet money.</div>'
+        : '<div class="q-value"><small>QUESTION VALUE</small><span id="qValue">' + money(c.value) + "</span></div>") +
+      timerHTML() + "</div>" +
+      '<div class="q-for">No options. No hiding. Think of a number — shout it when Sterling calls it.</div>' +
+      '<div style="margin-top:14px"><button class="btn-gold" id="btnCallIt">CALL IT — NUMBERS OUT</button></div>';
   }
   function toolsHTML() {
-    if (G.round !== 2 || !G.cur || G.cur.active < 0) return "";
-    var a = G.players[G.cur.active];
+    if (!G.cur || G.cur.kind === "num") return "";
     var h = '<div class="tools">';
-    h += '<button class="tool-btn" id="toolCut" ' + (a.life.cut > 0 ? "" : "disabled") + ">CUT TWO<small>remove two wrong answers — " + esc(a.name) + "'s</small></button>";
-    h += '<button class="tool-btn" id="toolTable" ' + (a.life.table > 0 ? "" : "disabled") + ">ASK THE TABLE<small>pause the clock, open debate</small></button>";
-    h += '<button class="tool-btn" id="toolClock" ' + (a.life.clock > 0 ? "" : "disabled") + ">SECOND CLOCK<small>+8 seconds</small></button>";
     G.players.forEach(function (p, i) {
-      if (i !== G.cur.active) h += '<button class="tool-btn needle" data-needle="' + i + '" ' + (p.needle > 0 ? "" : "disabled") + ">NEEDLE<small>" + esc(p.name) + " cuts them to 5s</small></button>";
+      h += '<button class="tool-btn" data-cut="' + i + '"' + (p.cut > 0 && !G.cur.cutUsed ? "" : " disabled") + ">CUT TWO<small>" + esc(p.name) + "'s one lifeline</small></button>";
     });
+    h += '<button class="tool-btn" id="btnCallIt">CALL IT<small>everybody — fingers up</small></button>';
     return h + "</div>";
   }
   function askCurrent() {
     G.phase = "question";
-    var p = G.players[G.cur.active];
+    applyCat(G.cur.cat);
+    seatsVisible(true);
     updateTop(); renderSeats();
-    stage(questionHTML(p.name + " answers. The room may discuss — the answer is theirs alone."));
+    if (G.cur.kind === "num") {
+      stage(numHTML());
+      hostSay("numQ", { cat: G.cur.cat });
+    } else {
+      stage(questionHTML());
+      hostSay("read", { cat: G.cur.cat });
+    }
     wireQuestion();
-    startClock(QTIME, function () { resolveAnswer(-1); });
+    startClock(G.cur.clockTotal, function () { callIt(); });
   }
   function wireQuestion() {
-    document.querySelectorAll("[data-ans]").forEach(function (b) {
-      b.addEventListener("click", function () { resolveAnswer(parseInt(b.getAttribute("data-ans"), 10)); });
+    document.querySelectorAll("[data-cut]").forEach(function (b) {
+      b.addEventListener("click", function () { useCut(parseInt(b.getAttribute("data-cut"), 10)); });
     });
-    var cut = $("toolCut"), tab = $("toolTable"), clk = $("toolClock");
-    if (cut) cut.addEventListener("click", useCut);
-    if (tab) tab.addEventListener("click", useTable);
-    if (clk) clk.addEventListener("click", useClock);
-    document.querySelectorAll("[data-needle]").forEach(function (b) {
-      b.addEventListener("click", function () { useNeedle(parseInt(b.getAttribute("data-needle"), 10)); });
-    });
+    var call = $("btnCallIt");
+    if (call) call.addEventListener("click", callIt);
+    var qt = document.querySelector(".q-text");
+    if (qt) qt.addEventListener("click", callIt);
   }
-  function speedFrac(elapsed, total) { return Math.max(0, Math.min(1, 1 - elapsed / total)); }
-  function earned(value, elapsed, total) { return round10(value * (0.5 + 0.5 * speedFrac(elapsed, total))); }
-
-  /* ---------- lifelines & the Needle ---------- */
-  function useCut() {
-    var c = G.cur, a = G.players[c.active];
-    if (a.life.cut <= 0 || c.cutUsed) return;
-    a.life.cut--; c.cutUsed = true;
-    var wrong = c.opts.map(function (o, i) { return { o: o, i: i }; }).filter(function (x) { return !x.o.ok && x.i !== c.foolsIdx; });
+  function useCut(i) {
+    var c = G.cur, p = G.players[i];
+    if (!c || G.phase !== "question" || c.kind === "num" || c.cutUsed || p.cut <= 0) return;
+    p.cut--; c.cutUsed = true;
+    var wrong = c.opts.map(function (o, ix) { return { o: o, i: ix }; }).filter(function (x) { return !x.o.ok; });
     shuffle(wrong).slice(0, 2).forEach(function (x) { x.o.gone = true; });
-    hostSay("cut", { name: a.name });
-    refreshQuestion();
-  }
-  function useTable() {
-    var c = G.cur, a = G.players[c.active];
-    if (a.life.table <= 0) return;
-    a.life.table--;
-    stopClock();
-    hostSay("tableTalk", { name: a.name });
-    stage(questionHTML(a.name + " has asked the table. The clock is paused — debate!") +
-      '<div style="margin-top:14px"><button class="btn-gold" id="btnResume">THE TABLE HAS SPOKEN — RESUME</button></div>');
-    wireQuestion();
-    $("btnResume").addEventListener("click", function () {
-      stage(questionHTML(a.name + " answers.")); wireQuestion();
-      clock.running = true; drawClock();
-    });
-    renderSeats();
-  }
-  function useClock() {
-    var c = G.cur, a = G.players[c.active];
-    if (a.life.clock <= 0) return;
-    a.life.clock--;
-    clock.left += 8; clock.total += 8;
-    hostSay("secondClock", { name: a.name });
-    renderSeats();
-  }
-  function useNeedle(byIdx) {
-    var c = G.cur, by = G.players[byIdx];
-    if (by.needle <= 0 || c.needledBy >= 0 || G.phase !== "question") return;
-    by.needle--; c.needledBy = byIdx;
-    if (clock.left > 5) clock.left = 5;
-    hostSay("needle", { by: by.name, name: G.players[c.active].name });
-    fxNeedle(); Snd.play("needle");
-    drawClock(); renderSeats();
-  }
-  function refreshQuestion() {
-    var p = G.players[G.cur.active];
-    stage(questionHTML(p.name + " answers.")); wireQuestion(); drawClock(); renderSeats();
+    hostSay("cut", { name: p.name });
+    Snd.play("gold");
+    stage(questionHTML()); wireQuestion(); drawClock(); renderSeats();
   }
 
-  /* ---------- answering ---------- */
-  function resolveAnswer(idx) {
+  /* ---------- the finger-vote ---------- */
+  function callIt() {
+    if (!G || !G.cur || G.phase !== "question" || G.cur.resolved) return;
+    G.cur.resolved = true; stopClock();
+    G.cur.bankValue = G.cur.betRound ? 0 : earned(G.cur.value, G.cur.elapsed, G.cur.clockTotal);
+    voteBeat();
+  }
+  function voteBeat() {
+    G.phase = "vote-count";
+    G.cur.marks = {};
+    renderSeats();
+    stage('<div class="q-cat">EVERYBODY READY?</div>' +
+      '<div class="round-title" id="voteCount">FINGERS UP…</div>' +
+      '<p class="round-text">' + (G.cur.kind === "num"
+        ? "Numbers ready — shout yours on SHOW ME."
+        : "Hold up 1, 2, 3 or 4 fingers — your answer, held high, for the whole room to see.") + "</p>");
+    hostSay("vote");
+    Snd.play("vote");
+    var steps = ["3", "2", "1", "SHOW ME!"];
+    var si = 0;
+    clearInterval(voteTimer);
+    voteTimer = setInterval(function () {
+      var vc = $("voteCount");
+      if (!vc || !G || G.phase !== "vote-count") { clearInterval(voteTimer); voteTimer = null; return; }
+      vc.textContent = steps[si];
+      vc.classList.remove("pop"); void vc.offsetWidth; vc.classList.add("pop");
+      si++;
+      if (si >= steps.length) { clearInterval(voteTimer); voteTimer = null; markScreen(); }
+    }, 450);
+  }
+  function markScreen() {
+    G.phase = "vote";
+    renderSeats();
+    stage('<div class="q-headrow"><span class="cat-pill">' + esc(G.cur.cat.toUpperCase()) + '</span><span class="q-kind">WHO HAD IT?</span></div>' +
+      '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(G.cur.q.q) + "</div>" +
+      '<p class="round-text">' + (G.cur.kind === "num"
+        ? "Who called the closest number? Tap their seat — tap two seats if it's a dead heat."
+        : "Tap the seat of everyone holding up the right fingers. Wrong fingers, no tap — and nobody loses a thing either way.") + "</p>" +
+      '<button class="btn-gold" id="btnReveal">REVEAL THE ANSWER</button>');
+    hostSay("mark");
+    $("btnReveal").addEventListener("click", revealAnswer);
+  }
+
+  /* ---------- the reveal (scores commit first, effects after) ---------- */
+  function revealAnswer() {
+    if (!G || !G.cur || G.phase !== "vote") return;
     var c = G.cur;
-    if (!c || c.resolved || (G.phase !== "question" && G.phase !== "stealQ")) return;
-    c.resolved = true; stopClock();
-    if (c.sudden) { resolveSudden(idx); return; }
-    var isSteal = G.phase === "stealQ";
-    var answerer = isSteal ? c.stealer : c.active;
-    var p = G.players[answerer];
-    c.picked = idx;
-    var correctIdx = c.opts.findIndex(function (o) { return o.ok; });
-
-    // Fool's Gold: a planted wrong answer that pays
-    if (idx === c.foolsIdx && idx >= 0) {
-      var bonus = c.value;
-      p.score += bonus;
-      if (c.needledBy >= 0) {
-        var nb = G.players[c.needledBy]; var cutAmt = round10(c.value * 0.25);
-        nb.score -= cutAmt;
-        finishReveal("fools", p.name + " picks the planted answer — the Fool's Gold. " + mplus(bonus) + " to " + p.name + ".", "foolsGold", { name: p.name });
-        return;
-      }
-      finishReveal("fools", p.name + " picks the planted answer — the Fool's Gold. " + mplus(bonus) + ".", "foolsGold", { name: p.name });
-      return;
-    }
-
-    var correct = idx === correctIdx;
-    if (correct) {
-      var gain = isSteal ? round10(earned(c.value, c.elapsed, STEAL_TIME) * 0.5)
-                         : earned(c.value, c.elapsed, QTIME);
+    G.phase = "reveal";
+    var winners = Object.keys(c.marks).map(Number).sort(function (a, b) { return a - b; });
+    var parts = [];
+    winners.forEach(function (i) {
+      var p = G.players[i];
+      var gain = c.betRound ? p.bet * 100 : c.bankValue;
       p.score += gain;
-      var kind = isSteal ? "stealGood" : (c.elapsed < 6 ? "correctFast" : (c.elapsed > 14 ? "correctSlow" : "correct"));
-      var dhtml = '<span class="up">' + mplus(gain) + " to " + esc(p.name) + "</span>";
-      if (c.needledBy >= 0) {
-        var n = G.players[c.needledBy]; var loss = round10(c.value * 0.25);
-        n.score -= loss; dhtml += ' &nbsp;<span class="down">' + mminus(loss) + " to " + esc(n.name) + " (the Needle)</span>";
-        kind = "needleBackfire";
-        finishReveal("correct", dhtml, kind, { name: p.name, by: n.name });
-        return;
-      }
-      finishReveal("correct", dhtml, kind, { name: p.name });
-      return;
-    }
-
-    // wrong or timeout
-    if (!isSteal && G.round === 2) {
-      var pen = round10(c.value * 0.5);
-      p.score -= pen;
-      var d2 = '<span class="down">' + mminus(pen) + " to " + esc(p.name) + "</span>";
-      if (c.needledBy >= 0) {
-        var n2 = G.players[c.needledBy]; n2.score += pen;
-        d2 += ' &nbsp;<span class="up">' + mplus(pen) + " to " + esc(n2.name) + " (the Needle pays out)</span>";
-      }
-      finishReveal("wrong", d2, idx < 0 ? "timeout" : "wrong", { name: p.name });
-      return;
-    }
-    if (isSteal) {
-      finishReveal("wrong", '<span class="down">The steal fails. No points move.</span>', "stealBad", { name: p.name });
-      return;
-    }
-    // Round 1 miss (or Round 2 never reaches here): open the steal
-    openSteal(idx, correctIdx);
-  }
-  function resolveSudden(idx) {
-    var c = G.cur;
-    var answerer = c.active, p = G.players[answerer];
-    var correctIdx = c.opts.findIndex(function (o) { return o.ok; });
-    c.picked = idx;
-    if (idx === correctIdx) {
+      parts.push('<span class="up">' + mplus(gain) + " to " + esc(p.name) + "</span>");
+    });
+    var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="btnNext">CONTINUE</button></div>';
+    if (c.kind === "num") {
+      var dNum = parts.length ? parts.join(" &nbsp;")
+        : '<span class="down">Nobody got close. The number keeps its dignity.</span>';
+      stage('<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">THE NUMBER WAS</span></div>' +
+        '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + "</div>" +
+        '<div class="wager-amt">' + Number(c.q.num).toLocaleString("en-US") + "</div>" +
+        '<div class="delta">' + dNum + "</div>" +
+        '<p class="why">' + esc(c.q.why) + "</p>" + nextBtn);
+      hostSay(winners.length ? "numHit" : "numMiss", { name: winners.length ? G.players[winners[0]].name : "" });
+      Snd.play(winners.length ? "correct" : "wrong");
+    } else {
+      var correctIdx = c.opts.findIndex(function (o) { return o.ok; });
       var btns = c.opts.map(function (o, i) {
-        var cls = "ans-btn" + (i === correctIdx ? " correct" : (i === idx ? " wrong" : ""));
-        return '<button class="' + cls + '" disabled><span class="letter">' + "ABCD"[i] + "</span><span>" + esc(o.t) + "</span></button>";
+        var cls = "ans-btn" + (i === correctIdx ? " correct" : (o.gone ? " dim wrong" : " dim"));
+        return '<button class="' + cls + '" disabled><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + "</span></button>";
       }).join("");
-      G.phase = "reveal";
-      stage('<div class="q-cat">SUDDEN DEATH · SETTLED</div>' +
+      var dMcq = parts.length ? parts.join(" &nbsp;")
+        : '<span class="down">No fingers on it. The money stays in Sterling\'s pocket — this time.</span>';
+      stage('<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">THE ANSWER</span></div>' +
         '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + "</div>" +
         '<div class="answers">' + btns + "</div>" +
-        '<div class="delta"><span class="gold">' + esc(p.name) + " takes it.</span></div>" +
-        '<p class="why">' + esc(c.q.why) + "</p>" +
-        '<div style="margin-top:12px"><button class="btn-gold" id="btnSuddenWin">TO THE RESULT</button></div>');
-      hostSay("correct", { name: p.name });
-      renderSeats();
-      $("btnSuddenWin").addEventListener("click", function () { winnerScreen(answerer); });
-      return;
+        '<div class="delta">' + dMcq + "</div>" +
+        '<p class="why">' + esc(c.q.why) + "</p>" + nextBtn);
+      var hk = winners.length === 0 ? "allMiss" : (winners.length === G.players.length ? "allHit" : "someHit");
+      hostSay(hk, { name: winners.length ? G.players[winners[0]].name : "" });
+      Snd.play(winners.length ? "correct" : "wrong");
     }
-    // wrong: remaining tied players may claim the same question
-    if (!c.suddenMissed) c.suddenMissed = {};
-    c.suddenMissed[answerer] = 1;
-    var remaining = G.tied.filter(function (ti) { return !c.suddenMissed[ti]; });
-    if (!remaining.length) { suddenDeath(G.tied); return; }
-    c.active = -1; c.resolved = false; G.phase = "claim";
-    stage('<div class="round-kicker">SUDDEN DEATH</div>' +
-      '<div class="round-title">' + esc(p.name) + " misses</div>" +
-      questionHTML("Still open — a remaining tied player may claim it.") +
-      '<p class="round-text" style="margin-top:10px">Waiting for a claim…</p>');
-    // mark the missed answer as spent
-    document.querySelectorAll("[data-ans]").forEach(function (b) {
-      if (parseInt(b.getAttribute("data-ans"), 10) === idx) { b.classList.add("wrong"); b.disabled = true; }
-    });
     renderSeats();
-  }
-  function openSteal(pickedIdx, correctIdx) {
-    var c = G.cur;
-    c.resolved = false; c.picked = pickedIdx;
-    G.phase = "steal";
-    c.tableValue = earned(c.value, c.elapsed, QTIME);
-    var efx = $("edgeFx"); if (efx) efx.classList.add("steal");
-    Snd.play("steal");
-    hostSay("stealCall");
-    renderSeats();
-    var btns = c.opts.map(function (o, i) {
-      var cls = "ans-btn" + (i === pickedIdx ? " wrong" : "");
-      return '<button class="ans-btn ' + (i === pickedIdx ? "wrong" : "") + '" disabled><span class="letter">' + "ABCD"[i] + "</span><span>" + esc(o.t) + "</span></button>";
-    }).join("");
-    stage('<div class="q-cat">' + esc(c.cat.toUpperCase()) + " · STEAL OPEN</div>" +
-      '<div class="q-text">' + esc(c.q.q) + "</div>" +
-      '<div class="answers">' + btns + "</div>" +
-      '<div class="q-value on-table"><small>ON THE TABLE</small><span>' + money(c.tableValue) + "</span></div>" +
-      '<div class="steal-bar"><i></i></div>' +
-      '<p class="round-text" style="margin-top:12px">Someone shout your name — then tap that seat. Tap the stage to let the question die.</p>');
-    $("stage").onclick = function (e) { if (e.target.id === "stage" || e.target.classList.contains("stage-inner")) dieQuestion(); };
-  }
-  function dieQuestion() {
-    var c = G.cur; if (!c) return;
-    $("stage").onclick = null;
-    var efx = $("edgeFx"); if (efx) efx.classList.remove("steal");
-    finishReveal("wrong", '<span class="down">Nobody takes it. The question retires.</span>', "wrong", { name: G.players[c.active].name });
-  }
-  function onSeatTap(i) {
-    if (!G) return;
-    if (G.phase === "steal" && G.cur && i !== G.cur.active) startSteal(i);
-    else if (G.phase === "claim" && G.cur && G.cur.openFloor) {
-      if (G.cur.sudden && G.tied.indexOf(i) < 0) return;
-      if (G.cur.sudden && G.cur.suddenMissed && G.cur.suddenMissed[i]) return;
-      claimQuestion(i);
-    }
-  }
-  function startSteal(i) {
-    var c = G.cur;
-    $("stage").onclick = null;
-    var efx = $("edgeFx"); if (efx) efx.classList.remove("steal");
-    c.stealer = i; c.elapsed = 0; c.resolved = false;
-    G.phase = "stealQ";
-    renderSeats();
-    stage(questionHTML(G.players[i].name + " steals — eight seconds."));
-    wireQuestion();
-    startClock(STEAL_TIME, function () { resolveAnswer(-1); });
-  }
-  function claimQuestion(i) {
-    var c = G.cur;
-    c.active = i; G.phase = "question";
-    renderSeats();
-    stage(questionHTML(G.players[i].name + " claimed it. Twenty seconds."));
-    wireQuestion();
-    startClock(QTIME, function () { resolveAnswer(-1); });
-  }
-  function finishReveal(kind, deltaHTML, hostKind, hostVars) {
-    G.phase = "reveal";
-    var c = G.cur;
-    var correctIdx = c.opts.findIndex(function (o) { return o.ok; });
-    var btns = c.opts.map(function (o, i) {
-      var cls = "ans-btn";
-      if (i === c.foolsIdx && kind === "fools") cls += " fools";
-      else if (i === correctIdx) cls += " correct";
-      else if (i === c.picked) cls += " wrong";
-      else cls += " dim";
-      return '<button class="' + cls + '" disabled><span class="letter">' + "ABCD"[i] + "</span><span>" + esc(o.t) + "</span></button>";
-    }).join("");
-    stage('<div class="q-cat">' + esc(c.cat.toUpperCase()) + "</div>" +
-      '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + "</div>" +
-      '<div class="answers">' + btns + "</div>" +
-      '<div class="delta">' + deltaHTML + "</div>" +
-      '<p class="why">' + esc(c.q.why) + "</p>" +
-      '<div style="margin-top:12px"><button class="btn-gold" id="btnNext">CONTINUE</button></div>');
-    hostSay(hostKind, hostVars);
-    if (kind === "correct") Snd.play("correct");
-    else if (kind === "fools") Snd.play("gold");
-    else Snd.play("wrong");
-    var efx3 = $("edgeFx"); if (efx3) efx3.classList.remove("steal");
-    renderSeats();
-    $("btnNext").addEventListener("click", function () {
-      G.qInRound++;
-      if (G.round === 3) { vaultRevealNext(); return; }
-      nextQuestion();
-    });
+    $("btnNext").addEventListener("click", function () { G.qInRound++; nextQuestion(); });
   }
 
-  /* ---------- Round 3: The Vault ---------- */
-  function cover(title, text, btnLabel, cb) {
-    $("coverTitle").textContent = title;
-    $("coverText").textContent = text;
-    $("coverBtn").textContent = btnLabel;
-    $("cover").classList.remove("hidden");
-    $("coverBtn").onclick = function () { $("cover").classList.add("hidden"); cb(); };
-  }
-  function startWagers() {
-    G.phase = "wager"; G.wagerIdx = 0;
-    hostSay("r3");
-    nextWager();
-  }
-  function stakeOf(p) { return p.score > 0 ? p.score : 100; } // a player at zero or below plays on a 100-point house stake
-  function nextWager() {
-    if (G.wagerIdx >= G.players.length) { hostSay("wagerSet"); beginVaultAnswers(); return; }
-    var i = G.wagerIdx, p = G.players[i];
-    cover("Pass the phone to " + p.name,
-      "The Vault category is " + G.vaultCat + ". " + p.name + " sets a secret wager. Everyone else: look away, hum, contemplate your own wagers.",
-      "I AM " + p.name.toUpperCase() + " — SET MY WAGER",
-      function () { wagerScreen(i); });
-  }
-  function wagerScreen(i) {
-    var p = G.players[i], stake = stakeOf(p);
-    G.phase = "wager";
-    stage('<div class="round-kicker">THE VAULT · SECRET WAGER</div>' +
-      '<div class="round-title">' + esc(p.name) + ", in private</div>" +
-      '<p class="round-text">The category is <b>' + esc(G.vaultCat) + '</b>. Your bank is ' + money(p.score) +
-      (p.score <= 0 ? " — the house stakes you $100 to play with." : ".") + " Wager any part of " + money(stake) + ".</p>" +
-      '<div class="wager-ctl"><div class="wager-amt" id="wagerAmt">$0</div>' +
-      '<input type="range" id="wagerRange" min="0" max="' + stake + '" step="10" value="0">' +
-      '<div class="wager-chips">' +
-      '<button class="chip" data-w="0">NOTHING</button><button class="chip" data-w="0.25">A QUARTER</button>' +
-      '<button class="chip" data-w="0.5">HALF</button><button class="chip" data-w="1">EVERYTHING</button></div>' +
-      '<button class="btn-gold" id="btnWager">LOCK IT IN — AND COVER</button></div>');
-    var range = $("wagerRange"), amt = $("wagerAmt");
-    range.addEventListener("input", function () { amt.textContent = money(parseInt(range.value, 10) || 0); });
-    document.querySelectorAll("[data-w]").forEach(function (ch) {
-      ch.addEventListener("click", function () {
-        var v = Math.round(stake * parseFloat(ch.getAttribute("data-w")) / 10) * 10;
-        range.value = v; amt.textContent = money(v);
-      });
-    });
-    $("btnWager").addEventListener("click", function () {
-      p.wager = parseInt(range.value, 10) || 0;
-      G.wagerIdx++; nextWager();
-    });
-  }
-  function beginVaultAnswers() {
-    var q = drawQuestion(G.vaultCat, "hard");
-    G.vaultQ = q;
-    G.phase = "vaultQ"; G.wagerIdx = 0;
-    nextVaultAnswer();
-  }
-  function nextVaultAnswer() {
-    if (G.wagerIdx >= G.players.length) { beginVaultReveal(); return; }
-    var i = G.wagerIdx, p = G.players[i];
-    cover(p.name + ", the Vault question is yours alone",
-      "One question, thirty seconds, nobody helping. Pass the phone and keep it covered until it is in " + p.name + "'s hands.",
-      "I AM " + p.name.toUpperCase() + " — SHOW ME",
-      function () { vaultQuestionScreen(i); });
-  }
-  function vaultQuestionScreen(i) {
-    var p = G.players[i], q = G.vaultQ;
-    if (!G.vaultShownOpts) G.vaultShownOpts = {};
-    var opts = shuffle([{ t: q.a, ok: true }].concat(q.w.map(function (w) { return { t: w, ok: false }; })));
-    G.vaultShownOpts[i] = opts;
-    G.cur = { q: q, cat: G.vaultCat, diff: "hard", value: 0, opts: opts, active: i, elapsed: 0, picked: -1, needledBy: -1, foolsIdx: -1, resolved: false };
-    G.phase = "vaultQ";
-    setSpot(50, 40);
-    stage('<div class="vault-q"><div class="q-cat">THE VAULT · ' + esc(G.vaultCat.toUpperCase()) + "</div>" +
-      '<div class="q-text">' + esc(q.q) + "</div>" + timerHTML() +
-      '<div class="answers">' + opts.map(function (o, oi) {
-        return '<button class="ans-btn" data-vans="' + oi + '"><span class="letter">' + "ABCD"[oi] + "</span><span>" + esc(o.t) + "</span></button>";
-      }).join("") + "</div></div>");
-    document.querySelectorAll("[data-vans]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        if (G.cur.resolved) return;
-        G.cur.resolved = true; stopClock();
-        p.vaultAns = parseInt(b.getAttribute("data-vans"), 10);
-        G.wagerIdx++; nextVaultAnswer();
-      });
-    });
-    startClock(VAULT_TIME, function () {
-      if (G.cur.resolved) return;
-      G.cur.resolved = true; p.vaultAns = -1;
-      G.wagerIdx++; nextVaultAnswer();
-    });
-  }
-  function beginVaultReveal() {
-    G.phase = "vaultReveal";
-    setSpot(50, 40);
-    G.order = G.players.map(function (p, i) { return i; }).sort(function (a, b) { return G.players[a].score - G.players[b].score; });
-    G.revealIdx = 0;
-    stage('<div class="round-kicker">THE VAULT</div><div class="round-title">The Reckoning</div>' +
-      '<p class="round-text">From the lowest score upward. Wagers meet answers.</p>' + standingsHTML() +
-      '<button class="btn-gold" id="btnRevealGo">BEGIN THE REVEAL</button>');
-    $("btnRevealGo").addEventListener("click", vaultRevealNext);
-  }
-  function vaultRevealNext() {
-    if (G.revealIdx >= G.order.length) { finishShow(); return; }
-    var i = G.order[G.revealIdx], p = G.players[i], q = G.vaultQ;
-    var theirText = (p.vaultAns >= 0 && G.vaultShownOpts && G.vaultShownOpts[i]) ? G.vaultShownOpts[i][p.vaultAns].t : null;
-    var right = theirText !== null && theirText === q.a;
-    if (right) p.score += p.wager; else p.score -= p.wager;
-    hostSay("vaultReveal", { name: p.name, amt: money(p.wager) });
-    Snd.play("door");
-    stage('<div class="door-wrap"><div class="door door-l"></div><div class="door door-r"></div><div class="door-content">' +
-      '<div class="round-kicker">THE VAULT · REVEAL</div>' +
-      '<div class="round-title">' + esc(p.name) + "</div>" +
-      '<p class="round-text">The question: ' + esc(q.q) + "<br>" +
-      esc(p.name) + " answered: <b>" + esc(theirText === null ? "(no answer)" : theirText) + "</b><br>" +
-      "The answer: <b>" + esc(q.a) + "</b><br>" +
-      "Wager: " + money(p.wager) + " — " + (right ? '<span style="color:var(--green)">won.</span>' : '<span style="color:var(--red)">lost.</span>') + "</p>" +
-      '<p class="why">' + esc(q.why) + "</p>" + standingsHTML() +
-      '<button class="btn-gold" id="btnRevealNext">' + (G.revealIdx + 1 >= G.order.length ? "THE RESULT" : "NEXT REVEAL") + "</button></div></div>");
-    G.revealIdx++;
-    $("btnRevealNext").addEventListener("click", vaultRevealNext);
-    renderSeats();
-  }
+  /* ---------- the result ---------- */
   function finishShow() {
     var best = Math.max.apply(null, G.players.map(function (p) { return p.score; }));
     var tied = G.players.map(function (p, i) { return i; }).filter(function (i) { return G.players[i].score === best; });
-    if (tied.length > 1) { suddenDeath(tied); return; }
-    winnerScreen(tied[0]);
+    winnerScreen(tied[0], tied.length > 1 ? tied : null);
   }
-  function suddenDeath(tied) {
-    G.tied = tied.slice(); G.phase = "claim";
-    hostSay("tie");
-    var offer = pick(makeOffers());
-    var q = drawQuestion(offer.cat, "medium");
-    setupQuestion(q, offer, -1);
-    G.cur.openFloor = true; G.cur.sudden = true;
-    stage('<div class="round-kicker">SUDDEN DEATH</div>' +
-      '<div class="round-title">One question takes it</div>' +
-      questionHTML("Tied players only — first to shout claims it.") +
-      '<p class="round-text" style="margin-top:10px">Waiting for a claim from a tied player…</p>');
-    renderSeats();
-  }
-  function winnerScreen(i) {
+  function winnerScreen(i, tiedIdx) {
     G.phase = "over";
+    if (G.cur) G.cur.marks = {};
     var p = G.players[i];
     hostSay("winner", { name: p.name });
+    seatsVisible(false);
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
-    var rows = order.map(function (ii, pos) {
-      var pp = G.players[ii];
-      return '<div class="stmt-row' + (ii === i ? " win" : "") + '"><span>' + (pos + 1) + ". " + esc(pp.name) + '</span><span class="dots"></span><span>' + money(pp.score) + "</span></div>";
+    var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
+    var disp = order.slice();
+    if (disp.length > 1) { var t = disp[0]; disp[0] = disp[1]; disp[1] = t; } // 2nd, 1st, 3rd, 4th
+    var pods = disp.map(function (ii) {
+      var pp = G.players[ii], pos = ranks[ii];
+      var badgeCls = pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
+      var top = ii === i
+        ? '<span class="champ-tag">★ CHAMPION</span>'
+        : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
+      return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === i ? " winner-podium lit" : "") + '">' + top +
+        avatarSVG(ii, ii === i ? "cheer" : "neutral") +
+        '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div></div></div>";
     }).join("");
-    stage('<div class="crown">♛</div><div class="round-kicker">THE VAULT OPENS FOR</div>' +
+    var tieNote = "";
+    if (tiedIdx) {
+      var names = tiedIdx.map(function (ii) { return G.players[ii].name; }).join(" and ");
+      tieNote = '<p class="round-text tie-note">Dead level at the top — ' + esc(names) + " matched at " + money(p.score) +
+        ". The crown goes to the earliest seat, and the rematch is now legally mandatory.</p>";
+    }
+    stage('<div class="finale-wrap"><div class="finale-main">' +
+      '<div class="marquee finale-marquee"><div class="kicker">THE GILDED HOUR · FINAL RESULT</div>' +
+      '<div class="winner-word">WINNER</div>' +
       '<div class="winner-name">' + esc(p.name) + "</div>" +
-      '<p class="round-text">Final balance ' + money(p.score) + ". The Gilded Hour is yours.</p>" +
-      '<div class="statement"><div class="stmt-head">THE GILDED HOUR · STATEMENT OF ACCOUNT</div>' + rows +
-      '<div class="stmt-total"><span>PAID TO ' + esc(p.name.toUpperCase()) + "</span><span>" + money(p.score) + "</span></div>" +
-      '<div class="stmt-foot">Settled in full. Sterling thanks the table.</div></div>' +
-      '<button class="btn-gold" id="btnAgain">BACK TO THE LOBBY</button>');
+      '<div class="winner-total">' + money(p.score) + "</div></div>" +
+      '<div class="sterling-zone"><div class="bubble bubble-finale">Sealed with a kiss of confetti — the hour is yours, ' + esc(p.name) + ".</div>" +
+      sterlingSVG("present", "sterling sterling-lg") + "</div></div>" +
+      tieNote +
+      '<div class="podium-row finale-row">' + pods + "</div>" +
+      '<div class="finale-btns"><button class="btn-gold" id="btnAgain">PLAY AGAIN</button>' +
+      '<button class="btn-ghost" id="btnLobby">BACK TO LOBBY</button></div></div>');
     Snd.play("finale");
     startLeaves();
     saveSeen();
     renderSeats();
-    $("btnAgain").addEventListener("click", function () { stopLeaves(); showScreen("scr-title"); G = null; });
+    buildBulbs(document.querySelector(".finale-marquee"));
+    $("btnAgain").addEventListener("click", function () {
+      stopLeaves();
+      startShow(G.players.map(function (pp) { return pp.name; }));
+    });
+    $("btnLobby").addEventListener("click", function () { stopLeaves(); showScreen("scr-title"); G = null; });
   }
 
   /* ---------- setup screen ---------- */
   var playerCount = 3;
+  function renderPodiumPreview() {
+    var wrap = $("podiumPreview");
+    if (!wrap) return;
+    var inputs = document.querySelectorAll(".name-input");
+    var html = "";
+    for (var i = 0; i < playerCount; i++) {
+      var nm = (inputs[i] && inputs[i].value.trim()) || PNAMES[i];
+      html += '<div class="podium pod' + i + '">' + avatarSVG(i, "neutral") +
+        '<div class="desk"><div class="pname">' + esc(nm) + '</div><div class="pmoney">$0</div></div></div>';
+    }
+    wrap.innerHTML = html;
+  }
   function buildNameRows() {
     var wrap = $("nameRows"); wrap.innerHTML = "";
     for (var i = 0; i < playerCount; i++) {
       var row = el('<div class="name-row"><span class="name-dot" style="background:' + PCOLORS[i] + '"></span>' +
         '<input class="name-input" maxlength="14" value="' + PNAMES[i] + '">' +
         '<span class="name-seat">SEAT ' + (i + 1) + "</span></div>");
+      row.querySelector(".name-input").addEventListener("input", renderPodiumPreview);
       wrap.appendChild(row);
     }
+    renderPodiumPreview();
   }
   document.querySelectorAll(".count-btn").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -974,10 +1073,13 @@
     startShow(names);
   });
   $("btnQuit").addEventListener("click", function () {
-    stopClock(); stopLeaves(); saveSeen(); G = null; showScreen("scr-title");
-    var efx = $("edgeFx"); if (efx) efx.classList.remove("steal");
+    stopClock(); stopLeaves(); saveSeen();
+    seatsVisible(true);
+    clearInterval(spinTimer); clearInterval(voteTimer); spinTimer = voteTimer = null;
+    G = null; showScreen("scr-title");
   });
   buildNameRows();
+  buildBulbs($("marqueeTitle"));
   /* mute toggle on the title screen — persisted; the show reads fully silent */
   var btnMute = $("btnMute");
   function paintMute() {
