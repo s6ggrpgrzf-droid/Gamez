@@ -158,3 +158,222 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
   .wager-chips{margin:4px 0 9px}
   .stand-row{padding:6px 11px;margin-bottom:5px}
 }
+
+/* ================= PASS 3 — THE PRODUCTION PASS =================
+   Money on the table, a set with depth, one continuous show.
+   Depth comes from light and shadow; gold stays in lettering,
+   rules, figures and accents. Matte obsidian base throughout. */
+
+/* ---------- frame & layered set ---------- */
+#scr-title{position:relative}
+#scr-game{position:relative;overflow:hidden}
+.set{position:absolute;inset:0;z-index:0;pointer-events:none;transition:filter 1.2s ease}
+.set>div{position:absolute;inset:0}
+.set-deep{background:radial-gradient(135% 118% at 50% 0%, #16181f 0%, #0a0b0e 68%);background-color:#08090b}
+.set-deep::after{content:"";position:absolute;left:50%;top:44%;width:340px;height:340px;margin:-170px 0 0 -170px;border:2px solid rgba(198,164,94,.07);border-radius:50%;box-shadow:0 0 0 26px rgba(198,164,94,.025), inset 0 0 60px rgba(0,0,0,.5)}
+.set-mid{background:repeating-linear-gradient(90deg, transparent 0 96px, rgba(232,205,141,.032) 118px, rgba(232,205,141,.008) 150px, transparent 190px), linear-gradient(180deg, rgba(232,205,141,.032), transparent 42%);transition:transform 1.4s ease}
+.set-fore{top:auto;height:34%;background:radial-gradient(90% 130% at 50% 118%, rgba(232,205,141,.10), transparent 60%), linear-gradient(0deg, rgba(0,0,0,.55), transparent)}
+#topbar,#hostbar{position:relative;z-index:2}
+#table{position:relative;z-index:1;background:transparent}
+.seats,#stage{position:relative;z-index:1}
+#spot{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .9s ease;background:radial-gradient(46% 62% at 50% 40%, rgba(232,205,141,.18), rgba(232,205,141,.05) 45%, transparent 70%)}
+#scr-game[data-light="hot"] .set{filter:brightness(.7)}
+#scr-game[data-light="vault"] .set{filter:brightness(.48)}
+#scr-game[data-light="hot"] .set-mid{transform:translateX(-16px)}
+#scr-game[data-light="vault"] .set-mid{transform:translateX(16px) scale(1.04)}
+#scr-game[data-light="hot"] #spot{opacity:.95}
+#scr-game[data-light="vault"] #spot{opacity:.85}
+
+/* ---------- seamless scene changes ---------- */
+.stage-inner.enter{animation:fadeUp .38s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.bumper{position:relative;animation:fadeUp .55s cubic-bezier(.2,.7,.3,1) both}
+.bumper::before{content:"";position:absolute;left:50%;top:-10px;width:min(420px,80vw);height:1px;background:var(--gold);transform:translateX(-50%) scaleX(0);animation:ruleGrow .8s .15s ease both}
+@keyframes ruleGrow{to{transform:translateX(-50%) scaleX(1)}}
+
+/* ---------- cold open ---------- */
+.coldopen{position:relative;padding:26px 0 10px;overflow:hidden}
+.co-sweep{position:absolute;inset:-20% -30%;pointer-events:none;background:linear-gradient(105deg, transparent 42%, rgba(232,205,141,.13) 50%, transparent 58%);transform:translateX(-70%);animation:coSweep 1.6s ease .1s both}
+@keyframes coSweep{to{transform:translateX(70%)}}
+.co-kicker{letter-spacing:.42em;font-size:11px;color:var(--gold);text-indent:.42em}
+.co-title{font-size:clamp(38px,8.4vw,74px);line-height:1.02;letter-spacing:.03em;margin-top:12px;text-shadow:0 4px 30px rgba(0,0,0,.6)}
+.co-l{display:inline-block;opacity:0;transform:translateY(16px) scale(.96);animation:coIn .6s cubic-bezier(.2,.7,.3,1) both}
+@keyframes coIn{to{opacity:1;transform:none}}
+.co-sub{color:var(--dim);font-style:italic;margin-top:12px;opacity:0;animation:coIn .6s ease .85s both}
+
+/* ---------- mute ---------- */
+.mute-btn{position:absolute;top:14px;right:16px;z-index:5;border:1px solid var(--line);background:var(--panel);color:var(--dim);border-radius:999px;padding:8px 14px;font-size:11.5px;letter-spacing:.18em;box-shadow:0 3px 0 rgba(0,0,0,.55)}
+.mute-btn.on{color:var(--gold-hi);border-color:var(--gold)}
+.mute-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.55)}
+
+/* ---------- fortune rail (the seats) ---------- */
+.seat-score{transition:color .3s}
+.seat.lead{border-color:rgba(198,164,94,.8);box-shadow:0 0 0 1px rgba(198,164,94,.35) inset}
+.seat.lead .seat-name::after{content:" ◆";color:var(--gold);font-size:9px}
+.seat.tick-up .seat-score{color:var(--green)}
+.seat.tick-down .seat-score{color:var(--red)}
+
+/* ---------- beveled glass-and-brass slabs ---------- */
+.ans-btn{position:relative;background:linear-gradient(180deg,#23262f 0%,#171a20 52%,#101216 100%);border:1px solid #3a3e48;box-shadow:inset 0 1px 0 rgba(242,234,216,.16), inset 0 -10px 16px rgba(0,0,0,.5), 0 6px 0 #050607, 0 14px 24px rgba(0,0,0,.5);transition:transform .1s ease, box-shadow .1s ease, opacity .3s ease, filter .3s ease}
+.ans-btn:not(:disabled):active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(242,234,216,.16), inset 0 -6px 10px rgba(0,0,0,.5), 0 2px 0 #050607, 0 6px 12px rgba(0,0,0,.5)}
+.ans-btn.correct{background:linear-gradient(180deg,#1d2b21,#12241a 60%,#0d1a12);border-color:var(--green);transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 2px 0 #050607, 0 0 22px rgba(62,207,122,.35);animation:pressIn .18s ease both}
+.ans-btn.wrong{background:linear-gradient(180deg,#2b1d1d,#241212 60%,#1a0d0d);border-color:var(--red);transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 2px 0 #050607, 0 0 18px rgba(224,82,68,.28);animation:pressIn .18s ease both}
+@keyframes pressIn{from{transform:translateY(0)}to{transform:translateY(4px)}}
+.ans-btn.dim{opacity:.38;filter:saturate(.35) brightness(.8)}
+.btn-gold{box-shadow:inset 0 1px 0 rgba(255,255,255,.55), inset 0 -3px 6px rgba(90,64,10,.45), 0 5px 0 #6e5622, 0 12px 20px rgba(0,0,0,.5);transition:transform .1s ease, box-shadow .1s ease}
+.btn-gold:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.55), inset 0 -2px 4px rgba(90,64,10,.45), 0 2px 0 #6e5622, 0 6px 12px rgba(0,0,0,.5)}
+.cat-tile{background:linear-gradient(180deg,#22242d,#14161b 60%,#101216);box-shadow:inset 0 1px 0 rgba(242,234,216,.13), inset 0 -8px 14px rgba(0,0,0,.45), 0 6px 0 #050607, 0 12px 20px rgba(0,0,0,.45);transition:transform .1s ease, box-shadow .1s ease}
+.cat-tile:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(242,234,216,.13), inset 0 -5px 9px rgba(0,0,0,.45), 0 2px 0 #050607, 0 6px 12px rgba(0,0,0,.45)}
+.tool-btn{box-shadow:0 3px 0 #050607, 0 6px 12px rgba(0,0,0,.4);transition:transform .1s ease, box-shadow .1s ease}
+.tool-btn:not(:disabled):active{transform:translateY(2px);box-shadow:0 1px 0 #050607, 0 3px 7px rgba(0,0,0,.4)}
+.chip,.count-btn{box-shadow:0 3px 0 rgba(0,0,0,.55)}
+.chip:active,.count-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.55)}
+
+/* ---------- the money figure ---------- */
+.q-value{text-align:center;margin:2px 0 4px}
+.q-value small{display:block;letter-spacing:.34em;font-size:10.5px;color:var(--dim);text-indent:.34em}
+.q-value span{display:inline-block;font-size:clamp(28px,4.6vw,42px);color:var(--gold-hi);font-weight:700;text-shadow:0 2px 14px rgba(198,164,94,.35)}
+.q-value.low span{color:var(--red)}
+.q-value.bump span{animation:valBump .18s ease}
+@keyframes valBump{40%{transform:scale(1.12)}}
+.q-value.on-table span{animation:tableFlash .55s ease-in-out infinite alternate}
+@keyframes tableFlash{from{opacity:.72;text-shadow:0 2px 8px rgba(198,164,94,.15)}to{opacity:1;text-shadow:0 2px 18px rgba(198,164,94,.55)}}
+.delta .up{display:inline-block;animation:burstIn .45s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes burstIn{0%{transform:scale(.6);opacity:0;filter:brightness(2)}100%{transform:scale(1);opacity:1;filter:brightness(1)}}
+
+/* ---------- steal window ---------- */
+#edgeFx{position:fixed;inset:0;z-index:21;pointer-events:none;opacity:0;transition:opacity .3s}
+#edgeFx.steal{opacity:1;box-shadow:inset 0 0 80px rgba(62,207,122,.24), inset 0 0 0 2px rgba(62,207,122,.36);animation:edgePulse .7s ease-in-out infinite alternate}
+@keyframes edgePulse{from{box-shadow:inset 0 0 55px rgba(62,207,122,.16), inset 0 0 0 2px rgba(62,207,122,.26)}to{box-shadow:inset 0 0 95px rgba(62,207,122,.32), inset 0 0 0 2px rgba(62,207,122,.44)}}
+.steal-bar{width:min(560px,90vw);height:6px;margin:12px auto 0;background:#22252c;border-radius:3px;overflow:hidden}
+.steal-bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--green),var(--gold-hi));animation:stealShrink 8s linear both}
+@keyframes stealShrink{0%{width:100%}85%{width:14%}100%{width:12%}}
+
+/* ---------- final-five-seconds vignette ---------- */
+#dangerFx{position:fixed;inset:0;z-index:22;pointer-events:none;opacity:0;transition:opacity .25s;box-shadow:inset 0 0 100px 30px rgba(224,82,68,.42)}
+#dangerFx.on{opacity:1;animation:dangerPulse .5s ease-in-out infinite alternate}
+@keyframes dangerPulse{from{box-shadow:inset 0 0 80px 22px rgba(224,82,68,.32)}to{box-shadow:inset 0 0 130px 44px rgba(224,82,68,.52)}}
+
+/* ---------- the Needle fixture ---------- */
+#needleFx{position:absolute;top:40px;left:50%;z-index:26;pointer-events:none;opacity:.26;transform:translateX(-50%) translateY(-14px);transform-origin:top center}
+.needle-rod{width:3px;height:40px;margin-left:-1.5px;background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+.needle-point{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:16px solid var(--gold-hi);margin-left:-7px;filter:drop-shadow(0 0 8px rgba(232,205,141,.8))}
+#needleFx.strike{animation:needleStrike 1.05s cubic-bezier(.3,1.4,.4,1) both}
+@keyframes needleStrike{0%{opacity:.26;transform:translateX(-50%) translateY(-14px) rotate(0deg)}25%{opacity:1;transform:translateX(-50%) translateY(8px) rotate(7deg)}55%{transform:translateX(-50%) translateY(4px) rotate(-6deg)}78%{opacity:1;transform:translateX(-50%) translateY(-6px) rotate(2deg)}100%{opacity:.26;transform:translateX(-50%) translateY(-14px) rotate(0deg)}}
+
+/* ---------- Fool's Gold: glitter, then crack ---------- */
+.ans-btn.fools{overflow:hidden;border-color:var(--gold);background:linear-gradient(180deg,#2e2a1c,#241f12 60%,#1a160c);transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 2px 0 #050607, 0 0 22px rgba(198,164,94,.4);animation:foolsPlay 1.25s ease both}
+.ans-btn.fools::before{content:"";position:absolute;inset:0;background:linear-gradient(105deg, transparent 30%, rgba(255,244,200,.55) 50%, transparent 70%);transform:translateX(-120%);animation:foolsShine .55s ease .05s both;pointer-events:none}
+@keyframes foolsShine{to{transform:translateX(120%)}}
+.ans-btn.fools::after{content:"";position:absolute;inset:0;border-radius:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='80' viewBox='0 0 240 80'%3E%3Cpath d='M8 2 L70 22 L58 38 L112 30 L138 52 L128 78' fill='none' stroke='%23000000' stroke-opacity='.5' stroke-width='2.5'/%3E%3Cpath d='M112 30 L158 16 L196 36 L232 30' fill='none' stroke='%23000000' stroke-opacity='.4' stroke-width='2'/%3E%3C/svg%3E");background-size:cover;opacity:0;animation:crackIn .25s ease .68s both;pointer-events:none}
+@keyframes crackIn{to{opacity:1}}
+@keyframes foolsPlay{0%{filter:brightness(1.7)}35%{filter:brightness(1.15)}58%{transform:translateY(4px) rotate(0deg)}66%{transform:translateY(4px) rotate(.8deg)}76%{transform:translateY(4px) rotate(-.6deg)}100%{transform:translateY(4px) rotate(0deg);filter:brightness(1)}}
+
+/* ---------- the Vault door ---------- */
+.door-wrap{position:relative;perspective:1100px;padding:10px 6px}
+.door-content{position:relative;z-index:1}
+.door{position:absolute;top:-6px;bottom:-6px;width:50.5%;z-index:3;pointer-events:none;border:1px solid #33363f;overflow:hidden}
+.door-l{left:0;transform-origin:left center;background:repeating-linear-gradient(0deg, transparent 0 46px, rgba(255,255,255,.022) 46px 47px), linear-gradient(90deg,#101216,#1b1d24 85%,#23252d);border-right:2px solid var(--gold);animation:doorOpenL 1.15s cubic-bezier(.6,0,.3,1) .2s both}
+.door-r{right:0;transform-origin:right center;background:repeating-linear-gradient(0deg, transparent 0 46px, rgba(255,255,255,.022) 46px 47px), linear-gradient(270deg,#101216,#1b1d24 85%,#23252d);border-left:2px solid var(--gold);animation:doorOpenR 1.15s cubic-bezier(.6,0,.3,1) .2s both}
+@keyframes doorOpenL{from{transform:rotateY(0deg)}to{transform:rotateY(-104deg)}}
+@keyframes doorOpenR{from{transform:rotateY(0deg)}to{transform:rotateY(104deg)}}
+
+/* ---------- statement of account ---------- */
+.statement{width:min(520px,94vw);margin:14px auto 18px;background:linear-gradient(180deg,#171a20,#121419);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:12px;padding:18px 20px;text-align:left;box-shadow:inset 0 1px 0 rgba(242,234,216,.08), 0 18px 34px rgba(0,0,0,.5)}
+.stmt-head{letter-spacing:.3em;font-size:11px;color:var(--gold);text-align:center;text-indent:.3em;margin-bottom:8px}
+.stmt-row{display:flex;align-items:baseline;gap:8px;padding:8px 2px;font-size:16.5px}
+.stmt-row .dots{flex:1;border-bottom:1px dotted #3a3e47;transform:translateY(-4px)}
+.stmt-row.win{color:var(--gold-hi)}
+.stmt-total{border-top:1px solid var(--line);margin-top:8px;padding-top:11px;display:flex;justify-content:space-between;gap:10px;font-size:19px;color:var(--gold-hi);letter-spacing:.04em}
+.stmt-foot{text-align:center;color:var(--dim);font-style:italic;font-size:13px;margin-top:9px}
+
+/* ---------- gold leaf ---------- */
+#leafCanvas{position:fixed;inset:0;z-index:30;pointer-events:none;display:none}
+#leafCanvas.on{display:block}
+
+/* ---------- short screens (Pass 3 additions) ---------- */
+@media (max-height:500px){
+  .q-value{margin:0}
+  .q-value span{font-size:23px}
+  .q-value small{font-size:9px}
+  .coldopen{padding:8px 0 4px}
+  .co-title{font-size:clamp(28px,6vw,42px);margin-top:6px}
+  .co-sub{margin-top:6px}
+  #needleFx{top:28px;transform:translateX(-50%) translateY(-14px) scale(.72)}
+  .statement{padding:12px 16px;margin:8px auto 12px}
+  .stmt-row{padding:5px 2px;font-size:15px}
+  .steal-bar{margin-top:7px}
+}
+
+/* ---------- portrait phones (Pass 3 additions) ---------- */
+@media (max-width:560px){
+  .q-value span{font-size:26px}
+  .door-wrap{padding:8px 2px}
+}
+
+/* ---------- Pass 3 fix-ups (from screenshot review) ---------- */
+/* answer slabs are positioned, so their shadows paint above later
+   static siblings — lift the follow-on blocks into the same layer */
+.q-value,.steal-bar,.delta,.why{position:relative}
+/* the vault emblem: two brass half-rings that meet at the seam */
+.door-l::before,.door-r::before{content:"";position:absolute;top:50%;width:176px;height:176px;margin-top:-88px;border:3px solid rgba(198,164,94,.55);border-radius:50%;box-shadow:inset 0 0 0 12px rgba(198,164,94,.10), 0 0 26px rgba(0,0,0,.45)}
+.door-l::before{right:-88px}
+.door-r::before{left:-88px}
+.door-l::after,.door-r::after{content:"";position:absolute;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:radial-gradient(circle at 38% 34%, var(--gold-hi), var(--gold) 60%, #6e5622)}
+.door-l::after{right:-11px}
+.door-r::after{left:-11px}
+
+/* ---------- mid-height tier: TV laptops & large tablets ---------- */
+@media (max-height:860px) and (min-height:501px){
+  .q-text{font-size:clamp(19px,3.1vw,26px)}
+  .timer-wrap{margin:2px 0 4px}
+  .timer-ring{width:58px;height:58px}
+  .q-value{margin:0}
+  .q-value span{font-size:29px}
+  .q-for{margin-bottom:3px}
+  .answers{gap:9px}
+  .ans-btn{padding:11px 14px;font-size:16.5px}
+  .tools{margin-top:9px}
+  .tool-btn{padding:7px 11px;font-size:12.5px}
+  .tool-btn small{font-size:10px}
+  .round-text{margin-bottom:12px}
+}
+
+/* ---------- short tier: Pass 3 additions ---------- */
+@media (max-height:500px){
+  .q-value small{display:inline-block;margin-right:9px;text-indent:0;vertical-align:middle}
+  .q-value span{vertical-align:middle}
+  .answers{gap:6px}
+  .q-text{font-size:clamp(16px,2.4vw,20px)}
+  .crown{font-size:24px}
+  .winner-name{font-size:28px;margin:2px 0}
+  .statement{margin:6px auto 8px}
+  .stmt-total{font-size:15px;padding-top:7px}
+  .stmt-foot{display:none}
+}
+
+/* ---------- portrait: Pass 3 additions ---------- */
+@media (max-width:560px){
+  .q-value small{display:inline-block;margin-right:9px;text-indent:0;vertical-align:middle}
+  .q-value span{vertical-align:middle}
+  .timer-ring{width:62px;height:62px}
+  .ans-btn{padding:12px 14px}
+}
+
+/* ---------- short tier: second trim (844x390 question fit) ---------- */
+@media (max-height:500px){
+  .q-for{font-size:12px;margin-bottom:0}
+  .timer-ring{width:36px;height:36px}
+  .ans-btn{padding:6px 10px;font-size:14.5px;line-height:1.25}
+  .q-value span{font-size:20px}
+  .seat{padding-top:2px;padding-bottom:2px}
+  #hostbar{padding-top:5px;padding-bottom:6px}
+}
+
+/* ---------- short tier: third trim (question-length variance) ---------- */
+@media (max-height:500px){
+  .q-text{max-width:44ch}
+  .seat-name{font-size:12.5px}
+  .seat-score{font-size:11px}
+  #topbar{padding-top:4px;padding-bottom:4px}
+}

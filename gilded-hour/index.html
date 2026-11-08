@@ -4,13 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div id="app">
 
   <!-- ============ TITLE / SETUP ============ -->
   <section id="scr-title" class="screen active">
+    <button id="btnMute" class="mute-btn">SOUND: ON</button>
     <div class="title-wrap">
       <div class="kicker">A TRIVIA SHOW FOR THE ROOM</div>
       <h1 class="logo">THE GILDED<br>HOUR</h1>
@@ -27,13 +28,15 @@
         <div id="nameRows"></div>
         <button id="btnStart" class="btn-gold big">START THE SHOW</button>
         <p class="fineprint">Pass the phone. Shout your steals. The TV is the stage.<br>
-        Questions from the Open Trivia DB (CC BY-SA 4.0) — full credits in the show notes.</p>
+        Every question written for this table — the pop culture of the eighties, nineties and two-thousands.</p>
       </div>
     </div>
   </section>
 
   <!-- ============ GAME ============ -->
-  <section id="scr-game" class="screen">
+  <section id="scr-game" class="screen" data-light="open">
+    <div class="set" aria-hidden="true"><div class="set-deep"></div><div class="set-mid"></div><div class="set-fore"></div></div>
+    <div id="needleFx" aria-hidden="true"><div class="needle-rod"></div><div class="needle-point"></div></div>
     <header id="topbar">
       <div class="tb-left"><span class="tb-show">THE GILDED HOUR</span></div>
       <div class="tb-mid"><span id="roundLabel">ROUND 1</span><span class="tb-dot">·</span><span id="qCounter">QUESTION 1 OF 15</span></div>
@@ -41,6 +44,7 @@
     </header>
 
     <div id="table">
+      <div id="spot" aria-hidden="true"></div>
       <div id="seatsTop" class="seats seats-top"></div>
       <div id="stage">
         <!-- dynamic stage content rendered by game.js -->
@@ -52,6 +56,9 @@
       <div class="host-name">STERLING</div>
       <div id="hostLine" class="host-line">Good evening.</div>
     </footer>
+    <div id="edgeFx" aria-hidden="true"></div>
+    <div id="dangerFx" aria-hidden="true"></div>
+    <canvas id="leafCanvas" aria-hidden="true"></canvas>
   </section>
 
   <!-- ============ COVER (pass-the-phone) ============ -->
@@ -66,6 +73,6 @@
 
 </div>
 <script src="questions.js?v=2"></script>
-<script src="game.js?v=2"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>
