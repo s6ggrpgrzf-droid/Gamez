@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>The Gilded Hour — a trivia show for 2–4 players</title>
+<link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ TITLE / SETUP ============ -->
+  <section id="scr-title" class="screen active">
+    <div class="title-wrap">
+      <div class="kicker">A TRIVIA SHOW FOR THE ROOM</div>
+      <h1 class="logo">THE GILDED<br>HOUR</h1>
+      <p class="tagline">Fifteen questions. One table. Sterling hosts.</p>
+
+      <div class="setup-card">
+        <div class="setup-label">HOW MANY AT THE TABLE?</div>
+        <div class="count-row" id="countRow">
+          <button class="count-btn" data-n="2">2</button>
+          <button class="count-btn sel" data-n="3">3</button>
+          <button class="count-btn" data-n="4">4</button>
+        </div>
+        <div class="setup-label">NAMES — TAP TO EDIT</div>
+        <div id="nameRows"></div>
+        <button id="btnStart" class="btn-gold big">START THE SHOW</button>
+        <p class="fineprint">Pass the phone. Shout your steals. The TV is the stage.<br>
+        Questions from the Open Trivia DB (CC BY-SA 4.0) — full credits in the show notes.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="scr-game" class="screen">
+    <header id="topbar">
+      <div class="tb-left"><span class="tb-show">THE GILDED HOUR</span></div>
+      <div class="tb-mid"><span id="roundLabel">ROUND 1</span><span class="tb-dot">·</span><span id="qCounter">QUESTION 1 OF 15</span></div>
+      <div class="tb-right"><button id="btnQuit" class="tb-btn">END SHOW</button></div>
+    </header>
+
+    <div id="table">
+      <div id="seatsTop" class="seats seats-top"></div>
+      <div id="stage">
+        <!-- dynamic stage content rendered by game.js -->
+      </div>
+      <div id="seatsBottom" class="seats seats-bottom"></div>
+    </div>
+
+    <footer id="hostbar">
+      <div class="host-name">STERLING</div>
+      <div id="hostLine" class="host-line">Good evening.</div>
+    </footer>
+  </section>
+
+  <!-- ============ COVER (pass-the-phone) ============ -->
+  <div id="cover" class="overlay hidden">
+    <div class="cover-card">
+      <div class="cover-kicker">THE TABLE LOOKS AWAY</div>
+      <div id="coverTitle" class="cover-title">Pass the phone</div>
+      <p id="coverText" class="cover-text"></p>
+      <button id="coverBtn" class="btn-gold">I HAVE IT — REVEAL</button>
+    </div>
+  </div>
+
+</div>
+<script src="questions.js?v=1"></script>
+<script src="game.js?v=2"></script>
+</body>
+</html>
