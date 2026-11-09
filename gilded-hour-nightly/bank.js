@@ -65,14 +65,14 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "medium",
-    "q": "In Pulp Fiction, Jules explains that in Paris a Quarter Pounder with Cheese is called what?",
+    "q": "In Pulp Fiction, Vincent tells Jules that in Paris a Quarter Pounder with Cheese is called what?",
     "a": "A Royale with Cheese",
     "w": [
       "Le Big Mac",
       "A Quarter Pounder Royale",
       "Le Royal Cheese"
     ],
-    "why": "'They call it a Royale with Cheese' — because of the metric system."
+    "why": "'They call it a Royale with Cheese' — Vincent's Paris report for Jules, delivered from a car in Los Angeles. Blame the metric system."
   },
   {
     "cat": "Movies",
@@ -876,7 +876,7 @@ export const BANK = [
       "She-Ra",
       "My Little Pony"
     ],
-    "why": "Jem and the Holograms — truly outrageous, and Mattel's answer to Barbie's rock years."
+    "why": "Jem and the Holograms — truly outrageous, and Hasbro's rock-and-roll answer to Mattel's Barbie."
   },
   {
     "cat": "The Dial-Up Years",

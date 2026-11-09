@@ -35,7 +35,7 @@
      over the slabs, chip, value figures and spotlight pool */
   var CATSTYLE = {
     "Movies":           { hi: "#F0568C", mid: "#E8437C", lo: "#C2255C", sh: "#8E1E47", rgb: "232,67,124" },
-    "TV":               { hi: "#5AB0FF", mid: "#2E9BFF", lo: "#1B7FD4", sh: "#0F5E94", rgb: "46,155,255" },
+    "TV":               { hi: "#1B70C6", mid: "#1563B2", lo: "#10518F", sh: "#0A3D6E", rgb: "21,99,178" },
     "Music":            { hi: "#B983F0", mid: "#9B5DE5", lo: "#7C3AC9", sh: "#55239E", rgb: "155,93,229" },
     "Ads & Jingles":    { hi: "#FFA25E", mid: "#FF8C42", lo: "#E56F1D", sh: "#A34D0E", rgb: "255,140,66" },
     "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#27AE54", sh: "#177A38", rgb: "62,207,110" },
@@ -94,11 +94,16 @@
     ],
     vote: [
       "Fingers up! Three, two, one — SHOW ME!",
-      "Hands in the air like you actually know this one. Three, two, one — show me!"
+      "Hands in the air like you actually know this one. Three, two, one — show me!",
+      "Answers on fingers, please — no conferring, no asking the dog. Three, two, one — show me!",
+      "Commit, table. A guess held high beats a certainty kept quiet. Three, two, one — show me!"
     ],
     mark: [
       "Right — who had it? Tap their seats. Generosity is allowed; honesty is encouraged.",
-      "Call it fairly, table. Tap the seats that earned it."
+      "Call it fairly, table. Tap the seats that earned it.",
+      "The moment of account. Tap every seat that had it — Sterling trusts your eyes and your conscience.",
+      "Who's holding the right answer? Point them out — tap their seats and make it official.",
+      "Confession time. Tap the seats that knew it. The others may keep their dignity; it's all they have left."
     ],
     allHit: [
       "EVERYBODY. The whole table, paid in full. I shall alert the newspapers.",
@@ -137,8 +142,27 @@
       "And the Hour belongs to {name}. Table, applaud. {name}, bow. I shall pretend not to enjoy this."
     ]
   };
+  /* Host lines are drawn from a shuffle-bag per pool: every variant
+     plays once before any variant repeats, and a refill never opens
+     with the line that just played — so even a two-line pool cycled
+     fifteen times a show stops sounding like a loop. Bags reset with
+     each new show (startShow / ogStartShow). */
+  var lineBags = {}, lineLast = {};
+  function drawLine(kind) {
+    var pool = HOST[kind] || ["…"];
+    var bag = lineBags[kind];
+    if (!bag || !bag.length) {
+      bag = shuffle(pool.map(function (_, i) { return i; }));
+      if (pool.length > 1 && bag[0] === lineLast[kind]) { var t = bag[0]; bag[0] = bag[1]; bag[1] = t; }
+      lineBags[kind] = bag;
+    }
+    var idx = bag.shift();
+    lineLast[kind] = idx;
+    return pool[idx];
+  }
+  function resetLineBags() { lineBags = {}; lineLast = {}; }
   function authoredLine(kind, vars) {
-    var line = pick(HOST[kind] || ["…"]);
+    var line = drawLine(kind);
     if (vars) for (var k in vars) line = line.split("{" + k + "}").join(vars[k]);
     return line;
   }
@@ -519,8 +543,12 @@
     var id = p.pop(); seen[id] = 1;
     return BANK[id];
   }
-  /* the five guess slots: kinds shuffled (2 num + 2 survey + 1 swing),
-     ids drawn per kind, unseen preferred */
+  /* the five guess slots: kinds PINNED to the slots in GUESS_SLOTS
+     order — Round 1's two are closest-number, Round 2's two are
+     surveys, Round 3's one is the swing (num or survey) — because
+     Sterling's Round 1 intro promises the table exactly two
+     closest-number questions, and his stated rules stay true every
+     show. Ids drawn per kind, unseen preferred. */
   function buildGuessSchedule() {
     function idsFor(kind) {
       var all = BANK.filter(function (q) { return q.kind === kind; }).map(function (q) { return q.id; });
@@ -528,7 +556,7 @@
       return shuffle(fresh.length ? fresh : all.slice());
     }
     var nums = idsFor("num"), survs = idsFor("survey");
-    var kinds = shuffle(["num", "num", "survey", "survey", rng() < 0.5 ? "num" : "survey"]);
+    var kinds = ["num", "num", "survey", "survey", rng() < 0.5 ? "num" : "survey"];
     var map = {};
     GUESS_SLOTS.forEach(function (slot, i) {
       var src = kinds[i] === "num" ? nums : survs;
@@ -693,6 +721,7 @@
     G = newGame(names);
     G.showId = "table-" + Date.now().toString(36) + "-" + ri(1000000);
     pools = {};
+    resetLineBags();
     G.guess = buildGuessSchedule();
     showScreen("scr-game");
     setLight("open");
@@ -1099,16 +1128,20 @@
   });
   buildNameRows();
   buildBulbs($("marqueeTitle"));
-  /* mute toggle on the title screen — persisted; the show reads fully silent */
-  var btnMute = $("btnMute");
+  /* mute toggles — one on the title screen, one in the show topbar —
+     same gh_mute persistence and wording; the show reads fully silent */
+  var muteBtns = [$("btnMute"), $("btnMuteShow")].filter(Boolean);
   function paintMute() {
-    if (!btnMute) return;
-    btnMute.textContent = Snd.muted ? "SOUND: OFF" : "SOUND: ON";
-    btnMute.classList.toggle("on", !Snd.muted);
+    muteBtns.forEach(function (b) {
+      b.textContent = Snd.muted ? "SOUND: OFF" : "SOUND: ON";
+      b.classList.toggle("on", !Snd.muted);
+    });
   }
-  if (btnMute) btnMute.addEventListener("click", function () {
-    Snd.ensure(); Snd.setMuted(!Snd.muted); paintMute();
-    if (!Snd.muted) Snd.play("correct");
+  muteBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      Snd.ensure(); Snd.setMuted(!Snd.muted); paintMute();
+      if (!Snd.muted) Snd.play("correct");
+    });
   });
   paintMute();
   /* the cold open is skippable — a tap never traps the table */
@@ -1697,15 +1730,40 @@
     prefetchShowLines(ogJoined().map(function (p) { return p.name; }));
     var joined = ogJoined().length;
     stage('<div class="q-cat">YOUR ROOM IS OPEN — PLAYERS JOIN WITH THIS CODE</div>' +
-      '<div class="og-code">' + esc(OG.code) + "</div>" +
+      '<div class="og-coderow"><div class="og-code">' + esc(OG.code) + "</div>" +
+      '<button class="btn-ghost og-copy" id="ogCopy">COPY CODE</button></div>' +
       '<p class="round-text">' + (joined
         ? joined + (joined === 1 ? " player is" : " players are") + " in. Sterling is warming up the room."
         : "Waiting for players — they open the game on their phones, tap JOIN A ROOM, and type the code.") + "</p>" +
       '<button class="btn-gold" id="ogStart"' + (joined >= 2 ? "" : " disabled") + ">START THE SHOW</button>" +
-      (joined === 1 ? '<div style="margin-top:10px"><button class="btn-ghost" id="ogStartAnyway">START WITH ONE PLAYER (TESTING)</button></div>' : "") +
       '<div class="og-statusline" id="ogLobbyStatus"></div>');
     var b = $("ogStart"); if (b) b.addEventListener("click", ogStartShow);
-    var ba = $("ogStartAnyway"); if (ba) ba.addEventListener("click", ogStartShow);
+    var bc = $("ogCopy");
+    if (bc) bc.addEventListener("click", function () {
+      function copied() {
+        bc.textContent = "COPIED ✓";
+        setTimeout(function () { if (bc.isConnected) bc.textContent = "COPY CODE"; }, 1600);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(OG.code).then(copied, function () { ogCopyFallback(bc, copied); });
+      } else ogCopyFallback(bc, copied);
+    });
+  }
+  /* clipboard fallback for browsers without the async API */
+  function ogCopyFallback(btn, done) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = OG.code;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (ok) { done(); return; }
+    } catch (e) {}
+    btn.textContent = "CODE: " + OG.code;
+    setTimeout(function () { if (btn.isConnected) btn.textContent = "COPY CODE"; }, 1600);
   }
   function ogRenderSeats() {
     if (!OG) return;
@@ -1766,8 +1824,9 @@
     }
   }
   function ogStartShow() {
-    if (!OG || OG.started || !ogJoined().length) return;
+    if (!OG || OG.started || ogJoined().length < 2) return;
     OG.started = true;
+    resetLineBags();
     OG.script = ogBuildScript();
     OG.idx = 0; OG.curRound = 0;
     OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
@@ -2333,7 +2392,7 @@
         var effNum = s.yourNum != null ? s.yourNum : (JP.sentNum ? JP.sentNum.num : null);
         main.innerHTML = '<div class="jp-pad">' + padTop +
           '<div class="jp-numpad">' +
-          '<input id="jpNum" class="jp-num" type="number" inputmode="decimal" placeholder="0" value="' + (numKeep != null ? esc(numKeep) : (effNum != null ? effNum : "")) + '">' +
+          '<input id="jpNum" class="jp-num" type="number" inputmode="decimal" placeholder="Your number" value="' + (numKeep != null ? esc(numKeep) : (effNum != null ? effNum : "")) + '">' +
           '<div class="jp-numstate" id="jpNumState">' + (effNum != null ? "SENT · <b>" + effNum + "</b> — send a new one to change it" : "CLOSEST NUMBER TAKES IT · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
           '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button></div></div>';
         $("jpNumSend").addEventListener("click", function () {
