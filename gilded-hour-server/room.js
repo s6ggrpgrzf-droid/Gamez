@@ -67,7 +67,7 @@ export function createRoom(code, hostToken) {
     code,
     hostToken,
     phase: 'lobby',           // lobby | bet | answer | reveal | ended
-    players: [null, null, null, null], // {name, token, score, cutTwo, connected}
+    players: [null, null, null, null], // {name, token, score, cutTwo, connected, avatar}
     bet: null,                // {qid, bySeat:{seat:chips}} while a bet phase is open
     question: null,           // current/last question record (see publish)
     lastReveal: null,         // payload of the last reveal, for snapshots
@@ -89,6 +89,17 @@ export function scoresArray(room) {
 function cleanName(name, seat) {
   const s = String(name || '').trim().slice(0, 24);
   return s || ('Player ' + (seat + 1));
+}
+
+/* Player avatar: an integer 0..7 chosen on the joining phone (Design
+ * pass item 6). Anything else — missing, non-integer, out of range —
+ * falls back to the seat's own index, so old clients that never send
+ * the field get exactly the pre-avatar behaviour. */
+export const AVATAR_COUNT = 8;
+export function cleanAvatar(value, seat) {
+  return Number.isInteger(value) && value >= 0 && value < AVATAR_COUNT
+    ? value
+    : ((seat % AVATAR_COUNT) + AVATAR_COUNT) % AVATAR_COUNT;
 }
 
 function out(partial) {
@@ -129,7 +140,7 @@ export function snapshotFor(room, view) {
     role: view.role,
     seat: view.role === 'player' ? view.seat : null,
     players: room.players.map((p, i) => (p
-      ? { seat: i, name: p.name, score: p.score, cutTwo: p.cutTwo, connected: p.connected }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: p.cutTwo, connected: p.connected, avatar: cleanAvatar(p.avatar, i) }
       : null)),
     question: pubQ,
     bet: room.bet ? { qid: room.bet.qid, betsIn: Object.keys(room.bet.bySeat).length } : null,
@@ -238,6 +249,11 @@ export function handleHello(room, msg) {
       const seat = room.players.findIndex((p) => p && p.token === msg.reclaimToken);
       if (seat === -1) return { identity: null, res: fail('Seat not found for that token.') };
       if (msg.name) room.players[seat].name = cleanName(msg.name, seat);
+      /* a reclaim hello WITHOUT an avatar field keeps the stored
+       * avatar; WITH one (even an invalid one, which clamps to the
+       * seat default) it updates — same rule as the name above */
+      if (msg.avatar !== undefined) room.players[seat].avatar = cleanAvatar(msg.avatar, seat);
+      else if (room.players[seat].avatar === undefined) room.players[seat].avatar = cleanAvatar(undefined, seat);
       return {
         identity: { role: 'player', seat },
         res: ok({
@@ -255,6 +271,7 @@ export function handleHello(room, msg) {
       score: 0,
       cutTwo: true,
       connected: true,
+      avatar: cleanAvatar(msg.avatar, seat),
     };
     room.players[seat] = p;
     return {

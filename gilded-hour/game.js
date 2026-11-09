@@ -34,14 +34,20 @@
   /* category colours — the study palette; the question's category takes
      over the slabs, chip, value figures and spotlight pool */
   var CATSTYLE = {
-    "Movies":           { hi: "#F0568C", mid: "#E8437C", lo: "#C2255C", sh: "#8E1E47", rgb: "232,67,124" },
+    "Movies":           { hi: "#F0568C", mid: "#E8437C", lo: "#C2255C", sh: "#8E1E47", rgb: "232,67,124", shi: "#C04570", smid: "#C83A6B" },
     "TV":               { hi: "#1B70C6", mid: "#1563B2", lo: "#10518F", sh: "#0A3D6E", rgb: "21,99,178" },
-    "Music":            { hi: "#B983F0", mid: "#9B5DE5", lo: "#7C3AC9", sh: "#55239E", rgb: "155,93,229" },
+    "Music":            { hi: "#B983F0", mid: "#9B5DE5", lo: "#7C3AC9", sh: "#55239E", rgb: "155,93,229", shi: "#855EAD", smid: "#8C54CE" },
     "Ads & Jingles":    { hi: "#FFA25E", mid: "#FF8C42", lo: "#E56F1D", sh: "#A34D0E", rgb: "255,140,66" },
-    "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#27AE54", sh: "#177A38", rgb: "62,207,110" },
+    "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#34B35E", sh: "#177A38", rgb: "62,207,110" },
     "Saturday Morning": { hi: "#FFD76A", mid: "#FFC93C", lo: "#F0A90B", sh: "#A87408", rgb: "255,201,60" },
-    "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#0FA3A0", sh: "#076B6E", rgb: "23,190,187" }
+    "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#27ACAA", sh: "#076B6E", rgb: "23,190,187" }
   };
+  /* shi/smid are the answer-slab gradient stops (perfectionist fix #3):
+     the identity hi/mid stay untouched for chips, pills and emblems,
+     but cream slab text on Movies/Music measured 2.59–3.55:1 — under
+     even the large-text floor. The slab-only stops deepen those two
+     gradients so cream clears 4.5:1 at every stop; Toys/Dial-Up lo
+     stops are lightened a step for the same reason (dark text). */
   function catStyle(cat) { return CATSTYLE[cat] || CATSTYLE["Movies"]; }
   var CATTX = { "Ads & Jingles": "#431A04", "Toys & Games": "#0B3D1C", "Saturday Morning": "#4A3200", "The Dial-Up Years": "#063A3B" };
   function applyCat(cat) {
@@ -52,7 +58,21 @@
     g.style.setProperty("--cat-lo", cs.lo);
     g.style.setProperty("--cat-sh", cs.sh);
     g.style.setProperty("--cat-rgb", cs.rgb);
+    g.style.setProperty("--cat-shi", cs.shi || cs.hi);
+    g.style.setProperty("--cat-smid", cs.smid || cs.mid);
     g.style.setProperty("--cat-tx", CATTX[cat] || "#FFF6E8");
+  }
+  /* category emblems (item 6): the seven symbols live in index.html;
+     this stamps one beside a category name anywhere, at any size */
+  var CATEMBLEM = {
+    "Movies": "emb-movies", "TV": "emb-tv", "Music": "emb-music",
+    "Ads & Jingles": "emb-ads", "Toys & Games": "emb-toys",
+    "Saturday Morning": "emb-sat", "The Dial-Up Years": "emb-dial"
+  };
+  function catEmblem(cat) {
+    var id = CATEMBLEM[cat];
+    if (!id) return "";
+    return '<svg class="emb" viewBox="0 0 48 48" aria-hidden="true"><use href="#' + id + '"></use></svg>';
   }
   var PNAMES = ["Player One", "Player Two", "Player Three", "Player Four"];
   var BASE_VALUES = { easy: 100, medium: 200, hard: 300 };
@@ -235,138 +255,158 @@
     return '<svg class="' + (cls || "sterling sterling-md") + '" viewBox="0 0 320 380" aria-label="Sterling">' + inner + "</svg>";
   }
 
-  /* player avatars: four designs x neutral / cheer / slump.
-     Design 2 (deep skin) uses cream eye-whites and bold features so the
-     face reads at couch distance — the study's low-contrast fix. */
-  function avatarSVG(i, state) {
-    var open = '<svg class="avatar" viewBox="0 0 120 124" aria-hidden="true">';
+  /* player avatars (item 6): eight original flat bust portraits in
+     Sterling's hand — round faces, bold features that read at couch
+     distance, cream eye-whites on deep skin (the study's contrast
+     fix). Each bust rides a ground disc in the SEAT's colour, so a
+     player's colour identity survives any portrait they pick.
+     avatarSVG(avatarId, state, seatIdx): id 0..7, seat defaults to
+     the id (which is exactly the old seat-index behaviour). */
+  var PCHEAD = ["#35D461", "#38B6FF", "#FF6B5E", "#B07FE8"];
+  var AVATARS = [
+    { /* 0 — the Starlet: gold waves, hoop earrings, a beauty mark */
+      skin: "#F6B183", neck: "#E89A63", shirt: "#E8437C", hair: "#F2C14E", brow: "#8A5A12",
+      mouth: "#C2255C", eye: "dark",
+      back: '<path d="M28,44 C24,16 40,6 60,6 C80,6 96,16 92,44 L94,78 C86,84 78,78 79,66 L80,44 C68,34 52,34 40,44 L41,66 C42,78 34,84 26,78 Z" fill="#F2C14E"/>',
+      front: '<path d="M32,42 C32,20 46,12 60,12 C74,12 88,20 88,42 C84,28 74,24 66,27 C56,30 44,24 38,29 C34,32 33,37 32,42 Z" fill="#F2C14E"/>' +
+        '<path d="M40,20 Q56,13 76,19 Q58,18 40,20 Z" fill="#FFE29A" opacity=".8"/>',
+      acc: '<circle cx="29.5" cy="60" r="4.4" fill="none" stroke="#FFC93C" stroke-width="2.4"/>' +
+        '<circle cx="90.5" cy="60" r="4.4" fill="none" stroke="#FFC93C" stroke-width="2.4"/>' +
+        '<circle cx="75" cy="55" r="1.7" fill="#2A1530"/>',
+      lips: true
+    },
+    { /* 1 — the Crooner: swept quiff, gold chain over a blue shirt */
+      skin: "#B96F3E", neck: "#9A5527", shirt: "#1563B2", hair: "#17101F", brow: "#17101F",
+      mouth: "#5E2408", eye: "dark",
+      back: "",
+      front: '<path d="M31,44 C30,20 44,10 58,10 C56,5 66,3 73,8 C86,13 90,26 89,44 C85,29 76,25 64,26 C49,27 37,30 31,44 Z" fill="#17101F"/>',
+      acc: '<path d="M38,92 Q60,106 82,92" stroke="#FFC93C" stroke-width="3.4" fill="none" stroke-linecap="round"/>' +
+        '<path d="M52,97 L60,108 L68,97 L60,101 Z" fill="#FFC93C"/>',
+      collar: '<path d="M48,88 L60,100 L72,88 L72,96 L60,106 L48,96 Z" fill="#FFF6E8"/>'
+    },
+    { /* 2 — the Kid: backwards cap, freckles, grin for days */
+      skin: "#F2B183", neck: "#D98E57", shirt: "#3ECF6E", hair: "#2A1530", brow: "#2A1530",
+      mouth: "#7C2D3E", eye: "dark",
+      back: "",
+      front: '<path d="M33,40 C36,24 46,17 60,17 C74,17 84,24 87,40 C76,31 44,31 33,40 Z" fill="#2A1530"/>' +
+        '<path d="M30,33 C32,16 44,7 60,7 C76,7 88,16 90,33 C74,25 46,25 30,33 Z" fill="#E8437C"/>' +
+        '<rect x="12" y="24" width="20" height="7" rx="3.5" transform="rotate(14 22 27)" fill="#C2255C"/>' +
+        '<circle cx="60" cy="10" r="3" fill="#FFC93C"/>',
+      acc: '<circle cx="42" cy="54" r="1.5" fill="#D98E57"/><circle cx="48" cy="57" r="1.5" fill="#D98E57"/><circle cx="41" cy="59" r="1.5" fill="#D98E57"/>' +
+        '<circle cx="78" cy="54" r="1.5" fill="#D98E57"/><circle cx="72" cy="57" r="1.5" fill="#D98E57"/><circle cx="79" cy="59" r="1.5" fill="#D98E57"/>'
+    },
+    { /* 3 — the Grandmother: silver bun, gold spectacles, pearls */
+      skin: "#8A4B26", neck: "#6B3418", shirt: "#9B5DE5", hair: "#D8C9E8", brow: "#D8C9E8",
+      mouth: "#4A1E08", eye: "cream",
+      back: '<circle cx="60" cy="9" r="9.5" fill="#D8C9E8"/><path d="M31,46 C29,22 44,12 60,12 C76,12 91,22 89,46 C86,30 74,25 60,25 C46,25 34,30 31,46 Z" fill="#D8C9E8"/>',
+      front: "",
+      acc: '<circle cx="31" cy="61" r="2.7" fill="#FFF6E8"/><circle cx="89" cy="61" r="2.7" fill="#FFF6E8"/>',
+      glasses: "#FFC93C"
+    },
+    { /* 4 — the Rocker: long mane, gold headband, lightning drop */
+      skin: "#F6B183", neck: "#E89A63", shirt: "#3A2150", hair: "#8E3B2F", brow: "#5E2408",
+      mouth: "#7C2D3E", eye: "dark",
+      back: '<path d="M26,40 C24,12 42,4 60,4 C78,4 96,12 94,40 L97,102 L78,102 L80,50 C70,40 50,40 40,50 L42,102 L23,102 Z" fill="#8E3B2F"/>',
+      front: '<path d="M32,40 C34,20 46,13 60,13 C74,13 86,20 88,40 L78,30 L70,39 L60,29 L50,39 L42,30 Z" fill="#8E3B2F"/>' +
+        '<rect x="31" y="31" width="58" height="7.5" rx="3.75" transform="rotate(-2 60 35)" fill="#FFC93C"/>',
+      acc: '<path d="M91,58 L85,70 L89.5,70 L84,82 L95,66 L90.5,66 Z" fill="#FFC93C"/>'
+    },
+    { /* 5 — the Cowboy: tan hat, moustache, neckerchief */
+      skin: "#C68642", neck: "#A66A2E", shirt: "#17BEBB", hair: "#2A1530", brow: "#2A1530",
+      mouth: "#5E2408", eye: "dark",
+      back: '<path d="M33,44 L33,64 L39,64 L39,46 Z M87,44 L87,64 L81,64 L81,46 Z" fill="#2A1530"/>',
+      front: '<ellipse cx="60" cy="27" rx="35" ry="8" fill="#C97B3D"/>' +
+        '<path d="M39,27 C40,11 48,5 60,5 C72,5 80,11 81,27 C68,22 52,22 39,27 Z" fill="#C97B3D"/>' +
+        '<path d="M41.5,20.5 C52,17 68,17 78.5,20.5 L79,25 C66,21.5 54,21.5 41,25 Z" fill="#E8437C"/>',
+      acc: '<path d="M40,57 Q50,50 60,57 Q70,50 80,57 Q72,66 60,61.5 Q48,66 40,57 Z" fill="#2A1530"/>',
+      collar: '<path d="M47,87 L60,104 L73,87 L66,87 L60,94 L54,87 Z" fill="#E8437C"/><circle cx="60" cy="96" r="3.4" fill="#FFC93C"/>',
+      stache: true
+    },
+    { /* 6 — the Professor: bald pate, round glasses, bowtie + moustache */
+      skin: "#F2B183", neck: "#D98E57", shirt: "#241331", hair: "#B9C7D6", brow: "#B9C7D6",
+      mouth: "#7C2D3E", eye: "dark",
+      back: '<path d="M31,52 C29,40 33,32 38,28 L40,44 C35,46 33,48 31,52 Z M89,52 C87,48 85,46 80,44 L82,28 C87,32 91,40 89,52 Z" fill="#B9C7D6"/>',
+      front: "",
+      acc: '<path d="M41,59 Q51,53 60,59 Q69,53 79,59 Q71,67 60,63 Q49,67 41,59 Z" fill="#B9C7D6"/>',
+      glasses: "#FFC93C",
+      collar: '<path d="M50,88 L70,88 L60,102 Z" fill="#FFF6E8"/><path d="M60,96 L48,89 Q44,96 48,103 Z" fill="#E8437C"/><path d="M60,96 L72,89 Q76,96 72,103 Z" fill="#E8437C"/><rect x="55.5" y="92.5" width="9" height="8" rx="3" fill="#FFC93C"/>',
+      stache: true
+    },
+    { /* 7 — the Mod: sharp black bob, gold hoops, unhurried */
+      skin: "#8A4B26", neck: "#6B3418", shirt: "#FF8C42", hair: "#17101F", brow: "#17101F",
+      mouth: "#E8437C", eye: "cream",
+      back: '<path d="M27,42 C25,14 42,5 60,5 C78,5 95,14 93,42 L95,80 C86,85 81,79 81.5,68 L82,42 L38,42 L38.5,68 C39,79 34,85 25,80 Z" fill="#17101F"/>',
+      front: '<path d="M33,40 C34,20 46,13 60,13 C74,13 86,20 87,40 L87,33 L33,33 Z" fill="#17101F"/>',
+      acc: '<circle cx="28.5" cy="66" r="4.6" fill="none" stroke="#FFC93C" stroke-width="2.4"/>' +
+        '<circle cx="91.5" cy="66" r="4.6" fill="none" stroke="#FFC93C" stroke-width="2.4"/>',
+      lips: true
+    }
+  ];
+  function avFeatures(A, state) {
     var sweat = '<path d="M98,18 C104,29 106,35 98,41 C90,35 92,29 98,18 Z" fill="#7FD4FF"/><circle cx="95.5" cy="32" r="2" fill="#E8FAFF"/>';
+    var eyeCol = A.eye === "cream" ? "#FFE9D6" : "#2A1530";
     var s = "";
-    if (i === 0) { /* green — the grinner */
-      if (state === "cheer") {
-        s = '<path d="M20,102 Q0,80 6,52" stroke="#35D461" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-          '<path d="M100,102 Q120,80 114,52" stroke="#35D461" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-          '<circle cx="6" cy="47" r="8.5" fill="#F2B183"/><circle cx="114" cy="47" r="8.5" fill="#F2B183"/>';
-      }
-      s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#35D461"/>' +
-        '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
-        '<rect x="51" y="66" width="18" height="18" rx="6" fill="#D98E57"/>' +
-        '<circle cx="60" cy="46" r="28" fill="#F2B183"/>' +
-        '<path d="M32,44 C32,22 46,14 60,14 C74,14 88,22 88,44 C84,30 74,26 60,26 C46,26 36,30 32,44 Z" fill="#2A1530"/>';
-      if (state === "cheer") {
-        s += '<path d="M41,47 Q49,40 57,47" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-          '<path d="M63,47 Q71,40 79,47" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-          '<path d="M44,58 Q60,80 76,58 Q60,67 44,58 Z" fill="#7C2D3E"/>' +
-          '<path d="M52,68 Q60,74 68,68 Q60,71 52,68 Z" fill="#FF8FA3"/>';
-      } else if (state === "slump") {
-        s += '<rect x="39" y="35" width="16" height="5.5" rx="2.75" transform="rotate(16 47 38)" fill="#2A1530"/>' +
-          '<rect x="65" y="35" width="16" height="5.5" rx="2.75" transform="rotate(-16 73 38)" fill="#2A1530"/>' +
-          '<path d="M40,48 Q49,55 58,48" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-          '<path d="M62,48 Q71,55 80,48" stroke="#2A1530" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-          '<path d="M48,64 Q55,60 60,64 Q65,68 72,64" stroke="#7C2D3E" stroke-width="3.5" stroke-linecap="round" fill="none"/>' + sweat;
-        return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
-      } else {
-        s += '<rect x="40" y="33" width="15" height="5.5" rx="2.75" transform="rotate(-6 47 36)" fill="#2A1530"/>' +
-          '<rect x="65" y="33" width="15" height="5.5" rx="2.75" transform="rotate(6 72 36)" fill="#2A1530"/>' +
-          '<circle cx="49" cy="46" r="3.4" fill="#2A1530"/><circle cx="71" cy="46" r="3.4" fill="#2A1530"/>' +
-          '<path d="M45,58 Q60,72 75,58 Q60,65 45,58 Z" fill="#7C2D3E"/>' +
-          '<path d="M49,59.5 Q60,66 71,59.5 Q60,62.5 49,59.5 Z" fill="#FFF"/>';
-      }
-      return open + s + "</svg>";
-    }
-    if (i === 1) { /* blue — cool shades */
-      if (state === "cheer") {
-        s = '<path d="M20,102 Q0,80 6,52" stroke="#38B6FF" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-          '<path d="M100,102 Q120,80 114,52" stroke="#38B6FF" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-          '<circle cx="6" cy="47" r="8.5" fill="#B96F3E"/><circle cx="114" cy="47" r="8.5" fill="#B96F3E"/>';
-      }
-      s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#38B6FF"/>' +
-        '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
-        '<rect x="51" y="66" width="18" height="18" rx="6" fill="#9A5527"/>' +
-        '<circle cx="60" cy="46" r="28" fill="#B96F3E"/>' +
-        '<path d="M31,42 C33,20 46,13 60,13 C74,13 87,20 89,42 L89,47 C70,39 50,39 31,47 Z" fill="#177FBF"/>' +
-        '<rect x="24" y="45" width="72" height="8" rx="4" fill="#0F5E94"/>' +
-        '<rect x="36" y="40" width="20" height="13" rx="6" fill="#1D0B26"/>' +
-        '<rect x="64" y="40" width="20" height="13" rx="6" fill="#1D0B26"/>' +
-        '<rect x="54" y="44" width="12" height="4" fill="#1D0B26"/>' +
-        '<rect x="39" y="42.5" width="9" height="3.5" rx="1.75" transform="rotate(-18 43 44)" fill="#FFF" opacity=".35"/>';
-      if (state === "cheer") {
-        s += '<path d="M45,58 Q60,72 75,58 Q60,65 45,58 Z" fill="#5E2408"/>' +
-          '<path d="M49,59.5 Q60,66 71,59.5 Q60,62.5 49,59.5 Z" fill="#FFF"/>';
-      } else if (state === "slump") {
-        s += '<path d="M50,66 L70,66" stroke="#401F0E" stroke-width="4" stroke-linecap="round"/>' + sweat;
-        return open + '<g transform="translate(0 4) rotate(-3 60 60)">' + s + "</g></svg>";
-      } else {
-        s += '<path d="M48,63 Q62,69 74,59" stroke="#401F0E" stroke-width="4" stroke-linecap="round" fill="none"/>';
-      }
-      return open + s + "</svg>";
-    }
-    if (i === 2) { /* coral — determined, deep skin, high-contrast features */
-      if (state === "cheer") {
-        s = '<path d="M20,102 Q0,80 6,52" stroke="#FF6B5E" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-          '<path d="M100,102 Q120,80 114,52" stroke="#FF6B5E" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-          '<circle cx="6" cy="47" r="8.5" fill="#8A4B26"/><circle cx="114" cy="47" r="8.5" fill="#8A4B26"/>';
-      }
-      s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#FF6B5E"/>' +
-        '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
-        '<rect x="51" y="66" width="18" height="18" rx="6" fill="#6B3418"/>' +
-        '<circle cx="60" cy="48" r="28" fill="#8A4B26"/>' +
-        '<circle cx="40" cy="28" r="11" fill="#1E0F26"/><circle cx="60" cy="20" r="13" fill="#1E0F26"/>' +
-        '<circle cx="80" cy="28" r="11" fill="#1E0F26"/><circle cx="30" cy="40" r="9" fill="#1E0F26"/>' +
-        '<circle cx="90" cy="40" r="9" fill="#1E0F26"/>';
-      if (state === "cheer") {
-        s += '<path d="M41,49 Q49,41 57,49" stroke="#FFE9D6" stroke-width="4" stroke-linecap="round" fill="none"/>' +
-          '<path d="M63,49 Q71,41 79,49" stroke="#FFE9D6" stroke-width="4" stroke-linecap="round" fill="none"/>' +
-          '<path d="M45,60 Q60,73 75,60 Q60,67 45,60 Z" fill="#4A1E08"/>' +
-          '<path d="M49,61.5 Q60,67 71,61.5 Q60,64 49,61.5 Z" fill="#FFF"/>';
-      } else if (state === "slump") {
-        s += '<rect x="39" y="38" width="16" height="6" rx="3" transform="rotate(-16 47 41)" fill="#241105"/>' +
-          '<rect x="65" y="38" width="16" height="6" rx="3" transform="rotate(16 73 41)" fill="#241105"/>' +
-          '<path d="M40,54 Q49,61 58,54" stroke="#FFE9D6" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-          '<path d="M62,54 Q71,61 80,54" stroke="#FFE9D6" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-          '<path d="M48,70 Q55,66 60,70 Q65,74 72,70" stroke="#FFE9D6" stroke-width="3.5" stroke-linecap="round" fill="none"/>' + sweat;
-        return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
-      } else {
-        s += '<rect x="39" y="35" width="16" height="6" rx="3" transform="rotate(14 47 38)" fill="#241105"/>' +
-          '<rect x="65" y="35" width="16" height="6" rx="3" transform="rotate(-14 73 38)" fill="#241105"/>' +
-          '<ellipse cx="49" cy="48" rx="6" ry="4.6" fill="#FFF6E8"/><ellipse cx="71" cy="48" rx="6" ry="4.6" fill="#FFF6E8"/>' +
-          '<circle cx="49" cy="48" r="2.6" fill="#1D0D05"/><circle cx="71" cy="48" r="2.6" fill="#1D0D05"/>' +
-          '<path d="M46,62 Q60,71 74,61" stroke="#2A1206" stroke-width="4.5" stroke-linecap="round" fill="none"/>';
-      }
-      return open + s + "</svg>";
-    }
-    /* purple — the coiled newcomer */
     if (state === "cheer") {
-      s = '<path d="M20,102 Q0,80 6,52" stroke="#B07FE8" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-        '<path d="M100,102 Q120,80 114,52" stroke="#B07FE8" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-        '<circle cx="6" cy="47" r="8.5" fill="#C68642"/><circle cx="114" cy="47" r="8.5" fill="#C68642"/>';
-    }
-    s += '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="#B07FE8"/>' +
-      '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
-      '<rect x="51" y="66" width="18" height="18" rx="6" fill="#A66A2E"/>' +
-      '<circle cx="60" cy="46" r="28" fill="#C68642"/>' +
-      '<path d="M32,42 C32,22 46,14 60,14 C74,14 88,22 88,42 C84,29 74,25 60,25 C46,25 36,29 32,42 Z" fill="#17101F"/>' +
-      '<circle cx="46" cy="15" r="7" fill="#17101F"/><circle cx="60" cy="11" r="8" fill="#17101F"/><circle cx="74" cy="15" r="7" fill="#17101F"/>';
-    if (state === "cheer") {
-      s += '<path d="M41,47 Q49,40 57,47" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-        '<path d="M63,47 Q71,40 79,47" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-        '<path d="M44,58 Q60,80 76,58 Q60,67 44,58 Z" fill="#5E2408"/>' +
+      s += '<path d="M41,47 Q49,40 57,47" stroke="' + eyeCol + '" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+        '<path d="M63,47 Q71,40 79,47" stroke="' + eyeCol + '" stroke-width="3.5" stroke-linecap="round" fill="none"/>';
+      if (!A.stache) s += '<path d="M44,58 Q60,80 76,58 Q60,67 44,58 Z" fill="' + A.mouth + '"/>' +
         '<path d="M52,68 Q60,74 68,68 Q60,71 52,68 Z" fill="#FF8FA3"/>';
+      else s += '<path d="M50,66 Q60,74 70,66 Q60,69.5 50,66 Z" fill="' + A.mouth + '"/>';
     } else if (state === "slump") {
-      s += '<rect x="39" y="35" width="16" height="5.5" rx="2.75" transform="rotate(16 47 38)" fill="#17101F"/>' +
-        '<rect x="65" y="35" width="16" height="5.5" rx="2.75" transform="rotate(-16 73 38)" fill="#17101F"/>' +
-        '<path d="M40,48 Q49,55 58,48" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-        '<path d="M62,48 Q71,55 80,48" stroke="#241105" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-        '<path d="M48,64 Q55,60 60,64 Q65,68 72,64" stroke="#5E2408" stroke-width="3.5" stroke-linecap="round" fill="none"/>' + sweat;
-      return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
+      s += '<rect x="39" y="35" width="16" height="5.5" rx="2.75" transform="rotate(16 47 38)" fill="' + A.brow + '"/>' +
+        '<rect x="65" y="35" width="16" height="5.5" rx="2.75" transform="rotate(-16 73 38)" fill="' + A.brow + '"/>' +
+        '<path d="M40,48 Q49,55 58,48" stroke="' + eyeCol + '" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+        '<path d="M62,48 Q71,55 80,48" stroke="' + eyeCol + '" stroke-width="3.5" stroke-linecap="round" fill="none"/>';
+      if (!A.stache) s += '<path d="M48,66 Q55,62 60,66 Q65,70 72,66" stroke="' + A.mouth + '" stroke-width="3.5" stroke-linecap="round" fill="none"/>';
+      s += sweat;
     } else {
-      s += '<rect x="40" y="33" width="15" height="5.5" rx="2.75" transform="rotate(-6 47 36)" fill="#17101F"/>' +
-        '<rect x="65" y="33" width="15" height="5.5" rx="2.75" transform="rotate(6 72 36)" fill="#17101F"/>' +
-        '<circle cx="49" cy="46" r="3.4" fill="#241105"/><circle cx="71" cy="46" r="3.4" fill="#241105"/>' +
-        '<path d="M45,58 Q60,72 75,58 Q60,65 45,58 Z" fill="#5E2408"/>' +
-        '<path d="M49,59.5 Q60,66 71,59.5 Q60,62.5 49,59.5 Z" fill="#FFF"/>';
+      s += '<rect x="40" y="33" width="15" height="5.5" rx="2.75" transform="rotate(-6 47 36)" fill="' + A.brow + '"/>' +
+        '<rect x="65" y="33" width="15" height="5.5" rx="2.75" transform="rotate(6 72 36)" fill="' + A.brow + '"/>';
+      if (A.eye === "cream") {
+        s += '<ellipse cx="49" cy="46" rx="6" ry="4.6" fill="#FFF6E8"/><ellipse cx="71" cy="46" rx="6" ry="4.6" fill="#FFF6E8"/>' +
+          '<circle cx="49" cy="46" r="2.6" fill="#1D0D05"/><circle cx="71" cy="46" r="2.6" fill="#1D0D05"/>';
+      } else {
+        s += '<circle cx="49" cy="46" r="3.4" fill="#2A1530"/><circle cx="71" cy="46" r="3.4" fill="#2A1530"/>';
+      }
+      if (!A.stache) {
+        if (A.lips) s += '<path d="M46,59 Q60,71 74,59 Q60,64 46,59 Z" fill="' + A.mouth + '"/>';
+        else s += '<path d="M45,58 Q60,72 75,58 Q60,65 45,58 Z" fill="' + A.mouth + '"/>' +
+          '<path d="M49,59.5 Q60,66 71,59.5 Q60,62.5 49,59.5 Z" fill="#FFF"/>';
+      }
     }
+    if (A.glasses) {
+      s += '<g stroke="' + A.glasses + '" stroke-width="2.6" fill="none">' +
+        '<circle cx="49" cy="46" r="10"/><circle cx="71" cy="46" r="10"/>' +
+        '<path d="M59,46 L61,46 M39,44 L32,41 M81,44 L88,41"/></g>';
+    }
+    return s;
+  }
+  function avatarSVG(id, state, seat) {
+    id = Number.isInteger(id) && id >= 0 && id < 8 ? id : 0;
+    var A = AVATARS[id];
+    var si = Number.isInteger(seat) ? ((seat % 4) + 4) % 4 : id % 4;
+    var open = '<svg class="avatar" viewBox="0 0 120 124" aria-hidden="true">';
+    var s = '<circle cx="60" cy="57" r="54" fill="' + PCHEAD[si] + '"/>' +
+      '<circle cx="60" cy="57" r="54" fill="none" stroke="#FFC93C" stroke-width="2" opacity=".45"/>';
+    if (state === "cheer") {
+      s += '<path d="M20,102 Q0,80 6,52" stroke="' + A.shirt + '" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+        '<path d="M100,102 Q120,80 114,52" stroke="' + A.shirt + '" stroke-width="13" stroke-linecap="round" fill="none"/>' +
+        '<circle cx="6" cy="47" r="8.5" fill="' + A.skin + '"/><circle cx="114" cy="47" r="8.5" fill="' + A.skin + '"/>';
+    }
+    s += A.back +
+      '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="' + A.shirt + '"/>' +
+      '<path d="M14,124 Q18,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
+      '<rect x="51" y="66" width="18" height="18" rx="6" fill="' + A.neck + '"/>' +
+      '<circle cx="60" cy="46" r="28" fill="' + A.skin + '"/>' +
+      A.front + avFeatures(A, state) + (A.acc || "") + (A.collar || "");
+    if (state === "slump") return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
     return open + s + "</svg>";
+  }
+  /* a snapshot player's portrait: their chosen avatar when the
+     server sent a valid one, else the seat default — so an old
+     server (no avatar field) renders exactly as before */
+  function snapAvatar(p, i) {
+    return p && Number.isInteger(p.avatar) && p.avatar >= 0 && p.avatar < 8 ? p.avatar : i % 8;
   }
 
   /* ---------- sound (synthesized with WebAudio only — no files) ---------- */
@@ -802,7 +842,7 @@
   function newGame(names) {
     return {
       players: names.map(function (nm, i) {
-        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1 };
+        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, avatar: tableAvatars[i] != null ? tableAvatars[i] : i };
       }),
       round: 1, qInRound: 0,
       showId: null,             // per-show key for the live Sterling lines
@@ -815,6 +855,43 @@
         ranks: names.reduce(function (m, _n, i) { m[i] = i; return m; }, {})
       }
     };
+  }
+
+  /* ---------- Pass D4: one scoring grammar for every host reveal ----------
+     bank -> a gold "+$N" (.seat-delta.bank) rises from the seat while the
+             coins fly (bankFx) and the score counts up under its shimmer
+     miss -> a muted "$0" (.seat-delta.miss) falls away from the seat
+     guess questions (num + survey): banking seats also wear a CLOSEST
+     chip beside the name for the whole reveal, so the room sees WHY.
+     Each reveal rebuilds a descriptor (seat -> treatment); the seat
+     renderers paint it whenever the phase is "reveal", so a mid-reveal
+     re-render (an online snapshot, a seat going AWAY) repaints the
+     same grammar instead of wiping it. */
+  var tableFx = null, ogFx = null;
+  function decorateSeat(s, fx) {
+    if (!fx) return;
+    if (fx.closest) {
+      var nm = s.querySelector(".seat-name");
+      if (nm) {
+        var tg = document.createElement("span");
+        tg.className = "closest-tag";
+        tg.textContent = "CLOSEST";
+        nm.appendChild(tg);
+      }
+    }
+    if (fx.delta) {
+      var desk = s.querySelector(".desk");
+      var d = document.createElement("span");
+      d.className = "seat-delta " + fx.delta;
+      d.textContent = fx.delta === "bank" ? mplus(fx.amt) : "$0";
+      d.style.animationDelay = (fx.delay || 0) + "s";
+      /* The span rides the SEAT, not the desk: the desk's clip-path
+         trapezoid clips any child painted above its top edge. Its
+         height comes from the desk's offset, so it still floats
+         exactly off the desk's top-centre in every layout. */
+      d.style.top = ((desk ? desk.offsetTop : 0) - 13) + "px";
+      s.appendChild(d);
+    }
   }
 
   /* ---------- seats (the podium row) ---------- */
@@ -830,12 +907,13 @@
       var state = "neutral";
       if (G.phase === "reveal" && G.cur && G.cur.marks) state = G.cur.marks[i] ? "cheer" : "slump";
       var s = el('<div class="seat pod' + i + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(i, state) + "</div>" +
+        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tagsFor(i) + "</span></div></div>");
       if (p.score === bestScore && bestScore > 0) s.classList.add("lead");
       if (G.cur && G.cur.marks && G.cur.marks[i]) s.classList.add("gotit");
+      if (G.phase === "reveal" && tableFx) decorateSeat(s, tableFx.seats[i]);
       s.addEventListener("click", function () { onSeatTap(i); });
       bot.appendChild(s);
     });
@@ -916,7 +994,7 @@
       var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
         '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
-        avatarSVG(pi, pos === 0 ? "cheer" : "neutral") +
+        avatarSVG(snapAvatar(p, pi), pos === 0 ? "cheer" : "neutral", pi) +
         '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
     }).join("");
     var leadName = G.players[order[0]].name, lastName = G.players[order[order.length - 1]].name;
@@ -1097,7 +1175,7 @@
     updateTop(); renderSeats();
     var chips = CATS.map(function (c) {
       var cs = catStyle(c);
-      return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + esc(c) + "</span>";
+      return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + catEmblem(c) + "<span>" + esc(c) + "</span></span>";
     }).join("");
     stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
       spinFrameHTML(chips) +
@@ -1127,7 +1205,7 @@
     }).join("");
     stage('<div class="round-kicker">THE BIG FINISH · QUESTION ' + (G.qInRound + 1) + " OF 3</div>" +
       '<p class="round-text">Bet on yourself, out loud — 1, 2 or 3 chips. A chip is $100. Right pays the bet; wrong costs nothing but pride.</p>' +
-      '<div style="display:flex;flex-direction:column;gap:6px;width:min(480px,94vw);margin:8px auto">' + rows + "</div>" +
+      '<div class="bet-rows">' + rows + "</div>" +
       '<button class="btn-gold" id="btnBetsDone">BETS ARE IN — SPIN THE CATEGORY</button>');
     hostSay("bet");
     document.querySelectorAll("[data-bet]").forEach(function (b) {
@@ -1152,7 +1230,7 @@
     }).join("");
     var head = c.kind === "survey" ? "MOST PEOPLE SAY…" : c.diff.toUpperCase();
     var pill = c.special ? "TONIGHT'S GILDED QUESTION" : esc(c.cat.toUpperCase());
-    return '<div class="q-headrow"><span class="cat-pill' + (c.special ? " gilded" : "") + '">' + pill + '</span><span class="q-kind">' + head + "</span></div>" +
+    return '<div class="q-headrow"><span class="cat-pill' + (c.special ? " gilded" : "") + '">' + catEmblem(c.cat) + pill + '</span><span class="q-kind">' + head + "</span></div>" +
       '<div class="q-text">' + esc(c.q.q) + "</div>" +
       '<div class="q-meta">' +
       (c.betRound
@@ -1163,7 +1241,7 @@
   }
   function numHTML() {
     var c = G.cur;
-    return '<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">CLOSEST NUMBER</span></div>' +
+    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">CLOSEST NUMBER</span></div>' +
       '<div class="q-text">' + esc(c.q.q) + "</div>" +
       '<div class="q-meta">' +
       (c.betRound
@@ -1250,7 +1328,7 @@
   function markScreen() {
     G.phase = "vote";
     renderSeats();
-    stage('<div class="q-headrow"><span class="cat-pill">' + esc(G.cur.cat.toUpperCase()) + '</span><span class="q-kind">WHO HAD IT?</span></div>' +
+    stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(G.cur.cat) + esc(G.cur.cat.toUpperCase()) + '</span><span class="q-kind">WHO HAD IT?</span></div>' +
       '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(G.cur.q.q) + "</div>" +
       '<p class="round-text">' + (G.cur.kind === "num"
         ? "Who called the closest number? Tap their seat — tap two seats if it's a dead heat."
@@ -1266,24 +1344,33 @@
     var c = G.cur;
     G.phase = "reveal";
     var winners = Object.keys(c.marks).map(Number).sort(function (a, b) { return a - b; });
-    var parts = [];
     winners.forEach(function (i) {
       var p = G.players[i];
       var gain = c.betRound ? p.bet * 100 : c.bankValue;
       p.score += gain;
-      parts.push('<span class="up">' + mplus(gain) + " to " + esc(p.name) + "</span>");
     });
+    /* Pass D4: this reveal's scoring grammar, painted at the seats by
+       renderSeats below. Marked seats banked; unmarked seats missed
+       (at the table the host's marks ARE the answer record — an
+       unmarked seat already slumps). Guess questions tag every
+       banker CLOSEST so the room sees why the money moved. */
+    var fxSeats = {}, bankSeq = 0, guessQ = (c.kind === "num" || c.kind === "survey");
+    G.players.forEach(function (p, i) {
+      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: c.betRound ? p.bet * 100 : c.bankValue, closest: guessQ, delay: bankSeq++ * 0.12 };
+      else fxSeats[i] = { delta: "miss", delay: i * 0.05 };
+    });
+    tableFx = { seats: fxSeats };
     /* the last question's reveal settles the final standings — start
        the winner line's generation now, not at the finale screen */
     if (G.round === 3 && G.qInRound === R3_COUNT - 1) winnerPrefetchAtReveal(winnerFactsFrom(G.players));
     var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="btnNext">CONTINUE</button></div>';
     if (c.kind === "num") {
-      var dNum = parts.length ? parts.join(" &nbsp;")
-        : '<span class="down">Nobody got close. The number keeps its dignity.</span>';
-      stage('<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">THE NUMBER WAS</span></div>' +
+      var dNum = winners.length ? ""
+        : '<div class="delta"><span class="down">Nobody got close. The number keeps its dignity.</span></div>';
+      stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">THE NUMBER WAS</span></div>' +
         '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + "</div>" +
         '<div class="wager-amt">' + Number(c.q.num).toLocaleString("en-US") + "</div>" +
-        '<div class="delta">' + dNum + "</div>" +
+        dNum +
         '<p class="why">' + esc(c.q.why) + "</p>" + nextBtn);
       revealSay(winners.length ? "numHit" : "numMiss", { name: winners.length ? G.players[winners[0]].name : "" }, winners);
       Snd.play(winners.length ? "correct" : "wrong");
@@ -1293,12 +1380,12 @@
         var cls = "ans-btn" + (i === correctIdx ? " correct" : (o.gone ? " dim wrong" : " dim"));
         return '<button class="' + cls + '" disabled><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + "</span></button>";
       }).join("");
-      var dMcq = parts.length ? parts.join(" &nbsp;")
-        : '<span class="down">No fingers on it. The money stays in Sterling\'s pocket — this time.</span>';
-      stage('<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">THE ANSWER</span></div>' +
+      var dMcq = winners.length ? ""
+        : '<div class="delta"><span class="down">No fingers on it. The money stays in Sterling\'s pocket — this time.</span></div>';
+      stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">THE ANSWER</span></div>' +
         '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + "</div>" +
         '<div class="answers">' + btns + "</div>" +
-        '<div class="delta">' + dMcq + "</div>" +
+        dMcq +
         '<p class="why">' + esc(c.q.why) + "</p>" + nextBtn);
       var hk = winners.length === 0 ? "allMiss" : (winners.length === G.players.length ? "allHit" : "someHit");
       revealSay(hk, { name: winners.length ? G.players[winners[0]].name : "" }, winners);
@@ -1341,7 +1428,7 @@
         ? '<span class="champ-tag">★ CHAMPION</span>'
         : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
       return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === i ? " winner-podium lit" : "") + '">' + top + (ii === i ? laurelBadge() : "") +
-        avatarSVG(ii, ii === i ? "cheer" : "neutral") +
+        avatarSVG(snapAvatar(pp, ii), ii === i ? "cheer" : "neutral", ii) +
         '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div></div></div>";
     }).join("");
     var tieNote = "";
@@ -1376,6 +1463,20 @@
 
   /* ---------- setup screen ---------- */
   var playerCount = 3;
+  /* table-mode portraits (item 6): one pick per seat slot, defaulting
+     to the seat's own avatar; tapping the disc in a name row cycles.
+     Remembered on this device like the join name is — presentation
+     only, never part of the game state the show scores from */
+  var tableAvatars = [0, 1, 2, 3];
+  try {
+    var _ta = JSON.parse(localStorage.getItem("gh_table_avatars") || "null");
+    if (Array.isArray(_ta)) _ta.forEach(function (v, i) {
+      if (i < 4 && Number.isInteger(v) && v >= 0 && v < 8) tableAvatars[i] = v;
+    });
+  } catch (e) {}
+  function saveTableAvatars() {
+    try { localStorage.setItem("gh_table_avatars", JSON.stringify(tableAvatars)); } catch (e) {}
+  }
   function renderPodiumPreview() {
     var wrap = $("podiumPreview");
     if (!wrap) return;
@@ -1383,7 +1484,7 @@
     var html = "";
     for (var i = 0; i < playerCount; i++) {
       var nm = (inputs[i] && inputs[i].value.trim()) || PNAMES[i];
-      html += '<div class="podium pod' + i + '">' + avatarSVG(i, "neutral") +
+      html += '<div class="podium pod' + i + '">' + avatarSVG(tableAvatars[i], "neutral", i) +
         '<div class="desk"><div class="pname">' + esc(nm) + '</div><div class="pmoney">$0</div></div></div>';
     }
     wrap.innerHTML = html;
@@ -1391,13 +1492,31 @@
   function buildNameRows() {
     var wrap = $("nameRows"); wrap.innerHTML = "";
     for (var i = 0; i < playerCount; i++) {
-      var row = el('<div class="name-row"><span class="name-dot" style="background:' + PCOLORS[i] + '"></span>' +
+      var row = el('<div class="name-row"><button class="ava-pick" data-avaseat="' + i + '" aria-label="Portrait for seat ' + (i + 1) + ' — tap to change">' +
+        avatarSVG(tableAvatars[i], "neutral", i) + "</button>" +
         '<input class="name-input" maxlength="14" value="' + PNAMES[i] + '">' +
         '<span class="name-seat">SEAT ' + (i + 1) + "</span></div>");
       row.querySelector(".name-input").addEventListener("input", renderPodiumPreview);
+      (function (seat) {
+        row.querySelector(".ava-pick").addEventListener("click", function () {
+          Snd.ensure();
+          tableAvatars[seat] = (tableAvatars[seat] + 1) % 8;
+          saveTableAvatars();
+          paintAvaPicks();
+          renderPodiumPreview();
+        });
+      })(i);
       wrap.appendChild(row);
     }
     renderPodiumPreview();
+  }
+  /* repaint just the picker discs (a cycle tap must not rebuild the
+     rows — that would throw away names being typed) */
+  function paintAvaPicks() {
+    document.querySelectorAll(".ava-pick").forEach(function (b) {
+      var seat = parseInt(b.getAttribute("data-avaseat"), 10);
+      b.innerHTML = avatarSVG(tableAvatars[seat], "neutral", seat);
+    });
   }
   document.querySelectorAll(".count-btn").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -1439,6 +1558,47 @@
     });
   });
   paintMute();
+  /* ---------- how tonight works (teaching cards) ----------
+     A manual overlay off the title screen: three beats, no game
+     state touched. gh_taught only records that a player checked
+     "Don't show this again" — the entry point stays either way,
+     and picks up a quiet tick when the table has been taught. */
+  var howBeat = 0;
+  function howTaught() { try { return localStorage.getItem("gh_taught") === "1"; } catch (e) { return false; } }
+  function paintHowEntry() { $("btnHow").textContent = howTaught() ? "HOW TONIGHT WORKS ✓" : "HOW TONIGHT WORKS"; }
+  function showBeat(n) {
+    howBeat = n;
+    document.querySelectorAll(".how-beat").forEach(function (p) { p.classList.toggle("hidden", +p.getAttribute("data-beat") !== n); });
+    document.querySelectorAll(".how-dot").forEach(function (d, i) { d.classList.toggle("sel", i === n); });
+    var last = n === 2;
+    $("howNext").classList.toggle("hidden", last);
+    $("howClose").classList.toggle("hidden", !last);
+    $("howStart").classList.toggle("hidden", !last);
+  }
+  function openHow() {
+    $("howAgain").checked = howTaught(); showBeat(0);
+    /* the last beat's gold button only starts a show at the table —
+       in the online modes it merely closes, so it says so (fix #9) */
+    $("howStart").textContent = ghMode === "table" ? "START THE SHOW" : "GOT IT";
+    $("howOverlay").classList.remove("hidden");
+  }
+  function closeHow() { $("howOverlay").classList.add("hidden"); }
+  $("btnHow").addEventListener("click", function () { Snd.ensure(); openHow(); });
+  $("howSkip").addEventListener("click", closeHow);
+  $("howClose").addEventListener("click", closeHow);
+  $("howNext").addEventListener("click", function () { showBeat(Math.min(2, howBeat + 1)); });
+  $("howStart").addEventListener("click", function () {
+    closeHow();
+    if (ghMode === "table") $("btnStart").click();
+  });
+  $("howAgain").addEventListener("change", function () {
+    try {
+      if ($("howAgain").checked) localStorage.setItem("gh_taught", "1");
+      else localStorage.removeItem("gh_taught");
+    } catch (e) {}
+    paintHowEntry();
+  });
+  paintHowEntry();
   /* the cold open is skippable — a tap never traps the table */
   $("stage").addEventListener("click", function () {
     if (G && G.phase === "coldopen") { clearTimeout(coldTimer); roundIntro(); }
@@ -2028,6 +2188,7 @@
     var joined = ogJoined().length;
     stage('<div class="q-cat">YOUR ROOM IS OPEN — PLAYERS JOIN WITH THIS CODE</div>' +
       '<div class="og-coderow"><div class="og-code">' + esc(OG.code) + "</div>" +
+      '<div class="og-qr" id="ogQr"><svg class="wheel-emblem emblem-lobby" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem-sm"></use></svg><canvas id="ogQrCanvas" width="240" height="240" aria-label="QR code to join this room"></canvas><div class="og-qr-cap">SCAN TO JOIN</div></div>' +
       '<button class="btn-ghost og-copy" id="ogCopy">COPY CODE</button></div>' +
       '<p class="round-text">' + (joined
         ? joined + (joined === 1 ? " player is" : " players are") + " in. Sterling is warming up the room."
@@ -2035,6 +2196,7 @@
       '<button class="btn-gold" id="ogStart"' + (joined >= 2 ? "" : " disabled") + ">START THE SHOW</button>" +
       '<div class="og-statusline" id="ogLobbyStatus"></div>');
     var b = $("ogStart"); if (b) b.addEventListener("click", ogStartShow);
+    ogPaintQr();
     var bc = $("ogCopy");
     if (bc) bc.addEventListener("click", function () {
       function copied() {
@@ -2045,6 +2207,38 @@
         navigator.clipboard.writeText(OG.code).then(copied, function () { ogCopyFallback(bc, copied); });
       } else ogCopyFallback(bc, copied);
     });
+  }
+  /* the join deep link: this page's own directory + ?room=<CODE>,
+     derived from the live URL so it works on any host with no
+     hardcoded environment; the join side reads ?room= at boot */
+  function ogJoinUrl() {
+    var base = location.href.split(/[?#]/)[0].replace(/[^/]+\.html?$/i, "");
+    if (base.charAt(base.length - 1) !== "/") base += "/";
+    return base + "?room=" + OG.code;
+  }
+  /* draw the lobby QR with the vendored offline generator (qr.js);
+     if the library somehow failed to load, the plate hides itself
+     and the big code + COPY CODE still carry the lobby */
+  function ogPaintQr() {
+    var plate = $("ogQr"), cv = $("ogQrCanvas");
+    if (!plate || !cv) return;
+    var url = ogJoinUrl();
+    plate.setAttribute("data-payload", url);
+    if (typeof qrcode !== "function") { plate.style.display = "none"; return; }
+    try {
+      var qr = qrcode(0, "M");
+      qr.addData(url);
+      qr.make();
+      var n = qr.getModuleCount(), quiet = 4, total = n + quiet * 2;
+      var px = cv.width, cell = px / total;
+      var ctx = cv.getContext("2d");
+      ctx.fillStyle = "#FFF6E8";
+      ctx.fillRect(0, 0, px, px);
+      ctx.fillStyle = "#241331";
+      for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, Math.ceil(cell), Math.ceil(cell));
+      }
+    } catch (e) { plate.style.display = "none"; }
   }
   /* clipboard fallback for browsers without the async API */
   function ogCopyFallback(btn, done) {
@@ -2075,11 +2269,12 @@
       var tags = [p.cutTwo ? "CUT TWO" : "CUT SPENT"];
       if (!p.connected) tags.push("AWAY");
       var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(i, state) + "</div>" +
+        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tags.join(" · ") + "</span></div></div>");
       if (p.score === best && best > 0) s.classList.add("lead");
+      if (OG.phase === "reveal" && ogFx && ogFx.qid === OG.lastRevealQid) decorateSeat(s, ogFx.seats[i]);
       bot.appendChild(s);
     });
     updateLaurel("og");
@@ -2164,7 +2359,7 @@
       var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
         '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
-        avatarSVG(pi, pos === 0 ? "cheer" : "neutral") +
+        avatarSVG(snapAvatar(p, pi), pos === 0 ? "cheer" : "neutral", pi) +
         '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
     }).join("");
     var line = order.length < 2
@@ -2235,7 +2430,7 @@
     seatsVisible(true); ogRenderSeats();
     var chips = CATS.map(function (c) {
       var cs = catStyle(c);
-      return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + esc(c) + "</span>";
+      return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + catEmblem(c) + "<span>" + esc(c) + "</span></span>";
     }).join("");
     stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
       spinFrameHTML(chips) +
@@ -2267,7 +2462,7 @@
     seatsVisible(true); ogRenderSeats();
     $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
     var head = e.kind === "survey" ? "MOST PEOPLE SAY…" : e.kind === "num" ? "CLOSEST NUMBER" : (e.diff || "").toUpperCase();
-    var top = '<div class="q-headrow"><span class="cat-pill' + (e.special ? " gilded" : "") + '">' + (e.special ? "TONIGHT'S GILDED QUESTION" : esc(e.cat.toUpperCase())) + '</span><span class="q-kind">' + head + "</span></div>" +
+    var top = '<div class="q-headrow"><span class="cat-pill' + (e.special ? " gilded" : "") + '">' + catEmblem(e.cat) + (e.special ? "TONIGHT'S GILDED QUESTION" : esc(e.cat.toUpperCase())) + '</span><span class="q-kind">' + head + "</span></div>" +
       '<div class="q-text">' + esc(e.bank.q) + "</div>";
     var meta = '<div class="q-meta">' + (q.betted
       ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
@@ -2317,18 +2512,31 @@
       OG.revealState[res.seat] = res.correct ? "cheer" : "slump";
       if (res.correct) winners.push(res.seat);
     });
-    ogRenderSeats();
-    var parts = [];
+    /* Pass D4: the table's scoring grammar, derived from this very
+       payload. banked > 0 banks; a wrong answer that was actually
+       given (pick/num present) misses; a seat that never answered
+       keeps the plain slump it already had — no third treatment.
+       Guess questions tag their correct seats CLOSEST. Painted at
+       the seats by ogRenderSeats, and repainted by any mid-reveal
+       snapshot re-render via ogFx. */
+    var guessQ = (e.kind === "num" || e.kind === "survey");
+    var fxSeats = {}, bankSeq = 0, anyBank = false;
     (r.results || []).forEach(function (res) {
-      if (res.banked > 0 && OG.players[res.seat]) parts.push('<span class="up">' + mplus(res.banked) + " to " + esc(OG.players[res.seat].name) + "</span>");
+      var fx = null;
+      if (res.banked > 0) { fx = { delta: "bank", amt: res.banked, delay: bankSeq++ * 0.12 }; anyBank = true; }
+      else if (!res.correct && (res.pick != null || res.num != null)) fx = { delta: "miss", delay: res.seat * 0.05 };
+      if (guessQ && res.correct) { fx = fx || {}; fx.closest = true; }
+      if (fx) fxSeats[res.seat] = fx;
     });
+    ogFx = { qid: r.qid, seats: fxSeats };
+    ogRenderSeats();
     var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="ogNext">CONTINUE</button></div>';
-    var head = '<div class="q-headrow"><span class="cat-pill">' + esc(e.cat.toUpperCase()) + '</span><span class="q-kind">' + (e.kind === "num" ? "THE NUMBER WAS" : "THE ANSWER") + "</span></div>" +
+    var head = '<div class="q-headrow"><span class="cat-pill">' + catEmblem(e.cat) + esc(e.cat.toUpperCase()) + '</span><span class="q-kind">' + (e.kind === "num" ? "THE NUMBER WAS" : "THE ANSWER") + "</span></div>" +
       '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(e.bank.q) + "</div>";
     if (e.kind === "num") {
       var tn = r.trueNum != null ? r.trueNum : e.trueNum;
       stage(head + '<div class="wager-amt">' + Number(tn).toLocaleString("en-US") + "</div>" +
-        '<div class="delta">' + (parts.length ? parts.join(" &nbsp;") : '<span class="down">Nobody got close. The number keeps its dignity.</span>') + "</div>" +
+        (anyBank ? "" : '<div class="delta"><span class="down">Nobody got close. The number keeps its dignity.</span></div>') +
         '<p class="why">' + esc(e.bank.why) + "</p>" + nextBtn);
       ogRevealSay(winners.length ? "numHit" : "numMiss", { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" }, winners);
     } else {
@@ -2337,7 +2545,7 @@
         return '<button class="ans-btn' + (i === ci ? " correct" : " dim") + '" disabled><span class="letter">' + (i + 1) + "</span><span>" + esc(t) + "</span></button>";
       }).join("");
       stage(head + '<div class="answers">' + btns + "</div>" +
-        '<div class="delta">' + (parts.length ? parts.join(" &nbsp;") : '<span class="down">No one had it. The money stays in Sterling\'s pocket — this time.</span>') + "</div>" +
+        (anyBank ? "" : '<div class="delta"><span class="down">No one had it. The money stays in Sterling\'s pocket — this time.</span></div>') +
         '<p class="why">' + esc(e.bank.why) + "</p>" + nextBtn);
       var joined = ogJoined().length;
       var hk = winners.length === 0 ? "allMiss" : (winners.length === joined ? "allHit" : "someHit");
@@ -2399,7 +2607,7 @@
         ? '<span class="champ-tag">★ CHAMPION</span>'
         : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
       return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === winSeat ? " winner-podium lit" : "") + '">' + top + (ii === winSeat ? laurelBadge() : "") +
-        avatarSVG(ii, ii === winSeat ? "cheer" : "neutral") +
+        avatarSVG(snapAvatar(pp, ii), ii === winSeat ? "cheer" : "neutral", ii) +
         '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div></div></div>";
     }).join("");
     var tieNote = "";
@@ -2441,11 +2649,34 @@
   /* ================= player (online podium) ================= */
   var JP = null;
   function jpSaved() { try { return JSON.parse(localStorage.getItem("gh_player") || "null"); } catch (e) { return null; } }
+  /* the pad's portrait pick (item 6): remembered on-device under its
+     own key, beside the remembered name and never with the room
+     code. null = never picked, in which case no avatar field is
+     sent and the server's seat default applies */
+  function jpAvatarPref() {
+    try {
+      var v = parseInt(localStorage.getItem("gh_avatar"), 10);
+      return Number.isInteger(v) && v >= 0 && v < 8 ? v : null;
+    } catch (e) { return null; }
+  }
+  function jpOwnAvatar() {
+    var me = jpMe();
+    if (me && Number.isInteger(me.avatar) && me.avatar >= 0 && me.avatar < 8) return me.avatar;
+    if (JP && Number.isInteger(JP.avatar)) return JP.avatar;
+    return JP && JP.seat != null ? JP.seat % 8 : 0;
+  }
+  /* the room a deep link (?room= / ?code=) prefilled, if any — when
+     it differs from the saved seat's room, the two doors on the join
+     screen must say they lead to different rooms (fix #10) */
+  var jpDeepRoom = null;
   function paintJoinPanel() {
     var sv = jpSaved(), b = $("btnResumePlayer");
     if (!b) return;
     b.classList.toggle("hidden", !sv);
-    if (sv) b.textContent = "REJOIN AS " + (sv.name || "PLAYER") + " · ROOM " + sv.code;
+    if (sv) {
+      b.textContent = "REJOIN AS " + (sv.name || "PLAYER") + " · ROOM " + sv.code +
+        (jpDeepRoom && jpDeepRoom !== sv.code ? " — A DIFFERENT ROOM" : "");
+    }
   }
   function jpSetConn(txt, warn) {
     var c = $("jpConn"); if (!c) return;
@@ -2462,13 +2693,15 @@
     jpTeardown();
     JP = {
       code: code, name: name || "", seat: null, reclaimToken: reclaimToken || null,
+      avatar: jpAvatarPref(),
       ws: null, snap: null, offset: 0, dead: false, welcomed: false,
       backoff: 1000, tickInt: null, betSel: 1, sentNum: null, sentBet: null
     };
     showScreen("scr-join");
     $("jpRoom").textContent = "ROOM " + code;
     jpSetConn("JOINING…", true);
-    $("jpMain").innerHTML = '<div class="jp-card"><div class="jp-hi">Joining the room…</div><p class="jp-sub">Finding your podium.</p></div>';
+    $("jpMain").innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">JOINING</div><div class="jp-hi">Joining the room…</div><p class="jp-sub">Finding your podium.</p></div>';
+    jpPaintClock();
     JP.tickInt = setInterval(jpTick, 250);
     jpOpenSocket();
   }
@@ -2478,8 +2711,14 @@
     try { ws = new WebSocket(wsBase() + "/room/" + JP.code); } catch (e) { jpScheduleReconnect(); return; }
     JP.ws = ws;
     ws.onopen = function () {
-      if (JP.reclaimToken) jpSend({ t: "hello", role: "player", reclaimToken: JP.reclaimToken, name: JP.name || undefined });
-      else jpSend({ t: "hello", role: "player", name: JP.name });
+      var hello = JP.reclaimToken
+        ? { t: "hello", role: "player", reclaimToken: JP.reclaimToken, name: JP.name || undefined }
+        : { t: "hello", role: "player", name: JP.name };
+      /* the portrait pick rides the hello when there is one; without
+         a pick the field stays off the wire entirely (server keeps
+         its stored/default avatar, old-server compatible) */
+      if (Number.isInteger(JP.avatar)) hello.avatar = JP.avatar;
+      jpSend(hello);
     };
     ws.onmessage = function (ev) { var m; try { m = JSON.parse(ev.data); } catch (e) { return; } jpOnMsg(m); };
     ws.onclose = function () {
@@ -2509,6 +2748,11 @@
       if (m.reclaimToken) JP.reclaimToken = m.reclaimToken;
       JP.welcomed = true; JP.backoff = 1000;
       try { localStorage.setItem("gh_player", JSON.stringify({ code: JP.code, reclaimToken: JP.reclaimToken, name: JP.name })); } catch (e) {}
+      /* the remembered name: a successful join keeps just the name
+         on the device so the join screen can prefill it next time
+         (the room code is never stored here — gh_player above is
+         the separate seat-reclaim record) */
+      if (JP.name) { try { localStorage.setItem("gh_name", JP.name); } catch (e) {} }
       jpSetConn("IN THE ROOM", false);
       paintJoinPanel();
       return;
@@ -2537,8 +2781,13 @@
       return;
     }
     if (m.t === "state") {
+      var prevQid = JP.snap && JP.snap.question ? JP.snap.question.qid : null;
       JP.snap = m.state;
-      if (m.state.question) JP.offset = m.state.question.openedAt - Date.now();
+      /* the clock offset anchors when a question first appears and is
+         HELD while that question runs: a state snapshot re-sent mid-
+         question (above all the reconnect/resync snapshot) must not
+         restart the pad's clocks at a full window */
+      if (m.state.question && m.state.question.qid !== prevQid) JP.offset = m.state.question.openedAt - Date.now();
       jpRender();
       return;
     }
@@ -2558,6 +2807,8 @@
     g.style.setProperty("--cat-lo", cs.lo);
     g.style.setProperty("--cat-sh", cs.sh);
     g.style.setProperty("--cat-rgb", cs.rgb);
+    g.style.setProperty("--cat-shi", cs.shi || cs.hi);
+    g.style.setProperty("--cat-smid", cs.smid || cs.mid);
     g.style.setProperty("--cat-tx", known ? (CATTX[cat] || "#FFF6E8") : JP_GOLD.tx);
     g.classList.add("cat-on");
   }
@@ -2574,6 +2825,63 @@
     g.appendChild(d);
     d.addEventListener("animationend", function () { d.remove(); });
     setTimeout(function () { if (d.isConnected) d.remove(); }, 1600);
+  }
+  /* Design pass item 2 — the pad clock. The drain line and the phase
+     word are DERIVED from the snapshot and the server's timestamps on
+     every paint, never accumulated, so a reconnect or a resync lands
+     on the true fraction and the true word at once.
+     Timing source: the state snapshot's question {openedAt, deadline,
+     windowMs}; JP.offset maps pad time onto server time — anchored
+     when a question first appears and held while it runs (jpOnMsg),
+     the same arithmetic jpTick has always used for the in-pad bar and
+     the seconds pill. The bet snapshot
+     carries NO deadline — the host closes betting by publishing the
+     question, and the server stamps nothing for the bet window — so
+     the bet phase is never drained: the line rests full and dim and
+     the word carries the moment instead. */
+  function jpPhaseWord() {
+    if (!JP) return "";
+    var s = JP.snap;
+    if (!s || JP.seat == null) return "JOINING";
+    if (s.phase === "lobby") return "IN THE LOBBY";
+    if (s.phase === "bet") return "YOUR BET";
+    if (s.phase === "answer") {
+      var q = s.question;
+      if (!q || JP._blind) return "WATCH THE SCREEN";
+      var answered = q.kind === "num"
+        ? (s.yourNum != null || (JP.sentNum && JP.sentNum.qid === q.qid))
+        : s.yourPick != null;
+      if (answered) return "LOCKED IN";
+      return q.kind === "num" ? "YOUR NUMBER" : "ANSWER";
+    }
+    if (s.phase === "reveal") return "THE VERDICT";
+    if (s.phase === "ended") return "ENDED";
+    return "";
+  }
+  function jpClockState() {
+    if (!JP || !JP.snap) return null;
+    var s = JP.snap;
+    if (s.phase !== "answer" || !s.question) return null;
+    var q = s.question;
+    if (!q.windowMs || q.deadline == null) return null;
+    var rem = q.deadline - (Date.now() + JP.offset);
+    if (rem < 0) rem = 0;
+    return { frac: Math.min(1, rem / q.windowMs), rem: rem };
+  }
+  function jpPaintClock() {
+    if (!JP) return;
+    var fill = $("jpClockFill");
+    if (fill) {
+      var cs = jpClockState();
+      if (!cs) { fill.style.width = "100%"; fill.classList.add("idle"); fill.classList.remove("low"); }
+      else {
+        fill.style.width = (cs.frac * 100) + "%";
+        fill.classList.remove("idle");
+        fill.classList.toggle("low", cs.rem < 5000);
+      }
+    }
+    var w = $("jpPhaseWord");
+    if (w) { var t = jpPhaseWord(); if (t && w.textContent !== t) w.textContent = t; }
   }
   function jpMe() { return JP && JP.snap && JP.seat != null ? JP.snap.players[JP.seat] : null; }
   function jpLeader() {
@@ -2642,8 +2950,9 @@
     if (me && JP.snap) JP.snap.players.forEach(function (p) { if (p && p.score > me.score) place++; });
     var ord = ["1ST", "2ND", "3RD", "4TH"][place - 1] || (place + "TH");
     return '<div class="jp-id" style="--me:' + PCOLORS[JP.seat] + '">' +
-      '<span class="jp-id-ava">' + avatarSVG(JP.seat, "neutral") + "</span>" +
-      '<span class="jp-id-name">' + esc(me ? me.name : (JP.name || "Player")) + "</span>" +
+      '<span class="jp-id-ava">' + avatarSVG(jpOwnAvatar(), "neutral", JP.seat || 0) + "</span>" +
+      '<span class="jp-id-idcol"><span class="jp-id-name">' + esc(me ? me.name : (JP.name || "Player")) + '</span>' +
+      '<span class="jp-phaseword" id="jpPhaseWord">' + jpPhaseWord() + "</span></span>" +
       '<span class="jp-id-place p' + Math.min(place, 4) + '">' + ord + "</span>" +
       '<span class="jp-id-score">' + money(me ? me.score : 0) + "</span>" +
       (secs ? '<span class="jp-id-secs" id="jpSecs"></span>' : "") + "</div>";
@@ -2656,9 +2965,11 @@
     if (oldNum) { numKeep = oldNum.value; numFocus = document.activeElement === oldNum; }
     var s = JP.snap;
     if (!s || JP.seat == null) {
-      main.innerHTML = '<div class="jp-card"><div class="jp-hi">Joining the room…</div><p class="jp-sub">Finding your podium.</p></div>';
+      main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">JOINING</div><div class="jp-hi">Joining the room…</div><p class="jp-sub">Finding your podium.</p></div>';
+      jpPaintClock();
       return;
     }
+    JP._blind = false;
     var me = jpMe();
     var myName = me ? me.name : (JP.name || "Player");
     if (s.phase === "lobby" || s.phase === "bet" || s.phase === "ended") $("scr-join").classList.remove("cat-on");
@@ -2667,10 +2978,11 @@
         return p && i !== JP.seat ? '<span class="jp-pchip' + (p.connected ? "" : " away") + '"><span class="name-dot" style="background:' + PCOLORS[i] + '"></span>' + esc(p.name) + "</span>" : "";
       }).join("");
       main.innerHTML = '<div class="jp-hero" style="--me:' + PCOLORS[JP.seat] + '">' +
-        '<div class="jp-hero-ava">' + avatarSVG(JP.seat, "neutral") + "</div>" +
+        '<div class="jp-hero-ava">' + avatarSVG(jpOwnAvatar(), "neutral", JP.seat || 0) + "</div>" +
         '<div class="jp-herotag">THAT\'S YOU</div>' +
         '<div class="jp-heroname">' + esc(myName) + "</div>" +
         '<div class="jp-colorband"></div>' +
+        '<div class="jp-phaseword" id="jpPhaseWord">IN THE LOBBY</div>' +
         '<p class="jp-sub">Watch the big screen — when a question lands,<br>this pad becomes your answer buttons.</p>' +
         (chips ? '<div class="jp-players">' + chips + "</div>" : "") +
         '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
@@ -2707,11 +3019,11 @@
       });
     } else if (s.phase === "answer") {
       var d = jpQuestionData();
-      if (!d) { main.innerHTML = '<div class="jp-card"><div class="jp-hi">Question on the big screen</div><p class="jp-sub">This pad couldn\'t load the question — watch the screen and sit this one out.</p></div>'; return; }
+      if (!d) { JP._blind = true; main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">WATCH THE SCREEN</div><div class="jp-hi">Question on the big screen</div><p class="jp-sub">This pad couldn\'t load the question — watch the screen and sit this one out.</p></div>'; jpPaintClock(); return; }
       jpApplyCat(d.q.category);
       var padTop = jpIdBar(true) +
         '<div class="jp-barwrap" id="jpBarWrap"><div class="jp-bar" id="jpBar" style="width:100%"></div></div>' +
-        '<div class="jp-qline"><span class="jp-catdot"></span>' + esc(d.bank.q) + "</div>";
+        '<div class="jp-qline"><span class="jp-catemb">' + catEmblem(d.bank.cat) + '</span><span>' + esc(d.bank.q) + "</span></div>";
       if (d.q.kind === "num") {
         if (JP.sentNum && JP.sentNum.qid !== d.q.qid) JP.sentNum = null;
         var effNum = s.yourNum != null ? s.yourNum : (JP.sentNum ? JP.sentNum.num : null);
@@ -2725,6 +3037,7 @@
           if (!isFinite(v)) { jpToast("Give a number first."); return; }
           Snd.ensure();
           JP.sentNum = { qid: d.q.qid, num: v };
+          jpPaintClock(); // the word flips to LOCKED IN on the tap, not on the next tick
           jpSend({ t: "answer", qid: d.q.qid, num: v });
           var ns = $("jpNumState");
           if (ns) ns.innerHTML = "SENT · <b>" + v + "</b> — send a new one to change it";
@@ -2750,6 +3063,7 @@
             main.querySelectorAll(".jp-ans").forEach(function (x) { x.classList.toggle("sel", parseInt(x.getAttribute("data-pick"), 10) === i); });
             var ps = $("jpPickState");
             if (ps) ps.innerHTML = "✓ <b>PICK " + (i + 1) + " IS IN</b> — TAP ANOTHER TO CHANGE IT";
+            jpPaintClock(); // the word flips to LOCKED IN on the tap, not on the next tick
             jpSend({ t: "answer", qid: d.q.qid, pick: i });
           });
         });
@@ -2760,7 +3074,7 @@
       var lr = s.lastReveal;
       var d2 = jpQuestionData();
       if (d2 && d2.bank && d2.bank.cat) jpApplyCat(d2.bank.cat);
-      if (!lr) { main.innerHTML = '<div class="jp-card"><div class="jp-hi">The reveal…</div><p class="jp-sub">Eyes on the big screen.</p></div>'; return; }
+      if (!lr) { main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">THE VERDICT</div><div class="jp-hi">The reveal…</div><p class="jp-sub">Eyes on the big screen.</p></div>'; jpPaintClock(); return; }
       var mine = null;
       (lr.results || []).forEach(function (r) { if (r.seat === JP.seat) mine = r; });
       var lead = jpLeader();
@@ -2769,28 +3083,31 @@
       else if (d2 && d2.opts && lr.correctIdx != null) ansLine = "The answer was <b>" + esc(d2.opts.answers[lr.correctIdx]) + "</b>";
       var scoreLine = '<div class="jp-vscore">YOU <b>' + money(me ? me.score : 0) + "</b>" + (lead ? " · LEADER — " + esc(lead.name) + " <b>" + money(lead.score) + "</b>" : "") + "</div>";
       if (mine && mine.correct) {
-        main.innerHTML = '<div class="jp-verdict"><div class="jp-vdisc">✓</div>' +
+        main.innerHTML = '<div class="jp-verdict"><div class="jp-phaseword" id="jpPhaseWord">THE VERDICT</div><div class="jp-vdisc">✓</div>' +
           '<div class="jp-vword">' + (lr.kind === "num" ? "CLOSEST!" : "YOU GOT IT!") + "</div>" +
           '<div class="jp-gain">' + mplus(mine.banked) + "</div>" +
           '<p class="jp-vans">' + ansLine + "</p>" + scoreLine + "</div>";
       } else {
-        main.innerHTML = '<div class="jp-verdict miss"><div class="jp-vdisc">✗</div>' +
+        main.innerHTML = '<div class="jp-verdict miss"><div class="jp-phaseword" id="jpPhaseWord">THE VERDICT</div><div class="jp-vdisc">✗</div>' +
           '<div class="jp-vword">' + (mine && (mine.pick != null || mine.num != null) ? "NOT THAT ONE" : "NO ANSWER") + "</div>" +
           '<p class="jp-vans">' + ansLine + ". Nothing lost — nobody can lose money here.</p>" + scoreLine + "</div>";
       }
       if (mine && mine.correct) jpBankPulse(me ? me.score : 0, mine.banked || 0);
     } else if (s.phase === "ended") {
       var lead2 = jpLeader();
-      main.innerHTML = '<div class="jp-card"><div class="q-cat">FINAL RESULT</div>' +
+      main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">ENDED</div><div class="q-cat">FINAL RESULT</div>' +
         '<div class="jp-hi">' + (lead2 ? esc(lead2.name) + " takes the Hour!" : "Show's over!") + "</div>" +
         jpStandRows() +
         '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
     }
     var lv = $("jpLeave");
     if (lv) lv.addEventListener("click", function () { jpTeardown(); showScreen("scr-title"); setMode("join"); });
+    jpPaintClock();
   }
   function jpTick() {
-    if (!JP || !JP.snap || JP.snap.phase !== "answer" || !JP.snap.question) return;
+    if (!JP) return;
+    jpPaintClock(); // the pad clock rides the pad's one existing tick — no second timer
+    if (!JP.snap || JP.snap.phase !== "answer" || !JP.snap.question) return;
     var q = JP.snap.question;
     var rem = q.deadline - (Date.now() + JP.offset);
     if (rem < 0) rem = 0;
@@ -2803,9 +3120,88 @@
     var cnt = $("jpCount");
     if (cnt) cnt.textContent = (q.answersIn || 0) + " / " + JP.snap.players.filter(Boolean).length + " IN";
   }
+  /* ---------- join letter boxes: four single-character boxes ----------
+     auto-uppercase, auto-advance, paste fills the row; the joined
+     value is the same 4-letter string the old single input produced */
+  var joinBoxEls = Array.prototype.slice.call(document.querySelectorAll("#joinBoxes .code-box"));
+  function joinCodeClean(s) { return (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4); }
+  function joinCodeValue() {
+    return joinBoxEls.map(function (b) { return b.value || ""; }).join("").toUpperCase();
+  }
+  function paintJoinBtn() {
+    var b = $("btnJoinRoom");
+    if (b) b.disabled = joinCodeValue().length !== 4;
+  }
+  function setJoinCode(str) {
+    var clean = joinCodeClean(str);
+    joinBoxEls.forEach(function (b, i) { b.value = clean.charAt(i) || ""; });
+    paintJoinBtn();
+    return clean;
+  }
+  function joinDistribute(from, clean) {
+    for (var k = 0; k < clean.length && from + k < 4; k++) joinBoxEls[from + k].value = clean.charAt(k);
+    paintJoinBtn();
+    if (joinCodeValue().length === 4) { var nm = $("joinName"); if (nm) { nm.focus(); return; } }
+    var next = Math.min(from + clean.length, 3);
+    joinBoxEls[next].focus();
+  }
+  joinBoxEls.forEach(function (box, i) {
+    box.addEventListener("input", function () {
+      var v = (box.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (v.length > 1) { box.value = ""; joinDistribute(i, v); return; }
+      box.value = v;
+      paintJoinBtn();
+      if (v && i < 3) joinBoxEls[i + 1].focus();
+    });
+    box.addEventListener("keydown", function (ev) {
+      if (ev.key === "Backspace") {
+        if (!box.value && i > 0) {
+          ev.preventDefault();
+          joinBoxEls[i - 1].value = "";
+          paintJoinBtn();
+          joinBoxEls[i - 1].focus();
+        }
+      } else if (ev.key === "ArrowLeft" && i > 0) { ev.preventDefault(); joinBoxEls[i - 1].focus(); }
+      else if (ev.key === "ArrowRight" && i < 3) { ev.preventDefault(); joinBoxEls[i + 1].focus(); }
+      else if (ev.key === "Home") { ev.preventDefault(); joinBoxEls[0].focus(); }
+      else if (ev.key === "End") { ev.preventDefault(); joinBoxEls[3].focus(); }
+    });
+    box.addEventListener("paste", function (ev) {
+      ev.preventDefault();
+      var text = "";
+      try { text = (ev.clipboardData || window.clipboardData).getData("text") || ""; } catch (e) {}
+      var clean = joinCodeClean(text);
+      if (clean) joinDistribute(i, clean);
+    });
+    box.addEventListener("focus", function () { box.select(); });
+  });
+  /* the pad's portrait picker: eight tappable busts under the name
+     field. A tap stores the pick on this device (gh_avatar) and it
+     rides the next hello; no pick yet = nothing highlighted and the
+     server assigns the seat's own portrait */
+  function buildAvaGrid() {
+    var grid = $("jpAvaGrid");
+    if (!grid) return;
+    var sel = jpAvatarPref();
+    grid.innerHTML = "";
+    for (var k = 0; k < 8; k++) {
+      var b = el('<button class="jp-ava-btn' + (sel === k ? " sel" : "") + '" data-ava="' + k + '" aria-label="Player portrait ' + (k + 1) + '">' +
+        avatarSVG(k, "neutral", k) + "</button>");
+      (function (kk, btn) {
+        btn.addEventListener("click", function () {
+          Snd.ensure();
+          try { localStorage.setItem("gh_avatar", String(kk)); } catch (e) {}
+          grid.querySelectorAll(".jp-ava-btn").forEach(function (x) {
+            x.classList.toggle("sel", parseInt(x.getAttribute("data-ava"), 10) === kk);
+          });
+        });
+      })(k, b);
+      grid.appendChild(b);
+    }
+  }
   $("btnJoinRoom").addEventListener("click", function () {
     Snd.ensure();
-    var code = ($("joinCode").value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    var code = joinCodeValue();
     var name = ($("joinName").value || "").trim();
     var st = $("joinStatus");
     if (code.length !== 4) { st.classList.add("err"); st.textContent = "The code is four letters — check the big screen."; return; }
@@ -2818,22 +3214,42 @@
     var sv = jpSaved();
     if (sv) { Snd.ensure(); jpConnect(sv.code, sv.name, sv.reclaimToken); }
   });
-  /* deep links + seat reclaim: ?code=XXXX prefills; if it matches the
-     saved seat, walk straight back in (this is also the mid-show
-     refresh path — the server hands the seat and score back) */
+  /* deep links: ?room=XXXX (the lobby QR's payload) opens the join
+     view with the boxes filled and the name field focused — a fresh
+     join, never an auto-connect; an invalid value is ignored
+     silently. The older ?code=XXXX keeps its meaning: prefill, and
+     if it matches the saved seat, walk straight back in (also the
+     mid-show refresh path — the server hands seat and score back) */
   try {
-    var _qc = new URLSearchParams(location.search).get("code");
+    var _qs = new URLSearchParams(location.search);
+    var _room = _qs.get("room");
     var _sv = jpSaved();
-    if (_qc) {
+    if (_room && /^[A-Za-z]{4}$/.test(_room.trim())) {
       setMode("join");
-      var _clean = _qc.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
-      $("joinCode").value = _clean;
-      if (_sv && _sv.code === _clean && _sv.reclaimToken) {
-        $("joinName").value = _sv.name || "";
-        jpConnect(_sv.code, _sv.name, _sv.reclaimToken);
+      jpDeepRoom = setJoinCode(_room);
+      var _nm = $("joinName");
+      if (_nm) _nm.focus();
+    } else {
+      var _qc = _qs.get("code");
+      if (_qc) {
+        setMode("join");
+        var _clean = setJoinCode(_qc);
+        jpDeepRoom = _clean;
+        if (_sv && _sv.code === _clean && _clean.length === 4 && _sv.reclaimToken) {
+          $("joinName").value = _sv.name || "";
+          jpConnect(_sv.code, _sv.name, _sv.reclaimToken);
+        }
       }
     }
   } catch (e) {}
+  /* remembered name: prefill the join field (deep-link seat reclaim
+     above has already filled it in the case that applies there) */
+  try {
+    var _rn = localStorage.getItem("gh_name");
+    if (_rn && !$("joinName").value) $("joinName").value = _rn;
+  } catch (e) {}
+  paintJoinBtn();
+  buildAvaGrid();
   paintHostPanel();
   paintJoinPanel();
 
