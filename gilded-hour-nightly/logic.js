@@ -1,105 +1,140 @@
-/* The Gilded Hour — tonight's special question (Pass 5a).
- * Pure logic, no Cloudflare APIs: takes an env-like
- * { AI, CACHE, STERLING } and a date, returns { status, data }.
+/* The Gilded Hour — tonight's special question (Pass 5, bank-pick
+ * rework). Pure logic, no Cloudflare APIs: takes an env-like
+ * { CACHE, STERLING } and a date, returns { status, data }.
  * worker.js is the thin wrapper.
  *
- * One special question per date, generated once and cached in KV
- * under "nightly:<date>", then served verbatim to everyone. The
- * question is validated HARD against the bank schema (strict JSON,
- * four distinct answers, one correct index, a real show category, no
- * sports, ever). Validate -> one retry -> a designed null: if no
- * valid question can be produced, the answer is
- * { question: null, intro: null } and the client simply deals from
- * its bank. Nothing here is load-bearing.
+ * The special question is PICKED FROM THE HAND-AUTHORED BANK
+ * (bank.js, a faithful copy of the game's questions.js) — never
+ * generated. The first live AI-generated question was factually
+ * confabulated (an invented ad campaign), and no schema check can
+ * verify truth, so at the owner's decision the model no longer
+ * writes questions. Sterling (the AI worker) still writes the
+ * intro line; the question itself is guaranteed true because a
+ * person wrote and fact-checked it.
  *
- * On success the intro line is asked of the Sterling worker over its
- * service binding (kind "nightly_intro"); if the binding is missing
- * or fails, an authored intro line stands in, and the pair is cached
- * together.
+ * The pick: the eligible pool (ordinary questions only — kind
+ * absent or "normal"; the num and survey entries are never
+ * specials) is shuffled ONCE with a fixed seed (mulberry32, seed
+ * below), so the order is identical on every deploy and machine.
+ * The date's index into that shuffled order is its UTC day number
+ * (days since the Unix epoch) modulo the pool size. Same date ->
+ * same question for everyone; consecutive dates walk the shuffled
+ * pool one step at a time, so the whole pool is dealt before any
+ * question repeats.
+ *
+ * The picked entry is normalized to the response schema
+ * { q, a: [4 strings], correct, cat, diff, why, kind: 'normal' }:
+ * the game's own entries store the correct answer in `a` and the
+ * three wrong ones in `w`, so the four are shuffled here with a
+ * date-seeded mulberry32 (the correct index must not sit at 0
+ * every night) — deterministically, so everyone gets the same
+ * arrangement.
+ *
+ * The pair { question, intro } is cached in KV under
+ * "nightly:v2:<date>". The v2 key orphans the one night's v1
+ * cache entry (which held the confabulated generated question):
+ * it is simply never read again. A cache hit returns the pair
+ * without a Sterling call.
+ *
+ * The intro is asked of the Sterling worker over its service
+ * binding (kind "nightly_intro"); if the binding is missing or
+ * fails, an authored intro line stands in, and the pair is cached
+ * together. Nothing here is load-bearing: in the worst case the
+ * defensive { question: null, intro: null } remains, and the
+ * client deals an ordinary question instead.
  */
-
-export const MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
+import { BANK } from './bank.js';
 
 export const CATEGORIES = [
   'Movies', 'TV', 'Music', 'Ads & Jingles', 'Toys & Games',
   'Saturday Morning', 'The Dial-Up Years',
 ];
 
-export const DIFFS = ['easy', 'med', 'hard'];
-
-/* Sports stay out of this show (the bank removed its sports category
- * at the owner's word) — a generated question that touches sport is
- * rejected outright, however good it is otherwise. */
-const SPORTS_TERMS = [
-  'football', 'baseball', 'basketball', 'soccer', 'hockey', 'tennis',
-  'golf', 'boxing', 'wrestling', 'olympic', 'olympics', 'nfl', 'nba',
-  'mlb', 'nhl', 'super bowl', 'world series', 'world cup',
-  'quarterback', 'touchdown', 'home run', 'slam dunk', 'stanley cup',
-  'heavyweight', 'race car', 'nascar', 'formula one', 'marathon',
-];
-
-export function mentionsSports(text) {
-  const lower = ' ' + String(text).toLowerCase() + ' ';
-  return SPORTS_TERMS.some((t) => lower.includes(t));
+/* mulberry32: a tiny seeded PRNG. Same seed -> same stream, on
+ * every machine, forever. That is the whole determinism story. */
+export function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-/* The reply text lives at result.response in one integration on this
- * account and at result.choices[0].message.content in another — check
- * both, defensively, every time. */
-export function extractAiText(result) {
-  if (!result || typeof result !== 'object') return null;
-  if (typeof result.response === 'string' && result.response.trim()) return result.response;
-  try {
-    const c = result.choices && result.choices[0] && result.choices[0].message;
-    if (c && typeof c.content === 'string' && c.content.trim()) return c.content;
-  } catch (e) { /* shape mismatch — fall through */ }
-  return null;
+/* The fixed seed for the one-time pool shuffle. Changing it
+ * re-deals the entire nightly rotation — don't, unless the bank
+ * changes enough to deserve a fresh walk. */
+const POOL_SEED = 0x9E3779B9;
+
+/* Ordinary questions only: kind absent or 'normal'. The guess
+ * kinds (num, survey) are dealt by the show's own guess slots and
+ * are never the nightly special. */
+export const ELIGIBLE_POOL = BANK.filter((e) => e && (e.kind == null || e.kind === 'normal'));
+
+const SHUFFLED_POOL = (() => {
+  const arr = ELIGIBLE_POOL.slice();
+  const rand = mulberry32(POOL_SEED);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr;
+})();
+
+export function eligiblePool() { return ELIGIBLE_POOL; }
+export function shuffledPool() { return SHUFFLED_POOL; }
+
+/* Days since the Unix epoch for a YYYY-MM-DD date (its UTC day
+ * number). The pick index is this number modulo the pool size. */
+export function dayNumberForDate(dateStr) {
+  return Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000);
 }
 
-/* Pull a JSON object out of a model reply: tolerates code fences and
- * surrounding chatter by taking the outermost braces. */
-export function extractJson(text) {
-  if (typeof text !== 'string') return null;
-  let t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  const a = t.indexOf('{');
-  const b = t.lastIndexOf('}');
-  if (a === -1 || b <= a) return null;
-  try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+export function pickIndexForDate(dateStr, poolSize) {
+  const size = poolSize == null ? SHUFFLED_POOL.length : poolSize;
+  if (!size) return -1;
+  const d = dayNumberForDate(dateStr);
+  return ((d % size) + size) % size;
 }
 
-/* HARD validation of a generated question against the bank schema.
- * Returns the normalized question { q, a, correct, cat, diff, why,
- * kind: 'normal' } or null. No partial credit. */
-export function validateQuestion(raw) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  if (raw.kind != null && raw.kind !== 'normal') return null;
-
-  const q = typeof raw.q === 'string' ? raw.q.trim() : '';
-  if (q.length < 10 || q.length > 160) return null;
-
-  if (!Array.isArray(raw.a) || raw.a.length !== 4) return null;
-  const a = raw.a.map((s) => (typeof s === 'string' ? s.trim() : ''));
-  if (a.some((s) => !s || s.length > 60)) return null;
-  if (new Set(a.map((s) => s.toLowerCase())).size !== 4) return null;
-
-  if (!Number.isInteger(raw.correct) || raw.correct < 0 || raw.correct > 3) return null;
-  if (!CATEGORIES.includes(raw.cat)) return null;
-  if (!DIFFS.includes(raw.diff)) return null;
-
-  const why = typeof raw.why === 'string' ? raw.why.trim() : '';
-  if (!why || why.length > 140) return null;
-
-  if (mentionsSports(q + ' ' + a.join(' ') + ' ' + why)) return null;
-
-  return { q, a, correct: raw.correct, cat: raw.cat, diff: raw.diff, why, kind: 'normal' };
+/* The raw bank entry tonight's special deals, or null for an
+ * (impossible-with-the-real-bank) empty pool. `pool` defaults to
+ * the shuffled eligible pool; the parameter exists so tests can
+ * prove the empty-pool defence. */
+export function pickEntryForDate(dateStr, pool) {
+  const p = pool || SHUFFLED_POOL;
+  if (!p || p.length === 0) return null;
+  return p[pickIndexForDate(dateStr, p.length)];
 }
 
-/* The evening's category rotates deterministically by date, so the
- * week walks the whole wheel and every room gets the same one. */
-export function categoryForDate(dateStr) {
-  const days = Math.floor(Date.parse(dateStr + 'T00:00:00Z') / 86400000);
-  const idx = ((days % CATEGORIES.length) + CATEGORIES.length) % CATEGORIES.length;
-  return CATEGORIES[idx];
+/* Bank entry -> response question. The correct answer starts in
+ * `a` with the wrong ones in `w`; the four are shuffled with a
+ * date-seeded PRNG so the correct index varies by night but is
+ * the same for everyone that night. */
+export function normalizeEntry(entry, dateStr) {
+  const opts = [{ t: entry.a, ok: true }]
+    .concat((entry.w || []).map((w) => ({ t: w, ok: false })));
+  const rand = mulberry32((dayNumberForDate(dateStr) ^ POOL_SEED) >>> 0);
+  for (let i = opts.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = opts[i]; opts[i] = opts[j]; opts[j] = tmp;
+  }
+  return {
+    q: entry.q,
+    a: opts.map((o) => o.t),
+    correct: opts.findIndex((o) => o.ok),
+    cat: entry.cat,
+    diff: entry.diff,
+    why: entry.why,
+    kind: 'normal',
+  };
+}
+
+export function pickForDate(dateStr) {
+  const entry = pickEntryForDate(dateStr);
+  return entry ? normalizeEntry(entry, dateStr) : null;
 }
 
 export function isValidDateStr(s) {
@@ -115,34 +150,6 @@ export function todayInChicago(now) {
   }).formatToParts(now || new Date());
   const get = (t) => parts.find((p) => p.type === t).value;
   return get('year') + '-' + get('month') + '-' + get('day');
-}
-
-const QUESTION_SYSTEM = [
-  'You are a trivia author for The Gilded Hour, a pop-culture trivia',
-  'show for players aged 30 to 50 — people whose childhoods ran from',
-  'the 1980s into the early 2000s. You write ONE original question.',
-  'Answer with strict JSON only — no code fences, no commentary — in',
-  'exactly this shape:',
-  '{"q": string, "a": [four answer strings], "correct": integer 0-3,',
-  '"cat": string, "diff": "easy"|"med"|"hard", "why": string}',
-  'Rules: the question is 10-160 characters; the four answers are',
-  'distinct, plausible, and each at most 60 characters; exactly one is',
-  'correct and "correct" is its index; "why" is one friendly line, at',
-  'most 140 characters, confirming the answer. The fact must be solid,',
-  'mainstream pop culture of the era — the kind of thing a room of',
-  'old friends would nod at, not an obscurity. Never write about',
-  'sports. Never copy a famous existing question word for word.',
-].join(' ');
-
-function buildQuestionMessages(dateStr, category) {
-  return [
-    { role: 'system', content: QUESTION_SYSTEM },
-    {
-      role: 'user',
-      content: 'Write tonight\'s special question (for ' + dateStr + ') in the category "'
-        + category + '". Return only the JSON object.',
-    },
-  ];
 }
 
 /* Authored intro, standing in whenever the Sterling worker cannot be
@@ -185,24 +192,11 @@ export async function askSterling(env, category, dateStr) {
   }
 }
 
-async function generateQuestion(env, dateStr) {
-  if (!env || !env.AI || typeof env.AI.run !== 'function') return null;
-  const messages = buildQuestionMessages(dateStr, categoryForDate(dateStr));
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const result = await env.AI.run(MODEL, { messages, temperature: 0.7, max_tokens: 400 });
-      const q = validateQuestion(extractJson(extractAiText(result)));
-      if (q) return q;
-    } catch (e) { /* fall through to retry, then the designed null */ }
-  }
-  return null;
-}
-
 export async function handleTonight(env, dateStr) {
   if (!isValidDateStr(dateStr)) {
     return { status: 400, data: { error: 'date must be YYYY-MM-DD.' } };
   }
-  const key = 'nightly:' + dateStr;
+  const key = 'nightly:v2:' + dateStr;
 
   if (env && env.CACHE && typeof env.CACHE.get === 'function') {
     try {
@@ -214,10 +208,11 @@ export async function handleTonight(env, dateStr) {
     } catch (e) { /* cache is an optimization, never a dependency */ }
   }
 
-  const question = await generateQuestion(env, dateStr);
+  const question = pickForDate(dateStr);
   if (!question) {
-    // A designed outcome, not an error: the client deals from its bank.
-    // Deliberately NOT cached, so a later request can try again.
+    // Defensive only — a bank pick cannot fail while the bank is
+    // non-empty. Kept so the route can never 500: the client just
+    // deals an ordinary question. Not cached.
     return { status: 200, data: { question: null, intro: null } };
   }
 

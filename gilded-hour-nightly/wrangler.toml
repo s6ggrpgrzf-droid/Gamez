@@ -2,9 +2,6 @@ name = "gilded-hour-nightly"
 main = "worker.js"
 compatibility_date = "2025-09-01"
 
-[ai]
-binding = "AI"
-
 [[kv_namespaces]]
 binding = "CACHE"
 id = "494d005c194f4063a3b1e37def3724c7"

@@ -1,11 +1,17 @@
-/* Nightly worker test: stub AI (good / malformed / sports / throwing),
- * an in-memory KV, and STERLING service-binding stubs (good / failing /
- * missing). No network. Proves: /tonight twice costs exactly one
- * generation, hard validation rejects bad questions, a failure returns
- * the designed {question:null, intro:null}, and the Sterling intro is
- * used when reachable and replaced by the authored intro when not.
- * Run: node test/test-nightly.js */
-import { handleTonight, validateQuestion, categoryForDate, todayInChicago, authoredIntro } from '../logic.js';
+/* Nightly worker test (Pass 5 bank-pick rework): the bank copy is
+ * deep-compared against the game's own questions.js read at test
+ * time; the day-number pick is proven deterministic, fully walking
+ * the eligible pool, and never dealing a num/survey question; the
+ * Sterling intro is used when reachable and replaced by the
+ * authored intro when not; the KV cache lives under nightly:v2:.
+ * No network, no AI anywhere — this worker no longer has one.
+ * Run: node build-single.js && node test/test-nightly.js */
+import fs from 'node:fs';
+import {
+  handleTonight, pickForDate, pickEntryForDate, pickIndexForDate,
+  eligiblePool, shuffledPool, dayNumberForDate, todayInChicago, authoredIntro,
+} from '../logic.js';
+import { BANK } from '../bank.js';
 import worker from '../worker.js';
 
 let pass = 0, fail = 0;
@@ -14,18 +20,18 @@ function ok(cond, name, detail) {
   else { fail++; console.log('FAIL:', name, detail || ''); }
 }
 
+function deepEqual(x, y) {
+  if (x === y) return true;
+  if (typeof x !== 'object' || typeof y !== 'object' || !x || !y) return false;
+  const kx = Object.keys(x), ky = Object.keys(y);
+  if (kx.length !== ky.length) return false;
+  return kx.every((k) => Object.prototype.hasOwnProperty.call(y, k) && deepEqual(x[k], y[k]));
+}
+
 class MapKV {
   constructor() { this.map = new Map(); }
   async get(k) { return this.map.has(k) ? this.map.get(k) : null; }
   async put(k, v) { this.map.set(k, String(v)); }
-}
-
-function aiStub(handler) {
-  const stub = {
-    calls: 0,
-    async run(model, opts) { stub.calls++; return handler(stub.calls, model, opts); },
-  };
-  return stub;
 }
 
 function sterlingStub(line) {
@@ -41,127 +47,170 @@ function sterlingStub(line) {
   return stub;
 }
 
-const GOOD_Q = {
-  q: 'Which 1994 film follows a gentle man whose life touches everyone he meets, from shrimp boats to a cross-country run?',
-  a: ['Forrest Gump', 'The Shawshank Redemption', 'Pulp Fiction', 'Speed'],
-  correct: 0,
-  cat: 'Movies',
-  diff: 'easy',
-  why: 'Forrest Gump won Best Picture for 1994 and made shrimping boats famous.',
-};
-const DATE = '2026-11-09';
+function addDays(dateStr, n) {
+  return new Date(Date.parse(dateStr + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+}
+
+const DATE = '2026-11-08';
 
 async function main() {
-  // ---- 1. happy path: question + Sterling intro, cached as one ----
+  // ---- 1. bank integrity: the worker's copy vs the game's file ----
+  {
+    const gameSrc = fs.readFileSync(new URL('../../gilded-hour/questions.js', import.meta.url), 'utf8');
+    const win = {};
+    new Function('window', gameSrc)(win);
+    const gameBank = win.GH_BANK;
+    ok(Array.isArray(gameBank) && gameBank.length === 96, 'the game bank has 96 entries', 'len=' + (gameBank && gameBank.length));
+    ok(BANK.length === 96, "the worker's bank.js has 96 entries", 'len=' + BANK.length);
+    ok(deepEqual(BANK, gameBank), "bank.js deep-equals the game's bank (same order, same fields, same values)");
+    // Spot checks, named and exact.
+    ok(BANK[0].q === 'In Forrest Gump, Forrest says life is like a box of what?'
+      && BANK[0].a === 'Chocolates' && deepEqual(BANK[0].w, ['Crayons', 'Roses', 'Letters'])
+      && BANK[0].cat === 'Movies' && BANK[0].diff === 'easy',
+      'spot check: entry 0 is the Forrest Gump question', JSON.stringify(BANK[0]).slice(0, 100));
+    const numEntry = BANK.find((e) => e.kind === 'num');
+    ok(!!numEntry && typeof numEntry.num === 'number' && !('a' in numEntry) && !('w' in numEntry) && typeof numEntry.q === 'string',
+      'spot check: a num entry carries {q, num, why} and no a/w', JSON.stringify(numEntry).slice(0, 100));
+    const surveyEntry = BANK.find((e) => e.kind === 'survey' && e.cat === 'Saturday Morning');
+    ok(!!surveyEntry && surveyEntry.a === 'Scooby-Doo' && Array.isArray(surveyEntry.w) && surveyEntry.w.length === 3,
+      'spot check: the Saturday Morning survey entry keys Scooby-Doo', JSON.stringify(surveyEntry).slice(0, 100));
+    const kinds = { normal: 0, num: 0, survey: 0 };
+    for (const e of BANK) kinds[e.kind === 'num' ? 'num' : e.kind === 'survey' ? 'survey' : 'normal']++;
+    ok(kinds.normal === 84 && kinds.num === 6 && kinds.survey === 6,
+      'kind distribution is 84 normal / 6 num / 6 survey', JSON.stringify(kinds));
+    const pool = eligiblePool();
+    ok(pool.length === 84, 'the eligible pool is exactly the 84 ordinary questions', 'len=' + pool.length);
+    ok(pool.every((e) => typeof e.a === 'string' && Array.isArray(e.w) && e.w.length === 3),
+      'every eligible entry has a correct string and three wrong answers');
+    ok(shuffledPool().length === 84 && shuffledPool() !== pool
+      && deepEqual(shuffledPool().slice().sort((x, y) => BANK.indexOf(x) - BANK.indexOf(y)), pool),
+      'the shuffled pool is a permutation of the eligible pool');
+  }
+
+  // ---- 2. the pick: shape, passthrough, answer arrangement ----
+  {
+    const entry = pickEntryForDate(DATE);
+    const q = pickForDate(DATE);
+    ok(!!entry && !!q, 'a pick exists for ' + DATE);
+    ok(q.q === entry.q && q.cat === entry.cat && q.diff === entry.diff && q.why === entry.why && q.kind === 'normal',
+      'the response question passes q/cat/diff/why through and is kind normal');
+    ok(Array.isArray(q.a) && q.a.length === 4
+      && deepEqual(q.a.slice().sort(), [entry.a].concat(entry.w).sort()),
+      'the four answers are exactly the bank entry\'s correct + three wrong');
+    ok(q.a[q.correct] === entry.a, 'the correct index points at the bank\'s correct answer');
+    ok(deepEqual(pickForDate(DATE), q), 'pickForDate is deterministic for the same date');
+  }
+
+  // ---- 3. adjacent dates follow the day-number rule ----
+  {
+    const i0 = pickIndexForDate(DATE);
+    const i1 = pickIndexForDate(addDays(DATE, 1));
+    ok(i1 === (i0 + 1) % 84, 'the next date picks the next slot in the shuffled pool', i0 + ' -> ' + i1);
+    ok(pickEntryForDate(addDays(DATE, 1)) === shuffledPool()[i1]
+      && pickEntryForDate(addDays(DATE, 1)) !== pickEntryForDate(DATE),
+      'adjacent dates deal adjacent (different) entries');
+    ok(dayNumberForDate(DATE) === Math.floor(Date.UTC(2026, 10, 8) / 86400000),
+      'dayNumberForDate is the UTC day number');
+  }
+
+  // ---- 4. reachability: 84 consecutive dates deal the whole pool ----
+  {
+    const idxSeen = new Set();
+    const entrySeen = new Set();
+    for (let n = 0; n < 84; n++) {
+      const d = addDays(DATE, n);
+      idxSeen.add(pickIndexForDate(d));
+      entrySeen.add(pickEntryForDate(d));
+    }
+    ok(idxSeen.size === 84, '84 consecutive dates hit 84 distinct pool slots', 'seen=' + idxSeen.size);
+    ok(entrySeen.size === 84, '84 consecutive dates deal 84 distinct questions', 'seen=' + entrySeen.size);
+    ok(pickEntryForDate(addDays(DATE, 84)) === pickEntryForDate(DATE),
+      'the 85th date repeats the 1st pick (the walk wraps the pool)');
+  }
+
+  // ---- 5. no guess kinds are ever dealt as specials ----
+  {
+    let allNormal = true;
+    for (let n = 0; n < 200; n++) {
+      const d = addDays(DATE, n);
+      const e = pickEntryForDate(d);
+      if (!e || (e.kind != null && e.kind !== 'normal') || pickForDate(d).kind !== 'normal') allNormal = false;
+    }
+    ok(allNormal, 'across 200 dates the special is never a num or survey question');
+  }
+
+  // ---- 6. empty-pool defence ----
+  {
+    ok(pickEntryForDate(DATE, []) === null, 'an empty pool picks null (defensive path stays)');
+    ok(pickIndexForDate(DATE, 0) === -1, 'a zero-size pool has no index');
+  }
+
+  // ---- 7. happy path: bank pick + Sterling intro, cached under v2 ----
   {
     const kv = new MapKV();
-    const ai = aiStub(() => ({ response: JSON.stringify(GOOD_Q) }));
     const sterling = sterlingStub('Sterling has been saving this one all day, and the wrapping is exquisite.');
-    const env = { AI: ai, CACHE: kv, STERLING: sterling };
+    const env = { CACHE: kv, STERLING: sterling }; // note: no AI in env at all
+    const expected = pickForDate(DATE);
     const r1 = await handleTonight(env, DATE);
-    ok(r1.status === 200 && r1.data.question && r1.data.question.q === GOOD_Q.q, 'tonight returns the generated question', JSON.stringify(r1.data));
-    ok(r1.data.question.kind === 'normal' && r1.data.question.correct === 0 && r1.data.question.a.length === 4,
-      'question is normalized to the bank schema (kind normal, 4 answers, correct index)');
-    ok(r1.data.intro.includes('wrapping is exquisite'), 'intro came from the Sterling worker', r1.data.intro);
+    ok(r1.status === 200 && deepEqual(r1.data.question, expected), 'tonight deals the predicted bank pick', JSON.stringify(r1.data).slice(0, 140));
+    ok(r1.data.intro.includes('wrapping is exquisite'), 'the intro came from the Sterling worker', r1.data.intro);
     ok(sterling.lastBody && sterling.lastBody.kind === 'nightly_intro' && sterling.lastBody.showKey === 'nightly:' + DATE
-      && sterling.lastBody.category === 'Movies', 'Sterling was asked over the binding with the nightly showKey', JSON.stringify(sterling.lastBody));
-    ok(ai.calls === 1 && sterling.calls === 1, 'one generation + one intro call', 'ai=' + ai.calls + ' st=' + sterling.calls);
-
+      && sterling.lastBody.category === expected.cat, 'Sterling was asked over the binding with the picked category', JSON.stringify(sterling.lastBody));
+    ok(sterling.calls === 1, 'one Sterling call for the first request', 'calls=' + sterling.calls);
+    ok(kv.map.has('nightly:v2:' + DATE), 'the pair is cached under the nightly:v2: key');
+    ok(!kv.map.has('nightly:' + DATE), 'nothing is written under the old v1 key');
     const r2 = await handleTonight(env, DATE);
-    ok(JSON.stringify(r2.data) === JSON.stringify(r1.data), 'second /tonight returns the cached pair verbatim');
-    ok(ai.calls === 1 && sterling.calls === 1, 'two /tonight calls cost exactly one AI generation total', 'ai=' + ai.calls);
+    ok(JSON.stringify(r2.data) === JSON.stringify(r1.data), 'the second /tonight returns the cached pair verbatim');
+    ok(sterling.calls === 1, 'two /tonight calls cost exactly one Sterling call total (cache serves the second)', 'calls=' + sterling.calls);
   }
 
-  // ---- 2. malformed first, good second (choices-shaped) -> success ----
-  {
-    const ai = aiStub((n) => (n === 1
-      ? { response: 'Here is your question! It is a great one, trust me.' }
-      : { choices: [{ message: { content: '```json\n' + JSON.stringify(GOOD_Q) + '\n```' } }] }));
-    const env = { AI: ai, CACHE: new MapKV(), STERLING: sterlingStub('An intro, second attempt lucky.') };
-    const r = await handleTonight(env, DATE);
-    ok(r.data.question && r.data.question.q === GOOD_Q.q, 'non-JSON output rejected, retry succeeds (fenced JSON in choices shape)', JSON.stringify(r.data).slice(0, 120));
-    ok(ai.calls === 2, 'exactly one retry on malformed output', 'calls=' + ai.calls);
-  }
-
-  // ---- 3. malformed twice -> designed null, NOT cached ----
-  {
-    const ai = aiStub(() => ({ response: '{"q":"too short"}' }));
-    const env = { AI: ai, CACHE: new MapKV(), STERLING: sterlingStub('unused') };
-    const r1 = await handleTonight(env, DATE);
-    ok(r1.status === 200 && r1.data.question === null && r1.data.intro === null,
-      'invalid question twice returns the designed {question:null, intro:null}', JSON.stringify(r1.data));
-    ok(ai.calls === 2, 'gave up after exactly one retry', 'calls=' + ai.calls);
-    const r2 = await handleTonight(env, DATE);
-    ok(r2.data.question === null && ai.calls === 4, 'the null is not cached — a later request tries again', 'calls=' + ai.calls);
-  }
-
-  // ---- 4. sports question is rejected however valid its shape ----
-  {
-    const sportsQ = { ...GOOD_Q, q: 'Which quarterback threw the winning touchdown in the 1995 Super Bowl game?', a: ['Steve Young', 'Troy Aikman', 'Dan Marino', 'John Elway'], why: 'A famous football moment.' };
-    const ai = aiStub(() => ({ response: JSON.stringify(sportsQ) }));
-    const env = { AI: ai, CACHE: new MapKV(), STERLING: sterlingStub('unused') };
-    const r = await handleTonight(env, DATE);
-    ok(r.data.question === null, 'a sports question is rejected outright', JSON.stringify(r.data));
-  }
-
-  // ---- 5. AI throws -> designed null, no exception escapes ----
-  {
-    const ai = aiStub(() => { throw new Error('muse is out'); });
-    const env = { AI: ai, CACHE: new MapKV(), STERLING: sterlingStub('unused') };
-    const r = await handleTonight(env, DATE);
-    ok(r.status === 200 && r.data.question === null, 'throwing AI returns the designed null', JSON.stringify(r.data));
-  }
-
-  // ---- 6. Sterling binding fails -> authored intro, still cached ----
+  // ---- 8. the v1 cache entry is orphaned, never read ----
   {
     const kv = new MapKV();
-    const ai = aiStub(() => ({ response: JSON.stringify(GOOD_Q) }));
-    const badSterling = { async fetch() { throw new Error('binding down'); } };
-    const env = { AI: ai, CACHE: kv, STERLING: badSterling };
-    const r1 = await handleTonight(env, DATE);
-    ok(r1.data.question && r1.data.intro === authoredIntro('Movies'), 'failing Sterling binding lands on the authored intro', r1.data.intro);
-    const r2 = await handleTonight(env, DATE);
-    ok(r2.data.intro === r1.data.intro && ai.calls === 1, 'question + authored intro are cached together', 'ai=' + ai.calls);
+    await kv.put('nightly:' + DATE, JSON.stringify({ question: { q: 'CONFABULATED — must never be served' }, intro: 'stale' }));
+    const sterling = sterlingStub('A fresh intro for a true question.');
+    const r = await handleTonight({ CACHE: kv, STERLING: sterling }, DATE);
+    ok(r.data.question && r.data.question.q === pickForDate(DATE).q,
+      'a stale v1 cache entry is ignored — the bank pick is served instead', JSON.stringify(r.data).slice(0, 120));
   }
 
-  // ---- 7. no STERLING binding at all -> authored intro ----
+  // ---- 9. cache hit needs no Sterling call at all ----
   {
-    const ai = aiStub(() => ({ response: JSON.stringify(GOOD_Q) }));
-    const env = { AI: ai, CACHE: new MapKV() };
-    const r = await handleTonight(env, DATE);
-    ok(r.data.intro === authoredIntro('Movies'), 'missing STERLING binding lands on the authored intro', r.data.intro);
+    const kv = new MapKV();
+    const stored = { question: pickForDate(DATE), intro: 'A previously stored intro.' };
+    await kv.put('nightly:v2:' + DATE, JSON.stringify(stored));
+    let calls = 0;
+    const counting = { async fetch() { calls++; throw new Error('must not be called'); } };
+    const r = await handleTonight({ CACHE: kv, STERLING: counting }, DATE);
+    ok(deepEqual(r.data, stored) && calls === 0, 'a v2 cache hit returns the pair with zero Sterling calls', 'calls=' + calls);
   }
 
-  // ---- 8. validateQuestion unit checks ----
+  // ---- 10. Sterling fails or is missing -> authored intro, still cached ----
   {
-    const base = { ...GOOD_Q };
-    ok(validateQuestion(base) !== null, 'validateQuestion accepts a good question');
-    ok(validateQuestion({ ...base, a: ['X', 'X', 'Y', 'Z'] }) === null, 'rejects duplicate answers');
-    ok(validateQuestion({ ...base, a: ['X', 'Y', 'Z'] }) === null, 'rejects three answers');
-    ok(validateQuestion({ ...base, correct: 4 }) === null, 'rejects correct index 4');
-    ok(validateQuestion({ ...base, correct: 1.5 }) === null, 'rejects non-integer correct');
-    ok(validateQuestion({ ...base, cat: 'Sports Moments' }) === null, 'rejects a non-show category');
-    ok(validateQuestion({ ...base, diff: 'brutal' }) === null, 'rejects an unknown diff');
-    ok(validateQuestion({ ...base, q: 'Short?' }) === null, 'rejects a too-short question');
-    ok(validateQuestion({ ...base, why: 'x'.repeat(141) }) === null, 'rejects an overlong why');
-    ok(validateQuestion({ ...base, kind: 'num' }) === null, 'rejects a non-normal kind');
-    ok(validateQuestion({ ...base, a: ['Ok', 'x'.repeat(61), 'Y', 'Z'] }) === null, 'rejects an overlong answer');
+    const kv = new MapKV();
+    const badSterling = { calls: 0, async fetch() { this.calls++; throw new Error('binding down'); } };
+    const r1 = await handleTonight({ CACHE: kv, STERLING: badSterling }, DATE);
+    ok(r1.data.question && r1.data.intro === authoredIntro(r1.data.question.cat),
+      'a failing Sterling binding lands on the authored intro', r1.data.intro);
+    const r2 = await handleTonight({ CACHE: kv, STERLING: badSterling }, DATE);
+    ok(r2.data.intro === r1.data.intro && badSterling.calls === 1,
+      'pick + authored intro are cached together (one attempt total)', 'calls=' + badSterling.calls);
+    const r3 = await handleTonight({ CACHE: new MapKV() }, DATE);
+    ok(r3.data.intro === authoredIntro(r3.data.question.cat), 'a missing STERLING binding lands on the authored intro', r3.data.intro);
+    const r4 = await handleTonight({}, DATE);
+    ok(r4.status === 200 && !!r4.data.question, 'no bindings at all still deals the pick (nothing is load-bearing)');
   }
 
-  // ---- 9. category rotation + Chicago date shape ----
+  // ---- 11. Chicago date shape (unchanged behaviour) ----
   {
-    const cats = new Set();
-    for (let d = 9; d <= 15; d++) cats.add(categoryForDate('2026-11-' + d));
-    ok(cats.size === 7, 'categoryForDate walks all seven categories across a week', [...cats].join(','));
-    ok(categoryForDate(DATE) === categoryForDate(DATE), 'categoryForDate is deterministic');
     ok(/^\d{4}-\d{2}-\d{2}$/.test(todayInChicago()), 'todayInChicago returns YYYY-MM-DD', todayInChicago());
     // 2026-11-09 02:00 UTC is still Nov 8 in Chicago (CST, UTC-6).
     ok(todayInChicago(new Date('2026-11-09T02:00:00Z')) === '2026-11-08', 'todayInChicago respects the Chicago date line', todayInChicago(new Date('2026-11-09T02:00:00Z')));
   }
 
-  // ---- 10. worker wrapper: health, bad date, tonight round-trip ----
+  // ---- 12. worker wrapper: health, bad dates, tonight round-trip ----
   {
-    const env = { AI: aiStub(() => ({ response: JSON.stringify(GOOD_Q) })), CACHE: new MapKV(), STERLING: sterlingStub('Wrapped intro, at your service.') };
+    const env = { CACHE: new MapKV(), STERLING: sterlingStub('Wrapped intro, at your service.') };
     const health = await worker.fetch(new Request('https://x/health'), env);
     ok(health.status === 200 && (await health.text()) === 'gilded-hour-nightly ok', 'GET /health answers the plain-text ok');
     const bad = await worker.fetch(new Request('https://x/tonight?date=November 9'), env);
@@ -170,9 +219,19 @@ async function main() {
     ok(badDay.status === 400, 'an impossible calendar date is a 400');
     const good = await worker.fetch(new Request('https://x/tonight?date=' + DATE), env);
     const gj = await good.json();
-    ok(good.status === 200 && gj.question.q === GOOD_Q.q && gj.intro.includes('at your service'), 'GET /tonight round-trips through the wrapper', JSON.stringify(gj).slice(0, 120));
+    ok(good.status === 200 && gj.question.q === pickForDate(DATE).q && gj.intro.includes('at your service'),
+      'GET /tonight round-trips through the wrapper', JSON.stringify(gj).slice(0, 120));
     const opt = await worker.fetch(new Request('https://x/tonight', { method: 'OPTIONS' }), env);
     ok(opt.status === 204, 'OPTIONS handled with 204');
+  }
+
+  // ---- 13. dist sanity: the single-file build carries the rework ----
+  {
+    const dist = fs.readFileSync(new URL('../dist/worker.js', import.meta.url), 'utf8');
+    ok(dist.includes('nightly:v2:'), 'dist uses the nightly:v2: cache key');
+    ok(dist.includes('mulberry32') && dist.includes('Forrest Gump'), 'dist inlines the seeded pick and the bank');
+    ok(!dist.includes('AI.run') && !dist.includes('validateQuestion') && !dist.includes('llama'),
+      'dist contains no AI generation code at all');
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
