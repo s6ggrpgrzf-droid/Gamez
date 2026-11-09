@@ -1,0 +1,10 @@
+name = "gilded-hour-sterling"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+[ai]
+binding = "AI"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "1d112de1cbb4478f99177b10caf6c29e"
