@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=7">
-<!-- repush 2026-11-08: nudge Pages to rebuild after the 75db41cd deploy was skipped -->
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <div id="app">
@@ -78,16 +77,40 @@
       </div>
       <div class="title-bottom">
         <div class="setup-card">
-          <div class="setup-label">HOW MANY AT THE TABLE?</div>
-          <div class="count-row" id="countRow">
-            <button class="count-btn" data-n="2">2</button>
-            <button class="count-btn sel" data-n="3">3</button>
-            <button class="count-btn" data-n="4">4</button>
+          <div class="mode-tabs" id="modeTabs" role="tablist" aria-label="How are you playing?">
+            <button class="mode-tab sel" data-mode="table">AT THE TABLE</button>
+            <button class="mode-tab" data-mode="host">ONLINE ROOM</button>
+            <button class="mode-tab" data-mode="join">JOIN A ROOM</button>
           </div>
-          <div class="setup-label">NAMES — TAP TO EDIT</div>
-          <div id="nameRows"></div>
-          <p class="fineprint">One phone, one TV. Everybody answers with their fingers — 1, 2, 3 or 4.
-          Every question written for this table — the pop culture of the eighties, nineties and two-thousands.</p>
+          <div id="panelTable">
+            <div class="setup-label">HOW MANY AT THE TABLE?</div>
+            <div class="count-row" id="countRow">
+              <button class="count-btn" data-n="2">2</button>
+              <button class="count-btn sel" data-n="3">3</button>
+              <button class="count-btn" data-n="4">4</button>
+            </div>
+            <div class="setup-label">NAMES — TAP TO EDIT</div>
+            <div id="nameRows"></div>
+            <p class="fineprint">One phone, one TV. Everybody answers with their fingers — 1, 2, 3 or 4.
+            Every question written for this table — the pop culture of the eighties, nineties and two-thousands.</p>
+          </div>
+          <div id="panelHost" class="hidden">
+            <div class="setup-label">YOU RUN THE SHOW — FRIENDS JOIN ON THEIR PHONES</div>
+            <p class="panel-text">This screen becomes the show. Up to four players join from their own phones with a room code — their answers stay private until Sterling calls the reveal.</p>
+            <button class="btn-gold wide" id="btnCreateRoom">CREATE A ROOM</button>
+            <button class="btn-ghost wide hidden" id="btnRejoinRoom" style="margin-top:10px">REJOIN YOUR ROOM</button>
+            <div class="panel-status" id="hostStatus">The room opens on this screen; the code appears here.</div>
+          </div>
+          <div id="panelJoin" class="hidden">
+            <div class="setup-label">GOT A ROOM CODE?</div>
+            <div class="join-row">
+              <input id="joinCode" class="code-input" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <input id="joinName" class="name-input join-name" maxlength="14" placeholder="Your name" autocomplete="off">
+            </div>
+            <button class="btn-gold wide" id="btnJoinRoom">JOIN THE ROOM</button>
+            <button class="btn-ghost wide hidden" id="btnResumePlayer" style="margin-top:10px">REJOIN YOUR SEAT</button>
+            <div class="panel-status" id="joinStatus">Four letters, your name, you're in.</div>
+          </div>
         </div>
         <div class="podium-row" id="podiumPreview"></div>
       </div>
@@ -104,6 +127,7 @@
       <div class="tb-mid"><span id="roundLabel">ROUND 1</span><span class="tb-dot">·</span><span id="qCounter">QUESTION 1 OF 15</span></div>
       <div class="tb-right"><button id="btnQuit" class="tb-btn">END SHOW</button></div>
     </header>
+    <div id="ogPill" class="og-pill hidden">ONLINE</div>
 
     <div id="table">
       <div id="spot" aria-hidden="true"></div>
@@ -142,8 +166,23 @@
     <canvas id="leafCanvas" aria-hidden="true"></canvas>
   </section>
 
+  <!-- ============ PLAYER (online podium) ============ -->
+  <section id="scr-join" class="screen">
+    <div class="curtain curtain-l" aria-hidden="true"></div>
+    <div class="curtain curtain-r" aria-hidden="true"></div>
+    <div class="jp-wrap">
+      <header class="jp-head">
+        <span class="tb-show">THE GILDED HOUR</span>
+        <span class="jp-room" id="jpRoom">ROOM ····</span>
+        <span class="jp-conn" id="jpConn">…</span>
+      </header>
+      <div id="jpMain"></div>
+      <div id="jpToast" class="jp-toast hidden"></div>
+    </div>
+  </section>
+
 </div>
 <script src="questions.js?v=3"></script>
-<script src="game.js?v=5"></script>
+<script src="game.js?v=6"></script>
 </body>
 </html>

@@ -443,3 +443,137 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
   .finale-row .podium.big .avatar{width:60px}
   .co-title{font-size:32px}
 }
+
+/* ================= Pass 4: online rooms ================= */
+.mode-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+.mode-tab{font-weight:700;letter-spacing:.06em;font-size:clamp(12px,1.7vmin,15px);color:rgba(255,246,232,.65);background:#3B1D4E;border-radius:999px;padding:10px 18px;box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
+.mode-tab:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.mode-tab.sel{background:linear-gradient(180deg,#FFE29A,#FFB03A);color:#431A04;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
+.btn-gold.wide,.btn-ghost.wide{display:block;width:100%;text-align:center}
+.panel-text{color:rgba(255,246,232,.72);font-weight:500;font-size:14px;line-height:1.5;text-align:center;max-width:52ch;margin:0 auto 12px}
+.panel-status{margin-top:11px;text-align:center;font-size:13px;font-weight:600;color:rgba(255,246,232,.6);line-height:1.45;min-height:19px}
+.panel-status.err{color:#FFB3AB}
+.join-row{display:flex;gap:10px;margin-bottom:12px}
+.code-input{flex:0 0 42%;background:rgba(255,246,232,.08);border:2px solid rgba(255,246,232,.16);border-radius:14px;padding:11px 12px;color:var(--cream);font-family:inherit;font-weight:700;font-size:21px;letter-spacing:.32em;text-transform:uppercase;text-align:center;outline:none;min-width:0}
+.code-input:focus{border-color:var(--gold)}
+.join-name{flex:1;background:rgba(255,246,232,.08);border:2px solid rgba(255,246,232,.16);border-radius:14px;padding:11px 14px;font-size:17px}
+.join-name:focus{border-color:var(--gold)}
+.og-pill{position:absolute;top:52px;right:14px;z-index:5;font-size:10.5px;font-weight:700;letter-spacing:.18em;color:#0B3D1C;background:linear-gradient(180deg,#8BF0AB,#3ECF6E);border-radius:999px;padding:6px 12px;box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.og-pill.warn{background:linear-gradient(180deg,#FFD76A,#FFB03A);color:#431A04}
+.og-code{font-size:clamp(64px,14vmin,124px);font-weight:700;letter-spacing:.22em;text-indent:.22em;line-height:1.05;background:linear-gradient(180deg,#FFF3D6 5%,#FFD76A 45%,#FF9E3C 92%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 5px 0 #571C46) drop-shadow(0 16px 30px rgba(0,0,0,.45))}
+.og-count{display:inline-block;margin-top:14px;font-weight:700;letter-spacing:.14em;font-size:clamp(14px,2.2vmin,19px);color:var(--cream);background:rgba(59,29,78,.75);border:2px solid rgba(255,246,232,.2);border-radius:999px;padding:9px 20px}
+.og-count b{color:var(--gold)}
+.seat.away{opacity:.45;filter:saturate(.4)}
+.seat .tag .awaytag{color:#FFB3AB}
+.og-statusline{margin-top:12px;font-weight:600;color:rgba(255,246,232,.65);font-size:14px;min-height:20px}
+.og-statusline.err{color:#FFB3AB}
+
+/* ---------- player (join) screen: THE CONTROLLER ----------
+   The phone is not a page, it is one person's answer pad: identity
+   bar on top, one phase, one set of oversized thumb controls. */
+#scr-join{position:relative;overflow:hidden;background:radial-gradient(120% 95% at 50% 28%,#3B1D4E 0%,#24102F 54%,#150820 100%)}
+.jp-wrap{flex:1;display:flex;flex-direction:column;width:min(560px,100%);margin:0 auto;padding:12px 16px 16px;position:relative;z-index:2;min-height:0}
+.jp-head{display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:.2em;color:rgba(255,246,232,.65)}
+.jp-head .tb-show{font-size:12px}
+.jp-room{margin-left:auto;background:#3B1D4E;border-radius:999px;padding:7px 13px;letter-spacing:.24em;color:var(--cream);box-shadow:0 3px 0 rgba(0,0,0,.4)}
+.jp-conn{border-radius:999px;padding:7px 11px;letter-spacing:.1em;background:#14532D;color:#8BF0AB;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.jp-conn.warn{background:#7A4A08;color:#FFD76A}
+#jpMain{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding-top:12px}
+.jp-card{text-align:center;animation:fadeUp .38s ease both;margin:auto 0}
+.jp-hi{font-size:clamp(24px,6.4vw,32px);font-weight:700;margin-top:6px;text-shadow:0 3px 0 rgba(20,4,24,.45)}
+.jp-sub{color:rgba(255,246,232,.72);font-weight:500;font-size:15.5px;line-height:1.5;margin-top:8px}
+.jp-players{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.jp-pchip{display:flex;align-items:center;gap:8px;background:rgba(255,246,232,.08);border:2px solid rgba(255,246,232,.12);border-radius:999px;padding:7px 14px 7px 8px;font-weight:700;font-size:14px}
+.jp-pchip .name-dot{width:13px;height:13px}
+.jp-pchip.me{border-color:var(--gold)}
+.jp-pchip.away{opacity:.45}
+.jp-gain{font-size:clamp(38px,11vw,56px);font-weight:700;background:linear-gradient(180deg,#FFE29A,#FFB03A 60%,#FF8A3C);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 3px 0 #571C46);margin-top:4px}
+.jp-standrow{display:flex;align-items:center;gap:10px;background:rgba(255,246,232,.07);border:2px solid rgba(255,246,232,.1);border-radius:14px;padding:10px 14px;margin-top:8px;font-weight:700;text-align:left}
+.jp-standrow.me{border-color:var(--gold);background:rgba(255,201,60,.1)}
+.jp-standrow .sc{margin-left:auto;font-size:18px}
+.jp-toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:6;background:#5E1710;color:#FFD9D4;font-weight:700;font-size:14px;border-radius:999px;padding:10px 18px;box-shadow:0 8px 18px rgba(0,0,0,.4);white-space:nowrap;max-width:92vw}
+.jp-leave{margin-top:22px}
+
+/* the pad itself: fills the screen, one job per phase */
+.jp-pad{flex:1;display:flex;flex-direction:column;min-height:0;animation:fadeUp .3s ease both}
+/* identity bar: your face, your colour, your name, your money, the clock */
+.jp-id{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,rgba(255,246,232,.14),rgba(255,246,232,.05));border:2px solid rgba(255,246,232,.16);border-left:10px solid var(--me,#FFC93C);border-radius:18px;padding:8px 14px 8px 10px}
+.jp-id-ava{width:46px;flex:none}
+.jp-id-ava .avatar{width:100%;height:auto;display:block}
+.jp-id-name{font-weight:700;font-size:clamp(19px,5.4vw,24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jp-id-score{margin-left:auto;font-weight:700;font-size:clamp(17px,4.8vw,21px);color:var(--gold-hi);white-space:nowrap}
+.jp-id-secs{flex:none;min-width:54px;text-align:center;font-weight:700;font-size:19px;color:#431A04;background:linear-gradient(180deg,#FFE29A,#FFB03A);border-radius:999px;padding:5px 10px;box-shadow:0 3px 0 var(--gold-sh)}
+.jp-barwrap{height:14px;border-radius:999px;background:rgba(255,246,232,.14);overflow:hidden;margin:12px 2px 0;flex:none}
+.jp-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cat,#FFB03A),var(--cat-hi,#FFE29A));transition:width .25s linear}
+.jp-barwrap.low .jp-bar{background:linear-gradient(90deg,#FF6B5E,#FF9E3C)}
+.jp-qline{margin:12px 2px 0;font-size:clamp(18px,5vw,22px);font-weight:700;line-height:1.3;text-shadow:0 2px 0 rgba(20,4,24,.45)}
+.jp-catdot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--cat,#FFB03A);margin-right:9px;box-shadow:0 0 0 3px rgba(255,246,232,.15);vertical-align:2px}
+/* the four answer buttons ARE the screen */
+.jp-answers{flex:1;display:flex;flex-direction:column;gap:12px;margin-top:14px;min-height:0}
+.jp-ans{flex:1 1 0;min-height:78px;display:flex;align-items:center;gap:14px;text-align:left;color:var(--cat-tx);font-weight:700;font-size:clamp(19px,5.4vw,23px);line-height:1.22;padding:12px 16px;border-radius:22px;background:linear-gradient(180deg,var(--cat-hi),var(--cat) 58%,var(--cat-lo));box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -6px 0 rgba(0,0,0,.16),0 8px 0 var(--cat-sh),0 14px 22px rgba(0,0,0,.4);transition:transform .1s ease,box-shadow .1s ease,opacity .3s,filter .3s;position:relative}
+.jp-ans .jp-numb{flex:none;width:52px;height:52px;border-radius:16px;background:var(--cream);color:var(--cat-sh);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;box-shadow:inset 0 -3px 0 rgba(0,0,0,.14),0 3px 0 rgba(0,0,0,.18)}
+.jp-ans:active{transform:translateY(5px);box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -6px 0 rgba(0,0,0,.16),0 3px 0 var(--cat-sh)}
+.jp-ans.sel{transform:translateY(4px);filter:brightness(1.08);box-shadow:inset 0 3px 0 rgba(255,255,255,.55),inset 0 -6px 0 rgba(0,0,0,.16),0 0 0 5px #FFD76A,0 4px 0 var(--cat-sh),0 14px 22px rgba(0,0,0,.4)}
+.jp-ans.sel .jp-numb{background:#FFD76A;color:#431A04}
+.jp-ans-tag{display:none;margin-left:auto;flex:none;font-size:12px;letter-spacing:.14em;font-weight:700;color:#431A04;background:#FFD76A;border-radius:999px;padding:6px 11px;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.jp-ans.sel .jp-ans-tag{display:inline-block}
+.jp-ans.dim{opacity:.38;filter:saturate(.3) brightness(.8)}
+.jp-pickstate{margin-top:12px;text-align:center;font-weight:700;letter-spacing:.12em;font-size:13.5px;color:rgba(255,246,232,.75);min-height:20px;flex:none}
+.jp-pickstate b{color:#FFD76A}
+.jp-cut{display:block;width:100%;margin-top:10px;min-height:60px;font-weight:700;font-size:17px;letter-spacing:.04em;color:var(--cream);background:#3B1D4E;border-radius:20px;padding:14px 16px;box-shadow:0 6px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);flex:none}
+.jp-cut:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.4)}
+.jp-cutnote{margin-top:10px;text-align:center;font-weight:700;letter-spacing:.12em;font-size:12.5px;color:rgba(255,246,232,.55);flex:none}
+/* number pad phase */
+.jp-numpad{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;min-height:0}
+.jp-num{width:100%;background:rgba(255,246,232,.07);border:3px solid rgba(255,246,232,.25);border-radius:22px;padding:16px 10px;color:var(--cream);font-family:inherit;font-weight:700;font-size:clamp(40px,12vw,56px);text-align:center;outline:none;min-width:0}
+.jp-num:focus{border-color:var(--gold)}
+.jp-numstate{text-align:center;font-weight:700;letter-spacing:.1em;font-size:14px;color:rgba(255,246,232,.75);min-height:20px}
+.jp-numstate b{color:#FFD76A}
+.jp-sendbig{width:100%;min-height:78px;font-size:22px;border-radius:22px}
+/* bet phase: chips you can count */
+.jp-betmid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:0}
+.jp-betlabel{letter-spacing:.3em;font-weight:700;font-size:13px;color:rgba(255,246,232,.65)}
+.jp-chipstack{display:flex;gap:12px;min-height:76px;align-items:center}
+.jp-chipdisc{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 50% 36%,#FFE29A,#FFB03A 62%,#FF8A3C);border:5px dashed rgba(67,26,4,.35);box-shadow:0 6px 0 var(--gold-sh),inset 0 3px 0 rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-weight:700;color:#431A04;font-size:19px}
+.jp-betamt{font-size:clamp(24px,7vw,32px);font-weight:700;text-shadow:0 3px 0 rgba(20,4,24,.45)}
+.jp-betrow{display:flex;gap:28px}
+.jp-step{width:86px;height:86px;border-radius:50%;font-size:38px;font-weight:700;color:var(--cream);background:#3B1D4E;box-shadow:0 6px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14)}
+.jp-step:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.jp-lockbtn{width:100%;min-height:78px;font-size:21px;border-radius:22px;flex:none}
+.jp-betstate{margin-top:12px;text-align:center;font-weight:700;letter-spacing:.1em;font-size:13.5px;color:rgba(255,246,232,.75);flex:none}
+.jp-betstate b{color:#FFD76A}
+/* lobby hero: this is YOU */
+.jp-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;animation:fadeUp .38s ease both}
+.jp-hero-ava{width:132px}
+.jp-hero-ava .avatar{width:100%;height:auto;display:block}
+.jp-herotag{letter-spacing:.26em;font-size:12px;font-weight:700;color:var(--gold);margin-top:14px}
+.jp-heroname{font-size:clamp(30px,8.6vw,38px);font-weight:700;margin-top:4px;text-shadow:0 3px 0 rgba(20,4,24,.45)}
+.jp-colorband{height:10px;border-radius:999px;width:132px;margin-top:14px;background:var(--me,#FFC93C);box-shadow:0 3px 0 rgba(0,0,0,.35)}
+/* reveal verdict: one disc, one word, one number */
+.jp-verdict{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;animation:fadeUp .35s ease both}
+.jp-vdisc{width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:62px;font-weight:700;color:#0B3D1C;background:linear-gradient(180deg,#8BF0AB,#3ECF6E);box-shadow:0 8px 0 #1E7A38,0 18px 30px rgba(0,0,0,.4)}
+.jp-verdict.miss .jp-vdisc{background:linear-gradient(180deg,#FFB3AB,#FF6B5E);color:#5E1710;box-shadow:0 8px 0 #A12B20,0 18px 30px rgba(0,0,0,.4)}
+.jp-vword{font-size:clamp(34px,10vw,48px);font-weight:700;margin-top:18px;text-shadow:0 3px 0 rgba(20,4,24,.45)}
+.jp-vans{margin-top:12px;font-size:17px;color:rgba(255,246,232,.88);line-height:1.5;max-width:34ch}
+.jp-vscore{margin-top:16px;font-weight:700;letter-spacing:.05em;font-size:17px}
+.jp-vscore b{color:var(--gold-hi)}
+@media (max-width:560px){
+  .code-input{letter-spacing:.18em;font-size:18px}
+  /* the pad's header is one clean line: room + connection, no brand wrap */
+  .jp-head .tb-show{display:none}
+  .jp-room{margin-left:0;white-space:nowrap;letter-spacing:.16em}
+  .jp-conn{margin-left:auto;white-space:nowrap}
+}
+@media (max-height:500px){
+  .jp-id-ava{width:34px}
+  .jp-id{padding:5px 10px 5px 8px}
+  .jp-qline{font-size:16px;margin-top:8px}
+  .jp-ans{min-height:54px;font-size:17px}
+  .jp-ans .jp-numb{width:40px;height:40px;font-size:20px;border-radius:12px}
+  .jp-cut{min-height:46px}
+  .jp-step{width:64px;height:64px;font-size:30px}
+  .jp-chipdisc{width:56px;height:56px;font-size:15px}
+  .jp-lockbtn,.jp-sendbig{min-height:58px}
+  .jp-hero-ava{width:84px}
+  .jp-vdisc{width:84px;height:84px;font-size:44px}
+}

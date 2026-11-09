@@ -1037,7 +1037,7 @@
   function renderPodiumPreview() {
     var wrap = $("podiumPreview");
     if (!wrap) return;
-    var inputs = document.querySelectorAll(".name-input");
+    var inputs = $("panelTable").querySelectorAll(".name-input");
     var html = "";
     for (var i = 0; i < playerCount; i++) {
       var nm = (inputs[i] && inputs[i].value.trim()) || PNAMES[i];
@@ -1067,7 +1067,7 @@
   });
   $("btnStart").addEventListener("click", function () {
     Snd.ensure();
-    var names = Array.prototype.map.call(document.querySelectorAll(".name-input"), function (inp, i) {
+    var names = Array.prototype.map.call($("panelTable").querySelectorAll(".name-input"), function (inp, i) {
       return inp.value.trim() || PNAMES[i];
     });
     startShow(names);
@@ -1076,6 +1076,7 @@
     stopClock(); stopLeaves(); saveSeen();
     seatsVisible(true);
     clearInterval(spinTimer); clearInterval(voteTimer); spinTimer = voteTimer = null;
+    ogTeardown();
     G = null; showScreen("scr-title");
   });
   buildNameRows();
@@ -1103,9 +1104,958 @@
   });
   requestAnimationFrame(loop);
 
+  /* ================= Pass 4: online rooms =================
+     The room server (gilded-hour-rooms) referees the same format:
+     the host screen publishes questions, players answer privately on
+     their own phones, the server clock owns the window and the scores.
+     Local pass-and-play above is untouched and remains the default. */
+  /* ---- the one clearly-marked endpoint (parent deploys the worker;
+     override for local testing with ?ghw=<url> or localStorage gh_worker) ---- */
+  var WORKER_URL = "https://gilded-hour-rooms.chaoticutopia84.workers.dev";
+  try {
+    var _ghw = new URLSearchParams(location.search).get("ghw");
+    if (_ghw) WORKER_URL = _ghw.replace(/\/+$/, "");
+    else { var _lsw = localStorage.getItem("gh_worker"); if (_lsw) WORKER_URL = _lsw.replace(/\/+$/, ""); }
+  } catch (e) {}
+  function wsBase() { return WORKER_URL.replace(/^http/, "ws"); }
+
+  /* Protocol note: publish_question carries ids and secrets, never the
+     question wording — so the host encodes the bank id and the shuffle
+     seed in the qid ("q<seq>.<bankId>.<seed36>"), and player clients
+     rebuild the exact question and answer order from their own copy of
+     the bank with this shared seeded shuffle. Picks, numbers and bets
+     stay server-secret until the reveal; only the public wording of a
+     question already on the big screen is reconstructed. */
+  function ogOptsFor(q, seed) {
+    var r = mulberry32(seed);
+    var opts = [{ t: q.a, ok: true }].concat(q.w.map(function (w) { return { t: w, ok: false }; }));
+    for (var i = opts.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var t = opts[i]; opts[i] = opts[j]; opts[j] = t; }
+    var correctIdx = -1;
+    opts.forEach(function (o, i) { if (o.ok) correctIdx = i; });
+    var wrong = opts.map(function (o, i) { return i; }).filter(function (i) { return i !== correctIdx; });
+    for (var k = wrong.length - 1; k > 0; k--) { var j2 = Math.floor(r() * (k + 1)); var t2 = wrong[k]; wrong[k] = wrong[j2]; wrong[j2] = t2; }
+    return { answers: opts.map(function (o) { return o.t; }), correctIdx: correctIdx, cutIndices: wrong.slice(0, 2) };
+  }
+  function ogParseQid(qid) {
+    var m = /^q(\d+)\.(\d+)\.([0-9a-z]+)$/.exec(String(qid || ""));
+    if (!m) return null;
+    return { seq: parseInt(m[1], 10), bankId: parseInt(m[2], 10), seed: parseInt(m[3], 36) };
+  }
+  /* build the 15-question script with the same deck machinery the
+     local show uses (pools, seen-set, the five guess slots) */
+  function ogBuildScript() {
+    var saved = G;
+    G = newGame(["—", "—", "—", "—"]); // scratch state for the shared draw helpers
+    pools = {};
+    var guess = buildGuessSchedule();
+    var script = [];
+    [[1, R1_COUNT, R1_DIFFS], [2, R2_COUNT, R2_DIFFS], [3, R3_COUNT, R3_DIFFS]].forEach(function (rr) {
+      G.round = rr[0];
+      for (var qi = 0; qi < rr[1]; qi++) {
+        G.qInRound = qi;
+        var gid = guess[rr[0] + ":" + qi];
+        var q, kind;
+        if (gid != null) { q = BANK[gid]; kind = q.kind; }
+        else { q = drawQuestion(pick(CATS), rr[2][qi] || "medium"); kind = "normal"; }
+        var seed = (Math.random() * 2147483646 + 1) | 0;
+        var e = {
+          seq: script.length + 1, round: rr[0], qInRound: qi, bank: q, kind: kind,
+          cat: q.cat, diff: q.diff || "medium",
+          baseValue: BASE_VALUES[q.diff || "medium"],
+          multiplier: rr[0] === 2 ? 2 : 1,
+          windowMs: kind === "num" ? NUM_TIME * 1000 : QTIME * 1000
+        };
+        if (kind === "num") e.trueNum = Number(q.num);
+        else { var o = ogOptsFor(q, seed); e.answers = o.answers; e.correctIdx = o.correctIdx; e.cutIndices = o.cutIndices; }
+        e.qid = "q" + e.seq + "." + q.id + "." + seed.toString(36);
+        script.push(e);
+      }
+    });
+    G = saved;
+    saveSeen();
+    return script;
+  }
+
+  /* ---------- title: mode choice ---------- */
+  var ghMode = "table";
+  function setMode(m) {
+    ghMode = m;
+    document.querySelectorAll(".mode-tab").forEach(function (b) { b.classList.toggle("sel", b.getAttribute("data-mode") === m); });
+    $("panelTable").classList.toggle("hidden", m !== "table");
+    $("panelHost").classList.toggle("hidden", m !== "host");
+    $("panelJoin").classList.toggle("hidden", m !== "join");
+    $("btnStart").classList.toggle("hidden", m !== "table");
+    var ml = document.querySelector(".microline");
+    if (ml) ml.textContent = m === "table" ? "Pass-and-play · 2–4 players · One phone, one TV"
+      : m === "host" ? "Online · you run the show · friends join on their phones"
+      : "Online · join the show from your phone";
+    paintHostPanel(); paintJoinPanel();
+  }
+  document.querySelectorAll(".mode-tab").forEach(function (b) {
+    b.addEventListener("click", function () { Snd.ensure(); setMode(b.getAttribute("data-mode")); });
+  });
+
+  /* ================= host (online show screen) ================= */
+  var OG = null;
+  function ogPill(txt, warn) {
+    var p = $("ogPill"); if (!p) return;
+    if (!txt) { p.classList.add("hidden"); return; }
+    p.textContent = txt; p.classList.toggle("warn", !!warn); p.classList.remove("hidden");
+  }
+  function ogSend(o) { if (OG && OG.ws && OG.ws.readyState === 1) { try { OG.ws.send(JSON.stringify(o)); return true; } catch (e) {} } return false; }
+  function ogJoined() { return OG ? OG.players.filter(Boolean) : []; }
+  function ogSavedHost() { try { return JSON.parse(sessionStorage.getItem("gh_host_room") || "null"); } catch (e) { return null; } }
+  function paintHostPanel() {
+    var sv = ogSavedHost(), b = $("btnRejoinRoom");
+    if (!b) return;
+    b.classList.toggle("hidden", !sv);
+    if (sv) b.textContent = "REJOIN ROOM " + sv.code;
+  }
+  function ogCreate() {
+    var st = $("hostStatus");
+    st.classList.remove("err"); st.textContent = "Opening your room…";
+    $("btnCreateRoom").disabled = true;
+    fetch(WORKER_URL + "/room", { method: "POST" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (j) {
+        if (!j.code || !j.hostToken) throw new Error("bad reply");
+        try { sessionStorage.setItem("gh_host_room", JSON.stringify({ code: j.code, hostToken: j.hostToken })); } catch (e) {}
+        ogJoinRoom(j.code, j.hostToken);
+      })
+      .catch(function () {
+        st.classList.add("err");
+        st.textContent = "The room server didn't answer. Check your connection and try again — the table game is unaffected.";
+      })
+      .then(function () { $("btnCreateRoom").disabled = false; });
+  }
+  function ogJoinRoom(code, hostToken) {
+    ogTeardown();
+    OG = {
+      code: code, hostToken: hostToken, ws: null, dead: false,
+      players: [null, null, null, null], snap: null, offset: 0,
+      started: false, script: null, idx: 0, curRound: 0, cur: null,
+      phase: "connecting", lastRevealQid: null, revealState: {},
+      disp: [null, null, null, null], lastStand: null,
+      backoff: 1000, tickInt: null, spinInt: null
+    };
+    showScreen("scr-game");
+    seatsVisible(true);
+    setLight("open");
+    $("roundLabel").textContent = "ONLINE ROOM";
+    $("qCounter").textContent = "ROOM " + code;
+    ogPill("CONNECTING…", true);
+    stage('<div class="q-cat">OPENING THE ROOM</div><div class="round-title">One moment…</div><p class="round-text">Waking Sterling up and chalking the board.</p>');
+    hostSay("open");
+    OG.tickInt = setInterval(ogTick, 100);
+    ogOpenSocket();
+  }
+  function ogOpenSocket() {
+    if (!OG || OG.dead) return;
+    var ws;
+    try { ws = new WebSocket(wsBase() + "/room/" + OG.code); } catch (e) { ogScheduleReconnect(); return; }
+    OG.ws = ws;
+    ws.onopen = function () { ogSend({ t: "hello", role: "host", hostToken: OG.hostToken }); };
+    ws.onmessage = function (ev) { var m; try { m = JSON.parse(ev.data); } catch (e) { return; } ogOnMsg(m); };
+    ws.onclose = function () { if (OG && !OG.dead) { ogPill("RECONNECTING…", true); ogScheduleReconnect(); } };
+    ws.onerror = function () { try { ws.close(); } catch (e) {} };
+  }
+  function ogScheduleReconnect() {
+    if (!OG || OG.dead) return;
+    var d = OG.backoff; OG.backoff = Math.min(OG.backoff * 2, 8000);
+    setTimeout(function () { if (OG && !OG.dead) ogOpenSocket(); }, d);
+  }
+  function ogTeardown() {
+    if (!OG) return;
+    OG.dead = true;
+    if (OG.tickInt) clearInterval(OG.tickInt);
+    if (OG.spinInt) clearInterval(OG.spinInt);
+    if (OG.ws) { try { OG.ws.close(); } catch (e) {} }
+    OG = null;
+    ogPill(null);
+    clock.running = false;
+  }
+  function ogOnMsg(m) {
+    if (!OG) return;
+    if (m.t === "welcome") { OG.backoff = 1000; ogPill("ONLINE · ROOM " + OG.code, false); return; }
+    if (m.t === "error") {
+      var ls = $("ogLobbyStatus");
+      if (ls && OG.phase === "lobby") { ls.textContent = m.msg || ""; ls.classList.add("err"); }
+      return;
+    }
+    if (m.t === "counts") {
+      if (OG.phase === "answer") { var c = $("ogCount"); if (c) c.textContent = String(m.answersIn); }
+      if (OG.phase === "bet") ogPaintBets(m.betsIn);
+      return;
+    }
+    if (m.t === "cut") { ogOnCut(m); return; }
+    if (m.t === "reveal") { ogOnReveal(m, false); return; }
+    if (m.t === "ended") { ogOnEnded(m); return; }
+    if (m.t === "state") { ogOnState(m.state); return; }
+  }
+  function ogEntryByQid(qid, snapQ) {
+    if (OG.script) {
+      for (var i = 0; i < OG.script.length; i++) if (OG.script[i].qid === qid) return OG.script[i];
+    }
+    if (snapQ) { // resync after a reconnect: rebuild the entry from the snapshot + bank
+      var p = ogParseQid(qid);
+      if (!p || !BANK[p.bankId]) return null;
+      var q = BANK[p.bankId];
+      var e = {
+        seq: p.seq, round: snapQ.round, qInRound: 0, bank: q, kind: snapQ.kind, cat: snapQ.category,
+        diff: q.diff || "medium", baseValue: snapQ.baseValue, multiplier: snapQ.multiplier, windowMs: snapQ.windowMs,
+        qid: qid
+      };
+      if (snapQ.kind === "num") e.trueNum = snapQ.trueNum;
+      else { var o = ogOptsFor(q, p.seed); e.answers = o.answers; e.correctIdx = snapQ.correctIdx != null ? snapQ.correctIdx : o.correctIdx; e.cutIndices = o.cutIndices; }
+      return e;
+    }
+    return null;
+  }
+  function ogOnState(s) {
+    if (!OG || !s) return;
+    OG.snap = s;
+    if (s.players) OG.players = s.players;
+    if (s.question) OG.offset = s.question.openedAt - Date.now();
+    if (s.phase === "lobby") { if (!OG.started) ogShowLobby(); else ogRenderSeats(); return; }
+    if (!OG.started && s.phase !== "lobby") {
+      // rejoined a room whose show is already running, without the script:
+      // this screen can watch the room but cannot drive it
+      if (OG.phase !== "watching") {
+        OG.phase = "watching";
+        seatsVisible(true); ogRenderSeats();
+        stage('<div class="q-cat">ROOM ' + esc(OG.code) + '</div><div class="round-title">This show is already running</div>' +
+          '<p class="round-text">This screen rejoined mid-show. The script lived in the tab that started it, so this screen can only watch the scores — start a new room to run a new show.</p>' +
+          '<button class="btn-gold" id="ogWatchLobby">BACK TO THE TITLE</button>');
+        $("ogWatchLobby").addEventListener("click", function () { ogTeardown(); showScreen("scr-title"); });
+      } else ogRenderSeats();
+      return;
+    }
+    if (s.phase === "bet") {
+      if (OG.phase !== "bet") { var be = ogEntryByQid(s.bet && s.bet.qid, null); if (be) ogBetWait(be); }
+      else ogPaintBets(s.bet ? s.bet.betsIn : 0);
+      ogRenderSeats();
+    } else if (s.phase === "answer") {
+      if (OG.phase !== "answer" || !OG.cur || OG.cur.qid !== s.question.qid) {
+        var ae = ogEntryByQid(s.question.qid, s.question);
+        if (ae) ogShowQuestion(ae, s.question);
+      } else ogRenderSeats();
+    } else if (s.phase === "reveal") {
+      if (OG.phase !== "reveal" && s.lastReveal) ogOnReveal(s.lastReveal, true);
+      else ogRenderSeats();
+    } else if (s.phase === "ended") {
+      if (OG.phase !== "over") ogWinner();
+    }
+  }
+  function ogShowLobby() {
+    OG.phase = "lobby";
+    seatsVisible(true);
+    ogRenderSeats();
+    var joined = ogJoined().length;
+    stage('<div class="q-cat">YOUR ROOM IS OPEN — PLAYERS JOIN WITH THIS CODE</div>' +
+      '<div class="og-code">' + esc(OG.code) + "</div>" +
+      '<p class="round-text">' + (joined
+        ? joined + (joined === 1 ? " player is" : " players are") + " in. Sterling is warming up the room."
+        : "Waiting for players — they open the game on their phones, tap JOIN A ROOM, and type the code.") + "</p>" +
+      '<button class="btn-gold" id="ogStart"' + (joined >= 2 ? "" : " disabled") + ">START THE SHOW</button>" +
+      (joined === 1 ? '<div style="margin-top:10px"><button class="btn-ghost" id="ogStartAnyway">START WITH ONE PLAYER (TESTING)</button></div>' : "") +
+      '<div class="og-statusline" id="ogLobbyStatus"></div>');
+    var b = $("ogStart"); if (b) b.addEventListener("click", ogStartShow);
+    var ba = $("ogStartAnyway"); if (ba) ba.addEventListener("click", ogStartShow);
+  }
+  function ogRenderSeats() {
+    if (!OG) return;
+    var top = $("seatsTop"), bot = $("seatsBottom");
+    top.innerHTML = ""; bot.innerHTML = "";
+    var best = -1;
+    OG.players.forEach(function (p) { if (p && p.score > best) best = p.score; });
+    OG.players.forEach(function (p, i) {
+      if (!p) return;
+      var state = OG.phase === "reveal" && OG.revealState ? (OG.revealState[i] || "neutral") : "neutral";
+      var shown = money(Math.round(OG.disp[i] != null ? OG.disp[i] : p.score));
+      var tags = [p.cutTwo ? "CUT TWO" : "CUT SPENT"];
+      if (!p.connected) tags.push("AWAY");
+      var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + '" data-seat="' + i + '">' +
+        '<div class="seat-ava">' + avatarSVG(i, state) + "</div>" +
+        '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
+        '<span class="seat-score">' + shown + '</span>' +
+        '<span class="tag">' + tags.join(" · ") + "</span></div></div>");
+      if (p.score === best && best > 0) s.classList.add("lead");
+      bot.appendChild(s);
+    });
+  }
+  function ogTick() {
+    if (!OG) return;
+    OG.players.forEach(function (p, i) {
+      if (!p) return;
+      if (OG.disp[i] == null) OG.disp[i] = p.score;
+      var diff = p.score - OG.disp[i];
+      if (diff !== 0) {
+        OG.disp[i] += diff * 0.35;
+        if (Math.abs(p.score - OG.disp[i]) < 1) OG.disp[i] = p.score;
+        var seat = document.querySelector('.seat[data-seat="' + i + '"]');
+        if (seat) {
+          seat.classList.toggle("tick-up", diff > 0.5);
+          var sc = seat.querySelector(".seat-score");
+          if (sc) sc.textContent = money(Math.round(OG.disp[i]));
+        }
+      }
+    });
+    if (OG.phase === "answer" && OG.snap && OG.snap.question) {
+      var q = OG.snap.question;
+      var rem = q.deadline - (Date.now() + OG.offset);
+      if (rem < 0) rem = 0;
+      clock.left = rem / 1000;
+      drawClock();
+      var vEl = $("qValue");
+      if (vEl && OG.cur && !q.betted) {
+        var frac = Math.min(Math.max((q.windowMs - rem) / q.windowMs, 0), 1);
+        var v = Math.round(OG.cur.baseValue * OG.cur.multiplier * (1 - 0.5 * frac));
+        var txt = money(v);
+        if (vEl.textContent !== txt) {
+          vEl.textContent = txt;
+          var wrap = vEl.parentElement;
+          if (wrap) wrap.classList.toggle("low", frac > 0.75);
+        }
+      }
+      if (rem <= 0) clock.running = false;
+    }
+  }
+  function ogStartShow() {
+    if (!OG || OG.started || !ogJoined().length) return;
+    OG.started = true;
+    OG.script = ogBuildScript();
+    OG.idx = 0; OG.curRound = 0;
+    OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
+    Snd.ensure(); Snd.play("theme");
+    hostSay("open");
+    ogIntro();
+  }
+  function ogStandingsHTML() {
+    var idxs = [];
+    OG.players.forEach(function (p, i) { if (p) idxs.push(i); });
+    var order = idxs.slice().sort(function (a, b) { return OG.players[b].score - OG.players[a].score; });
+    var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
+    var prev = OG.lastStand || { scores: [0, 0, 0, 0], ranks: {} };
+    var disp = order.slice();
+    if (disp.length > 1) { var t = disp[0]; disp[0] = disp[1]; disp[1] = t; }
+    var pods = disp.map(function (pi) {
+      var p = OG.players[pi], pos = ranks[pi];
+      var chips = "";
+      var gain = p.score - (prev.scores[pi] || 0);
+      var rd = (prev.ranks[pi] != null ? prev.ranks[pi] : pos) - pos;
+      if (gain > 0) chips += '<span class="gain-chip">' + mplus(gain) + "</span>";
+      if (rd > 0) chips += '<span class="delta up">▲ ' + rd + "</span>";
+      else if (rd < 0) chips += '<span class="delta down">▼ ' + (-rd) + "</span>";
+      var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
+      return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
+        '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + chips +
+        avatarSVG(pi, pos === 0 ? "cheer" : "neutral") +
+        '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
+    }).join("");
+    var line = order.length < 2
+      ? "The race is young. The kitchen is everybody's tonight."
+      : esc(OG.players[order[0]].name) + " is cooking. " + esc(OG.players[order[order.length - 1]].name) + " — the kitchen is still open.";
+    OG.lastStand = { scores: OG.players.map(function (p) { return p ? p.score : 0; }), ranks: ranks };
+    return '<div class="race-wrap"><div class="race-stage">' +
+      '<div class="race-sterling"><div class="bubble bubble-stand">' + line + "</div>" + sterlingSVG("smirk") + "</div>" +
+      '<div class="race-podiums">' +
+      '<svg class="swap-arrows" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="M28,34 Q40,4 54,10" fill="none" stroke="#35D461" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="3 2.6" opacity=".55"/>' +
+      '<path d="M54,10 l-4.4,.4 M54,10 l-1.2,4.2" stroke="#35D461" stroke-width="1.1" stroke-linecap="round" opacity=".55"/>' +
+      '<path d="M58,8 Q70,32 82,28" fill="none" stroke="#FF6B5E" stroke-width="1.1" stroke-linecap="round" stroke-dasharray="3 2.6" opacity=".45"/></svg>' +
+      pods + "</div></div></div>";
+  }
+  function ogIntro() {
+    var e = OG.script[OG.idx]; if (!e) return;
+    OG.curRound = e.round;
+    OG.phase = "intro";
+    setLight(e.round === 1 ? "open" : e.round === 2 ? "hot" : "vault");
+    seatsVisible(false);
+    $("roundLabel").textContent = { 1: "ROUND 1 · THE WARM-UP", 2: "ROUND 2 · DOUBLE MONEY", 3: "ROUND 3 · THE BIG FINISH" }[e.round];
+    $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
+    var titles = { 1: "THE WARM-UP", 2: "DOUBLE MONEY", 3: "THE BIG FINISH" };
+    var texts = {
+      1: "Six questions, and everybody answers every one — on your own phones this time. Sterling spins the category. Easy pays $100, medium $200, hard $300, and the value drains while the room thinks. When the window closes, every correct phone banks the money. Closest-number questions: type your number — the nearest takes it.",
+      2: "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it from your phone before the window closes and two wrong answers vanish for everybody.",
+      3: "Three questions. Before each one, bet on yourself from your phone: 1, 2 or 3 chips — a chip is $100, and the bet stays secret until the reveal. Get it right and the bet pays in full. Get it wrong and you lose nothing but face."
+    };
+    stage('<div class="bumper"><div class="round-kicker">ROUND ' + e.round + "</div>" +
+      '<div class="round-title">' + titles[e.round] + "</div>" +
+      '<p class="round-text">' + texts[e.round] + "</p>" +
+      (e.round > 1 ? ogStandingsHTML() : "") +
+      '<button class="btn-gold" id="ogRoundGo">' + (e.round === 1 ? "START THE WARM-UP" : e.round === 2 ? "DOUBLE IT" : "TO THE BIG FINISH") + "</button></div>");
+    hostSay("r" + e.round);
+    $("ogRoundGo").addEventListener("click", ogServe);
+  }
+  function ogServe() {
+    if (!OG || !OG.script) return;
+    var e = OG.script[OG.idx];
+    if (!e) { ogFinish(); return; }
+    OG.cur = e;
+    seatsVisible(true);
+    $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
+    if (e.round === 3) { ogSend({ t: "bet_phase", qid: e.qid }); ogBetWait(e); }
+    else ogSpinThenPublish(e);
+  }
+  function ogBetWait(e) {
+    OG.phase = "bet"; OG.cur = e;
+    seatsVisible(true); ogRenderSeats();
+    stage('<div class="round-kicker">THE BIG FINISH · QUESTION ' + (e.qInRound + 1) + " OF 3</div>" +
+      '<div class="round-title">BET TIME</div>' +
+      '<p class="round-text">Bets are being placed on phones — 1, 2 or 3 chips, secret until the reveal. A chip is $100; right pays the bet, wrong costs nothing.</p>' +
+      '<div><span class="og-count">BETS IN&nbsp;<b id="ogBetsIn">0</b> / ' + ogJoined().length + "</span></div>" +
+      '<div style="margin-top:14px"><button class="btn-gold" id="ogBetsGo">BETS ARE IN — SPIN THE CATEGORY</button></div>');
+    hostSay("bet");
+    $("ogBetsGo").addEventListener("click", function () { ogSpinThenPublish(e); });
+    if (OG.snap && OG.snap.bet) ogPaintBets(OG.snap.bet.betsIn);
+  }
+  function ogPaintBets(n) { var b = $("ogBetsIn"); if (b) b.textContent = String(n || 0); }
+  function ogSpinThenPublish(e) {
+    OG.phase = "spin";
+    seatsVisible(true); ogRenderSeats();
+    var chips = CATS.map(function (c) {
+      var cs = catStyle(c);
+      return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + esc(c) + "</span>";
+    }).join("");
+    stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
+      '<div class="cat-row">' + chips + "</div>" +
+      '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
+    hostSay("spin", { cat: e.cat });
+    Snd.play("spin");
+    var ticks = 0, totalTicks = 10 + ri(3);
+    clearInterval(OG.spinInt);
+    OG.spinInt = setInterval(function () {
+      if (!OG || OG.phase !== "spin") { clearInterval(OG.spinInt); OG.spinInt = null; return; }
+      ticks++;
+      var cat = ticks >= totalTicks ? e.cat : CATS[ticks % CATS.length];
+      document.querySelectorAll(".cat-chip").forEach(function (ch) {
+        ch.classList.toggle("sel", ch.getAttribute("data-cat") === cat);
+      });
+      if (ticks >= totalTicks) {
+        clearInterval(OG.spinInt); OG.spinInt = null;
+        setTimeout(function () { if (OG && OG.phase === "spin") ogPublish(e); }, 350);
+      }
+    }, 85);
+  }
+  function ogPublish(e) {
+    OG.phase = "publishing";
+    var msg = {
+      t: "publish_question", qid: e.qid, round: e.round, kind: e.kind, category: e.cat,
+      deadlineMs: e.windowMs, baseValue: e.baseValue, multiplier: e.multiplier
+    };
+    if (e.kind === "num") msg.trueNum = e.trueNum;
+    else { msg.correctIdx = e.correctIdx; msg.answersCount = 4; msg.cutIndices = e.cutIndices; }
+    ogSend(msg);
+  }
+  function ogShowQuestion(e, q) {
+    OG.phase = "answer"; OG.cur = e;
+    applyCat(e.cat);
+    seatsVisible(true); ogRenderSeats();
+    $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
+    var head = e.kind === "survey" ? "MOST PEOPLE SAY…" : e.kind === "num" ? "CLOSEST NUMBER" : (e.diff || "").toUpperCase();
+    var top = '<div class="q-headrow"><span class="cat-pill">' + esc(e.cat.toUpperCase()) + '</span><span class="q-kind">' + head + "</span></div>" +
+      '<div class="q-text">' + esc(e.bank.q) + "</div>";
+    var meta = '<div class="q-meta">' + (q.betted
+      ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
+      : '<div class="q-value"><small>QUESTION VALUE</small><span id="qValue">' + money(e.baseValue * e.multiplier) + "</span></div>") + timerHTML() + "</div>";
+    if (e.kind === "num") {
+      stage(top + meta +
+        '<div class="q-for">No options. No hiding. Numbers are being typed on phones — the closest takes it.</div>' +
+        '<div><span class="og-count">ANSWERS IN&nbsp;<b id="ogCount">' + (q.answersIn || 0) + "</b> / " + ogJoined().length + "</span></div>" +
+        '<div style="margin-top:14px"><button class="btn-gold" id="ogCallIt">CALL IT — NUMBERS IN</button></div>');
+    } else {
+      var btns = e.answers.map(function (t, i) {
+        var cut = q.cut && q.cut.indices.indexOf(i) >= 0;
+        return '<button class="ans-btn' + (cut ? " dim" : "") + '" style="--d:' + (i * 0.09).toFixed(2) + 's" disabled><span class="letter">' + (i + 1) + "</span><span>" + esc(t) + "</span></button>";
+      }).join("");
+      stage(top + meta +
+        '<div class="answers pop-in">' + btns + "</div>" +
+        '<div><span class="og-count">ANSWERS IN&nbsp;<b id="ogCount">' + (q.answersIn || 0) + "</b> / " + ogJoined().length + "</span></div>" +
+        '<div style="margin-top:12px"><button class="btn-gold" id="ogCallIt">CALL IT — CLOSE THE WINDOW</button></div>');
+    }
+    hostSay(e.kind === "num" ? "numQ" : "read", { cat: e.cat });
+    var call = $("ogCallIt");
+    if (call) call.addEventListener("click", function () { ogSend({ t: "reveal", qid: e.qid }); });
+    clock.total = e.windowMs / 1000; clock.left = clock.total; clock.running = true; Snd._lw = -1;
+    drawClock();
+  }
+  function ogOnCut(m) {
+    if (!OG || !OG.cur || m.qid !== OG.cur.qid) return;
+    document.querySelectorAll(".answers .ans-btn").forEach(function (b, i) { if (m.indices.indexOf(i) >= 0) b.classList.add("dim"); });
+    var p = OG.players[m.bySeat];
+    hostSay("cut", { name: p ? p.name : "A player" });
+    Snd.play("gold");
+  }
+  function ogOnReveal(r, fromSnap) {
+    if (!OG || !OG.cur) return;
+    if (OG.lastRevealQid === r.qid && OG.phase === "reveal") return;
+    OG.lastRevealQid = r.qid;
+    OG.phase = "reveal";
+    clock.running = false;
+    (r.scores || []).forEach(function (sc, i) { if (OG.players[i] && sc != null) OG.players[i].score = sc; });
+    var e = OG.cur;
+    var winners = [];
+    OG.revealState = {};
+    (r.results || []).forEach(function (res) {
+      OG.revealState[res.seat] = res.correct ? "cheer" : "slump";
+      if (res.correct) winners.push(res.seat);
+    });
+    ogRenderSeats();
+    var parts = [];
+    (r.results || []).forEach(function (res) {
+      if (res.banked > 0 && OG.players[res.seat]) parts.push('<span class="up">' + mplus(res.banked) + " to " + esc(OG.players[res.seat].name) + "</span>");
+    });
+    var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="ogNext">CONTINUE</button></div>';
+    var head = '<div class="q-headrow"><span class="cat-pill">' + esc(e.cat.toUpperCase()) + '</span><span class="q-kind">' + (e.kind === "num" ? "THE NUMBER WAS" : "THE ANSWER") + "</span></div>" +
+      '<div class="q-text" style="font-size:clamp(18px,3vw,25px)">' + esc(e.bank.q) + "</div>";
+    if (e.kind === "num") {
+      var tn = r.trueNum != null ? r.trueNum : e.trueNum;
+      stage(head + '<div class="wager-amt">' + Number(tn).toLocaleString("en-US") + "</div>" +
+        '<div class="delta">' + (parts.length ? parts.join(" &nbsp;") : '<span class="down">Nobody got close. The number keeps its dignity.</span>') + "</div>" +
+        '<p class="why">' + esc(e.bank.why) + "</p>" + nextBtn);
+      hostSay(winners.length ? "numHit" : "numMiss", { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" });
+    } else {
+      var ci = r.correctIdx != null ? r.correctIdx : e.correctIdx;
+      var btns = e.answers.map(function (t, i) {
+        return '<button class="ans-btn' + (i === ci ? " correct" : " dim") + '" disabled><span class="letter">' + (i + 1) + "</span><span>" + esc(t) + "</span></button>";
+      }).join("");
+      stage(head + '<div class="answers">' + btns + "</div>" +
+        '<div class="delta">' + (parts.length ? parts.join(" &nbsp;") : '<span class="down">No one had it. The money stays in Sterling\'s pocket — this time.</span>') + "</div>" +
+        '<p class="why">' + esc(e.bank.why) + "</p>" + nextBtn);
+      var joined = ogJoined().length;
+      var hk = winners.length === 0 ? "allMiss" : (winners.length === joined ? "allHit" : "someHit");
+      hostSay(hk, { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" });
+    }
+    Snd.play(winners.length ? "correct" : "wrong");
+    $("ogNext").addEventListener("click", function () { OG.idx++; ogAdvance(); });
+  }
+  function ogAdvance() {
+    if (!OG || !OG.script) {
+      stage('<div class="round-title">This screen can\'t drive the show</div><p class="round-text">It rejoined without the script. Start a new room for the next show.</p><button class="btn-gold" id="ogWatchLobby2">BACK TO THE TITLE</button>');
+      var b = $("ogWatchLobby2"); if (b) b.addEventListener("click", function () { ogTeardown(); showScreen("scr-title"); });
+      return;
+    }
+    if (OG.idx >= OG.script.length) { ogFinish(); return; }
+    var e = OG.script[OG.idx];
+    if (e.round !== OG.curRound) { ogIntro(); return; }
+    ogServe();
+  }
+  function ogFinish() {
+    OG.phase = "finishing";
+    ogSend({ t: "end_show" });
+    setTimeout(function () { if (OG && OG.phase === "finishing") ogWinner(); }, 700);
+  }
+  function ogOnEnded(m) {
+    if (!OG) return;
+    (m.scores || []).forEach(function (sc, i) { if (OG.players[i] && sc != null) OG.players[i].score = sc; });
+    ogWinner();
+  }
+  function ogWinner() {
+    if (!OG || OG.phase === "over") return;
+    OG.phase = "over";
+    clock.running = false;
+    seatsVisible(false);
+    var idxs = [];
+    OG.players.forEach(function (p, i) { if (p) idxs.push(i); });
+    if (!idxs.length) { ogTeardown(); showScreen("scr-title"); return; }
+    var best = Math.max.apply(null, idxs.map(function (i) { return OG.players[i].score; }));
+    var tied = idxs.filter(function (i) { return OG.players[i].score === best; });
+    var winSeat = tied[0], p = OG.players[winSeat];
+    hostSay("winner", { name: p.name });
+    var order = idxs.slice().sort(function (a, b) { return OG.players[b].score - OG.players[a].score; });
+    var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
+    var disp = order.slice();
+    if (disp.length > 1) { var t = disp[0]; disp[0] = disp[1]; disp[1] = t; }
+    var pods = disp.map(function (ii) {
+      var pp = OG.players[ii], pos = ranks[ii];
+      var badgeCls = pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
+      var top = ii === winSeat
+        ? '<span class="champ-tag">★ CHAMPION</span>'
+        : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
+      return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === winSeat ? " winner-podium lit" : "") + '">' + top +
+        avatarSVG(ii, ii === winSeat ? "cheer" : "neutral") +
+        '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div></div></div>";
+    }).join("");
+    var tieNote = "";
+    if (tied.length > 1) {
+      var names = tied.map(function (ii) { return OG.players[ii].name; }).join(" and ");
+      tieNote = '<p class="round-text tie-note">Dead level at the top — ' + esc(names) + " matched at " + money(best) +
+        ". The crown goes to the earliest seat, and the rematch is now legally mandatory.</p>";
+    }
+    stage('<div class="finale-wrap"><div class="finale-main">' +
+      '<div class="marquee finale-marquee"><div class="kicker">THE GILDED HOUR · FINAL RESULT</div>' +
+      '<div class="winner-word">WINNER</div>' +
+      '<div class="winner-name">' + esc(p.name) + "</div>" +
+      '<div class="winner-total">' + money(p.score) + "</div></div>" +
+      '<div class="sterling-zone"><div class="bubble bubble-finale">Sealed with a kiss of confetti — the hour is yours, ' + esc(p.name) + ".</div>" +
+      sterlingSVG("present", "sterling sterling-lg") + "</div></div>" +
+      tieNote +
+      '<div class="podium-row finale-row">' + pods + "</div>" +
+      '<div class="finale-btns"><button class="btn-gold" id="ogAgain">PLAY AGAIN — NEW ROOM</button>' +
+      '<button class="btn-ghost" id="ogLobby">BACK TO LOBBY</button></div></div>');
+    Snd.play("finale");
+    startLeaves();
+    buildBulbs(document.querySelector(".finale-marquee"));
+    $("ogAgain").addEventListener("click", function () {
+      stopLeaves();
+      ogTeardown();
+      showScreen("scr-title");
+      setMode("host");
+      ogCreate();
+    });
+    $("ogLobby").addEventListener("click", function () { stopLeaves(); ogTeardown(); showScreen("scr-title"); });
+  }
+  $("btnCreateRoom").addEventListener("click", function () { Snd.ensure(); ogCreate(); });
+  $("btnRejoinRoom").addEventListener("click", function () {
+    var sv = ogSavedHost();
+    if (sv) { Snd.ensure(); ogJoinRoom(sv.code, sv.hostToken); }
+  });
+
+  /* ================= player (online podium) ================= */
+  var JP = null;
+  function jpSaved() { try { return JSON.parse(localStorage.getItem("gh_player") || "null"); } catch (e) { return null; } }
+  function paintJoinPanel() {
+    var sv = jpSaved(), b = $("btnResumePlayer");
+    if (!b) return;
+    b.classList.toggle("hidden", !sv);
+    if (sv) b.textContent = "REJOIN AS " + (sv.name || "PLAYER") + " · ROOM " + sv.code;
+  }
+  function jpSetConn(txt, warn) {
+    var c = $("jpConn"); if (!c) return;
+    c.textContent = txt; c.classList.toggle("warn", !!warn);
+  }
+  function jpToast(msg) {
+    var t = $("jpToast"); if (!t) return;
+    t.textContent = msg; t.classList.remove("hidden");
+    clearTimeout(jpToast._t);
+    jpToast._t = setTimeout(function () { t.classList.add("hidden"); }, 2600);
+  }
+  function jpSend(o) { if (JP && JP.ws && JP.ws.readyState === 1) { try { JP.ws.send(JSON.stringify(o)); return true; } catch (e) {} } return false; }
+  function jpConnect(code, name, reclaimToken) {
+    jpTeardown();
+    JP = {
+      code: code, name: name || "", seat: null, reclaimToken: reclaimToken || null,
+      ws: null, snap: null, offset: 0, dead: false, welcomed: false,
+      backoff: 1000, tickInt: null, betSel: 1, sentNum: null, sentBet: null
+    };
+    showScreen("scr-join");
+    $("jpRoom").textContent = "ROOM " + code;
+    jpSetConn("JOINING…", true);
+    $("jpMain").innerHTML = '<div class="jp-card"><div class="jp-hi">Joining the room…</div><p class="jp-sub">Finding your podium.</p></div>';
+    JP.tickInt = setInterval(jpTick, 250);
+    jpOpenSocket();
+  }
+  function jpOpenSocket() {
+    if (!JP || JP.dead) return;
+    var ws;
+    try { ws = new WebSocket(wsBase() + "/room/" + JP.code); } catch (e) { jpScheduleReconnect(); return; }
+    JP.ws = ws;
+    ws.onopen = function () {
+      if (JP.reclaimToken) jpSend({ t: "hello", role: "player", reclaimToken: JP.reclaimToken, name: JP.name || undefined });
+      else jpSend({ t: "hello", role: "player", name: JP.name });
+    };
+    ws.onmessage = function (ev) { var m; try { m = JSON.parse(ev.data); } catch (e) { return; } jpOnMsg(m); };
+    ws.onclose = function () {
+      if (!JP || JP.dead) return;
+      JP.welcomed = false;
+      jpSetConn("REJOINING…", true);
+      jpScheduleReconnect();
+    };
+    ws.onerror = function () { try { ws.close(); } catch (e) {} };
+  }
+  function jpScheduleReconnect() {
+    if (!JP || JP.dead) return;
+    var d = JP.backoff; JP.backoff = Math.min(JP.backoff * 2, 5000);
+    setTimeout(function () { if (JP && !JP.dead) jpOpenSocket(); }, d);
+  }
+  function jpTeardown() {
+    if (!JP) return;
+    JP.dead = true;
+    if (JP.tickInt) clearInterval(JP.tickInt);
+    if (JP.ws) { try { JP.ws.close(); } catch (e) {} }
+    JP = null;
+  }
+  function jpOnMsg(m) {
+    if (!JP) return;
+    if (m.t === "welcome") {
+      JP.seat = m.seat;
+      if (m.reclaimToken) JP.reclaimToken = m.reclaimToken;
+      JP.welcomed = true; JP.backoff = 1000;
+      try { localStorage.setItem("gh_player", JSON.stringify({ code: JP.code, reclaimToken: JP.reclaimToken, name: JP.name })); } catch (e) {}
+      jpSetConn("IN THE ROOM", false);
+      paintJoinPanel();
+      return;
+    }
+    if (m.t === "error") {
+      if (!JP.welcomed && /Seat not found|Room is full/.test(m.msg || "")) {
+        try { localStorage.removeItem("gh_player"); } catch (e) {}
+        jpTeardown();
+        showScreen("scr-title");
+        setMode("join");
+        var st = $("joinStatus");
+        st.classList.add("err");
+        st.textContent = (m.msg || "Couldn't join.") + " Check the code with your host.";
+        paintJoinPanel();
+        return;
+      }
+      jpToast(m.msg || "That didn't land.");
+      return;
+    }
+    if (m.t === "counts") {
+      if (!JP.snap) return;
+      if (JP.snap.question && m.qid === JP.snap.question.qid) JP.snap.question.answersIn = m.answersIn;
+      if (JP.snap.bet && m.qid === JP.snap.bet.qid) JP.snap.bet.betsIn = m.betsIn;
+      var c = $("jpCount");
+      if (c) c.textContent = (m.answersIn || 0) + " / " + JP.snap.players.filter(Boolean).length + " IN";
+      return;
+    }
+    if (m.t === "state") {
+      JP.snap = m.state;
+      if (m.state.question) JP.offset = m.state.question.openedAt - Date.now();
+      jpRender();
+      return;
+    }
+    /* counts / accepted / cut / reveal / ended: the state snapshot that
+       follows carries everything the podium needs */
+  }
+  function jpApplyCat(cat) {
+    var cs = catStyle(cat), g = $("scr-join");
+    if (!g) return;
+    g.style.setProperty("--cat", cs.mid);
+    g.style.setProperty("--cat-hi", cs.hi);
+    g.style.setProperty("--cat-lo", cs.lo);
+    g.style.setProperty("--cat-sh", cs.sh);
+    g.style.setProperty("--cat-rgb", cs.rgb);
+    g.style.setProperty("--cat-tx", CATTX[cat] || "#FFF6E8");
+  }
+  function jpMe() { return JP && JP.snap && JP.seat != null ? JP.snap.players[JP.seat] : null; }
+  function jpLeader() {
+    if (!JP || !JP.snap) return null;
+    var best = null;
+    JP.snap.players.forEach(function (p) { if (p && (!best || p.score > best.score)) best = p; });
+    return best;
+  }
+  function jpStandRows() {
+    var rows = JP.snap.players.map(function (p, i) { return p ? { p: p, seat: i } : null; }).filter(Boolean)
+      .sort(function (a, b) { return b.p.score - a.p.score; });
+    return rows.map(function (r, pos) {
+      return '<div class="jp-standrow' + (r.seat === JP.seat ? " me" : "") + '"><span class="name-dot" style="background:' + PCOLORS[r.seat] + '"></span>' +
+        "<span>" + (pos + 1) + ". " + esc(r.p.name) + (r.p.connected ? "" : " (away)") + '</span><span class="sc">' + money(r.p.score) + "</span></div>";
+    }).join("");
+  }
+  function jpQuestionData() {
+    var q = JP.snap && JP.snap.question;
+    if (!q) return null;
+    var p = ogParseQid(q.qid);
+    if (!p || !BANK[p.bankId]) return null;
+    var bank = BANK[p.bankId];
+    var d = { q: q, bank: bank, opts: null };
+    if (q.kind !== "num") d.opts = ogOptsFor(bank, p.seed);
+    return d;
+  }
+  /* the identity bar rides every control phase: your face, your
+     colour, your name, your money — this pad belongs to one person */
+  function jpIdBar(secs) {
+    var me = jpMe();
+    return '<div class="jp-id" style="--me:' + PCOLORS[JP.seat] + '">' +
+      '<span class="jp-id-ava">' + avatarSVG(JP.seat, "neutral") + "</span>" +
+      '<span class="jp-id-name">' + esc(me ? me.name : (JP.name || "Player")) + "</span>" +
+      '<span class="jp-id-score">' + money(me ? me.score : 0) + "</span>" +
+      (secs ? '<span class="jp-id-secs" id="jpSecs"></span>' : "") + "</div>";
+  }
+  function jpRender() {
+    if (!JP) return;
+    var main = $("jpMain");
+    var numKeep = null, numFocus = false;
+    var oldNum = $("jpNum");
+    if (oldNum) { numKeep = oldNum.value; numFocus = document.activeElement === oldNum; }
+    var s = JP.snap;
+    if (!s || JP.seat == null) {
+      main.innerHTML = '<div class="jp-card"><div class="jp-hi">Joining the room…</div><p class="jp-sub">Finding your podium.</p></div>';
+      return;
+    }
+    var me = jpMe();
+    var myName = me ? me.name : (JP.name || "Player");
+    if (s.phase === "lobby") {
+      var chips = s.players.map(function (p, i) {
+        return p && i !== JP.seat ? '<span class="jp-pchip' + (p.connected ? "" : " away") + '"><span class="name-dot" style="background:' + PCOLORS[i] + '"></span>' + esc(p.name) + "</span>" : "";
+      }).join("");
+      main.innerHTML = '<div class="jp-hero" style="--me:' + PCOLORS[JP.seat] + '">' +
+        '<div class="jp-hero-ava">' + avatarSVG(JP.seat, "neutral") + "</div>" +
+        '<div class="jp-herotag">THAT\'S YOU</div>' +
+        '<div class="jp-heroname">' + esc(myName) + "</div>" +
+        '<div class="jp-colorband"></div>' +
+        '<p class="jp-sub">Watch the big screen — when a question lands,<br>this pad becomes your answer buttons.</p>' +
+        (chips ? '<div class="jp-players">' + chips + "</div>" : "") +
+        '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
+    } else if (s.phase === "bet") {
+      var effBet = s.yourBet != null ? s.yourBet : (JP.sentBet && s.bet && JP.sentBet.qid === s.bet.qid ? JP.sentBet.chips : null);
+      var cur = effBet != null ? effBet : JP.betSel;
+      JP.betSel = Math.max(1, Math.min(3, cur || 1));
+      main.innerHTML = '<div class="jp-pad">' + jpIdBar(false) +
+        '<div class="jp-betmid"><div class="jp-betlabel">THE BIG FINISH · YOUR BET</div>' +
+        '<div class="jp-chipstack" id="jpChipStack"></div>' +
+        '<div class="jp-betamt" id="jpBetAmt"></div>' +
+        '<div class="jp-betrow"><button class="jp-step" id="jpBetMinus" aria-label="One chip less">−</button>' +
+        '<button class="jp-step" id="jpBetPlus" aria-label="One chip more">+</button></div></div>' +
+        '<button class="btn-gold jp-lockbtn" id="jpBetLock">' + (effBet != null ? "CHANGE MY BET" : "LOCK IN MY BET") + "</button>" +
+        (effBet != null ? '<div class="jp-betstate">BET IN · <b>' + effBet + (effBet === 1 ? " CHIP" : " CHIPS") + "</b> — change it any time before the question</div>" : '<div class="jp-betstate">SECRET UNTIL THE REVEAL · A CHIP IS $100</div>') +
+        "</div>";
+      var paintBet = function () {
+        var stack = $("jpChipStack"), amt = $("jpBetAmt");
+        if (stack) {
+          var discs = "";
+          for (var k = 0; k < JP.betSel; k++) discs += '<span class="jp-chipdisc">$100</span>';
+          stack.innerHTML = discs;
+        }
+        if (amt) amt.textContent = JP.betSel + (JP.betSel === 1 ? " CHIP" : " CHIPS") + " · " + money(JP.betSel * 100);
+      };
+      paintBet();
+      $("jpBetMinus").addEventListener("click", function () { JP.betSel = Math.max(1, JP.betSel - 1); paintBet(); });
+      $("jpBetPlus").addEventListener("click", function () { JP.betSel = Math.min(3, JP.betSel + 1); paintBet(); });
+      $("jpBetLock").addEventListener("click", function () {
+        Snd.ensure();
+        JP.sentBet = { qid: s.bet.qid, chips: JP.betSel };
+        jpSend({ t: "bet", qid: s.bet.qid, chips: JP.betSel });
+        jpRender(); // the server confirms by counts, not snapshot — echo the lock now
+      });
+    } else if (s.phase === "answer") {
+      var d = jpQuestionData();
+      if (!d) { main.innerHTML = '<div class="jp-card"><div class="jp-hi">Question on the big screen</div><p class="jp-sub">This pad couldn\'t load the question — watch the screen and sit this one out.</p></div>'; return; }
+      jpApplyCat(d.q.category);
+      var padTop = jpIdBar(true) +
+        '<div class="jp-barwrap" id="jpBarWrap"><div class="jp-bar" id="jpBar" style="width:100%"></div></div>' +
+        '<div class="jp-qline"><span class="jp-catdot"></span>' + esc(d.bank.q) + "</div>";
+      if (d.q.kind === "num") {
+        if (JP.sentNum && JP.sentNum.qid !== d.q.qid) JP.sentNum = null;
+        var effNum = s.yourNum != null ? s.yourNum : (JP.sentNum ? JP.sentNum.num : null);
+        main.innerHTML = '<div class="jp-pad">' + padTop +
+          '<div class="jp-numpad">' +
+          '<input id="jpNum" class="jp-num" type="number" inputmode="decimal" placeholder="0" value="' + (numKeep != null ? esc(numKeep) : (effNum != null ? effNum : "")) + '">' +
+          '<div class="jp-numstate" id="jpNumState">' + (effNum != null ? "SENT · <b>" + effNum + "</b> — send a new one to change it" : "CLOSEST NUMBER TAKES IT · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
+          '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button></div></div>';
+        $("jpNumSend").addEventListener("click", function () {
+          var v = parseFloat($("jpNum").value);
+          if (!isFinite(v)) { jpToast("Give a number first."); return; }
+          Snd.ensure();
+          JP.sentNum = { qid: d.q.qid, num: v };
+          jpSend({ t: "answer", qid: d.q.qid, num: v });
+          var ns = $("jpNumState");
+          if (ns) ns.innerHTML = "SENT · <b>" + v + "</b> — send a new one to change it";
+        });
+        if (numFocus && $("jpNum")) $("jpNum").focus();
+      } else {
+        var cutIdx = d.q.cut ? d.q.cut.indices : [];
+        var btns = d.opts.answers.map(function (t, i) {
+          return '<button class="jp-ans' + (s.yourPick === i ? " sel" : "") + (cutIdx.indexOf(i) >= 0 ? " dim" : "") + '" data-pick="' + i + '"><span class="jp-numb">' + (i + 1) + '</span><span class="jp-ans-tx">' + esc(t) + '</span><span class="jp-ans-tag">✓ YOUR PICK</span></button>';
+        }).join("");
+        var cutBtn = "";
+        if (me && me.cutTwo && !d.q.cut) cutBtn = '<button class="jp-cut" id="jpCut">✂ CUT TWO — KILL TWO WRONG ANSWERS</button>';
+        else if (d.q.cut) cutBtn = '<div class="jp-cutnote">CUT TWO PLAYED — TWO ANSWERS ARE GONE</div>';
+        main.innerHTML = '<div class="jp-pad">' + padTop +
+          '<div class="jp-answers">' + btns + "</div>" +
+          '<div class="jp-pickstate" id="jpPickState">' + (s.yourPick != null ? "✓ <b>PICK " + (s.yourPick + 1) + " IS IN</b> — TAP ANOTHER TO CHANGE IT" : "TAP YOUR ANSWER · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
+          cutBtn + "</div>";
+        main.querySelectorAll(".jp-ans").forEach(function (b) {
+          b.addEventListener("click", function () {
+            Snd.ensure();
+            var i = parseInt(b.getAttribute("data-pick"), 10);
+            if (JP.snap) JP.snap.yourPick = i;
+            main.querySelectorAll(".jp-ans").forEach(function (x) { x.classList.toggle("sel", parseInt(x.getAttribute("data-pick"), 10) === i); });
+            var ps = $("jpPickState");
+            if (ps) ps.innerHTML = "✓ <b>PICK " + (i + 1) + " IS IN</b> — TAP ANOTHER TO CHANGE IT";
+            jpSend({ t: "answer", qid: d.q.qid, pick: i });
+          });
+        });
+        var cb = $("jpCut");
+        if (cb) cb.addEventListener("click", function () { jpSend({ t: "cuttwo", qid: d.q.qid }); });
+      }
+    } else if (s.phase === "reveal") {
+      var lr = s.lastReveal;
+      var d2 = jpQuestionData();
+      if (!lr) { main.innerHTML = '<div class="jp-card"><div class="jp-hi">The reveal…</div><p class="jp-sub">Eyes on the big screen.</p></div>'; return; }
+      var mine = null;
+      (lr.results || []).forEach(function (r) { if (r.seat === JP.seat) mine = r; });
+      var lead = jpLeader();
+      var ansLine = "";
+      if (lr.kind === "num") ansLine = "The number was <b>" + Number(lr.trueNum).toLocaleString("en-US") + "</b>" + (mine && mine.num != null ? " — you said " + mine.num : "");
+      else if (d2 && d2.opts && lr.correctIdx != null) ansLine = "The answer was <b>" + esc(d2.opts.answers[lr.correctIdx]) + "</b>";
+      var scoreLine = '<div class="jp-vscore">YOU <b>' + money(me ? me.score : 0) + "</b>" + (lead ? " · LEADER — " + esc(lead.name) + " <b>" + money(lead.score) + "</b>" : "") + "</div>";
+      if (mine && mine.correct) {
+        main.innerHTML = '<div class="jp-verdict"><div class="jp-vdisc">✓</div>' +
+          '<div class="jp-vword">' + (lr.kind === "num" ? "CLOSEST!" : "YOU GOT IT!") + "</div>" +
+          '<div class="jp-gain">' + mplus(mine.banked) + "</div>" +
+          '<p class="jp-vans">' + ansLine + "</p>" + scoreLine + "</div>";
+      } else {
+        main.innerHTML = '<div class="jp-verdict miss"><div class="jp-vdisc">✗</div>' +
+          '<div class="jp-vword">' + (mine && (mine.pick != null || mine.num != null) ? "NOT THAT ONE" : "NO ANSWER") + "</div>" +
+          '<p class="jp-vans">' + ansLine + ". Nothing lost — nobody can lose money here.</p>" + scoreLine + "</div>";
+      }
+    } else if (s.phase === "ended") {
+      var lead2 = jpLeader();
+      main.innerHTML = '<div class="jp-card"><div class="q-cat">FINAL RESULT</div>' +
+        '<div class="jp-hi">' + (lead2 ? esc(lead2.name) + " takes the Hour!" : "Show's over!") + "</div>" +
+        jpStandRows() +
+        '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
+    }
+    var lv = $("jpLeave");
+    if (lv) lv.addEventListener("click", function () { jpTeardown(); showScreen("scr-title"); setMode("join"); });
+  }
+  function jpTick() {
+    if (!JP || !JP.snap || JP.snap.phase !== "answer" || !JP.snap.question) return;
+    var q = JP.snap.question;
+    var rem = q.deadline - (Date.now() + JP.offset);
+    if (rem < 0) rem = 0;
+    var bar = $("jpBar");
+    if (bar) bar.style.width = (q.windowMs ? (rem / q.windowMs) * 100 : 0) + "%";
+    var wrap = $("jpBarWrap");
+    if (wrap) wrap.classList.toggle("low", rem < 5000);
+    var secs = $("jpSecs");
+    if (secs) secs.textContent = Math.ceil(rem / 1000) + "s";
+    var cnt = $("jpCount");
+    if (cnt) cnt.textContent = (q.answersIn || 0) + " / " + JP.snap.players.filter(Boolean).length + " IN";
+  }
+  $("btnJoinRoom").addEventListener("click", function () {
+    Snd.ensure();
+    var code = ($("joinCode").value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    var name = ($("joinName").value || "").trim();
+    var st = $("joinStatus");
+    if (code.length !== 4) { st.classList.add("err"); st.textContent = "The code is four letters — check the big screen."; return; }
+    st.classList.remove("err");
+    var sv = jpSaved();
+    if (sv && sv.code === code && sv.reclaimToken) jpConnect(code, name || sv.name, sv.reclaimToken);
+    else jpConnect(code, name, null);
+  });
+  $("btnResumePlayer").addEventListener("click", function () {
+    var sv = jpSaved();
+    if (sv) { Snd.ensure(); jpConnect(sv.code, sv.name, sv.reclaimToken); }
+  });
+  /* deep links + seat reclaim: ?code=XXXX prefills; if it matches the
+     saved seat, walk straight back in (this is also the mid-show
+     refresh path — the server hands the seat and score back) */
+  try {
+    var _qc = new URLSearchParams(location.search).get("code");
+    var _sv = jpSaved();
+    if (_qc) {
+      setMode("join");
+      var _clean = _qc.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+      $("joinCode").value = _clean;
+      if (_sv && _sv.code === _clean && _sv.reclaimToken) {
+        $("joinName").value = _sv.name || "";
+        jpConnect(_sv.code, _sv.name, _sv.reclaimToken);
+      }
+    }
+  } catch (e) {}
+  paintHostPanel();
+  paintJoinPanel();
+
   /* ---------- test hooks ---------- */
   window.__game = {
     get G() { return G; }, get clock() { return clock; },
     startShow: startShow, BANK: BANK
+  };
+  window.__online = {
+    get OG() { return OG; }, get JP() { return JP; },
+    WORKER_URL: WORKER_URL
   };
 })();
