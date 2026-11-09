@@ -85,3 +85,5 @@ worker's service binding points at it.
 4. Check: `https://gilded-hour-nightly.<your-subdomain>.workers.dev/health`
    should answer `gilded-hour-nightly ok`, and
    `GET /tonight` should return a question plus Sterling's intro.
+
+Deploys: Workers Builds from the Gamez repo (this folder, watch path gilded-hour-nightly/*); deploy command `npx wrangler deploy` applies the wrangler.toml bindings.

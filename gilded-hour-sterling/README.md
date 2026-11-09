@@ -85,3 +85,5 @@ Settings after a paste. Steps:
 4. Check: `https://gilded-hour-sterling.<your-subdomain>.workers.dev/health`
    should answer `gilded-hour-sterling ok`, and a `POST /g` greeting
    should return a line naming the players.
+
+Deploys: Workers Builds from the Gamez repo (this folder, watch path gilded-hour-sterling/*); deploy command `npx wrangler deploy` applies the wrangler.toml bindings.
