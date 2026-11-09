@@ -1,9 +1,13 @@
-/* THE GILDED HOUR — Pass 2 bank.
+/* THE GILDED HOUR — Pass 2 bank + Pass B guess questions.
    84 hand-authored, fact-checked questions (7 categories x easy/medium/hard),
    written for players aged 30-50: the pop culture of a childhood in the
    1980s-90s and teens in the 1990s-2000s. Nothing post-2015; pre-1975 only
    where it is evergreen the cohort grew up on.
-   Fields: cat, diff (easy|medium|hard), q, a (correct), w (3 wrong), why (one-line note). */
+   Fields: cat, diff (easy|medium|hard), q, a (correct), w (3 wrong), why (one-line note).
+   Pass B adds 12 guess questions at the end, marked with a kind field:
+   kind:"num"    — closest-number shouts (fields: q, num, why; no a/w).
+   kind:"survey" — most-people answers (normal a/w shape; the keyed answer
+                   is the majority-culture one). */
 window.GH_BANK = [
 /* ---------------- MOVIES ---------------- */
 {cat:"Movies",diff:"easy",q:"In Forrest Gump, Forrest says life is like a box of what?",a:"Chocolates",w:["Crayons","Roses","Letters"],why:"'Mama always said life was like a box of chocolates. You never know what you're gonna get.'"},
@@ -96,4 +100,18 @@ window.GH_BANK = [
 {cat:"The Dial-Up Years",diff:"hard",q:"The Pilot 1000 and 5000, the 1996 organizers that launched the PDA era, were made by which company?",a:"Palm Computing",w:["Handspring","Psion","Sharp"],why:"Palm Computing, then part of U.S. Robotics; Handspring was founded later by Palm's founders."},
 {cat:"The Dial-Up Years",diff:"hard",q:"Which post-Napster file-sharing network, launched in 2000, was named after a donkey?",a:"eDonkey2000",w:["Kazaa","LimeWire","Morpheus"],why:"eDonkey2000, Kazaa and LimeWire fought over Napster's orphaned users."},
 {cat:"The Dial-Up Years",diff:"hard",q:"Which 1993 web browser first made the web graphical — pictures alongside text — and popular with the public?",a:"Mosaic",w:["Netscape Navigator","Lynx","Internet Explorer"],why:"NCSA Mosaic came first; its creators went on to build Netscape Navigator in 1994."},
+/* ---------------- GUESS QUESTIONS — CLOSEST NUMBER (kind:"num") ---------------- */
+{cat:"TV",diff:"easy",kind:"num",q:"How many episodes of Friends were there, across all ten seasons?",num:236,why:"236 episodes, 1994 to 2004 — and yes, somebody at this table has seen all of them twice."},
+{cat:"Movies",diff:"medium",kind:"num",q:"How many minutes long is Titanic, bow to stern?",num:194,why:"194 minutes — three hours and fourteen. The iceberg gets about four of them."},
+{cat:"Music",diff:"medium",kind:"num",q:"How many weeks did the Macarena sit at number one in America?",num:14,why:"Fourteen weeks at the top in 1996. The dance outlasted the summer, the year, and several governments."},
+{cat:"Toys & Games",diff:"hard",kind:"num",q:"How many stickers are there on a Rubik's Cube, counting every square on all six faces?",num:54,why:"Nine per face, six faces — 54. Knowing that solves nothing, but it impresses people."},
+{cat:"Saturday Morning",diff:"easy",kind:"num",q:"How many members are in Mystery Inc, counting Scooby-Doo himself?",num:5,why:"Fred, Daphne, Velma, Shaggy and Scooby — five, and the dog does most of the running."},
+{cat:"The Dial-Up Years",diff:"hard",kind:"num",q:"At its peak, to the nearest thousand, how many Blockbuster stores were there in the world?",num:9000,why:"Over 9,000 stores at the 2004 peak — and every single one of them wanted its tapes rewound."},
+/* ---------------- GUESS QUESTIONS — MOST PEOPLE SAY (kind:"survey") ---------------- */
+{cat:"Movies",diff:"easy",kind:"survey",q:"Ask a roomful of grown-ups to name the greatest film ever made, and the answer that comes up most is…",a:"The Godfather",w:["Star Wars","The Shawshank Redemption","Jaws"],why:"The Godfather tops critics' and readers' all-time polls decade after decade — it's the answer the room reaches for."},
+{cat:"TV",diff:"medium",kind:"survey",q:"The TV theme most people say they can still sing along to, word for word, is the one from…",a:"Cheers",w:["Friends","The Simpsons","Seinfeld"],why:"'Where everybody knows your name' — the Cheers theme is the one the whole room can hum."},
+{cat:"Music",diff:"medium",kind:"survey",q:"The song most people claim they know every single word to is…",a:"Bohemian Rhapsody",w:["Sweet Caroline","Don't Stop Believin'","Livin' on a Prayer"],why:"Queen's six-minute mini-opera — everybody performs it in the car, air-piano, head-bang and all."},
+{cat:"Toys & Games",diff:"easy",kind:"survey",q:"The board game most families say has started the biggest arguments at their table is…",a:"Monopoly",w:["Risk","Uno","Clue"],why:"Monopoly — the only board game that comes with its own family grudges and house rules about Free Parking."},
+{cat:"Saturday Morning",diff:"easy",kind:"survey",q:"The cartoon most people say WAS their Saturday morning, more than any other, is…",a:"Scooby-Doo",w:["The Jetsons","He-Man and the Masters of the Universe","The Care Bears"],why:"Scooby-Doo has been rerun into every childhood since 1969 — meddling kids across three generations."},
+{cat:"The Dial-Up Years",diff:"medium",kind:"survey",q:"The sound from the dial-up years that most people say they can still hear in their sleep is…",a:"The modem handshake",w:["The 'You've got mail' voice","The Windows startup chime","The Nokia ringtone"],why:"That screech-and-static handshake is burned into a generation's dreams — usually right before someone picks up the phone."},
 ];
