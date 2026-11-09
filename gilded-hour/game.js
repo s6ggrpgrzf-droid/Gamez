@@ -699,7 +699,9 @@
     stopLeaves();
     dispScore = G.players.map(function () { return 0; });
     writtenScore = [];
-    sayLive("greeting", { names: names.slice() }, authoredLine("open"));
+    prefetchShowLines(names);
+    sayLive("greeting", { names: names.slice() }, authoredLine("open"),
+      { window: 2500, guard: function () { return !!G && G.phase === "coldopen"; } });
     fetchNightlyForShow(G.showId);
     renderSeats(); updateTop();
     Snd.ensure(); Snd.play("theme");
@@ -999,7 +1001,7 @@
     var p = G.players[i];
     var wStand = G.players.map(function (pp) { return { name: pp.name, score: pp.score }; })
       .sort(function (a, b) { return b.score - a.score; });
-    sayLive("winner", { winner: p.name, standings: wStand, topScore: p.score }, authoredLine("winner", { name: p.name }));
+    sayLive("winner", { winner: p.name, standings: wStand, topScore: p.score }, authoredLine("winner", { name: p.name }), { window: 4000 });
     seatsVisible(false);
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
@@ -1134,10 +1136,10 @@
   /* ================= Pass 5: the Sterling + nightly workers =================
      Two small AI workers lend the show a live voice and one special
      question a night. Everything they offer is decoration on top of the
-     authored game: every fetch is timeout-capped and fail-soft, the
-     authored line always renders first, and nothing anywhere waits on
-     the network. No labels, no spinners — Sterling just sounds like
-     Sterling, on his good nights slightly more so. */
+     authored game: every fetch is timeout-capped and fail-soft, a line
+     (prefetched or authored) always renders instantly, and nothing
+     anywhere waits on the network. No labels, no spinners — Sterling
+     just sounds like Sterling, on his good nights slightly more so. */
   var STERLING_URL = "https://gilded-hour-sterling.chaoticutopia84.workers.dev";
   var NIGHTLY_URL = "https://gilded-hour-nightly.chaoticutopia84.workers.dev";
   /* The live workers belong to the HOSTED game. A page served over
@@ -1164,12 +1166,12 @@
       } catch (e) { fin(null); }
     });
   }
-  function sterlingLine(kind, facts) {
+  function sterlingLine(kind, facts, timeoutMs) {
     var body = { kind: kind };
     for (var k in facts) body[k] = facts[k];
     return fetchJSON(STERLING_URL + "/g", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
-    }, 2500).then(function (j) {
+    }, timeoutMs || 2500).then(function (j) {
       return j && typeof j.line === "string" && j.line.trim() ? j.line : null;
     });
   }
@@ -1178,27 +1180,101 @@
     if (G && G.showId) return G.showId;
     return null;
   }
-  /* Render the authored line NOW; if the Sterling worker answers with
-     a live line quickly (<=900ms) and the bubble is still showing that
-     same authored line (nothing newer has replaced it), swap it in.
-     The sequence token + text comparison together make a stale reply
-     harmless: it can only ever overwrite its own line. */
+  /* ---------- prefetch + patient swaps ----------
+     Cold Workers AI generation takes seconds, not milliseconds, so
+     the old fetch-at-the-moment-and-swap-within-900ms almost never
+     landed a generated line. Now the lines whose facts are knowable
+     in advance — the greeting for the names at the table, a first
+     bank or a Cut Two for each of them, a whole-table miss — are
+     fetched BEFORE the moment (the online lobby, table show start)
+     into a per-show cache; at the beat, a cached line simply renders
+     and no swap is involved. The lines whose facts cannot be known
+     in advance (a runaway lead's margin, the winner's standings)
+     still fetch at the moment, but with beat-specific patience, and
+     the sequence-token + bubble-text guards keep any late reply from
+     overwriting a newer line. A prefetch that times out or fails
+     just leaves the authored line in place — nothing retries. */
+  var livePrefetch = { scope: null, map: {} };
+  function pfFactsKey(facts) {
+    if (facts.names) return "names:" + facts.names.join(",");
+    if (facts.beat) return facts.beat + "|" + (facts.name || "");
+    return "";
+  }
+  function pfKey(kind, facts) { return kind + "|" + pfFactsKey(facts); }
+  function prefetchEntry(kind, facts) {
+    var scope = liveShowKey();
+    if (!scope) return null;
+    if (livePrefetch.scope !== scope) livePrefetch = { scope: scope, map: {} };
+    return livePrefetch.map[pfKey(kind, facts)] || null;
+  }
+  function prefetchLine(kind, facts) {
+    if (!LIVE_OK) return;
+    var scope = liveShowKey();
+    if (!scope) return;
+    if (livePrefetch.scope !== scope) livePrefetch = { scope: scope, map: {} };
+    var k = pfKey(kind, facts);
+    if (livePrefetch.map[k]) return;   // fetched or fetching — never twice
+    var entry = { status: "wait", line: null, promise: null };
+    livePrefetch.map[k] = entry;
+    var f = {}; for (var key in facts) f[key] = facts[key];
+    f.showKey = scope;
+    entry.promise = sterlingLine(kind, f).then(function (line) {
+      if (livePrefetch.map[k] !== entry) return line;  // a newer show owns the cache now
+      entry.status = line ? "ok" : "miss";
+      entry.line = line || null;
+      return line;
+    });
+  }
+  /* the predictable set for a table of names — fired in the online
+     lobby and re-fired whenever the player set changes (the greeting
+     key carries the names, so a changed set fetches a fresh greeting
+     while unchanged per-player lines stay cached), and at table
+     show start */
+  function prefetchShowLines(names) {
+    if (!LIVE_OK || !names || !names.length) return;
+    prefetchLine("greeting", { names: names.slice() });
+    prefetchLine("beat", { beat: "whole_miss" });
+    names.forEach(function (n) {
+      prefetchLine("beat", { beat: "first_bank", name: n });
+      prefetchLine("beat", { beat: "cut_used", name: n });
+    });
+  }
+  /* Render a Sterling line for this beat. A prefetched line renders
+     as-is. Otherwise the authored line renders NOW and the live reply
+     may still swap in within this beat's window (opts.window; default
+     2500ms — greeting 2500, winner 4000) — but only while the
+     sequence token is current, the bubble still shows that same
+     authored line, and the caller's guard (opts.guard, if any) still
+     holds. If the matching prefetch is still in flight, ride it
+     instead of asking the worker twice. */
   var saySeq = 0;
-  function sayLive(kind, facts, authored) {
+  function sayLive(kind, facts, authored, opts) {
     var hl = $("hostLine"); if (!hl) return;
+    var seq = ++saySeq;
+    var entry = LIVE_OK ? prefetchEntry(kind, facts) : null;
+    if (entry && entry.status === "ok") { hl.textContent = entry.line; return; }
     hl.textContent = authored;
     if (!LIVE_OK) return;
     var key = liveShowKey();
     if (!key) return;
-    var f = {}; for (var k in facts) f[k] = facts[k];
-    f.showKey = key;
-    var seq = ++saySeq, t0 = Date.now();
-    sterlingLine(kind, f).then(function (line) {
+    var windowMs = (opts && opts.window) || 2500;
+    var guard = opts && opts.guard;
+    var promise;
+    if (entry && entry.status === "wait" && entry.promise) {
+      promise = entry.promise;
+    } else {
+      var f = {}; for (var k in facts) f[k] = facts[k];
+      f.showKey = key;
+      promise = sterlingLine(kind, f, Math.max(2500, windowMs + 500));
+    }
+    var t0 = Date.now();
+    promise.then(function (line) {
       if (!line) return;
-      if (Date.now() - t0 > 900) return;         // too late — the moment has passed
+      if (Date.now() - t0 > windowMs) return;    // too late — the moment has passed
       if (seq !== saySeq) return;                // a newer line was requested since
       var el2 = $("hostLine");
       if (!el2 || el2.textContent !== authored) return; // the bubble has moved on
+      if (guard && !guard()) return;             // the beat's stage has passed
       el2.textContent = line;
     });
   }
@@ -1220,7 +1296,7 @@
         G.bigLeadDone = true;
         var leadName = "";
         G.players.forEach(function (p) { if (p.score === srt[0] && !leadName) leadName = p.name; });
-        sayLive("beat", { beat: "big_lead", name: leadName, lead: srt[0] - srt[1] }, authored);
+        sayLive("beat", { beat: "big_lead", name: leadName, lead: srt[0] - srt[1] }, authored, { window: 2500 });
         return;
       }
     }
@@ -1245,7 +1321,7 @@
         OG.bigLeadDone = true;
         var leadName2 = "";
         OG.players.forEach(function (p) { if (p && p.score === sc[0] && !leadName2) leadName2 = p.name; });
-        sayLive("beat", { beat: "big_lead", name: leadName2, lead: sc[0] - sc[1] }, authored);
+        sayLive("beat", { beat: "big_lead", name: leadName2, lead: sc[0] - sc[1] }, authored, { window: 2500 });
         return;
       }
     }
@@ -1546,6 +1622,10 @@
     OG.phase = "lobby";
     seatsVisible(true);
     ogRenderSeats();
+    /* warm the predictable Sterling lines for the table as it stands;
+       re-rendered on every join/leave, and the cache keys make a
+       changed player set fetch only what is actually new */
+    prefetchShowLines(ogJoined().map(function (p) { return p.name; }));
     var joined = ogJoined().length;
     stage('<div class="q-cat">YOUR ROOM IS OPEN — PLAYERS JOIN WITH THIS CODE</div>' +
       '<div class="og-code">' + esc(OG.code) + "</div>" +
@@ -1623,7 +1703,8 @@
     OG.idx = 0; OG.curRound = 0;
     OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
     Snd.ensure(); Snd.play("theme");
-    sayLive("greeting", { names: ogJoined().map(function (p) { return p.name; }) }, authoredLine("open"));
+    sayLive("greeting", { names: ogJoined().map(function (p) { return p.name; }) }, authoredLine("open"),
+      { window: 2500, guard: function () { return !!OG && OG.phase === "intro"; } });
     /* tonight's special: fetched once per show; if it lands before
        Round 1 reaches its third question, it takes that slot in the
        script (the phones only ever see its qid at publish time) */
@@ -1691,7 +1772,12 @@
       '<p class="round-text">' + texts[e.round] + "</p>" +
       (e.round > 1 ? ogStandingsHTML() : "") +
       '<button class="btn-gold" id="ogRoundGo">' + (e.round === 1 ? "START THE WARM-UP" : e.round === 2 ? "DOUBLE IT" : "TO THE BIG FINISH") + "</button></div>");
-    hostSay("r" + e.round);
+    /* Round 1 does NOT set its bumper line here: the greeting owns
+       the bubble for this screen (setting the bumper line in the same
+       tick as ogStartShow's greeting was the same-tick overwrite that
+       killed every live greeting). The Round-1 bumper line is set
+       when the first question's spin begins, in ogSpinThenPublish. */
+    if (e.round !== 1) hostSay("r" + e.round);
     $("ogRoundGo").addEventListener("click", ogServe);
   }
   function ogServe() {
@@ -1728,6 +1814,7 @@
       '<div class="cat-row">' + chips + "</div>" +
       '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
     if (e.special && e.intro) $("hostLine").textContent = e.intro;
+    else if (e.round === 1 && e.qInRound === 0) hostSay("r1");   // the Round-1 bumper line, set where the first spin's lines are set (see ogIntro)
     else hostSay("spin", { cat: e.cat });
     Snd.play("spin");
     var ticks = 0, totalTicks = 10 + ri(3);
@@ -1871,7 +1958,7 @@
     var winSeat = tied[0], p = OG.players[winSeat];
     var ogStand = idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score }; })
       .sort(function (a, b) { return b.score - a.score; });
-    sayLive("winner", { winner: p.name, standings: ogStand, topScore: best }, authoredLine("winner", { name: p.name }));
+    sayLive("winner", { winner: p.name, standings: ogStand, topScore: best }, authoredLine("winner", { name: p.name }), { window: 4000 });
     var order = idxs.slice().sort(function (a, b) { return OG.players[b].score - OG.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
     var disp = order.slice();
