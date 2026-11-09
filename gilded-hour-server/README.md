@@ -164,3 +164,5 @@ snapshots; nothing about a seat is ever deleted mid-show.
 The game client (Pass 4b, not part of this pass) will point at the
 deployed `wss://` URL; keep the URL configurable client-side, the way
 the Dominoes client allows an override.
+
+Deploys: Workers Builds from the Gamez repo (this folder). `npx wrangler deploy` applies the wrangler.toml config, including the ROOMS Durable Object binding and its v1 migration.
