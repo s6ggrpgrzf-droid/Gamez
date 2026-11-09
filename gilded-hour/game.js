@@ -957,6 +957,9 @@
       p.score += gain;
       parts.push('<span class="up">' + mplus(gain) + " to " + esc(p.name) + "</span>");
     });
+    /* the last question's reveal settles the final standings — start
+       the winner line's generation now, not at the finale screen */
+    if (G.round === 3 && G.qInRound === R3_COUNT - 1) winnerPrefetchAtReveal(winnerFactsFrom(G.players));
     var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="btnNext">CONTINUE</button></div>';
     if (c.kind === "num") {
       var dNum = parts.length ? parts.join(" &nbsp;")
@@ -1001,7 +1004,8 @@
     var p = G.players[i];
     var wStand = G.players.map(function (pp) { return { name: pp.name, score: pp.score }; })
       .sort(function (a, b) { return b.score - a.score; });
-    sayLive("winner", { winner: p.name, standings: wStand, topScore: p.score }, authoredLine("winner", { name: p.name }), { window: 4000 });
+    sayWinner({ winner: p.name, standings: wStand, topScore: p.score }, authoredLine("winner", { name: p.name }),
+      function () { return !!G && G.phase === "over"; });
     seatsVisible(false);
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
@@ -1193,7 +1197,12 @@
      still fetch at the moment, but with beat-specific patience, and
      the sequence-token + bubble-text guards keep any late reply from
      overwriting a newer line. A prefetch that times out or fails
-     just leaves the authored line in place — nothing retries. */
+     just leaves the authored line in place — nothing retries. The
+     winner is the extreme case: its facts exist only once the final
+     reveal settles, yet a cold generation outran even a 4s finale
+     window in production — so the winner request fires AT that
+     reveal (sayWinner's prefetch, 9s budget) and the finale rides
+     the in-flight promise on its own guard channel. */
   var livePrefetch = { scope: null, map: {} };
   function pfFactsKey(facts) {
     if (facts.names) return "names:" + facts.names.join(",");
@@ -1207,7 +1216,7 @@
     if (livePrefetch.scope !== scope) livePrefetch = { scope: scope, map: {} };
     return livePrefetch.map[pfKey(kind, facts)] || null;
   }
-  function prefetchLine(kind, facts) {
+  function prefetchLine(kind, facts, timeoutMs) {
     if (!LIVE_OK) return;
     var scope = liveShowKey();
     if (!scope) return;
@@ -1218,7 +1227,7 @@
     livePrefetch.map[k] = entry;
     var f = {}; for (var key in facts) f[key] = facts[key];
     f.showKey = scope;
-    entry.promise = sterlingLine(kind, f).then(function (line) {
+    entry.promise = sterlingLine(kind, f, timeoutMs).then(function (line) {
       if (livePrefetch.map[k] !== entry) return line;  // a newer show owns the cache now
       entry.status = line ? "ok" : "miss";
       entry.line = line || null;
@@ -1242,11 +1251,12 @@
   /* Render a Sterling line for this beat. A prefetched line renders
      as-is. Otherwise the authored line renders NOW and the live reply
      may still swap in within this beat's window (opts.window; default
-     2500ms — greeting 2500, winner 4000) — but only while the
+     2500ms — greeting 2500, big_lead 2500) — but only while the
      sequence token is current, the bubble still shows that same
      authored line, and the caller's guard (opts.guard, if any) still
      holds. If the matching prefetch is still in flight, ride it
-     instead of asking the worker twice. */
+     instead of asking the worker twice. (The winner line has its own
+     channel — sayWinner, below — with a longer patience.) */
   var saySeq = 0;
   function sayLive(kind, facts, authored, opts) {
     var hl = $("hostLine"); if (!hl) return;
@@ -1275,6 +1285,65 @@
       var el2 = $("hostLine");
       if (!el2 || el2.textContent !== authored) return; // the bubble has moved on
       if (guard && !guard()) return;             // the beat's stage has passed
+      el2.textContent = line;
+    });
+  }
+  /* ---------- the winner line: fired early, on its own channel ----
+     The winner's facts are final the instant the LAST question's
+     reveal settles, seconds before the finale screen renders — so
+     the request fires there (winnerPrefetchAtReveal, both modes)
+     with a 9s fetch budget, and the finale's sayWinner rides the
+     in-flight prefetch instead of asking at the last moment. The
+     finale screen then dwells until PLAY AGAIN, so the swap window
+     is also 9s: a single late swap there reads as Sterling adding a
+     thought, never as a glitch. The guard is deliberately NOT the
+     shared saySeq — unrelated beats settling between the final
+     reveal and the finale must not kill the swap. sayWinner has its
+     own sequence (winnerSeq) and requires: still on the finale
+     screen (the caller's isFinale closure over its own mode state),
+     and the bubble still showing the authored winner line the
+     finale rendered. The static .bubble-finale inside the finale
+     stage is a different element and is never the target. */
+  var winnerSeq = 0;
+  function winnerFactsFrom(players) {
+    var best = -Infinity, wi = -1;
+    players.forEach(function (p, i) { if (p && p.score > best) { best = p.score; wi = i; } });
+    if (wi < 0) return null;
+    var standings = players.filter(function (p) { return !!p; })
+      .map(function (p) { return { name: p.name, score: p.score }; })
+      .sort(function (a, b) { return b.score - a.score; });
+    return { winner: players[wi].name, standings: standings, topScore: best };
+  }
+  /* fire the winner request the moment the final standings exist */
+  function winnerPrefetchAtReveal(facts) {
+    if (!facts) return;
+    prefetchLine("winner", facts, 9000);
+  }
+  function sayWinner(facts, authored, isFinale) {
+    var hl = $("hostLine"); if (!hl) return;
+    var seq = ++winnerSeq;
+    var entry = LIVE_OK ? prefetchEntry("winner", facts) : null;
+    if (entry && entry.status === "ok") { hl.textContent = entry.line; return; }
+    hl.textContent = authored;
+    if (!LIVE_OK) return;
+    var key = liveShowKey();
+    if (!key) return;
+    var promise;
+    if (entry && entry.status === "wait" && entry.promise) {
+      promise = entry.promise;   // fired at the final reveal — ride it
+    } else {
+      var f = {}; for (var k in facts) f[k] = facts[k];
+      f.showKey = key;
+      promise = sterlingLine("winner", f, 9000);
+    }
+    var t0 = Date.now();
+    promise.then(function (line) {
+      if (!line) return;
+      if (Date.now() - t0 > 9000) return;         // past the finale's patience
+      if (seq !== winnerSeq) return;             // a newer finale owns the bubble
+      if (isFinale && !isFinale()) return;       // the finale screen has passed
+      var el2 = $("hostLine");
+      if (!el2 || el2.textContent !== authored) return; // the bubble has moved on
       el2.textContent = line;
     });
   }
@@ -1888,6 +1957,9 @@
     OG.phase = "reveal";
     clock.running = false;
     (r.scores || []).forEach(function (sc, i) { if (OG.players[i] && sc != null) OG.players[i].score = sc; });
+    /* the last question's reveal settles the final standings — start
+       the winner line's generation now, not at the finale screen */
+    if (OG.script && OG.idx === OG.script.length - 1) winnerPrefetchAtReveal(winnerFactsFrom(OG.players));
     var e = OG.cur;
     var winners = [];
     OG.revealState = {};
@@ -1958,7 +2030,8 @@
     var winSeat = tied[0], p = OG.players[winSeat];
     var ogStand = idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score }; })
       .sort(function (a, b) { return b.score - a.score; });
-    sayLive("winner", { winner: p.name, standings: ogStand, topScore: best }, authoredLine("winner", { name: p.name }), { window: 4000 });
+    sayWinner({ winner: p.name, standings: ogStand, topScore: best }, authoredLine("winner", { name: p.name }),
+      function () { return !!OG && OG.phase === "over"; });
     var order = idxs.slice().sort(function (a, b) { return OG.players[b].score - OG.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
     var disp = order.slice();
