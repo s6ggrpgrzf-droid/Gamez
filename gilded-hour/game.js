@@ -137,10 +137,13 @@
       "And the Hour belongs to {name}. Table, applaud. {name}, bow. I shall pretend not to enjoy this."
     ]
   };
-  function hostSay(kind, vars) {
+  function authoredLine(kind, vars) {
     var line = pick(HOST[kind] || ["…"]);
     if (vars) for (var k in vars) line = line.split("{" + k + "}").join(vars[k]);
-    $("hostLine").textContent = line;
+    return line;
+  }
+  function hostSay(kind, vars) {
+    $("hostLine").textContent = authoredLine(kind, vars);
   }
 
   /* ---------- dom helpers ---------- */
@@ -545,6 +548,8 @@
         return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1 };
       }),
       round: 1, qInRound: 0,
+      showId: null,             // per-show key for the live Sterling lines
+      bankedOnce: false, bigLeadDone: false, // live-beat latches (Pass 5)
       phase: "intro",           // intro|spin|bet|question|vote-count|vote|reveal|over
       cur: null,                // current question runtime
       guess: null,              // "round:qInRound" -> bank id for the 5 guess slots
@@ -686,6 +691,7 @@
   }
   function startShow(names) {
     G = newGame(names);
+    G.showId = "table-" + Date.now().toString(36) + "-" + ri(1000000);
     pools = {};
     G.guess = buildGuessSchedule();
     showScreen("scr-game");
@@ -693,7 +699,8 @@
     stopLeaves();
     dispScore = G.players.map(function () { return 0; });
     writtenScore = [];
-    hostSay("open");
+    sayLive("greeting", { names: names.slice() }, authoredLine("open"));
+    fetchNightlyForShow(G.showId);
     renderSeats(); updateTop();
     Snd.ensure(); Snd.play("theme");
     G.phase = "coldopen";
@@ -732,6 +739,7 @@
     if (G.round === 3 && G.qInRound >= R3_COUNT) { finishShow(); return; }
     var gid = G.guess ? G.guess[G.round + ":" + G.qInRound] : null;
     if (gid != null) G.cur = makeCur(BANK[gid], BANK[gid].kind);
+    else if (G.round === 1 && G.qInRound === 2 && nightlyState.data && nightlyState.key === G.showId) G.cur = makeCurServed(nightlyState.data);
     else G.cur = makeCur(drawNormal(), "mcq");
     if (G.round === 3) betBeat(); else spinBeat();
   }
@@ -768,7 +776,8 @@
     stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
       '<div class="cat-row">' + chips + "</div>" +
       '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
-    hostSay("spin", { cat: G.cur.cat });
+    if (G.cur.special && G.cur.intro) $("hostLine").textContent = G.cur.intro;
+    else hostSay("spin", { cat: G.cur.cat });
     Snd.play("spin");
     var ticks = 0, totalTicks = 10 + ri(3);
     clearInterval(spinTimer);
@@ -824,7 +833,8 @@
         '<span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + "</span></button>";
     }).join("");
     var head = c.kind === "survey" ? "MOST PEOPLE SAY…" : c.diff.toUpperCase();
-    return '<div class="q-headrow"><span class="cat-pill">' + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">' + head + "</span></div>" +
+    var pill = c.special ? "TONIGHT'S GILDED QUESTION" : esc(c.cat.toUpperCase());
+    return '<div class="q-headrow"><span class="cat-pill' + (c.special ? " gilded" : "") + '">' + pill + '</span><span class="q-kind">' + head + "</span></div>" +
       '<div class="q-text">' + esc(c.q.q) + "</div>" +
       '<div class="q-meta">' +
       (c.betRound
@@ -884,7 +894,7 @@
     p.cut--; c.cutUsed = true;
     var wrong = c.opts.map(function (o, ix) { return { o: o, i: ix }; }).filter(function (x) { return !x.o.ok; });
     shuffle(wrong).slice(0, 2).forEach(function (x) { x.o.gone = true; });
-    hostSay("cut", { name: p.name });
+    sayLive("beat", { beat: "cut_used", name: p.name }, authoredLine("cut", { name: p.name }));
     Snd.play("gold");
     stage(questionHTML()); wireQuestion(); drawClock(); renderSeats();
   }
@@ -954,7 +964,7 @@
         '<div class="wager-amt">' + Number(c.q.num).toLocaleString("en-US") + "</div>" +
         '<div class="delta">' + dNum + "</div>" +
         '<p class="why">' + esc(c.q.why) + "</p>" + nextBtn);
-      hostSay(winners.length ? "numHit" : "numMiss", { name: winners.length ? G.players[winners[0]].name : "" });
+      revealSay(winners.length ? "numHit" : "numMiss", { name: winners.length ? G.players[winners[0]].name : "" }, winners);
       Snd.play(winners.length ? "correct" : "wrong");
     } else {
       var correctIdx = c.opts.findIndex(function (o) { return o.ok; });
@@ -970,7 +980,7 @@
         '<div class="delta">' + dMcq + "</div>" +
         '<p class="why">' + esc(c.q.why) + "</p>" + nextBtn);
       var hk = winners.length === 0 ? "allMiss" : (winners.length === G.players.length ? "allHit" : "someHit");
-      hostSay(hk, { name: winners.length ? G.players[winners[0]].name : "" });
+      revealSay(hk, { name: winners.length ? G.players[winners[0]].name : "" }, winners);
       Snd.play(winners.length ? "correct" : "wrong");
     }
     renderSeats();
@@ -987,7 +997,9 @@
     G.phase = "over";
     if (G.cur) G.cur.marks = {};
     var p = G.players[i];
-    hostSay("winner", { name: p.name });
+    var wStand = G.players.map(function (pp) { return { name: pp.name, score: pp.score }; })
+      .sort(function (a, b) { return b.score - a.score; });
+    sayLive("winner", { winner: p.name, standings: wStand, topScore: p.score }, authoredLine("winner", { name: p.name }));
     seatsVisible(false);
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
@@ -1119,6 +1131,189 @@
   } catch (e) {}
   function wsBase() { return WORKER_URL.replace(/^http/, "ws"); }
 
+  /* ================= Pass 5: the Sterling + nightly workers =================
+     Two small AI workers lend the show a live voice and one special
+     question a night. Everything they offer is decoration on top of the
+     authored game: every fetch is timeout-capped and fail-soft, the
+     authored line always renders first, and nothing anywhere waits on
+     the network. No labels, no spinners — Sterling just sounds like
+     Sterling, on his good nights slightly more so. */
+  var STERLING_URL = "https://gilded-hour-sterling.chaoticutopia84.workers.dev";
+  var NIGHTLY_URL = "https://gilded-hour-nightly.chaoticutopia84.workers.dev";
+  /* The live workers belong to the HOSTED game. A page served over
+     http(s) — or pointed at a local worker with the ?ghw= override —
+     uses them; a file:// copy is a fully self-contained build and
+     makes no network attempts at all (a refused fetch logs a console
+     error even when handled, so "fail-soft" alone cannot keep an
+     offline copy error-free — the gate is what guarantees it). */
+  var LIVE_OK = /^https?:$/.test(location.protocol) || !!_ghw;
+  /* fetch JSON with a hard timeout; resolves null on ANY failure
+     (offline, timeout, bad status, bad JSON) and never rejects */
+  function fetchJSON(url, opts, timeoutMs) {
+    return new Promise(function (resolve) {
+      var done = false, timer = null, ctrl = null;
+      function fin(v) { if (!done) { done = true; if (timer) clearTimeout(timer); resolve(v); } }
+      try {
+        var o = opts || {};
+        if (typeof AbortController !== "undefined") { ctrl = new AbortController(); o.signal = ctrl.signal; }
+        timer = setTimeout(function () { if (ctrl) { try { ctrl.abort(); } catch (e) {} } fin(null); }, timeoutMs || 2500);
+        fetch(url, o).then(function (r) {
+          if (!r || !r.ok) { fin(null); return null; }
+          return r.json();
+        }).then(function (j) { fin(j == null ? null : j); }).catch(function () { fin(null); });
+      } catch (e) { fin(null); }
+    });
+  }
+  function sterlingLine(kind, facts) {
+    var body = { kind: kind };
+    for (var k in facts) body[k] = facts[k];
+    return fetchJSON(STERLING_URL + "/g", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+    }, 2500).then(function (j) {
+      return j && typeof j.line === "string" && j.line.trim() ? j.line : null;
+    });
+  }
+  function liveShowKey() {
+    if (OG && OG.code) return "room-" + OG.code;
+    if (G && G.showId) return G.showId;
+    return null;
+  }
+  /* Render the authored line NOW; if the Sterling worker answers with
+     a live line quickly (<=900ms) and the bubble is still showing that
+     same authored line (nothing newer has replaced it), swap it in.
+     The sequence token + text comparison together make a stale reply
+     harmless: it can only ever overwrite its own line. */
+  var saySeq = 0;
+  function sayLive(kind, facts, authored) {
+    var hl = $("hostLine"); if (!hl) return;
+    hl.textContent = authored;
+    if (!LIVE_OK) return;
+    var key = liveShowKey();
+    if (!key) return;
+    var f = {}; for (var k in facts) f[k] = facts[k];
+    f.showKey = key;
+    var seq = ++saySeq, t0 = Date.now();
+    sterlingLine(kind, f).then(function (line) {
+      if (!line) return;
+      if (Date.now() - t0 > 900) return;         // too late — the moment has passed
+      if (seq !== saySeq) return;                // a newer line was requested since
+      var el2 = $("hostLine");
+      if (!el2 || el2.textContent !== authored) return; // the bubble has moved on
+      el2.textContent = line;
+    });
+  }
+  /* reveal-time live beats for the table show: a whole-table miss, the
+     first bank of the night, a runaway lead (>= $500, once per show).
+     Anything else keeps the authored line the reveal already chose. */
+  function revealSay(hk, vars, winners) {
+    var authored = authoredLine(hk, vars);
+    if (!G) { var h0 = $("hostLine"); if (h0) h0.textContent = authored; return; }
+    if (winners.length === 0) { sayLive("beat", { beat: "whole_miss" }, authored); return; }
+    if (!G.bankedOnce) {
+      G.bankedOnce = true;
+      sayLive("beat", { beat: "first_bank", name: G.players[winners[0]].name }, authored);
+      return;
+    }
+    if (!G.bigLeadDone) {
+      var srt = G.players.map(function (p) { return p.score; }).sort(function (a, b) { return b - a; });
+      if (srt.length > 1 && srt[0] - srt[1] >= 500) {
+        G.bigLeadDone = true;
+        var leadName = "";
+        G.players.forEach(function (p) { if (p.score === srt[0] && !leadName) leadName = p.name; });
+        sayLive("beat", { beat: "big_lead", name: leadName, lead: srt[0] - srt[1] }, authored);
+        return;
+      }
+    }
+    var hl = $("hostLine"); if (hl) hl.textContent = authored;
+  }
+  /* the same beats for the online host, against server scores */
+  function ogRevealSay(hk, vars, winners) {
+    var authored = authoredLine(hk, vars);
+    if (!OG) { var h0 = $("hostLine"); if (h0) h0.textContent = authored; return; }
+    if (winners.length === 0) { sayLive("beat", { beat: "whole_miss" }, authored); return; }
+    if (!OG.bankedOnce) {
+      OG.bankedOnce = true;
+      var fp = OG.players[winners[0]];
+      sayLive("beat", { beat: "first_bank", name: fp ? fp.name : "A player" }, authored);
+      return;
+    }
+    if (!OG.bigLeadDone) {
+      var sc = [];
+      OG.players.forEach(function (p) { if (p) sc.push(p.score); });
+      sc.sort(function (a, b) { return b - a; });
+      if (sc.length > 1 && sc[0] - sc[1] >= 500) {
+        OG.bigLeadDone = true;
+        var leadName2 = "";
+        OG.players.forEach(function (p) { if (p && p.score === sc[0] && !leadName2) leadName2 = p.name; });
+        sayLive("beat", { beat: "big_lead", name: leadName2, lead: sc[0] - sc[1] }, authored);
+        return;
+      }
+    }
+    var hl = $("hostLine"); if (hl) hl.textContent = authored;
+  }
+  /* ---------- tonight's special question (served ready-made) ---------- */
+  function chicagoDateStr() {
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    } catch (e) { return new Date().toISOString().slice(0, 10); }
+  }
+  function validServed(j) {
+    return !!(j && j.question && j.question.kind === "normal" &&
+      typeof j.question.q === "string" && Array.isArray(j.question.a) && j.question.a.length === 4 &&
+      Number.isInteger(j.question.correct) && j.question.correct >= 0 && j.question.correct <= 3 &&
+      typeof j.question.cat === "string");
+  }
+  /* table mode: one fetch per show, keyed by the show id; the result
+     (or the lack of one) is simply read when Round 1 reaches slot 3 */
+  var nightlyState = { key: null, data: null };
+  function fetchNightlyForShow(key) {
+    nightlyState = { key: key, data: null };
+    if (!LIVE_OK) return;
+    fetchJSON(NIGHTLY_URL + "/tonight", null, 2500).then(function (j) {
+      if (nightlyState.key !== key) return;
+      if (validServed(j)) nightlyState.data = j;
+    });
+  }
+  /* a table-show runtime for the special: options arrive pre-shuffled
+     from the worker and are used exactly as served — the parallel path
+     alongside makeCur, which builds options from a bank entry */
+  function makeCurServed(sv) {
+    var q = sv.question;
+    var diff = BASE_VALUES[q.diff] ? q.diff : "medium";
+    var cur = {
+      q: { q: q.q, why: q.why || "", cat: q.cat, diff: diff, special: true },
+      kind: "mcq", cat: q.cat, diff: diff,
+      value: BASE_VALUES[diff],   // the special only ever sits in Round 1 (x1)
+      elapsed: 0, clockTotal: QTIME,
+      opts: q.a.map(function (t, i) { return { t: t, ok: i === q.correct }; }),
+      marks: {}, resolved: false, cutUsed: false,
+      betRound: false, bankValue: 0,
+      special: true, intro: sv.intro || null
+    };
+    lastShownValue = null;
+    return cur;
+  }
+  /* an online script entry for the special: same served order, a qid
+     the phones recognise ("nightly.<date>.<seed36>"), and a pair of
+     cut indices chosen the way ogOptsFor chooses them (seeded) */
+  function ogSpecialEntry(sv, seed) {
+    var q = sv.question;
+    var diff = BASE_VALUES[q.diff] ? q.diff : "medium";
+    var wrong = [0, 1, 2, 3].filter(function (i) { return i !== q.correct; });
+    var r = mulberry32(seed);
+    for (var i = wrong.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var t = wrong[i]; wrong[i] = wrong[j]; wrong[j] = t; }
+    return {
+      seq: 3, round: 1, qInRound: 2,
+      bank: { q: q.q, why: q.why || "", cat: q.cat, diff: diff },
+      kind: "normal", cat: q.cat, diff: diff,
+      baseValue: BASE_VALUES[diff], multiplier: 1, windowMs: QTIME * 1000,
+      answers: q.a.slice(), correctIdx: q.correct,
+      cutIndices: wrong.slice(0, 2).sort(function (a, b) { return a - b; }),
+      special: true, intro: sv.intro || null,
+      qid: "nightly." + chicagoDateStr() + "." + seed.toString(36)
+    };
+  }
+
   /* Protocol note: publish_question carries ids and secrets, never the
      question wording — so the host encodes the bank id and the shuffle
      seed in the qid ("q<seq>.<bankId>.<seed36>"), and player clients
@@ -1235,6 +1430,7 @@
       players: [null, null, null, null], snap: null, offset: 0,
       started: false, script: null, idx: 0, curRound: 0, cur: null,
       phase: "connecting", lastRevealQid: null, revealState: {},
+      bankedOnce: false, bigLeadDone: false,
       disp: [null, null, null, null], lastStand: null,
       backoff: 1000, tickInt: null, spinInt: null
     };
@@ -1427,7 +1623,18 @@
     OG.idx = 0; OG.curRound = 0;
     OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
     Snd.ensure(); Snd.play("theme");
-    hostSay("open");
+    sayLive("greeting", { names: ogJoined().map(function (p) { return p.name; }) }, authoredLine("open"));
+    /* tonight's special: fetched once per show; if it lands before
+       Round 1 reaches its third question, it takes that slot in the
+       script (the phones only ever see its qid at publish time) */
+    var ogRef = OG;
+    if (LIVE_OK) fetchJSON(NIGHTLY_URL + "/tonight", null, 2500).then(function (j) {
+      if (!ogRef || OG !== ogRef || ogRef.dead || !validServed(j)) return;
+      if (!ogRef.script || ogRef.idx > 2) return;
+      var slot = ogRef.script[2];
+      if (!slot || slot.round !== 1 || slot.qInRound !== 2 || slot.special) return;
+      ogRef.script[2] = ogSpecialEntry(j, (Math.random() * 2147483646 + 1) | 0);
+    });
     ogIntro();
   }
   function ogStandingsHTML() {
@@ -1520,7 +1727,8 @@
     stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
       '<div class="cat-row">' + chips + "</div>" +
       '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
-    hostSay("spin", { cat: e.cat });
+    if (e.special && e.intro) $("hostLine").textContent = e.intro;
+    else hostSay("spin", { cat: e.cat });
     Snd.play("spin");
     var ticks = 0, totalTicks = 10 + ri(3);
     clearInterval(OG.spinInt);
@@ -1553,7 +1761,7 @@
     seatsVisible(true); ogRenderSeats();
     $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
     var head = e.kind === "survey" ? "MOST PEOPLE SAY…" : e.kind === "num" ? "CLOSEST NUMBER" : (e.diff || "").toUpperCase();
-    var top = '<div class="q-headrow"><span class="cat-pill">' + esc(e.cat.toUpperCase()) + '</span><span class="q-kind">' + head + "</span></div>" +
+    var top = '<div class="q-headrow"><span class="cat-pill' + (e.special ? " gilded" : "") + '">' + (e.special ? "TONIGHT'S GILDED QUESTION" : esc(e.cat.toUpperCase())) + '</span><span class="q-kind">' + head + "</span></div>" +
       '<div class="q-text">' + esc(e.bank.q) + "</div>";
     var meta = '<div class="q-meta">' + (q.betted
       ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
@@ -1583,7 +1791,7 @@
     if (!OG || !OG.cur || m.qid !== OG.cur.qid) return;
     document.querySelectorAll(".answers .ans-btn").forEach(function (b, i) { if (m.indices.indexOf(i) >= 0) b.classList.add("dim"); });
     var p = OG.players[m.bySeat];
-    hostSay("cut", { name: p ? p.name : "A player" });
+    sayLive("beat", { beat: "cut_used", name: p ? p.name : "A player" }, authoredLine("cut", { name: p ? p.name : "A player" }));
     Snd.play("gold");
   }
   function ogOnReveal(r, fromSnap) {
@@ -1613,7 +1821,7 @@
       stage(head + '<div class="wager-amt">' + Number(tn).toLocaleString("en-US") + "</div>" +
         '<div class="delta">' + (parts.length ? parts.join(" &nbsp;") : '<span class="down">Nobody got close. The number keeps its dignity.</span>') + "</div>" +
         '<p class="why">' + esc(e.bank.why) + "</p>" + nextBtn);
-      hostSay(winners.length ? "numHit" : "numMiss", { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" });
+      ogRevealSay(winners.length ? "numHit" : "numMiss", { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" }, winners);
     } else {
       var ci = r.correctIdx != null ? r.correctIdx : e.correctIdx;
       var btns = e.answers.map(function (t, i) {
@@ -1624,7 +1832,7 @@
         '<p class="why">' + esc(e.bank.why) + "</p>" + nextBtn);
       var joined = ogJoined().length;
       var hk = winners.length === 0 ? "allMiss" : (winners.length === joined ? "allHit" : "someHit");
-      hostSay(hk, { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" });
+      ogRevealSay(hk, { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" }, winners);
     }
     Snd.play(winners.length ? "correct" : "wrong");
     $("ogNext").addEventListener("click", function () { OG.idx++; ogAdvance(); });
@@ -1661,7 +1869,9 @@
     var best = Math.max.apply(null, idxs.map(function (i) { return OG.players[i].score; }));
     var tied = idxs.filter(function (i) { return OG.players[i].score === best; });
     var winSeat = tied[0], p = OG.players[winSeat];
-    hostSay("winner", { name: p.name });
+    var ogStand = idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score }; })
+      .sort(function (a, b) { return b.score - a.score; });
+    sayLive("winner", { winner: p.name, standings: ogStand, topScore: best }, authoredLine("winner", { name: p.name }));
     var order = idxs.slice().sort(function (a, b) { return OG.players[b].score - OG.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
     var disp = order.slice();
@@ -1843,11 +2053,43 @@
         "<span>" + (pos + 1) + ". " + esc(r.p.name) + (r.p.connected ? "" : " (away)") + '</span><span class="sc">' + money(r.p.score) + "</span></div>";
     }).join("");
   }
+  /* tonight's special is not in the bank: for a "nightly." qid the pad
+     fetches the same served question from the nightly worker (its
+     answer order is date-seeded, identical on every phone). Until the
+     fetch lands — or if it never does — the pad falls back to four
+     numbered buttons and the show screen carries the wording, so the
+     pad is never dead and a pick always works. */
+  var jpNightly = { qid: null, data: null };
+  function jpNightlyFor(qid) {
+    if (jpNightly.qid !== qid) {
+      jpNightly = { qid: qid, data: null };
+      if (!LIVE_OK) return null;
+      fetchJSON(NIGHTLY_URL + "/tonight", null, 2500).then(function (j) {
+        if (jpNightly.qid !== qid) return;
+        if (validServed(j)) jpNightly.data = j.question;
+        if (JP && !JP.dead) jpRender();
+      });
+    }
+    return jpNightly.data;
+  }
   function jpQuestionData() {
     var q = JP.snap && JP.snap.question;
     if (!q) return null;
     var p = ogParseQid(q.qid);
-    if (!p || !BANK[p.bankId]) return null;
+    if (!p) {
+      if (/^nightly\.\d{4}-\d{2}-\d{2}\.[0-9a-z]+$/.test(String(q.qid || ""))) {
+        var sv = jpNightlyFor(q.qid);
+        if (sv) return { q: q, bank: { q: sv.q, why: sv.why || "", cat: sv.cat }, opts: { answers: sv.a.slice(), correctIdx: sv.correct, cutIndices: [] } };
+        return {
+          q: q,
+          bank: { q: "Tonight's Gilded Question — eyes on the show screen", why: "", cat: q.category },
+          opts: { answers: ["Answer 1", "Answer 2", "Answer 3", "Answer 4"], correctIdx: -1, cutIndices: [] },
+          nightlyPad: true
+        };
+      }
+      return null;
+    }
+    if (!BANK[p.bankId]) return null;
     var bank = BANK[p.bankId];
     var d = { q: q, bank: bank, opts: null };
     if (q.kind !== "num") d.opts = ogOptsFor(bank, p.seed);

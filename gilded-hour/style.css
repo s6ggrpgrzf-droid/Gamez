@@ -186,6 +186,7 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 /* question */
 .q-headrow{display:flex;align-items:center;gap:14px;width:min(900px,96%);margin:0 auto}
 .cat-pill{background:var(--cat);color:var(--cat-tx);font-weight:700;letter-spacing:.1em;padding:9px 18px;border-radius:999px;font-size:clamp(12.5px,1.9vmin,17px);box-shadow:0 6px 0 var(--cat-sh),inset 0 2px 0 rgba(255,255,255,.35);white-space:nowrap}
+.cat-pill.gilded{letter-spacing:.07em;font-size:clamp(11.5px,1.75vmin,16px)}
 .q-kind{margin-left:auto;color:rgba(255,246,232,.7);font-weight:600;letter-spacing:.22em;font-size:clamp(10.5px,1.6vmin,13.5px);white-space:nowrap}
 .q-text{font-size:clamp(23px,4.2vmin,40px);line-height:1.18;margin:clamp(10px,2.2vmin,20px) auto 0;max-width:24em;font-weight:700;text-shadow:0 3px 0 rgba(20,4,24,.45),0 10px 26px rgba(0,0,0,.4)}
 .q-meta{display:flex;align-items:center;gap:18px;width:min(900px,96%);margin:clamp(6px,1.6vmin,12px) auto 0}
