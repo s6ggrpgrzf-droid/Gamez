@@ -117,9 +117,11 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(255,158,60,.14),rgba(255,158,60,0) 70%)}
 .set-mid{background:radial-gradient(52% 46% at 50% 40%,rgba(var(--cat-rgb),.26),rgba(var(--cat-rgb),0) 70%),radial-gradient(60% 20% at 50% 97%,rgba(var(--cat-rgb),.20),rgba(var(--cat-rgb),0) 70%);transition:opacity 1.2s ease}
 .set-fore{background:linear-gradient(0deg,rgba(10,3,16,.5),transparent 34%)}
-#scr-game[data-light="hot"] .set{filter:brightness(.88) saturate(1.3)}
-#scr-game[data-light="vault"] .set{filter:brightness(.6)}
+#scr-game[data-light="hot"] .set{filter:brightness(.9) saturate(1.5)}
+#scr-game[data-light="hot"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(255,116,66,.22),rgba(255,116,66,0) 70%)}
+#scr-game[data-light="vault"] .set{filter:brightness(.58) saturate(1.15)}
 #scr-game[data-light="vault"] .set-mid{opacity:.45}
+#scr-game[data-light="vault"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(255,176,58,.10),rgba(255,176,58,0) 70%)}
 #spot{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .9s ease;background:radial-gradient(42% 58% at 50% 34%,rgba(255,215,106,.20),rgba(255,215,106,.05) 48%,transparent 72%)}
 #scr-game[data-light="vault"] #spot{opacity:.95}
 #scr-game[data-light="hot"] #spot{opacity:.5}
@@ -608,3 +610,93 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .jp-hero-ava{width:84px}
   .jp-vdisc{width:84px;height:84px;font-size:44px}
 }
+
+/* ================= Pass P — the polish pass =================
+   Six visual enhancements. Juice is feedback: every motion below
+   answers a game event. No backdrop-filter, no reduced-motion reads. */
+
+/* ---- 1. the living stage: breathing glow, motes, landing bloom ---- */
+.set-glow{background:radial-gradient(40% 34% at 50% 30%,rgba(255,196,86,.20),rgba(255,196,86,.05) 55%,rgba(255,196,86,0) 72%);opacity:.55;transform-origin:50% 30%;animation:stageBreathe 7.5s ease-in-out infinite alternate}
+@keyframes stageBreathe{from{opacity:.42;transform:scale(1)}to{opacity:.78;transform:scale(1.07)}}
+#scr-game[data-light="hot"] .set-glow{opacity:.8;filter:hue-rotate(-14deg) saturate(1.3)}
+#scr-game[data-light="vault"] .set-glow{opacity:1;filter:saturate(1.25)}
+#moteCanvas{position:absolute;inset:0;z-index:0;pointer-events:none}
+#bloom{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0}
+#bloom.on{animation:bloomPulse 1s ease-out both}
+@keyframes bloomPulse{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
+
+/* ---- 2. Sterling, alive: blink, glance, lean, nod, tip ---- */
+.host-face{transition:transform .35s ease}
+#scr-game.st-glance .host-face{transform:rotate(3deg) translateY(-1px)}
+#scr-game.st-lean .host-face{transform:scale(1.08) translateY(1px)}
+#scr-game.st-tip .host-face{transform:rotate(-5deg) translateY(3px)}
+#scr-game.st-nod .host-face{animation:nodA .55s ease}
+@keyframes nodA{0%,100%{transform:translateY(0)}30%{transform:translateY(3px)}55%{transform:translateY(0)}78%{transform:translateY(2px)}}
+.host-face svg circle[r="3.6"],.sterling circle[r="6.5"]{transform-box:fill-box;transform-origin:center;transition:transform .07s ease}
+#scr-game.st-blink .host-face svg circle[r="3.6"],#scr-game.st-blink .sterling circle[r="6.5"]{transform:scaleY(.08)}
+#scr-game.st-glance .host-face svg circle[r="3.6"]{transform:translateX(1.6px)}
+.finale-wrap .sterling-zone{animation:tipBow 1.5s cubic-bezier(.2,.7,.3,1) .35s 1 both}
+@keyframes tipBow{0%{transform:rotate(0)}35%{transform:rotate(-2.6deg) translateY(5px)}70%{transform:rotate(.8deg) translateY(-1px)}100%{transform:rotate(0)}}
+
+/* ---- 3. money moves: coin canvas, score shimmer, the laurel ---- */
+#coinCanvas{position:fixed;inset:0;z-index:26;pointer-events:none;display:none}
+#coinCanvas.on{display:block}
+.seat.banking .seat-score{background:linear-gradient(100deg,#FFF 15%,#FFE29A 38%,#FFB03A 50%,#FFF 72%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:shimmerX .85s linear}
+@keyframes shimmerX{from{background-position:110% 0}to{background-position:-110% 0}}
+#laurel{position:absolute;z-index:3;width:42px;height:42px;pointer-events:none;transform:translate(-50%,-88%);transition:left .65s cubic-bezier(.3,1.25,.4,1),top .65s cubic-bezier(.3,1.25,.4,1),opacity .3s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
+#laurel.snap{transition:none}
+#laurel.off{opacity:0}
+#scr-game.noseats #laurel{opacity:0}
+#laurel svg{width:100%;height:100%;display:block}
+.laurel-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);width:34px;height:34px;z-index:5;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.laurel-badge svg{width:100%;height:100%;display:block}
+
+/* ---- 4. the wheel, with materials: brass frame, needle, glint ---- */
+.spin-frame{position:relative;max-width:780px;margin:14px auto 4px;padding:20px 16px 14px;border-radius:28px;background:linear-gradient(180deg,rgba(66,32,90,.82),rgba(32,14,46,.9));border:3px solid #A87408;box-shadow:inset 0 0 0 2px rgba(255,226,154,.55),inset 0 3px 0 rgba(255,255,255,.14),0 16px 32px rgba(0,0,0,.45)}
+.spin-frame .cat-row{margin:2px 0 0}
+.spin-needle{position:absolute;top:-11px;left:50%;width:24px;height:18px;z-index:4;pointer-events:none;background:linear-gradient(180deg,#FFE29A,#FFB03A 60%,#D9930D);clip-path:polygon(0 0,100% 0,50% 100%);filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));transform:translateX(-50%);transition:transform .17s ease-out}
+.spin-needle.snap{transition:none}
+.spin-needle.settle{animation:needleSettle .34s cubic-bezier(.2,2.2,.4,1)}
+@keyframes needleSettle{0%{margin-top:0}35%{margin-top:3px}70%{margin-top:-1px}100%{margin-top:0}}
+.spin-glint{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:3}
+.spin-glint::after{content:"";position:absolute;top:-10%;bottom:-10%;left:0;width:46%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.17) 50%,transparent);transform:translateX(-240%) skewX(-12deg)}
+.spin-frame.spinning .spin-glint::after{animation:glintMove .85s linear infinite}
+@keyframes glintMove{to{transform:translateX(340%) skewX(-12deg)}}
+.spin-frame.fast .cat-chip{filter:blur(.5px) saturate(1.1)}
+.spin-frame.fast .cat-chip.sel{filter:none;box-shadow:-11px 0 15px -5px var(--chip),0 7px 0 var(--chipd),0 0 24px var(--chip),inset 0 2px 0 rgba(255,255,255,.4)}
+.spin-frame:not(.spinning) .cat-chip{transition:all .18s ease}
+
+/* ---- 5. the finale ceremony: spotlight, seal, foil ---- */
+.finale-wrap{position:relative}
+.spot-cone{position:absolute;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,215,106,.30),rgba(255,215,106,.09) 72%,rgba(255,215,106,.14)),radial-gradient(52% 16% at 50% 100%,rgba(255,215,106,.34),rgba(255,215,106,0) 70%);clip-path:polygon(43% 0,57% 0,100% 100%,0 100%);opacity:0}
+.spot-cone.on{animation:coneIn 1.15s ease-out .25s both}
+@keyframes coneIn{from{opacity:0;transform:translateX(-50%) translateY(-12px) scaleY(.94)}to{opacity:1;transform:translateX(-50%) translateY(0) scaleY(1)}}
+.gold-seal{position:absolute;top:-17px;right:-13px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:23px;color:#7A4A08;background:radial-gradient(circle at 35% 30%,#FFF0BE,#FFC93C 55%,#D9930D);border:2px solid rgba(122,74,8,.5);box-shadow:inset 0 2px 3px rgba(255,255,255,.85),inset 0 -3px 5px rgba(122,74,8,.55),0 5px 10px rgba(0,0,0,.35);text-shadow:0 1px 0 rgba(255,255,255,.65),0 -1px 1px rgba(122,74,8,.7);opacity:0;transform:scale(2.4) rotate(-30deg);pointer-events:none;z-index:5}
+.gold-seal::after{content:"";position:absolute;inset:4px;border-radius:50%;border:1.5px solid rgba(122,74,8,.4)}
+#scr-game.sealed .gold-seal{animation:sealStamp .5s cubic-bezier(.2,1.6,.4,1) .55s both}
+#scr-game.sealed .host-bubble{padding-right:58px}
+@keyframes sealStamp{0%{opacity:0;transform:scale(2.4) rotate(-30deg)}60%{opacity:1;transform:scale(.92) rotate(-11deg)}100%{opacity:1;transform:scale(1) rotate(-12deg)}}
+.finale-marquee{border:3px solid transparent;background:linear-gradient(180deg,rgba(59,29,78,.88),rgba(30,13,43,.92)) padding-box,linear-gradient(155deg,#FFE29A,#B96A12 30%,#FFD76A 50%,#8A4D0C 72%,#FFC93C) border-box;background-size:auto,230% 230%;animation:foilShift 6.5s ease-in-out infinite alternate}
+@keyframes foilShift{from{background-position:0 0,0% 0%}to{background-position:0 0,100% 100%}}
+
+/* ---- 6. phones dressed for the show ---- */
+#scr-join::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(95% 55% at 50% 0%,rgba(var(--cat-rgb,255,185,58),.5),rgba(var(--cat-rgb,255,185,58),0) 70%);opacity:0;transition:opacity .7s ease}
+#scr-join.cat-on::before{opacity:.85}
+.jp-pulse{position:absolute;left:0;right:0;bottom:0;height:62%;z-index:1;pointer-events:none;background:radial-gradient(62% 100% at 50% 100%,rgba(255,201,60,.55),rgba(255,201,60,0) 70%);animation:jpPulseRise 1.2s ease-out both}
+@keyframes jpPulseRise{0%{opacity:0;transform:translateY(46%)}22%{opacity:1}100%{opacity:0;transform:translateY(-8%)}}
+.jp-verdict{position:relative}
+.jp-verdict.miss::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(22,9,30,0),rgba(22,9,30,.42));animation:missFall 1.1s ease-out both}
+@keyframes missFall{0%{opacity:.55;transform:translateY(-14%)}100%{opacity:0;transform:translateY(7%)}}
+.jp-ans{transition:transform .16s cubic-bezier(.2,1.5,.4,1),box-shadow .16s ease,filter .16s ease}
+.jp-ans:active{transform:translateY(5px) scale(.965);box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -6px 0 rgba(0,0,0,.16),0 3px 0 var(--cat-sh)}
+.jp-step:active{transform:translateY(4px) scale(.93)}
+.jp-cut{transition:transform .14s ease,box-shadow .14s ease}
+.jp-cut:active{transform:translateY(3px) scale(.98)}
+.jp-chipdisc{animation:chipPop .32s cubic-bezier(.2,1.8,.4,1) both}
+@keyframes chipPop{0%{transform:scale(.5)}100%{transform:scale(1)}}
+.jp-id{box-shadow:0 6px 0 rgba(0,0,0,.3)}
+.jp-id-place{flex:none;display:flex;align-items:center;justify-content:center;min-width:43px;height:43px;padding:0 7px;border-radius:50%;font-size:14.5px;font-weight:700;color:#431A04;box-shadow:0 3px 0 rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.6)}
+.jp-id-place.p1{background:radial-gradient(circle at 35% 30%,#FFE29A,#FFB03A)}
+.jp-id-place.p2{background:radial-gradient(circle at 35% 30%,#FFFFFF,#B9C7D6);color:#33404F}
+.jp-id-place.p3{background:radial-gradient(circle at 35% 30%,#FFC79A,#C97B3D);color:#4A2405}
+.jp-id-place.p4{background:radial-gradient(circle at 35% 30%,#D8C9E8,#9B85C4);color:#2E1A40}

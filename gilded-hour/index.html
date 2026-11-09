@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <div id="app">
@@ -121,7 +121,9 @@
 
   <!-- ============ GAME ============ -->
   <section id="scr-game" class="screen" data-light="open">
-    <div class="set" aria-hidden="true"><div class="set-deep"></div><div class="set-mid"></div><div class="set-fore"></div></div>
+    <div class="set" aria-hidden="true"><div class="set-deep"></div><div class="set-mid"></div><div class="set-glow"></div><div class="set-fore"></div></div>
+    <div id="bloom" aria-hidden="true"></div>
+    <canvas id="moteCanvas" aria-hidden="true"></canvas>
     <header id="topbar">
       <div class="tb-left"><span class="tb-show">THE GILDED HOUR</span></div>
       <div class="tb-mid"><span id="roundLabel">ROUND 1</span><span class="tb-dot">·</span><span id="qCounter">QUESTION 1 OF 15</span></div>
@@ -131,6 +133,7 @@
 
     <div id="table">
       <div id="spot" aria-hidden="true"></div>
+      <div id="laurel" class="off" aria-hidden="true"></div>
       <div id="seatsTop" class="seats seats-top"></div>
       <div id="stage">
         <!-- dynamic stage content rendered by game.js -->
@@ -159,10 +162,12 @@
       <div class="host-bubble">
         <div class="host-name">STERLING</div>
         <div id="hostLine" class="host-line">Good evening.</div>
+        <span class="gold-seal" aria-hidden="true">★</span>
       </div>
     </footer>
     <div id="edgeFx" aria-hidden="true"></div>
     <div id="dangerFx" aria-hidden="true"></div>
+    <canvas id="coinCanvas" aria-hidden="true"></canvas>
     <canvas id="leafCanvas" aria-hidden="true"></canvas>
   </section>
 
@@ -183,6 +188,6 @@
 
 </div>
 <script src="questions.js?v=5"></script>
-<script src="game.js?v=10"></script>
+<script src="game.js?v=11"></script>
 </body>
 </html>

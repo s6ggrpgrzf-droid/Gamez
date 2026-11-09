@@ -473,17 +473,22 @@
       }
     }
   }
-  /* gold leaf finale — pooled particles, capped, no per-frame allocation */
+  /* gold leaf finale — pooled particles, capped, no per-frame allocation.
+     Pass P: three depths (far/mid/near — size, speed and alpha ride the
+     depth), leaf-shaped flecks among the rounds, and gold runs heavy. */
   var leaves = { active: false, parts: [], cv: null, cx: null, dpr: 1 };
-  var LEAF_COLORS = ["#E8437C", "#2E9BFF", "#9B5DE5", "#FF8C42", "#3ECF6E", "#FFC93C", "#17BEBB", "#FFD76A"];
+  var LEAF_COLORS = ["#E8437C", "#2E9BFF", "#9B5DE5", "#FF8C42", "#3ECF6E", "#FFC93C", "#17BEBB", "#FFD76A", "#FFB03A", "#FFE29A"];
+  var LEAF_GOLD = [5, 7, 8, 9];
+  var LEAF_DEPTH_SIZE = [0.55, 1, 1.55], LEAF_DEPTH_SPEED = [0.55, 1, 1.5], LEAF_DEPTH_ALPHA = [0.45, 0.8, 0.95];
   function resetLeaf(p, scatter) {
     var cv = leaves.cv; if (!cv) return;
+    var ds = LEAF_DEPTH_SIZE[p.depth];
     p.x = Math.random() * cv.width;
     p.y = scatter ? Math.random() * cv.height : -20 - Math.random() * 60;
-    p.w = 4 + Math.random() * 6; p.h = p.w * 1.5;
-    p.vy = 26 + Math.random() * 34; p.ph = Math.random() * 6.28;
+    p.w = (4 + Math.random() * 6) * ds; p.h = p.w * 1.5;
+    p.vy = (26 + Math.random() * 34) * LEAF_DEPTH_SPEED[p.depth]; p.ph = Math.random() * 6.28;
     p.rot = Math.random() * 6.28; p.vr = (Math.random() - 0.5) * 2.4;
-    p.col = ri(LEAF_COLORS.length);
+    p.col = Math.random() < 0.45 ? LEAF_GOLD[ri(LEAF_GOLD.length)] : ri(LEAF_COLORS.length);
   }
   function startLeaves() {
     var cv = $("leafCanvas"); if (!cv) return;
@@ -492,7 +497,7 @@
     cv.height = Math.floor(window.innerHeight * leaves.dpr);
     leaves.cv = cv; leaves.cx = cv.getContext("2d");
     if (!leaves.parts.length) {
-      for (var i = 0; i < 56; i++) leaves.parts.push({ x: 0, y: 0, w: 5, h: 8, vy: 0, ph: 0, rot: 0, vr: 0, col: 0 });
+      for (var i = 0; i < 56; i++) leaves.parts.push({ x: 0, y: 0, w: 5, h: 8, vy: 0, ph: 0, rot: 0, vr: 0, col: 0, depth: i % 3, leaf: i % 5 < 2 });
       leaves.parts.forEach(function (p) { resetLeaf(p, true); });
     }
     leaves.active = true; cv.classList.add("on");
@@ -506,13 +511,237 @@
       p.y += p.vy * dpr * dt; p.x += Math.sin(p.ph) * 22 * dpr * dt;
       if (p.y > cv.height + 24) resetLeaf(p, false);
       cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot);
-      cx.fillStyle = LEAF_COLORS[p.col]; cx.globalAlpha = 0.85;
-      cx.fillRect(-p.w * dpr / 2, -p.h * dpr / 2, p.w * dpr, p.h * dpr * (0.4 + 0.6 * Math.abs(Math.sin(p.ph))));
+      cx.fillStyle = LEAF_COLORS[p.col]; cx.globalAlpha = LEAF_DEPTH_ALPHA[p.depth];
+      var flut = 0.35 + 0.65 * Math.abs(Math.sin(p.ph));
+      if (p.leaf) {
+        cx.beginPath();
+        cx.ellipse(0, 0, p.w * dpr * 0.5, p.h * dpr * 0.5 * flut, 0, 0, 6.2832);
+        cx.fill();
+      } else {
+        cx.fillRect(-p.w * dpr / 2, -p.h * dpr / 2, p.w * dpr, p.h * dpr * flut);
+      }
       cx.restore();
     });
     cx.globalAlpha = 1;
   }
   function stopLeaves() { leaves.active = false; var cv = $("leafCanvas"); if (cv) cv.classList.remove("on"); }
+
+  /* ================= Pass P — polish effects =================
+     All pooled, all event-driven except the stage's own breathing
+     (CSS) and the dust motes. Nothing here allocates per frame. */
+
+  /* ---- dust motes in the stage light (26 pooled motes) ---- */
+  var MOTES = 26;
+  var motes = { parts: [], cv: null, cx: null, dpr: 1 };
+  function sizeMotes() {
+    var cv = $("moteCanvas"); if (!cv) return;
+    motes.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    cv.width = Math.floor(window.innerWidth * motes.dpr);
+    cv.height = Math.floor(window.innerHeight * motes.dpr);
+    motes.cv = cv; motes.cx = cv.getContext("2d");
+    if (!motes.parts.length) {
+      for (var i = 0; i < MOTES; i++) {
+        motes.parts.push({
+          x: Math.random(), y: Math.random(), r: 0.8 + Math.random() * 1.5,
+          vy: 3 + Math.random() * 7, ph: Math.random() * 6.28, sw: 4 + Math.random() * 9
+        });
+      }
+    }
+  }
+  function stepMotes(dt) {
+    var g = $("scr-game");
+    if (!g || !g.classList.contains("active")) return;
+    if (!motes.cx) sizeMotes();
+    if (!motes.cx) return;
+    var cx = motes.cx, cv = motes.cv, dpr = motes.dpr, W = cv.width, H = cv.height;
+    cx.clearRect(0, 0, W, H);
+    cx.fillStyle = "#FFD478";
+    for (var i = 0; i < motes.parts.length; i++) {
+      var p = motes.parts[i];
+      p.ph += dt * 0.7; p.y -= p.vy * dt / H;
+      if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
+      var tw = 0.10 + 0.16 * (0.5 + 0.5 * Math.sin(p.ph * 1.7));
+      cx.globalAlpha = tw;
+      cx.beginPath();
+      cx.arc((p.x + Math.sin(p.ph) * p.sw / W) * W, p.y * H, p.r * dpr, 0, 6.2832);
+      cx.fill();
+    }
+    cx.globalAlpha = 1;
+  }
+
+  /* ---- Sterling, alive: timed expression classes on the host face ---- */
+  var stFx = { nextBlink: 0 };
+  function stClass(cls, ms) {
+    var g = $("scr-game"); if (!g) return;
+    g.classList.add(cls);
+    setTimeout(function () { g.classList.remove(cls); }, ms);
+  }
+  function stepSterling(t) {
+    if (!stFx.nextBlink) { stFx.nextBlink = t + 2400; return; }
+    if (t < stFx.nextBlink) return;
+    stFx.nextBlink = t + 2900 + Math.random() * 4400;
+    var g = $("scr-game");
+    if (g && g.classList.contains("active")) stClass("st-blink", 150);
+  }
+
+  /* ---- the landing bloom: the category's colour washes the stage ---- */
+  function stageBloom(cat) {
+    var b = $("bloom"); if (!b) return;
+    var cs = catStyle(cat);
+    b.style.background = "radial-gradient(52% 46% at 50% 40%, rgba(" + cs.rgb + ",.5), rgba(" + cs.rgb + ",0) 70%)";
+    b.classList.remove("on"); void b.offsetWidth; b.classList.add("on");
+    setTimeout(function () { b.classList.remove("on"); }, 1050);
+  }
+
+  /* ---- money you can see move: pooled coin flights (cap 42) ---- */
+  var COINS = 42;
+  var coins = { parts: [], cv: null, cx: null, dpr: 1, busy: false };
+  (function () {
+    for (var i = 0; i < COINS; i++) coins.parts.push({ on: false, t: 0, dur: 0, delay: 0, linger: 0, x0: 0, y0: 0, cx: 0, cy: 0, x1: 0, y1: 0, spin: 0, flight: null });
+  })();
+  function coinCanvas() {
+    var cv = $("coinCanvas"); if (!cv) return null;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.floor(window.innerWidth * dpr), h = Math.floor(window.innerHeight * dpr);
+    if (coins.cv !== cv || cv.width !== w || cv.height !== h) {
+      cv.width = w; cv.height = h; coins.cv = cv; coins.cx = cv.getContext("2d"); coins.dpr = dpr;
+    }
+    return cv;
+  }
+  function coinFlight(x0, y0, x1, y1, n, baseDelay, onArrive) {
+    var cv = coinCanvas(); if (!cv) { if (onArrive) onArrive(); return; }
+    cv.classList.add("on"); coins.busy = true;
+    var flight = { left: 0, onArrive: onArrive };
+    for (var i = 0; i < coins.parts.length && flight.left < n; i++) {
+      var p = coins.parts[i];
+      if (p.on) continue;
+      p.on = true; p.t = 0; p.linger = 0.14; p.flight = flight;
+      p.dur = 0.68 + Math.random() * 0.18;
+      p.delay = baseDelay + flight.left * 0.05;
+      p.x0 = x0 + (Math.random() - 0.5) * 26; p.y0 = y0 + (Math.random() - 0.5) * 14;
+      p.x1 = x1; p.y1 = y1;
+      p.cx = (p.x0 + x1) / 2 + (Math.random() - 0.5) * 30;
+      p.cy = Math.min(p.y0, y1) - 80 - Math.random() * 60;
+      p.spin = Math.random() * 6.28;
+      flight.left++;
+    }
+    if (!flight.left && onArrive) onArrive();
+  }
+  function stepCoins(dt) {
+    if (!coins.busy) return;
+    var cx = coins.cx, cv = coins.cv;
+    if (!cx || !cv) { coins.busy = false; return; }
+    var dpr = coins.dpr;
+    cx.clearRect(0, 0, cv.width, cv.height);
+    var anyOn = false;
+    for (var i = 0; i < coins.parts.length; i++) {
+      var p = coins.parts[i];
+      if (!p.on) continue;
+      anyOn = true;
+      if (p.delay > 0) { p.delay -= dt; continue; }
+      if (p.t < 1) {
+        p.t = Math.min(1, p.t + dt / p.dur);
+        if (p.t >= 1 && p.flight) {
+          var fl = p.flight; p.flight = null; fl.left--;
+          if (fl.left <= 0 && fl.onArrive) { var cb = fl.onArrive; fl.onArrive = null; cb(); }
+        }
+      } else {
+        p.linger -= dt;
+        if (p.linger <= 0) { p.on = false; continue; }
+      }
+      var t = p.t, u = 1 - t;
+      var x = (u * u * p.x0 + 2 * u * t * p.cx + t * t * p.x1) * dpr;
+      var y = (u * u * p.y0 + 2 * u * t * p.cy + t * t * p.y1) * dpr;
+      var sq = Math.abs(Math.cos(p.spin + t * 9));
+      cx.save(); cx.translate(x, y); cx.scale(Math.max(0.18, sq), 1);
+      cx.beginPath(); cx.arc(0, 0, 8.5 * dpr, 0, 6.2832);
+      cx.fillStyle = "#D9930D"; cx.fill();
+      cx.beginPath(); cx.arc(0, 0, 6.8 * dpr, 0, 6.2832);
+      cx.fillStyle = "#FFC93C"; cx.fill();
+      cx.beginPath(); cx.arc(-1.6 * dpr, -1.6 * dpr, 3.4 * dpr, 0, 6.2832);
+      cx.fillStyle = "#FFE29A"; cx.fill();
+      cx.restore();
+    }
+    if (!anyOn) { coins.busy = false; cv.classList.remove("on"); cx.clearRect(0, 0, cv.width, cv.height); }
+  }
+  /* ---- the finale ceremony: seal stamp, the tip, the spotlight ---- */
+  function finaleCeremony() {
+    var g = $("scr-game");
+    if (g) g.classList.add("sealed");
+    stClass("st-tip", 1700);
+    requestAnimationFrame(function () {
+      var cone = document.querySelector(".spot-cone");
+      var pod = document.querySelector(".finale-row .winner-podium");
+      var wrap = document.querySelector(".finale-wrap");
+      if (!cone || !pod || !wrap) return;
+      var wr = wrap.getBoundingClientRect(), pr = pod.getBoundingClientRect();
+      cone.style.left = ((pr.left + pr.width / 2 - wr.left) / wr.width * 100) + "%";
+      cone.style.top = "2px";
+      cone.style.height = Math.max(60, pr.top - wr.top - 6) + "px";
+      cone.style.width = (pr.width * 2.1) + "px";
+      cone.classList.add("on");
+    });
+  }
+
+  /* a bank lands: coins arc from the answer to the seat, then the
+     seat's score shimmers as the count-up runs */
+  function bankFx(seatIdx, delayBase) {
+    var from = document.querySelector(".ans-btn.correct") || document.querySelector(".wager-amt") || document.querySelector("#stage .delta");
+    var seat = document.querySelector('.seat[data-seat="' + seatIdx + '"]');
+    if (!seat) return;
+    var toEl = seat.querySelector(".seat-score") || seat;
+    var tr = toEl.getBoundingClientRect();
+    var tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+    var fx = tx, fy = ty - 140;
+    if (from) { var fr = from.getBoundingClientRect(); fx = fr.left + fr.width / 2; fy = fr.top + fr.height / 2; }
+    coinFlight(fx, fy, tx, ty, 9, delayBase || 0, function () {
+      var s2 = document.querySelector('.seat[data-seat="' + seatIdx + '"]');
+      if (!s2) return;
+      s2.classList.remove("banking"); void s2.offsetWidth; s2.classList.add("banking");
+      setTimeout(function () { s2.classList.remove("banking"); }, 950);
+    });
+  }
+
+  /* ---- the laurel: one marker that travels to whoever leads ---- */
+  var LAUREL_SVG = '<svg viewBox="0 0 40 40" aria-hidden="true">' +
+    '<g fill="none" stroke="#FFC93C" stroke-width="2.1" stroke-linecap="round">' +
+    '<path d="M13,33 C7,27 5,17 9,7"/><path d="M27,33 C33,27 35,17 31,7"/></g>' +
+    '<g fill="#FFC93C">' +
+    '<ellipse cx="8.5" cy="24" rx="2.1" ry="3.6" transform="rotate(-24 8.5 24)"/>' +
+    '<ellipse cx="10.5" cy="15.5" rx="2.1" ry="3.6" transform="rotate(-38 10.5 15.5)"/>' +
+    '<ellipse cx="15" cy="8.5" rx="2.1" ry="3.6" transform="rotate(-58 15 8.5)"/>' +
+    '<ellipse cx="31.5" cy="24" rx="2.1" ry="3.6" transform="rotate(24 31.5 24)"/>' +
+    '<ellipse cx="29.5" cy="15.5" rx="2.1" ry="3.6" transform="rotate(38 29.5 15.5)"/>' +
+    '<ellipse cx="25" cy="8.5" rx="2.1" ry="3.6" transform="rotate(58 25 8.5)"/></g>' +
+    '<path d="M20,3.4 L21.4,7 L25,7.2 L22.2,9.4 L23.1,12.8 L20,10.9 L16.9,12.8 L17.8,9.4 L15,7.2 L18.6,7 Z" fill="#FFE29A"/></svg>';
+  var laurelState = { seat: -1 };
+  function laurelBadge() { return '<span class="laurel-badge">' + LAUREL_SVG + "</span>"; }
+  function updateLaurel(source) {
+    var wrap = $("laurel"); if (!wrap) return;
+    if (!wrap.innerHTML) wrap.innerHTML = LAUREL_SVG;
+    var players = null;
+    if (source === "og") players = OG ? OG.players : null;
+    else if (source === "table") players = G ? G.players : null;
+    else players = ghMode === "host" ? (OG ? OG.players : null) : (G ? G.players : null);
+    var lead = -1, best = 0;
+    if (players) {
+      players.forEach(function (p, i) { if (p && p.score > best) { best = p.score; lead = i; } });
+    }
+    var table = $("table");
+    var seat = lead >= 0 ? document.querySelector('.seat[data-seat="' + lead + '"]') : null;
+    if (!seat || !table) {
+      wrap.classList.add("off"); laurelState.seat = -1; return;
+    }
+    var ava = seat.querySelector(".seat-ava") || seat;
+    var tr = table.getBoundingClientRect(), ar = ava.getBoundingClientRect();
+    var snap = laurelState.seat === -1;
+    wrap.classList.toggle("snap", snap);
+    wrap.style.left = (ar.left + ar.width / 2 - tr.left) + "px";
+    wrap.style.top = (ar.top - tr.top + 6) + "px";
+    wrap.classList.remove("off");
+    if (snap) { void wrap.offsetWidth; wrap.classList.remove("snap"); }
+    laurelState.seat = lead;
+  }
 
   /* ---------- bank / deck ---------- */
   var BANK = (window.GH_BANK || []).map(function (q, i) { q.id = i; return q; });
@@ -610,6 +839,7 @@
       s.addEventListener("click", function () { onSeatTap(i); });
       bot.appendChild(s);
     });
+    updateLaurel("table");
   }
   function tagsFor(i) {
     var p = G.players[i], t = [];
@@ -639,7 +869,7 @@
       if (clock.left <= 0) { clock.left = 0; clock.running = false; drawClock(); if (clock.onEnd) clock.onEnd(); }
       else drawClock();
     }
-    if (!pageHidden) { stepFortune(dt); drawValue(); stepLeaves(dt); }
+    if (!pageHidden) { stepFortune(dt); drawValue(); stepLeaves(dt); stepMotes(dt); stepCoins(dt); stepSterling(t); }
     requestAnimationFrame(loop);
   }
   function drawClock() {
@@ -685,7 +915,7 @@
       }
       var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
-        '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + chips +
+        '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
         avatarSVG(pi, pos === 0 ? "cheer" : "neutral") +
         '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
     }).join("");
@@ -716,6 +946,7 @@
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $(id).classList.add("active");
+    if (id === "scr-title") { var g = $("scr-game"); if (g) g.classList.remove("sealed"); }
   }
   function startShow(names) {
     G = newGame(names);
@@ -724,6 +955,7 @@
     resetLineBags();
     G.guess = buildGuessSchedule();
     showScreen("scr-game");
+    $("scr-game").classList.remove("sealed");
     setLight("open");
     stopLeaves();
     dispScore = G.players.map(function () { return 0; });
@@ -795,6 +1027,69 @@
     return cur;
   }
 
+  /* Pass P: the spin as a wheel — a planned highlight sequence: fast
+     cycles, an ease-out deceleration, one step PAST the landing slot
+     (the overshoot), then the settle back onto it. The brass needle
+     tracks the lit chip; on landing the category blooms across the
+     stage. The outcome is untouched — the plan is built around the
+     category already chosen. */
+  function spinFrameHTML(chips) {
+    return '<div class="spin-frame"><div class="spin-needle"></div><div class="spin-glint"></div><div class="cat-row">' + chips + "</div></div>";
+  }
+  function runSpinChips(targetCat, alive, store, onDone) {
+    var chips = Array.prototype.slice.call(document.querySelectorAll(".cat-chip"));
+    var frame = document.querySelector(".spin-frame");
+    var needle = frame ? frame.querySelector(".spin-needle") : null;
+    var targetIdx = CATS.indexOf(targetCat);
+    if (targetIdx < 0) targetIdx = 0;
+    var startIdx = ri(CATS.length);
+    var steps = 11 + ri(3);
+    while ((startIdx + steps) % CATS.length !== targetIdx) steps++;
+    var plan = [];
+    for (var k = 0; k <= steps; k++) {
+      var f = steps ? k / steps : 1;
+      plan.push({ cat: CATS[(startIdx + k) % CATS.length], delay: k === 0 ? 30 : Math.round(46 + 118 * f * f) });
+    }
+    plan.push({ cat: CATS[(targetIdx + 1) % CATS.length], delay: 175, over: true });
+    plan.push({ cat: targetCat, delay: 120, settle: true });
+    var i = 0;
+    function storeId(id) { if (store) store(id); }
+    function light(cat) {
+      var chip = null;
+      chips.forEach(function (ch) {
+        var on = ch.getAttribute("data-cat") === cat;
+        ch.classList.toggle("sel", on);
+        if (on) chip = ch;
+      });
+      if (needle && frame && chip) {
+        var fr = frame.getBoundingClientRect(), cr = chip.getBoundingClientRect();
+        needle.style.transform = "translateX(calc(-50% + " + ((cr.left + cr.width / 2) - (fr.left + fr.width / 2)).toFixed(1) + "px))";
+      }
+    }
+    if (frame) { frame.classList.add("spinning"); frame.classList.add("fast"); }
+    if (needle) needle.classList.add("snap");
+    light(plan[0].cat);
+    if (needle) { void needle.offsetWidth; needle.classList.remove("snap"); }
+    function step() {
+      if (!alive()) { storeId(null); return; }
+      i++;
+      if (i >= plan.length) {
+        if (frame) frame.classList.remove("spinning");
+        storeId(setTimeout(function () { if (alive()) onDone(); }, 350));
+        return;
+      }
+      var s = plan[i];
+      light(s.cat);
+      if (frame && plan.length - i <= 4) frame.classList.remove("fast");
+      if (s.settle) {
+        if (needle) { needle.classList.remove("settle"); void needle.offsetWidth; needle.classList.add("settle"); }
+        stageBloom(targetCat);
+      }
+      storeId(setTimeout(step, s.delay));
+    }
+    storeId(setTimeout(step, plan[0].delay));
+  }
+
   /* ---------- the spin (Sterling chooses the category — pure theatre) ---------- */
   function spinBeat() {
     G.phase = "spin";
@@ -805,25 +1100,17 @@
       return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + esc(c) + "</span>";
     }).join("");
     stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
-      '<div class="cat-row">' + chips + "</div>" +
+      spinFrameHTML(chips) +
       '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
     if (G.cur.special && G.cur.intro) $("hostLine").textContent = G.cur.intro;
     else hostSay("spin", { cat: G.cur.cat });
     Snd.play("spin");
-    var ticks = 0, totalTicks = 10 + ri(3);
+    stClass("st-glance", 1600);
     clearInterval(spinTimer);
-    spinTimer = setInterval(function () {
-      if (!G || G.phase !== "spin") { clearInterval(spinTimer); spinTimer = null; return; }
-      ticks++;
-      var cat = ticks >= totalTicks ? G.cur.cat : CATS[ticks % CATS.length];
-      document.querySelectorAll(".cat-chip").forEach(function (ch) {
-        ch.classList.toggle("sel", ch.getAttribute("data-cat") === cat);
-      });
-      if (ticks >= totalTicks) {
-        clearInterval(spinTimer); spinTimer = null;
-        setTimeout(function () { if (G && G.phase === "spin") askCurrent(); }, 350);
-      }
-    }, 85);
+    runSpinChips(G.cur.cat,
+      function () { return !!G && G.phase === "spin"; },
+      function (id) { spinTimer = id; },
+      function () { askCurrent(); });
   }
 
   /* ---------- the Big Finish bet beat ---------- */
@@ -1018,6 +1305,13 @@
       Snd.play(winners.length ? "correct" : "wrong");
     }
     renderSeats();
+    /* Pass P: Sterling leans in for the reveal; a fat bank earns the
+       nod; and the money visibly travels to each winner's seat */
+    stClass("st-lean", 1000);
+    var maxGain = 0;
+    winners.forEach(function (wi) { var gn = c.betRound ? G.players[wi].bet * 100 : c.bankValue; if (gn > maxGain) maxGain = gn; });
+    if (maxGain >= 300) stClass("st-nod", 600);
+    winners.forEach(function (wi, k) { bankFx(wi, k * 0.12); });
     $("btnNext").addEventListener("click", function () { G.qInRound++; nextQuestion(); });
   }
 
@@ -1046,7 +1340,7 @@
       var top = ii === i
         ? '<span class="champ-tag">★ CHAMPION</span>'
         : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
-      return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === i ? " winner-podium lit" : "") + '">' + top +
+      return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === i ? " winner-podium lit" : "") + '">' + top + (ii === i ? laurelBadge() : "") +
         avatarSVG(ii, ii === i ? "cheer" : "neutral") +
         '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div></div></div>";
     }).join("");
@@ -1056,7 +1350,7 @@
       tieNote = '<p class="round-text tie-note">Dead level at the top — ' + esc(names) + " matched at " + money(p.score) +
         ". The crown goes to the earliest seat, and the rematch is now legally mandatory.</p>";
     }
-    stage('<div class="finale-wrap"><div class="finale-main">' +
+    stage('<div class="finale-wrap"><div class="spot-cone" aria-hidden="true"></div><div class="finale-main">' +
       '<div class="marquee finale-marquee"><div class="kicker">THE GILDED HOUR · FINAL RESULT</div>' +
       '<div class="winner-word">WINNER</div>' +
       '<div class="winner-name">' + esc(p.name) + "</div>" +
@@ -1072,6 +1366,7 @@
     saveSeen();
     renderSeats();
     buildBulbs(document.querySelector(".finale-marquee"));
+    finaleCeremony();
     $("btnAgain").addEventListener("click", function () {
       stopLeaves();
       startShow(G.players.map(function (pp) { return pp.name; }));
@@ -1153,6 +1448,7 @@
     pageHidden = document.hidden;
     if (Snd.ctx) { try { if (document.hidden) Snd.ctx.suspend(); else Snd.ctx.resume(); } catch (e) {} }
   });
+  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); });
   requestAnimationFrame(loop);
 
   /* ================= Pass 4: online rooms =================
@@ -1646,6 +1942,7 @@
     if (OG.ws) { try { OG.ws.close(); } catch (e) {} }
     OG = null;
     ogPill(null);
+    var gg = $("scr-game"); if (gg) gg.classList.remove("sealed");
     clock.running = false;
   }
   function ogOnMsg(m) {
@@ -1785,6 +2082,7 @@
       if (p.score === best && best > 0) s.classList.add("lead");
       bot.appendChild(s);
     });
+    updateLaurel("og");
   }
   function ogTick() {
     if (!OG) return;
@@ -1826,6 +2124,7 @@
   function ogStartShow() {
     if (!OG || OG.started || ogJoined().length < 2) return;
     OG.started = true;
+    $("scr-game").classList.remove("sealed");
     resetLineBags();
     OG.script = ogBuildScript();
     OG.idx = 0; OG.curRound = 0;
@@ -1864,7 +2163,7 @@
       else if (rd < 0) chips += '<span class="delta down">▼ ' + (-rd) + "</span>";
       var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
-        '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + chips +
+        '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
         avatarSVG(pi, pos === 0 ? "cheer" : "neutral") +
         '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
     }).join("");
@@ -1939,26 +2238,18 @@
       return '<span class="cat-chip" data-cat="' + esc(c) + '" style="--chip:' + cs.mid + ";--chipd:" + cs.sh + ";color:" + (CATTX[c] || "#FFF6E8") + '">' + esc(c) + "</span>";
     }).join("");
     stage('<div class="q-cat">STERLING SPINS THE CATEGORIES</div>' +
-      '<div class="cat-row">' + chips + "</div>" +
+      spinFrameHTML(chips) +
       '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
     if (e.special && e.intro) $("hostLine").textContent = e.intro;
     else if (e.round === 1 && e.qInRound === 0) hostSay("r1");   // the Round-1 bumper line, set where the first spin's lines are set (see ogIntro)
     else hostSay("spin", { cat: e.cat });
     Snd.play("spin");
-    var ticks = 0, totalTicks = 10 + ri(3);
+    stClass("st-glance", 1600);
     clearInterval(OG.spinInt);
-    OG.spinInt = setInterval(function () {
-      if (!OG || OG.phase !== "spin") { clearInterval(OG.spinInt); OG.spinInt = null; return; }
-      ticks++;
-      var cat = ticks >= totalTicks ? e.cat : CATS[ticks % CATS.length];
-      document.querySelectorAll(".cat-chip").forEach(function (ch) {
-        ch.classList.toggle("sel", ch.getAttribute("data-cat") === cat);
-      });
-      if (ticks >= totalTicks) {
-        clearInterval(OG.spinInt); OG.spinInt = null;
-        setTimeout(function () { if (OG && OG.phase === "spin") ogPublish(e); }, 350);
-      }
-    }, 85);
+    runSpinChips(e.cat,
+      function () { return !!OG && OG.phase === "spin"; },
+      function (id) { OG.spinInt = id; },
+      function () { ogPublish(e); });
   }
   function ogPublish(e) {
     OG.phase = "publishing";
@@ -2053,6 +2344,12 @@
       ogRevealSay(hk, { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" }, winners);
     }
     Snd.play(winners.length ? "correct" : "wrong");
+    /* Pass P: lean-in, the nod for a fat bank, coins to the winners */
+    stClass("st-lean", 1000);
+    var ogMax = 0;
+    (r.results || []).forEach(function (res) { if (res.banked > ogMax) ogMax = res.banked; });
+    if (ogMax >= 300) stClass("st-nod", 600);
+    (r.results || []).forEach(function (res, k) { if (res.banked > 0) bankFx(res.seat, k * 0.12); });
     $("ogNext").addEventListener("click", function () { OG.idx++; ogAdvance(); });
   }
   function ogAdvance() {
@@ -2101,7 +2398,7 @@
       var top = ii === winSeat
         ? '<span class="champ-tag">★ CHAMPION</span>'
         : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
-      return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === winSeat ? " winner-podium lit" : "") + '">' + top +
+      return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === winSeat ? " winner-podium lit" : "") + '">' + top + (ii === winSeat ? laurelBadge() : "") +
         avatarSVG(ii, ii === winSeat ? "cheer" : "neutral") +
         '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div></div></div>";
     }).join("");
@@ -2111,7 +2408,7 @@
       tieNote = '<p class="round-text tie-note">Dead level at the top — ' + esc(names) + " matched at " + money(best) +
         ". The crown goes to the earliest seat, and the rematch is now legally mandatory.</p>";
     }
-    stage('<div class="finale-wrap"><div class="finale-main">' +
+    stage('<div class="finale-wrap"><div class="spot-cone" aria-hidden="true"></div><div class="finale-main">' +
       '<div class="marquee finale-marquee"><div class="kicker">THE GILDED HOUR · FINAL RESULT</div>' +
       '<div class="winner-word">WINNER</div>' +
       '<div class="winner-name">' + esc(p.name) + "</div>" +
@@ -2125,6 +2422,7 @@
     Snd.play("finale");
     startLeaves();
     buildBulbs(document.querySelector(".finale-marquee"));
+    finaleCeremony();
     $("ogAgain").addEventListener("click", function () {
       stopLeaves();
       ogTeardown();
@@ -2247,15 +2545,35 @@
     /* counts / accepted / cut / reveal / ended: the state snapshot that
        follows carries everything the podium needs */
   }
+  /* a category the pad genuinely can't place (a fallback pad whose
+     question never resolved) degrades to neutral gold, never to
+     another category's colours */
+  var JP_GOLD = { hi: "#FFE29A", mid: "#FFB03A", lo: "#FF8A3C", sh: "#B96A12", rgb: "255,185,58", tx: "#431A04" };
   function jpApplyCat(cat) {
-    var cs = catStyle(cat), g = $("scr-join");
+    var known = !!CATSTYLE[cat];
+    var cs = known ? catStyle(cat) : JP_GOLD, g = $("scr-join");
     if (!g) return;
     g.style.setProperty("--cat", cs.mid);
     g.style.setProperty("--cat-hi", cs.hi);
     g.style.setProperty("--cat-lo", cs.lo);
     g.style.setProperty("--cat-sh", cs.sh);
     g.style.setProperty("--cat-rgb", cs.rgb);
-    g.style.setProperty("--cat-tx", CATTX[cat] || "#FFF6E8");
+    g.style.setProperty("--cat-tx", known ? (CATTX[cat] || "#FFF6E8") : JP_GOLD.tx);
+    g.classList.add("cat-on");
+  }
+  /* the bank pulse: gold rises up the pad when THIS player's answer
+     banks — once per reveal, keyed to the new score so snapshot
+     re-renders never re-fire it */
+  function jpBankPulse(score, banked) {
+    var key = score + "|" + banked;
+    if (JP._pulseKey === key) return;
+    JP._pulseKey = key;
+    var g = $("scr-join"); if (!g) return;
+    var d = document.createElement("div");
+    d.className = "jp-pulse";
+    g.appendChild(d);
+    d.addEventListener("animationend", function () { d.remove(); });
+    setTimeout(function () { if (d.isConnected) d.remove(); }, 1600);
   }
   function jpMe() { return JP && JP.snap && JP.seat != null ? JP.snap.players[JP.seat] : null; }
   function jpLeader() {
@@ -2318,9 +2636,15 @@
      colour, your name, your money — this pad belongs to one person */
   function jpIdBar(secs) {
     var me = jpMe();
+    /* the identity bar as a mini podium: avatar, name, your standing
+       place on a medal disc, your money, the clock */
+    var place = 1;
+    if (me && JP.snap) JP.snap.players.forEach(function (p) { if (p && p.score > me.score) place++; });
+    var ord = ["1ST", "2ND", "3RD", "4TH"][place - 1] || (place + "TH");
     return '<div class="jp-id" style="--me:' + PCOLORS[JP.seat] + '">' +
       '<span class="jp-id-ava">' + avatarSVG(JP.seat, "neutral") + "</span>" +
       '<span class="jp-id-name">' + esc(me ? me.name : (JP.name || "Player")) + "</span>" +
+      '<span class="jp-id-place p' + Math.min(place, 4) + '">' + ord + "</span>" +
       '<span class="jp-id-score">' + money(me ? me.score : 0) + "</span>" +
       (secs ? '<span class="jp-id-secs" id="jpSecs"></span>' : "") + "</div>";
   }
@@ -2337,6 +2661,7 @@
     }
     var me = jpMe();
     var myName = me ? me.name : (JP.name || "Player");
+    if (s.phase === "lobby" || s.phase === "bet" || s.phase === "ended") $("scr-join").classList.remove("cat-on");
     if (s.phase === "lobby") {
       var chips = s.players.map(function (p, i) {
         return p && i !== JP.seat ? '<span class="jp-pchip' + (p.connected ? "" : " away") + '"><span class="name-dot" style="background:' + PCOLORS[i] + '"></span>' + esc(p.name) + "</span>" : "";
@@ -2434,6 +2759,7 @@
     } else if (s.phase === "reveal") {
       var lr = s.lastReveal;
       var d2 = jpQuestionData();
+      if (d2 && d2.bank && d2.bank.cat) jpApplyCat(d2.bank.cat);
       if (!lr) { main.innerHTML = '<div class="jp-card"><div class="jp-hi">The reveal…</div><p class="jp-sub">Eyes on the big screen.</p></div>'; return; }
       var mine = null;
       (lr.results || []).forEach(function (r) { if (r.seat === JP.seat) mine = r; });
@@ -2452,6 +2778,7 @@
           '<div class="jp-vword">' + (mine && (mine.pick != null || mine.num != null) ? "NOT THAT ONE" : "NO ANSWER") + "</div>" +
           '<p class="jp-vans">' + ansLine + ". Nothing lost — nobody can lose money here.</p>" + scoreLine + "</div>";
       }
+      if (mine && mine.correct) jpBankPulse(me ? me.score : 0, mine.banked || 0);
     } else if (s.phase === "ended") {
       var lead2 = jpLeader();
       main.innerHTML = '<div class="jp-card"><div class="q-cat">FINAL RESULT</div>' +
@@ -2515,6 +2842,8 @@
     get G() { return G; }, get clock() { return clock; },
     startShow: startShow, BANK: BANK
   };
+  /* Pass P verification hooks: particle censuses for the polish fx */
+  window.__fx = { leaves: leaves, coins: coins, motes: motes, laurelState: laurelState };
   window.__online = {
     get OG() { return OG; }, get JP() { return JP; },
     WORKER_URL: WORKER_URL
