@@ -51,6 +51,17 @@
  *   never read), and the reveal carries it as quickDrawSeat plus a
  *   quickDraw flag on the winner's result entry.
  *
+ *   The Photo-Finish (gameplay-visuals pass G5): alongside the
+ *   receipt ORDER, every accepted pick also leaves its receipt
+ *   TIME (q.pickTimes, server clock at acceptance, re-stamped when
+ *   a pick changes — the time of the answer the player stands on).
+ *   At close, each pick-based result carries lockMs: milliseconds
+ *   from the question's open to that receipt, or null where no pick
+ *   was ever received (silent seats; number questions, which take
+ *   numbers, not picks). It is display truth only — no settlement
+ *   reads it — and because pickOrder is exactly pickTimes sorted,
+ *   the quick-draw winner is always the earliest correct lockMs.
+ *
  *   The Decider (New programme pass 1): when a show's fifteenth
  *   reveal leaves two or more players tied at the top, the crown is
  *   settled head-to-head. The host publishes ONE extra question
@@ -85,6 +96,25 @@
  *   and bet_phase both accept the intermission phase and clear it,
  *   and end_show clears it too. Players cannot call the break —
  *   the message exists only in the host handler.
+ *
+ *   Second Wind (Dynamics pass D2): the break itself now pays a
+ *   small mercy. At the moment the intermission is accepted —
+ *   inside that handler, the one place a break begins — every
+ *   seat tied for LAST place whose Cut Two is spent gets it back.
+ *   A trailer still holding theirs gets nothing: the grant tops
+ *   up toward the seat's starting count and never past it (one
+ *   token as written here; two under Second Cut — the N2 note).
+ *   The
+ *   grant fires exactly once per break because the message is
+ *   accepted only from the reveal phase and leaves the room in
+ *   the intermission phase, where a replay is refused. The
+ *   granted seats are recorded on room.interm.wind and ride
+ *   every break snapshot (intermission:{nextRound, wind}), so a
+ *   pad that resyncs at the break reads the granted state — and
+ *   the names for its card — from the referee, never from a
+ *   second grant. The second break re-evaluates from the
+ *   standings as they then stand. Nothing is scored, and
+ *   nothing else about Cut Two changes.
  *
  *   Hot Streaks (New programme pass 3): a player's streak is their
  *   run of consecutive banked 'normal' questions, kept on the player
@@ -123,11 +153,121 @@
  *   first without trusting a phase edge. Players cannot call a
  *   new show — the message exists only in the host handler.
  *
+ *   Show the Band (The Ten, pass 3): the difficulty band the host
+ *   dealt (1 Warm / 2 Middle / 3 Deep Cut) becomes public. The
+ *   host names it on publish_question as `band`; the room keeps
+ *   only a validated 1|2|3 (anything else — missing, fractional,
+ *   out of range — is stored as null, never trusted, never an
+ *   error: an older host simply deals unbanded questions). The
+ *   public question view carries it to every viewer from open
+ *   through the reveal. It is presentation, not a secret and not
+ *   money: no settlement path ever reads it, and — unlike the
+ *   Headline — the room does not derive it; the band is a fact
+ *   about the dealt bank entry, and the host is its only source.
+ *
+ *   The Golden Question (The Ten, pass 4): exactly one question
+ *   per show is secretly golden and pays DOUBLE under the
+ *   Headline's grammar — the doubled multiplier and halved window
+ *   fold into the question record at publish, so the drain, the
+ *   deadline and every payout are the ordinary code running on
+ *   the effective figures (and the streak / quick-draw bonuses
+ *   stay flat, added after, as always). The host picks the slot
+ *   before the show from its seeded rng and names it on that one
+ *   publish as golden:true. Unlike the band, this claim IS
+ *   refereed, inside the honest envelope: rounds 1-2 only (the
+ *   Big Finish pays bet x $100, not question value — gold there
+ *   would double nothing), never on the Headline (the two
+ *   doubles never stack), never on a decider (which banks
+ *   nothing), and only ONCE per show (room.goldenUsed; a fresh
+ *   show via new_show earns a fresh pick). A claim outside the
+ *   envelope is stored as an ordinary question — never an error,
+ *   exactly like a legacy host that never sends the field at
+ *   all. The flag is a SECRECY on the same footing as
+ *   correctIdx: it lives only on the question record, rides no
+ *   snapshot (snapshotFor simply never copies it, for any viewer
+ *   — the host resyncs its own plan locally, not from the room),
+ *   and first leaves the room inside the reveal payload (and the
+ *   lastReveal a post-reveal snapshot carries), once the money
+ *   has already moved.
+ *
+ *   The Table Pot (Dynamics pass D1): money the room fails to bank
+ *   does not vanish — it feeds a pot the champion takes. The rule
+ *   runs here, once, at close, beside the rest of the money. In
+ *   Rounds 1-2, a question NO seat banks feeds the pot exactly
+ *   what a winner would have taken: the as-stopped drained value
+ *   (the Headline/Golden doubling already folded into the question
+ *   record, so the doubled figure feeds). A partial bank feeds
+ *   nothing. In the Big Finish there is no question value to feed,
+ *   so each seat that MISSES feeds its own stake instead: its bet
+ *   x $100, at the bet it actually placed (the Long Shot cap has
+ *   already had its say at bet time; a missing bet is the usual
+ *   default 1). The Decider banks $0 by design and feeds nothing.
+ *   The pot never touches a score and never changes who wins — it
+ *   is added to the champion's total only on the host screen, at
+ *   the finale, and written into that screen's record there. It
+ *   rides every snapshot (pot) and every reveal (pot, plus potFed:
+ *   what THIS question fed), so a resync repaints the vessel
+ *   settled and never re-feeds. A fresh show via new_show starts
+ *   with an empty pot, always.
+ *
  * Secrecy: correctIdx / trueNum / picks / bets are stored in the room
  * but NEVER leave it before reveal — broadcasts during a window carry
  * counts only (answersIn, betsIn). Per-viewer snapshots include only
  * the viewer's own pick/num/bet (plus, for the host alone, the secrets
  * it authored, so a reconnected host can resync).
+ *
+ * Cut Two, Previewed (Gameplay-visuals pass G6): the cut pair is
+ * committed at publish — it rides the question record as cutIndices,
+ * chosen by the host and validated here — and {t:'cut_preview', qid}
+ * lets a pad ask what its own spend WOULD cut. The answer goes to the
+ * asking seat alone ({t:'cut_preview', qid, indices}), spends nothing,
+ * changes nothing, and is never broadcast or written into a snapshot.
+ * A later cuttwo cuts exactly the previewed pair, because both read
+ * the same stored record. The guards mirror cuttwo's own (open MCQ
+ * question, pair available, no cut yet, token in hand); a refusal is
+ * an error to the requester only, like every refusal.
+ *
+ * The Report Card (pass N1): four per-seat facts the referee keeps
+ * through the night and reads back at the finale — recorded facts
+ * only, the Intermission's rule. Settled at close beside the rest
+ * of the money (the Decider settles none of them): BIGGEST BANK is
+ * the largest single-question total a seat took home (the settled
+ * banked figure, quick-draw and streak bonuses and every doubling
+ * already inside it); BEST CATEGORY is where the seat's banked
+ * money piled highest (ties: more banks there, then the category
+ * banked in earliest); FASTEST HAND is the seat's quickest CORRECT
+ * lock-in, read from the standing pick's own receipt stamp
+ * (q.pickTimes — stamped for number answers too, so a closest call
+ * counts by the moment it landed); HOTTEST STREAK is the peak run
+ * the settlement itself recorded. The raw tallies ride the room
+ * (stats, reset by new_show like every per-show memory); the
+ * derived card (reportFor) leaves the room only when the show is
+ * over — in the `ended` broadcast and in snapshots taken at phase
+ * 'ended' — never mid-show, so no screen can peek at the card
+ * before the finale.
+ *
+ *   House Rules (pass N2): three toggles the host sets when the
+ * room is created, kept on the room (room.rules) and carried in
+ * every snapshot, so every screen in the room agrees on the night
+ * that is being played. All default OFF, and a room persisted
+ * before they existed reads all-off — tonight's game, unchanged.
+ * LONGER CLOCK: every published window is stretched x1.5 here, at
+ * the one place windows are born (the Headline and Golden
+ * halvings then apply to the longer figure, as they always apply
+ * to the dealt one). SECOND CUT: the Cut Two token becomes a
+ * COUNT — a seat starts the show holding two, a spend decrements,
+ * and Second Wind tops a tied-last seat up by one, never above
+ * its STARTING count (the D2 note's "boolean, never two" is this
+ * rule at a starting count of one). The count is the room's own
+ * record (players[].cutTwo, a number from this pass on); a record
+ * persisted before it — a boolean — reads as its count (true ->
+ * 1, the old starting count; false -> 0), and the snapshot keeps
+ * dealing the boolean `cutTwo` (a token in hand) beside the
+ * number `cutCount`, so older screens read exactly what they
+ * always read. CALM TABLE: display-side only — the room merely
+ * carries the flag; no referee path reads it. The rules are the
+ * ROOM's, not the show's: new_show keeps them (a rematch plays
+ * the same house), and changing them means a new room.
  *
  * Handler result convention (consumed by server.js):
  *   { to: [{dest, msg}], all: msg|null, state: bool,
@@ -149,6 +289,40 @@ const QUICK_DRAW_BONUS = 50; // flat, on a 'normal' question's first correct rec
 const STREAK_BONUS = 25; // flat, per bank once a streak reaches STREAK_MIN
 const STREAK_MIN = 3; // banks in a row before the bonus starts paying
 const STREAK_DEATH_MIN = 4; // a dying run of this length or more earns a named moment
+const CLOCK_STRETCH = 1.5; // House Rules (N2): Longer Clock stretches every window by this
+
+/* House Rules (pass N2): the night's three toggles, normalized
+ * once at the room's creation and read off the room ever after.
+ * Anything that is not a literal `true` is off — a rules field
+ * from anywhere else (a hand-edited record, an old client) can
+ * only ever switch a rule OFF, never invent one. */
+function cleanRules(v) {
+  const r = (v && typeof v === 'object') ? v : {};
+  return {
+    longerClock: r.longerClock === true,
+    secondCut: r.secondCut === true,
+    calmTable: r.calmTable === true,
+  };
+}
+
+/* The Cut Two count a seat STARTS a show with, under the room's
+ * rules: two under Second Cut, one without it. Second Wind tops
+ * up toward this figure and never past it. */
+function cutStartFor(room) {
+  return (room && room.rules && room.rules.secondCut === true) ? 2 : 1;
+}
+
+/* A player record's Cut Two COUNT, however the record spells it:
+ * a number is itself (clamped to the honest 0..2), a boolean from
+ * a room persisted before the count existed reads as its count
+ * (true -> 1, the starting count of the game that wrote it;
+ * false -> 0), and anything else is an empty pocket. */
+function cutCountOf(p) {
+  if (!p) return 0;
+  const v = p.cutTwo;
+  if (typeof v === 'number' && Number.isFinite(v)) return Math.max(0, Math.min(2, Math.floor(v)));
+  return v === true ? 1 : 0;
+}
 
 /* The Long Shot, server-authoritative: 3 chips at (or near) the
  * lead, +1 per full $1,000 of deficit, capped at 5. Purely a
@@ -192,10 +366,11 @@ let nowProvider = () => Date.now();
 function setNowProvider(fn) { if (typeof fn === 'function') nowProvider = fn; }
 function nowMs() { return nowProvider(); }
 
-function createRoom(code, hostToken) {
+function createRoom(code, hostToken, rules) {
   return {
     code,
     hostToken,
+    rules: cleanRules(rules), // House Rules (N2): the night's toggles, set at creation, the room's for its whole life
     phase: 'lobby',           // lobby | bet | answer | reveal | intermission | ended
     players: [null, null, null, null], // {name, token, score, cutTwo, connected, avatar, streak}
     bet: null,                // {qid, bySeat:{seat:chips}} while a bet phase is open
@@ -205,6 +380,10 @@ function createRoom(code, hostToken) {
     lastReveal: null,         // payload of the last reveal, for snapshots
     interm: null,             // {nextRound} while the room rests between rounds (the Intermission)
     deciderWinner: null,      // seat that won a resolved decider, once one resolves
+    goldenUsed: false,        // the Golden Question: this show's one double is spent
+    pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
+    stats: [null, null, null, null], // The Report Card (N1): per-seat raw tallies {cats, fastestMs, biggest, peak}
+    statsSeq: 0,              // questions settled this show — the "earliest in the night" clock for best-category ties
     showSeq: 1,               // which show of the night this room is on (Rematch Night)
     createdAt: nowMs(),
     lastActivity: nowMs(),
@@ -219,6 +398,40 @@ function joinedSeats(room) {
 
 function scoresArray(room) {
   return room.players.map((p) => (p ? p.score : null));
+}
+
+/* The Report Card (N1): the derived card, one entry per seat (null
+ * for an empty seat), computed from the raw tallies closeQuestion
+ * keeps. best is {cat, amt} or null — a category only counts money
+ * actually banked in it; ties break to more banks there, then to
+ * the category the seat first banked in (the smaller `first` — the
+ * settled-question number of that first bank). fastestMs is null
+ * when no correct lock-in was ever stamped for the seat. A room
+ * persisted before the card existed has no tallies: every seat
+ * reads as a blank card, which is exactly what it recorded. */
+function reportFor(room) {
+  const stats = Array.isArray(room.stats) ? room.stats : [];
+  return room.players.map((p, seat) => {
+    if (!p) return null;
+    const st = stats[seat];
+    if (!st || typeof st !== 'object') return { best: null, fastestMs: null, biggest: 0, peak: 0 };
+    let best = null;
+    const cats = (st.cats && typeof st.cats === 'object') ? st.cats : {};
+    for (const cat of Object.keys(cats)) {
+      const c = cats[cat];
+      if (!c || !(c.amt > 0)) continue;
+      if (!best || c.amt > best.amt
+        || (c.amt === best.amt && (c.n > best.n || (c.n === best.n && c.first < best.first)))) {
+        best = { cat, amt: c.amt, n: c.n, first: c.first };
+      }
+    }
+    return {
+      best: best ? { cat: best.cat, amt: best.amt } : null,
+      fastestMs: typeof st.fastestMs === 'number' ? st.fastestMs : null,
+      biggest: st.biggest || 0,
+      peak: st.peak || 0,
+    };
+  });
 }
 
 function cleanName(name, seat) {
@@ -258,6 +471,7 @@ function snapshotFor(room, view) {
       baseValue: q.baseValue,
       multiplier: q.multiplier,
       headline: q.headline === true,
+      band: q.band === 1 || q.band === 2 || q.band === 3 ? q.band : null,
       windowMs: q.windowMs,
       openedAt: q.openedAt,
       deadline: q.deadline,
@@ -274,6 +488,12 @@ function snapshotFor(room, view) {
   }
   const snap = {
     code: room.code,
+    /* House Rules (N2): the room's toggles ride every snapshot —
+     * the lobby line, the pad's waiting screen and the calm
+     * manner all read them from here; a room persisted before
+     * they existed reads all-off, which is the game it was
+     * already playing */
+    rules: cleanRules(room.rules),
     phase: room.phase,
     /* which show of the night this is (Rematch Night): 1 for the
      * room's first show, advancing only when the host calls
@@ -282,14 +502,26 @@ function snapshotFor(room, view) {
     role: view.role,
     seat: view.role === 'player' ? view.seat : null,
     players: room.players.map((p, i) => (p
-      ? { seat: i, name: p.name, score: p.score, cutTwo: p.cutTwo, connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      /* House Rules (N2): cutTwo stays the boolean it has always
+       * been (a token in hand — a record persisted as a count reads
+       * through cutCountOf), and cutCount rides beside it as the
+       * number, so a screen that knows the count reads the count
+       * and a screen that doesn't reads exactly what it always did */
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
+    /* The Table Pot (D1): the running total, public from the
+     * first question — a room persisted before the pot existed
+     * reads 0, which is exactly what its pot holds */
+    pot: room.pot || 0,
     /* the Intermission rides the snapshot so a pad (or a restored
      * host) that only ever sees snapshots knows the room is resting
-     * and which round follows the break */
+     * and which round follows the break; Second Wind (D2) adds the
+     * seats this break granted, so the telling also comes from
+     * the referee — a room persisted before the wind existed
+     * reads an empty list, which is exactly what it granted */
     intermission: room.phase === 'intermission' && room.interm
-      ? { nextRound: room.interm.nextRound } : null,
+      ? { nextRound: room.interm.nextRound, wind: (room.interm.wind || []).slice() } : null,
     bet: room.bet ? {
       qid: room.bet.qid,
       betsIn: Object.keys(room.bet.bySeat).length,
@@ -299,6 +531,12 @@ function snapshotFor(room, view) {
       ...(view.role === 'player' ? { yourCap: betCapFor(room, view.seat) } : {}),
     } : null,
     lastReveal: room.lastReveal,
+    /* The Report Card (N1): the derived card rides a snapshot only
+     * once the show is over — it is a finale artifact, and a screen
+     * that resyncs onto the ended room (a pad refreshing at the
+     * finale, a host rejoining it) reads the same card the `ended`
+     * broadcast dealt. Mid-show it is null, never a peek. */
+    report: room.phase === 'ended' ? reportFor(room) : null,
   };
   if (view.role === 'player') {
     const seat = view.seat;
@@ -353,6 +591,14 @@ function closeQuestion(room) {
       const correct = pick != null && pick === q.correctIdx;
       entry = { seat, pick, correct, banked: 0 };
     }
+    /* The Photo-Finish (G5): milliseconds from the question's open
+     * to the receipt of the pick this seat stands on — server-
+     * received truth, never a client claim. Null where no pick was
+     * ever received: silent seats, and number questions (their
+     * answers are numbers, not picks). Display only: nothing in
+     * the settlement below reads it. */
+    entry.lockMs = (q.kind !== 'num' && q.pickTimes && q.pickTimes[seat] != null)
+      ? Math.max(0, q.pickTimes[seat] - q.openedAt) : null;
     if (entry.correct && !isDecider) {
       entry.banked = q.betted
         ? (q.bets[seat] != null ? q.bets[seat] : 1) * BET_PAYOUT
@@ -420,6 +666,68 @@ function closeQuestion(room) {
     cands.sort((a, b) => (rank[a.type] - rank[b.type]) || (b.n - a.n) || (a.seat - b.seat));
     if (cands.length) streakMoment = cands[0];
   }
+  /* The Table Pot (Dynamics pass D1): money nobody banked feeds
+   * the pot the champion takes — computed here, once, from the
+   * settled results, never from a client claim. Rounds 1-2 feed
+   * only on a FULL miss (a partial bank feeds nothing), and the
+   * figure is the question's as-stopped drained value — the
+   * Headline/Golden doubling already lives in the record's
+   * multiplier, so a doubled question feeds its doubled figure.
+   * The Big Finish has no value to feed, so each seat that missed
+   * feeds its own stake instead: its bet x $100 at the bet it
+   * placed (a missing bet is the usual default 1). The Decider
+   * banks $0 by design and feeds nothing. The pot is NOT a score:
+   * it never touches room.players[].score and never changes who
+   * wins — the host screen adds it to the champion's total at
+   * the finale, and only there. */
+  let potFed = 0;
+  if (!isDecider) {
+    if (q.betted) {
+      for (const entry of results) {
+        if (!entry.correct) potFed += (q.bets[entry.seat] != null ? q.bets[entry.seat] : 1) * BET_PAYOUT;
+      }
+    } else if (value != null && !results.some((e) => e.banked > 0)) {
+      potFed = value;
+    }
+  }
+  room.pot = (room.pot || 0) + potFed;
+  /* The Report Card (N1): the night's four facts, written in the
+   * same commit as the money they describe — every figure below is
+   * read off the settled results, never recomputed later. The
+   * Decider is skipped whole: it banks $0 by design and its
+   * verdict touches none of the four. entry.banked is final here
+   * (value or bet, quick-draw and streak bonuses folded in), and
+   * entry.streak is the run the settlement left standing, so the
+   * peak is the settlement's own memory of the run. The fastest
+   * hand reads the standing pick's receipt stamp — number answers
+   * stamp one too, so a closest call counts by its true moment;
+   * a seat whose correct answer was never stamped simply has no
+   * time to beat, and the fact stays unrecorded for them. */
+  if (!isDecider) {
+    room.statsSeq = (room.statsSeq || 0) + 1;
+    if (!Array.isArray(room.stats)) room.stats = [null, null, null, null];
+    for (const entry of results) {
+      let st = room.stats[entry.seat];
+      if (!st || typeof st !== 'object') {
+        st = room.stats[entry.seat] = { cats: {}, fastestMs: null, biggest: 0, peak: 0 };
+      }
+      if (typeof entry.streak === 'number' && entry.streak > st.peak) st.peak = entry.streak;
+      if (entry.banked > 0) {
+        if (entry.banked > st.biggest) st.biggest = entry.banked;
+        if (q.category) {
+          if (!st.cats || typeof st.cats !== 'object') st.cats = {};
+          const c = st.cats[q.category] || (st.cats[q.category] = { amt: 0, n: 0, first: 0 });
+          if (!c.n) c.first = room.statsSeq;
+          c.amt += entry.banked;
+          c.n++;
+        }
+      }
+      if (entry.correct && q.pickTimes && q.pickTimes[entry.seat] != null) {
+        const lt = Math.max(0, q.pickTimes[entry.seat] - q.openedAt);
+        if (st.fastestMs == null || lt < st.fastestMs) st.fastestMs = lt;
+      }
+    }
+  }
   /* The Decider's verdict: exactly one eligible seat holding the
    * closest call takes the crown; an identical closest distance
    * (or a question nobody eligible answered) leaves the show dead
@@ -439,6 +747,10 @@ function closeQuestion(room) {
     qid: q.qid,
     kind: q.kind,
     headline: q.headline === true,
+    /* the Golden Question's flag leaves the room only now, in
+     * the reveal and the record snapshots resync from — the
+     * money has already moved (The Ten, pass 4) */
+    golden: q.golden === true,
     correctIdx: q.kind === 'num' ? null : q.correctIdx,
     trueNum: q.kind === 'num' ? q.trueNum : null,
     value,
@@ -449,8 +761,13 @@ function closeQuestion(room) {
     decider: isDecider,
     eligible: isDecider ? (q.eligible || []).slice() : null,
     deciderWinner,
+    /* The Table Pot (D1): the total after this question, and what
+     * this question fed — a resync repaints from these two and
+     * never re-feeds */
+    pot: room.pot,
+    potFed,
   };
-  const reveal = { t: 'reveal', qid: q.qid, kind: q.kind, headline: q.headline === true, value, results, scores, quickDrawSeat, streakMoment, decider: isDecider, eligible: isDecider ? (q.eligible || []).slice() : null, deciderWinner };
+  const reveal = { t: 'reveal', qid: q.qid, kind: q.kind, headline: q.headline === true, golden: q.golden === true, value, results, scores, quickDrawSeat, streakMoment, decider: isDecider, eligible: isDecider ? (q.eligible || []).slice() : null, deciderWinner, pot: room.pot, potFed };
   if (q.kind === 'num') reveal.trueNum = q.trueNum;
   else reveal.correctIdx = q.correctIdx;
   return ok({ all: reveal, state: true, changed: true });
@@ -509,7 +826,7 @@ function handleHello(room, msg) {
       name: cleanName(msg.name, seat),
       token: makeToken(),
       score: 0,
-      cutTwo: true,
+      cutTwo: cutStartFor(room), // House Rules (N2): the starting COUNT — two under Second Cut, else one
       connected: true,
       avatar: cleanAvatar(msg.avatar, seat),
       streak: 0,
@@ -574,10 +891,18 @@ function handleHostMessage(room, msg) {
         decider = true;
         eligible = el.slice();
       }
-      const windowMs = Number(msg.deadlineMs);
+      let windowMs = Number(msg.deadlineMs);
       if (!Number.isFinite(windowMs) || windowMs < 1000 || windowMs > 180000) {
         return fail('Bad deadlineMs (window length, 1000..180000).');
       }
+      /* House Rules (N2) — Longer Clock: the stretch is applied
+       * HERE, where the room's windows are born, to the host's
+       * dealt figure — so the deadline, the drain and every
+       * snapshot downstream run on the longer window, and the
+       * Headline/Golden halving below halves the longer figure,
+       * exactly as it halves any dealt one. The host deals the
+       * ordinary windows and never stretches its own copy. */
+      if (room.rules && room.rules.longerClock === true) windowMs = Math.round(windowMs * CLOCK_STRETCH);
       const baseValue = msg.baseValue == null ? 100 : Number(msg.baseValue);
       if (!Number.isFinite(baseValue) || baseValue <= 0) return fail('Bad baseValue.');
       const multiplier = msg.multiplier == null ? 1 : Number(msg.multiplier);
@@ -609,6 +934,12 @@ function handleHostMessage(room, msg) {
           cutIndices = ci.slice();
         }
       }
+      /* Show the Band (pass 3): the host names the dealt entry's
+       * difficulty band. Validated to a bare 1|2|3 — anything else
+       * is stored as null (an unbanded question), never an error:
+       * the band is public presentation, not a claim the room
+       * referees. */
+      const band = Number.isInteger(msg.band) && msg.band >= 1 && msg.band <= 3 ? msg.band : null;
       const betted = room.phase === 'bet';
       const bets = betted ? Object.assign({}, room.bet.bySeat) : {};
       room.bet = null;
@@ -627,7 +958,18 @@ function handleHostMessage(room, msg) {
         room.lastPubQid = msg.qid;
       }
       const headline = headlinePublish(room, round);
-      const effWindowMs = headline ? Math.round(windowMs / 2) : Math.round(windowMs);
+      /* The Golden Question (The Ten, pass 4): the host's secret
+       * pick, refereed inside its honest envelope (see the header
+       * note). A re-publish of the very question that already
+       * carries the gold keeps it — the resync republishes the
+       * same record, it does not spend a second double. Rooms
+       * persisted before the field existed read goldenUsed as
+       * undefined, which is falsy: unspent, exactly right. */
+      const reGold = !!(room.question && room.question.qid === msg.qid && room.question.golden === true);
+      const golden = msg.golden === true && !decider && !headline
+        && (round === 1 || round === 2) && (!room.goldenUsed || reGold);
+      if (golden) room.goldenUsed = true;
+      const effWindowMs = (headline || golden) ? Math.round(windowMs / 2) : Math.round(windowMs);
       const t = nowMs();
       room.question = {
         qid: msg.qid,
@@ -636,8 +978,10 @@ function handleHostMessage(room, msg) {
         category: String(msg.category || '').slice(0, 32),
         answersCount,
         baseValue,
-        multiplier: headline ? multiplier * 2 : multiplier,
+        multiplier: (headline || golden) ? multiplier * 2 : multiplier,
         headline,
+        band,
+        golden,
         correctIdx,
         trueNum,
         cutIndices,
@@ -650,6 +994,7 @@ function handleHostMessage(room, msg) {
         eligible,
         picks: {},
         pickOrder: [],
+        pickTimes: {},
         nums: {},
         cutBy: null,
         closedAt: null,
@@ -674,13 +1019,40 @@ function handleHostMessage(room, msg) {
        * reveal phase and only naming the round that follows the
        * break (2 or 3 — there is no break before Round 1 and none
        * after Round 3, whose ground belongs to the finale and the
-       * Decider). The room records nothing but the phase and the
-       * next round; the break ends when the host advances (publish
+       * Decider). The room records the phase, the next round, and
+       * (Dynamics pass D2) the Second Wind grant the break itself
+       * makes; the break ends when the host advances (publish
        * and bet_phase clear it, above) or ends the show (below). */
       if (room.phase !== 'reveal') return fail('The break comes after a reveal.');
       const nr = Number(msg.nextRound);
       if (nr !== 2 && nr !== 3) return fail('The break names the round that follows: 2 or 3.');
-      room.interm = { nextRound: nr };
+      /* Second Wind (Dynamics pass D2): the grant fires HERE, the
+       * moment the break begins — every seat tied for last with a
+       * spent Cut Two gets it back, written into the player
+       * records before the phase turns, so the snapshot that
+       * announces the break already carries the restored tokens.
+       * It cannot fire twice for one break: this case is
+       * reachable only from the reveal phase, and a replayed
+       * message meets the refusal above. A trailer already
+       * holding their full count is owed nothing — the grant
+       * tops up toward the starting count and never past it
+       * (one token under the plain rule; see the N2 note). */
+      const wind = [];
+      const seated = room.players.filter(Boolean);
+      if (seated.length) {
+        const minScore = Math.min.apply(null, seated.map((p) => p.score));
+        /* House Rules (N2): the grant is one token toward the
+         * seat's STARTING count — a tied-last seat below it gains
+         * one back, a seat already holding its full count (one
+         * under the old rule, two under Second Cut) is owed
+         * nothing, and nobody is ever topped past where they
+         * started */
+        const startCount = cutStartFor(room);
+        room.players.forEach((p, i) => {
+          if (p && p.score === minScore && cutCountOf(p) < startCount) { p.cutTwo = cutCountOf(p) + 1; wind.push(i); }
+        });
+      }
+      room.interm = { nextRound: nr, wind };
       room.phase = 'intermission';
       return ok({ state: true, changed: true });
     }
@@ -697,7 +1069,7 @@ function handleHostMessage(room, msg) {
       for (const p of room.players) {
         if (!p) continue;
         p.score = 0;
-        p.cutTwo = true;
+        p.cutTwo = cutStartFor(room); // House Rules (N2): a fresh show restocks to the room's starting count — the rules themselves are the room's and stay
         p.streak = 0;
       }
       room.bet = null;
@@ -707,6 +1079,15 @@ function handleHostMessage(room, msg) {
       room.lastReveal = null;
       room.interm = null;
       room.deciderWinner = null;
+      /* a rematch deals a FRESH golden pick (Rematch Night's
+       * reset list is the referee's whole per-show memory) */
+      room.goldenUsed = false;
+      /* The Table Pot (D1): a fresh show starts with an empty pot, always */
+      room.pot = 0;
+      /* The Report Card (N1): the tallies are per-show memory like
+       * everything on this list — a rematch starts a blank card */
+      room.stats = [null, null, null, null];
+      room.statsSeq = 0;
       room.showSeq = (room.showSeq || 1) + 1;
       room.phase = 'lobby';
       return ok({ state: true, changed: true });
@@ -717,8 +1098,11 @@ function handleHostMessage(room, msg) {
       room.phase = 'ended';
       const scores = scoresArray(room);
       /* winnerSeat names the champion when a decider chose one —
-       * the scores alone still read as a tie, by design */
-      return ok({ all: { t: 'ended', scores, winnerSeat: room.deciderWinner != null ? room.deciderWinner : null }, state: true, changed: true });
+       * the scores alone still read as a tie, by design. The Report
+       * Card (N1) rides the same broadcast: the night's four facts
+       * per seat, derived from the referee's own tallies — the one
+       * moment the card is dealt to every screen at once. */
+      return ok({ all: { t: 'ended', scores, winnerSeat: room.deciderWinner != null ? room.deciderWinner : null, report: reportFor(room) }, state: true, changed: true });
     }
     default:
       return fail('Unknown message.');
@@ -757,6 +1141,12 @@ function handlePlayerMessage(room, seat, msg) {
         if (!Array.isArray(q.pickOrder)) q.pickOrder = [];
         q.pickOrder = q.pickOrder.filter((s) => s !== seat);
         q.pickOrder.push(seat);
+        /* Photo-Finish receipt (G5): the standing pick's arrival
+         * time, on the same re-queue rule as the order above — a
+         * changed pick is stamped at its change. Rooms persisted
+         * before the field existed grow it here. */
+        if (!q.pickTimes || typeof q.pickTimes !== 'object') q.pickTimes = {};
+        q.pickTimes[seat] = nowMs();
       }
       const answersIn = Object.keys(q.kind === 'num' ? q.nums : q.picks).length;
       return ok({
@@ -787,13 +1177,30 @@ function handlePlayerMessage(room, seat, msg) {
       if (q.kind === 'num') return fail('Nothing to cut on a number question.');
       if (!q.cutIndices) return fail('No cut available on this question.');
       if (q.cutBy != null) return fail('Already cut on this question.');
-      if (!p.cutTwo) return fail('Your Cut Two is spent.');
-      p.cutTwo = false;
+      if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');
+      p.cutTwo = cutCountOf(p) - 1; // House Rules (N2): a spend decrements the count — under Second Cut one blade remains
       q.cutBy = seat;
       return ok({
         all: { t: 'cut', qid: q.qid, bySeat: seat, indices: q.cutIndices.slice() },
         state: true,
         changed: true,
+      });
+    }
+    case 'cut_preview': {
+      /* G6: the pair was committed at publish (see the header note);
+       * a preview only READS it back to the one seat asking. No
+       * field of the room changes, nothing is broadcast, and the
+       * answer rides no snapshot — it exists only on this wire, to
+       * this seat, for this question. */
+      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
+      const q = room.question;
+      if (msg.qid !== q.qid) return fail('Wrong question.');
+      if (q.kind === 'num') return fail('Nothing to cut on a number question.');
+      if (!q.cutIndices) return fail('No cut available on this question.');
+      if (q.cutBy != null) return fail('Already cut on this question.');
+      if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');
+      return ok({
+        to: [{ dest: seat, msg: { t: 'cut_preview', qid: q.qid, indices: q.cutIndices.slice() } }],
       });
     }
     default:
@@ -981,7 +1388,10 @@ export class GildedRoom {
         if (!body.code || !body.hostToken) {
           return Response.json({ ok: false, error: 'code and hostToken required' }, { status: 400 });
         }
-        this.room = createRoom(body.code, body.hostToken);
+        /* House Rules (N2): the host's toggles ride creation and
+         * are the room's for its whole life; createRoom validates
+         * them (anything not a literal true is off) */
+        this.room = createRoom(body.code, body.hostToken, body.rules);
         await this.save();
         this.scheduleAlarm();
         return Response.json({ ok: true, created: true, code: this.room.code });
@@ -1115,6 +1525,11 @@ export default {
         return new Response('POST to create a room', { status: 405, headers: cors() });
       }
       // Create a room; retry on the (rare) code collision with a live room.
+      // House Rules (N2): the host's toggles may ride the create
+      // body as {rules:{...}} — forwarded untouched to the room's
+      // creation, where room.js validates them. No body (an older
+      // host) creates a plain room, exactly as before.
+      const createBody = await request.json().catch(() => ({}));
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = makeCode();
         const hostToken = makeToken();
@@ -1123,7 +1538,7 @@ export default {
         const r = await stub.fetch(new Request('https://room/init', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, hostToken }),
+          body: JSON.stringify({ code, hostToken, rules: createBody && createBody.rules }),
         }));
         const j = await r.json().catch(() => ({}));
         if (j.created) {

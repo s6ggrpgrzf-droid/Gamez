@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="stylesheet" href="style.css?v=69">
 </head>
 <body>
 <div id="app">
@@ -144,6 +144,7 @@
   <section id="scr-title" class="screen active">
     <div class="curtain curtain-l" aria-hidden="true"></div>
     <div class="curtain curtain-r" aria-hidden="true"></div>
+    <div class="set-aud" aria-hidden="true"><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span></div>
     <button id="btnMute" class="mute-btn">SOUND: ON</button>
     <div class="title-scroll">
       <div class="title-main">
@@ -177,14 +178,17 @@
               <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stop-color="#FFE29A"/><stop offset=".55" stop-color="#FFB03A"/><stop offset="1" stop-color="#FF8A3C"/>
               </linearGradient>
+              <radialGradient id="stShadGrad" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset=".55" stop-color="#000" stop-opacity=".26"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
             </defs>
-            <path d="M238,238 Q292,214 288,150" stroke="#4E2C68" stroke-width="30" stroke-linecap="round" fill="none"/>
+            <g class="st-shadow"><ellipse cx="150" cy="372" rx="122" ry="11" fill="url(#stShadGrad)"/></g>
+            <g class="st-plane st-plane-arm-r"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M238,238 Q292,214 288,150" stroke-width="30"/><path d="M238,238 Q292,214 288,150" stroke="#4E2C68" stroke-width="30" stroke-linecap="round" fill="none"/>
             <g transform="rotate(16 287 104)">
               <rect x="258" y="62" width="58" height="78" rx="9" fill="url(#goldGrad)"/>
               <rect x="266" y="70" width="42" height="62" rx="6" fill="#FFF6E8"/>
               <text x="287" y="120" text-anchor="middle" font-size="46" font-weight="900" fill="#A11E50">?</text>
             </g>
-            <circle cx="287" cy="142" r="15" fill="#F6B183"/>
+            <circle cx="287" cy="142" r="15" fill="#F6B183"/></g>
+            <g class="st-plane st-plane-body"><g class="st-rim" transform="translate(-2.5,-2)"><path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z"/></g>
             <path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z" fill="#241331"/>
             <path d="M196,197 Q250,208 254,258 L266,380 L200,380 C206,320 206,250 196,197 Z" fill="#1D0E29"/>
             <path d="M134,196 L186,196 L160,292 Z" fill="#FFF6E8"/>
@@ -199,7 +203,8 @@
             <path d="M211,252 L223,249 L221,257 Z" fill="#FFC93C"/>
             <svg x="111" y="222" width="19" height="19" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem"></use></svg>
             <rect x="146" y="158" width="28" height="42" rx="9" fill="#E89A63"/>
-            <rect x="146" y="184" width="28" height="13" fill="#D97F4A"/>
+            <rect x="146" y="184" width="28" height="13" fill="#D97F4A"/></g>
+            <g class="st-plane st-plane-head"><g class="st-rim" transform="translate(-2.5,-2)"><ellipse cx="160" cy="118" rx="64" ry="70"/><path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z"/></g>
             <circle cx="94" cy="124" r="13" fill="#F6B183"/><circle cx="93" cy="122" r="5" fill="#E89A63"/>
             <circle cx="226" cy="124" r="13" fill="#F6B183"/><circle cx="227" cy="122" r="5" fill="#E89A63"/>
             <ellipse cx="160" cy="118" rx="64" ry="70" fill="#F6B183"/>
@@ -217,7 +222,7 @@
             <g class="st-eye"><path d="M117,110 Q131,98 145,110 Q131,120 117,110 Z" fill="#FFF9F0" stroke="#2A1530" stroke-width="3"/><circle cx="131" cy="110" r="8.6" fill="#7A4A21"/><circle cx="131" cy="110" r="6.5" fill="#2A1530"/><circle cx="128.5" cy="107.5" r="2.2" fill="#FFF6E8"/></g>
             <g class="st-eye"><path d="M175,110 Q189,98 203,110 Q189,120 175,110 Z" fill="#FFF9F0" stroke="#2A1530" stroke-width="3"/><circle cx="189" cy="110" r="8.6" fill="#7A4A21"/><circle cx="189" cy="110" r="6.5" fill="#2A1530"/><circle cx="186.5" cy="107.5" r="2.2" fill="#FFF6E8"/></g>
             <path d="M121,143 Q160,188 199,143 Q160,162 121,143 Z" fill="#7C2D3E"/>
-            <path d="M129,146 Q160,158 191,146 Q160,151.5 129,146 Z" fill="#FFFFFF"/>
+            <path d="M129,146 Q160,158 191,146 Q160,151.5 129,146 Z" fill="#FFFFFF"/></g>
           </svg>
         </div>
       </div>
@@ -229,6 +234,14 @@
             <button class="mode-tab" data-mode="join">JOIN A ROOM</button>
           </div>
           <button id="btnHow" class="how-link">HOW TONIGHT WORKS</button>
+          <div id="rulesBlock">
+            <div class="setup-label">HOUSE RULES — BEND TONIGHT YOUR WAY</div>
+            <div class="rules-row">
+              <button class="rule-toggle" data-rule="longerClock" type="button">LONGER CLOCK<small>Half as much again on every question</small></button>
+              <button class="rule-toggle" data-rule="secondCut" type="button">SECOND CUT<small>Two Cut Two tokens for every player</small></button>
+              <button class="rule-toggle" data-rule="calmTable" type="button">CALM TABLE<small>No alarms — the room stays serene</small></button>
+            </div>
+          </div>
           <div id="panelTable">
             <div id="resumeChip" class="resume-chip hidden">
               <span class="resume-txt"><span class="resume-kicker">A SHOW IS IN PROGRESS</span><span class="resume-detail" id="resumeDetail">ROUND 1 OF 3 · QUESTION 1 OF 15</span></span>
@@ -239,6 +252,9 @@
               <button class="count-btn" data-n="2">2</button>
               <button class="count-btn sel" data-n="3">3</button>
               <button class="count-btn" data-n="4">4</button>
+            </div>
+            <div class="solo-row">
+              <button class="solo-btn" id="btnSolo" type="button">SOLO SHOW<small>Just me — the house plays seats 2 &amp; 3</small></button>
             </div>
             <div class="setup-label">NAMES — TAP TO EDIT</div>
             <div id="nameRows"></div>
@@ -285,7 +301,7 @@
             <span class="fm f1">1</span><span class="fm f2">2</span><span class="fm f3">3</span><span class="fm f4">4</span>
           </div>
           <h3 class="how-title">EVERYBODY ANSWERS</h3>
-          <p class="how-text">Every question is for the whole table — hold up 1, 2, 3 or 4 fingers. Sterling keeps score in dollars, and a question's value drains while you think, so quick and right pays best.</p>
+          <p class="how-text">Every question is for the whole table — hold up 1, 2, 3 or 4 fingers. Sterling keeps score in dollars, and a question's value drains while you think, so quick and right pays best. And one question in the first two rounds is secretly golden: it pays double, and you'll know it when it lands. Questions nobody banks feed the pot — the champion takes it all. Playing alone? Start a Solo Show and the house deals in two of its own players to beat.</p>
         </div>
         <div class="how-beat hidden" data-beat="1">
           <div class="how-mark mark-chips" aria-hidden="true">
@@ -299,7 +315,7 @@
             <span class="km lit"></span><span class="km cut"></span><span class="km lit"></span><span class="km cut"></span>
           </div>
           <h3 class="how-title">CUT TWO SAVES YOU ONCE</h3>
-          <p class="how-text">Stuck on a question? Your Cut Two strikes two wrong answers clean off it. One token per player, per show — spend it like it matters, because it does.</p>
+          <p class="how-text">Stuck on a question? Your Cut Two strikes two wrong answers clean off it. One token per player, per show — spend it like it matters, because it does. One mercy: last place at the break gets their Cut Two back — if it's spent. Still holding yours? One is all anyone carries.</p>
         </div>
         <div class="how-dots" aria-hidden="true"><span class="how-dot sel"></span><span class="how-dot"></span><span class="how-dot"></span></div>
         <label class="how-again"><input type="checkbox" id="howAgain"> Don't show this again</label>
@@ -326,11 +342,13 @@
         </div>
       </div>
     </div>
+    <!-- Visual pass V5: the broadcast finish (title instance) -->
+    <div class="bc-grade" aria-hidden="true"></div>
   </section>
 
   <!-- ============ GAME ============ -->
   <section id="scr-game" class="screen" data-light="open">
-    <div class="set" aria-hidden="true"><div class="set-deep"></div><div class="set-walls"></div><div class="set-mid"></div><div class="set-glow"></div><div class="set-cat"><div class="set-cat-glow"></div><svg class="set-cat-emb set-cat-a" viewBox="0 0 48 48" aria-hidden="true"><use href="#emb-movies"></use></svg><svg class="set-cat-emb set-cat-b" viewBox="0 0 48 48" aria-hidden="true"><use href="#emb-movies"></use></svg></div><div class="set-floor"></div><div class="set-fore"></div><div class="set-lights"></div></div>
+    <div class="set" aria-hidden="true"><div class="set-deep"></div><div class="set-walls"></div><div class="set-mid"></div><div class="set-glow"></div><div class="set-cat"><div class="set-cat-glow"></div><svg class="set-cat-emb set-cat-a" viewBox="0 0 48 48" aria-hidden="true"><use href="#emb-movies"></use></svg><svg class="set-cat-emb set-cat-b" viewBox="0 0 48 48" aria-hidden="true"><use href="#emb-movies"></use></svg></div><div class="set-floor"></div><div class="set-fore"></div><div class="set-rim"><div class="rim-wide"></div><div class="rim-tight"></div></div><div class="set-lights"></div><div class="set-aud" aria-hidden="true"><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span></div></div>
     <div id="bloom" aria-hidden="true"></div>
     <canvas id="moteCanvas" aria-hidden="true"></canvas>
     <header id="topbar">
@@ -353,8 +371,12 @@
     <footer id="hostbar">
       <span class="host-face">
         <svg viewBox="0 0 120 120" aria-label="Sterling">
+          <defs><radialGradient id="stShadGrad" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset=".55" stop-color="#000" stop-opacity=".26"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>
+          <g class="st-shadow"><ellipse cx="57" cy="116" rx="48" ry="5.5" fill="url(#stShadGrad)"/></g>
+          <g class="st-plane st-plane-body"><g class="st-rim" transform="translate(-1.6,-1.4)"><path d="M18,120 Q22,96 60,94 Q98,96 102,120 Z"/></g>
           <path d="M18,120 Q22,96 60,94 Q98,96 102,120 Z" fill="#241331"/>
-          <path d="M64,94.5 Q96,97 101,120 L64,120 Z" fill="#1D0E29"/>
+          <path d="M64,94.5 Q96,97 101,120 L64,120 Z" fill="#1D0E29"/></g>
+          <g class="st-plane st-plane-head"><g class="st-rim" transform="translate(-1.6,-1.4)"><circle cx="60" cy="56" r="37"/><path d="M24,54 C21,26 40,12 60,12 C81,12 98,28 96,54 C94,38 86,29 74,27 C79,34 79,38 76.5,41 C73,31 64,26 52,29 C38,32 28,40 24,54 Z"/></g>
           <circle cx="60" cy="56" r="37" fill="#F6B183"/>
           <path d="M83.8,27.7 A37 37 0 0 1 56.8,92.9 C72,84 84,64 85,48 C85,39 84.6,32 83.8,27.7 Z" fill="#E89A63"/>
           <path d="M24,54 C21,26 40,12 60,12 C81,12 98,28 96,54 C94,38 86,29 74,27 C79,34 79,38 76.5,41 C73,31 64,26 52,29 C38,32 28,40 24,54 Z" fill="#2A1530"/>
@@ -369,7 +391,7 @@
           <ellipse cx="37" cy="70" rx="6" ry="3.6" fill="#FF9D8A" opacity=".5"/>
           <ellipse cx="81" cy="69" rx="5.6" ry="3.4" fill="#FF9D8A" opacity=".42"/>
           <path d="M46,74 Q60,88 74,74 Q60,80.5 46,74 Z" fill="#7C2D3E"/>
-          <path d="M50,75.5 Q60,79.5 70,75.5 Q60,77.2 50,75.5 Z" fill="#FFFFFF"/>
+          <path d="M50,75.5 Q60,79.5 70,75.5 Q60,77.2 50,75.5 Z" fill="#FFFFFF"/></g>
           <g class="st-podium">
             <path d="M26,120 L33,103 L87,103 L94,120 Z" fill="#170B22"/>
             <path d="M39,120 L43,109 L77,109 L81,120 Z" fill="#2E1A40" stroke="#C6A45E" stroke-opacity=".45"/>
@@ -378,8 +400,8 @@
             <rect x="20" y="94" width="80" height="3" rx="1.5" fill="#C6A45E" opacity=".85"/>
             <rect x="20" y="102.5" width="80" height="2.5" fill="#C6A45E"/>
           </g>
-          <g class="st-arm st-arm-l"><path d="M27,90 C16,94 15,99 24,101 C30,103 36,101 41,99" stroke="#4E2C68" stroke-width="10" stroke-linecap="round" fill="none"/><circle cx="37" cy="100" r="3.6" fill="#FFF6E8"/><circle cx="43" cy="98" r="4.8" fill="#F6B183"/></g>
-          <g class="st-arm st-arm-r"><path d="M93,90 C104,94 105,99 96,101 C90,103 84,101 79,99" stroke="#4E2C68" stroke-width="10" stroke-linecap="round" fill="none"/><circle cx="83" cy="100" r="3.6" fill="#FFF6E8"/><circle cx="77" cy="98" r="4.8" fill="#F6B183"/></g>
+          <g class="st-plane st-plane-arm-l"><g class="st-arm st-arm-l"><path class="st-rim-stroke" transform="translate(-1.4,-1.2)" d="M27,90 C16,94 15,99 24,101 C30,103 36,101 41,99" stroke-width="10"/><path d="M27,90 C16,94 15,99 24,101 C30,103 36,101 41,99" stroke="#4E2C68" stroke-width="10" stroke-linecap="round" fill="none"/><circle cx="37" cy="100" r="3.6" fill="#FFF6E8"/><circle cx="43" cy="98" r="4.8" fill="#F6B183"/></g></g>
+          <g class="st-plane st-plane-arm-r"><g class="st-arm st-arm-r"><path class="st-rim-stroke" transform="translate(-1.4,-1.2)" d="M93,90 C104,94 105,99 96,101 C90,103 84,101 79,99" stroke-width="10"/><path d="M93,90 C104,94 105,99 96,101 C90,103 84,101 79,99" stroke="#4E2C68" stroke-width="10" stroke-linecap="round" fill="none"/><circle cx="83" cy="100" r="3.6" fill="#FFF6E8"/><circle cx="77" cy="98" r="4.8" fill="#F6B183"/></g></g>
         </svg>
       </span>
       <div class="host-bubble">
@@ -391,6 +413,8 @@
     <div id="dangerFx" aria-hidden="true"></div>
     <canvas id="coinCanvas" aria-hidden="true"></canvas>
     <canvas id="leafCanvas" aria-hidden="true"></canvas>
+    <!-- Visual pass V5: the broadcast finish (stage instance — the finale renders in this screen and wears it too) -->
+    <div class="bc-grade" aria-hidden="true"></div>
   </section>
 
   <!-- ============ PLAYER (online podium) ============ -->
@@ -409,9 +433,37 @@
     </div>
   </section>
 
+  <!-- ============ SHARE THE NIGHT (Pass N3) ============
+       The finale's card, composed on the canvas inside game.js and
+       previewed here before it leaves through the phone's own
+       share sheet (or as a saved PNG). Lives outside every screen
+       section on purpose: three different finales open it. -->
+  <div id="shareOverlay" class="how-overlay share-overlay hidden" role="dialog" aria-modal="true" aria-label="Share the night">
+    <div class="share-sheet">
+      <div class="share-kicker">SHARE THE NIGHT</div>
+      <canvas id="shareCanvas" width="1080" height="1350"></canvas>
+      <div class="share-btns">
+        <button id="shareGo" class="btn-gold" type="button">SHARE…</button>
+        <button id="shareSave" class="btn-ghost" type="button">SAVE IMAGE</button>
+        <button id="shareClose" class="btn-ghost" type="button">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 <script src="questions.js?v=6"></script>
 <script src="qr.js?v=1"></script>
-<script src="game.js?v=43"></script>
+<script src="game.js?v=71"></script>
+<script>
+/* Party-Proof Shell: register the offline worker (sw.js, scoped to
+   this directory by its location). http(s) only — a file:// copy
+   never attempts it, so the plain local load path stays untouched;
+   any registration failure is swallowed and the show plays on. */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', function () {
+    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+  });
+}
+</script>
 </body>
 </html>

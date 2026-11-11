@@ -179,7 +179,10 @@ export class GildedRoom {
         if (!body.code || !body.hostToken) {
           return Response.json({ ok: false, error: 'code and hostToken required' }, { status: 400 });
         }
-        this.room = createRoom(body.code, body.hostToken);
+        /* House Rules (N2): the host's toggles ride creation and
+         * are the room's for its whole life; createRoom validates
+         * them (anything not a literal true is off) */
+        this.room = createRoom(body.code, body.hostToken, body.rules);
         await this.save();
         this.scheduleAlarm();
         return Response.json({ ok: true, created: true, code: this.room.code });
@@ -313,6 +316,11 @@ export default {
         return new Response('POST to create a room', { status: 405, headers: cors() });
       }
       // Create a room; retry on the (rare) code collision with a live room.
+      // House Rules (N2): the host's toggles may ride the create
+      // body as {rules:{...}} — forwarded untouched to the room's
+      // creation, where room.js validates them. No body (an older
+      // host) creates a plain room, exactly as before.
+      const createBody = await request.json().catch(() => ({}));
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = makeCode();
         const hostToken = makeToken();
@@ -321,7 +329,7 @@ export default {
         const r = await stub.fetch(new Request('https://room/init', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, hostToken }),
+          body: JSON.stringify({ code, hostToken, rules: createBody && createBody.rules }),
         }));
         const j = await r.json().catch(() => ({}));
         if (j.created) {

@@ -180,6 +180,26 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .count-btn{width:64px;height:46px;font-size:22px;font-weight:700;border-radius:16px;background:var(--glass-ink);color:rgba(255,246,232,.65);box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
 .count-btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
 .count-btn.sel{background:var(--brass-pill);color:#431A04;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
+/* The Ten, pass 5 — the solo entry: a wide chip in the count row's
+   own grammar (glass-ink at rest, the brass pill when chosen) */
+.solo-row{margin-top:10px}
+.solo-btn{width:100%;padding:10px 14px;border-radius:16px;background:var(--glass-ink);color:rgba(255,246,232,.85);font-weight:700;letter-spacing:.06em;font-size:15px;box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
+.solo-btn small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.04em;opacity:.75;margin-top:2px}
+.solo-btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.solo-btn.sel{background:var(--brass-pill);color:#431A04;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
+/* Pass N2 — HOUSE RULES: the setup's three toggles wear the
+   setup's own grammar (glass-ink at rest, the brass pill when
+   chosen, the solo button's small-line under the name) */
+#rulesBlock{margin-top:12px}
+.rules-row{display:flex;gap:8px}
+.rule-toggle{flex:1;padding:9px 8px;border-radius:16px;background:var(--glass-ink);color:rgba(255,246,232,.85);font-weight:700;letter-spacing:.05em;font-size:13px;box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
+.rule-toggle small{display:block;font-size:10px;font-weight:600;letter-spacing:.03em;opacity:.75;margin-top:2px}
+.rule-toggle:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.rule-toggle.on{background:var(--brass-pill);color:#431A04;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
+.house-note{margin-top:8px;padding:9px 12px;border-radius:12px;background:rgba(255,215,106,.08);border:1px solid rgba(255,215,106,.35);color:#FFE29A;font-size:12px;font-weight:700;letter-spacing:.05em;text-align:left}
+.house-note span{display:block;font-weight:500;letter-spacing:0;color:rgba(255,246,232,.75);font-size:11.5px;margin-top:2px}
+.house-pod .house-q{display:flex;align-items:center;justify-content:center;height:64px;font-size:34px;font-weight:700;color:rgba(255,215,106,.55)}
+.house-bet{font-size:10px;font-weight:700;letter-spacing:.12em;color:#FFD76A;margin-right:8px}
 #nameRows{display:flex;flex-direction:column;gap:8px}
 .name-row{display:flex;align-items:center;gap:10px;background:var(--ink-row);border:2px solid rgba(255,246,232,.10);border-radius:14px;padding:6px 12px}
 .name-dot{width:16px;height:16px;border-radius:50%;flex:0 0 auto;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25),0 2px 0 rgba(0,0,0,.2)}
@@ -281,10 +301,115 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
   .fact-k{ flex-basis:92px; padding-top:1px }
   .fact-v{ font-size:13px }
   .break-tease{ margin-top:5px }
+  /* Dynamics pass D2: a full house — all six fact rows aboard
+     (the pot row from D1 and a Second Wind row) — tightens one
+     step further, keyed to the sixth row actually existing, so
+     the four- and five-row cards keep the rhythm above as-is */
+  .break-card:has(.fact-row:nth-child(6)) .fact-list{ margin:0 auto }
+  .break-card:has(.fact-row:nth-child(6)) .round-title{ font-size:21px; margin:1px 0 0 }
+  .break-card:has(.fact-row:nth-child(6)) .fact-row{ padding:.5px 2px }
+  .break-card:has(.fact-row:nth-child(6)) .fact-v{ font-size:12.5px; line-height:1.15 }
+  .break-card:has(.fact-row:nth-child(6)) .break-tease{ margin-top:2px; margin-bottom:3px }
 }
 /* under the Big Finish gloom the practicals burn a little harder,
    the way real footlights do */
 #scr-game[data-light="vault"] .set-lights{ filter:brightness(1.3) }
+
+/* ================= Gameplay-visuals pass G7 — THE CLOCK AS LIGHT ===
+   The stage's rim of warm light IS the answer clock. Two pre-rendered
+   glow layers live in .set (pure backdrop, pointer-events none, below
+   the footlights): rim-wide, a soft wash standing at the stage's edge,
+   and rim-tight, the same light pulled inward toward the card in a
+   deeper amber. One custom property — --rim-f, the DISPLAYED share of
+   the window still remaining (1 at the open, 0 at the close) — is
+   written by drawClockLight() in game.js off the clock's own tick,
+   and the layers cross-fade and contract on it by opacity/transform
+   alone (never an animated box-shadow, never a layout property).
+   Visibility follows the set-cat grammar: the rim belongs to the
+   question's life — present in question and reveal (at the reveal it
+   has eased back to its wide rest pose, under the footlights' existing
+   applause), faded everywhere else: spin, bet, intermission, finale.
+   data-light still filters .set as a whole, so the Big Finish vault
+   dims the rim with the rest of the room. */
+.set>div.set-rim{--rim-f:1;opacity:0;transition:opacity .6s ease}
+#scr-game[data-phase="question"] .set-rim,
+#scr-game[data-phase="reveal"] .set-rim{opacity:1}
+.set-rim>div{position:absolute;inset:0}
+.rim-wide{
+  background:radial-gradient(118% 102% at 50% 46%, rgba(255,206,120,0) 60%, rgba(255,198,110,.10) 84%, rgba(255,186,92,.30) 100%);
+  opacity:calc(.22 + .78 * var(--rim-f));
+}
+.rim-tight{
+  background:radial-gradient(104% 94% at 50% 47%, rgba(255,150,60,0) 44%, rgba(255,146,58,.15) 66%, rgba(255,116,40,.32) 88%, rgba(122,44,10,.16) 100%);
+  opacity:calc(.95 * (1 - var(--rim-f)));
+  transform:scale(calc(1.05 - .07 * (1 - var(--rim-f))));
+  transform-origin:50% 47%;
+}
+/* the hurry: under five seconds the footlights themselves breathe —
+   two soft beats a second at low amplitude around their standing
+   warmth, keyed by the .hurry class drawClock() toggles on the very
+   threshold the danger glow already watches. The class dies with the
+   clock, so the pulse stops the instant the question closes; the red
+   danger vignette (#dangerFx) is a separate, louder instrument and
+   keeps its own grammar. No reduced-motion gating (standing rule). */
+#scr-game.hurry .set-lights::before{ animation:rimPulseWash .5s ease-in-out infinite }
+#scr-game.hurry .set-lights::after{ animation:rimPulseBulbs .5s ease-in-out infinite }
+@keyframes rimPulseWash{ 0%,100%{opacity:.40} 50%{opacity:.64} }
+@keyframes rimPulseBulbs{ 0%,100%{opacity:.36} 50%{opacity:.60} }
+
+/* Visual pass V4 — THE AUDIENCE: the show gains a house. One drawn
+   silhouette (head and shoulders, near-black plum, a whisper of
+   stage light on the crown) repeated eleven times along the floor's
+   front edge, in front of the footlights and behind every piece of
+   furniture — the front row, seen from behind. The figures own no
+   layout: the layer is the set's own full-frame box, pointer-events
+   none, and every behaviour is a class the game already keeps —
+   data-phase for the question's bob, .hurry (drawClock's own under-
+   5s class) and .aud-hush (the Decider's whole question) for the
+   hush, .aud-ripple / .aud-dip for the reveal's answer, armed only
+   by the live reveal in game.js. Between questions the row rests in
+   a sway almost at rest; on the title screen the same house sits
+   perfectly still — it is waiting for the show. Amplitudes are a
+   few pixels throughout: felt, not watched. No reduced-motion
+   gating (standing rule). */
+.set-aud{pointer-events:none;overflow:hidden}
+#scr-title .set-aud{position:absolute;left:0;right:0;bottom:0;height:min(170px,30vh);z-index:1}
+.aud-fig{
+  position:absolute;bottom:calc(-10px + var(--b,0px));left:var(--l,0%);
+  width:9.4%;height:min(112px,28vh);
+  opacity:var(--o,1);scale:var(--s,1);
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 76'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%231E1129'/%3E%3Cstop offset='.45' stop-color='%230D0517'/%3E%3Cstop offset='1' stop-color='%2305020A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='30' cy='15' r='12.5' fill='url(%23g)'/%3E%3Cpath d='M3 76C3 50 15 39 30 39C45 39 57 50 57 76Z' fill='url(%23g)'/%3E%3C/svg%3E") bottom center/contain no-repeat;
+  transition:translate .5s ease;
+}
+@media (orientation:portrait){ .aud-fig{width:15%;height:min(140px,17.5vh)} }
+.aud-fig:nth-child(1){--l:.2%;--s:.92;--o:.90;--b:0px;--d:-.4s;--rd:0s;--dd:.00s}
+.aud-fig:nth-child(2){--l:9.3%;--s:1.04;--o:.96;--b:-3px;--d:-1.7s;--rd:.05s;--dd:.02s}
+.aud-fig:nth-child(3){--l:18.4%;--s:.87;--o:.85;--b:2px;--d:-2.9s;--rd:.10s;--dd:.05s}
+.aud-fig:nth-child(4){--l:27.5%;--s:1.10;--o:1;--b:-2px;--d:-.9s;--rd:.15s;--dd:.01s}
+.aud-fig:nth-child(5){--l:36.6%;--s:.95;--o:.92;--b:1px;--d:-2.2s;--rd:.20s;--dd:.07s}
+.aud-fig:nth-child(6){--l:45.7%;--s:1.07;--o:.97;--b:-4px;--d:-1.2s;--rd:.25s;--dd:.03s}
+.aud-fig:nth-child(7){--l:54.8%;--s:.89;--o:.87;--b:2px;--d:-3.1s;--rd:.30s;--dd:.06s}
+.aud-fig:nth-child(8){--l:63.9%;--s:1.02;--o:.94;--b:-1px;--d:-.2s;--rd:.35s;--dd:.00s}
+.aud-fig:nth-child(9){--l:73%;--s:.93;--o:.90;--b:3px;--d:-2.6s;--rd:.40s;--dd:.04s}
+.aud-fig:nth-child(10){--l:82.1%;--s:1.08;--o:.98;--b:-3px;--d:-1.5s;--rd:.45s;--dd:.02s}
+.aud-fig:nth-child(11){--l:91.2%;--s:.90;--o:.88;--b:0px;--d:-2s;--rd:.50s;--dd:.05s}
+/* the resting sway — every game phase that is not an open question */
+#scr-game .aud-fig{animation:audSway 7s ease-in-out infinite alternate;animation-delay:var(--d,0s)}
+/* the bob — an open question breathes */
+#scr-game[data-phase="question"] .aud-fig{animation-name:audBob;animation-duration:3.6s}
+/* the hush — the last five seconds (.hurry is drawClock's own class,
+   the same threshold the footlights breathe on) and the Decider's
+   whole question (.aud-hush, kept by game.js): the bob dies, the
+   row leans a hair toward the stage, and holds */
+#scr-game.hurry .aud-fig,
+#scr-game.aud-hush .aud-fig{animation:none;translate:0 -3px}
+/* the reveal's answer — one pass of the class, then game.js lifts it */
+#scr-game.aud-ripple .aud-fig{animation:audRipple .85s ease-in-out 1 both;animation-delay:var(--rd,0s)}
+#scr-game.aud-dip .aud-fig{animation:audDip .95s ease-in-out 1 both;animation-delay:var(--dd,0s)}
+@keyframes audSway{from{translate:0 0}to{translate:0 1px}}
+@keyframes audBob{0%,100%{translate:0 0}50%{translate:0 -2px}}
+@keyframes audRipple{0%{translate:0 0}38%{translate:0 -5px}100%{translate:0 0}}
+@keyframes audDip{0%{translate:0 0}32%{translate:0 4px}68%{translate:0 4px}100%{translate:0 0}}
 
 #scr-game[data-light="hot"] .set{filter:brightness(.9) saturate(1.5)}
 #scr-game[data-light="hot"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(255,116,66,.22),rgba(255,116,66,0) 70%)}
@@ -330,6 +455,22 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .tb-btn{letter-spacing:.16em;font-size:11px;font-weight:700;color:var(--cream);background:var(--glass-ink);padding:7px 12px;border-radius:999px;box-shadow:0 3px 0 rgba(0,0,0,.4);min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 #btnMuteShow.on{color:#431A04;background:var(--brass-pill);box-shadow:0 3px 0 var(--gold-sh)}
 .tb-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+/* Audit A2: in portrait the bar's three pieces sum wider than the
+   phone on the longest round label (Round 3, a two-digit question
+   count) — the mid, which may not wrap, ran the END SHOW button
+   off the right edge and squeezed its label into two lines. The
+   buttons no longer shrink, and the mid ellipsises as the last
+   resort instead of pushing them out. */
+@media (max-width:560px){
+  #topbar{gap:6px;padding:10px}
+  .tb-mid{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;letter-spacing:.12em}
+  .tb-right{flex:none}
+  .tb-btn{white-space:nowrap;padding:6px 8px;font-size:10px}
+  /* even shrunk, round label + question counter + both buttons
+     sum wider than the phone; the counter is the piece the show
+     can spare in portrait — the round keeps its name */
+  #qCounter,.tb-dot{display:none}
+}
 #table{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;min-height:0}
 .seats{display:flex;gap:clamp(10px,2.4vw,26px);justify-content:center;align-items:flex-end;padding:6px 14px 10px}
 .seats-top{display:none}
@@ -340,6 +481,15 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .seat-name{display:block;color:var(--cream);font-weight:700;letter-spacing:.11em;font-size:clamp(10px,1.5vmin,13.5px);text-shadow:0 2px 0 rgba(0,0,0,.22);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .seat-score{display:block;color:#FFF;font-weight:700;font-size:clamp(18px,3.2vmin,28px);line-height:1.1;text-shadow:0 3px 0 rgba(0,0,0,.25);transition:color .3s}
 .seat .tag{display:block;font-size:9px;font-weight:600;letter-spacing:.16em;color:rgba(255,246,232,.75);margin-top:1px}
+/* House Players (pass 5): the HOUSE segment leads the tag line in
+   brass; a house seat's line runs a segment longer than any human
+   combination, so house tags take one squeeze step at base size,
+   and a further step in each tight tier below — the portrait fix's
+   grammar, extended to the longest line the desk can now carry
+   ("HOUSE · CUT SPENT · BET 3 CHIPS · STREAK ×9") */
+.tag .houseseg{color:#FFD76A}
+.seat.house .tag{font-size:8px;letter-spacing:.1em}
+.seat .seat-guess{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#FFE29A;margin-top:1px}
 .seat.lead .desk{background:linear-gradient(180deg,#FFD76A 0 5px,transparent 5px),linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 42%),linear-gradient(180deg,var(--c),var(--cd))}
 .seat.gotit .desk{filter:drop-shadow(0 0 14px rgba(62,207,110,.9))}
 .seat.gotit{animation:gotBounce .45s cubic-bezier(.2,1.8,.4,1)}
@@ -392,12 +542,30 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .q-kind{margin-left:auto;color:rgba(255,246,232,.7);font-weight:600;letter-spacing:.22em;font-size:clamp(10.5px,1.6vmin,13.5px);white-space:nowrap}
 .q-text{font-size:clamp(23px,4.2vmin,40px);line-height:1.18;margin:clamp(10px,2.2vmin,20px) auto 0;max-width:24em;font-weight:700;background:var(--paper-bg);color:var(--paper-ink);border-radius:20px;padding:clamp(16px,2.6vmin,26px) clamp(20px,3.6vmin,36px);box-shadow:0 16px 30px rgba(0,0,0,.38),inset 0 0 0 1px var(--paper-edge)}
 .q-meta{display:flex;align-items:center;gap:18px;width:min(900px,96%);margin:clamp(6px,1.6vmin,12px) auto 0}
-.q-value{flex:1;text-align:center}
+.q-value{flex:1;display:flex;align-items:center;justify-content:center;gap:12px}
+.q-valmain{text-align:center}
 .q-value small{display:block;letter-spacing:.3em;font-size:10.5px;font-weight:600;color:rgba(255,246,232,.65);text-indent:.3em}
 .q-value span{display:inline-block;font-size:clamp(32px,6vmin,54px);line-height:1.05;font-weight:700;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 3px 0 rgba(20,4,24,.5))}
 .q-value.low span{background:linear-gradient(180deg,#FF9A8A,#E05244);-webkit-background-clip:text;background-clip:text}
 .q-value.bump span{animation:valBump .18s ease}
 @keyframes valBump{40%{transform:scale(1.13)}}
+/* G1 — THE MELTING VALUE: a slim vessel beside the numeral, filled
+   with molten gold. The gold column stands full-height inside an
+   overflow-hidden glass and rides a translateY, so the tick path
+   touches transform and opacity only. Depth is painted: an inset
+   brass rim, a dark well behind the gold, a glass streak down the
+   face, and the meniscus lit like a surface catching the footlights */
+.melt{flex:none;width:17px;height:60px;position:relative}
+.melt-glass{position:absolute;inset:0;border-radius:4px 4px 7px 7px;overflow:hidden;background:linear-gradient(180deg,rgba(12,5,18,.78),rgba(12,5,18,.55));box-shadow:inset 0 0 0 1.5px rgba(255,214,130,.42),inset 0 3px 6px rgba(0,0,0,.6),inset -3px 0 5px rgba(255,255,255,.05),0 2px 5px rgba(10,2,14,.45)}
+.melt-fill{position:absolute;left:1px;right:1px;top:0;height:100%;background:linear-gradient(180deg,#FFEFAF 0%,#FFD76A 24%,#FFB03A 56%,#D97E26 84%,#A85A1A 100%);will-change:transform}
+.melt-men{position:absolute;left:0;right:0;top:0;height:3px;border-radius:2px;background:linear-gradient(180deg,#FFF8DC,#FFE9A8);box-shadow:0 0 6px 1px rgba(255,214,110,.75)}
+.melt-cool{position:absolute;inset:0;background:linear-gradient(180deg,rgba(58,22,44,.10),rgba(46,14,30,.62))}
+.melt-mark{position:absolute;height:0;border-top:1px solid rgba(255,240,200,.5)}
+.mk-floor{left:0;right:0;bottom:50%;border-top:1.5px solid rgba(255,214,130,.95);box-shadow:0 0 4px rgba(255,190,80,.55)}
+.mk-full{left:22%;right:0;bottom:86%}
+.mk-2x{left:45%;right:0;bottom:96%;border-top-color:rgba(255,240,200,.72)}
+.melt.dbl .mk-2x{border-top-color:#FFE9A8;box-shadow:0 0 4px rgba(255,214,110,.65)}
+.melt-glass::after{content:"";position:absolute;top:0;bottom:0;left:2px;width:4px;background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.04));border-radius:2px;pointer-events:none}
 .q-for{flex:1;text-align:center;color:rgba(255,246,232,.8);font-weight:600;font-size:clamp(13.5px,2vmin,16.5px)}
 .timer-wrap{flex:none;display:flex;justify-content:center}
 .timer-ring{transform:rotate(-90deg);width:66px;height:66px}
@@ -464,10 +632,32 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .bet-row{border-left:12px solid var(--pc)}
 .bet-row .chip{min-width:44px}
 .bet-amt{flex:none;min-width:118px;text-align:center;font-weight:700;font-size:16.5px;color:#431A04;background:var(--brass-pill);border-radius:999px;padding:7px 13px;box-shadow:0 4px 0 var(--gold-sh)}
+/* Audit A2: in portrait a bet row's fixed pieces (two steppers,
+   the amount pill, the gaps) left the name less room than the
+   longest name needs, and the overflow pushed the +1 stepper off
+   the row's right edge — half off the phone, half untappable.
+   The fixed pieces run a step smaller here, and the name takes
+   an ellipsis before it ever pushes a control out again. */
+@media (max-width:560px){
+  .bet-row{gap:6px;padding:6px 8px}
+  .bet-row .chip{min-width:40px;padding:8px 10px}
+  .bet-amt{min-width:96px;font-size:13.5px;padding:6px 9px}
+  .bet-row .name-dot + span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
 .longshot-marker{flex:none;font-size:10px;font-weight:800;letter-spacing:.13em;color:#FFD76A;background:rgba(255,183,58,.13);border:1px solid rgba(255,215,106,.6);border-radius:999px;padding:5px 7px;white-space:nowrap}
 .chip{font-weight:700;border-radius:999px;padding:9px 15px;font-size:14px;color:var(--cream);background:var(--glass-ink);box-shadow:0 4px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
 button.chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .chip:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+/* G3 — the Bet Projector: the standings the chips would create */
+.proj-wrap{width:min(480px,94vw);margin:10px auto 4px;text-align:center}
+.proj-label{font-size:10.5px;font-weight:800;letter-spacing:.24em;color:var(--gold)}
+.proj-strip{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}
+.proj-seat{display:inline-flex;align-items:center;gap:6px;background:var(--glass-ink);border:1px solid rgba(255,215,106,.28);border-radius:999px;padding:5px 11px 5px 8px;font-weight:700;font-size:13.5px;box-shadow:inset 0 2px 0 rgba(255,255,255,.10)}
+.proj-move{font-size:11px;font-weight:800;min-width:20px;text-align:center}
+.proj-move.up{color:#8BF0AB}
+.proj-move.down{color:#FFB3AB}
+.proj-move.flat{color:rgba(255,246,232,.38)}
+.proj-amt{color:#FFD76A}
 
 /* race / standings */
 .race-wrap{animation:riseIn .7s cubic-bezier(.2,1.5,.4,1) both .1s;text-align:left}
@@ -502,6 +692,23 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .winner-podium .desk{min-height:96px}
 .finale-btns{display:flex;gap:14px;justify-content:center;margin-top:16px;flex-wrap:wrap}
 .tie-note{margin-top:10px}
+/* Pass N1 — THE REPORT CARD: the night's four recorded facts per
+   seat, brass-ruled under the podium in the statement register.
+   A row is the name and the facts they earned, in tabular type;
+   a fact that was never recorded is simply not on the row. */
+.report-card{max-width:660px;margin:16px auto 0;text-align:left;border-top:2px solid rgba(198,164,94,.55);border-bottom:1px solid rgba(198,164,94,.3);padding:9px 6px 5px}
+.report-head{font-size:10.5px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-align:center}
+.report-say{font-size:12.5px;font-style:italic;color:rgba(255,246,232,.78);text-align:center;margin-top:3px;line-height:1.35}
+.report-row{display:flex;gap:12px;align-items:baseline;padding:4px 2px;border-bottom:1px solid rgba(198,164,94,.16)}
+.report-row:last-child{border-bottom:none}
+.report-name{flex:0 0 108px;font-weight:700;color:var(--cream);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-facts{font-size:12.5px;color:rgba(255,246,232,.92);line-height:1.5;min-width:0}
+/* Audit A2: a fact is one thought — it wraps as a unit or not at
+   all. Before this, a fact could split across lines (FASTEST HAND
+   ending one line, its seconds opening the next) */
+.report-fact{display:inline-block;white-space:nowrap}
+.report-fk{font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--gold);white-space:nowrap}
+.report-dot{margin:0 7px;color:rgba(198,164,94,.6)}
 
 /* fx layers */
 #edgeFx{position:fixed;inset:0;z-index:21;pointer-events:none;opacity:0}
@@ -556,6 +763,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .q-cardwrap{margin-top:4px}
   .q-meta{margin-top:2px;gap:10px}
   .q-value span{font-size:25px}
+  .melt{width:14px;height:46px}
   .q-value small{display:inline-block;margin-right:8px;text-indent:0}
   .q-for{font-size:12.5px}
   .timer-ring{width:28px;height:28px}
@@ -698,6 +906,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .seat-name{font-size:9.5px;letter-spacing:.05em}
   .seat-score{font-size:15px}
   .seat .tag{font-size:7px;letter-spacing:.08em}
+  .seat.house .tag{font-size:6px;letter-spacing:.04em}
   .host-bubble{max-width:82vw}
   .host-face{width:46px;height:46px}
   .race-stage{flex-direction:column;align-items:center;gap:6px}
@@ -784,6 +993,46 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .jp-pchip.me{border-color:var(--gold)}
 .jp-pchip.away{opacity:.45}
 .jp-gain{font-size:clamp(38px,11vw,56px);font-weight:700;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 3px 0 #571C46);margin-top:4px}
+/* Pass N1 — the pad's own report card, under its final standings:
+   the break card's fact rows, one per recorded fact */
+.jp-report{margin-top:14px;text-align:left}
+.jp-report-head{font-size:10.5px;font-weight:700;letter-spacing:.26em;color:var(--gold);text-align:center;margin-bottom:2px}
+/* Pass N1, portrait: a finale carrying the report card tightens
+   the same way the break cards do — Sterling and the podium slim,
+   the desks step down from their full rank heights, the marquee's
+   display sizes drop a notch, and the card's own rows run tight.
+   The champion line and the buttons stay on screen; the facts
+   keep their 12.5px. */
+@media (max-width:560px){
+  .finale-wrap.has-report{gap:2px}
+  /* Audit A2: a full show's finale — rich report, series line,
+     pot line — overflowed this squeeze by up to ~25px and left
+     BACK TO LOBBY half under the bubble. The height is earned
+     back across the stack: the marquee's vertical padding, the
+     wrap's gaps, the desks' spare depth, Sterling's line size
+     and the buttons' padding all give a little. */
+  .finale-wrap.has-report .marquee{padding-top:10px;padding-bottom:10px}
+  #stage .finale-wrap.has-report .sterling-lg{width:56px}
+  #stage .finale-wrap.has-report .bubble{font-size:11px;padding:6px 9px}
+  .finale-wrap.has-report .winner-word{font-size:23px}
+  .finale-wrap.has-report .winner-name{font-size:17px}
+  .finale-wrap.has-report .winner-total{font-size:21px}
+  .finale-wrap.has-report .winner-sub.pot-line{font-size:11.5px}
+  #stage .finale-wrap.has-report .finale-row{margin-top:2px}
+  #stage .finale-wrap.has-report .finale-row .podium .avatar{width:30px}
+  #stage .finale-wrap.has-report .finale-row .desk{min-height:32px;padding-top:6px}
+  .finale-wrap.has-report .report-card{margin-top:6px;padding:6px 8px 4px}
+  .finale-wrap.has-report .report-say{font-size:10.5px;line-height:1.25;margin-top:2px}
+  .finale-wrap.has-report .report-row{padding:1px 2px}
+  .finale-wrap.has-report .report-name{flex-basis:100px}
+  .finale-wrap.has-report .report-facts{font-size:12px;line-height:1.2}
+  .finale-wrap.has-report .btn{padding-top:7px;padding-bottom:7px}
+  /* Pass N3: three finale buttons in portrait wrap to two rows —
+     the row and its buttons run a step tighter so the finale
+     keeps its fit with SHARE THE NIGHT aboard */
+  .finale-wrap .finale-btns{gap:8px;margin-top:10px}
+  .finale-wrap .finale-btns .btn-gold,.finale-wrap .finale-btns .btn-ghost{padding:7px 16px;font-size:15px}
+}
 .jp-standrow{display:flex;align-items:center;gap:10px;background:var(--ink-row);border:2px solid rgba(255,246,232,.1);border-radius:14px;padding:10px 14px;margin-top:8px;font-weight:700;text-align:left}
 .jp-standrow.me{border-color:var(--gold);background:rgba(255,201,60,.1)}
 .jp-standrow .sc{margin-left:auto;font-size:18px}
@@ -852,6 +1101,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .jp-chipstack{display:flex;gap:12px;min-height:76px;align-items:center}
 .jp-chipdisc{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 50% 36%,#FFE29A,#FFB03A 62%,#FF8A3C);border:5px dashed rgba(67,26,4,.35);box-shadow:0 6px 0 var(--gold-sh),inset 0 3px 0 rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-weight:700;color:#431A04;font-size:19px}
 .jp-betamt{font-size:clamp(24px,7vw,32px);font-weight:700;text-shadow:0 3px 0 rgba(20,4,24,.45)}
+.jp-proj{min-height:22px;font-size:15.5px;font-weight:800;letter-spacing:.06em;color:#FFD76A;text-shadow:0 2px 0 rgba(20,4,24,.45);text-align:center}
 .jp-betrow{display:flex;gap:28px}
 .jp-step{width:86px;height:86px;border-radius:50%;font-size:38px;font-weight:700;color:var(--cream);background:var(--glass-ink);box-shadow:0 6px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14)}
 .jp-step:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
@@ -970,9 +1220,68 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 #scr-game.st-lean.st-point-c .host-face{transform:scale(1.08) translateY(3px)}
 #scr-game.st-lean.st-point-r .host-face{transform:scale(1.08) rotate(4deg) translateY(2px)}
 
+/* ---- Visual pass V1: Sterling in planes ----
+   The figure is built in planes (game.js sterlingSVG; the title
+   figure and the host-face bust in index.html wear the same
+   groups): a cast shadow (.st-shadow), body, head, and an arm
+   wrapper around each untouched .st-arm gesture group. The pose
+   classes the rig already fires translate the planes a few
+   pixels with a hair of stagger — the pointing arm leads (no
+   delay), the head follows a beat later (.06s), the body
+   settles last (.12s) — via these transitions, so the depth
+   rides motions that already exist and no pose changes shape.
+   The painted rim (.st-rim shapes, .st-rim-stroke copies) is a
+   silhouette offset toward the light, filled with the live
+   category's colour inside the game screen (applyCat keeps
+   --cat-rgb current there) and warm brass everywhere else.
+   The shadow drifts opposite the lean and the point, the way
+   a cast shadow answers a moving figure. */
+.sterling,.host-face{--rim-rgb:198,164,94}
+#scr-game .sterling,#scr-game .host-face{--rim-rgb:var(--cat-rgb)}
+.sterling .st-rim,.host-face .st-rim{fill:rgb(var(--rim-rgb));opacity:.5}
+.sterling .st-rim-stroke,.host-face .st-rim-stroke{fill:none;stroke:rgb(var(--rim-rgb));opacity:.45;stroke-linecap:round}
+.sterling .st-plane,.host-face .st-plane{transition:transform .5s cubic-bezier(.25,1.2,.4,1)}
+.sterling .st-plane-head,.host-face .st-plane-head{transition-delay:.06s}
+.sterling .st-plane-body,.host-face .st-plane-body{transition-delay:.12s}
+.sterling .st-shadow,.host-face .st-shadow{transform-box:fill-box;transform-origin:center;transition:transform .6s ease .04s}
+/* the glance and the lean — written first, so a point composed
+   with the lean keeps the point's offsets below, the same
+   composition the host-face rules above observe */
+#scr-game.st-glance .st-plane-head{transform:translate(1px,-.3px)}
+#scr-game.st-lean .st-plane-head{transform:translate(1.5px,1.5px)}
+#scr-game.st-lean .st-plane-body{transform:translate(.8px,.8px)}
+#scr-game.st-lean .st-plane-arm-l,#scr-game.st-lean .st-plane-arm-r{transform:translate(.8px,.4px)}
+#scr-game.st-lean .st-shadow{transform:translate(-2.5px,0) scale(1.05,1)}
+/* the nod rides the head plane (the badge already nods as one
+   piece on nodA); the dip mirrors nodA's shape at plane scale */
+#scr-game.st-nod .st-plane-head{animation:planeNod .55s ease}
+@keyframes planeNod{0%,100%{transform:translate(0,0)}30%{transform:translate(.4px,1.8px)}55%{transform:translate(0,0)}78%{transform:translate(.3px,1px)}}
+/* the presenting sweep: the arm plane leads toward the card */
+#scr-game.st-sweep .st-plane-arm-r{transform:translate(2.5px,-1.5px)}
+#scr-game.st-sweep .st-plane-head{transform:translate(1.5px,-.5px)}
+#scr-game.st-sweep .st-plane-body{transform:translate(.5px,0)}
+#scr-game.st-sweep .st-shadow{transform:translate(-2px,0) scale(1.02,1)}
+/* the point: the pointing arm's plane reaches furthest, the
+   head follows it, the shadow falls the other way */
+#scr-game.st-point-l .st-plane-arm-l{transform:translate(-3px,-1px)}
+#scr-game.st-point-l .st-plane-head{transform:translate(-2px,.5px)}
+#scr-game.st-point-l .st-plane-body{transform:translate(-1px,0)}
+#scr-game.st-point-l .st-shadow{transform:translate(3.5px,.5px) scale(1.03,1)}
+#scr-game.st-point-c .st-plane-arm-r{transform:translate(1.5px,1px)}
+#scr-game.st-point-c .st-plane-head{transform:translate(1px,1px)}
+#scr-game.st-point-c .st-plane-body{transform:translate(.5px,.5px)}
+#scr-game.st-point-c .st-shadow{transform:translate(0,.5px) scale(1.02,1)}
+#scr-game.st-point-r .st-plane-arm-r{transform:translate(3px,-1px)}
+#scr-game.st-point-r .st-plane-head{transform:translate(2px,.5px)}
+#scr-game.st-point-r .st-plane-body{transform:translate(1px,0)}
+#scr-game.st-point-r .st-shadow{transform:translate(-3.5px,.5px) scale(1.03,1)}
+
 /* ---- 3. money moves: coin canvas, score shimmer, the laurel ---- */
 #coinCanvas{position:fixed;inset:0;z-index:26;pointer-events:none;display:none}
 #coinCanvas.on{display:block}
+/* The Ten, pass 7: the pad's twin coin canvas, inside the join screen */
+#jpCoinCanvas{position:fixed;inset:0;z-index:30;pointer-events:none;display:none}
+#jpCoinCanvas.on{display:block}
 .seat.banking .seat-score{background:linear-gradient(100deg,#FFF 15%,#FFE29A 38%,#FFB03A 50%,#FFF 72%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:shimmerX .85s linear}
 @keyframes shimmerX{from{background-position:110% 0}to{background-position:-110% 0}}
 
@@ -991,6 +1300,10 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
    same geometry, so the seat's tag space and fit guards are unmoved. */
 .closest-tag.qdtag{background:linear-gradient(180deg,#FFF3C4,#FFD76A 70%,#FFC53D);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,213,106,.55)}
 .jp-qdtag{display:inline-block;margin:2px auto 4px;padding:3px 10px 4px;border-radius:999px;background:linear-gradient(180deg,#FFF3C4,#FFD76A 70%,#FFC53D);color:#431A04;font-size:10px;font-weight:800;letter-spacing:.12em;box-shadow:0 2px 0 rgba(0,0,0,.3)}
+/* Gameplay-visuals pass G5: the pad's photo-finish line — a quiet
+   gold caps line above the score line, lettered in the race's own
+   grammar (FIRST IN / 2ND IN / the margin in tabular figures). */
+.jp-pfline{text-align:center;margin:2px auto 4px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#FFD76A;text-shadow:0 1px 2px rgba(0,0,0,.55);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 /* Hot Streaks (New programme pass 3): the warm family. The desk
    tag's streak segment is amber in the tag's own caps grammar,
    deepening to a lit ember at 5+; the reveal tags are the qdtag
@@ -1002,6 +1315,35 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .closest-tag.streaktag{background:linear-gradient(180deg,#FFE3B3,#FFB03A 70%,#FF8A3C);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,154,60,.5)}
 .jp-qdtag.streak{background:linear-gradient(180deg,#FFE3B3,#FFB03A 70%,#FF8A3C)}
 .jp-streakline{margin:8px auto 0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.14em;color:#FFB03A;text-shadow:0 0 10px rgba(255,154,60,.35)}
+/* Gameplay-visuals pass G8 — THREAT DISPLAYS: the streak made
+   ambient. The tag prints the run from 3; the seat itself carries
+   the temperature from 2, in the same warm family — kindling is a
+   faint warm rim along the desk's top edge, ember (3–4, the bonus
+   live) is a steady glow with the nameplate warmed to match, and
+   at 5+ — the tag's own hot tier — the glow breathes on a slow
+   pulse whose rest frame is exactly the ember frame, so the class
+   landing never jumps. Paint only (box-shadow, filter, colour):
+   no layout property moves, no hit target shifts, zero height.
+   A marked seat keeps its green GOT IT glow composed over the
+   heat; at full ember the pulse subsumes it (the bounce remains).
+   No reduced-motion gating (standing rule). */
+.seat.kindling .desk{filter:drop-shadow(0 0 5px rgba(255,176,66,.25));box-shadow:inset 0 2px 0 rgba(255,197,61,.5),inset 0 0 13px rgba(255,166,58,.13)}
+.seat.ember .desk{filter:drop-shadow(0 0 8px rgba(255,140,50,.5));box-shadow:inset 0 2px 0 rgba(255,186,84,.9),inset 0 0 18px rgba(255,132,46,.3)}
+.seat.ember .seat-name{color:#FFE0B0;text-shadow:0 0 9px rgba(255,154,60,.4),0 2px 0 rgba(0,0,0,.22)}
+.seat.gotit.kindling .desk{filter:drop-shadow(0 0 5px rgba(255,176,66,.25)) drop-shadow(0 0 14px rgba(62,207,110,.9))}
+.seat.gotit.ember .desk{filter:drop-shadow(0 0 8px rgba(255,140,50,.5)) drop-shadow(0 0 14px rgba(62,207,110,.9))}
+.seat.emberfull .desk{animation:emberPulse 2.6s ease-in-out infinite}
+@keyframes emberPulse{0%,100%{filter:drop-shadow(0 0 8px rgba(255,140,50,.5));box-shadow:inset 0 2px 0 rgba(255,186,84,.9),inset 0 0 18px rgba(255,132,46,.3)}50%{filter:drop-shadow(0 0 15px rgba(255,118,38,.8));box-shadow:inset 0 2px 0 rgba(255,205,105,1),inset 0 0 26px rgba(255,118,38,.45)}}
+/* the pad's standings rows warm by the same thresholds — an inset
+   ember bar at the row's leading edge and a wash of the warm
+   family; the me-row keeps its gold border (identity outranks
+   heat), and the full-ember row pulses its bar, never its text */
+.jp-standrow.kindling{box-shadow:inset 3px 0 0 rgba(255,197,61,.55),inset 0 0 12px rgba(255,166,58,.08)}
+.jp-standrow.ember{border-color:rgba(255,154,60,.5);background-image:linear-gradient(90deg,rgba(255,140,50,.12),rgba(255,140,50,0) 55%);box-shadow:inset 3px 0 0 rgba(255,160,60,.95),inset 0 0 14px rgba(255,140,50,.12)}
+.jp-standrow.me.ember{border-color:var(--gold)}
+.jp-standrow.emberfull{animation:emberRowPulse 2.6s ease-in-out infinite}
+@keyframes emberRowPulse{0%,100%{box-shadow:inset 3px 0 0 rgba(255,160,60,.95),inset 0 0 14px rgba(255,140,50,.12)}50%{box-shadow:inset 3px 0 0 rgba(255,186,84,1),inset 0 0 22px rgba(255,132,46,.24)}}
+.jp-toyou{margin:9px auto 0;text-align:center;font-size:14px;font-weight:900;letter-spacing:.08em;color:#FFE29A;font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(255,176,58,.4)}
 @keyframes tagIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
 #laurel{position:absolute;z-index:3;width:42px;height:42px;pointer-events:none;transform:translate(-50%,-88%);transition:left .65s cubic-bezier(.3,1.25,.4,1),top .65s cubic-bezier(.3,1.25,.4,1),opacity .3s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
 #laurel.snap{transition:none}
@@ -1011,20 +1353,16 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .laurel-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);width:34px;height:34px;z-index:5;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
 .laurel-badge svg{width:100%;height:100%;display:block}
 
-/* ---- 4. the wheel, with materials: brass frame, needle, glint ---- */
-.spin-frame{position:relative;max-width:780px;margin:14px auto 4px;padding:20px 16px 14px;border-radius:28px;background:var(--ink-panel-deep);border:3px solid var(--brass-frame);box-shadow:inset 0 0 0 2px rgba(255,226,154,.55),inset 0 3px 0 rgba(255,255,255,.14),0 16px 32px rgba(0,0,0,.45)}
-.spin-frame .cat-row{margin:2px 0 0}
-.spin-needle{position:absolute;top:-11px;left:50%;width:24px;height:18px;z-index:4;pointer-events:none;background:linear-gradient(180deg,#FFE29A,#FFB03A 60%,#D9930D);clip-path:polygon(0 0,100% 0,50% 100%);filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));transform:translateX(-50%);transition:transform .17s ease-out}
-.spin-needle.snap{transition:none}
-.spin-needle.settle{animation:needleSettle .34s cubic-bezier(.2,2.2,.4,1)}
+/* ---- 4. THE WHEEL, REAL (The Ten, pass 1): a drawn wheel — seven
+   segments in the category colours under a fixed brass needle.
+   The rotor is an SVG group turned by the runner in game.js; the
+   needle lives outside it and only flicks as boundaries pass. ---- */
+.wheel-frame{position:relative;width:min(74vw,340px);margin:12px auto 2px}
+.wheel-svg{display:block;width:100%;height:auto;filter:drop-shadow(0 16px 26px rgba(0,0,0,.5))}
+.wheel-needle{position:absolute;top:-10px;left:50%;width:26px;height:20px;z-index:4;pointer-events:none;background:linear-gradient(180deg,#FFE29A,#FFB03A 60%,#D9930D);clip-path:polygon(0 0,100% 0,50% 100%);filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));transform:translateX(-50%);transition:transform .06s ease-out}
+.wheel-needle.land{animation:needleSettle .34s cubic-bezier(.2,2.2,.4,1)}
 @keyframes needleSettle{0%{margin-top:0}35%{margin-top:3px}70%{margin-top:-1px}100%{margin-top:0}}
-.spin-glint{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:3}
-.spin-glint::after{content:"";position:absolute;top:-10%;bottom:-10%;left:0;width:46%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.17) 50%,transparent);transform:translateX(-240%) skewX(-12deg)}
-.spin-frame.spinning .spin-glint::after{animation:glintMove .85s linear infinite}
-@keyframes glintMove{to{transform:translateX(340%) skewX(-12deg)}}
-.spin-frame.fast .cat-chip{filter:blur(.5px) saturate(1.1)}
-.spin-frame.fast .cat-chip.sel{filter:none;box-shadow:-11px 0 15px -5px var(--chip),0 7px 0 var(--chipd),0 0 24px var(--chip),inset 0 2px 0 rgba(255,255,255,.4)}
-.spin-frame:not(.spinning) .cat-chip{transition:all .18s ease}
+.wheel-label{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-anchor:middle}
 
 /* ---- 8. the wheel emblem: the show's key art ----
    One medallion (index.html #emblem / #emblem-sm), three stamps:
@@ -1086,7 +1424,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
    element's own letter-tracking (sizes untouched). Sterling's
    speech, question/answer text and player names are NOT labels and
    are deliberately absent from both lists. */
-.tnum,.pmoney,.seat-score,.seat-delta,.gain-chip,.podium .delta,.winner-total,.wager-amt,.q-value span,.timer-num,.bet-amt,.og-count,.og-code,.code-box,.count-btn,.rank-badge,.jp-id-score,.jp-id-secs,.jp-id-place,.jp-gain,.jp-standrow .sc,.jp-vscore,.jp-betamt,.jp-chipdisc,.jp-num,.jp-pickstate,.jp-numstate,.jp-betstate,#qCounter{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-kerning:none}
+.tnum,.pmoney,.seat-score,.seat-delta,.gain-chip,.podium .delta,.winner-total,.wager-amt,.q-value span,.timer-num,.bet-amt,.og-count,.og-code,.code-box,.count-btn,.rank-badge,.jp-id-score,.jp-id-secs,.jp-id-place,.jp-gain,.jp-standrow .sc,.jp-vscore,.jp-betamt,.jp-chipdisc,.jp-num,.jp-pickstate,.jp-numstate,.jp-betstate,#qCounter,.proj-amt,.jp-proj{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-kerning:none}
 .lbl,.kicker,.setup-label,.name-seat,.microline,.how-kicker,.how-skip,.how-close,.round-kicker,.co-kicker,.q-cat,.q-kind,.cat-pill,.q-value small,.host-name,#topbar,.tb-btn,.mute-btn,.mode-tab,.chip,.cat-chip,.og-pill,.og-qr-cap,.og-count,.jp-head,.jp-room,.jp-conn,.jp-phaseword,.jp-betlabel,.jp-herotag,.jp-ans-tag,.jp-cutnote,.jp-pickstate,.jp-numstate,.jp-betstate,.seat .tag,.closest-tag{text-transform:uppercase}
 
 /* ================= Design pass item 6 — emblems + portraits =================
@@ -1193,8 +1531,19 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .count-btn::after{content:"";position:absolute;inset:-6px 0}
   /* #1 — bet rows stand down like the lobby: two-up grid, slimmer rows */
   .bet-rows{display:grid;grid-template-columns:1fr 1fr;width:min(880px,97vw);gap:4px;margin:4px auto}
+  .proj-wrap{width:min(880px,97vw);margin:4px auto 2px}
+  /* G3 fit: the strip earns its height back in short landscape —
+     label and pills share one line, pills slim — so the beat that
+     just fit before the projector still fits with it (measured:
+     the strip is fully in view, no scroll, at 844x390) */
+  .stage-inner:has(.bet-rows) .proj-wrap{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto}
+  .stage-inner:has(.bet-rows) .bet-rows{margin:2px auto;gap:2px}
+  .stage-inner:has(.bet-rows) .round-kicker{font-size:9px}
+  .stage-inner:has(.bet-rows) .proj-strip{margin-top:0;flex-wrap:nowrap}
+  .stage-inner:has(.bet-rows) .proj-seat{padding:1px 8px 1px 6px;font-size:12px;gap:4px}
+  .stage-inner:has(.bet-rows) .proj-move{min-width:16px;font-size:10px}
   .bet-row{padding:0 8px}
-  .stage-inner:has(.bet-rows) .round-text{max-width:76ch;margin-bottom:2px;font-size:14px}
+  .stage-inner:has(.bet-rows) .round-text{max-width:76ch;margin-bottom:0;font-size:12px;line-height:1.3}
   /* #4/#8 — stage air: the host bubble gives back a line, desks slim */
   .host-line{min-height:3.3em}
   #stage{padding-top:1px;padding-bottom:1px}
@@ -1209,6 +1558,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .cat-pill{margin-bottom:2px;padding-top:1px;padding-bottom:1px;font-size:12px}
   .q-meta{margin-top:0}
   .q-value span{font-size:22px}
+  .melt{width:13px;height:40px}
   .timer-ring{width:22px;height:22px}
   #topbar{padding-top:7px;padding-bottom:7px}
   #stage{padding-top:0;padding-bottom:0}
@@ -1232,6 +1582,61 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .winner-name{font-size:18px}
   .finale-wrap .sterling-lg{width:76px}
   .finale-btns .btn-gold,.finale-btns .btn-ghost{padding:7px 20px}
+  /* Pass N1: a finale carrying the report card earns the card's
+     height back across the whole finale — the marquee's display
+     sizes step down one notch, Sterling and the podium slim, the
+     card's own head and Sterling's line share a single line, and
+     its rows run hairline-tight. Measured against the pre-card
+     finale, which itself just fits: the champion line and the
+     buttons stay on screen, and no type drops below the game's
+     floors (the facts' 11.5px matches the break card's own
+     short-landscape floor). */
+  /* …and in short landscape the card earns its height
+     structurally: the finale composes as a broadcast two-column
+     graphic — champion and podium left, the report card right,
+     the buttons full-width beneath — so no type anywhere drops
+     below the game's floors and nothing scrolls. */
+  .finale-wrap.has-report{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:16px;row-gap:1px;align-items:start;padding-top:0;padding-bottom:0}
+  .finale-wrap.has-report .marquee{padding-top:2px;padding-bottom:2px}
+  .finale-wrap.has-report .finale-main{grid-column:1}
+  .finale-wrap.has-report .finale-row{grid-column:1}
+  .finale-wrap.has-report .btn-row{grid-column:1/-1}
+  .finale-wrap.has-report .marquee .kicker{display:none}
+  #stage .finale-wrap.has-report .winner-word{font-size:19px;line-height:1}
+  .finale-wrap.has-report .winner-name{font-size:14px;margin-top:1px;line-height:1.1}
+  .finale-wrap.has-report .winner-total{font-size:18px;line-height:1}
+  .finale-wrap.has-report .winner-sub.pot-line{font-size:10.5px;margin-top:0;line-height:1.2}
+  .finale-wrap.has-report .winner-sub:not(.pot-line){display:inline;font-size:11px;margin-top:0;line-height:1.2}
+  /* Audit A2: two inline subs back to back printed as one word
+     ("A NEW CHAMPIONON THE NIGHT") — the series line takes a
+     breath of space when it follows the champion's own sub */
+  .finale-wrap.has-report .winner-sub:not(.pot-line) + .winner-sub.series-line{margin-left:12px}
+  .finale-wrap.has-report .winner-streak{display:inline-block;font-size:10px;margin:0 0 0 8px;vertical-align:2px}
+  .finale-wrap.has-report .sterling-lg{width:54px}
+  #stage .finale-wrap.has-report .finale-row .podium.big .avatar{width:24px}
+  #stage .finale-wrap.has-report .finale-row .desk{min-height:34px}
+  /* Audit A2: padding-top 2px slid the nameplate under the avatar
+     (the avatar wears a -10px hem into the desk), printing the
+     middle of every name behind a face. 12px clears the hem; the
+     height is earned back from the marquee's padding, this row's
+     own top padding and the buttons' top margin. */
+  #stage .finale-wrap.has-report .finale-row .desk{padding-top:12px;padding-bottom:4px}
+  .finale-wrap.has-report .finale-row{padding-top:0}
+  #stage .finale-wrap.has-report .finale-row .pname{font-size:10.5px;line-height:1.1}
+  #stage .finale-wrap.has-report .finale-row .pmoney{font-size:13px;line-height:1.1}
+  #stage .finale-wrap.has-report .desk-tag{display:none}
+  .finale-wrap.has-report .btn{padding-top:4px;padding-bottom:4px}
+  /* Pass N3: with a third button aboard (SHARE THE NIGHT), the
+     buttons leave their auto-placed cell and take the full width
+     beneath both columns, in one row — stacked in the narrow
+     column they cost the finale its fit */
+  .finale-wrap.has-report .finale-btns{grid-column:1/-1;margin-top:2px;gap:10px}
+  .finale-wrap.has-report .report-card{grid-column:2;grid-row:1/3;margin-top:0;padding:4px 10px 3px}
+  .finale-wrap.has-report .report-head{font-size:10px;line-height:1.1}
+  .finale-wrap.has-report .report-say{font-size:10.5px;margin-top:1px;line-height:1.2}
+  .finale-wrap.has-report .report-row{padding:1px 2px}
+  .finale-wrap.has-report .report-name{flex-basis:98px;font-size:12.5px}
+  .finale-wrap.has-report .report-facts{font-size:11.5px;line-height:1.2}
   /* #5 — the pad answers two-up in landscape; portrait untouched.
      The column must fit for real: a flex-shrunk grid paints its rows
      over the pick-state and the Cut Two button, so the question line,
@@ -1335,6 +1740,52 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .fortune.lead .fstk::before{box-shadow:inset 0 0 0 1px rgba(122,74,8,.5),0 0 8px rgba(255,215,106,.7)}
 .fstk.off{visibility:hidden}
 .fortune.zero::after{content:"";position:absolute;right:10px;bottom:0;width:21px;height:6px;border-radius:50%;border:1.5px solid rgba(255,224,150,.38);background:rgba(0,0,0,.14)}
+/* Dynamics pass D1: the table pot's vessel — drawn brass at the
+   front-left of the stage, wearing its running total. An overlay
+   child of #stage (zero layout height, pointer-events none), so
+   no measured fit anywhere can move because it exists */
+.pot-vessel{position:absolute;left:12px;bottom:8px;z-index:6;width:64px;text-align:center;pointer-events:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.pot-vessel.fed{animation:potFedGlow .9s ease-out}
+@keyframes potFedGlow{0%{filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}30%{filter:drop-shadow(0 0 14px rgba(255,196,64,.85)) brightness(1.3)}100%{filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}}
+.pot-rim{height:9px;border-radius:50%;background:radial-gradient(ellipse at 42% 34%,#FFE9AE,#E9B64F 55%,#9A6B14 88%);box-shadow:inset 0 0 0 1px rgba(90,58,6,.65),inset 0 -3px 4px rgba(90,58,6,.5)}
+.pot-body{position:relative;height:30px;margin-top:-4px;border-radius:6px 6px 46% 46%/6px 6px 68% 68%;background:linear-gradient(100deg,#7A5210 0%,#C8922A 30%,#F0BE58 48%,#B57F1C 72%,#6E4A0E 100%);box-shadow:inset 0 0 0 1px rgba(74,44,4,.55),inset 0 -8px 10px rgba(74,44,4,.45)}
+.pot-vessel.fed .pot-body{animation:potFedBump .9s ease-out}
+@keyframes potFedBump{0%{transform:scale(1)}30%{transform:scale(1.09)}100%{transform:scale(1)}}
+.pot-shine{position:absolute;left:9px;top:4px;width:11px;height:17px;border-radius:50%;background:linear-gradient(180deg,rgba(255,246,214,.65),rgba(255,246,214,0));transform:rotate(14deg)}
+.pot-label{margin-top:3px;font-weight:800;letter-spacing:.3em;font-size:8.5px;color:rgba(255,226,160,.85);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.pot-total{font-weight:800;font-size:14px;color:#FFD76A;text-shadow:0 1px 0 rgba(20,4,24,.55);font-variant-numeric:tabular-nums}
+.winner-sub.pot-line{color:#FFE9AE}
+.jp-potline{text-align:center;color:rgba(255,215,106,.8);font-weight:800;letter-spacing:.26em;font-size:10.5px;margin:7px 2px 0;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.jp-potline.fed{color:#FFD76A;text-shadow:0 0 10px rgba(255,190,60,.45)}
+/* Audit A2: the vessel's docks. Bottom-left is its home only where
+   the stage's bottom-left is scenery (intro, vote, reveal,
+   intermission, the portrait bet). On the question and landscape
+   bet stages that corner is furniture — the first Cut Two pill,
+   the third bet row — so there the vessel moves to measured-clear
+   ground: in short landscape, up beside the question card at the
+   value row's height while a question is open (the answers begin
+   below it, the category pill ends above it), and a compact
+   bottom-left — label folded away, body shortened — under the
+   bet grid, whose rows end higher than the question's tools row
+   does. In portrait a question has no free corner at any player
+   count, so the vessel sits that one phase out (see the block
+   below). The coin flights target the element itself, so they
+   follow it to whichever dock the phase uses. */
+@media (max-height:500px){
+  #stage:has(#btnCallIt) .pot-vessel,#stage:has(#ogCallIt) .pot-vessel{top:40px;bottom:auto}
+  #stage:has(.bet-row) .pot-vessel{left:10px;bottom:2px}
+  #stage:has(.bet-row) .pot-vessel .pot-label{display:none}
+  #stage:has(.bet-row) .pot-vessel .pot-body{height:20px}
+  #stage:has(.bet-row) .pot-vessel .pot-total{font-size:12px}
+}
+@media (max-width:560px){
+  /* Portrait's question stage has no free corner at any player
+     count — the tools grid, the CALL IT bar and the answers take
+     every edge — so there the vessel sits the question out. It is
+     back at its bottom-left home for the vote (that stage's foot
+     is empty), the reveal its moment lives in, and the bet. */
+  #stage:has(#btnCallIt) .pot-vessel,#stage:has(#ogCallIt) .pot-vessel{display:none}
+}
 .seat .desk .seat-name,.seat .desk .seat-score{position:relative;z-index:1}
 @media (max-height:500px){
   .fortune{--fmax:23px;right:6px;bottom:3px;gap:2px}
@@ -1423,8 +1874,18 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
      cluster either. Same three lines, same desk height. */
   .seat .desk{display:flex;flex-direction:column}
   .seat .seat-name{order:1}
-  .seat .tag{order:2;padding-right:0}
-  .seat .seat-score{order:3}
+  /* …and the tag type squeezes a step in this tier: with the streak
+     segment the longest combination ("CUT SPENT · BET 3 CHIPS ·
+     STREAK ×9") measures 144px at 7px/.08em against the 122px
+     desk, so 6px/.05em brings it to ~117px — every segment whole
+     on the line, nothing truncated, nothing under the stacks. */
+  .seat .tag{order:2;padding-right:0;font-size:6px;letter-spacing:.05em}
+  /* …and the house line, one segment longer again, squeezes one
+     step further in this tier (5px/.02em): the longest house
+     combination measures ~111px against the 122px desk */
+  .seat.house .tag{order:2;padding-right:0;font-size:5px;letter-spacing:.02em}
+  .seat .seat-guess{order:3;font-size:9.5px}
+  .seat .seat-score{order:4}
   /* FIX 4 (portrait leg of the repay) */
   .race-podiums{padding-top:16px}
   .bumper:has(.race-wrap) .btn-gold{margin-top:6px}
@@ -1443,6 +1904,18 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .q-cardwrap .q-text{margin-top:0}
 .headline-banner{position:absolute;left:50%;top:-14px;transform:translate(-50%,-50%) rotate(-1.2deg);z-index:3;background:var(--brass-grad);color:#431A04;font-weight:800;letter-spacing:.13em;font-size:clamp(10px,1.5vmin,13px);padding:4px 14px;border-radius:999px;box-shadow:0 4px 0 rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.7);white-space:nowrap}
 .headline-banner.inflow{position:relative;left:auto;top:auto;transform:rotate(-1.2deg);display:inline-block;margin:8px auto 0}
+/* ---------- Gameplay-visuals pass G2: stakes callouts ----------
+   A ribbon pinned across the question card's top edge, under its
+   header — a zero-height overlay in the headline banner's grammar,
+   so no measured fit moves. FOR THE LEAD wears the stage's plum
+   with brass lettering; FOR THE NIGHT wears the Decider's crimson
+   family, the crown's colours. The pad's ribbon is an in-flow line
+   in its own grammar. */
+.stake-ribbon{position:relative;z-index:4;height:0;text-align:center}
+.stake-ribbon>span{position:absolute;left:50%;top:0;transform:translate(-50%,-50%) rotate(-1.2deg);background:linear-gradient(180deg,#3A1B57,#24102F);color:#FFD76A;border:1px solid rgba(255,215,106,.5);font-weight:800;letter-spacing:.15em;font-size:clamp(10px,1.5vmin,13px);padding:4px 16px;border-radius:999px;box-shadow:0 4px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.16);white-space:nowrap}
+.stake-ribbon.night>span{background:linear-gradient(180deg,#9C2B4C,#7E1F3E 60%,#5E1530);color:#FFE9C9;border-color:rgba(255,233,201,.45);box-shadow:0 4px 0 rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.35)}
+.jp-stakeribbon{text-align:center;width:fit-content;margin:8px auto 0;padding:3px 14px;border-radius:999px;background:linear-gradient(180deg,#3A1B57,#24102F);color:#FFD76A;border:1px solid rgba(255,215,106,.5);font-weight:800;letter-spacing:.14em;font-size:11px}
+.jp-stakeribbon.night{background:linear-gradient(180deg,#9C2B4C,#7E1F3E 60%,#5E1530);color:#FFE9C9;border-color:rgba(255,233,201,.45)}
 .hl-slot{margin-top:-4px;margin-bottom:-10px}
 .q-text.headline-card{box-shadow:0 16px 30px rgba(0,0,0,.38),inset 0 0 0 2px var(--brass-frame),inset 0 0 0 4px var(--paper-flat),inset 0 0 0 6px rgba(146,104,32,.5)}
 .cat-pill.headline{box-shadow:0 6px 0 var(--cat-sh),inset 0 0 0 2px var(--brass-hi),inset 0 2px 0 rgba(255,255,255,.35)}
@@ -1509,6 +1982,24 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .seat.cutflash .tag{animation:tagCutFlash 1.15s ease both}
 @keyframes tagCutFlash{0%{color:#FFD76A;text-shadow:0 0 14px rgba(255,215,106,.95);transform:scale(1.18)}100%{transform:scale(1)}}
 
+/* ---------- Gameplay-visuals pass G6 — Cut Two, Previewed ----------
+   The ghost of a cut not yet spent: the same slashed seam as the
+   settled cut above, at GHOST strength — the slab stays legible
+   (opacity .68 against the cut's .4, colour half-kept), the seam
+   is the same brass line thinned and paled, and there is NO
+   scissors badge: the badge belongs to a cut that has happened.
+   The class exists only while a finger holds the lifeline down;
+   on release it comes off and the slab is untouched. The held
+   control itself answers with a pressed, lit rim so the hand
+   knows the preview is live, and both controls refuse the
+   long-press callout / text selection a hold would invite. */
+.ans-btn.cutghost{opacity:.68;filter:saturate(.5) brightness(.94)}
+.ans-btn.cutghost::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,106,.5) 16%,rgba(255,215,106,.5) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.jp-ans.cutghost{opacity:.68;filter:saturate(.5) brightness(.94)}
+.jp-ans.cutghost::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,106,.5) 16%,rgba(255,215,106,.5) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.tool-btn.holding,.jp-cut.holding{box-shadow:inset 0 0 0 2px rgba(255,215,106,.85),inset 0 2px 10px rgba(0,0,0,.35);transform:translateY(1px)}
+[data-cut],.jp-cut{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
 /* ============ New programme pass 1 — the Decider ============
    The banner keeps the Headline's grammar (an overlay pill on the
    card — no layout box moves) but wears the show's deepest rose,
@@ -1533,6 +2024,10 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .jp-rematch{text-align:center;margin:10px auto 0;padding:8px 14px 7px;max-width:300px;border:1px solid rgba(255,215,106,.55);border-radius:12px;color:var(--brass-hi);font-weight:800;letter-spacing:.13em;font-size:13px;background:linear-gradient(180deg,rgba(255,215,106,.12),rgba(255,215,106,.03))}
 .jp-rematch span{display:block;margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.22em;color:var(--cream);opacity:.75}
 .og-lobby-note{max-width:520px;margin-left:auto;margin-right:auto}
+/* Pass N2: the rules named where the room gathers — the host
+   stage's centered line and the pad's quiet brass note */
+.og-rules-line{max-width:520px;margin-left:auto;margin-right:auto;letter-spacing:.14em;font-weight:700;color:var(--brass-hi)}
+.jp-rules{text-align:center;margin:10px auto 0;padding:7px 12px;max-width:300px;border:1px solid rgba(255,215,106,.45);border-radius:12px;color:var(--brass-hi);font-weight:700;letter-spacing:.12em;font-size:11.5px}
 /* the short-landscape finale with a series line up: the line's
    height comes out of the same places Design pass 4's squeeze
    took the subline's (this block out-specifies and follows it) */
@@ -1544,4 +2039,518 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .finale-wrap.has-series .sterling-lg{width:56px}
   .finale-wrap.has-series{gap:2px}
   .finale-wrap.has-series .finale-row .podium.big .avatar{width:34px}
+}
+
+/* The Ten, pass 1 — the wheel's sizes per stage, appended last so
+   they hold over every earlier block. Short landscape is the tight
+   stage: the wheel shrinks to 120px and the spin's caption line
+   yields (the race stage's precedent) so the stage fit holds even
+   with the Headline slot mounted above the wheel. */
+@media (max-height:860px) and (min-height:501px){
+  .wheel-frame{width:200px}
+}
+@media (max-height:500px){
+  .wheel-frame{width:120px;margin:4px auto 0}
+  .stage-inner:has(.wheel-frame) .round-text{display:none}
+}
+
+/* ============ The Ten, pass 2 — the Number Dial ============
+   Drawn depth, never an engine: the rail is brass with a lit top
+   rim and end finials, the pins stand on the rail as lollipops —
+   stem, a disc with a painted top light and a cast shadow — the
+   truth is a framed brass portal with its number on a plaque, and
+   the needle is a slim brass pointer with a diamond at the rail.
+   Row 0 pins fly their labels above the rail, row 1 below, so
+   equal guesses split instead of colliding. A label is dark until
+   the needle passes its pin (the settled painters light them
+   all). The count dial's readout IS the wager-amt treatment; its
+   rail fills toward a gate post at the truth end, and landing
+   pops the number once. */
+.dial.spread{position:relative;height:118px;margin:10px auto 2px;width:100%;max-width:660px}
+.dial-rail{position:absolute;left:0;right:0;top:50%;height:10px;margin-top:-5px;border-radius:6px;background:linear-gradient(180deg,#FFE9B0 0%,#E9B94F 30%,#C9971F 55%,#8A5E0D 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -2px 3px rgba(60,32,0,.55),0 4px 8px rgba(0,0,0,.45)}
+.dial-rail::before,.dial-rail::after{content:"";position:absolute;top:-4px;width:6px;height:18px;border-radius:3px;background:linear-gradient(180deg,#FFE29A,#8A5E0D);box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.dial-rail::before{left:-1px}
+.dial-rail::after{right:-1px}
+.dial-gate{position:absolute;top:6px;bottom:6px;width:36px;transform:translateX(-50%);border-radius:18px 18px 7px 7px;border:3px solid transparent;background:linear-gradient(180deg,#33184A,#24102F) padding-box,linear-gradient(180deg,#FFE29A,#C9971F 55%,#8A5E0D) border-box;z-index:1}
+.dial.landed .dial-gate{box-shadow:0 0 20px rgba(255,201,60,.5),inset 0 0 14px rgba(255,201,60,.25)}
+.dial-gate-num{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--brass-grad);color:#431A04;font-weight:800;font-size:12.5px;line-height:1;padding:3px 8px 4px;border-radius:999px;box-shadow:0 3px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7);white-space:nowrap}
+.dial-gate-num,.dial-lab i{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.dial-pin{position:absolute;top:0;bottom:0;width:0;z-index:2}
+.dial-stem{position:absolute;left:-1px;width:2px;border-radius:1px;background:var(--pin);opacity:.85}
+.dial-pin.r0 .dial-stem{bottom:calc(50% + 5px);height:23px}
+.dial-pin.r1 .dial-stem{top:calc(50% + 5px);height:23px}
+.dial-disc{position:absolute;left:0;width:16px;height:16px;border-radius:50%;background:var(--pin);border:2px solid rgba(24,6,32,.6);box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.35),0 3px 5px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;color:#431A04;z-index:2}
+.dial-pin.r0 .dial-disc{bottom:calc(50% + 26px);transform:translateX(-50%)}
+.dial-pin.r1 .dial-disc{top:calc(50% + 26px);transform:translateX(-50%)}
+.dial-pin.mine .dial-disc{box-shadow:0 0 0 2px #FFF6E8,inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.35),0 3px 5px rgba(0,0,0,.5)}
+.dial-disc.closest{width:19px;height:19px;box-shadow:0 0 0 2px #FFD76A,0 0 16px rgba(255,201,60,.85),inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.3)}
+.dial-lab{position:absolute;left:0;transform:translateX(-50%);white-space:nowrap;text-align:center;font-size:11px;line-height:1.25;color:var(--cream);text-shadow:0 1px 2px rgba(0,0,0,.65);opacity:0;transition:opacity .25s ease;z-index:3}
+.dial-pin.r0 .dial-lab{bottom:calc(50% + 47px)}
+.dial-pin.r1 .dial-lab{top:calc(50% + 47px)}
+.dial-lab.lit{opacity:1}
+.dial-lab b{font-weight:800}
+.dial-lab i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.12em;color:#FFD76A}
+.dial-lab.edge-l{transform:translateX(-6%)}
+.dial-lab.edge-r{transform:translateX(-94%)}
+.dial-needle{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;border-radius:2px;background:linear-gradient(180deg,#FFF6E8,#FFD76A 55%,#C9971F);box-shadow:0 0 6px rgba(255,215,106,.65),1px 0 2px rgba(0,0,0,.4);z-index:4}
+.dial-needle::after{content:"";position:absolute;top:50%;left:50%;width:11px;height:11px;transform:translate(-50%,-50%) rotate(45deg);background:linear-gradient(135deg,#FFE29A,#C9971F);border:1.5px solid rgba(24,6,32,.55);box-shadow:0 2px 4px rgba(0,0,0,.5)}
+.dial.pad{height:104px;margin:10px 0 2px;max-width:none}
+.dial.pad .dial-lab{font-size:10px}
+.dial.pad .dial-gate{width:30px}
+.count-dial{margin:4px auto 0;max-width:520px;text-align:center}
+.count-rail{position:relative;height:8px;margin:12px 10px 0;border-radius:5px;background:rgba(255,246,232,.1);box-shadow:inset 0 1px 3px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.08)}
+.count-fill{height:100%;border-radius:5px;background:linear-gradient(180deg,#FFE29A,#C9971F 60%,#8A5E0D);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 0 10px rgba(255,201,60,.35)}
+.count-rail::after{content:"";position:absolute;right:-2px;top:-4px;width:5px;height:16px;border-radius:3px;background:linear-gradient(180deg,#FFE29A,#8A5E0D);box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.count-dial.landed .count-num{animation:countPop .5s cubic-bezier(.2,1.8,.4,1) both}
+@keyframes countPop{0%{transform:scale(1)}35%{transform:scale(1.09)}100%{transform:scale(1)}}
+/* ============ THE PHOTO-FINISH (gameplay-visuals pass G5) ============
+   The quick-draw race, drawn on the reveal in the dial's own brass:
+   a slim rail, the correct finishers' discs standing on it in
+   lock-in order — the first gilded and starred — names above,
+   margins lettered in gold tabular figures, and the caption
+   engraved beneath. Pure furniture: it is painted whole from the
+   record on every repaint, so no keyframe ever runs on it. */
+.pf-strip{position:relative;height:70px;margin:8px auto 0;width:100%;max-width:660px}
+.pf-rail{position:absolute;left:0;right:0;top:42px;height:6px;border-radius:4px;background:linear-gradient(180deg,#FFE9B0 0%,#E9B94F 30%,#C9971F 55%,#8A5E0D 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1px 2px rgba(60,32,0,.55),0 3px 6px rgba(0,0,0,.45)}
+.pf-cap{position:absolute;left:0;right:0;top:57px;text-align:center;font-size:8.5px;font-weight:800;letter-spacing:.3em;color:rgba(255,217,118,.72);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.pf-chip{position:absolute;top:0;bottom:0;width:0;z-index:2}
+.pf-disc{position:absolute;top:42px;left:0;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;background:var(--pin);border:2px solid rgba(24,6,32,.6);box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.35),0 3px 5px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:8.5px;line-height:1;color:#431A04;z-index:2}
+.pf-disc.first{width:18px;height:18px;box-shadow:0 0 0 2px #FFD76A,0 0 14px rgba(255,201,60,.85),inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.3)}
+.pf-lab{position:absolute;left:0;top:0;transform:translateX(-50%);white-space:nowrap;text-align:center;font-size:11px;line-height:1.25;color:var(--cream);text-shadow:0 1px 2px rgba(0,0,0,.65);z-index:3}
+.pf-lab b{display:block;font-weight:800}
+.pf-lab i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.1em;color:#FFD76A;font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.pf-lab.edge-l{transform:translateX(-8%)}
+.pf-lab.edge-r{transform:translateX(-92%)}
+/* the short-landscape reveal is the tight stage: the dial
+   compresses like everything else there — stems shorten, labels
+   shrink, the gate narrows — appended last so it holds */
+@media (max-height:500px){
+  .dial.spread{height:88px;margin-top:4px}
+  .dial-pin.r0 .dial-stem{height:14px}
+  .dial-pin.r1 .dial-stem{height:14px}
+  .dial-pin.r0 .dial-disc{bottom:calc(50% + 17px)}
+  .dial-pin.r1 .dial-disc{top:calc(50% + 17px)}
+  .dial-pin.r0 .dial-lab{bottom:calc(50% + 33px)}
+  .dial-pin.r1 .dial-lab{top:calc(50% + 33px)}
+  .dial-lab{font-size:9.5px}
+  .dial-disc{width:13px;height:13px}
+  .dial-disc.closest{width:15px;height:15px}
+  .dial-gate{width:28px;top:4px;bottom:4px}
+  .dial-gate-num{font-size:10.5px;top:-10px;padding:2px 6px 3px}
+  .count-rail{margin-top:7px}
+  .pf-strip{height:23px;margin-top:-6px}
+  .pf-rail{top:4px;height:5px}
+  .pf-disc{top:4px;width:10px;height:10px;font-size:7px}
+  .pf-disc.first{width:11px;height:11px}
+  .pf-lab{top:9.5px;font-size:8px;line-height:.95}
+  .pf-lab i{font-size:6.5px;letter-spacing:.05em}
+  .pf-cap{display:none}
+}
+/* Audit A1: the dial reveal outgrew the short-landscape stage —
+   the reveal column around the dial (band headrow, why-slip, pot
+   era spacing) added ~38px after pass 2's own squeeze was tuned,
+   leaving the host's CONTINUE below the fold (stage scroll 222 vs
+   184). A dial-carrying reveal compresses one step further: the
+   dial itself slims and the column's spacing tightens, scoped by
+   :has(.dial.spread) so no other reveal moves. */
+@media (max-height:500px){
+  .stage-inner:has(.dial.spread) .dial.spread{height:60px;margin-top:0}
+  .stage-inner:has(.dial.spread) .dial-pin.r0 .dial-stem{height:7px}
+  .stage-inner:has(.dial.spread) .dial-pin.r1 .dial-stem{height:7px}
+  .stage-inner:has(.dial.spread) .dial-pin.r0 .dial-disc{bottom:calc(50% + 10px)}
+  .stage-inner:has(.dial.spread) .dial-pin.r1 .dial-disc{top:calc(50% + 10px)}
+  .stage-inner:has(.dial.spread) .dial-pin.r0 .dial-lab{bottom:calc(50% + 22px)}
+  .stage-inner:has(.dial.spread) .dial-pin.r1 .dial-lab{top:calc(50% + 22px)}
+  .stage-inner:has(.dial.spread) .dial-gate{top:2px;bottom:2px}
+  .stage-inner:has(.dial.spread) .q-text{margin-top:2px}
+  .stage-inner:has(.dial.spread) .delta{margin-top:3px;font-size:12.5px;min-height:0}
+  .stage-inner:has(.dial.spread) .why-wrap{margin-top:4px}
+  .stage-inner:has(.dial.spread) .why-slip{padding-top:2px;padding-bottom:2px}
+  /* the reveal templates carry the CONTINUE wrapper's 12px as an
+     inline style; on this one tight stage the squeeze outranks it */
+  .stage-inner:has(.dial.spread)>div:last-child{margin-top:2px !important}
+}
+
+/* ============ SHOW THE BAND (The Ten, pass 3) ============
+   The difficulty band, printed in the question card's header line
+   beside the category pill: an engraved tag — letter-spaced small
+   caps behind a hairline rule, in restrained tones. WARM sits in
+   soft cream, MIDDLE a step warmer, DEEP CUT in the warmest brass
+   of the three — still lettering, never a fill, never an alarm.
+   On pads the same word rides its own centred line in the
+   jp-headline grammar, dot-separated. Depth is a hairline and a
+   tone, drawn — no engine. The short-landscape squeeze keeps the
+   header composition honest at 844x390: the tag narrows its
+   tracking before anything else gives. */
+.band-tag{flex:none;display:inline-flex;align-items:center;gap:10px;font-weight:700;
+  letter-spacing:.24em;font-size:clamp(9.5px,1.45vmin,12px);line-height:1;
+  color:rgba(255,246,232,.55);text-transform:uppercase;white-space:nowrap}
+.band-tag::before{content:"";width:1px;height:15px;flex:none;
+  background:linear-gradient(180deg,transparent,rgba(255,233,201,.5),transparent)}
+.band-tag.b2{color:rgba(255,216,158,.78)}
+.band-tag.b3{color:#EBBE6D}
+.jp-bandline{text-align:center;color:rgba(255,246,232,.55);font-weight:700;
+  letter-spacing:.26em;font-size:10.5px;margin:7px 2px 0;text-transform:uppercase}
+.jp-bandline.b2{color:rgba(255,216,158,.78)}
+.jp-bandline.b3{color:#EBBE6D}
+@media (max-height:500px){
+  .band-tag{font-size:9px;letter-spacing:.17em;gap:7px}
+  .band-tag::before{height:10px}
+}
+
+/* ================= The Golden Question (The Ten, pass 4) =================
+   The reveal's gilt, and nothing before it: every selector here is
+   reveal-only (the question phase never carries these classes, which
+   is the secrecy the mechanic runs on). The frame is PAINTED gold —
+   inset brass steps richer than the Headline's card, plus a warm
+   outer bloom — and the shimmer is drawn light: a gilt band crossing
+   the card on a slow loop while the reveal stands, transform-only,
+   no filters, no backdrop blur, no 3D anything. The banner is the
+   Headline banner's grammar struck in full gilt. On the pad, the
+   verdict card takes a gilt inner frame and the banner becomes a
+   struck-gilt strip. */
+.headline-banner.golden-banner{background:linear-gradient(180deg,#FFF3C4,#FFD76A 55%,#F0A90B);color:#431A04;box-shadow:0 4px 0 rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.85),0 0 20px rgba(255,201,60,.5)}
+.q-text.golden-card{box-shadow:0 16px 30px rgba(0,0,0,.38),inset 0 0 0 2px #F0A90B,inset 0 0 0 4px #FFF3C4,inset 0 0 0 6px rgba(168,116,8,.8),0 0 28px rgba(255,201,60,.35)}
+.q-text.golden-card::after{content:"";position:absolute;inset:-20% -45%;pointer-events:none;background:linear-gradient(100deg,rgba(255,220,120,0) 32%,rgba(255,224,150,.32) 45%,rgba(255,246,205,.55) 50%,rgba(255,224,150,.32) 55%,rgba(255,220,120,0) 68%);transform:translateX(-110%) skewX(-12deg);animation:giltShimmer 2.8s cubic-bezier(.4,0,.2,1) .3s infinite}
+@keyframes giltShimmer{0%{transform:translateX(-110%) skewX(-12deg)}42%,100%{transform:translateX(110%) skewX(-12deg)}}
+.jp-headline.golden{color:#431A04;background:linear-gradient(180deg,#FFF3C4,#FFD76A 55%,#F0A90B);border-radius:999px;padding:5px 14px;box-shadow:0 3px 0 rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.85),0 0 16px rgba(255,201,60,.45)}
+.jp-verdict.golden{box-shadow:inset 0 0 0 2px #F0A90B,inset 0 0 0 5px rgba(255,243,196,.85),inset 0 0 0 7px rgba(168,116,8,.7),inset 0 0 44px rgba(255,201,60,.22);border-radius:18px}
+
+/* ================= The Card as an Object (Visual pass V3) =================
+   The question card is a handled object, and it shows. Three drawn
+   treatments, all paint — two absolutely-positioned children inside
+   the card, no layout anywhere, nothing animated by a new timer
+   (the gilt rides the melt's existing tick):
+   THE GILT EDGE — a gold-leaf line traced by the .card-gilt child's
+   border, driven by ONE custom property, --gilt-f: the melt's own
+   s (1 at the open, 0 at the value's 50% floor). At s=1 the edge is
+   3px at full light; at the floor it is a 1px hairline at half
+   light. Card, vessel (G1) and rim light (G7) all tell the same
+   time because all three read the same multiplier.
+   THE WEARING CORNERS — the .card-wear child's four pale corner
+   rubs, switched by the round's class on the card: Round 1 crisp
+   (no class, opacity 0), Round 2 wear2 (.38), Round 3 — and the
+   Decider, which inherits the night's most-handled state — wear3
+   (.8). The state is the round's, set at the render; a repaint
+   rebuilds it identically.
+   THE WAX SEAL — .wax-seal, born ONLY in a Golden Question's
+   reveal render, from the unmasked record: a deep red-gold wax
+   disc with an irregular hand-stamped edge, a pressed ring, and
+   the show's star pressed into it. It lands with a small
+   scale-settle (sealStamp); a settled repaint (.set) wears it
+   already landed. Before the reveal a golden card carries no
+   seal, no gilt difference, no telling class — the mask holds. */
+.q-text .card-gilt{position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-sizing:border-box;border:calc(1px + 2px*var(--gilt-f,1)) solid rgba(240,203,110,calc(.40 + .42*var(--gilt-f,1)))}
+.q-text .card-wear{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(46px 46px at 0% 0%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%),radial-gradient(46px 46px at 100% 0%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%),radial-gradient(46px 46px at 0% 100%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%),radial-gradient(46px 46px at 100% 100%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%)}
+.q-text.wear2 .card-wear{opacity:.38}
+.q-text.wear3 .card-wear{opacity:.8}
+.q-text .wax-seal{position:absolute;right:14px;bottom:12px;width:50px;height:50px;border-radius:48% 52% 55% 45%/52% 47% 53% 48%;pointer-events:none;background:radial-gradient(circle at 34% 28%,#D8542F,#A52E18 52%,#7E2110 82%,#6E1B0C);box-shadow:inset 0 2px 3px rgba(255,190,140,.45),inset 0 -3px 5px rgba(40,5,0,.45),0 3px 7px rgba(60,20,0,.35);transform:rotate(-8deg);animation:sealStamp .38s cubic-bezier(.25,.9,.3,1.15) both}
+.q-text .wax-seal.set{animation:none}
+.q-text .wax-seal::before{content:"";position:absolute;inset:6px;border-radius:50%;border:2px solid rgba(66,13,4,.38);box-shadow:inset 0 1px 1px rgba(255,180,120,.28)}
+.q-text .wax-seal::after{content:"★";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:rgba(66,13,4,.52);text-shadow:0 1px 0 rgba(255,186,128,.30)}
+@keyframes sealStamp{0%{transform:rotate(-8deg) scale(1.75);opacity:0}55%{opacity:1}78%{transform:rotate(-8deg) scale(.93)}100%{transform:rotate(-8deg) scale(1)}}
+
+/* ================= Seven Entrances (The Ten, pass 6) =================
+   Every category's question arrives its own way: one keyframed
+   class on the question card, fresh opens only (the JS proves
+   freshness; a repaint never carries these classes, and the
+   classes come off when the motion ends, leaving the settled
+   card exactly as it always was). Each motion is transform,
+   clip-path, opacity or filter — never layout — so the inputs
+   are live from the first frame and the drain clock's timeline
+   is untouched. Longest is the Dial-Up's 700ms; all seven sit
+   inside the cap. Depth is DRAWN throughout: the starburst is a
+   conic gradient, the marquee bulbs are radial gradients, the
+   static is a repeating gradient — no images, no 3D engine. On
+   the big screen the card is .q-text inside .q-cardwrap; on a
+   pad the pad itself wears the class. */
+.q-cardwrap.ent{isolation:isolate}
+.jp-pad.ent,.jp-card.ent{position:relative;isolation:isolate}
+
+/* MOVIES — an iris opens on the card while a ring of marquee
+   bulbs chases around its inner frame and dies with the motion */
+.q-cardwrap.ent-movies .q-text,.jp-pad.ent-movies,.jp-card.ent-movies{animation:entMovies .62s cubic-bezier(.3,.7,.3,1) both}
+@keyframes entMovies{0%{clip-path:circle(0% at 50% 42%);transform:scale(.94);opacity:.35}55%{opacity:1}100%{clip-path:circle(120% at 50% 42%);transform:scale(1);opacity:1}}
+.q-cardwrap.ent-movies .q-text::before,.jp-pad.ent-movies::before,.jp-card.ent-movies::before{content:"";position:absolute;inset:5px;border-radius:14px;pointer-events:none;z-index:2;background:radial-gradient(circle,#FFE9A8 2.3px,rgba(255,233,168,0) 3.4px) 0 0/26px 11px repeat-x,radial-gradient(circle,#FFE9A8 2.3px,rgba(255,233,168,0) 3.4px) 0 100%/26px 11px repeat-x,radial-gradient(circle,#FFE9A8 2.3px,rgba(255,233,168,0) 3.4px) 0 0/11px 26px repeat-y,radial-gradient(circle,#FFE9A8 2.3px,rgba(255,233,168,0) 3.4px) 100% 0/11px 26px repeat-y;animation:entBulbs .62s linear both}
+@keyframes entBulbs{0%{opacity:0;background-position:0 0,0 100%,0 0,100% 0}14%{opacity:1}30%{background-position:13px 0,-13px 100%,0 13px,100% -13px}55%{opacity:.4}80%{opacity:1}100%{opacity:0;background-position:26px 0,-26px 100%,0 26px,100% -26px}}
+
+/* TV — a channel change: the card thunks sideways through a
+   rolling band of static that settles as the picture locks */
+.q-cardwrap.ent-tv .q-text,.jp-pad.ent-tv,.jp-card.ent-tv{animation:entTV .54s cubic-bezier(.2,.8,.3,1) both}
+@keyframes entTV{0%{transform:translateX(-7px) skewX(-2deg);filter:brightness(1.7) saturate(.35);opacity:.5}18%{transform:translateX(5px) skewX(1.4deg);filter:brightness(1.25) saturate(.8);opacity:.9}38%{transform:translateX(-3px) skewX(-.6deg);filter:brightness(1.08)}58%{transform:translateX(1px);filter:brightness(1.02)}100%{transform:none;filter:none;opacity:1}}
+.q-cardwrap.ent-tv .q-text::before,.jp-pad.ent-tv::before,.jp-card.ent-tv::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(255,255,255,.16) 0 2px,rgba(20,16,28,.13) 2px 4px,rgba(255,255,255,.05) 4px 7px);background-size:100% 28px;animation:entStatic .54s steps(9) both}
+@keyframes entStatic{0%{opacity:1;background-position:0 0}70%{opacity:.85}100%{opacity:0;background-position:0 -56px}}
+
+/* MUSIC — the card rides in on a beat (two bounces, like a
+   downbeat answered), equalizer bars flourishing at its foot */
+.q-cardwrap.ent-music .q-text,.jp-pad.ent-music,.jp-card.ent-music{animation:entMusic .56s cubic-bezier(.3,.7,.3,1) both}
+@keyframes entMusic{0%{transform:translateY(30px);opacity:0}30%{transform:translateY(0);opacity:1}48%{transform:translateY(-8px)}64%{transform:translateY(0)}80%{transform:translateY(-3px)}100%{transform:none;opacity:1}}
+.q-cardwrap.ent-music .q-text::before,.jp-pad.ent-music::before,.jp-card.ent-music::before{content:"";position:absolute;left:12%;right:12%;bottom:7px;height:13px;pointer-events:none;z-index:2;background:repeating-linear-gradient(90deg,var(--cat) 0 5px,rgba(0,0,0,0) 5px 12px);transform-origin:50% 100%;opacity:0;animation:entEQ .56s ease-out both}
+@keyframes entEQ{0%{transform:scaleY(.15);opacity:0}18%{opacity:.95;transform:scaleY(1)}38%{transform:scaleY(.4)}58%{transform:scaleY(.85)}78%{transform:scaleY(.3);opacity:.8}100%{transform:scaleY(.15);opacity:0}}
+
+/* ADS & JINGLES — a product-shot pop: the card scales in over a
+   drawn starburst blooming behind it (a repeating conic
+   gradient, radially masked — pure CSS, no asset) */
+.q-cardwrap.ent-ads .q-text,.jp-pad.ent-ads,.jp-card.ent-ads{animation:entAds .6s cubic-bezier(.2,1.2,.3,1) both}
+@keyframes entAds{0%{transform:scale(.55);opacity:0}55%{transform:scale(1.07);opacity:1}78%{transform:scale(.985)}100%{transform:scale(1);opacity:1}}
+.q-cardwrap.ent-ads::before,.jp-pad.ent-ads::before,.jp-card.ent-ads::before{content:"";position:absolute;left:50%;top:50%;width:340px;height:340px;margin:-170px 0 0 -170px;pointer-events:none;z-index:-1;background:repeating-conic-gradient(from -8deg,rgba(255,205,92,.9) 0deg 9deg,rgba(255,205,92,0) 9deg 18deg);-webkit-mask-image:radial-gradient(closest-side,#000 26%,transparent 70%);mask-image:radial-gradient(closest-side,#000 26%,transparent 70%);opacity:0;animation:entBurst .6s ease-out both}
+@keyframes entBurst{0%{transform:scale(.25) rotate(0deg);opacity:0}25%{opacity:.95}100%{transform:scale(1.12) rotate(24deg);opacity:0}}
+
+/* TOYS & GAMES — the card tumbles in like a tossed game piece
+   and settles with overshoot */
+.q-cardwrap.ent-toys .q-text,.jp-pad.ent-toys,.jp-card.ent-toys{animation:entToys .64s cubic-bezier(.3,.7,.3,1) both;transform-origin:50% 62%}
+@keyframes entToys{0%{transform:translateY(-52px) rotate(-10deg);opacity:0}38%{transform:translateY(7px) rotate(5.5deg);opacity:1}62%{transform:translateY(-4px) rotate(-2.4deg)}82%{transform:translateY(1px) rotate(.8deg)}100%{transform:none;opacity:1}}
+
+/* SATURDAY MORNING — a cartoon spring-in, squash at the landing */
+.q-cardwrap.ent-sat .q-text,.jp-pad.ent-sat,.jp-card.ent-sat{animation:entSat .58s cubic-bezier(.3,.7,.3,1) both;transform-origin:50% 100%}
+@keyframes entSat{0%{transform:translateY(34px) scale(.55,1.06);opacity:0}42%{transform:translateY(0) scale(1.14,.84);opacity:1}60%{transform:scale(.94,1.07)}76%{transform:scale(1.03,.98)}100%{transform:none;opacity:1}}
+
+/* THE DIAL-UP YEARS — the card assembles in scanline steps,
+   modem-patient: seven chunks down the card under a fading
+   scanline grain. The slowest of the seven, still in the cap */
+.q-cardwrap.ent-dialup .q-text,.jp-pad.ent-dialup,.jp-card.ent-dialup{animation:entDial .7s steps(7,end) both}
+@keyframes entDial{from{clip-path:inset(-3% -3% 103% -3%)}to{clip-path:inset(-3% -3% -3% -3%)}}
+.q-cardwrap.ent-dialup .q-text::before,.jp-pad.ent-dialup::before,.jp-card.ent-dialup::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(24,20,34,.20) 0 1px,rgba(0,0,0,0) 1px 3px);animation:entScan .7s linear both}
+@keyframes entScan{from{opacity:1}to{opacity:0}}
+
+/* ================= The Broadcast Finish (Visual pass V5) =================
+   One pre-rendered finishing overlay (.bc-grade) standing in the two
+   shared screens — the title and the game stage (the finale renders
+   inside the stage, in the graded room). The phone pad (#scr-join)
+   never gets one: a controller read at arm's length in a bright
+   room stays clean.
+   Three still layers, painted once, never animated, no JS:
+     the element itself — the warm grade, a whisper of amber light
+       pooled over the stage's heart;
+     ::before — the vignette, the frame's edges deepening toward the
+       plum-black the stage already falls to;
+     ::after — the grain, ONE baked 96x96 noise tile (generated once
+       from a fixed seed, shipped as a data URI) tiled at opacity .05:
+       texture, never dirt, and it never moves — no keyframes touch
+       this element or its pseudos, ever.
+   pointer-events:none, so taps pass through it wherever it stands.
+   STACKING — measured, not guessed (drive-broadcast has the sums):
+   a uniform grade over EVERYTHING was built first and indicted by
+   its own spot-check: warm + grain regress every colour toward
+   their means, and the tightest audited slab stops (4.52:1, two
+   hundredths of headroom) fell to ~3.97:1. So the finish stands
+   where a broadcast grade can stand without touching the words:
+   on the TITLE it rides z-70 over the whole screen, dialog cards
+   (z-60) and all — display type carries contrast to spare. In the
+   GAME it rides z-0: above the room itself (.set — walls, category
+   glow, rim light, footlights, the V4 audience — bloom and motes),
+   level with the set and beneath the furniture, whose stacking the
+   stage already declares (#table z-1, #topbar/#hostbar z-2, the
+   effect canvases 21-30 keep their own colours above it). The room
+   takes the finish; every card, slab, seat and line of text keeps
+   its audited contrast untouched — the drive re-proves a slab at
+   drop ~0.00 from real pixels. */
+.bc-grade{position:absolute;inset:0;z-index:40;pointer-events:none;background:radial-gradient(115% 95% at 50% 38%,rgba(255,178,96,.07),rgba(255,152,74,.03) 55%,rgba(255,132,64,0) 78%)}
+#scr-title .bc-grade{z-index:70}
+#scr-game .bc-grade{z-index:0}
+.bc-grade::before{content:"";position:absolute;inset:0;background:radial-gradient(112% 88% at 50% 46%,rgba(4,1,9,0) 56%,rgba(4,1,9,.16) 80%,rgba(3,1,7,.40) 100%)}
+.bc-grade::after{content:"";position:absolute;inset:0;opacity:.05;background-image:url("data:image/png;base64,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");background-size:96px 96px;background-repeat:repeat}
+
+/* =====================================================================
+   V6 — THE LETTERING PASS: print-shop material for the display type.
+   Two crafts, nothing else touched — no font, size, spacing or layout
+   changes anywhere, and no fill changes: every colour below is the
+   audited one, the craft lives in the edges of the glyphs.
+
+   LETTERPRESS (category titles + the banner register): a fine dark
+   incise ABOVE the glyph and a hair of light catching BELOW it, as if
+   the type were pressed into the material. One pair serves the pill
+   on every category ground (cream ink on deep candy, dark ink on
+   light) because the alphas are kept where relief reads on both.
+   The brass banner wears the dark-ink variant (stronger catch, the
+   ground is bright metal); the Decider's wine banner reverses it
+   (cream ink on a dark ground: deeper incise, fainter catch).
+
+   ENGRAVED GOLD (the money lettering): an incised dark edge and a
+   fine light catch cut around the figure, the way numerals are cut
+   into a brass plate. The gradient-clipped figures (#qValue,
+   .winner-total) cannot take text-shadow — a shadow under clipped
+   text paints through the transparent fill — so their engraving is
+   built from chained drop-shadow() in the filter, which follows the
+   clipped gradient's own alpha: dark 1px up (the cut's top wall),
+   warm light 1px down (the cut's lit floor), then the depth shadow
+   each figure already wore, byte-identical. Plain-fill figures take
+   the same recipe as a text-shadow stack, their existing depth
+   shadow kept as the last layer. White desk/podium figures keep
+   their audited white fill — engraving is an edge craft, not a
+   recolour — and read as plate-cut lettering in the same hand.
+
+   RESTRAINT: nothing below display size is touched. Answer slabs,
+   question text, body copy and fine print keep today's flat,
+   audited rendering exactly (drive-lettering proves their computed
+   text-shadow stays "none"). The shadows are 1px edges at low
+   alpha — they sit OUTSIDE the glyph core, so effective glyph
+   contrast is unmoved; drive-lettering spot-checks the value
+   numeral and a category title in pixels against the 4.5:1 floor.
+   ===================================================================== */
+.cat-pill{text-shadow:0 -1px 0 rgba(0,0,0,.25),0 1px 0 rgba(255,255,255,.16)}
+.headline-banner{text-shadow:0 -1px 0 rgba(66,26,4,.30),0 1px 0 rgba(255,248,220,.55)}
+.headline-banner.decider-banner{text-shadow:0 -1px 0 rgba(0,0,0,.50),0 1px 0 rgba(255,233,201,.16)}
+.q-value span{filter:drop-shadow(0 -1px 0 rgba(43,16,0,.55)) drop-shadow(0 1px 0 rgba(255,240,200,.28)) drop-shadow(0 3px 0 rgba(20,4,24,.5))}
+.winner-total{filter:drop-shadow(0 -1px 0 rgba(43,16,0,.55)) drop-shadow(0 1px 0 rgba(255,240,200,.28)) drop-shadow(0 3px 0 #571C46)}
+.seat-score{text-shadow:0 -1px 0 rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.13),0 3px 0 rgba(0,0,0,.25)}
+.pmoney{text-shadow:0 -1px 0 rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.13),0 3px 0 rgba(0,0,0,.25)}
+.pot-total{text-shadow:0 -1px 0 rgba(20,4,24,.55),0 1px 0 rgba(255,240,200,.22),0 1px 2px rgba(0,0,0,.40)}
+.jp-id-score{text-shadow:0 -1px 0 rgba(20,4,24,.55),0 1px 0 rgba(255,240,200,.22)}
+.jp-standrow .sc{text-shadow:0 -1px 0 rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.12),0 2px 2px rgba(0,0,0,.30)}
+
+/* ================= Pass N3 — SHARE THE NIGHT =================
+   The preview sheet rides the how-overlay shell, above it (the
+   finales it opens from sit under confetti layers of their own).
+   The card in the sheet is the canvas itself, sized to the room:
+   its width is the lesser of the screen's width and what the
+   height leaves after the kicker and the buttons, keeping the
+   card's own 1080:1350 face at every size. */
+.share-overlay{z-index:70}
+.share-sheet{display:flex;flex-direction:column;align-items:center;gap:13px;max-height:100%}
+.share-kicker{letter-spacing:.3em;font-weight:700;font-size:12px;color:var(--gold)}
+#shareCanvas{width:min(86vw,58dvh);height:auto;display:block;border-radius:8px;background:#150820;box-shadow:0 18px 44px rgba(0,0,0,.6),0 0 0 2px rgba(198,164,94,.55)}
+.share-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.jp-share{display:block;width:100%;margin-top:18px}
+
+/* A3 review, proposal 1 (Jimmy's pick, 2026-11-11): the portrait
+   vote stage floated its short content in auto margins and left a
+   hollow band of bare curtain between the REVEAL dock and the pot.
+   In portrait the table's vote inner now fills the stage above
+   the vessel and distributes its blocks — question at the top,
+   the reveal docked at the bottom — so the phase reads composed.
+   Scoped to the table vote (the #btnReveal scope): the online
+   host's answer phase and every other phase keep their layout. */
+@media (max-width:560px){
+  /* the table's vote keeps data-phase="question" (the vote is the
+     question's beat in the light grammar) — the REVEAL dock is
+     the vote stage's true signature, so :has() does the scoping */
+  #scr-game[data-phase="question"] .stage-inner:has(#btnReveal){flex:1;display:flex;flex-direction:column;margin:0 auto;padding:8px 0 12px}
+  #scr-game[data-phase="question"] .stage-inner:has(#btnReveal) .btn-gold{align-self:center;margin-top:auto}
+}
+
+/* A3 review, proposal 3 (Jimmy's pick, 2026-11-11): in short
+   landscape the reveal's answers sit flush against the question
+   card — layout gap 0 — so the correct slab's resting rise
+   (translateY(-7px) at scale 1.04, plus its 4px gold ring)
+   overlapped the card's bottom edge by ~10px, ~25px at the
+   jump's peak. The fix is height-neutral, because the landscape
+   reveal stage is exactly full: the card lends 8px from its
+   bottom padding and the answers take an 11px margin, for a
+   19px layout gap — about 7px of true air at rest, 2px at the
+   peak, and the stage's total height unchanged. Portrait has
+   over 100px of air already and is untouched. */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .q-text{padding-bottom:8px}
+  #scr-game[data-phase="reveal"] .answers{margin-top:14px}
+}
+/* the slab's own jump, tuned for the clearance above: the shared
+   jumpIn rises 12px at its peak and rests 7px up — against a
+   flush card that rise IS the overlap. jumpSlab keeps the leap's
+   scale and tilt (the personality) on a shorter rise: 8px at the
+   peak, 4px at rest. The wager amount keeps the original jumpIn;
+   it leaps in open space. */
+@keyframes jumpSlab{0%{transform:scale(.7) translateY(10px) rotate(1.5deg)}55%{transform:scale(1.07) translateY(-8px) rotate(-2deg)}100%{transform:scale(1.04) translateY(-4px) rotate(-1.4deg)}}
+.ans-btn.correct{animation-name:jumpSlab}
+/* portrait: the same flush when the correct slab is in the top
+   row (over 100px of air only when it sits lower) — the reveal
+   takes a 16px margin there; the portrait stage carries it */
+@media (max-width:560px){
+  #scr-game[data-phase="reveal"] .answers{margin-top:16px}
+}
+
+/* Perfectionist pass 3, finding 1 (Jimmy's pick, 2026-11-11):
+   four players in short landscape — the tools row is nowrap, so
+   four Cut Two pills + CALL IT exceeded the stage and CALL IT,
+   the shrinkable last item, was crushed to ~110px; its label
+   wrapped into a stack, the button grew taller than the row,
+   and THAT is what pushed the stage 12px over on long questions.
+   Now the pills share what's left equally and may ellipsize
+   their small line instead of wrapping, and CALL IT never
+   shrinks. 3-player and portrait (a grid there) are untouched
+   in effect: the pills' flex only binds when space runs out. */
+@media (max-height:500px){
+  .tools .tool-btn{flex:1 1 0;min-width:0}
+  .tools #btnCallIt{flex:none}
+  .tools .tool-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* finding 1, the height half: measured across the whole bank on
+   the real styles, the landscape question screen's worst total
+   is 217px in a 194px stage (long card + wrapping answers) — an
+   8px tier of long questions sits behind it. The relief comes
+   from the question phase's own spacing in short landscape: the
+   card's top margin and vertical padding, the answers' top
+   margin and row gap. Nothing resizes type or touches the melt
+   bar; portrait keeps its roomier spacing. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-text{margin-top:4px;padding-top:10px;padding-bottom:10px}
+  #scr-game[data-phase="question"] .answers{margin-top:7px;gap:6px}
+}
+
+/* finding 1, the height half (continued): the card's top margin
+   lives on .q-cardwrap (the text's own margin is 0 inside it, and
+   the wrap's base clamp beat the landscape block's 4px on cascade
+   order), the tools row gives back 3px, and Sterling's line —
+   which reserves three lines of desk (min-height 4.05em) under
+   every landscape screen — takes the same 3.3em reservation the
+   bet screens already use, returning the difference to the
+   stage. All question-phase, all short-landscape only. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-cardwrap{margin-top:4px}
+  #scr-game[data-phase="question"] .tools{margin-top:2px}
+  #scr-game[data-phase="question"] .host-line{min-height:3.3em}
+}
+
+/* finding 1, the height half (final trims): with the wrap margin
+   and tools margin already returned, the remaining excess lives
+   in the landscape question screen's type and ticks — the card
+   at 20px (portrait keeps its full size), answers at 12.5px, the
+   melt gauge capped to the value stack's height, and 2px back
+   from the card's padding and the pills'. Sized so the bank's
+   long tier fits outright and the single longest question in
+   the bank lands within a few px of the stage's edge. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-text{font-size:20px;padding-top:7px;padding-bottom:7px}
+  #scr-game[data-phase="question"] .answers .ans-btn{font-size:12.5px}
+  #scr-game[data-phase="question"] .q-meta .melt{height:34px}
+  #scr-game[data-phase="question"] .tools{margin-top:0}
+  #scr-game[data-phase="question"] .tools .tool-btn{padding-top:3px;padding-bottom:3px}
+  #scr-game[data-phase="question"] .cat-pill{padding-top:1px;padding-bottom:1px}
+}
+
+/* finding 1, the height half (last stretch): the stage's own
+   padding gives back its 6px, the letter discs slim to 17px,
+   the meta's value stack steps down a tick, the card to 19px —
+   and the stage's side padding halves in this phase so the
+   answers run a few px wider, which unwraps borderline answer
+   texts outright. The long tier now fits with room; the bank's
+   single longest question lands within a few px. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] #stage{padding:0 6px}
+  #scr-game[data-phase="question"] .q-text{font-size:19px}
+  #scr-game[data-phase="question"] .ans-btn .letter{width:17px;height:17px}
+  #scr-game[data-phase="question"] .q-meta .melt{height:31px}
+}
+
+/* finding 1, the height half (the last ticks for the bank's
+   longest question): 2px each from the answers gap, the card's
+   padding, the pills' type and the headrow — individually
+   invisible, together they bring the Jerrica question home. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .answers{gap:4px}
+  #scr-game[data-phase="question"] .q-text{padding-top:5px;padding-bottom:5px}
+  #scr-game[data-phase="question"] .tools .tool-btn{font-size:11px}
+  #scr-game[data-phase="question"] .q-kind{font-size:11px}
+  #scr-game[data-phase="question"] .q-meta .melt{height:29px}
+}
+
+/* finding 1, the height half (the real lever, saved for last):
+   the question card caps at 24em — a portrait readability
+   measure that forces long questions onto a third line in
+   landscape, where the stage has width to spare. In short
+   landscape the card may run the stage's width; short questions
+   stay snug (the wrap is fit-content), long ones drop a line. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-text{max-width:100%}
 }
