@@ -4,11 +4,16 @@
    digit advances at 100px run 38–57px, and font-variant-numeric:
    tabular-nums changes nothing), so money set in Fredoka jitters as
    it counts. This face claims ONLY the money glyphs ($ + , - . and
-   0-9) via unicode-range and resolves them from system faces whose
-   figures are tabular by design — Arial Rounded / Helvetica /
-   Liberation / Arial / DejaVu / Roboto. Letters never touch it:
-   every word on stage stays Fredoka. */
-@font-face{font-family:'GHTab';font-style:normal;font-weight:100 900;src:local('Arial Rounded MT Bold'),local('Helvetica Neue'),local('Helvetica'),local('Liberation Sans'),local('Arial'),local('DejaVu Sans'),local('Roboto');unicode-range:U+0024,U+002B,U+002C,U+002D,U+002E,U+0030-0039}
+   0-9) via unicode-range. Improvement 2: the glyphs now come from an
+   EMBEDDED subset of Nunito (SIL OFL 1.1) — rounded like Fredoka,
+   and tabular BY CONSTRUCTION (every digit advance is exactly
+   600/1000em in the font data; there is no tnum feature to switch
+   on) — so the money wears the same face on every device it loads
+   on. The system chain (Arial Rounded / Helvetica / Liberation /
+   Arial / DejaVu / Roboto) stays on as fallback after the embedded
+   source. Letters never touch this face: every word on stage stays
+   Fredoka. */
+@font-face{font-family:'GHTab';font-style:normal;font-weight:200 1000;src:url(data:font/woff2;base64,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) format('woff2'),local('Arial Rounded MT Bold'),local('Helvetica Neue'),local('Helvetica'),local('Liberation Sans'),local('Arial'),local('DejaVu Sans'),local('Roboto');unicode-range:U+0024,U+002B,U+002C,U+002D,U+002E,U+0030-0039}
 /* THE GILDED HOUR — Pass C: the party look.
    The study's clothes on the Pass B format: deep plum-ink stage, curtain
    edges, category colour runs the room, chunky candy-glass slabs, an
@@ -81,7 +86,36 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .podium .delta.up{background:#14532D;color:#8BF0AB}
 .podium .delta.down{background:#5E1710;color:#FFB3AB}
 .gain-chip{position:absolute;top:-4px;left:-6px;z-index:4;background:var(--brass-pill);color:#431A04;font-weight:700;padding:6px 12px;border-radius:999px;transform:rotate(-6deg);box-shadow:0 5px 0 rgba(0,0,0,.25);font-size:clamp(13px,2vmin,17px)}
-.champ-tag{position:absolute;top:-28px;left:2px;z-index:4;background:var(--brass-pill);color:#431A04;font-weight:700;letter-spacing:.07em;padding:6px 14px;border-radius:999px;box-shadow:0 5px 0 rgba(0,0,0,.28);font-size:clamp(11px,1.7vmin,14px);white-space:nowrap;transform:rotate(-2deg)}
+.champ-tag{display:inline-block;vertical-align:middle;position:relative;top:-2px;margin-left:10px;background:var(--brass-pill);color:#431A04;font-weight:700;letter-spacing:.07em;padding:6px 14px;border-radius:999px;box-shadow:0 5px 0 rgba(0,0,0,.28);font-size:clamp(11px,1.7vmin,14px);white-space:nowrap;transform:rotate(-2deg);text-shadow:none}
+
+/* ---------- Design pass 4: Sterling remembers ---------- */
+/* the defending champion's plaque: a quiet brass line under the
+   title marquee, in the breathing room above the category chips —
+   a button, because tapping it opens the trophy shelf */
+.champ-plaque{align-self:center;display:block;margin:9px auto 0;max-width:100%;background:linear-gradient(180deg,rgba(255,210,106,.16),rgba(185,106,18,.10));border:1.5px solid var(--brass-line);color:var(--gold);border-radius:999px;padding:5px 12px;font-family:inherit;font-weight:700;letter-spacing:.08em;line-height:1.15;font-size:clamp(10px,1.5vmin,12.5px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 4px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.25);cursor:pointer}
+.champ-plaque:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.champ-plaque:not(.hidden) + .chips{margin-top:7px}
+/* the finale marquee's crown line: defended, taken, or first-ever */
+.winner-sub{margin-top:5px;font-weight:700;letter-spacing:.24em;font-size:clamp(11px,1.9vmin,15px);color:var(--gold);text-shadow:0 2px 0 rgba(20,4,24,.4)}
+/* the lobby acknowledgement: Sterling notes the champion's return */
+.champ-return{margin:10px auto 0;max-width:72ch;text-align:center;color:var(--gold);font-weight:600;font-style:italic;font-size:clamp(13px,2vmin,16px)}
+/* the trophy shelf (the records sheet rides the how-overlay shell) */
+.records-card{text-align:left;max-width:560px}
+.records-card .how-kicker,.records-card .how-title{text-align:center}
+.records-list{margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto}
+.record-row{display:flex;align-items:center;gap:12px;background:rgba(42,21,48,.05);border:1.5px solid rgba(146,104,32,.35);border-radius:14px;padding:7px 12px}
+.record-row .avatar{width:46px;height:48px;flex:0 0 auto}
+.record-who{flex:1;min-width:0}
+.record-name{font-weight:700;font-size:17px;color:var(--paper-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.record-crown{color:var(--brass-deep);font-size:10.5px;font-weight:700;letter-spacing:.14em;vertical-align:2px}
+.record-sub{font-size:11px;font-weight:600;letter-spacing:.18em;color:var(--paper-ink-soft);margin-top:2px}
+.record-nums{text-align:right;flex:0 0 auto}
+.record-wins{font-weight:700;font-size:16px;color:var(--paper-ink);font-variant-numeric:tabular-nums}
+.record-purse{font-size:11px;font-weight:600;letter-spacing:.14em;color:var(--brass-deep);margin-top:2px;font-variant-numeric:tabular-nums}
+.records-empty{text-align:center;color:var(--paper-ink-soft);font-weight:500;line-height:1.5;padding:10px 6px 4px}
+.records-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
+.records-clear{font-weight:700;letter-spacing:.12em;font-size:12px;color:#A33327;padding:10px 8px;border-radius:10px}
+.records-clear.armed{color:#FFF6E8;background:#A33327;padding:10px 12px}
 
 /* ================= title / setup ================= */
 #scr-title{position:relative;overflow:hidden;background:radial-gradient(120% 95% at 50% 28%,#3B1D4E 0%,#24102F 54%,#150820 100%)}
@@ -170,11 +204,121 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(255,158,60,.14),rgba(255,158,60,0) 70%)}
 .set-mid{background:radial-gradient(52% 46% at 50% 40%,rgba(var(--cat-rgb),.26),rgba(var(--cat-rgb),0) 70%),radial-gradient(60% 20% at 50% 97%,rgba(var(--cat-rgb),.20),rgba(var(--cat-rgb),0) 70%);transition:opacity 1.2s ease}
 .set-fore{background:linear-gradient(0deg,rgba(10,3,16,.5),transparent 34%)}
+/* ================= Visual stage 1 — Sterling's set =================
+   The room itself: a panelled back wall, a stage floor, a row of
+   footlights. Pure backdrop — every layer lives inside .set (z-index
+   0, pointer-events none, behind #table), so nothing here can move a
+   single layout pixel. The polish pass's round tint reaches the set
+   through the same data-light filter already on .set; the category
+   wash (.set-mid) paints over the walls, so the room takes the
+   category too. Footlight warmth is keyed to data-phase, mirrored
+   onto #scr-game by the phase presenters in game.js — no timers;
+   the warmth itself is the CSS transition below. Material law:
+   ink room, brass trim, warm practical light. */
+/* the walls: four large quiet panels, brass stiles in dark grooves,
+   one top rail, the base falling into shade where wall meets floor */
+.set>div.set-walls{
+  background:
+    repeating-linear-gradient(90deg, rgba(255,246,232,.020) 0, rgba(255,246,232,.020) calc(25% - 2px), rgba(0,0,0,.10) calc(25% - 2px), rgba(0,0,0,.10) 25%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) calc(25% - 1px), rgba(198,164,94,.14) calc(25% - 1px), rgba(198,164,94,.14) 25%),
+    linear-gradient(180deg, rgba(198,164,94,.11), rgba(198,164,94,.11) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 56%, rgba(0,0,0,.20) 82.5%, rgba(0,0,0,.20));
+}
+/* the floor: a deep ink-plum deck from the wall's base (82.5%) to the
+   front edge — one bright hairline where wall meets floor, a warm
+   light pool centre-stage, board seams running toward the audience */
+.set>div.set-floor{
+  top:auto; bottom:0; height:17.5%;
+  background:
+    linear-gradient(180deg, rgba(255,214,140,.22), rgba(255,214,140,0) 3px),
+    radial-gradient(62% 130% at 50% -10%, rgba(255,196,100,.13), rgba(255,196,100,0) 62%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0, rgba(0,0,0,.16) 2px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 132px),
+    linear-gradient(180deg, rgba(43,20,63,.88), rgba(27,11,42,.94) 55%, rgba(15,5,24,.97));
+}
+/* the footlights: ::before is the upward wash, ::after the bulbs —
+   a dotted row of small warm lamps along the floor's front edge,
+   behind the seats row's plane; the glow does most of the talking */
+.set-lights::before{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(0deg, rgba(255,170,64,.16), rgba(255,160,60,.07) 16%, rgba(255,160,60,0) 34%);
+  opacity:.5; transition:opacity 1.15s ease;
+}
+.set-lights::after{
+  content:""; position:absolute; left:0; right:0; bottom:11.5%; height:26px;
+  background-image:radial-gradient(circle, rgba(255,240,200,.95) 0, rgba(255,240,200,.95) 2.4px, rgba(255,190,84,.55) 4.6px, rgba(255,176,58,.18) 8.5px, rgba(255,176,58,0) 12px);
+  background-size:48px 26px; background-repeat:repeat-x; background-position:50% 50%;
+  opacity:.45; transition:opacity 1.15s ease;
+}
+@media (orientation:portrait){ .set-lights::after{ bottom:9.8% } }
+/* the room applauds: at the reveal the footlights warm up; the
+   finale holds them at full warmth */
+#scr-game[data-phase="reveal"] .set-lights::before{ opacity:1 }
+#scr-game[data-phase="reveal"] .set-lights::after{ opacity:1 }
+#scr-game[data-phase="over"] .set-lights::before{
+  opacity:1;
+  background:linear-gradient(0deg, rgba(255,178,70,.24), rgba(255,165,64,.09) 18%, rgba(255,165,64,0) 38%);
+}
+#scr-game[data-phase="over"] .set-lights::after{ opacity:1 }
+/* New programme pass 2 — the Intermission: the footlights settle
+   to a resting warmth, between the working glow and the reveal's
+   applause — the room itself takes the break */
+#scr-game[data-phase="intermission"] .set-lights::before{ opacity:.8 }
+#scr-game[data-phase="intermission"] .set-lights::after{ opacity:.75 }
+/* the story-so-far card: fact rows in the bumper's grammar — a
+   brass label, a ruled line, the fact itself */
+.fact-list{ max-width:540px; margin:12px auto 2px; text-align:left }
+.fact-row{ display:flex; gap:14px; align-items:baseline; padding:5px 2px; border-bottom:1px solid rgba(198,164,94,.18) }
+.fact-row:last-child{ border-bottom:none }
+.fact-k{ flex:0 0 104px; font-size:10.5px; font-weight:700; letter-spacing:.22em; color:var(--gold); padding-top:2px }
+.fact-v{ font-size:clamp(13px,1.9vw,15.5px); font-weight:600; color:rgba(255,246,232,.94); line-height:1.35 }
+.break-tease{ margin-top:10px }
+/* short landscape: the break card carries four fact rows and a
+   tease where the intro carries a paragraph — the facts tighten
+   harder to fit the same stage (after the base rules, so it wins) */
+@media (max-height:500px){
+  .break-card .round-title{ font-size:23px; margin:2px 0 1px }
+  .fact-list{ margin:4px auto 0 }
+  .fact-row{ padding:2.5px 2px }
+  .fact-k{ flex-basis:92px; padding-top:1px }
+  .fact-v{ font-size:13px }
+  .break-tease{ margin-top:5px }
+}
+/* under the Big Finish gloom the practicals burn a little harder,
+   the way real footlights do */
+#scr-game[data-light="vault"] .set-lights{ filter:brightness(1.3) }
+
 #scr-game[data-light="hot"] .set{filter:brightness(.9) saturate(1.5)}
 #scr-game[data-light="hot"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(255,116,66,.22),rgba(255,116,66,0) 70%)}
 #scr-game[data-light="vault"] .set{filter:brightness(.58) saturate(1.15)}
 #scr-game[data-light="vault"] .set-mid{opacity:.45}
 #scr-game[data-light="vault"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(255,176,58,.10),rgba(255,176,58,0) 70%)}
+
+/* ================= Visual stage 3 — category backdrops =================
+   While a question is live, the room itself announces the category:
+   the back wall blooms in the category's colour and the category's
+   emblem hangs huge and faint behind the question card, like a
+   backdrop logo on a television set. The glow extends .set-mid's
+   category wash upward — same --cat-rgb, same architecture — and
+   needs no JS: applyCat already sets the colour at question open.
+   The emblem swap is a two-copy crossfade driven by setCatBackdrop()
+   in game.js (the incoming copy takes the new emblem while dark,
+   then the .on class trades places; opacity/transform only).
+   Visibility belongs to the question's life: the group is keyed to
+   data-phase — shown in question and reveal (data-phase stays
+   "question" through the table's marking beat, so the backdrop
+   holds for the question's whole life) and faded everywhere else:
+   spin, bet, standings, finale, lobby. data-light still filters
+   .set as a whole, so the Big Finish vault dims the backdrop with
+   the rest of the room. Pure backdrop: inside .set, below set-fore,
+   pointer-events none — it cannot move a layout pixel. */
+.set>div.set-cat{opacity:0;transition:opacity .6s ease}
+#scr-game[data-phase="question"] .set-cat,
+#scr-game[data-phase="reveal"] .set-cat{opacity:1}
+.set-cat-glow{position:absolute;inset:0;background:radial-gradient(58% 50% at 50% 30%,rgba(var(--cat-rgb),.34),rgba(var(--cat-rgb),.10) 52%,rgba(var(--cat-rgb),0) 72%)}
+.set-cat-emb{position:absolute;left:50%;top:41%;width:min(92vmin,520px);aspect-ratio:1;transform:translate(-50%,-50%) scale(.94);opacity:0;transition:opacity .6s ease,transform .6s ease}
+.set-cat-emb.on{opacity:.17;transform:translate(-50%,-50%) scale(1)}
+@media (orientation:portrait){
+  .set-cat-emb{top:36%;width:min(88vw,380px)}
+}
 #spot{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .9s ease;background:radial-gradient(42% 58% at 50% 34%,rgba(255,215,106,.20),rgba(255,215,106,.05) 48%,transparent 72%)}
 #scr-game[data-light="vault"] #spot{opacity:.95}
 #scr-game[data-light="hot"] #spot{opacity:.5}
@@ -282,6 +426,37 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .delta{font-size:clamp(15px,2.3vmin,19px);font-weight:700;margin-top:14px;min-height:24px}
 .delta .down{color:#FFB3AB}
 .why{color:var(--paper-ink-soft);background:var(--paper-bg);font-weight:500;font-size:clamp(13.5px,2vmin,16px);margin-top:10px;line-height:1.5;max-width:58ch;margin-left:auto;margin-right:auto;border-radius:14px;padding:10px 18px;box-shadow:0 10px 20px rgba(0,0,0,.3),inset 0 0 0 1px var(--paper-edge)}
+
+/* ============ Visual stage 5 — reveal theatre ============
+   Two pieces of ceremony, both pure presentation over the reveal's
+   existing layout. (1) The light sweep: a soft band of stage light
+   crosses the question card once as the reveal paints, with a
+   matching sheen over the correct slab — clipped overlays, transform
+   only, fired by revealTheatre() adding .sweep/.sheen. The band is
+   wide-feathered warm paper-light, never a hard glare stripe.
+   (2) The receipt: the why-line's reveal presentation is a paper
+   slip that PRINTS out of a slot at the top of its own space. The
+   .why-wrap carries exactly the margins/max-width/shadow the .why
+   carried alone, so the stage's layout height is the why-line's
+   height it always was; the slip inside is the same .why (same
+   paper, same ink, same padding — the perfectionist contrast ground
+   is untouched), torn along its bottom edge by clip-path, sliding
+   down with a steps() advance like a receipt printer's feed. A
+   resumed reveal paints the wrap without .printing: settled, fully
+   out, nothing in flight. */
+.q-text{position:relative;overflow:hidden}
+.q-text.sweep::after{content:"";position:absolute;inset:-20% -45%;pointer-events:none;background:linear-gradient(100deg,rgba(255,190,80,0) 30%,rgba(255,196,84,.30) 43%,rgba(255,216,130,.52) 50%,rgba(255,196,84,.30) 57%,rgba(255,190,80,0) 70%);transform:translateX(-110%) skewX(-12deg);animation:cardSweep .7s cubic-bezier(.4,0,.2,1) both}
+@keyframes cardSweep{from{transform:translateX(-110%) skewX(-12deg)}to{transform:translateX(110%) skewX(-12deg)}}
+.ans-btn{position:relative}
+.ans-btn.sheen{overflow:hidden}
+.ans-btn.sheen::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(100deg,rgba(255,255,255,0) 32%,rgba(255,255,255,.34) 46%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.34) 54%,rgba(255,255,255,0) 68%);transform:translateX(-130%) skewX(-12deg);animation:slabSheen .7s cubic-bezier(.4,0,.2,1) .05s both;z-index:1}
+@keyframes slabSheen{from{transform:translateX(-130%) skewX(-12deg)}to{transform:translateX(130%) skewX(-12deg)}}
+.why-wrap{position:relative;margin-top:10px;max-width:58ch;margin-left:auto;margin-right:auto;border-radius:14px 14px 4px 4px;overflow:hidden;box-shadow:0 10px 20px rgba(0,0,0,.3)}
+.why-wrap::before{content:"";position:absolute;left:5%;right:5%;top:0;height:4px;border-radius:0 0 4px 4px;background:linear-gradient(180deg,#2A1A33,#17101F);box-shadow:0 2px 4px rgba(0,0,0,.35);z-index:2}
+.why-wrap .why{margin:0;max-width:none;box-shadow:inset 0 0 0 1px var(--paper-edge)}
+.why-slip{clip-path:polygon(0 0, 100% 0, 100% calc(100% - 4px), 97.5% 100%, 95% calc(100% - 4px), 92.5% 100%, 90% calc(100% - 4px), 87.5% 100%, 85% calc(100% - 4px), 82.5% 100%, 80% calc(100% - 4px), 77.5% 100%, 75% calc(100% - 4px), 72.5% 100%, 70% calc(100% - 4px), 67.5% 100%, 65% calc(100% - 4px), 62.5% 100%, 60% calc(100% - 4px), 57.5% 100%, 55% calc(100% - 4px), 52.5% 100%, 50% calc(100% - 4px), 47.5% 100%, 45% calc(100% - 4px), 42.5% 100%, 40% calc(100% - 4px), 37.5% 100%, 35% calc(100% - 4px), 32.5% 100%, 30% calc(100% - 4px), 27.5% 100%, 25% calc(100% - 4px), 22.5% 100%, 20% calc(100% - 4px), 17.5% 100%, 15% calc(100% - 4px), 12.5% 100%, 10% calc(100% - 4px), 7.5% 100%, 5% calc(100% - 4px), 2.5% 100%, 0 calc(100% - 4px))}
+.why-wrap.printing .why-slip{animation:whyPrint .8s steps(9) .25s both}
+@keyframes whyPrint{from{transform:translateY(-104%)}to{transform:translateY(0)}}
 .wager-amt{font-size:clamp(52px,10vmin,92px);font-weight:700;line-height:1.05;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 4px 0 #571C46);animation:jumpIn .55s cubic-bezier(.2,1.8,.4,1) both}
 
 /* bet beat */
@@ -289,6 +464,7 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .bet-row{border-left:12px solid var(--pc)}
 .bet-row .chip{min-width:44px}
 .bet-amt{flex:none;min-width:118px;text-align:center;font-weight:700;font-size:16.5px;color:#431A04;background:var(--brass-pill);border-radius:999px;padding:7px 13px;box-shadow:0 4px 0 var(--gold-sh)}
+.longshot-marker{flex:none;font-size:10px;font-weight:800;letter-spacing:.13em;color:#FFD76A;background:rgba(255,183,58,.13);border:1px solid rgba(255,215,106,.6);border-radius:999px;padding:5px 7px;white-space:nowrap}
 .chip{font-weight:700;border-radius:999px;padding:9px 15px;font-size:14px;color:var(--cream);background:var(--glass-ink);box-shadow:0 4px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
 button.chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .chip:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
@@ -377,6 +553,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .q-cat{font-size:10.5px}
   .cat-pill{padding:2px 10px}
   .q-text{font-size:15px !important;margin-top:4px;line-height:1.2}
+  .q-cardwrap{margin-top:4px}
   .q-meta{margin-top:2px;gap:10px}
   .q-value span{font-size:25px}
   .q-value small{display:inline-block;margin-right:8px;text-indent:0}
@@ -393,6 +570,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .answers:not(.pop-in) .ans-btn{font-size:12.5px}
   .delta{margin-top:3px;min-height:16px;font-size:12px}
   .why{font-size:11px;line-height:1.32;margin-top:2px;max-width:94%}
+  .why-wrap{margin-top:2px;max-width:94%}
   .wager-amt{font-size:40px}
   #voteCount{font-size:42px}
   .name-row{padding:3px 10px}
@@ -418,6 +596,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .winner-word{font-size:36px}
   .winner-name{font-size:19px;margin-top:3px}
   .winner-total{font-size:27px}
+  .winner-sub{font-size:10px;margin-top:3px;letter-spacing:.2em}
   .finale-wrap .sterling-zone{flex-direction:row;align-items:flex-end}
   .finale-wrap .sterling-lg{width:96px}
   .finale-wrap .bubble{font-size:11px;padding:7px 10px;margin:0 0 14px 6px;max-width:210px}
@@ -433,6 +612,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .kicker{font-size:9px}
   .chips{gap:5px;margin-top:6px}
   .chip{padding:3px 9px;font-size:10.5px}
+
   .setup-card{margin-top:8px;padding:6px 14px 5px;border-radius:18px}
   .setup-label{margin:3px 0 4px;font-size:9.5px}
   .mode-tabs{margin-bottom:8px}
@@ -664,6 +844,11 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 /* bet phase: chips you can count */
 .jp-betmid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:0}
 .jp-betlabel{letter-spacing:.3em;font-weight:700;font-size:13px;color:rgba(255,246,232,.65)}
+.jp-longshot{font-size:12px;font-weight:800;letter-spacing:.16em;color:#FFD76A;background:rgba(255,183,58,.12);border:1px solid rgba(255,215,106,.55);border-radius:999px;padding:6px 10px;white-space:nowrap}
+/* Long Shot pads: at 4-5 discs the counted stack slims so the whole
+   pile stays on the pad instead of bleeding off both edges */
+.jp-chipstack.many{gap:8px}
+.jp-chipstack.many .jp-chipdisc{width:56px;height:56px;font-size:15px;border-width:4px}
 .jp-chipstack{display:flex;gap:12px;min-height:76px;align-items:center}
 .jp-chipdisc{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 50% 36%,#FFE29A,#FFB03A 62%,#FF8A3C);border:5px dashed rgba(67,26,4,.35);box-shadow:0 6px 0 var(--gold-sh),inset 0 3px 0 rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-weight:700;color:#431A04;font-size:19px}
 .jp-betamt{font-size:clamp(24px,7vw,32px);font-weight:700;text-shadow:0 3px 0 rgba(20,4,24,.45)}
@@ -738,9 +923,52 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 @keyframes nodA{0%,100%{transform:translateY(0)}30%{transform:translateY(3px)}55%{transform:translateY(0)}78%{transform:translateY(2px)}}
 .host-face svg circle[r="3.6"],.sterling circle[r="6.5"]{transform-box:fill-box;transform-origin:center;transition:transform .07s ease}
 #scr-game.st-blink .host-face svg circle[r="3.6"],#scr-game.st-blink .sterling circle[r="6.5"]{transform:scaleY(.08)}
+/* Cast pass 1: eyes have whites now, so the blink flattens the whole
+   .st-eye group on the same st-blink hook (the pupil rule above still
+   applies inside it); pupil travel (glance/sweep/point) is untouched */
+.sterling .st-eye,.host-face .st-eye{transform-box:fill-box;transform-origin:center;transition:transform .07s ease}
+#scr-game.st-blink .sterling .st-eye,#scr-game.st-blink .host-face .st-eye{transform:scaleY(.1)}
 #scr-game.st-glance .host-face svg circle[r="3.6"]{transform:translateX(1.6px)}
 .finale-wrap .sterling-zone{animation:tipBow 1.5s cubic-bezier(.2,.7,.3,1) .35s 1 both}
 @keyframes tipBow{0%{transform:rotate(0)}35%{transform:rotate(-2.6deg) translateY(5px)}70%{transform:rotate(.8deg) translateY(-1px)}100%{transform:rotate(0)}}
+
+/* ---- Visual stage 2: the podium, the arms, the gestures ----
+   The podium and arms are drawn inside Sterling's own SVGs (game.js
+   STERLING_PODIUM / STERLING_ARMS, and the host-face bust in
+   index.html wears the same kit at badge scale). Arms pivot at the
+   shoulders — transform-box:view-box pins each origin to the SVG's
+   own coordinates, so the same angles serve the full figure and the
+   badge. One ease for both gestures: out fast, a breath of overshoot,
+   settle — the show's 20/80 tween feel. The classes are transient
+   (stClass timers), fired only from the question/reveal presenters,
+   and the pupils travel with the arm so the point and the gaze agree.
+   The finale never carries these classes: the bow owns it. */
+.sterling .st-arm,.host-face .st-arm{transition:transform .55s cubic-bezier(.25,1.3,.4,1)}
+.sterling .st-arm-l{transform-box:view-box;transform-origin:84px 218px}
+.sterling .st-arm-r{transform-box:view-box;transform-origin:236px 218px}
+.host-face .st-arm-l{transform-box:view-box;transform-origin:27px 90px}
+.host-face .st-arm-r{transform-box:view-box;transform-origin:93px 90px}
+/* the presenting sweep: the right arm swings out across the podium
+   toward the card, holds while the class lives (~1.5s), settles back */
+#scr-game.st-sweep .sterling .st-arm-r,#scr-game.st-sweep .host-face .st-arm-r{transform:rotate(-46deg)}
+#scr-game.st-sweep .host-face svg circle[r="3.6"],#scr-game.st-sweep .sterling circle[r="6.5"]{transform:translateX(1.8px)}
+/* the point: left arm for a seat to his left, right arm dropped for
+   centre, right arm swung wide for a seat to his right */
+#scr-game.st-point-l .sterling .st-arm-l,#scr-game.st-point-l .host-face .st-arm-l{transform:rotate(36deg)}
+#scr-game.st-point-c .sterling .st-arm-r,#scr-game.st-point-c .host-face .st-arm-r{transform:rotate(-15deg)}
+#scr-game.st-point-r .sterling .st-arm-r,#scr-game.st-point-r .host-face .st-arm-r{transform:rotate(-36deg)}
+#scr-game.st-point-l .host-face svg circle[r="3.6"],#scr-game.st-point-l .sterling circle[r="6.5"]{transform:translate(-1.8px,1px)}
+#scr-game.st-point-c .host-face svg circle[r="3.6"],#scr-game.st-point-c .sterling circle[r="6.5"]{transform:translate(0,1.2px)}
+#scr-game.st-point-r .host-face svg circle[r="3.6"],#scr-game.st-point-r .sterling circle[r="6.5"]{transform:translate(1.8px,1px)}
+/* at badge scale the arm alone is a whisper, so the whole face leans
+   into the point — composed with the reveal's lean-in, never instead
+   of it */
+#scr-game.st-point-l .host-face{transform:rotate(-4deg) translateY(1px)}
+#scr-game.st-point-c .host-face{transform:translateY(2px)}
+#scr-game.st-point-r .host-face{transform:rotate(4deg) translateY(1px)}
+#scr-game.st-lean.st-point-l .host-face{transform:scale(1.08) rotate(-4deg) translateY(2px)}
+#scr-game.st-lean.st-point-c .host-face{transform:scale(1.08) translateY(3px)}
+#scr-game.st-lean.st-point-r .host-face{transform:scale(1.08) rotate(4deg) translateY(2px)}
 
 /* ---- 3. money moves: coin canvas, score shimmer, the laurel ---- */
 #coinCanvas{position:fixed;inset:0;z-index:26;pointer-events:none;display:none}
@@ -758,6 +986,22 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 @keyframes deltaRise{0%{opacity:0;transform:translate(-50%,8px) scale(.8)}14%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}24%{transform:translate(-50%,-8px) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px) scale(1)}}
 @keyframes deltaFall{0%{opacity:0;transform:translate(-50%,-6px)}18%{opacity:.95}70%{opacity:.8}100%{opacity:0;transform:translate(-50%,10px)}}
 .closest-tag{display:inline-block;margin-left:7px;padding:2px 7px 3px;border-radius:999px;background:var(--brass-pill);color:#431A04;font-size:9px;font-weight:800;letter-spacing:.1em;vertical-align:2px;box-shadow:0 2px 0 rgba(0,0,0,.3);animation:tagIn .4s cubic-bezier(.2,1.6,.4,1) both}
+/* Design pass 3: the quick-draw tag — same pill, hotter metal (a
+   near-white gold flash) so speed reads at a glance across the room;
+   same geometry, so the seat's tag space and fit guards are unmoved. */
+.closest-tag.qdtag{background:linear-gradient(180deg,#FFF3C4,#FFD76A 70%,#FFC53D);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,213,106,.55)}
+.jp-qdtag{display:inline-block;margin:2px auto 4px;padding:3px 10px 4px;border-radius:999px;background:linear-gradient(180deg,#FFF3C4,#FFD76A 70%,#FFC53D);color:#431A04;font-size:10px;font-weight:800;letter-spacing:.12em;box-shadow:0 2px 0 rgba(0,0,0,.3)}
+/* Hot Streaks (New programme pass 3): the warm family. The desk
+   tag's streak segment is amber in the tag's own caps grammar,
+   deepening to a lit ember at 5+; the reveal tags are the qdtag
+   pill in heated metal — same geometry throughout, so the seat's
+   tag space and fit guards are unmoved. The pad's live streak line
+   is a small warm caps line under the question. */
+.tag .streakseg{color:#FFC53D}
+.tag .streakseg.hot{color:#FF9A3C;text-shadow:0 0 8px rgba(255,154,60,.55)}
+.closest-tag.streaktag{background:linear-gradient(180deg,#FFE3B3,#FFB03A 70%,#FF8A3C);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,154,60,.5)}
+.jp-qdtag.streak{background:linear-gradient(180deg,#FFE3B3,#FFB03A 70%,#FF8A3C)}
+.jp-streakline{margin:8px auto 0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.14em;color:#FFB03A;text-shadow:0 0 10px rgba(255,154,60,.35)}
 @keyframes tagIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
 #laurel{position:absolute;z-index:3;width:42px;height:42px;pointer-events:none;transform:translate(-50%,-88%);transition:left .65s cubic-bezier(.3,1.25,.4,1),top .65s cubic-bezier(.3,1.25,.4,1),opacity .3s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
 #laurel.snap{transition:none}
@@ -800,7 +1044,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .spot-cone{position:absolute;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,215,106,.30),rgba(255,215,106,.09) 72%,rgba(255,215,106,.14)),radial-gradient(52% 16% at 50% 100%,rgba(255,215,106,.34),rgba(255,215,106,0) 70%);clip-path:polygon(43% 0,57% 0,100% 100%,0 100%);opacity:0}
 .spot-cone.on{animation:coneIn 1.15s ease-out .25s both}
 @keyframes coneIn{from{opacity:0;transform:translateX(-50%) translateY(-12px) scaleY(.94)}to{opacity:1;transform:translateX(-50%) translateY(0) scaleY(1)}}
-.gold-seal{position:absolute;top:-19px;right:-15px;width:60px;height:60px;display:block;opacity:0;transform:scale(2.4) rotate(-30deg);pointer-events:none;z-index:5;filter:drop-shadow(0 5px 9px rgba(0,0,0,.4))}
+.gold-seal{position:absolute;bottom:-16px;right:-14px;width:60px;height:60px;display:block;opacity:0;transform:scale(2.4) rotate(-30deg);pointer-events:none;z-index:5;filter:drop-shadow(0 5px 9px rgba(0,0,0,.4))}
 #scr-game.sealed .gold-seal{animation:sealStamp .5s cubic-bezier(.2,1.6,.4,1) .55s both}
 #scr-game.sealed .host-bubble{padding-right:58px}
 @keyframes sealStamp{0%{opacity:0;transform:scale(2.4) rotate(-30deg)}60%{opacity:1;transform:scale(.92) rotate(-11deg)}100%{opacity:1;transform:scale(1) rotate(-12deg)}}
@@ -879,6 +1123,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
    question screen's fit is the fit it always was. */
 @media (max-height:500px){
   .q-text{padding:5px 12px;border-radius:12px;margin-top:0}
+  .q-cardwrap{margin-top:0}
   .answers{margin-top:2px}
   .tools{margin-top:1px}
   .why{padding:5px 10px;border-radius:10px}
@@ -956,6 +1201,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .seat .desk{padding-top:9px}
   #stage .q-card{padding:9px 16px 8px}
   .q-text{padding:2px 6px 3px;max-width:34em;margin-top:0;font-size:14px !important;line-height:1.08}
+  .q-cardwrap{margin-top:0}
   .ans-btn{padding-top:3px;padding-bottom:3px}
   .answers{gap:5px;margin-top:0}
   .tools{margin-top:0}
@@ -1029,4 +1275,273 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
      marquee row buys back its right side, so the pill clears the D */
   #marqueeTitle .logo{font-size:8.8vw}
   .marquee-row{padding-right:52px}
+}
+
+/* improvement 4 — the resume chip: a brass line inside the table
+   setup card, present only while a saved show waits. Slim by design;
+   the buttons carry an expanded invisible hit area, the house rule
+   for named controls. When the chip is present the card is in
+   .has-resume and gives back the chip's height elsewhere, so the
+   title's verified folds (START in the first viewport, 3p and 4p,
+   both orientations) hold with the chip showing. */
+.resume-chip{display:flex;align-items:center;gap:10px;background:rgba(255,201,60,.08);border:1.5px solid var(--gold);border-radius:14px;padding:7px 10px;margin-bottom:9px}
+.resume-chip.hidden{display:none}
+.resume-txt{flex:1;display:flex;flex-direction:column;gap:1px;text-align:left;min-width:0}
+.resume-kicker{font-weight:700;font-size:12.5px;letter-spacing:.08em;color:var(--gold)}
+.resume-detail{font-size:11px;font-weight:600;letter-spacing:.1em;color:rgba(255,246,232,.75)}
+.resume-btns{display:flex;gap:7px;flex:none}
+.resume-chip .resume-btn{position:relative;padding:7px 11px;font-size:12px;border-radius:11px}
+.resume-btn::after{content:"";position:absolute;inset:-7px -2px}
+@media (max-width:560px){
+  .setup-card.has-resume .fineprint{display:none}
+  .setup-card.has-resume .resume-chip{flex-direction:column;align-items:stretch;gap:6px;padding:8px 10px;margin-bottom:6px}
+  .setup-card.has-resume .resume-txt{gap:2px}
+  .setup-card.has-resume .resume-kicker{font-size:12px;white-space:nowrap}
+  .setup-card.has-resume .resume-detail{font-size:10.5px;letter-spacing:.06em;white-space:nowrap}
+  .setup-card.has-resume .resume-btn{flex:1;padding:7px 10px}
+  #scr-title:has(.setup-card.has-resume) .sterling-zone .sterling-lg{width:62px}
+  #scr-title:has(.setup-card.has-resume) .chips{display:none}
+}
+@media (max-height:500px){
+  .setup-card.has-resume .resume-chip{padding:4px 8px;margin-bottom:5px;border-radius:11px}
+  .setup-card.has-resume .resume-txt{flex-direction:row;gap:8px;align-items:baseline}
+  .setup-card.has-resume .resume-kicker{font-size:11px}
+  .setup-card.has-resume .resume-detail{font-size:10px}
+  .setup-card.has-resume .resume-btn{padding:5px 10px;font-size:11.5px}
+  #scr-title:has(.setup-card.has-resume) .chips{display:none}
+  .setup-card.has-resume .setup-label{margin-top:0;margin-bottom:2px}
+}
+
+/* ================= Visual stage 4 — visible fortunes =================
+   A cluster of brass coin stacks on the right-hand end of every
+   desk: height IS the score, told relatively — the leader stands
+   full height, everyone else in proportion, $0 is an empty saucer
+   spot. Pure furniture inside the desk (absolute, out of flow), so
+   no seat box moves and no fit changes. game.js sets each stack's
+   height in px from --fmax, owned here per breakpoint; the runged
+   coin edges are a repeating gradient, the bright top coin a
+   pseudo-element, and the only transition is height. Trailers sit
+   in dimmer metal; the leader's cluster takes the full shine, so
+   rank reads in the brass as well as the height. The name and the
+   score keep the top layer — a tall pile may stand beside the
+   digits, never over them. */
+.fortune{--fmax:32px;position:absolute;right:8px;bottom:5px;z-index:2;height:calc(var(--fmax) + 5px);display:flex;align-items:flex-end;gap:3px;pointer-events:none;filter:saturate(.78) brightness(.86)}
+.fortune.lead{filter:none}
+.fstk{position:relative;display:block;height:0;border-radius:2px 2px 1px 1px;background:linear-gradient(90deg,rgba(74,44,4,.5),rgba(255,244,200,.32) 42%,rgba(74,44,4,.42)),repeating-linear-gradient(180deg,#D99A26 0 2px,#A96F0E 2px 3.5px);box-shadow:inset 0 0 0 1px rgba(74,44,4,.35),0 1px 2px rgba(0,0,0,.35);transition:height .8s cubic-bezier(.25,.9,.3,1)}
+.fstk.a{width:13px}
+.fstk.b{width:17px}
+.fstk.c{width:12px}
+.fstk::before{content:"";position:absolute;left:0;right:0;top:-2px;height:5px;border-radius:50%;background:radial-gradient(ellipse at 38% 32%,#FFE9AE,#F5B93F 58%,#C07F12);box-shadow:inset 0 0 0 1px rgba(122,74,8,.5),0 1px 1px rgba(0,0,0,.3)}
+.fortune.lead .fstk::before{box-shadow:inset 0 0 0 1px rgba(122,74,8,.5),0 0 8px rgba(255,215,106,.7)}
+.fstk.off{visibility:hidden}
+.fortune.zero::after{content:"";position:absolute;right:10px;bottom:0;width:21px;height:6px;border-radius:50%;border:1.5px solid rgba(255,224,150,.38);background:rgba(0,0,0,.14)}
+.seat .desk .seat-name,.seat .desk .seat-score{position:relative;z-index:1}
+@media (max-height:500px){
+  .fortune{--fmax:23px;right:6px;bottom:3px;gap:2px}
+  .fstk.a{width:11px}
+  .fstk.b{width:14px}
+  .fstk.c{width:10px}
+}
+@media (max-width:560px){
+  /* a portrait desk is ~90px wide: the cluster slims, and the short
+     stack takes the corner so the tallest pile stands clear of the
+     tag line's right end */
+  .fortune{--fmax:18px;right:3px;bottom:3px;gap:2px}
+  .fstk.a{width:8px;order:3}
+  .fstk.b{width:10px;order:2}
+  .fstk.c{width:7px;order:1}
+  .fortune.zero::after{width:15px;height:5px;right:5px}
+}
+
+/* ================================================================
+   FIX-UP PASS — four paint/geometry defects from the first-hand
+   visual pass (mypass frames 17/12/10/08). Paint and geometry
+   only: no logic, no copy, and every verified fit is repaid to
+   the pixel where a fix spends vertical room.
+   ================================================================ */
+
+/* FIX 3 (all tiers) — the desk tag's centred text box ends before
+   the fortune cluster's footprint (48px incl. its right offset),
+   so "CUT TWO · BET 3 CHIPS" reads in full at maximum stack
+   height instead of sliding under the coins. Short-landscape and
+   portrait refinements live in their media blocks below. */
+.seat .tag{padding-right:50px}
+
+/* FIX 4 — on the standings bumper the go button is foreground
+   furniture: positioned above the race (podiums sit at z-index 1),
+   so it paints whole and hit-tests whole at every moment of the
+   riseIn entrance, not just once the podiums settle. The R1
+   bumper (no race) is untouched. The 6px of air the button gains
+   in the short tiers is repaid by the race-podiums padding cuts
+   in those same blocks — bumper height is unchanged. */
+.bumper:has(.race-wrap) .btn-gold{position:relative;z-index:2}
+
+@media (max-height:500px){
+  /* FIX 1 — landscape tools row, whole at last. The defect was
+     three layers deep: .tools had margin-top:0 here, so the row
+     ABUTTED the answer slabs; the slabs are positioned and the
+     pills were static, so the slabs' 6px ledge shadow painted
+     across the pills' tops; and the two-line squeeze (label +
+     "one lifeline" in a 27px pill) put the label glyphs 1px from
+     the pill's top edge, squarely in that shadow band. Portrait
+     already runs this row single-line — short landscape joins
+     it: the subtext goes inline, the pill is honestly one line
+     tall (22px), positioned so it paints above the slab shadow,
+     given 5px of real air (financed by the 5px the single line
+     saves — stage height unchanged), and the perfectionist hit
+     expansion keeps the tap target at 30px. */
+  .tools{margin-top:5px}
+  .tool-btn{position:relative;flex-direction:row;align-items:baseline;justify-content:center;padding-top:4px;padding-bottom:4px}
+  .tool-btn small{display:inline;margin:0 0 0 5px}
+  .tool-btn::after{content:"";position:absolute;inset:-4px 0}
+  /* FIX 3 (short landscape) — cluster footprint is 45px here;
+     47px of right padding plus a breath less letter-spacing ends
+     the longest tag ~14px clear of the stacks at 844px wide, and
+     still clear at the 150px seat minimum. */
+  .seat .tag{padding-right:47px;letter-spacing:.12em}
+  /* FIX 4 repay + FIX 2a repay (see below) */
+  .race-podiums{padding-top:10px}
+  .bumper:has(.race-wrap) .btn-gold{margin-top:6px}
+  /* FIX 2a — the ★ CHAMPION pill now rides the winner-name line
+     inside the marquee (it used to hang off the winner's podium
+     and land on the total). The pill is ~3px taller than the
+     19px name line here, repaid from the name's own margin so
+     the finale fit does not move. */
+  .winner-name{margin-top:0}
+}
+
+/* Portrait-only geometry (never on a short landscape: the
+   min-height guard keeps the two fixes from fighting on small
+   landscape phones, which take the short-landscape rules). */
+@media (max-width:560px) and (min-height:501px){
+  /* FIX 3 (portrait) — the portrait desk is 106px of content:
+     the longest tag (91.8px) and the coin cluster (29px) cannot
+     share one line at any padding. So the tag trades places with
+     the score: name, tag, score top to bottom — the tag sits a
+     full line above the bottom-anchored stacks, and the score
+     (centred, ~45px of glyphs, z-index 1) never reaches the
+     cluster either. Same three lines, same desk height. */
+  .seat .desk{display:flex;flex-direction:column}
+  .seat .seat-name{order:1}
+  .seat .tag{order:2;padding-right:0}
+  .seat .seat-score{order:3}
+  /* FIX 4 (portrait leg of the repay) */
+  .race-podiums{padding-top:16px}
+  .bumper:has(.race-wrap) .btn-gold{margin-top:6px}
+}
+
+/* ================= Design pass 2 — the Headline Question =================
+   One question a show wears the front-page treatment: a brass ribbon
+   banner pinned across the question card's top edge, a double-rule
+   brass frame inside the card, and a brass ring on the category pill.
+   Brass and newsprint — deliberately NOT the nightly special's gilded
+   pill, which replaces the category outright. The banner rides the
+   card's top edge from inside the card's own wrapper, so the stage
+   gains no height anywhere: the wrapper carries the card's margin
+   and the card itself keeps every other rule it ever had. */
+.q-cardwrap{position:relative;width:fit-content;max-width:100%;margin:clamp(10px,2.2vmin,20px) auto 0}
+.q-cardwrap .q-text{margin-top:0}
+.headline-banner{position:absolute;left:50%;top:-14px;transform:translate(-50%,-50%) rotate(-1.2deg);z-index:3;background:var(--brass-grad);color:#431A04;font-weight:800;letter-spacing:.13em;font-size:clamp(10px,1.5vmin,13px);padding:4px 14px;border-radius:999px;box-shadow:0 4px 0 rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.7);white-space:nowrap}
+.headline-banner.inflow{position:relative;left:auto;top:auto;transform:rotate(-1.2deg);display:inline-block;margin:8px auto 0}
+.hl-slot{margin-top:-4px;margin-bottom:-10px}
+.q-text.headline-card{box-shadow:0 16px 30px rgba(0,0,0,.38),inset 0 0 0 2px var(--brass-frame),inset 0 0 0 4px var(--paper-flat),inset 0 0 0 6px rgba(146,104,32,.5)}
+.cat-pill.headline{box-shadow:0 6px 0 var(--cat-sh),inset 0 0 0 2px var(--brass-hi),inset 0 2px 0 rgba(255,255,255,.35)}
+.why-tag{display:inline-block;background:var(--brass-pill);color:#431A04;font-weight:700;letter-spacing:.06em;border-radius:6px;padding:1px 8px;margin-right:8px;font-size:.85em;vertical-align:1px;white-space:nowrap}
+.jp-headline{text-align:center;color:var(--brass-hi);font-weight:700;letter-spacing:.11em;font-size:12px;margin:8px 2px 0}
+
+/* ---------- Design pass 4: the short-landscape squeezes ----------
+   Appended last on purpose: this viewport's finale and title are
+   already squeezed by several max-height blocks, so a crowned
+   finale / a plaque-bearing title reclaims the new elements'
+   height from the tightest values in force — never new scroll. */
+@media (max-height:500px){
+  /* the title, with the champion's plaque up */
+  #scr-title:has(.champ-plaque:not(.hidden)) .title-scroll{padding-top:2px;padding-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) #marqueeTitle{padding-top:1px;padding-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) #marqueeTitle>.kicker{margin-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) #marqueeTitle .logo{font-size:27px;line-height:1.02}
+  /* the plaque keeps real air under the marquee: its bottom bulbs
+     protrude ~6px below the frame, and the line must clear them */
+  #scr-title:has(.champ-plaque:not(.hidden)) .champ-plaque{margin-top:8px;padding-top:1px;padding-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) .champ-plaque + .chips{margin-top:1px;gap:2px}
+  #scr-title:has(.champ-plaque:not(.hidden)) .chip{padding-top:1px;padding-bottom:1px}
+  /* a crowned finale, with its subline up */
+  .finale-marquee:has(.winner-sub){padding-top:1px;padding-bottom:1px}
+  .finale-wrap:has(.winner-sub) .winner-sub{margin-top:1px}
+  .finale-wrap:has(.winner-sub) .winner-word{font-size:20px}
+  .finale-wrap:has(.winner-sub) .winner-name{font-size:16px}
+  .finale-wrap:has(.winner-sub) .champ-tag{padding:3px 10px}
+  .finale-wrap:has(.winner-sub) .winner-total{font-size:20px}
+  .finale-wrap:has(.winner-sub) .sterling-lg{width:64px}
+  .finale-wrap:has(.winner-sub){gap:3px}
+  .finale-wrap:has(.winner-sub) .finale-row{padding-top:1px}
+  .finale-wrap:has(.winner-sub) .finale-row .podium.big .avatar{width:38px}
+  /* the lobby, with the champion's acknowledgement up: the stack
+     was fitted to the stage to the pixel, so the line's height
+     comes out of the QR plate and its own margin */
+  #stage:has(.champ-return) .og-qr canvas{width:92px;height:92px}
+  #stage:has(.champ-return) .champ-return{margin-top:4px}
+}
+
+/* ---------- Design pass 6 — Cut Two's moment ----------
+   The cut slab is NOT the reveal's dim: deeper desaturation, a
+   brass seam slashed diagonally across the face, and a scissors
+   badge in the corner — a slab that has been CUT, readable across
+   the room. The settled class paints identically on a repaint or
+   a resumed show; only the live spend adds .cutfresh, whose shear
+   animation runs once and settles into the same look. The banner
+   is a pure overlay on #stage (which is position:relative): it
+   moves no layout box and answers to no clock. */
+.ans-btn.cut{opacity:.4;filter:saturate(.26) brightness(.82)}
+.ans-btn.cut::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:2px;background:linear-gradient(90deg,transparent,rgba(255,215,106,.9) 16%,rgba(255,215,106,.9) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.ans-btn.cut::after{content:"✂";position:absolute;top:3px;right:9px;font-size:13px;color:#FFD76A;opacity:.95;pointer-events:none}
+.answers .ans-btn.cutfresh{animation:cutShear .6s cubic-bezier(.3,1.4,.4,1) both}
+.answers .ans-btn.cutfresh::before{transform-origin:left center;animation:cutSlashDraw .45s ease-out .05s both}
+@keyframes cutShear{0%{transform:translateX(0) skewX(0deg)}18%{transform:translateX(-5px) skewX(-5deg)}38%{transform:translateX(4px) skewX(3deg)}62%{transform:translateX(-2px) skewX(-1.5deg)}100%{transform:translateX(0) skewX(0deg)}}
+@keyframes cutSlashDraw{from{transform:rotate(-7deg) scaleX(0)}to{transform:rotate(-7deg) scaleX(1)}}
+.jp-ans.cut{opacity:.42;filter:saturate(.26) brightness(.82)}
+.jp-ans.cut::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:2px;background:linear-gradient(90deg,transparent,rgba(255,215,106,.9) 16%,rgba(255,215,106,.9) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.jp-ans.cut::after{content:"✂";position:absolute;top:3px;right:9px;font-size:13px;color:#FFD76A;opacity:.95;pointer-events:none}
+.jp-answers .jp-ans.cutfresh{animation:cutShear .6s cubic-bezier(.3,1.4,.4,1) both}
+.jp-answers .jp-ans.cutfresh::before{transform-origin:left center;animation:cutSlashDraw .45s ease-out .05s both}
+.cut-banner{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-1.2deg);z-index:6;background:var(--brass-grad);color:#431A04;font-weight:800;letter-spacing:.14em;font-size:clamp(13px,2.2vmin,19px);padding:9px 22px;border-radius:999px;box-shadow:0 6px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7),0 18px 34px rgba(0,0,0,.45);white-space:nowrap;pointer-events:none;text-transform:uppercase;animation:cutBannerIn 1.3s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes cutBannerIn{0%{opacity:0;transform:translate(-50%,-50%) rotate(-1.2deg) scale(.7)}14%{opacity:1;transform:translate(-50%,-50%) rotate(-1.2deg) scale(1.07)}24%{transform:translate(-50%,-50%) rotate(-1.2deg) scale(1)}76%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) rotate(-1.2deg) scale(1)}}
+.seat.cutflash .tag{animation:tagCutFlash 1.15s ease both}
+@keyframes tagCutFlash{0%{color:#FFD76A;text-shadow:0 0 14px rgba(255,215,106,.95);transform:scale(1.18)}100%{transform:scale(1)}}
+
+/* ============ New programme pass 1 — the Decider ============
+   The banner keeps the Headline's grammar (an overlay pill on the
+   card — no layout box moves) but wears the show's deepest rose,
+   so a room can tell at a glance this is not the Headline: this
+   one is for the crown. Spectator seats step out of the light;
+   the winner's podium carries its marker in the same rose. */
+.headline-banner.decider-banner{background:linear-gradient(180deg,#9C2B4C,#7E1F3E 60%,#5E1530);color:#FFE9C9;box-shadow:0 4px 0 rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.35)}
+.seat.spectator{opacity:.42;filter:saturate(.35) brightness(.82)}
+.decider-marker{display:inline-block;margin-top:4px;padding:2px 9px 3px;border-radius:999px;background:linear-gradient(180deg,#9C2B4C,#7E1F3E);color:#FFE9C9;font-size:9px;font-weight:800;letter-spacing:.14em;box-shadow:0 2px 0 rgba(0,0,0,.3);white-space:nowrap}
+.jp-headline.decider{color:#FF9EBB}
+.jp-decider-vs{text-align:center;font-weight:800;letter-spacing:.05em;font-size:clamp(17px,4.6vw,22px);margin-top:8px;color:var(--cream);text-shadow:0 2px 0 rgba(20,4,24,.4)}
+
+/* ============ Programme pass 4 — Rematch Night ============
+   The series line rides inside the finale marquee under the
+   champion subline, in the same letter-spaced capitals — a step
+   quieter for a running score, full brass and glowing on the one
+   night it becomes the taking of the night. The pad's rematch
+   banner is the headline grammar at lobby scale: a framed plate
+   that tells the player the table stayed together. */
+.winner-sub.series-line{color:var(--cream);opacity:.92;letter-spacing:.18em}
+.winner-sub.series-line.night-won{color:var(--gold);opacity:1;font-size:clamp(12px,2.2vmin,17px);text-shadow:0 0 14px rgba(255,201,60,.45),0 2px 0 rgba(20,4,24,.4)}
+.jp-rematch{text-align:center;margin:10px auto 0;padding:8px 14px 7px;max-width:300px;border:1px solid rgba(255,215,106,.55);border-radius:12px;color:var(--brass-hi);font-weight:800;letter-spacing:.13em;font-size:13px;background:linear-gradient(180deg,rgba(255,215,106,.12),rgba(255,215,106,.03))}
+.jp-rematch span{display:block;margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.22em;color:var(--cream);opacity:.75}
+.og-lobby-note{max-width:520px;margin-left:auto;margin-right:auto}
+/* the short-landscape finale with a series line up: the line's
+   height comes out of the same places Design pass 4's squeeze
+   took the subline's (this block out-specifies and follows it) */
+@media (max-height:500px){
+  .finale-wrap.has-series .winner-word{font-size:18px}
+  .finale-wrap.has-series .winner-name{font-size:15px}
+  .finale-wrap.has-series .winner-total{font-size:18px}
+  .finale-wrap.has-series .winner-sub{font-size:9px;margin-top:1px;letter-spacing:.16em}
+  .finale-wrap.has-series .sterling-lg{width:56px}
+  .finale-wrap.has-series{gap:2px}
+  .finale-wrap.has-series .finale-row .podium.big .avatar{width:34px}
 }

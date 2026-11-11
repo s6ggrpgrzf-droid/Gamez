@@ -5,7 +5,7 @@
  * same values — test/test-nightly.js deep-compares this copy
  * against the game file at test time, so any drift fails loudly.
  *
- * Entry shape (the game's own): { cat, diff, q, a, w, why, kind? }
+ * Entry shape (the game's own): { cat, diff, d, q, a, w, why, kind? }
  *   a    — the correct answer (a string, not an array)
  *   w    — the three wrong answers
  *   kind — absent for ordinary questions; "num" entries carry
@@ -17,6 +17,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "easy",
+    "d": 1,
     "q": "In Forrest Gump, Forrest says life is like a box of what?",
     "a": "Chocolates",
     "w": [
@@ -29,6 +30,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "easy",
+    "d": 1,
     "q": "Arnold Schwarzenegger's famous one-line promise in The Terminator is what?",
     "a": "I'll be back",
     "w": [
@@ -41,6 +43,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "easy",
+    "d": 1,
     "q": "Which 1982 Steven Spielberg film is about a boy who befriends a stranded alien who wants to phone home?",
     "a": "E.T. the Extra-Terrestrial",
     "w": [
@@ -53,6 +56,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "easy",
+    "d": 1,
     "q": "In Back to the Future, Doc Brown builds his time machine out of which car?",
     "a": "A DeLorean",
     "w": [
@@ -65,6 +69,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "medium",
+    "d": 2,
     "q": "In Pulp Fiction, Vincent tells Jules that in Paris a Quarter Pounder with Cheese is called what?",
     "a": "A Royale with Cheese",
     "w": [
@@ -77,6 +82,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "medium",
+    "d": 3,
     "q": "What species is the first dinosaur the visitors see rearing up in Jurassic Park?",
     "a": "Brachiosaurus",
     "w": [
@@ -89,6 +95,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "medium",
+    "d": 2,
     "q": "Who directed The Terminator, Titanic and Avatar?",
     "a": "James Cameron",
     "w": [
@@ -101,6 +108,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "medium",
+    "d": 2,
     "q": "In The Shawshank Redemption, Andy escapes through a tunnel hidden behind what in his cell?",
     "a": "A movie poster",
     "w": [
@@ -113,6 +121,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "hard",
+    "d": 3,
     "q": "In Raiders of the Lost Ark, Indiana Jones teaches archaeology at which fictional college?",
     "a": "Marshall College",
     "w": [
@@ -125,6 +134,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "hard",
+    "d": 3,
     "q": "In Die Hard, John McClane's wife Holly works for which corporation, whose tower is attacked?",
     "a": "The Nakatomi Corporation",
     "w": [
@@ -137,6 +147,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "hard",
+    "d": 3,
     "q": "Which film won the Academy Award for Best Picture for 1993, beating The Fugitive and The Piano?",
     "a": "Schindler's List",
     "w": [
@@ -149,6 +160,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "hard",
+    "d": 2,
     "q": "The Ghostbusters' converted 1959 Cadillac ambulance is known by what name?",
     "a": "The Ecto-1",
     "w": [
@@ -161,6 +173,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "easy",
+    "d": 1,
     "q": "On Friends, what is the name of the coffee house where the gang hangs out?",
     "a": "Central Perk",
     "w": [
@@ -173,6 +186,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "easy",
+    "d": 1,
     "q": "On The Simpsons, what does Homer exclaim when he makes a mistake?",
     "a": "D'oh!",
     "w": [
@@ -185,6 +199,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "easy",
+    "d": 1,
     "q": "Which rumpled TV detective in a beige raincoat always had 'just one more thing' to ask?",
     "a": "Columbo",
     "w": [
@@ -197,6 +212,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "easy",
+    "d": 1,
     "q": "On Seinfeld, which neighbour of Jerry's is famous for his wild sliding entrances?",
     "a": "Kramer",
     "w": [
@@ -209,6 +225,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "medium",
+    "d": 2,
     "q": "On Frasier, what is the name of Frasier Crane's equally pompous younger brother?",
     "a": "Niles",
     "w": [
@@ -221,6 +238,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "medium",
+    "d": 1,
     "q": "Which 1990s drama follows FBI agents Mulder and Scully investigating paranormal cases?",
     "a": "The X-Files",
     "w": [
@@ -233,6 +251,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "medium",
+    "d": 2,
     "q": "On Married… with Children, what is Al Bundy's proudest high-school achievement?",
     "a": "Scoring four touchdowns in one game",
     "w": [
@@ -245,6 +264,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "medium",
+    "d": 3,
     "q": "Buffy the Vampire Slayer is set in which fictional California town, built over a Hellmouth?",
     "a": "Sunnydale",
     "w": [
@@ -257,6 +277,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "hard",
+    "d": 3,
     "q": "In the final episode of M*A*S*H, B.J. arranges stones on the ground to spell out what word, seen from the air?",
     "a": "GOODBYE",
     "w": [
@@ -269,6 +290,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "hard",
+    "d": 3,
     "q": "ER is set in the emergency room of which fictional Chicago hospital?",
     "a": "County General",
     "w": [
@@ -281,6 +303,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "hard",
+    "d": 3,
     "q": "David Lynch co-created Twin Peaks with which writer-producer?",
     "a": "Mark Frost",
     "w": [
@@ -293,6 +316,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "hard",
+    "d": 3,
     "q": "On NewsRadio, the all-news radio station where the staff works has which call letters?",
     "a": "WNYX",
     "w": [
@@ -305,6 +329,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "easy",
+    "d": 1,
     "q": "Which grunge band, fronted by Kurt Cobain, released Nevermind in 1991?",
     "a": "Nirvana",
     "w": [
@@ -317,6 +342,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "easy",
+    "d": 1,
     "q": "Which boy band sang the 1999 hit 'I Want It That Way'?",
     "a": "Backstreet Boys",
     "w": [
@@ -329,6 +355,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "easy",
+    "d": 1,
     "q": "Which rapper's 1990 hit 'Ice Ice Baby' opens with 'Yo, VIP, let's kick it'?",
     "a": "Vanilla Ice",
     "w": [
@@ -341,6 +368,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "easy",
+    "d": 1,
     "q": "Which Michael Jackson song's video features a graveyard full of dancing zombies?",
     "a": "Thriller",
     "w": [
@@ -353,6 +381,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "medium",
+    "d": 2,
     "q": "Green Day's 1994 breakthrough album, featuring 'Basket Case' and 'When I Come Around', is titled what?",
     "a": "Dookie",
     "w": [
@@ -365,6 +394,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "medium",
+    "d": 3,
     "q": "TLC's hit 'Waterfalls' appears on which 1994 album?",
     "a": "CrazySexyCool",
     "w": [
@@ -377,6 +407,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "medium",
+    "d": 3,
     "q": "Which Spanish duo had a massive 1996 hit with the dance craze 'Macarena'?",
     "a": "Los del Río",
     "w": [
@@ -389,6 +420,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "medium",
+    "d": 1,
     "q": "Who sang 'My Heart Will Go On', the theme from Titanic?",
     "a": "Celine Dion",
     "w": [
@@ -401,6 +433,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "hard",
+    "d": 3,
     "q": "Before Pearl Jam, Stone Gossard and Jeff Ament played in which Seattle band, fronted by Andrew Wood?",
     "a": "Mother Love Bone",
     "w": [
@@ -413,6 +446,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "hard",
+    "d": 2,
     "q": "What was the very first music video played when MTV launched on 1 August 1981?",
     "a": "Video Killed the Radio Star",
     "w": [
@@ -425,6 +459,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "hard",
+    "d": 2,
     "q": "Dr. Dre's landmark 1992 solo debut album, the record that defined G-funk, is titled what?",
     "a": "The Chronic",
     "w": [
@@ -437,6 +472,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "hard",
+    "d": 2,
     "q": "Which British band made the 1997 album OK Computer, regularly ranked among the greatest ever recorded?",
     "a": "Radiohead",
     "w": [
@@ -449,6 +485,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "easy",
+    "d": 1,
     "q": "Nike's famous three-word slogan, introduced in 1988, is what?",
     "a": "Just Do It",
     "w": [
@@ -461,6 +498,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "easy",
+    "d": 1,
     "q": "Which fast-food chain asked 'Where's the beef?' in a famous 1984 commercial?",
     "a": "Wendy's",
     "w": [
@@ -473,6 +511,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "easy",
+    "d": 1,
     "q": "The Energizer Bunny 'keeps going and going and going' — what product does it advertise?",
     "a": "Batteries",
     "w": [
@@ -485,6 +524,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "easy",
+    "d": 1,
     "q": "'I don't wanna grow up, I'm a ___ kid' — which toy retailer sang that jingle?",
     "a": "Toys 'R' Us",
     "w": [
@@ -497,6 +537,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "medium",
+    "d": 2,
     "q": "Which coffee brand's jingle promises 'The best part of wakin' up… in your cup'?",
     "a": "Folgers",
     "w": [
@@ -509,6 +550,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "medium",
+    "d": 2,
     "q": "In McDonald's 'The Showdown' ad, Michael Jordan and Larry Bird play an impossible game of H-O-R-S-E to win which sandwich?",
     "a": "The Big Mac",
     "w": [
@@ -521,6 +563,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "medium",
+    "d": 1,
     "q": "Which soda's Christmas ads feature a family of polar bears watching the Northern Lights?",
     "a": "Coca-Cola",
     "w": [
@@ -533,6 +576,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "medium",
+    "d": 3,
     "q": "'Sometimes you feel like a nut, sometimes you don't' — according to the jingle, which candy bar HAS nuts?",
     "a": "Almond Joy",
     "w": [
@@ -545,6 +589,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "hard",
+    "d": 2,
     "q": "Apple's famous 1984 Super Bowl ad, directed by Ridley Scott, cast Big Brother from which dystopian novel?",
     "a": "Nineteen Eighty-Four",
     "w": [
@@ -557,6 +602,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "hard",
+    "d": 1,
     "q": "Which beer brand's ads had friends answering the phone by shouting 'Whassup?!'",
     "a": "Budweiser",
     "w": [
@@ -569,6 +615,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "hard",
+    "d": 2,
     "q": "In the classic Tootsie Pop cartoon ad, Mr. Owl says it takes how many licks to get to the centre?",
     "a": "Three",
     "w": [
@@ -581,6 +628,7 @@ export const BANK = [
   {
     "cat": "Ads & Jingles",
     "diff": "hard",
+    "d": 2,
     "q": "'Be a Pepper' — the 'I'm a Pepper' jingle invited everyone to drink which soda?",
     "a": "Dr Pepper",
     "w": [
@@ -593,6 +641,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "easy",
+    "d": 1,
     "q": "Which Nintendo handheld, launched in North America in 1989 and bundled with Tetris, played games on cartridges?",
     "a": "Game Boy",
     "w": [
@@ -605,6 +654,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "easy",
+    "d": 1,
     "q": "Which furry electronic toy of 1998 babbled in its own language, Furbish, until it learned English?",
     "a": "Furby",
     "w": [
@@ -617,6 +667,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "easy",
+    "d": 2,
     "q": "In the board game Candy Land, players race along the rainbow path to reach which destination?",
     "a": "Candy Castle",
     "w": [
@@ -629,6 +680,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "easy",
+    "d": 1,
     "q": "Which twisting 3-D puzzle cube became a worldwide craze after its 1980 US launch?",
     "a": "Rubik's Cube",
     "w": [
@@ -641,6 +693,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "medium",
+    "d": 2,
     "q": "Which Nintendo 64 launch game in 1996 had Mario exploring Princess Peach's castle in 3-D for the first time?",
     "a": "Super Mario 64",
     "w": [
@@ -653,6 +706,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "medium",
+    "d": 1,
     "q": "What was Sony's first home games console, launched in North America in September 1995?",
     "a": "PlayStation",
     "w": [
@@ -665,6 +719,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "medium",
+    "d": 2,
     "q": "Which keychain-sized virtual pet from Bandai had to be fed and cleaned up after, or it would die?",
     "a": "Tamagotchi",
     "w": [
@@ -677,6 +732,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "medium",
+    "d": 2,
     "q": "In The Legend of Zelda (1986), the old man in the first cave hands Link which weapon, saying 'It's dangerous to go alone'?",
     "a": "A wooden sword",
     "w": [
@@ -689,6 +745,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "hard",
+    "d": 2,
     "q": "Which 1982 Atari game sold so badly that truckloads of unsold cartridges were buried in a New Mexico landfill?",
     "a": "E.T. the Extra-Terrestrial",
     "w": [
@@ -701,6 +758,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "hard",
+    "d": 1,
     "q": "In the school computer-lab classic The Oregon Trail, your party members most famously died of which disease?",
     "a": "Dysentery",
     "w": [
@@ -713,6 +771,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "hard",
+    "d": 3,
     "q": "The early NES Deluxe Set came bundled with which robotic accessory, meant to make the console look like a toy?",
     "a": "R.O.B.",
     "w": [
@@ -725,6 +784,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "hard",
+    "d": 2,
     "q": "Which doll line caused the great Christmas toy riots of 1983, as parents fought over shortages in stores?",
     "a": "Cabbage Patch Kids",
     "w": [
@@ -737,6 +797,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "easy",
+    "d": 1,
     "q": "Which cartoon stars four pizza-loving turtle brothers: Leonardo, Donatello, Michelangelo and Raphael?",
     "a": "Teenage Mutant Ninja Turtles",
     "w": [
@@ -749,6 +810,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "easy",
+    "d": 1,
     "q": "In Scooby-Doo, the gang solves mysteries while travelling in a painted van called what?",
     "a": "The Mystery Machine",
     "w": [
@@ -761,6 +823,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "easy",
+    "d": 1,
     "q": "In DuckTales, which billionaire duck takes swimming dives into his own money bin?",
     "a": "Scrooge McDuck",
     "w": [
@@ -773,6 +836,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "easy",
+    "d": 1,
     "q": "Which cartoon's lion-led heroes answer the call by shouting 'Thunder… Thunder… ThunderCats, ho!'?",
     "a": "ThunderCats",
     "w": [
@@ -785,6 +849,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "medium",
+    "d": 3,
     "q": "In Chip 'n Dale: Rescue Rangers, which character is the team's inventive pilot and mechanic?",
     "a": "Gadget Hackwrench",
     "w": [
@@ -797,6 +862,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "medium",
+    "d": 2,
     "q": "Which cartoon hero introduces himself as 'the terror that flaps in the night'?",
     "a": "Darkwing Duck",
     "w": [
@@ -809,6 +875,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "medium",
+    "d": 2,
     "q": "In the Animaniacs segments, Pinky and the Brain are genetically altered what?",
     "a": "Laboratory mice",
     "w": [
@@ -821,6 +888,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "medium",
+    "d": 2,
     "q": "In Captain Planet and the Planeteers, Ma-Ti's ring wields which fifth power, alongside Earth, Fire, Wind and Water?",
     "a": "Heart",
     "w": [
@@ -833,6 +901,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "hard",
+    "d": 2,
     "q": "Which Batman: The Animated Series character was created for the show in 1992 and later adopted into the comics?",
     "a": "Harley Quinn",
     "w": [
@@ -845,6 +914,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "hard",
+    "d": 3,
     "q": "In the 1983 Dungeons & Dragons cartoon, the kids are given riddling guidance by which small, mysterious mentor?",
     "a": "The Dungeon Master",
     "w": [
@@ -857,6 +927,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "hard",
+    "d": 1,
     "q": "G.I. Joe's end-of-episode safety lessons always ended: '…and knowing is…?' what?",
     "a": "Half the battle",
     "w": [
@@ -869,6 +940,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "hard",
+    "d": 2,
     "q": "Which 1980s cartoon starred Jerrica Benton, a music executive who became a pop star via holographic earrings from a computer called Synergy?",
     "a": "Jem",
     "w": [
@@ -881,6 +953,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "easy",
+    "d": 1,
     "q": "Which online service flooded America's mailboxes with free-trial CDs and floppy disks through the 1990s?",
     "a": "AOL",
     "w": [
@@ -893,6 +966,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "easy",
+    "d": 1,
     "q": "What three words did AOL announce when new email arrived?",
     "a": "You've got mail",
     "w": [
@@ -905,6 +979,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "easy",
+    "d": 1,
     "q": "Which video rental chain's blue-and-yellow stores asked customers to 'Be Kind, Rewind'?",
     "a": "Blockbuster",
     "w": [
@@ -917,6 +992,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "easy",
+    "d": 1,
     "q": "A dial-up connection screeched and beeped while connecting through which piece of hardware?",
     "a": "A modem",
     "w": [
@@ -929,6 +1005,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "medium",
+    "d": 2,
     "q": "Google's name is a play on 'googol' — what is a googol?",
     "a": "1 followed by 100 zeros",
     "w": [
@@ -941,6 +1018,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "medium",
+    "d": 1,
     "q": "Napster, launched in 1999 by Shawn Fanning, let users share which kind of file for free?",
     "a": "MP3s",
     "w": [
@@ -953,6 +1031,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "medium",
+    "d": 2,
     "q": "Which Motorola flip phone, launched in 2004, was famous for being razor-thin?",
     "a": "The Razr",
     "w": [
@@ -965,6 +1044,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "medium",
+    "d": 2,
     "q": "On MySpace, every new user's first friend was which co-founder?",
     "a": "Tom Anderson",
     "w": [
@@ -977,6 +1057,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "hard",
+    "d": 3,
     "q": "The world's first famous webcam, set up in 1991, let researchers check the level of what before walking down the hall?",
     "a": "A coffee pot",
     "w": [
@@ -989,6 +1070,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "hard",
+    "d": 3,
     "q": "The Pilot 1000 and 5000, the 1996 organizers that launched the PDA era, were made by which company?",
     "a": "Palm Computing",
     "w": [
@@ -1001,6 +1083,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "hard",
+    "d": 3,
     "q": "Which post-Napster file-sharing network, launched in 2000, was named after a donkey?",
     "a": "eDonkey2000",
     "w": [
@@ -1013,6 +1096,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "hard",
+    "d": 3,
     "q": "Which 1993 web browser first made the web graphical — pictures alongside text — and popular with the public?",
     "a": "Mosaic",
     "w": [
@@ -1025,6 +1109,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "easy",
+    "d": 1,
     "kind": "num",
     "q": "How many episodes of Friends were there, across all ten seasons?",
     "num": 236,
@@ -1033,6 +1118,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "medium",
+    "d": 2,
     "kind": "num",
     "q": "How many minutes long is Titanic, bow to stern?",
     "num": 194,
@@ -1041,6 +1127,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "medium",
+    "d": 3,
     "kind": "num",
     "q": "How many weeks did the Macarena sit at number one in America?",
     "num": 14,
@@ -1049,6 +1136,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "hard",
+    "d": 2,
     "kind": "num",
     "q": "How many stickers are there on a Rubik's Cube, counting every square on all six faces?",
     "num": 54,
@@ -1057,6 +1145,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "easy",
+    "d": 1,
     "kind": "num",
     "q": "How many members are in Mystery Inc, counting Scooby-Doo himself?",
     "num": 5,
@@ -1065,6 +1154,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "hard",
+    "d": 3,
     "kind": "num",
     "q": "At its peak, to the nearest thousand, how many Blockbuster stores were there in the world?",
     "num": 9000,
@@ -1073,6 +1163,7 @@ export const BANK = [
   {
     "cat": "Movies",
     "diff": "easy",
+    "d": 1,
     "kind": "survey",
     "q": "Ask a roomful of grown-ups to name the greatest film ever made, and the answer that comes up most is…",
     "a": "The Godfather",
@@ -1086,6 +1177,7 @@ export const BANK = [
   {
     "cat": "TV",
     "diff": "medium",
+    "d": 3,
     "kind": "survey",
     "q": "The TV theme most people say they can still sing along to, word for word, is the one from…",
     "a": "Cheers",
@@ -1099,6 +1191,7 @@ export const BANK = [
   {
     "cat": "Music",
     "diff": "medium",
+    "d": 2,
     "kind": "survey",
     "q": "The song most people claim they know every single word to is…",
     "a": "Bohemian Rhapsody",
@@ -1112,6 +1205,7 @@ export const BANK = [
   {
     "cat": "Toys & Games",
     "diff": "easy",
+    "d": 1,
     "kind": "survey",
     "q": "The board game most families say has started the biggest arguments at their table is…",
     "a": "Monopoly",
@@ -1125,6 +1219,7 @@ export const BANK = [
   {
     "cat": "Saturday Morning",
     "diff": "easy",
+    "d": 2,
     "kind": "survey",
     "q": "The cartoon most people say WAS their Saturday morning, more than any other, is…",
     "a": "Scooby-Doo",
@@ -1138,6 +1233,7 @@ export const BANK = [
   {
     "cat": "The Dial-Up Years",
     "diff": "medium",
+    "d": 3,
     "kind": "survey",
     "q": "The sound from the dial-up years that most people say they can still hear in their sleep is…",
     "a": "The modem handshake",

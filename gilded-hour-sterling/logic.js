@@ -210,6 +210,12 @@ export function validateBody(body) {
   const beat = body.beat;
   if (!BEATS.includes(beat)) return { error: 'Unknown beat.' };
   const facts = { beat };
+  /* Optional (improvement 5): the client now sends the current
+   * question's category with reveal beats. A real show category is
+   * kept as a fact (and so flavours the prompt and the cache key);
+   * anything else is ignored, never a 400 — older clients send no
+   * category at all and must behave exactly as before. */
+  if (CATEGORIES.includes(body.category)) facts.category = body.category;
   if (beat === 'first_bank' || beat === 'cut_used') {
     const name = cleanName(body.name);
     if (!name) return { error: 'beat ' + beat + ' needs a name.' };
@@ -253,6 +259,10 @@ function buildMessages(kind, facts) {
     else if (b === 'finale_start') ask = 'The Big Finish is beginning: three questions, everyone bets on themselves, nobody can lose money. Set the stage.';
     else ask = 'The game is very close between ' + joinNames(facts.names) + ' late in the show. Remark on the tension.';
     ask = 'Write a one-line reaction to this moment in the show: ' + ask;
+    if (facts.category) {
+      ask += ' The question was from the category ' + facts.category +
+        ' — let the line breathe that world a little (its sounds, rituals and beloved junk), without inventing anything about the question itself.';
+    }
   }
   return [
     { role: 'system', content: VOICE_BIBLE },
