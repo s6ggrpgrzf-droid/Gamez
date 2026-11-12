@@ -1260,7 +1260,7 @@ function avatarSVG(id, state, seat) {
      phase presenter in both modes mirrors its phase here; the set's
      CSS warms the footlights on "reveal" and holds them full on
      "over". Event-driven only — no timers. */
-  function stagePhase(p) { var g = $("scr-game"); if (g) g.setAttribute("data-phase", p); if (p !== "reveal" && p !== "over") setMood(""); }
+  function stagePhase(p) { if (p !== "reveal") { clearRevealStaging(true); paceDisarm(); } var g = $("scr-game"); if (g) g.setAttribute("data-phase", p); if (p !== "reveal" && p !== "over") setMood(""); }
   /* Visual stage 3: the category backdrop. askCurrent and
      ogShowQuestion hand the question's category here at the same
      moment they call applyCat — so the nightly special wears its
@@ -1339,6 +1339,7 @@ function avatarSVG(id, state, seat) {
   /* fortune rail: displayed totals tween toward real scores */
   function stepFortune(dt) {
     if (!G) return;
+    if (revealBeatOne()) return; /* Pass #2 staging: the desks hold their pre-reveal figures through the answer beat — the chase is the settlement, and the settlement is beat 2 */
     var fortuneLead = 0, realLead = 0;
     G.players.forEach(function (p, i) {
       var dv = fortuneDisp[i] != null ? fortuneDisp[i] : p.score;
@@ -1842,12 +1843,194 @@ function avatarSVG(id, state, seat) {
      repainting its reveal, an online snapshot resync) gets neither:
      the slip sits fully printed and no light moves — the reveal as
      shown, not the reveal again. */
-  function revealTheatre(settled) {
+  function revealTheatre(settled, numKind) {
+    revealStaging(settled, numKind);
     if (settled) return;
     var card = document.querySelector("#stage .q-text");
     if (card) card.classList.add("sweep");
     var ok = document.querySelector("#stage .ans-btn.correct");
     if (ok) ok.classList.add("sheen");
+  }
+  /* ---------- Pass #2 (2026-11-12, from the improvement list) —
+     THE REVEAL, STAGED. A live reveal used to land as one chord:
+     Sterling's line, the why-slip, the seat deltas, the score chase
+     and the coin flights all fired inside the first ~150ms, three
+     voices reading at once. Now a live reveal plays in beats:
+       beat 1 — the ANSWER alone: the correct slab lights (the dial
+                sweeps, for a number question), the desks hold
+                their pre-reveal figures, Sterling's bubble waits
+                empty of its new line;
+       beat 2 — the STORY AND THE SETTLEMENT: the why-slip prints,
+                the photo-finish strip and the seat grammar appear,
+                the score chase runs and the coins fly;
+       beat 3 — STERLING, last: his bubble arrives with the line
+                the reveal chose (a live swap that lands during the
+                hold simply changes the text he arrives with).
+     A settled repaint (a resumed show, an online resync) never
+     stages: it lands whole, exactly as it always has. The staging
+     lives on #scr-game as .rv-live + data-rvbeat; any phase change
+     off "reveal" clears it (stagePhase), so an eager CONTINUE can
+     never strand a held bubble or a queued flight. A number
+     question's first beat runs long — its dial IS the answer, and
+     it gets its full sweep before the story starts. */
+  var RV_B1_MS = 950, RV_B1_NUM_MS = 1750, RV_B2_MS = 1250;
+  var rvTimers = [], rvCoinFn = null, rvCoinAt = 0, rvToken = 0;
+  /* flush=true is the phase-change clear (stagePhase): a host who
+     advances during beat 1 skips the wait, never the settlement —
+     the queued flights fire as the reveal is left, measured off
+     the reveal's own still-standing stage, and the score chase
+     resumes behind them. A stale queue (the stage has been gone
+     for seconds — a quit to the title and back) is dropped, not
+     flushed. Every other clear (a settled repaint, a new reveal
+     taking the stage) drops the queue untouched. */
+  function clearRevealStaging(flush) {
+    rvToken++;
+    rvTimers.forEach(function (t) { clearTimeout(t); });
+    rvTimers = [];
+    var f = rvCoinFn; rvCoinFn = null;
+    var fresh = f && (Date.now() - rvCoinAt < 5000);
+    var g = $("scr-game");
+    if (g) { g.classList.remove("rv-live", "rv-line-in"); g.removeAttribute("data-rvbeat"); }
+    if (flush && fresh) f();
+  }
+  function revealBeatOne() {
+    var g = $("scr-game");
+    return !!(g && g.classList.contains("rv-live") && g.getAttribute("data-rvbeat") === "1");
+  }
+  /* the live reveal paths hand their coin flights here: under
+     staging they wait for beat 2 (their closures re-check that
+     their own reveal still owns the stage); anywhere else they
+     fly at once, exactly as before */
+  function queueRevealCoins(fn) {
+    if (revealBeatOne()) { rvCoinFn = fn; rvCoinAt = Date.now(); return; }
+    fn();
+  }
+  function revealStaging(settled, numKind) {
+    var g = $("scr-game"); if (!g) return;
+    clearRevealStaging(false);
+    if (settled) return;
+    var tok = rvToken;
+    g.classList.add("rv-live");
+    g.setAttribute("data-rvbeat", "1");
+    /* the slip must not print during beat 1: its .printing class
+       comes off before the first paint (this runs inside the same
+       task that painted the reveal) and goes back on at beat 2,
+       which starts the print then */
+    var wrap = document.querySelector("#stage .why-wrap.printing");
+    if (wrap) wrap.classList.remove("printing");
+    rvTimers.push(setTimeout(function () {
+      if (tok !== rvToken) return;
+      var gg = $("scr-game"); if (!gg || !gg.classList.contains("rv-live")) return;
+      gg.setAttribute("data-rvbeat", "2");
+      var w2 = document.querySelector("#stage .why-wrap");
+      if (w2) w2.classList.add("printing");
+      if (rvCoinFn) { var f = rvCoinFn; rvCoinFn = null; f(); }
+      rvTimers.push(setTimeout(function () {
+        if (tok !== rvToken) return;
+        var g3 = $("scr-game"); if (!g3 || !g3.classList.contains("rv-live")) return;
+        g3.setAttribute("data-rvbeat", "3");
+        g3.classList.add("rv-line-in");
+        paceArmReveal(); /* Pass #3: the reveal is settled — if the host chose a pace, the dwell starts here */
+      }, RV_B2_MS));
+    }, numKind ? RV_B1_NUM_MS : RV_B1_MS));
+  }
+
+  /* ---------- Pass #3 (2026-11-12, improvement list #3) — SHOW
+     PACE: the dead air, removed. The audit that shaped this pass:
+     most of the show's waits are decisions (the question clock is
+     the room thinking, the mark screen is the host judging, the
+     bumpers are a break and a briefing) or theatre (the wheel,
+     the count-in, the dials) — none of those are dead air and
+     none are touched. What WAS dead: (1) a settled reveal sitting
+     on CONTINUE for as long as the host took to notice it, in
+     both engines; (2) online, an answer window running out its
+     full clock after every connected player was already in — and
+     its twin, the bet window waiting on a tap after the last bet.
+     The host picks the pace on the setup sheet (gh_pace, per
+     device, HOST LED by default = the show exactly as it was):
+       FLOWING — a live reveal rolls on 6s after Sterling lands
+                 (staging's beat 3 is the arm point, so the dwell
+                 is pure settled time); online, a full house
+                 closes its window after a 3s grace.
+       BRISK   — the same at 3.5s / 1.5s, for rooms that know it.
+     The grace is deliberate: an answer in is not an answer
+     finished — pads may still change a pick (or spend a Cut Two)
+     until the window closes, so the close waits a breath after
+     the last seat lands, never fires the instant it does. An
+     AWAY seat never holds the show hostage: only connected
+     players count toward a full house (the Decider counts its
+     eligible seats). Firing is the button's own click (reveal)
+     or the CALL IT message itself (window), so an auto-advance
+     can never walk a path a host tap wouldn't. Every timer is
+     keyed to its reveal/question and re-checked at fire time;
+     a host tap always wins, because the tap moves the phase and
+     the stale timer's guard then reads a different show. Pace
+     is host-screen behaviour only: it never enters the rules
+     object, a save, or the room protocol. */
+  var PACE_KEY = "gh_pace";
+  var PACE_CFG = { flow: { reveal: 6000, grace: 3000 }, brisk: { reveal: 3500, grace: 1500 } };
+  function loadPace() {
+    try { var v = localStorage.getItem(PACE_KEY); return PACE_CFG[v] ? v : "host"; } catch (e) { return "host"; }
+  }
+  function savePace(v) { try { localStorage.setItem(PACE_KEY, PACE_CFG[v] ? v : "host"); } catch (e) {} }
+  function paceCfg() { return PACE_CFG[loadPace()] || null; }
+  var paceTimer = null, paceKey = null;
+  function paceDisarm() { if (paceTimer) { clearTimeout(paceTimer); paceTimer = null; } paceKey = null; }
+  /* which reveal owns the stage right now, and the button that
+     moves it on — the arm and the fire read the same answer, so
+     a timer can only ever click the reveal that armed it */
+  function paceRevealBtn() {
+    if (OG && OG.phase === "reveal") { var b = $("ogNext"); return b ? { btn: b, key: "og:" + OG.lastRevealQid } : null; }
+    if (G && G.phase === "reveal" && G.cur) { var b2 = $("btnNext"); return b2 ? { btn: b2, key: "tb:" + G.round + ":" + G.qInRound + ":" + (G.cur.q ? G.cur.q.id : "?") } : null; }
+    return null;
+  }
+  function paceArmReveal() {
+    var cfg = paceCfg(); if (!cfg) return;
+    var cur = paceRevealBtn(); if (!cur) return;
+    paceDisarm();
+    paceKey = cur.key;
+    cur.btn.classList.add("pacing");
+    cur.btn.style.setProperty("--pace-ms", cfg.reveal + "ms");
+    paceTimer = setTimeout(function () {
+      paceTimer = null;
+      var now = paceRevealBtn();
+      var k = paceKey; paceKey = null;
+      if (now && now.key === k && now.btn.isConnected) now.btn.click();
+    }, cfg.reveal);
+  }
+  /* the online full-house grace: answers and bets both report a
+     live count, and both windows are the host's to close — when
+     every connected player is in, the pace closes them after
+     the grace instead of at the clock's end */
+  var paceGraceTimer = null, paceGraceKey = null;
+  function paceDisarmGrace() { if (paceGraceTimer) { clearTimeout(paceGraceTimer); paceGraceTimer = null; } paceGraceKey = null; }
+  function ogExpectedIn() {
+    if (!OG) return 0;
+    if (OG.phase === "bet") return OG.players.filter(function (p) { return p && p.connected; }).length;
+    if (OG.phase !== "answer" || !OG.cur) return 0;
+    if (OG.cur.decider) {
+      var el = OG.cur.eligible || [];
+      return el.filter(function (i) { return OG.players[i] && OG.players[i].connected; }).length;
+    }
+    return OG.players.filter(function (p) { return p && p.connected; }).length;
+  }
+  function paceCheckAllIn() {
+    var cfg = paceCfg(); if (!cfg || !OG) return;
+    if (OG.phase !== "answer" && OG.phase !== "bet") return;
+    var expected = ogExpectedIn(); if (expected <= 0) return;
+    var have = OG.phase === "bet" ? (OG._betsIn || 0) : (OG._answersIn || 0);
+    if (have < expected) return;
+    var key = OG.phase + ":" + (OG.cur ? OG.cur.qid : "?");
+    if (paceGraceKey === key && paceGraceTimer) return; /* this full house is already counting its grace */
+    paceDisarmGrace();
+    paceGraceKey = key;
+    paceGraceTimer = setTimeout(function () {
+      paceGraceTimer = null;
+      var k = paceGraceKey; paceGraceKey = null;
+      if (!OG || !OG.cur || k !== OG.phase + ":" + OG.cur.qid) return;
+      if (OG.phase === "answer") ogSend({ t: "reveal", qid: OG.cur.qid });
+      else if (OG.phase === "bet") { var b = $("ogBetsGo"); if (b && b.isConnected) b.click(); }
+    }, cfg.grace);
   }
   function whySlip(text, settled, tag) {
     return '<div class="why-wrap' + (settled ? "" : " printing") + '"><p class="why why-slip">' + (tag ? '<span class="why-tag">' + esc(tag) + "</span>" : "") + esc(text) + "</p></div>";
@@ -5678,7 +5861,7 @@ function avatarSVG(id, state, seat) {
     /* Visual stage 5: the reveal's first beat is lit — the sweep
        crosses the card as the correct slab lights (its sheen rides
        along), with the footlights' warm-up from stage 1 */
-    revealTheatre(settled);
+    revealTheatre(settled, c.kind === "num");
     /* The Ten, pass 2: a live num reveal runs the count dial; a
        settled repaint's dial was born landed in countDialHTML */
     if (c.kind === "num" && !settled) { var cdEl = document.querySelector(".count-dial"); if (cdEl) runCountDial(cdEl); }
@@ -5699,7 +5882,8 @@ function avatarSVG(id, state, seat) {
        shown, coinless), banking seats fly in lock-in order — the
        quick-draw's own record — and each flight is sized by that
        seat's total award for the reveal */
-    if (!c.decider && !settled) {
+    if (!c.decider && !settled) queueRevealCoins(function () {
+      if (!G) return; /* the flights measure the live stage — at beat 2 it is this reveal's; on an early-advance flush it is still this reveal's, not yet repainted */
       var flyOrder = winners.slice().sort(function (a, b) {
         var ia = (c.lockOrder || []).indexOf(a), ib = (c.lockOrder || []).indexOf(b);
         if (ia < 0) ia = 100 + a; if (ib < 0) ib = 100 + b;
@@ -5712,7 +5896,7 @@ function avatarSVG(id, state, seat) {
       /* Dynamics pass D1: what the room failed to bank flies the
          other way — from the card into the pot — in the same beat */
       if (c.potFed > 0) potFeedFx(c.potFed);
-    }
+    });
     $("btnNext").addEventListener("click", function () {
       if (c.decider && G.decider && G.decider.winner == null) { deciderContinue(); return; }
       G.qInRound++; nextQuestion();
@@ -6228,6 +6412,24 @@ function avatarSVG(id, state, seat) {
     });
   });
   paintRuleToggles();
+  /* Pass #3 — SHOW PACE setup: a three-way choice, not a toggle —
+     one of the three is always the night's pace, HOST LED is the
+     resting state, and the choice persists per device in gh_pace
+     exactly as the rules persist in gh_rules */
+  function paintPaceToggles() {
+    var p = loadPace();
+    document.querySelectorAll(".pace-toggle").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-pace") === p);
+    });
+  }
+  document.querySelectorAll(".pace-toggle").forEach(function (b) {
+    b.addEventListener("click", function () {
+      Snd.ensure();
+      savePace(b.getAttribute("data-pace"));
+      paintPaceToggles();
+    });
+  });
+  paintPaceToggles();
   $("btnStart").addEventListener("click", function () {
     Snd.ensure();
     if (soloMode) {
@@ -6811,6 +7013,8 @@ function avatarSVG(id, state, seat) {
        joining phone sets no rules and never sees the toggles */
     var rb = $("rulesBlock");
     if (rb) rb.classList.toggle("hidden", m === "join");
+    var pb = $("paceBlock"); /* Pass #3: the pace is the show-runner's too — a joining phone never sees it */
+    if (pb) pb.classList.toggle("hidden", m === "join");
     $("btnStart").classList.toggle("hidden", m !== "table");
     /* Designer's pass P7 (2026-11-11): the start actions live in
        the docked start bar now — each mode's button shows there,
@@ -7133,8 +7337,9 @@ function avatarSVG(id, state, seat) {
       return;
     }
     if (m.t === "counts") {
-      if (OG.phase === "answer") { var c = $("ogCount"); if (c) c.textContent = String(m.answersIn); }
-      if (OG.phase === "bet") ogPaintBets(m.betsIn);
+      if (OG.phase === "answer") { var c = $("ogCount"); if (c) c.textContent = String(m.answersIn); OG._answersIn = m.answersIn || 0; }
+      if (OG.phase === "bet") { OG._betsIn = m.betsIn || 0; ogPaintBets(m.betsIn); }
+      paceCheckAllIn(); /* Pass #3: a full house starts its grace */
       return;
     }
     if (m.t === "cut") { ogOnCut(m); return; }
@@ -7401,7 +7606,8 @@ function avatarSVG(id, state, seat) {
   }
   function ogTick() {
     if (!OG) return;
-    OG.players.forEach(function (p, i) {
+    var rvHold = revealBeatOne(); /* Pass #2 staging: the online desks hold through the answer beat too */
+    if (!rvHold) OG.players.forEach(function (p, i) {
       if (!p) return;
       if (OG.disp[i] == null) OG.disp[i] = p.score;
       var diff = p.score - OG.disp[i];
@@ -7427,7 +7633,7 @@ function avatarSVG(id, state, seat) {
       if (dv > ogDispLead) ogDispLead = dv;
       if (p.score > ogRealLead) ogRealLead = p.score;
     });
-    OG.players.forEach(function (p, i) {
+    if (!rvHold) OG.players.forEach(function (p, i) {
       if (!p) return;
       if (ogFortuneDisp[i] == null) ogFortuneDisp[i] = p.score;
       var fd = p.score - ogFortuneDisp[i];
@@ -7702,6 +7908,8 @@ function avatarSVG(id, state, seat) {
     hostSay("bet");
     $("ogBetsGo").addEventListener("click", function () { ogSpinThenPublish(e); });
     if (OG.snap && OG.snap.bet) ogPaintBets(OG.snap.bet.betsIn);
+    OG._betsIn = (OG.snap && OG.snap.bet) ? (OG.snap.bet.betsIn || 0) : 0;
+    paceCheckAllIn(); /* Pass #3: a bet window painted already-full starts its grace */
   }
   function ogPaintBets(n) { var b = $("ogBetsIn"); if (b) b.textContent = String(n || 0); }
   function ogSpinThenPublish(e) {
@@ -7865,6 +8073,8 @@ function avatarSVG(id, state, seat) {
     if (entOnce("og:" + OG.code + ":" + e.qid)) entApply(document.querySelector("#stage .q-cardwrap"), e.cat);
     clock.total = (q.windowMs || e.windowMs) / 1000; clock.left = clock.total; clock.running = true; Snd._lw = -1;
     drawClock();
+    OG._answersIn = q.answersIn || 0;
+    paceCheckAllIn(); /* Pass #3: a window painted already-full starts its grace */
   }
   function ogOnCut(m) {
     if (!OG || !OG.cur || m.qid !== OG.cur.qid) return;
@@ -8061,7 +8271,7 @@ function avatarSVG(id, state, seat) {
     Snd.play(winners.length ? "correct" : "wrong");
     /* Visual stage 5: lit first beat, as at the table — a snapshot
        resync (fromSnap) repaints it settled, slip already printed */
-    revealTheatre(fromSnap);
+    revealTheatre(fromSnap, e.kind === "num");
     /* Pass P: lean-in, the nod for a fat bank, coins to the winners */
     stClass("st-lean", 1000);
     /* Visual stage 2: point at the first seat that actually BANKED
@@ -8077,13 +8287,14 @@ function avatarSVG(id, state, seat) {
     /* Pass 7: live reveals only — a snapshot resync (fromSnap)
        repaints the desks as they stand, coinless; each banker's
        flight is sized by what the room says they banked */
-    if (!fromSnap) {
+    if (!fromSnap) queueRevealCoins(function () {
+      if (!OG) return; /* same live-stage measurement rule as the table's flights */
       var flyK = 0;
       (r.results || []).forEach(function (res) { if (res.banked > 0) bankFx(res.seat, flyK++ * 0.12, res.banked); });
       /* Dynamics pass D1: what the room failed to bank flies
          into the pot in the same beat */
       if (rPotFed > 0) potFeedFx(rPotFed);
-    }
+    });
     /* The Ten, pass 2: a live num reveal sweeps the spread dial;
        a snapshot resync's dial was born settled in the markup */
     if (e.kind === "num" && !fromSnap) { var sdEl = document.querySelector(".dial.spread"); if (sdEl) runSpreadDial(sdEl); }

@@ -10,7 +10,7 @@
 
    CACHE COUPLING — READ THIS BEFORE BUMPING ANYTHING:
    BUILD below must match the game.js cache-bust in index.html
-   (game.js?v=73 <-> BUILD 73). Whenever a future pass bumps the
+   (game.js?v=74 <-> BUILD 74). Whenever a future pass bumps the
    ?v= busts in index.html, bump BUILD here to the new game.js
    number in the same commit. The cache name carries BUILD, so a
    bumped build installs into a fresh cache and activate deletes
@@ -30,7 +30,7 @@
    ===================================================================== */
 "use strict";
 
-var BUILD = 73; /* == the game.js?v= bust in index.html — keep coupled */
+var BUILD = 74; /* == the game.js?v= bust in index.html — keep coupled */
 var CACHE = "gilded-hour-shell-v" + BUILD;
 var PREFIX = "gilded-hour-shell-";
 
@@ -43,10 +43,10 @@ var PREFIX = "gilded-hour-shell-";
 var PRECACHE = [
   "./",
   "index.html",
-  "style.css?v=71",
-  "questions.js?v=6",
+  "style.css?v=72",
+  "questions.js?v=7",
   "qr.js?v=1",
-  "game.js?v=73"
+  "game.js?v=74"
 ];
 
 self.addEventListener("install", function (e) {

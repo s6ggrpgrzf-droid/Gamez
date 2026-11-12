@@ -2938,6 +2938,47 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 }
 
 /* ================================================================
+   PASS #2 — THE REVEAL, STAGED (2026-11-12, improvement list #2):
+   under .rv-live the reveal's later voices wait for their beats
+   (game.js drives data-rvbeat 1 -> 2 -> 3 on #scr-game and clears
+   the whole state when the phase leaves "reveal"). Beat 1 shows
+   the answer alone: the why-slip, the photo-finish strip, the
+   stage's verdict line and the seat grammar are held by
+   visibility — their own animations keep their clocks running
+   underneath, and the slip's print itself is re-armed by game.js
+   at beat 2 so it prints then, not early. Sterling's bubble (the
+   host rail's .host-bubble) waits through beats 1-2 and arrives
+   at beat 3 with a small rise. Settled repaints never carry
+   .rv-live, so none of this can touch a resumed reveal.
+   ================================================================ */
+#scr-game.rv-live[data-rvbeat="1"] .why-wrap,
+#scr-game.rv-live[data-rvbeat="1"] .pf-strip,
+#scr-game.rv-live[data-rvbeat="1"] #stage .delta,
+#scr-game.rv-live[data-rvbeat="1"] .seat-delta,
+#scr-game.rv-live[data-rvbeat="1"] .closest-tag{visibility:hidden}
+#scr-game.rv-live[data-rvbeat="1"] .host-bubble,
+#scr-game.rv-live[data-rvbeat="2"] .host-bubble{opacity:0;transform:translateY(8px)}
+#scr-game.rv-live.rv-line-in .host-bubble{animation:rvLineIn .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes rvLineIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ================================================================
+   PASS #3 — SHOW PACE (2026-11-12, improvement list #3): the
+   setup sheet's pace choices wear the house-rule toggles' dress
+   (one of the three is always lit — HOST LED is the resting
+   state). An armed CONTINUE carries a thin gold drain along its
+   foot, running the dwell the host chose: the room can see the
+   show about to move, and the host's own tap always beats the
+   timer — the drain is a promise, not a trap.
+   ================================================================ */
+.pace-toggle{flex:1;padding:9px 8px;border-radius:16px;background:var(--glass-ink);color:rgba(255,246,232,.85);font-weight:700;letter-spacing:.05em;font-size:13px;box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
+.pace-toggle small{display:block;font-size:10px;font-weight:600;letter-spacing:.03em;opacity:.75;margin-top:2px;text-transform:none}
+.pace-toggle:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.pace-toggle.on{background:var(--brass-pill);color:#431A04;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
+.btn-gold.pacing{position:relative;overflow:hidden}
+.btn-gold.pacing::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(67,26,4,.55);transform-origin:left center;animation:paceDrain var(--pace-ms,6000ms) linear forwards}
+@keyframes paceDrain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
    for tall compositions — measured with the report rows pinned
    to their full four facts (a real night's card, long category

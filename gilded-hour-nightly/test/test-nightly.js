@@ -60,8 +60,8 @@ async function main() {
     const win = {};
     new Function('window', gameSrc)(win);
     const gameBank = win.GH_BANK;
-    ok(Array.isArray(gameBank) && gameBank.length === 96, 'the game bank has 96 entries', 'len=' + (gameBank && gameBank.length));
-    ok(BANK.length === 96, "the worker's bank.js has 96 entries", 'len=' + BANK.length);
+    ok(Array.isArray(gameBank) && gameBank.length === 102, 'the game bank has 102 entries', 'len=' + (gameBank && gameBank.length));
+    ok(BANK.length === 102, "the worker's bank.js has 102 entries", 'len=' + BANK.length);
     ok(deepEqual(BANK, gameBank), "bank.js deep-equals the game's bank (same order, same fields, same values)");
     // Spot checks, named and exact.
     ok(BANK[0].q === 'In Forrest Gump, Forrest says life is like a box of what?'
@@ -76,8 +76,8 @@ async function main() {
       'spot check: the Saturday Morning survey entry keys Scooby-Doo', JSON.stringify(surveyEntry).slice(0, 100));
     const kinds = { normal: 0, num: 0, survey: 0 };
     for (const e of BANK) kinds[e.kind === 'num' ? 'num' : e.kind === 'survey' ? 'survey' : 'normal']++;
-    ok(kinds.normal === 84 && kinds.num === 6 && kinds.survey === 6,
-      'kind distribution is 84 normal / 6 num / 6 survey', JSON.stringify(kinds));
+    ok(kinds.normal === 84 && kinds.num === 9 && kinds.survey === 9,
+      'kind distribution is 84 normal / 9 num / 9 survey', JSON.stringify(kinds));
     const pool = eligiblePool();
     ok(pool.length === 84, 'the eligible pool is exactly the 84 ordinary questions', 'len=' + pool.length);
     ok(pool.every((e) => typeof e.a === 'string' && Array.isArray(e.w) && e.w.length === 3),

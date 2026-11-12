@@ -118,4 +118,18 @@ window.GH_BANK = [
 {cat:"Toys & Games",diff:"easy",d:1,kind:"survey",q:"The board game most families say has started the biggest arguments at their table is…",a:"Monopoly",w:["Risk","Uno","Clue"],why:"Monopoly — the only board game that comes with its own family grudges and house rules about Free Parking."},
 {cat:"Saturday Morning",diff:"easy",d:2,kind:"survey",q:"The cartoon most people say WAS their Saturday morning, more than any other, is…",a:"Scooby-Doo",w:["The Jetsons","He-Man and the Masters of the Universe","The Care Bears"],why:"Scooby-Doo has been rerun into every childhood since 1969 — meddling kids across three generations."},
 {cat:"The Dial-Up Years",diff:"medium",d:3,kind:"survey",q:"The sound from the dial-up years that most people say they can still hear in their sleep is…",a:"The modem handshake",w:["The 'You've got mail' voice","The Windows startup chime","The Nokia ringtone"],why:"That screech-and-static handshake is burned into a generation's dreams — usually right before someone picks up the phone."},
+/* ---------------- PASS #4 (2026-11-12) — MORE DEPTH FOR THE GUESS SLOTS ----------------
+   The guess pools were exactly two deep in every band, so the
+   pinned slots and the Decider had no real choice and a single
+   vetoed question could empty a cell. Six more, hand-authored:
+   one of each kind in each band, which also gives Ads & Jingles
+   its missing guess pair and brings it level at 14. Appended at
+   the end so every existing entry keeps the index it has always
+   had. Guess cells are now 3/3/3 in both kinds. */
+{cat:"The Dial-Up Years",diff:"easy",d:1,kind:"num",q:"How many minutes of music fit on a standard blank CD-R — the spindle every desk drawer had?",num:80,why:"Eighty minutes — exactly one perfect mixtape, if you timed the fade-outs like a professional."},
+{cat:"Ads & Jingles",diff:"medium",d:2,kind:"num",q:"How many herbs and spices are in Colonel Sanders' famous KFC blend — the number the ads never stopped saying?",num:11,why:"Eleven herbs and spices — the Colonel counted them in every advert, and still nobody's kitchen has all eleven."},
+{cat:"Movies",diff:"hard",d:3,kind:"num",q:"How many Oscars did The Lord of the Rings: The Return of the King win, the year it swept the ceremony?",num:11,why:"Eleven — every single one it was nominated for, tying the all-time record held by Ben-Hur and Titanic."},
+{cat:"Ads & Jingles",diff:"easy",d:1,kind:"survey",q:"The sung jingle most people say is still stuck in their head, note for note, decades later is…",a:"I'm Lovin' It",w:["The Oscar Mayer wiener song","Plop Plop, Fizz Fizz","Like a Good Neighbor"],why:"Five notes — ba da ba ba baaah — and McDonald's bought its way into a generation's skull in 2003. Nobody at this table has escaped."},
+{cat:"Music",diff:"medium",d:2,kind:"survey",q:"The music video most people say defined MTV for them — the one they can still see with their eyes closed — is…",a:"Thriller",w:["Take On Me","Like a Prayer","Smells Like Teen Spirit"],why:"Fourteen minutes, a horror film wearing a pop song — Thriller is the one everybody caught at a sleepover they were too young for."},
+{cat:"Saturday Morning",diff:"medium",d:3,kind:"survey",q:"The cartoon villain most people say genuinely scared them as a kid — not the hero, the villain — is…",a:"The Joker",w:["Skeletor","Shredder","Cobra Commander"],why:"Mark Hamill's Joker, from Batman: The Animated Series — that laugh alone sent a generation behind the couch, and the show knew exactly what it was doing."},
 ];

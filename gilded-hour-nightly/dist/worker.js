@@ -1253,6 +1253,75 @@ const BANK = [
       "The Nokia ringtone"
     ],
     "why": "That screech-and-static handshake is burned into a generation's dreams — usually right before someone picks up the phone."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many minutes of music fit on a standard blank CD-R — the spindle every desk drawer had?",
+    "num": 80,
+    "why": "Eighty minutes — exactly one perfect mixtape, if you timed the fade-outs like a professional."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many herbs and spices are in Colonel Sanders' famous KFC blend — the number the ads never stopped saying?",
+    "num": 11,
+    "why": "Eleven herbs and spices — the Colonel counted them in every advert, and still nobody's kitchen has all eleven."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many Oscars did The Lord of the Rings: The Return of the King win, the year it swept the ceremony?",
+    "num": 11,
+    "why": "Eleven — every single one it was nominated for, tying the all-time record held by Ben-Hur and Titanic."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "The sung jingle most people say is still stuck in their head, note for note, decades later is…",
+    "a": "I'm Lovin' It",
+    "w": [
+      "The Oscar Mayer wiener song",
+      "Plop Plop, Fizz Fizz",
+      "Like a Good Neighbor"
+    ],
+    "why": "Five notes — ba da ba ba baaah — and McDonald's bought its way into a generation's skull in 2003. Nobody at this table has escaped."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The music video most people say defined MTV for them — the one they can still see with their eyes closed — is…",
+    "a": "Thriller",
+    "w": [
+      "Take On Me",
+      "Like a Prayer",
+      "Smells Like Teen Spirit"
+    ],
+    "why": "Fourteen minutes, a horror film wearing a pop song — Thriller is the one everybody caught at a sleepover they were too young for."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 3,
+    "kind": "survey",
+    "q": "The cartoon villain most people say genuinely scared them as a kid — not the hero, the villain — is…",
+    "a": "The Joker",
+    "w": [
+      "Skeletor",
+      "Shredder",
+      "Cobra Commander"
+    ],
+    "why": "Mark Hamill's Joker, from Batman: The Animated Series — that laugh alone sent a generation behind the couch, and the show knew exactly what it was doing."
   }
 ];
 

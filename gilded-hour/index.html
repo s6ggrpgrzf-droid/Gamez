@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=71">
+<link rel="stylesheet" href="style.css?v=72">
 </head>
 <body>
 <div id="app">
@@ -242,6 +242,14 @@
               <button class="rule-toggle" data-rule="calmTable" type="button">CALM TABLE<small>No alarms — the room stays serene</small></button>
             </div>
           </div>
+          <div id="paceBlock">
+            <div class="setup-label">SHOW PACE — WHO MOVES THE SHOW ALONG</div>
+            <div class="rules-row">
+              <button class="pace-toggle" data-pace="host" type="button">HOST LED<small>You tap to move on — the show waits for you</small></button>
+              <button class="pace-toggle" data-pace="flow" type="button">FLOWING<small>Reveals roll on; a full house closes its own window</small></button>
+              <button class="pace-toggle" data-pace="brisk" type="button">BRISK<small>The same, quicker — for rooms that know the game</small></button>
+            </div>
+          </div>
           <div id="panelTable">
             <div id="resumeChip" class="resume-chip hidden">
               <span class="resume-txt"><span class="resume-kicker">A SHOW IS IN PROGRESS</span><span class="resume-detail" id="resumeDetail">ROUND 1 OF 3 · QUESTION 1 OF 15</span></span>
@@ -471,9 +479,9 @@
   </div>
 
 </div>
-<script src="questions.js?v=6"></script>
+<script src="questions.js?v=7"></script>
 <script src="qr.js?v=1"></script>
-<script src="game.js?v=73"></script>
+<script src="game.js?v=74"></script>
 <script>
 /* Party-Proof Shell: register the offline worker (sw.js, scoped to
    this directory by its location). http(s) only — a file:// copy
