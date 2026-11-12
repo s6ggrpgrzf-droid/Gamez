@@ -1260,7 +1260,7 @@ function avatarSVG(id, state, seat) {
      phase presenter in both modes mirrors its phase here; the set's
      CSS warms the footlights on "reveal" and holds them full on
      "over". Event-driven only — no timers. */
-  function stagePhase(p) { var g = $("scr-game"); if (g) g.setAttribute("data-phase", p); }
+  function stagePhase(p) { var g = $("scr-game"); if (g) g.setAttribute("data-phase", p); if (p !== "reveal" && p !== "over") setMood(""); }
   /* Visual stage 3: the category backdrop. askCurrent and
      ogShowQuestion hand the question's category here at the same
      moment they call applyCat — so the nightly special wears its
@@ -1771,6 +1771,17 @@ function avatarSVG(id, state, seat) {
 
   /* ---- Sterling, alive: timed expression classes on the host face ---- */
   var stFx = { nextBlink: 0 };
+  /* Designer's pass P16: Sterling's standing expression. The
+     greeting face is the absence of a mood class; the reveal
+     painters set delight (the moment landed for someone) or
+     sorry (it landed for no one), the finales set delight, and
+     stagePhase clears back to the greeting for every other
+     phase — so a mood never outlives the beat that earned it. */
+  function setMood(m) {
+    var g = $("scr-game"); if (!g) return;
+    g.classList.toggle("st-mood-delight", m === "delight");
+    g.classList.toggle("st-mood-sorry", m === "sorry");
+  }
   function stClass(cls, ms) {
     var g = $("scr-game"); if (!g) return;
     g.classList.add(cls);
@@ -2520,7 +2531,7 @@ function avatarSVG(id, state, seat) {
         '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
-        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + fortuneHTML() + "</div></div>");
+        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + deskBetsHTML(p, i) + fortuneHTML() + "</div></div>");
       /* New programme pass 1: during the Decider, a seat that is not
          playing steps back — dimmed out of the light while the tied
          leaders settle it (the winner is crowned, the class lifts) */
@@ -2538,6 +2549,7 @@ function avatarSVG(id, state, seat) {
         Math.max.apply(null, G.players.map(function (x, j) { return fortuneDisp[j] != null ? fortuneDisp[j] : x.score; })),
         p.score === bestScore && bestScore > 0);
     });
+    paintDeskHead();
     updateLaurel("table");
   }
   /* Design pass 1 — the Long Shot: in the Big Finish a player's
@@ -2637,6 +2649,40 @@ function avatarSVG(id, state, seat) {
     if (seg) t.push(seg);
     return t.join(" · ");
   }
+  /* Designer's pass P11 (2026-11-11): the bet steppers live on
+     the desks now. In the table game's bet phase each desk grows
+     its own − / amount / + row (a house desk shows its policy bet
+     with no steppers — the house is never tapped for), and the
+     tag line keeps its full grammar above it. The buttons carry
+     the same data-bet address they always did; one delegated
+     listener on the seats row (registered beside betBeat) works
+     them, so the seats' constant rebuilding can't orphan them. */
+  function deskBetsHTML(p, i) {
+    if (!G || G.phase !== "bet" || typeof ghMode === "undefined" || ghMode !== "table") return "";
+    if (p.house != null) {
+      return '<div class="desk-bets house"><span class="house-bet">HOUSE BET</span>' +
+        '<span class="bet-amt" id="betAmt' + i + '">' + betLabel(p.bet) + "</span></div>";
+    }
+    return '<div class="desk-bets"><button class="chip bet-step" data-bet="' + i + '|-1">− 1</button>' +
+      '<span class="bet-amt" id="betAmt' + i + '">' + betLabel(p.bet) + "</span>" +
+      '<button class="chip bet-step" data-bet="' + i + '|1">+ 1</button></div>';
+  }
+  /* P11: the projector strip is the desks' shared header — it
+     lives in #deskHead, between the stage and the seats, filled
+     for the table bet phase and emptied for everything else.
+     renderSeats runs on every beat, so the header follows the
+     phase exactly, and a stepper tap's re-render repaints the
+     strip in its new order (the G3 promise, kept). */
+  function paintDeskHead() {
+    var dh = $("deskHead");
+    if (!dh) return;
+    if (G && G.phase === "bet" && typeof ghMode !== "undefined" && ghMode === "table") {
+      dh.innerHTML = '<div class="proj-wrap"><div class="proj-label">IF THEY BANK</div><div class="proj-strip" id="projStrip"></div></div>';
+      paintProjector();
+    } else if (dh.innerHTML) {
+      dh.innerHTML = "";
+    }
+  }
   /* House Players (pass 5): the lock order becomes a race on one
      clock. Every marked seat carries a lock-in TIME — a host tap's
      time is the question's burned elapsed plus the seconds this
@@ -2699,6 +2745,7 @@ function avatarSVG(id, state, seat) {
     }
     syncLockOrder();
     renderSeats();
+    paintVoteChips();
     saveTableShow();
   }
 
@@ -3725,11 +3772,40 @@ function avatarSVG(id, state, seat) {
     if (d.peak >= 2) out.push({ k: "HOTTEST STREAK", full: "HOTTEST STREAK", v: String(d.peak) });
     return out;
   }
+  /* A seat with nothing recorded still gets a sentence — Sterling
+     does not leave a guest's line blank on the closing card
+     (designer's pass, 2026-11-11). The line is voice, never a
+     fact: it invents no numbers, only notes the quiet. The pad's
+     own card keeps its stricter rule — an empty card is omitted
+     there, because a player's own phone need not announce it. */
+  var REPORT_QUIET = [
+    "a quiet one — the chair was comfy",
+    "unhurried, unbothered, unbanked",
+    "all dignity, no dollars",
+    "a spectator's masterclass",
+    "saving it for the rematch, presumably"
+  ];
+  function quietLineFor(name, seat, taken) {
+    var h = 0, s = String(name || "");
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    var idx = (h + seat) % REPORT_QUIET.length;
+    if (taken[idx]) idx = (idx + 1) % REPORT_QUIET.length;
+    taken[idx] = true;
+    return REPORT_QUIET[idx];
+  }
   function reportPanelHTML(rows, say) {
-    var body = rows.map(function (r) {
-      var facts = reportFactsOf(r.d).map(function (f) {
-        return '<span class="report-fact"><span class="report-fk">' + f.k + "</span> " + esc(f.v) + "</span>";
-      }).join('<span class="report-dot">·</span>');
+    var taken = {};
+    var body = rows.map(function (r, seat) {
+      var list = reportFactsOf(r.d);
+      var facts;
+      if (list.length) {
+        facts = list.map(function (f) {
+          return '<span class="report-fact"><span class="report-fk">' + f.k + "</span> " + esc(f.v) + "</span>";
+        }).join('<span class="report-dot">·</span>');
+      } else {
+        facts = '<span class="report-fact report-quiet"><span class="report-fk">THE NIGHT</span> ' +
+          esc(quietLineFor(r.name, seat, taken)) + "</span>";
+      }
       return '<div class="report-row"><span class="report-name">' + esc(r.name) + '</span><span class="report-facts">' + facts + "</span></div>";
     }).join("");
     return '<div class="report-card"><div class="report-head">THE REPORT CARD</div>' +
@@ -4243,16 +4319,44 @@ function avatarSVG(id, state, seat) {
     seatsVisible(false);
     updateTop(); renderSeats();
     var titles = { 1: "THE WARM-UP", 2: "DOUBLE MONEY", 3: "THE BIG FINISH" };
-    var texts = {
-      1: "Six questions, and everybody answers every one. Sterling spins the category — the wheel and he have an understanding. Easy pays $100, medium $200, hard $300, and the value drains while the room thinks, so commit early. When the clock stops: fingers up, show 1, 2, 3 or 4. Everyone holding the right fingers banks the money. And on every question with fingers, the first right answer in also pockets a $50 quick-draw — be quick AND right. Three correct in a row starts a streak — every bank after that pays a bonus $25 while it lives. Twice this round, a closest-number question: no options, just shout a number — the nearest shout takes it.",
+    /* Designer's pass P6 (2026-11-11, Jimmy's pick — shape B,
+       the ledger): the bumper's wall of prose is now ruled rows
+       in the break card's dress. Every fact from the old
+       paragraphs survives, one per row; the online game's intro
+       keeps its own phone-flavoured text, untouched. */
+    var rows = {
+      1: [["Questions", "Six — everybody answers every one"],
+          ["The wheel", "Sterling spins the category"],
+          ["The pay", "$100 easy · $200 medium · $300 hard"],
+          ["The drain", "The value melts while the room thinks — commit early"],
+          ["The fingers", "1, 2, 3 or 4 when the clock stops — right fingers bank"],
+          ["Quick-draw", "First right answer in pockets +$50"],
+          ["The streak", "Three in a row starts it — +$25 a bank while it lives"],
+          ["Closest number", "Twice this round — shout a number, nearest takes it"]],
       2: (G.rules && G.rules.secondCut)
-        ? "Same game, double money — $200, $400, $600. Your lifelines are live: each of you holds TWO Cut Two tokens for the whole show. Call one before the fingers go up and two wrong answers vanish for everybody. Spend them like they matter — because they do. And the round closes with the Headline Question — double money again, half the time on the clock."
-        : "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it before the fingers go up and two wrong answers vanish for everybody. Spend it like it's the last one. It is. And the round closes with the Headline Question — double money again, half the time on the clock.",
-      3: "Three questions. Before each one, bet on yourself out loud — a chip is $100. Chasing the leader? The further behind you are, the more chips you may ride — up to five. Get it right and the bet pays in full: no drain, no deductions. Get it wrong and you lose nothing but face. Nobody leaves this show poorer than they arrived. That is the whole trick of it."
+        ? [["The money", "Same game, double — $200 · $400 · $600"],
+           ["Cut Two", "Two tokens each — yours for the whole show"],
+           ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
+           ["The spend", "Spend them like they matter — because they do"],
+           ["The Headline", "The round closes with it — double money again, half the clock"]]
+        : [["The money", "Same game, double — $200 · $400 · $600"],
+           ["Cut Two", "One token each — yours for the whole show"],
+           ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
+           ["The spend", "Spend it like it's the last one — it is"],
+           ["The Headline", "The round closes with it — double money again, half the clock"]],
+      3: [["Questions", "Three"],
+          ["The bet", "Before each one, bet on yourself out loud — a chip is $100"],
+          ["The chase", "The further behind you are, the more chips you may ride — up to five"],
+          ["The pay", "Get it right and the bet pays in full — no drain, no deductions"],
+          ["The risk", "Get it wrong and you lose nothing but face"],
+          ["The promise", "Nobody leaves this show poorer than they arrived"]]
     };
-    stage('<div class="bumper"><div class="round-kicker">ROUND ' + G.round + "</div>" +
+    var factRows = rows[G.round].map(function (r) {
+      return '<div class="fact-row"><span class="fact-k">' + r[0] + '</span><span class="fact-v">' + r[1] + "</span></div>";
+    }).join("");
+    stage('<div class="bumper break-card"><div class="round-kicker">ROUND ' + G.round + "</div>" +
       '<div class="round-title">' + titles[G.round] + "</div>" +
-      '<p class="round-text">' + texts[G.round] + "</p>" +
+      '<div class="fact-list">' + factRows + "</div>" +
       (G.round > 1 ? standingsHTML() : "") +
       '<button class="btn-gold" id="btnRoundGo">' + (G.round === 1 ? "START THE WARM-UP" : G.round === 2 ? "DOUBLE IT" : "TO THE BIG FINISH") + "</button></div>");
     /* Rematch Night: on a series show, Sterling's framing of the
@@ -4461,11 +4565,14 @@ function avatarSVG(id, state, seat) {
     saveTableShow();
   }
 
-  /* G3: the projected standings strip under the steppers. Painted
-     from live state on every beat render (a resumed beat repaints
-     betBeat, so the strip is rebuilt from the bets as they stand —
-     no stale figures), and repainted inside the stepper handler so
-     the sort follows a chip the moment it moves. */
+  /* G3: the projected standings strip. Painted from live state
+     on every beat render (a resumed beat repaints betBeat, so
+     the strip is rebuilt from the bets as they stand — no stale
+     figures), and repainted inside the stepper handler so the
+     sort follows a chip the moment it moves. Since the
+     designer's pass P11 (2026-11-11) the strip is the desks'
+     shared header (#deskHead via paintDeskHead); the painting
+     itself is unchanged. */
   function paintProjector() {
     var strip = $("projStrip");
     if (!strip || !G) return;
@@ -4496,48 +4603,43 @@ function avatarSVG(id, state, seat) {
     });
     seatsVisible(true);
     updateTop(); renderSeats();
-    var rows = G.players.map(function (p, i) {
-      if (p.house != null) {
-        return '<div class="name-row bet-row" style="--pc:var(--p' + i + ')"><span class="name-dot" style="background:' + p.color + '"></span>' +
-          '<span style="flex:1;text-align:left">' + esc(p.name) + "</span>" +
-          (caps[i] > 3 ? '<span class="longshot-marker">LONG SHOT</span>' : "") +
-          '<span class="house-bet">HOUSE BET</span>' +
-          '<span class="bet-amt" id="betAmt' + i + '">' + betLabel(p.bet) + "</span></div>";
-      }
-      return '<div class="name-row bet-row" style="--pc:var(--p' + i + ')"><span class="name-dot" style="background:' + p.color + '"></span>' +
-        '<span style="flex:1;text-align:left">' + esc(p.name) + "</span>" +
-        (caps[i] > 3 ? '<span class="longshot-marker">LONG SHOT</span>' : "") +
-        '<button class="chip" data-bet="' + i + '|-1">− 1</button>' +
-        '<span class="bet-amt" id="betAmt' + i + '">' + betLabel(p.bet) + "</span>" +
-        '<button class="chip" data-bet="' + i + '|1">+ 1</button></div>';
-    }).join("");
+    /* Designer's pass P11 (2026-11-11): the per-player bet rows
+       and the stage's strip are gone — the steppers live on the
+       desks (deskBetsHTML, in renderSeats) and the strip is the
+       desks' shared header (#deskHead, paintDeskHead). The stage
+       keeps only the words and the way on. */
     stage('<div class="round-kicker">THE BIG FINISH · QUESTION ' + (G.qInRound + 1) + " OF 3</div>" +
       '<p class="round-text">Bet on yourself, out loud — a chip is $100; right pays, wrong costs only pride. Chasing the leader? The further behind you are, the more chips you may ride — up to five.</p>' +
-      '<div class="bet-rows">' + rows + "</div>" +
-      '<div class="proj-wrap"><div class="proj-label">IF THEY BANK</div><div class="proj-strip" id="projStrip"></div></div>' +
       '<button class="btn-gold" id="btnBetsDone">BETS ARE IN — SPIN THE CATEGORY</button>');
-    paintProjector();
     hostSay("bet");
-    var longShotCalled = {};
-    document.querySelectorAll("[data-bet]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var parts = b.getAttribute("data-bet").split("|");
-        var pi = parseInt(parts[0], 10), p = G.players[pi];
-        p.bet = Math.max(1, Math.min(caps[pi], p.bet + parseInt(parts[1], 10)));
-        var amt = $("betAmt" + pi);
-        if (amt) amt.textContent = betLabel(p.bet);
-        if (p.bet >= 4 && longShotCalled[pi] !== p.bet) {
-          longShotCalled[pi] = p.bet;
-          $("hostLine").textContent = authoredLine("longshot", { name: p.name, chips: p.bet, amount: money(p.bet * 100) });
-        }
-        renderSeats();
-        paintProjector();
-        saveTableShow();
-      });
-    });
+    betLongShotCalled = {};
     $("btnBetsDone").addEventListener("click", spinBeat);
     saveTableShow();
   }
+  /* P11: the steppers' one delegated listener — registered once,
+     working every show, because the desks rebuild on every beat
+     and per-button wiring would die with the first re-render.
+     The cap is read at tap time (tableBetCap derives from the
+     scores, which never move during the bet beat, so it equals
+     the cap betBeat clamped with). */
+  var betLongShotCalled = {};
+  $("seatsBottom").addEventListener("click", function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest("[data-bet]") : null;
+    if (!b || !G || G.phase !== "bet") return;
+    var parts = b.getAttribute("data-bet").split("|");
+    var pi = parseInt(parts[0], 10), p = G.players[pi];
+    if (!p || p.house != null) return;
+    p.bet = Math.max(1, Math.min(tableBetCap(pi), p.bet + parseInt(parts[1], 10)));
+    var amt = $("betAmt" + pi);
+    if (amt) amt.textContent = betLabel(p.bet);
+    if (p.bet >= 4 && betLongShotCalled[pi] !== p.bet) {
+      betLongShotCalled[pi] = p.bet;
+      $("hostLine").textContent = authoredLine("longshot", { name: p.name, chips: p.bet, amount: money(p.bet * 100) });
+    }
+    renderSeats();
+    paintProjector();
+    saveTableShow();
+  });
 
   /* ================= The Ten, pass 6 — Seven Entrances =================
      Every category's question arrives its own way: one keyframed
@@ -4909,6 +5011,41 @@ function avatarSVG(id, state, seat) {
       if (si >= steps.length) { clearInterval(voteTimer); voteTimer = null; markScreen(); }
     }, 450);
   }
+  /* Designer's pass P9 (2026-11-11): the mark screen keeps the
+     answers on stage, dimmed — the room watches each marked
+     seat's face gather on the right slab as the host taps,
+     instead of marking against a question that vanished. The
+     correct slab is the one wearing chips; a cut slab can never
+     wear one (a cut option is never the answer). Guess questions
+     (no slabs) and the Decider keep their text-only screen. */
+  function markGridHTML() {
+    var c = G.cur;
+    if (!c || !c.opts || c.decider) return "";
+    var btns = c.opts.map(function (o, i) {
+      return '<button class="ans-btn' + (o.gone ? " cut" : "") + '" disabled>' +
+        '<span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span><span class="vote-chips"></span></button>';
+    }).join("");
+    return '<div class="answers marking">' + btns + "</div>";
+  }
+  function paintVoteChips() {
+    var grid = document.querySelector(".answers.marking");
+    if (!grid || !G || !G.cur || !G.cur.opts) return;
+    var okIx = -1;
+    G.cur.opts.forEach(function (o, i) { if (o.ok) okIx = i; });
+    var slabs = grid.querySelectorAll(".ans-btn");
+    slabs.forEach(function (b) { var box = b.querySelector(".vote-chips"); if (box) box.innerHTML = ""; });
+    if (okIx < 0 || !slabs[okIx]) return;
+    var box = slabs[okIx].querySelector(".vote-chips");
+    if (!box) return;
+    var order = (Array.isArray(G.cur.lockOrder) && G.cur.lockOrder.length) ? G.cur.lockOrder : Object.keys(G.cur.marks || {}).map(Number);
+    var h = "";
+    order.forEach(function (i) {
+      if (!G.cur.marks || !G.cur.marks[i]) return;
+      var p = G.players[i]; if (!p) return;
+      h += '<span class="vote-chip pod' + i + '" title="' + esc(p.name) + '">' + avatarSVG(snapAvatar(p, i), "neutral", i) + "</span>";
+    });
+    box.innerHTML = h;
+  }
   function markScreen() {
     G.phase = "vote";
     renderSeats();
@@ -4919,10 +5056,12 @@ function avatarSVG(id, state, seat) {
         : G.cur.kind === "num"
         ? "Who called the closest number? Tap their seat — tap two seats if it's a dead heat."
         : "Tap the seat of everyone holding up the right fingers. Wrong fingers, no tap — and nobody loses a thing either way.") + "</p>" +
+      markGridHTML() +
       '<button class="btn-gold" id="btnReveal">REVEAL THE ANSWER</button>');
     hostSay("mark");
     G.cur.voteAt = Date.now();
     housePreMark();
+    paintVoteChips();
     $("btnReveal").addEventListener("click", revealAnswer);
     saveTableShow();
   }
@@ -5478,6 +5617,7 @@ function avatarSVG(id, state, seat) {
     stagePhase("reveal");
     var c = G.cur;
     var winners = Object.keys(c.marks).map(Number).sort(function (a, b) { return a - b; });
+    setMood(c.decider ? (winners.length === 1 ? "delight" : "sorry") : (winners.length ? "delight" : "sorry"));
     var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="btnNext">CONTINUE</button></div>';
     if (c.kind === "num") {
       var dNum = "";
@@ -5670,6 +5810,7 @@ function avatarSVG(id, state, seat) {
   }
   function winnerScreen(i, tiedIdx) {
     G.phase = "over"; stagePhase("over");
+    setMood("delight");
     clearTableSave(); /* the show is complete — nothing left to resume */
     if (G.cur) G.cur.marks = {};
     var p = G.players[i];
@@ -6671,6 +6812,11 @@ function avatarSVG(id, state, seat) {
     var rb = $("rulesBlock");
     if (rb) rb.classList.toggle("hidden", m === "join");
     $("btnStart").classList.toggle("hidden", m !== "table");
+    /* Designer's pass P7 (2026-11-11): the start actions live in
+       the docked start bar now — each mode's button shows there,
+       pinned to the sheet's bottom, instead of inside its panel */
+    $("btnCreateRoom").classList.toggle("hidden", m !== "host");
+    $("btnJoinRoom").classList.toggle("hidden", m !== "join");
     var ml = document.querySelector(".microline");
     if (ml) ml.textContent = m === "table" ? "Pass-and-play · 2–4 players · One phone, one TV"
       : m === "host" ? "Online · you run the show · friends join on their phones"
@@ -7836,6 +7982,7 @@ function avatarSVG(id, state, seat) {
       if (fx) fxSeats[res.seat] = fx;
     });
     ogStreakMoment = r.streakMoment || null;
+    setMood((anyBank || winners.length) ? "delight" : "sorry");
     /* The Golden Question (pass 4): the reveal is the first place
        the flag exists outside the room — capture it for the gilt,
        the why-slip tag and Sterling's moment (ogRevealSay) */
@@ -8048,6 +8195,7 @@ function avatarSVG(id, state, seat) {
   function ogWinner() {
     if (!OG || OG.phase === "over") return;
     OG.phase = "over"; stagePhase("over");
+    setMood("delight");
     ogClearHostSave(); /* the show ended — its save retires with it */
     clock.running = false;
     seatsVisible(false);

@@ -71,7 +71,7 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .pod0{--c:var(--p0);--cd:var(--p0d)} .pod1{--c:var(--p1);--cd:var(--p1d)} .pod2{--c:var(--p2);--cd:var(--p2d)} .pod3{--c:var(--p3);--cd:var(--p3d)}
 .avatar{width:clamp(80px,12.5vmin,112px);height:auto;display:block;margin:0 auto -10px;position:relative;z-index:2;filter:drop-shadow(0 0 7px rgba(255,220,170,.28)) drop-shadow(0 6px 8px rgba(0,0,0,.3))}
 .desk{position:relative;clip-path:polygon(6% 0,94% 0,100% 100%,0 100%);padding:clamp(17px,2.5vmin,23px) 8px clamp(12px,2vmin,18px);background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 42%),linear-gradient(180deg,var(--c),var(--cd))}
-.pname{color:var(--cream);font-weight:700;letter-spacing:.13em;font-size:clamp(10px,1.5vmin,14px);text-shadow:0 2px 0 rgba(0,0,0,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pname{display:inline-block;color:var(--cream);font-weight:800;letter-spacing:.12em;font-size:clamp(11.5px,1.7vmin,15px);text-shadow:0 1px 0 rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(21,8,32,.45);padding:2px 9px 3px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
 .pmoney{color:#FFF;font-weight:700;font-size:clamp(20px,3.6vmin,34px);line-height:1.08;text-shadow:0 3px 0 rgba(0,0,0,.25)}
 .podium.lit{transform:translateY(-8px)}
 .podium.lit .desk{filter:drop-shadow(0 0 15px rgba(255,215,106,.85))}
@@ -478,7 +478,7 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .seat{position:relative;width:clamp(150px,21vw,248px);text-align:center;cursor:pointer}
 .seat .avatar{width:clamp(58px,9.5vmin,84px)}
 .seat .desk{position:relative;padding:14px 8px 11px}
-.seat-name{display:block;color:var(--cream);font-weight:700;letter-spacing:.11em;font-size:clamp(10px,1.5vmin,13.5px);text-shadow:0 2px 0 rgba(0,0,0,.22);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat-name{display:block;color:var(--cream);font-weight:800;letter-spacing:.1em;font-size:clamp(11.5px,1.7vmin,15px);text-shadow:0 1px 0 rgba(0,0,0,.5),0 0 7px rgba(21,8,32,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .seat-score{display:block;color:#FFF;font-weight:700;font-size:clamp(18px,3.2vmin,28px);line-height:1.1;text-shadow:0 3px 0 rgba(0,0,0,.25);transition:color .3s}
 .seat .tag{display:block;font-size:9px;font-weight:600;letter-spacing:.16em;color:rgba(255,246,232,.75);margin-top:1px}
 /* House Players (pass 5): the HOUSE segment leads the tag line in
@@ -627,24 +627,10 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 @keyframes whyPrint{from{transform:translateY(-104%)}to{transform:translateY(0)}}
 .wager-amt{font-size:clamp(52px,10vmin,92px);font-weight:700;line-height:1.05;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 4px 0 #571C46);animation:jumpIn .55s cubic-bezier(.2,1.8,.4,1) both}
 
-/* bet beat */
-.bet-rows{display:flex;flex-direction:column;gap:6px;width:min(480px,94vw);margin:8px auto}
-.bet-row{border-left:12px solid var(--pc)}
-.bet-row .chip{min-width:44px}
+/* bet beat — the amount pill (the steppers and the strip moved
+   to the desks in the designer's pass P11; their dress is in
+   the P11 block at the foot of this file) */
 .bet-amt{flex:none;min-width:118px;text-align:center;font-weight:700;font-size:16.5px;color:#431A04;background:var(--brass-pill);border-radius:999px;padding:7px 13px;box-shadow:0 4px 0 var(--gold-sh)}
-/* Audit A2: in portrait a bet row's fixed pieces (two steppers,
-   the amount pill, the gaps) left the name less room than the
-   longest name needs, and the overflow pushed the +1 stepper off
-   the row's right edge — half off the phone, half untappable.
-   The fixed pieces run a step smaller here, and the name takes
-   an ellipsis before it ever pushes a control out again. */
-@media (max-width:560px){
-  .bet-row{gap:6px;padding:6px 8px}
-  .bet-row .chip{min-width:40px;padding:8px 10px}
-  .bet-amt{min-width:96px;font-size:13.5px;padding:6px 9px}
-  .bet-row .name-dot + span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-}
-.longshot-marker{flex:none;font-size:10px;font-weight:800;letter-spacing:.13em;color:#FFD76A;background:rgba(255,183,58,.13);border:1px solid rgba(255,215,106,.6);border-radius:999px;padding:5px 7px;white-space:nowrap}
 .chip{font-weight:700;border-radius:999px;padding:9px 15px;font-size:14px;color:var(--cream);background:var(--glass-ink);box-shadow:0 4px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
 button.chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .chip:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
@@ -707,6 +693,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
    all. Before this, a fact could split across lines (FASTEST HAND
    ending one line, its seconds opening the next) */
 .report-fact{display:inline-block;white-space:nowrap}
+.report-quiet{font-style:italic;color:rgba(255,246,232,.78);white-space:normal}
 .report-fk{font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--gold);white-space:nowrap}
 .report-dot{margin:0 7px;color:rgba(198,164,94,.6)}
 
@@ -716,6 +703,13 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 #dangerFx.on{opacity:1;animation:dangerPulse .5s ease-in-out infinite alternate}
 @keyframes dangerPulse{from{box-shadow:inset 0 0 70px 18px rgba(255,80,60,.26)}to{box-shadow:inset 0 0 115px 36px rgba(255,80,60,.44)}}
 #leafCanvas{position:fixed;inset:0;z-index:30;pointer-events:none;display:none}
+/* Designer's pass P3 (2026-11-11): on the finale the falling
+   leaves drop behind the show's content — the winner's card, the
+   report and Sterling's words stay clean while the celebration
+   still falls around them (the stage already sits at z-index 1;
+   anything the canvas still crosses gets raised by name below,
+   from the evidence screenshot, not by guess) */
+#scr-game[data-phase="over"] #leafCanvas{z-index:0}
 #leafCanvas.on{display:block}
 
 /* ================= mid tier ================= */
@@ -741,7 +735,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .seat .avatar{width:34px}
   .seat .desk{padding:12px 6px 3px}
   .podium .desk{padding-top:14px}
-  .seat-name{font-size:10px}
+  .seat-name{font-size:12px}
   .seat-score{font-size:14px}
   .seat .tag{font-size:7.5px}
   #stage{padding:3px 12px}
@@ -798,7 +792,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .gain-chip{font-size:12px;padding:4px 9px}
   .podium .delta{font-size:10px;padding:3px 7px;right:6px;top:5px}
   .pmoney{font-size:16px}
-  .pname{font-size:9px}
+  .pname{font-size:11.5px}
   /* finale */
   .finale-marquee{padding:8px 16px;border-radius:18px}
   .winner-word{font-size:36px}
@@ -896,14 +890,16 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .tool-btn{padding:7px 8px;font-size:12.5px}
   .tool-btn small{display:inline;margin:0 0 0 4px;font-size:10px}
   #btnCallIt{grid-column:1/-1}
-  .answers{grid-template-columns:1fr;width:min(430px,96%);gap:8px;margin-top:8px}
+  /* Designer's pass P8 (2026-11-11): portrait answers run 2×2
+     like landscape — the four-slab column halved the stage */
+  .answers{grid-template-columns:1fr 1fr;width:min(430px,96%);gap:8px;margin-top:8px}
   .ans-btn{padding:9px 12px;font-size:16px}
   .ans-btn .letter{width:28px;height:28px}
   .q-text{font-size:20px}
   .seats{gap:6px;padding:3px 6px 5px}
   .seat{flex:1 1 0;width:auto;min-width:0}
   .seat .avatar{width:30px}
-  .seat-name{font-size:9.5px;letter-spacing:.05em}
+  .seat-name{font-size:11px;letter-spacing:.04em}
   .seat-score{font-size:15px}
   .seat .tag{font-size:7px;letter-spacing:.08em}
   .seat.house .tag{font-size:6px;letter-spacing:.04em}
@@ -949,9 +945,16 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .og-pill{position:absolute;top:52px;right:14px;z-index:5;font-size:10.5px;font-weight:700;letter-spacing:.18em;color:#0B3D1C;background:linear-gradient(180deg,#8BF0AB,#3ECF6E);border-radius:999px;padding:6px 12px;box-shadow:0 4px 0 rgba(0,0,0,.35)}
 .og-pill.warn{background:linear-gradient(180deg,#FFD76A,#FFB03A);color:#431A04}
 .og-coderow{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
-.og-qr{position:relative;background:var(--paper-plate);border-radius:14px;padding:10px 10px 7px;box-shadow:0 10px 24px rgba(0,0,0,.35);flex:none}
-.og-qr canvas{display:block;width:120px;height:120px}
-.og-qr-cap{color:#571C46;font-size:10px;font-weight:700;letter-spacing:.18em;text-indent:.18em;text-align:center;margin-top:6px}
+/* Designer's pass P4 (2026-11-11): the QR plate is dressed like
+   the rest of the show — a plum card in a brass frame (the same
+   tokens as the title marquee), the code itself still riding a
+   full paper plate with its quiet zone untouched — and COPY CODE
+   stands as a solid brass-edged button next to the gold START
+   instead of a translucent outline adrift on the plum */
+.og-qr{position:relative;background:var(--ink-panel);border:3px solid var(--brass-line);border-radius:16px;padding:11px 11px 8px;box-shadow:0 14px 30px rgba(0,0,0,.5),inset 0 0 0 2px rgba(20,6,26,.55);flex:none}
+.og-qr canvas{display:block;width:120px;height:120px;background:var(--paper-plate);padding:8px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(87,28,70,.16)}
+.og-qr-cap{color:var(--gold);font-size:10px;font-weight:700;letter-spacing:.18em;text-indent:.18em;text-align:center;margin-top:7px}
+.og-copy{background:linear-gradient(180deg,#4B2768,#2C1443);border-color:var(--brass-line);box-shadow:0 5px 0 rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.14)}
 .og-copy{flex:none}
 .og-code{font-size:clamp(64px,14vmin,124px);font-weight:700;letter-spacing:.22em;text-indent:.22em;line-height:1.05;background:linear-gradient(180deg,#FFF3D6 5%,#FFD76A 45%,#FF9E3C 92%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 5px 0 #571C46) drop-shadow(0 16px 30px rgba(0,0,0,.45))}
 .og-count{display:inline-block;margin-top:14px;font-weight:700;letter-spacing:.14em;font-size:clamp(14px,2.2vmin,19px);color:var(--cream);background:var(--ink-chip);border:2px solid rgba(255,246,232,.2);border-radius:999px;padding:9px 20px}
@@ -1529,21 +1532,10 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .how-link::after{inset:-11px 0}
   .count-btn{position:relative}
   .count-btn::after{content:"";position:absolute;inset:-6px 0}
-  /* #1 — bet rows stand down like the lobby: two-up grid, slimmer rows */
-  .bet-rows{display:grid;grid-template-columns:1fr 1fr;width:min(880px,97vw);gap:4px;margin:4px auto}
-  .proj-wrap{width:min(880px,97vw);margin:4px auto 2px}
-  /* G3 fit: the strip earns its height back in short landscape —
-     label and pills share one line, pills slim — so the beat that
-     just fit before the projector still fits with it (measured:
-     the strip is fully in view, no scroll, at 844x390) */
-  .stage-inner:has(.bet-rows) .proj-wrap{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto}
-  .stage-inner:has(.bet-rows) .bet-rows{margin:2px auto;gap:2px}
-  .stage-inner:has(.bet-rows) .round-kicker{font-size:9px}
-  .stage-inner:has(.bet-rows) .proj-strip{margin-top:0;flex-wrap:nowrap}
-  .stage-inner:has(.bet-rows) .proj-seat{padding:1px 8px 1px 6px;font-size:12px;gap:4px}
-  .stage-inner:has(.bet-rows) .proj-move{min-width:16px;font-size:10px}
-  .bet-row{padding:0 8px}
-  .stage-inner:has(.bet-rows) .round-text{max-width:76ch;margin-bottom:0;font-size:12px;line-height:1.3}
+  /* the bet stage's words run small in short landscape (the
+     strip's own one-line dress lives in the P11 block now) */
+  #scr-game[data-phase="bet"] .round-kicker{font-size:9px}
+  #scr-game[data-phase="bet"] .round-text{max-width:76ch;margin-bottom:0;font-size:12px;line-height:1.3}
   /* #4/#8 — stage air: the host bubble gives back a line, desks slim */
   .host-line{min-height:3.3em}
   #stage{padding-top:1px;padding-bottom:1px}
@@ -2162,9 +2154,15 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .stage-inner:has(.dial.spread) .dial-pin.r0 .dial-lab{bottom:calc(50% + 22px)}
   .stage-inner:has(.dial.spread) .dial-pin.r1 .dial-lab{top:calc(50% + 22px)}
   .stage-inner:has(.dial.spread) .dial-gate{top:2px;bottom:2px}
-  .stage-inner:has(.dial.spread) .q-text{margin-top:2px}
+  .stage-inner:has(.dial.spread) .q-text{margin-top:0}
   .stage-inner:has(.dial.spread) .delta{margin-top:3px;font-size:12.5px;min-height:0}
   .stage-inner:has(.dial.spread) .why-wrap{margin-top:4px}
+  /* Audit finding 4 (2026-11-11): the OG host's stage is 4px
+     shorter than the local one, and this composition still read
+     186 against its 184 — the question's top margin carries the
+     first of it; the why slip's share sits in the addendum at
+     the foot of this file (a plainer selector loses the cascade
+     to the reveal blocks there) */
   .stage-inner:has(.dial.spread) .why-slip{padding-top:2px;padding-bottom:2px}
   /* the reveal templates carry the CONTINUE wrapper's 12px as an
      inline style; on this one tight stage the squeeze outranks it */
@@ -2554,3 +2552,238 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 @media (max-height:500px){
   #scr-game[data-phase="question"] .q-text{max-width:100%}
 }
+
+/* Perfectionist fix 3 (2026-11-11): the portrait reveal's tallest
+   compositions (long question, two-row answers, full why slip)
+   stood ~24px proud of the 578px stage — repaid inside the
+   portrait reveal only; the answers' own top margin is left
+   alone (the slab clearance from proposal 3 is not spent here) */
+@media (max-width:560px){
+  #scr-game[data-phase="reveal"] .q-card{padding-top:10px}
+  #scr-game[data-phase="reveal"] .q-cardwrap{margin-top:6px;margin-bottom:6px}
+  #scr-game[data-phase="reveal"] .q-text{line-height:1.18}
+  #scr-game[data-phase="reveal"] .answers{gap:8px}
+  #scr-game[data-phase="reveal"] .ans-btn .letter{width:26px;height:26px}
+  #scr-game[data-phase="reveal"] .delta{margin-top:10px}
+  #scr-game[data-phase="reveal"] .why-wrap{margin-top:6px}
+  #scr-game[data-phase="reveal"] .why{padding-top:7px;padding-bottom:7px;line-height:1.4}
+  #scr-game[data-phase="reveal"] .cat-pill{padding-top:4px;padding-bottom:4px}
+  #scr-game[data-phase="reveal"] #btnNext{padding-top:10px;padding-bottom:10px}
+}
+
+/* Perfectionist fix 4 (2026-11-11): the landscape reveal's tall
+   compositions — count-dial reveals and two-row answer sets —
+   stood up to 19px proud of the host stage; repaid inside the
+   landscape reveal only. The answers' top margin is HELD at
+   12px on purpose: the reveal's slab clearance is not spent. */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .q-card{max-width:100%;padding-top:6px;padding-bottom:5px}
+  #scr-game[data-phase="reveal"] .q-cardwrap{margin-top:2px}
+  #scr-game[data-phase="reveal"] .q-text{line-height:1.15}
+  #scr-game[data-phase="reveal"] .count-dial{margin-top:0}
+  #scr-game[data-phase="reveal"] .dial-rail{margin-top:6px}
+  #scr-game[data-phase="reveal"] .answers{margin-top:12px;gap:2px}
+  #scr-game[data-phase="reveal"] .ans-btn{padding-top:1px;padding-bottom:1px;line-height:1.15;font-size:12.5px}
+  #scr-game[data-phase="reveal"] .ans-btn .letter{width:18px;height:18px}
+  #scr-game[data-phase="reveal"] .delta{margin-top:0;line-height:1.2}
+  #scr-game[data-phase="reveal"] .why-wrap{margin-top:0}
+  #scr-game[data-phase="reveal"] .why{padding-top:3px;padding-bottom:3px;line-height:1.25}
+  #scr-game[data-phase="reveal"] #btnNext{padding-top:9px;padding-bottom:9px}
+}
+
+/* Audit finding 2 (2026-11-11): the fullest break card (six fact
+   rows, two wrapped, Second Wind aboard, the recap at three
+   lines squeezing the stage to ~239) read ~9px over on the short
+   landscape stage — repaid inside the break card only */
+@media (max-height:500px){
+  #scr-game[data-phase="intermission"] .break-card .fact-row{padding-top:1px;padding-bottom:1px}
+  #scr-game[data-phase="intermission"] .break-card .fact-list{margin-top:2px}
+  #scr-game[data-phase="intermission"] .break-card .round-title{margin-top:0;line-height:1}
+  #scr-game[data-phase="intermission"] .break-card .round-kicker{line-height:1.05}
+  #scr-game[data-phase="intermission"] .break-card .break-tease{line-height:1.22;font-size:12px}
+}
+
+/* Audit finding 3 (2026-11-11): on the landscape no-winner
+   reveal, the why slip's scalloped painted trim hangs below the
+   answers' border box and struck through the delta line sitting
+   at margin-top 0. The delta is given air, the answers close up
+   a little to help pay for it, and the funding comes only from
+   compositions that carry this exact delta (winner reveals and
+   portrait are untouched) */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .answers{margin-top:7px}
+  #scr-game[data-phase="reveal"] .answers + .delta{margin-top:14px}
+  #scr-game[data-phase="reveal"] .stage-inner:has(> .answers + .delta) .why{padding-top:3px;padding-bottom:3px}
+  #scr-game[data-phase="reveal"] .stage-inner:has(> .answers + .delta)>div:last-child{margin-top:6px !important}
+}
+
+/* Audit finding 4, addendum: the spread-dial why slip at 3px —
+   scoped with the reveal blocks' own ID prefix so it actually
+   wins the cascade (measured: the slip was still computing 5px
+   under the class-only :has rule above). 5→3 on both faces is
+   the remaining 4px the OG host's shorter stage needed. */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .stage-inner:has(.dial.spread) .why-slip{padding-top:3px;padding-bottom:3px}
+}
+
+/* Designer's pass P6 fit (2026-11-11): the ledger bumper plus
+   the rounds 2–3 standings stood proud of the short landscape
+   stage (R2 by ~47px — the start button fell below the fold).
+   Inside the intro only: the ledger takes the break card's
+   dense dress at any row count, and the standings podiums sit
+   a little tighter. Portrait and the break card are untouched. */
+@media (max-height:500px){
+  #scr-game[data-phase="intro"] .fact-row{padding-top:.5px;padding-bottom:.5px}
+  #scr-game[data-phase="intro"] .fact-v{font-size:12.5px;line-height:1.15}
+  #scr-game[data-phase="intro"] .podium .desk{padding-top:8px;padding-bottom:4px}
+  #scr-game[data-phase="intro"] .race-wrap .podium .avatar{width:46px}
+  #scr-game[data-phase="intro"] .round-title{font-size:20px}
+}
+
+/* Designer's pass P7 (2026-11-11): the start bar. The sheet's
+   start action — START THE SHOW, CREATE A ROOM, JOIN THE ROOM,
+   one per mode — docks at the bottom of the title scroll, so it
+   is always in reach in portrait instead of living below the
+   modes, rules, count and names. It rides a fade of plum so the
+   sheet slides under it; scrolled to the end, it simply rests
+   in place. The rejoin buttons stay in their panels — they are
+   recovery, not the start. */
+.start-bar{position:sticky;bottom:0;z-index:6;display:flex;justify-content:center;padding:16px 16px calc(10px + env(safe-area-inset-bottom));margin-top:10px;background:linear-gradient(180deg,rgba(21,8,32,0),rgba(21,8,32,.9) 38%,#150820);pointer-events:none}
+.start-bar>*{pointer-events:auto}
+.start-bar .start-btn{margin-top:0}
+.start-bar .btn-gold{width:min(440px,100%)}
+
+/* Designer's pass P9 (2026-11-11): the mark screen's kept
+   answers. The grid rides dimmed and still while the host
+   marks; each marked seat's face gathers on the correct slab's
+   shoulder, in tap order, ringed in the seat's own colour. */
+.answers.marking{opacity:.66;filter:saturate(.6);pointer-events:none;margin-top:10px}
+.answers.marking .ans-btn{position:relative;overflow:visible;animation:none}
+.vote-chips{position:absolute;top:-10px;right:12px;display:flex;z-index:3}
+.vote-chip{width:25px;height:25px;border-radius:50%;border:2px solid var(--c);background:#2A1530;overflow:hidden;margin-left:-8px;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.vote-chip:first-child{margin-left:0}
+.vote-chip svg{width:100%;height:100%;display:block}
+@media (max-height:500px){
+  #scr-game[data-phase="vote"] .answers.marking{margin-top:6px}
+  #scr-game[data-phase="vote"] .round-text{margin-top:6px}
+}
+
+/* Designer's pass P10 (2026-11-11): bet-strip clearance in
+   short landscape — the desks side of it. In the bet phase the
+   host line gives back its spare height and the desks sit a
+   touch lower, so the whole seats row — the leader's crown
+   included — drops away from the stage's last row. (The stage
+   side of P10 was subsumed the same night by P11, which moved
+   the strip and the steppers off the stage entirely.) */
+@media (max-height:500px){
+  #scr-game[data-phase="bet"] .host-line{min-height:2.5em}
+  #scr-game[data-phase="bet"] .seat .desk{padding-top:5px}
+}
+
+/* Designer's pass P11 (2026-11-11): the bet consolidation.
+   The strip is the desks' shared header (#deskHead, between
+   stage and seats); the steppers ride each desk. Portrait
+   desks are narrow, so the stepper grid stacks — the amount
+   pill spans the top, − and + sit under it; in short landscape
+   the desks are wide and the three run in one row. The bet
+   stage, words only now, rests its button at the stage's foot,
+   right above the header it feeds. */
+.desk-head:empty{display:none}
+.desk-head .proj-wrap{width:min(680px,96vw);margin:6px auto 0}
+.desk-bets{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;width:100%}
+.desk-bets .bet-amt{grid-column:1/-1;min-width:0;width:100%;font-size:12.5px;padding:5px 6px;white-space:nowrap}
+.desk-bets .bet-step{min-height:36px;padding:4px 6px;font-size:13px;min-width:0}
+.desk-bets.house{display:flex;align-items:center;justify-content:center;gap:6px}
+.desk-bets.house .bet-amt{width:auto}
+#scr-game[data-phase="bet"] .stage-inner:has(#btnBetsDone) #btnBetsDone{margin-top:auto;align-self:center}
+@media (max-height:500px){
+  .desk-head{margin-bottom:15px}
+  .desk-head .proj-wrap{display:flex;align-items:center;justify-content:center;gap:8px;width:min(880px,97vw);margin:2px auto 0}
+  .desk-head .proj-strip{margin-top:0;flex-wrap:nowrap}
+  .desk-head .proj-seat{padding:1px 8px 1px 6px;font-size:12px;gap:4px}
+  .desk-head .proj-move{min-width:16px;font-size:10px}
+  .desk-bets{display:flex;align-items:center;justify-content:center;gap:5px}
+  .desk-bets .bet-amt{width:auto;min-width:104px;font-size:13.5px;padding:6px 9px}
+  .desk-bets .bet-step{min-height:36px}
+}
+
+
+/* Designer's pass P12 (2026-11-11): the online lobby fills its
+   width in landscape. The table becomes two columns — the room
+   controls (code, QR, copy, START) on the left, the seats in a
+   2x2 grid on the right — instead of a narrow centred column
+   floating over a row of desks. The landscape lobby's standing
+   text treatment holds (the giant code and the QR carry the
+   meaning; the cat line and the waiting text stay stood down).
+   Portrait keeps the stacked lobby unchanged. */
+@media (max-height:500px){
+  #scr-game[data-phase="lobby"] #table{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:4px 16px}
+  #scr-game[data-phase="lobby"] #seatsTop{display:none}
+  #scr-game[data-phase="lobby"] #deskHead{display:none}
+  #scr-game[data-phase="lobby"] #stage{grid-column:1}
+  #scr-game[data-phase="lobby"] .stage-inner{max-width:100%}
+  #scr-game[data-phase="lobby"] .og-code{font-size:56px}
+  #scr-game[data-phase="lobby"] #seatsBottom{grid-column:2;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:min-content;gap:8px;align-content:center;padding:4px}
+}
+
+/* Designer's pass P13 (2026-11-11): the setup card reads in two
+   columns in landscape. The explaining lives on the left — HOW
+   TONIGHT WORKS over the house rules, stacked as a list — and
+   the doing lives on the right: the mode tabs over whichever
+   panel they open (count, names, the room forms). The docked
+   start bar narrows to the right column's share, so START THE
+   SHOW waits under the controls it fires. Placement is grid
+   areas only; the DOM order is untouched, and portrait keeps
+   the single stacked card it has always had. */
+@media (max-height:500px){
+  #scr-title .setup-card{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:20px;align-items:start}
+  #scr-title .mode-tabs{grid-column:2;grid-row:1;margin-bottom:6px}
+  #scr-title .how-link{grid-column:1;grid-row:1;justify-self:start}
+  #scr-title #rulesBlock{grid-column:1;grid-row:2}
+  #scr-title #rulesBlock .rules-row{flex-direction:column}
+  #scr-title #panelTable,#scr-title #panelHost,#scr-title #panelJoin{grid-column:2;grid-row:2}
+  #scr-title .start-bar{width:57%;margin-left:auto}
+}
+
+/* Designer's pass P15 (2026-11-11): the landscape host rail.
+   In short landscape the host bar leaves the bottom of the
+   screen and stands as a narrow right-hand column: Sterling's
+   face at the top, his bubble under it with its tail re-aimed
+   upward, and the table — stage and seats — takes the full
+   height the bar used to spend. Everything the stage sizes by
+   the viewport is re-capped to the column it now lives in.
+   Portrait keeps the bottom bar unchanged. */
+@media (max-height:500px){
+  #scr-game.active{display:grid;grid-template-columns:minmax(0,1fr) 232px;grid-template-rows:auto minmax(0,1fr);grid-template-areas:"top top" "table rail"}
+  #scr-game #topbar{grid-area:top}
+  #scr-game #table{grid-area:table}
+  #scr-game #hostbar{grid-area:rail;flex-direction:column;align-items:center;justify-content:flex-start;gap:9px;padding:14px 12px 10px;background:linear-gradient(270deg,rgba(18,6,26,.55),rgba(18,6,26,0))}
+  #scr-game .host-face{width:62px;height:62px}
+  #scr-game .host-bubble{max-width:100%;width:100%;padding:9px 13px 11px}
+  #scr-game .host-bubble::before{left:50%;top:-11px;margin:0 0 0 -13px;width:26px;height:12px;clip-path:polygon(0 100%,100% 100%,50% 0)}
+  #scr-game .host-line{font-size:14.5px;min-height:3.4em}
+  #scr-game .stage-inner{width:100%}
+  #scr-game .desk-head .proj-wrap{width:100%}
+  /* the pot's question-phase perch (top:40px, from the short-
+     stage era) lands on the card now that the stage is tall;
+     it goes back to the stage's bottom-left, and the tools row
+     starts after it, the way a row on a real table starts
+     after the bowl resting beside it */
+  #scr-game #stage:has(#btnCallIt) .pot-vessel,#scr-game #stage:has(#ogCallIt) .pot-vessel{top:auto;bottom:8px}
+  #scr-game #stage:has(#btnCallIt) .tools{padding-left:88px}
+}
+
+/* Designer's pass P16 (2026-11-11): Sterling's expressions.
+   The host-face bust carries three feature sets — the greeting
+   face he has always worn, a delight (brows up, eyes wide, the
+   grin opened) and a commiseration (brows slanted in sympathy,
+   gaze dropped, a gentle closed smile). The mood classes ride
+   #scr-game exactly like his gesture classes; the reveal and
+   the finale set them, and every other phase clears back to
+   the greeting. His blink and his pointing pupils work on
+   whichever face is up — the variant eyes are .st-eye groups
+   like the originals. */
+.host-face .face-delight,.host-face .face-sorry{display:none}
+#scr-game.st-mood-delight .host-face .face-base,#scr-game.st-mood-sorry .host-face .face-base{display:none}
+#scr-game.st-mood-delight .host-face .face-delight{display:inline}
+#scr-game.st-mood-sorry .host-face .face-sorry{display:inline}

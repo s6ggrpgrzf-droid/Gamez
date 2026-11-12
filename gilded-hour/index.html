@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=69">
+<link rel="stylesheet" href="style.css?v=70">
 </head>
 <body>
 <div id="app">
@@ -264,7 +264,6 @@
           <div id="panelHost" class="hidden">
             <div class="setup-label">YOU RUN THE SHOW — FRIENDS JOIN ON THEIR PHONES</div>
             <p class="panel-text">This screen becomes the show. Up to four players join from their own phones with a room code — their answers stay private until Sterling calls the reveal.</p>
-            <button class="btn-gold wide" id="btnCreateRoom">CREATE A ROOM</button>
             <button class="btn-ghost wide hidden" id="btnRejoinRoom" style="margin-top:10px">REJOIN YOUR ROOM</button>
             <div class="panel-status" id="hostStatus">The room opens on this screen; the code appears here.</div>
           </div>
@@ -281,14 +280,17 @@
             </div>
             <div class="setup-label">PICK YOUR PLAYER — TAP ONE</div>
             <div class="jp-ava-grid" id="jpAvaGrid" role="group" aria-label="Pick your player"></div>
-            <button class="btn-gold wide" id="btnJoinRoom" disabled>JOIN THE ROOM</button>
             <button class="btn-ghost wide hidden" id="btnResumePlayer" style="margin-top:10px">REJOIN YOUR SEAT</button>
             <div class="panel-status" id="joinStatus">Four letters, your name, you're in.</div>
           </div>
         </div>
         <div class="podium-row" id="podiumPreview"></div>
       </div>
-      <button id="btnStart" class="start-btn">START THE SHOW</button>
+      <div class="start-bar" id="startBar">
+        <button id="btnStart" class="start-btn">START THE SHOW</button>
+        <button class="btn-gold wide hidden" id="btnCreateRoom">CREATE A ROOM</button>
+        <button class="btn-gold wide hidden" id="btnJoinRoom" disabled>JOIN THE ROOM</button>
+      </div>
       <div class="microline">Pass-and-play · 2–4 players · One phone, one TV</div>
     </div>
 
@@ -365,6 +367,7 @@
       <div id="stage">
         <!-- dynamic stage content rendered by game.js -->
       </div>
+      <div id="deskHead" class="desk-head"></div>
       <div id="seatsBottom" class="seats seats-bottom"></div>
     </div>
 
@@ -383,15 +386,32 @@
           <path d="M40,20 C50,14 66,13 76,18 C64,16 50,17 40,20 Z" fill="#452A5E" opacity=".9"/>
           <path d="M28,42 C31,34 36,29 41,27.5 C35,33.5 32,41 32,48 C29.5,46.5 28,44.5 28,42 Z" fill="#BBA9D2"/>
           <path d="M92,42 C89,34 84,29 79,27.5 C85,33.5 88,41 88,48 C90.5,46.5 92,44.5 92,42 Z" fill="#BBA9D2"/>
+          <g class="face-base">
           <path d="M38,47 Q47,42 56,46 L55,49.5 Q47,45.5 39,50.5 Z" fill="#2A1530"/>
           <path d="M64,46 Q73,42 82,47 L81,50.5 Q73,45.5 65,49.5 Z" fill="#2A1530"/>
           <g class="st-eye"><ellipse cx="47" cy="57" rx="7.6" ry="5.6" fill="#FFF9F0" stroke="#2A1530" stroke-width="1.6"/><circle cx="47" cy="57" r="4.7" fill="#7A4A21"/><circle cx="47" cy="57" r="3.6" fill="#2A1530"/><circle cx="45.9" cy="55.8" r="0.95" fill="#FFF6E8"/></g>
           <g class="st-eye"><ellipse cx="73" cy="57" rx="7.6" ry="5.6" fill="#FFF9F0" stroke="#2A1530" stroke-width="1.6"/><circle cx="73" cy="57" r="4.7" fill="#7A4A21"/><circle cx="73" cy="57" r="3.6" fill="#2A1530"/><circle cx="71.9" cy="55.8" r="0.95" fill="#FFF6E8"/></g>
+          </g>
+          <g class="face-delight">
+          <path d="M38,43 Q47,37.5 56,42 L55,45.5 Q47,41 39,46.5 Z" fill="#2A1530"/>
+          <path d="M64,42 Q73,37.5 82,43 L81,46.5 Q73,41 65,45.5 Z" fill="#2A1530"/>
+          <g class="st-eye"><ellipse cx="47" cy="56" rx="8.4" ry="6.6" fill="#FFF9F0" stroke="#2A1530" stroke-width="1.6"/><circle cx="47" cy="56" r="5.2" fill="#7A4A21"/><circle cx="47" cy="56" r="3.9" fill="#2A1530"/><circle cx="45.7" cy="54.6" r="1.2" fill="#FFF6E8"/></g>
+          <g class="st-eye"><ellipse cx="73" cy="56" rx="8.4" ry="6.6" fill="#FFF9F0" stroke="#2A1530" stroke-width="1.6"/><circle cx="73" cy="56" r="5.2" fill="#7A4A21"/><circle cx="73" cy="56" r="3.9" fill="#2A1530"/><circle cx="71.7" cy="54.6" r="1.2" fill="#FFF6E8"/></g>
+          </g>
+          <g class="face-sorry">
+          <path d="M38,52 Q46,47.5 56,43.5 L56,47 Q46,51 39,55 Z" fill="#2A1530"/>
+          <path d="M64,43.5 Q74,47.5 82,52 L81,55 Q74,51 64,47 Z" fill="#2A1530"/>
+          <g class="st-eye"><ellipse cx="47" cy="58" rx="7.4" ry="5" fill="#FFF9F0" stroke="#2A1530" stroke-width="1.6"/><circle cx="47" cy="58.5" r="4.5" fill="#7A4A21"/><circle cx="47" cy="58.5" r="3.4" fill="#2A1530"/><circle cx="46" cy="57.3" r="0.9" fill="#FFF6E8"/></g>
+          <g class="st-eye"><ellipse cx="73" cy="58" rx="7.4" ry="5" fill="#FFF9F0" stroke="#2A1530" stroke-width="1.6"/><circle cx="73" cy="58.5" r="4.5" fill="#7A4A21"/><circle cx="73" cy="58.5" r="3.4" fill="#2A1530"/><circle cx="72" cy="57.3" r="0.9" fill="#FFF6E8"/></g>
+          </g>
           <path d="M61,59 Q58.5,65 57.8,68 Q59.5,70.5 62.5,70" stroke="#D97F4A" stroke-width="1.8" stroke-linecap="round" fill="none"/>
           <ellipse cx="37" cy="70" rx="6" ry="3.6" fill="#FF9D8A" opacity=".5"/>
           <ellipse cx="81" cy="69" rx="5.6" ry="3.4" fill="#FF9D8A" opacity=".42"/>
-          <path d="M46,74 Q60,88 74,74 Q60,80.5 46,74 Z" fill="#7C2D3E"/>
+          <g class="face-base"><path d="M46,74 Q60,88 74,74 Q60,80.5 46,74 Z" fill="#7C2D3E"/>
           <path d="M50,75.5 Q60,79.5 70,75.5 Q60,77.2 50,75.5 Z" fill="#FFFFFF"/></g>
+          <g class="face-delight"><path d="M44,73 Q60,96 76,73 Q60,85 44,73 Z" fill="#7C2D3E"/>
+          <path d="M49,75.5 Q60,82.5 71,75.5 Q60,78.5 49,75.5 Z" fill="#FFFFFF"/></g>
+          <g class="face-sorry"><path d="M47,77.5 Q60,83.5 73,76 Q60,80 47,77.5 Z" fill="#7C2D3E"/></g></g>
           <g class="st-podium">
             <path d="M26,120 L33,103 L87,103 L94,120 Z" fill="#170B22"/>
             <path d="M39,120 L43,109 L77,109 L81,120 Z" fill="#2E1A40" stroke="#C6A45E" stroke-opacity=".45"/>
@@ -453,7 +473,7 @@
 </div>
 <script src="questions.js?v=6"></script>
 <script src="qr.js?v=1"></script>
-<script src="game.js?v=71"></script>
+<script src="game.js?v=72"></script>
 <script>
 /* Party-Proof Shell: register the offline worker (sw.js, scoped to
    this directory by its location). http(s) only — a file:// copy
