@@ -4765,9 +4765,9 @@ function avatarSVG(id, state, seat) {
          in the row (the row's shape is the show's grammar) but
          carries no data-cut and never arms */
       if (p.house != null) {
-        h += '<button class="tool-btn" disabled>CUT TWO<small>' + esc(p.name) + " plays their own</small></button>";
+        h += '<button class="tool-btn" disabled>CUT TWO<small>' + esc(p.name) + '<span class="ct-rest"> plays their own</span></small></button>';
       } else {
-        h += '<button class="tool-btn" data-cut="' + i + '"' + (p.cut > 0 && !G.cur.cutUsed ? "" : " disabled") + ">CUT TWO<small>" + esc(p.name) + (p.cut >= 2 ? "'s lifeline · two in hand" : "'s one lifeline") + "</small></button>";
+        h += '<button class="tool-btn" data-cut="' + i + '"' + (p.cut > 0 && !G.cur.cutUsed ? "" : " disabled") + ">CUT TWO<small>" + esc(p.name) + '<span class="ct-rest">' + (p.cut >= 2 ? "'s lifeline · two in hand" : "'s one lifeline") + "</span></small></button>";
       }
     });
     h += '<button class="tool-btn" id="btnCallIt">CALL IT<small>everybody — fingers up</small></button>';
@@ -8883,26 +8883,20 @@ function avatarSVG(id, state, seat) {
     var myName = me ? me.name : (JP.name || "Player");
     if (s.phase === "lobby" || s.phase === "bet" || s.phase === "ended" || s.phase === "intermission") $("scr-join").classList.remove("cat-on");
     if (s.phase === "lobby") {
-      var chips = s.players.map(function (p, i) {
-        return p && i !== JP.seat ? '<span class="jp-pchip' + (p.connected ? "" : " away") + '"><span class="name-dot" style="background:' + PCOLORS[i] + '"></span>' + esc(p.name) + "</span>" : "";
-      }).join("");
+      /* The minimal pad (Jimmy's word, 2026-11-11): the phone is a
+         controller, the TV is the show. The lobby hero is identity
+         only — your face, your name, your colour — plus the one
+         state line a returning pad needs (a rematch means a later
+         show in this same room, no rejoin). The rules card and the
+         room's roster live on the big screen's lobby now. */
       main.innerHTML = '<div class="jp-hero" style="--me:' + PCOLORS[JP.seat] + '">' +
         '<div class="jp-hero-ava">' + avatarSVG(jpOwnAvatar(), "neutral", JP.seat || 0) + "</div>" +
         '<div class="jp-herotag">THAT\'S YOU</div>' +
         '<div class="jp-heroname">' + esc(myName) + "</div>" +
         '<div class="jp-colorband"></div>' +
         '<div class="jp-phaseword" id="jpPhaseWord">IN THE LOBBY</div>' +
-        /* Rematch Night: the room's show counter (the snapshot's
-           showSeq, advanced only by the host's new_show) tells this
-           pad the lobby it is sitting in belongs to a later show —
-           the rematch beat, with no rejoin and no code to re-enter */
         (s.showSeq >= 2 ? '<div class="jp-rematch">★ REMATCH — SHOW ' + s.showSeq + '<span>THE TABLE STAYS TOGETHER</span></div>' : "") +
-        /* Pass N2: the night's rules, named on the pad's waiting
-           screen from the room's own snapshot — only the ones in
-           force, and nothing at all under the plain game */
-        (s.rules && rulesActive(s.rules) ? '<div class="jp-rules">HOUSE RULES — ' + esc(rulesCapsText(s.rules)) + "</div>" : "") +
         '<p class="jp-sub">Watch the big screen — when a question lands,<br>this pad becomes your answer buttons.</p>' +
-        (chips ? '<div class="jp-players">' + chips + "</div>" : "") +
         '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
     } else if (s.phase === "bet") {
       var effBet = s.yourBet != null ? s.yourBet : (JP.sentBet && s.bet && JP.sentBet.qid === s.bet.qid ? JP.sentBet.chips : null);
@@ -8914,7 +8908,6 @@ function avatarSVG(id, state, seat) {
         (betCap > 3 ? '<div class="jp-longshot">LONG SHOT · RIDE UP TO ' + betCap + ' CHIPS</div>' : "") +
         '<div class="jp-chipstack" id="jpChipStack"></div>' +
         '<div class="jp-betamt" id="jpBetAmt"></div>' +
-        '<div class="jp-proj" id="jpProj"></div>' +
         '<div class="jp-betrow"><button class="jp-step" id="jpBetMinus" aria-label="One chip less">−</button>' +
         '<button class="jp-step" id="jpBetPlus" aria-label="One chip more">+</button></div></div>' +
         '<button class="btn-gold jp-lockbtn" id="jpBetLock">' + (effBet != null ? "CHANGE MY BET" : "LOCK IN MY BET") + "</button>" +
@@ -8929,17 +8922,9 @@ function avatarSVG(id, state, seat) {
           stack.classList.toggle("many", JP.betSel >= 4);
         }
         if (amt) amt.textContent = JP.betSel + (JP.betSel === 1 ? " CHIP" : " CHIPS") + " · " + money(JP.betSel * 100);
-        /* G3: the personal projection rides the same repaint — my
-           chips against the snapshot's public scores (my bet is
-           exact; the room's bets are secret, so nobody else's
-           figure moves). Before I have a seat score there is
-           nothing honest to project, and the line stays empty. */
-        var projEl = $("jpProj");
-        if (projEl) {
-          projEl.textContent = me ? jpProjLine(me.score,
-            s.players.filter(function (p, i) { return p && i !== JP.seat; }).map(function (p) { return p.score; }),
-            JP.betSel) : "";
-        }
+        /* The minimal pad: no projection line here any more — the
+           standings story is the big screen's to tell (the G3 model
+           jpProjLine stays in the file, unrendered on the pad). */
       };
       paintBet();
       $("jpBetMinus").addEventListener("click", function () { JP.betSel = Math.max(1, JP.betSel - 1); paintBet(); });
@@ -8955,35 +8940,14 @@ function avatarSVG(id, state, seat) {
       if (!d) { JP._blind = true; main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">WATCH THE SCREEN</div><div class="jp-hi">Question on the big screen</div><p class="jp-sub">This pad couldn\'t load the question — watch the screen and sit this one out.</p></div>'; jpPaintClock(); return; }
       var padEnt = entOnce("jp:" + JP.code + ":" + d.q.qid) ? entSlug(d.q.category) : null;
       jpApplyCat(d.q.category);
+      /* The minimal pad: the answer phase is the identity bar
+         (your face, name, phase word, place, money) and the drain
+         bar — then the controls themselves. The question text, the
+         band, the pot, the stake callouts, the streak line and the
+         G4 price ticker all live on the big screen now; the pad's
+         buttons carry the answer texts, which are the input. */
       var padTop = jpIdBar(true) +
-        '<div class="jp-barwrap" id="jpBarWrap"><div class="jp-bar" id="jpBar" style="width:100%"></div></div>' +
-        (d.q.headline ? '<div class="jp-headline">★ HEADLINE QUESTION — DOUBLE MONEY · HALF CLOCK</div>' : "") +
-        (d.q.decider ? '<div class="jp-headline decider">★ THE DECIDER — CLOSEST NUMBER TAKES THE CROWN</div>' : "") +
-        /* Show the Band (pass 3): the pad's question card wears the
-           band too — read off the snapshot's public question view,
-           the room's dealt fact, exactly as the big screen reads it */
-        jpBandLine(d.q.band) +
-        jpPotLine() +
-        /* G2: the pad wears the same callout as the big screen,
-           computed from the same public standings (jpStakeCtx) */
-        stakePadHTML(stakeCallout(jpStakeCtx(d, s)), s.players) +
-        '<div class="jp-qline"><span class="jp-catemb">' + catEmblem(d.bank.cat) + '</span><span>' + esc(d.bank.q) + "</span></div>";
-      /* Hot Streaks: your own run, live on the pad from two straight
-         — at two, one more pays; at three-plus, every bank pays.
-         Read off the snapshot's per-player streak. Guess questions
-         are neutral, so the line rides those pads too (the run is
-         simply waiting); the Decider's pad never shows it. */
-      if (me && (me.streak || 0) >= 2 && !(d.q.kind === "num" && d.q.decider)) {
-        padTop += '<div class="jp-streakline">' + (me.streak === 2
-          ? "TWO STRAIGHT — ONE MORE PAYS +$25"
-          : "STREAK ×" + me.streak + " — EVERY BANK PAYS +$25") + "</div>";
-      }
-      /* G4: the personal price — what this pad's holder banks if
-         they lock in correctly at this moment, ticking with the
-         drain and frozen at their lock-in (jpToYouText holds the
-         rules; jpToYouTick keeps it live on the pad's one tick) */
-      var tyText = jpToYouText(d, s);
-      if (tyText != null) padTop += '<div class="jp-toyou" id="jpToYou">' + tyText + "</div>";
+        '<div class="jp-barwrap" id="jpBarWrap"><div class="jp-bar" id="jpBar" style="width:100%"></div></div>';
       if (d.q.kind === "num" && d.q.decider && (d.q.eligible || []).indexOf(JP.seat) < 0) {
         /* the spectator's pad: a watch screen, not a dead one — the
            pairing, the stakes, and the count as the numbers land.
@@ -8991,7 +8955,6 @@ function avatarSVG(id, state, seat) {
         var vsNames = (d.q.eligible || []).map(function (i) { return s.players[i] ? esc(s.players[i].name) : ""; }).filter(Boolean).join(" vs ");
         main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">THE DECIDER</div>' +
           '<div class="jp-hi">★ THE DECIDER</div>' +
-          jpBandLine(d.q.band) +
           '<div class="jp-decider-vs">' + vsNames + "</div>" +
           '<p class="jp-sub">Dead level at the top — closest number takes the crown.<br>You\'re watching this one: it is settled between them.</p>' +
           '<div class="jp-numstate"><span id="jpCount">' + (d.q.answersIn || 0) + " / " + (d.q.eligible || []).length + " IN</span></div></div>";
@@ -9065,190 +9028,68 @@ function avatarSVG(id, state, seat) {
         }
       }
     } else if (s.phase === "intermission") {
-      /* New programme pass 2: the pad's own break card — its score
-         and place, its gap to the leader, its Cut Two, and the
-         next round's one-line promise, every number derived from
-         the snapshot this pad already holds (the pass's server
-         addition is only the phase and the round that follows).
-         The pad cannot advance the show; it rests here until the
-         host brings the next round, and a refresh lands it right
-         back on this card. */
-      var nx = (s.intermination && s.intermination.nextRound) || (s.question ? s.question.round + 1 : 2);
+      /* The minimal pad: the break card is your own standing and
+         your own blade state, nothing else — the gap story, the
+         room's Second Wind news and the next round's promise are
+         the big screen's break card to carry. A Second Wind grant
+         still names itself here, because it changes what THIS
+         pad's holder carries into the next round. */
       var seated = s.players.filter(Boolean);
       var myScore = me ? me.score : 0;
       var myPlace = 1 + seated.filter(function (p) { return p.score > myScore; }).length;
-      var leadP = jpLeader();
-      var gapLine = "";
-      if (leadP && leadP.seat === JP.seat) {
-        var rest = seated.filter(function (p) { return p.seat !== JP.seat; });
-        var top2 = rest.length ? Math.max.apply(null, rest.map(function (p) { return p.score; })) : null;
-        gapLine = (top2 != null && top2 === myScore) ? "Dead level at the top — the crown is anybody's."
-          : "You lead" + (top2 != null ? " by " + money(myScore - top2) : "") + ".";
-      } else if (leadP) {
-        gapLine = money(leadP.score - myScore) + " behind " + esc(leadP.name) + " — the lead is theirs, for now.";
-      }
       var placeWord = ["", "1ST", "2ND", "3RD", "4TH"][myPlace] || (myPlace + "TH");
-      /* Dynamics pass D2 — Second Wind: the snapshot names the
-         seats this break granted. A granted pad is told
-         personally (its token already reads restored in the
-         players array — the generic line below would call it
-         merely "unspent", which undersells a comeback); every
-         other pad hears the story row, as the table does. */
       var windSeatsP = (s.intermission && Array.isArray(s.intermission.wind)) ? s.intermission.wind : [];
       var windMine = windSeatsP.indexOf(JP.seat) >= 0;
-      var windNamesP = windSeatsP.map(function (si) { return s.players[si] ? s.players[si].name : ""; }).filter(Boolean);
       main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">THE INTERMISSION</div>' +
         '<div class="jp-hi">YOU\'RE ' + placeWord + " · " + money(myScore) + "</div>" +
-        (gapLine ? '<p class="jp-sub">' + gapLine + "</p>" : "") +
         '<p class="jp-sub">' + (windMine
-          ? "SECOND WIND — your Cut Two is back. Last place has its privileges."
-          /* Pass N2: the pocket's contents, counted honestly —
-             the one-blade and spent lines are the plain game's
-             own words, reached at counts 1 and 0 as always */
-          : (snapCutN(me) >= 2 ? "Both your Cut Two tokens are still in your pocket — two blades, unspent."
-            : snapCutN(me) === 1 ? "Your Cut Two is still in your pocket — one blade, unspent."
-            : "Your Cut Two is spent — no more scissors this show.")) + "</p>" +
-        (windNamesP.length && !windMine
-          ? '<p class="jp-sub">Second Wind — ' + esc(joinNames(windNamesP)) + (windNamesP.length === 1 ? " gets" : " get") + " their Cut Two back.</p>"
-          : "") +
-        '<p class="jp-sub">' + (nx === 3
-          ? "Next: <b>the Big Finish</b> — three questions, chips committed in the open."
-          : "Next: <b>Round 2 · Double Money</b> — every value doubles, and the ★ Headline Question closes the round.") + "</p>" +
-        '<p class="jp-sub">Sterling is taking a breath — the show resumes from the big screen.</p></div>';
+          ? "SECOND WIND — YOUR CUT TWO IS BACK"
+          : "CUT TWO — " + (snapCutN(me) >= 2 ? "TWO IN HAND" : snapCutN(me) === 1 ? "IN HAND" : "SPENT")) + "</p>" +
+        '<p class="jp-sub">The show resumes from the big screen.</p></div>';
     } else if (s.phase === "reveal") {
+      /* The minimal pad: the reveal on the phone is ONE line — what
+         your own input earned — over your own score. The answer,
+         the spread, the band, the pot, the photo-finish order and
+         the celebration all play on the big screen, where the
+         whole room can see them. */
       var lr = s.lastReveal;
       var d2 = jpQuestionData();
       if (d2 && d2.bank && d2.bank.cat) jpApplyCat(d2.bank.cat);
       if (!lr) { main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">THE VERDICT</div><div class="jp-hi">The reveal…</div><p class="jp-sub">Eyes on the big screen.</p></div>'; jpPaintClock(); return; }
       var mine = null;
       (lr.results || []).forEach(function (r) { if (r.seat === JP.seat) mine = r; });
-      var lead = jpLeader();
-      var ansLine = "";
-      if (lr.kind === "num") ansLine = "The number was <b>" + Number(lr.trueNum).toLocaleString("en-US") + "</b>" + (mine && mine.num != null ? " — you said " + mine.num : "");
-      else if (d2 && d2.opts && lr.correctIdx != null) ansLine = "The answer was <b>" + esc(d2.opts.answers[lr.correctIdx]) + "</b>";
-      var scoreLine = '<div class="jp-vscore">YOU <b>' + money(me ? me.score : 0) + "</b>" + (lead ? " · LEADER — " + esc(lead.name) + " <b>" + money(lead.score) + "</b>" : "") + "</div>";
+      var vWord, vMiss = false;
       if (lr.decider) {
-        /* the Decider's verdict card: no money moved, so the generic
-           verdict (with its gain line) would lie — the crown is the
-           whole content here */
         var dWinner = lr.deciderWinner != null ? s.players[lr.deciderWinner] : null;
-        var dAns = "The number was <b>" + Number(lr.trueNum).toLocaleString("en-US") + "</b>" + (mine && mine.num != null ? " — you said " + mine.num : "");
-        if (lr.deciderWinner === JP.seat) {
-          main.innerHTML = '<div class="jp-verdict"><div class="jp-phaseword" id="jpPhaseWord">THE DECIDER</div><div class="jp-vdisc">★</div>' +
-            '<div class="jp-vword">YOU TAKE THE CROWN!</div>' +
-            '<p class="jp-vans">' + dAns + " — the closest call of the night, with the whole show riding on it.</p>" + scoreLine + "</div>";
-        } else if (dWinner) {
-          main.innerHTML = '<div class="jp-verdict miss"><div class="jp-phaseword" id="jpPhaseWord">THE DECIDER</div><div class="jp-vdisc">★</div>' +
-            '<div class="jp-vword">' + esc(dWinner.name).toUpperCase() + " TAKES THE DECIDER</div>" +
-            '<p class="jp-vans">' + dAns + ". The crown is settled — eyes on the big screen for the crowning.</p>" + scoreLine + "</div>";
-        } else {
-          main.innerHTML = '<div class="jp-verdict miss"><div class="jp-phaseword" id="jpPhaseWord">THE DECIDER</div><div class="jp-vdisc">=</div>' +
-            '<div class="jp-vword">DEAD LEVEL — IT GOES AGAIN</div>' +
-            '<p class="jp-vans">' + dAns + ". Identical closest calls — another decider question is coming.</p>" + scoreLine + "</div>";
-        }
+        if (lr.deciderWinner === JP.seat) vWord = "★ YOU TAKE THE CROWN";
+        else if (dWinner) { vWord = esc(dWinner.name).toUpperCase() + " TAKES THE DECIDER"; vMiss = true; }
+        else { vWord = "DEAD LEVEL — IT GOES AGAIN"; vMiss = true; }
       } else if (mine && mine.correct) {
-        main.innerHTML = '<div class="jp-verdict"><div class="jp-phaseword" id="jpPhaseWord">THE VERDICT</div><div class="jp-vdisc">✓</div>' +
-          '<div class="jp-vword">' + (lr.kind === "num" ? "CLOSEST!" : "YOU GOT IT!") + "</div>" +
-          '<div class="jp-gain">' + mplus(mine.banked) + "</div>" +
-          /* Design pass 3: the winner's own pad wears the tag too —
-             the banked figure above already includes the $50. */
-          (mine.quickDraw ? '<div class="jp-qdtag">QUICK DRAW +$50 · FIRST IN, AND RIGHT</div>' : "") +
-          /* Hot Streaks: the bonus wears its own tag under the
-             banked figure above, which already includes it */
-          (mine.streakBonus > 0 ? '<div class="jp-qdtag streak">STREAK +$25 · ×' + (mine.streak || 0) + " AND COUNTING</div>" : "") +
-          '<p class="jp-vans">' + ansLine + "</p>" + scoreLine + "</div>";
+        vWord = (lr.kind === "num" ? "CLOSEST · " : "BANKED · ") + mplus(mine.banked);
       } else {
-        main.innerHTML = '<div class="jp-verdict miss"><div class="jp-phaseword" id="jpPhaseWord">THE VERDICT</div><div class="jp-vdisc">✗</div>' +
-          '<div class="jp-vword">' + (mine && (mine.pick != null || mine.num != null) ? "NOT THAT ONE" : "NO ANSWER") + "</div>" +
-          '<p class="jp-vans">' + ansLine + ". Nothing lost — nobody can lose money here.</p>" + scoreLine + "</div>";
+        vMiss = true;
+        vWord = (mine && (mine.pick != null || mine.num != null)) ? "NO BANK" : "NO ANSWER";
       }
-      /* The Ten, pass 2: a num verdict card carries the settled
-         spread — every pin, the truth gate lit, the holder's own
-         pin ringed — spliced in above the score line, whichever of
-         the verdict templates above painted the card. The map
-         only; the sweep is host theatre. */
-      if (lr.kind === "num") {
-        var scEl = main.querySelector(".jp-vscore");
-        if (scEl && scEl.parentNode) {
-          var dHolder = document.createElement("div");
-          dHolder.innerHTML = spreadDialHTML(dialGuesses(s.players, lr.results), lr.trueNum, { settled: true, mine: JP.seat, pad: true });
-          if (dHolder.firstElementChild) scEl.parentNode.insertBefore(dHolder.firstElementChild, scEl);
-        }
-      }
-      /* Show the Band (pass 3): the verdict card keeps the band it
-         was asked under — spliced in above the answer line (the
-         dial's own splice pattern), whichever verdict template
-         painted the card. The band is read off the snapshot's
-         question view, which the room keeps through the reveal. */
-      if (bandWord(s.question && s.question.band)) {
-        var vCard = main.querySelector(".jp-verdict");
-        var vAnchor = vCard && (vCard.querySelector(".jp-vans") || vCard.querySelector(".jp-vscore"));
-        if (vCard && vAnchor) {
-          var bHolder = document.createElement("div");
-          bHolder.innerHTML = jpBandLine(s.question.band);
-          if (bHolder.firstElementChild) vCard.insertBefore(bHolder.firstElementChild, vAnchor);
-        }
-      }
-      /* The Golden Question (pass 4): the verdict card turns
-         gilt — named by the reveal payload (lastReveal.golden),
-         and only now: this pad's question card above carried no
-         trace of it, and a decider never wears it. The banner
-         rides the top of the card in the Headline strip's
-         grammar; a num verdict keeps its settled dial below,
-         unchanged apart from the gilt frame on the card. */
-      if (lr.golden && !lr.decider) {
-        var gCard = main.querySelector(".jp-verdict");
-        if (gCard) {
-          gCard.classList.add("golden");
-          var gHolder = document.createElement("div");
-          gHolder.innerHTML = '<div class="jp-headline golden">★ GOLDEN QUESTION — DOUBLE</div>';
-          if (gHolder.firstElementChild) gCard.insertBefore(gHolder.firstElementChild, gCard.firstChild);
-        }
-      }
-      /* Dynamics pass D1: the pot line rides the verdict card
-         too — spliced in above the score line, whichever verdict
-         template painted the card, and lit warm when THIS
-         question fed the pot */
-      var potLn = jpPotLine();
-      if (potLn) {
-        var pvScore = main.querySelector(".jp-vscore");
-        if (pvScore && pvScore.parentNode) {
-          var pHolder = document.createElement("div");
-          pHolder.innerHTML = potLn;
-          if (pHolder.firstElementChild) {
-            if (lr.potFed > 0) pHolder.firstElementChild.classList.add("fed");
-            pvScore.parentNode.insertBefore(pHolder.firstElementChild, pvScore);
-          }
-        }
-      }
-      /* Gameplay-visuals pass G5: the photo-finish line — this
-         pad's place in the race, spliced above the score line in
-         the pot line's pattern. Silence for everyone who wasn't a
-         correct finisher. */
-      var pfLn = jpPhotoLine(lr);
-      if (pfLn) {
-        var pfScore = main.querySelector(".jp-vscore");
-        if (pfScore && pfScore.parentNode) {
-          var pfHolder = document.createElement("div");
-          pfHolder.innerHTML = '<div class="jp-pfline">' + esc(pfLn) + "</div>";
-          if (pfHolder.firstElementChild) pfScore.parentNode.insertBefore(pfHolder.firstElementChild, pfScore);
-        }
-      }
-      if (!lr.decider && mine && mine.correct) { jpBankPulse(me ? me.score : 0, mine.banked || 0); jpCoinHopOnce(lr, mine); }
+      main.innerHTML = '<div class="jp-verdict' + (vMiss ? " miss" : "") + '"><div class="jp-plaque"><div class="jp-phaseword" id="jpPhaseWord">' + (lr.decider ? "THE DECIDER" : "THE VERDICT") + '</div>' +
+        '<div class="jp-vword">' + vWord + '</div>' +
+        '<div class="jp-vscore">YOU <b>' + money(me ? me.score : 0) + "</b></div></div></div>";
+      /* The minimal pad: no splices ride this card any more — the
+         settled dial, the band, the gilt frame, the pot line, the
+         photo-finish order and the coin celebration were the big
+         screen's reveal told a second time on a smaller glass. */
     } else if (s.phase === "ended") {
-      /* a decider-decided show still reads tied on points — the
-         ended screen names the champion the decider chose, which
-         the last reveal (and the ended broadcast) both carry */
-      var decChamp = (s.lastReveal && s.lastReveal.decider && s.lastReveal.deciderWinner != null)
-        ? s.players[s.lastReveal.deciderWinner] : null;
-      var lead2 = decChamp || jpLeader();
-      /* Pass N3: the pad's share card is built from this same
-         snapshot — the night as this phone honestly holds it */
+      /* The minimal pad: the ended phone is your own result, the
+         share (a phone act by nature — the souvenir is built from
+         this pad's snapshot, jpShareData unchanged) and the door.
+         The champion, the standings rows and the report card are
+         the big screen's finale. */
       shareNight = jpShareData();
-      main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">ENDED</div><div class="q-cat">FINAL RESULT</div>' +
-        '<div class="jp-hi">' + (lead2 ? esc(lead2.name) + " takes the Hour!" : "Show's over!") + "</div>" +
-        jpStandRows() +
-        jpReportHTML(s.report ? s.report[JP.seat] : null) +
+      var myScoreE = me ? me.score : 0;
+      var myPlaceE = 1 + s.players.filter(Boolean).filter(function (p) { return p.score > myScoreE; }).length;
+      var placeWordE = ["", "1ST", "2ND", "3RD", "4TH"][myPlaceE] || (myPlaceE + "TH");
+      main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">ENDED</div>' +
+        '<div class="jp-hi">YOU CAME ' + placeWordE + " · " + money(myScoreE) + "</div>" +
+        '<p class="jp-sub">The result is on the big screen.</p>' +
         '<button class="btn-gold jp-share" id="jpShareNight">SHARE THE NIGHT</button>' +
         '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
     }
