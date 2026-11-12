@@ -378,7 +378,7 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
   position:absolute;bottom:calc(-10px + var(--b,0px));left:var(--l,0%);
   width:9.4%;height:min(112px,28vh);
   opacity:var(--o,1);scale:var(--s,1);
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 76'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%231E1129'/%3E%3Cstop offset='.45' stop-color='%230D0517'/%3E%3Cstop offset='1' stop-color='%2305020A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='30' cy='15' r='12.5' fill='url(%23g)'/%3E%3Cpath d='M3 76C3 50 15 39 30 39C45 39 57 50 57 76Z' fill='url(%23g)'/%3E%3C/svg%3E") bottom center/contain no-repeat;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 76'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%231E1129'/%3E%3Cstop offset='.45' stop-color='%230D0517'/%3E%3Cstop offset='1' stop-color='%2305020A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='30' cy='15' r='12.5' fill='url(%23g)'/%3E%3Cpath d='M3 76C3 50 15 39 30 39C45 39 57 50 57 76Z' fill='url(%23g)'/%3E%3Cellipse cx='30' cy='5' rx='8' ry='3' fill='%23FFD9A0' opacity='.34'/%3E%3Cpath d='M10 50C16 42 23 39.8 30 39.8C37 39.8 44 42 50 50C43 44.5 36.5 42.6 30 42.6C23.5 42.6 17 44.5 10 50Z' fill='%23FFD9A0' opacity='.16'/%3E%3C/svg%3E") bottom center/contain no-repeat;
   transition:translate .5s ease;
 }
 @media (orientation:portrait){ .aud-fig{width:15%;height:min(140px,17.5vh)} }
@@ -2977,6 +2977,144 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .btn-gold.pacing{position:relative;overflow:hidden}
 .btn-gold.pacing::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(67,26,4,.55);transform-origin:left center;animation:paceDrain var(--pace-ms,6000ms) linear forwards}
 @keyframes paceDrain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* ================================================================
+   REPAIRS PASS (2026-11-12, from the expensive-look audit): four
+   rendered collisions, each measured in the live DOM before it
+   was touched (probe-repairs.js), each repaired inside its own
+   scope, nothing else moved.
+   1) Portrait finale: the report card's say line ended EXACTLY
+      where the first row began (say bottom 444 = row top 444 —
+      zero air, so two voices read as one collision). The say
+      takes 4px of air beneath it, repaid from the card's own
+      top padding (6→2) in the same scope: the finale's fit,
+      measured exact at 653/653, does not move.
+   2) Short-landscape reveal: the photo-finish strip borrowed
+      its room from its neighbours — margin-top −6 pulled its
+      rail across the answer row's foot (strip top 179 against
+      the buttons' bottom 185), and the two-line micro labels
+      (8px type on a 7.6px line) ran past the strip's foot into
+      the why-slip (labels ending 203, the slip starting 202).
+      The strip now stands on its own feet: no negative margin,
+      the rail at its top, each label ONE line under the rail —
+      name and delta side by side at 8.5px on an honest line.
+      Cost +11px, repaid inside the same compositions: the
+      answers' top margin 7→3 and the CONTINUE wrapper's 12px
+      inline margin taken to 6 (the dial reveal's own trick),
+      so the column's total is unchanged.
+   3) Portrait question headrow: pill + band + kind measured
+      405px of content in a 360px row — the kind label's right
+      edge landed at x422 in a 390px viewport and clipped
+      mid-word ("CLOSEST NUM…"). The row compresses its dress,
+      never its words: narrower gaps, the pill's shoulders in
+      a step, the band's and kind's tracking eased — ~54px
+      recovered against the 45px overflow.
+   4) Portrait desk tags: the tier squeezed the tag to 6px so
+      the longest line would fit whole — it fit, and read as
+      garble pressed against the score. The line itself is
+      shorter now (tagsFor steps the CUT segment off the tag
+      in round 3, where the bet is the story — the long-shot
+      line already read exactly that way), so the type comes
+      back up: 7px for a live seat; 6px kept for the house and
+      away seats, whose longest lines still need the step.
+   ================================================================ */
+@media (max-width:560px){
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-card{padding-top:2px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-say{margin-bottom:4px}
+  .q-headrow{gap:9px}
+  .q-headrow .cat-pill{padding-left:12px;padding-right:12px}
+  .q-headrow .band-tag{gap:6px;letter-spacing:.14em}
+  .q-headrow .q-kind{font-size:10px;letter-spacing:.09em}
+}
+@media (max-width:560px) and (min-height:501px){
+  .seat .tag{font-size:7px;letter-spacing:.06em}
+  .seat.house .tag{font-size:6px;letter-spacing:.02em}
+  .seat.away .tag{font-size:6px;letter-spacing:.03em}
+}
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .stage-inner:has(.pf-strip) .answers{margin-top:3px}
+  #scr-game[data-phase="reveal"] .stage-inner:has(.pf-strip)>div:last-child{margin-top:6px !important}
+  .pf-strip{height:27px;margin-top:0}
+  .pf-rail{top:5px}
+  .pf-disc{top:5px}
+  .pf-lab{top:14px;font-size:8.5px;line-height:1.1;white-space:nowrap}
+  .pf-lab b{display:inline}
+  .pf-lab i{display:inline;margin-left:4px;font-size:8.5px;letter-spacing:.04em}
+}
+
+/* ================================================================
+   LIGHT & STAGE PASS (2026-11-12, from the expensive-look
+   audit): the room's light learns to land, the desks gain form,
+   and the stage's empty places are furnished. Paint only —
+   backgrounds, shadows, opacities — not one layout pixel
+   moves, so every measured fit in the game stands.
+   1) The footlights at rest burned at half strength outside
+      the reveal, so the stage's front edge read unlit and the
+      audience row in front of it read as dark holes. Rest is
+      now a lit room — the reveal and finale still warm to
+      full, the hurry still breathes — and the audience figures
+      carry the light on their crowns and shoulders, baked
+      into their silhouette in the .aud-fig rule above.
+   2) The desks: the trapezoid was one flat gradient. It gains
+      its geometry — the slanted flanks in shade, the front
+      face darkening toward the floor, the top sheen it already
+      had — and a cast shadow where it meets the floor, an
+      ellipse under every seat and under the setup and race
+      podiums (the finale's podiums stand too close to the
+      report card to borrow its air). Colour identity is
+      untouched: the shades are black at low alpha over each
+      seat's own --c, so a green desk stays a green desk, lit.
+   3) The bet phase: the stage's middle stood empty while the
+      room waited on the wheel, so the category wash gains a
+      warm pool centre-stage in that phase — the light the
+      wheel is about to spin under. The lobby's empty chairs
+      are built in game.js (ogRenderSeats) in the setup
+      screen's own grammar for an unfilled seat, styled below.
+   ================================================================ */
+.set-lights::before{opacity:.62}
+.set-lights::after{opacity:.6}
+.desk{background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 42%),linear-gradient(90deg,rgba(0,0,0,.20),rgba(0,0,0,0) 16%,rgba(0,0,0,0) 84%,rgba(0,0,0,.20)),linear-gradient(0deg,rgba(0,0,0,.30),rgba(0,0,0,0) 26%),linear-gradient(180deg,var(--c),var(--cd))}
+.seat{isolation:isolate}
+.seat::before{content:"";position:absolute;left:3%;right:3%;bottom:-7px;height:15px;background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.5),rgba(0,0,0,0) 68%);z-index:-1;pointer-events:none}
+#podiumPreview .podium{isolation:isolate}
+#podiumPreview .podium::before{content:"";position:absolute;left:3%;right:3%;bottom:-7px;height:15px;background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.5),rgba(0,0,0,0) 68%);z-index:-1;pointer-events:none}
+.race-podiums .podium{isolation:isolate}
+.race-podiums .podium::before{content:"";position:absolute;left:3%;right:3%;bottom:-7px;height:15px;background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.5),rgba(0,0,0,0) 68%);z-index:-1;pointer-events:none}
+#scr-game[data-phase="bet"] .set-mid{background:radial-gradient(46% 30% at 50% 64%,rgba(255,196,100,.15),rgba(255,196,100,0) 70%),radial-gradient(52% 46% at 50% 40%,rgba(var(--cat-rgb),.26),rgba(var(--cat-rgb),0) 70%),radial-gradient(60% 20% at 50% 97%,rgba(var(--cat-rgb),.20),rgba(var(--cat-rgb),0) 70%)}
+.seat.ghost-seat{cursor:default}
+.seat.ghost-seat .desk{--c:#4A3566;--cd:#291740}
+.seat.ghost-seat .seat-name{color:rgba(255,246,232,.55)}
+.seat.ghost-seat .tag{color:rgba(255,217,160,.6)}
+.ghost-q{display:flex;align-items:center;justify-content:center;width:clamp(58px,9.5vmin,84px);aspect-ratio:120/124;margin:0 auto -10px;border:2px dashed rgba(255,201,60,.45);border-radius:50%;font-size:clamp(24px,4vmin,34px);font-weight:700;color:rgba(255,217,160,.7);box-sizing:border-box}
+/* the ring follows the avatar's own size in every tier, so an
+   open seat stands exactly as tall as a taken one */
+@media (max-height:860px) and (min-height:501px){ .ghost-q{width:60px} }
+@media (max-height:500px){ .ghost-q{width:34px;font-size:17px;border-width:1.6px} }
+@media (max-width:560px){ .ghost-q{width:30px;font-size:15px;border-width:1.6px} }
+
+/* ================================================================
+   FINISH PASS (2026-11-12, the expensive-look programme's last
+   pass): two finishes.
+   1) The pace drain, rebuilt in the game's own time grammar.
+      Pass #3 armed the flowing CONTINUE with a drain bar in
+      dark brown at 55% — a colour from no other clock in the
+      game, and too faint to read across a room. The game's
+      bars run in a channel, lit from above (the pad's .jp-bar
+      is the type specimen): the CONTINUE now carries that
+      channel along its foot — a dark inset line — and inside
+      it a gold bar that drains on the same --pace-ms promise
+      and warms toward red-gold as it empties, the way the
+      game's clocks run hot when they run low. Mechanics
+      untouched: same class, same variable, same left-hugging
+      shrink; only the paint is in grammar.
+   2) The category slabs' saturation discipline lives in
+      game.js (CATSTYLE's shi/smid stops, extended there to
+      every category) — no CSS belongs to it; this note is its
+      witness so the file tells the whole pass.
+   ================================================================ */
+.btn-gold.pacing::before{content:"";position:absolute;left:10px;right:10px;bottom:3px;height:5px;border-radius:999px;background:rgba(67,26,4,.38);box-shadow:inset 0 1.5px 3px rgba(10,2,16,.55),inset 0 -1px 0 rgba(255,246,232,.14)}
+.btn-gold.pacing::after{left:10px;right:10px;bottom:4px;height:3px;width:auto;border-radius:999px;background:linear-gradient(90deg,#B57F1C,#FFC93C 55%,#FFE29A);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 8px rgba(255,190,80,.45)}
+@keyframes paceDrain{from{transform:scaleX(1);filter:hue-rotate(0deg)}to{transform:scaleX(0);filter:hue-rotate(-16deg)}}
 
 /* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled

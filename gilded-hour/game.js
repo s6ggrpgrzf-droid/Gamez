@@ -46,19 +46,27 @@
      over the slabs, chip, value figures and spotlight pool */
   var CATSTYLE = {
     "Movies":           { hi: "#F0568C", mid: "#E8437C", lo: "#C2255C", sh: "#8E1E47", rgb: "232,67,124", shi: "#C04570", smid: "#C83A6B" },
-    "TV":               { hi: "#1B70C6", mid: "#1563B2", lo: "#10518F", sh: "#0A3D6E", rgb: "21,99,178" },
+    "TV":               { hi: "#1B70C6", mid: "#1563B2", lo: "#10518F", sh: "#0A3D6E", rgb: "21,99,178", shi: "#186ABC", smid: "#135BA2" },
     "Music":            { hi: "#B983F0", mid: "#9B5DE5", lo: "#7C3AC9", sh: "#55239E", rgb: "155,93,229", shi: "#855EAD", smid: "#8C54CE" },
-    "Ads & Jingles":    { hi: "#FFA25E", mid: "#FF8C42", lo: "#E56F1D", sh: "#A34D0E", rgb: "255,140,66" },
-    "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#34B35E", sh: "#177A38", rgb: "62,207,110" },
+    "Ads & Jingles":    { hi: "#FFA25E", mid: "#FF8C42", lo: "#E56F1D", sh: "#A34D0E", rgb: "255,140,66", shi: "#FF9750", smid: "#F37F31" },
+    "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#34B35E", sh: "#177A38", rgb: "62,207,110", shi: "#48D678", smid: "#30B15B" },
     "Saturday Morning": { hi: "#FFD76A", mid: "#FFC93C", lo: "#F0A90B", sh: "#A87408", rgb: "255,201,60" },
-    "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#27ACAA", sh: "#076B6E", rgb: "23,190,187" }
+    "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#27ACAA", sh: "#076B6E", rgb: "23,190,187", shi: "#27C8C5", smid: "#13ACAA" }
   };
   /* shi/smid are the answer-slab gradient stops (perfectionist fix #3):
      the identity hi/mid stay untouched for chips, pills and emblems,
      but cream slab text on Movies/Music measured 2.59–3.55:1 — under
      even the large-text floor. The slab-only stops deepen those two
      gradients so cream clears 4.5:1 at every stop; Toys/Dial-Up lo
-     stops are lightened a step for the same reason (dark text). */
+     stops are lightened a step for the same reason (dark text).
+     Finish pass (2026-11-12): the discipline is now the rule for
+     every category, not the exception for two — TV, Ads, Toys and
+     Dial-Up gain slab stops blended down toward their own lo/sh,
+     so the big surfaces read as dyed glass in the room's light
+     while the identity colour keeps the accents (pill, wheel,
+     wash, letters). Toys, the candy offender, takes the firmest
+     step. Saturday Morning carries no slab stops on purpose: its
+     gold IS the house brass, already in discipline. */
   function catStyle(cat) { return CATSTYLE[cat] || CATSTYLE["Movies"]; }
   var CATTX = { "Ads & Jingles": "#431A04", "Toys & Games": "#0B3D1C", "Saturday Morning": "#4A3200", "The Dial-Up Years": "#063A3B" };
   function applyCat(cat) {
@@ -738,8 +746,8 @@
     '<ellipse cx="206" cy="140" rx="10" ry="6" fill="#FF9D8A" opacity=".42"/>' +
     '<path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z" fill="#2A1530"/>' +
     '<path d="M148,31 C132,35 119,46 111,60 C121,44 134,35 148,31 Z" fill="#C9BCD6" opacity=".65"/>' +
-    '<path d="M101,100 C104,84 110,72 120,65 C112,76 108,90 108,108 C104,105 102,102 101,100 Z" fill="#BBA9D2"/>' +
-    '<path d="M219,100 C216,84 210,72 200,65 C208,76 212,90 212,108 C216,105 218,102 219,100 Z" fill="#BBA9D2"/>' +
+    '<path d="M101,100 C104,84 110,72 120,65 C112,76 108,90 108,108 C104,105 102,102 101,100 Z" fill="#BBA9D2" opacity=".55"/>' +
+    '<path d="M219,100 C216,84 210,72 200,65 C208,76 212,90 212,108 C216,105 218,102 219,100 Z" fill="#BBA9D2" opacity=".55"/>' +
     '<path d="M124,41 C142,30 166,28 186,34 C164,32 142,34 124,41 Z" fill="#452A5E" opacity=".85"/>';
   /* The eye: almond white, iris, the r=6.5 pupil the rig animates,
      one spec dot — wrapped in .st-eye so st-blink can flatten the
@@ -1008,8 +1016,13 @@ function avFeatures(A, id, state) {
         s += '<path d="M43,58 Q60,75 77,58 Q60,64.5 43,58 Z" fill="' + A.mouth + '"/>' +
           '<rect x="52" y="60.6" width="6" height="3.6" rx="1.3" fill="#FFF"/><rect x="62" y="60.6" width="6" height="3.6" rx="1.3" fill="#FFF"/>'; break;
       case "warm":
-        s += '<path d="M42,58.5 Q60,76 78,58.5 Q60,65.5 42,58.5 Z" fill="' + A.mouth + '"/>' +
-          '<path d="M48.5,60.2 Q60,63 71.5,60.2 Q60,65.4 48.5,60.2 Z" fill="#FFF6E8"/>'; break;
+        /* Cast pass (2026-11-12): the Grandmother's smile, a
+           touch larger — the known call from cast pass 1: at
+           desk sizes her gold spectacles carry the face and
+           the smile was lost behind them. Wider by two a side,
+           deeper by three, the same warm shape. */
+        s += '<path d="M40,58 Q60,79 80,58 Q60,66.5 40,58 Z" fill="' + A.mouth + '"/>' +
+          '<path d="M47.5,60 Q60,63.5 72.5,60 Q60,66 47.5,60 Z" fill="#FFF6E8"/>'; break;
       case "half":
         s += '<path d="M45,63 Q59,70.5 73,58.5" stroke="' + A.mouth + '" stroke-width="3" stroke-linecap="round" fill="none"/>' +
           '<path d="M73,58.5 Q77.5,56.5 78,52.5" stroke="' + A.mouth + '" stroke-width="3" stroke-linecap="round" fill="none"/>'; break;
@@ -1051,6 +1064,17 @@ function avatarSVG(id, state, seat) {
     '<circle cx="88.5" cy="49" r="5.5" fill="' + A.skin + '"/><circle cx="87.7" cy="48" r="2.4" fill="' + A.neck + '"/>';
   s += '<circle cx="60" cy="46" r="28" fill="' + A.skin + '"/>' +
     '<path d="M83,30 A28 28 0 0 1 56,74 C68,67 79,54 80,45 C80.5,39 81,34 83,30 Z" fill="' + A.neck + '"/>' +
+    /* Cast pass (2026-11-12): the modelling layer, drawn at the
+       sizes the faces are actually seen. The cel shade takes a
+       second, deeper pass so the light direction survives
+       miniaturisation; a rim of the same light stands along the
+       face's upper-left edge; and the chin casts its shadow —
+       one soft shape in the darkened neck tone, under everything
+       the features will draw. Nothing here touches identity art:
+       hair, accessories and features stay each face's own. */
+    '<path d="M83,30 A28 28 0 0 1 56,74 C68,67 79,54 80,45 C80.5,39 81,34 83,30 Z" fill="#000" opacity=".07"/>' +
+    '<ellipse cx="60" cy="73" rx="12.5" ry="3.6" fill="' + dk(A.neck, .78) + '" opacity=".38"/>' +
+    '<path d="M39.5,32 A25.5 25.5 0 0 1 65,21.8" stroke="#FFF6E8" stroke-width="3.2" stroke-linecap="round" fill="none" opacity=".16"/>' +
     '<ellipse cx="43" cy="55" rx="5.5" ry="3.2" fill="#FF9D8A" opacity="' + (A.blush || .45) + '"/>' +
     '<ellipse cx="77" cy="55" rx="5.5" ry="3.2" fill="#FF9D8A" opacity="' + ((A.blush || .45) * .85) + '"/>' +
     A.front + avFeatures(A, id, state) + (A.acc || "") + (A.collar || "");
@@ -2384,17 +2408,23 @@ function avatarSVG(id, state, seat) {
   function stepJpCoins(dt) { stepCoinPool(jpCoins, 6.5, dt); }
 
   /* ---- the laurel: one marker that travels to whoever leads ---- */
+  /* Cast pass (2026-11-12): the marker redrawn as what the
+     show's own lines have always called it — a crown. The laurel
+     it replaces measured as a gold scribble at the sizes it is
+     worn (34px on the desk, 42px travelling): two fine branches,
+     six small leaves and a star, all detail under the size where
+     detail survives. The crown is one bold silhouette — three
+     points, ball tips, a band, one jewel — in the brass family
+     with the dark keyline the game's drawn style uses, and it
+     reads at 30px. Same viewBox, same two homes (the travelling
+     #laurel and the seat's .laurel-badge). */
   var LAUREL_SVG = '<svg viewBox="0 0 40 40" aria-hidden="true">' +
-    '<g fill="none" stroke="#FFC93C" stroke-width="2.1" stroke-linecap="round">' +
-    '<path d="M13,33 C7,27 5,17 9,7"/><path d="M27,33 C33,27 35,17 31,7"/></g>' +
-    '<g fill="#FFC93C">' +
-    '<ellipse cx="8.5" cy="24" rx="2.1" ry="3.6" transform="rotate(-24 8.5 24)"/>' +
-    '<ellipse cx="10.5" cy="15.5" rx="2.1" ry="3.6" transform="rotate(-38 10.5 15.5)"/>' +
-    '<ellipse cx="15" cy="8.5" rx="2.1" ry="3.6" transform="rotate(-58 15 8.5)"/>' +
-    '<ellipse cx="31.5" cy="24" rx="2.1" ry="3.6" transform="rotate(24 31.5 24)"/>' +
-    '<ellipse cx="29.5" cy="15.5" rx="2.1" ry="3.6" transform="rotate(38 29.5 15.5)"/>' +
-    '<ellipse cx="25" cy="8.5" rx="2.1" ry="3.6" transform="rotate(58 25 8.5)"/></g>' +
-    '<path d="M20,3.4 L21.4,7 L25,7.2 L22.2,9.4 L23.1,12.8 L20,10.9 L16.9,12.8 L17.8,9.4 L15,7.2 L18.6,7 Z" fill="#FFE29A"/></svg>';
+    '<path d="M7,29 L5,13 L13.5,19 L20,8.5 L26.5,19 L35,13 L33,29 Z" fill="#FFC93C" stroke="#8A5E0D" stroke-width="1.8" stroke-linejoin="round"/>' +
+    '<circle cx="5" cy="11" r="2.7" fill="#FFE29A" stroke="#8A5E0D" stroke-width="1.4"/>' +
+    '<circle cx="20" cy="6.8" r="3" fill="#FFE29A" stroke="#8A5E0D" stroke-width="1.4"/>' +
+    '<circle cx="35" cy="11" r="2.7" fill="#FFE29A" stroke="#8A5E0D" stroke-width="1.4"/>' +
+    '<rect x="6" y="29" width="28" height="5.2" rx="2.4" fill="#E9B94F" stroke="#8A5E0D" stroke-width="1.6"/>' +
+    '<circle cx="20" cy="23" r="3" fill="#E8437C" stroke="#8A5E0D" stroke-width="1.3"/></svg>';
   var laurelState = { seat: -1 };
   function laurelBadge() { return '<span class="laurel-badge">' + LAUREL_SVG + "</span>"; }
   function updateLaurel(source) {
@@ -2826,8 +2856,15 @@ function avatarSVG(id, state, seat) {
     }
     if (houseSeg) t.push(houseSeg);
     /* Pass N2: a pocket holding two says so on the tag; one is
-       the plain CUT TWO the tag has always worn */
-    t.push(p.cut >= 2 ? "CUT TWO ×2" : p.cut > 0 ? "CUT TWO" : "CUT SPENT");
+       the plain CUT TWO the tag has always worn.
+       Repairs pass (2026-11-12): in round 3 the bet is the
+       tag's story and the cut steps off it — the long-shot
+       line above already reads exactly that way. The cut's
+       state still rides the tools row and the pads; what the
+       desk gives back is a round-3 tag short enough to print
+       at a size a room can read (see the repairs block in
+       style.css, desk tags). */
+    if (G.round !== 3) t.push(p.cut >= 2 ? "CUT TWO ×2" : p.cut > 0 ? "CUT TWO" : "CUT SPENT");
     if (G.round === 3) t.push("BET " + p.bet + (p.bet === 1 ? " CHIP" : " CHIPS"));
     if (seg) t.push(seg);
     return t.join(" · ");
@@ -7602,6 +7639,24 @@ function avatarSVG(id, state, seat) {
         Math.max.apply(null, OG.players.map(function (x, j) { return x ? (ogFortuneDisp[j] != null ? ogFortuneDisp[j] : x.score) : 0; })),
         p.score === best && best > 0);
     });
+    /* Light & stage pass (2026-11-12): the lobby's empty chairs.
+       In the lobby the row shows the table as it will be — every
+       unfilled slot up to the room's four keeps a chair: the setup
+       screen's own grammar for an unfilled seat (a ringed ? over
+       an unclaimed desk), here named an open seat, waiting. Inert
+       by construction: no data-seat, no name in any list, gone
+       the moment the show leaves the lobby. */
+    if (OG.phase === "lobby") {
+      var seated = 0;
+      OG.players.forEach(function (p) { if (p) seated++; });
+      for (var gi = seated; gi < 4; gi++) {
+        bot.appendChild(el('<div class="seat ghost-seat" aria-hidden="true">' +
+          '<div class="seat-ava"><div class="ghost-q">?</div></div>' +
+          '<div class="desk"><span class="seat-name">AN OPEN SEAT</span>' +
+          '<span class="seat-score">&nbsp;</span>' +
+          '<span class="tag">WAITING FOR A PLAYER</span></div></div>'));
+      }
+    }
     updateLaurel("og");
   }
   function ogTick() {
