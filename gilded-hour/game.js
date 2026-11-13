@@ -5014,6 +5014,10 @@ function avatarSVG(id, state, seat) {
       stakeRibbonHTML(c.stake, G.players) +
       '<div class="q-cardwrap">' + (c.headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "") +
       '<div class="q-text' + (c.headline ? " headline-card" : "") + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(c.betRound ? 1 : meltMult(c.elapsed, c.clockTotal)) + "</div></div>" +
+      /* Surfacing pass (2026-11-13): the Gilded Question names its
+         own provenance under the card — one question, chosen for
+         the date, identical at every table playing tonight. */
+      (c.special ? '<div class="special-note">THE SAME QUESTION AT EVERY TABLE TONIGHT</div>' : "") +
       '<div class="q-meta">' +
       (c.betRound
         ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
@@ -7604,6 +7608,12 @@ function avatarSVG(id, state, seat) {
          at all under the plain game */
       (rulesActive(OG.rules) ? '<p class="round-text og-rules-line">HOUSE RULES — ' + esc(rulesCapsText(OG.rules)) + "</p>" : "") +
       (ogLobbyNote ? '<p class="round-text og-lobby-note" id="ogLobbyNote">' + esc(ogLobbyNote) + "</p>" : "") +
+      /* Surfacing pass (2026-11-13): the room's one piece of
+         machinery worth naming, said plainly where the room
+         gathers — the room is server-held, so a dropped phone
+         rejoins by code and reclaims its seat. Always printed;
+         it is a fact about the room, not a state of it. */
+      '<p class="og-room-note">This room is kept on the show\u2019s server, not on this screen \u2014 a phone that drops out rejoins with the code and takes its seat back.</p>' +
       '<button class="btn-gold" id="ogStart"' + (joined >= 2 ? "" : " disabled") + ">START THE SHOW</button>" +
       '<div class="og-statusline" id="ogLobbyStatus"></div>');
     var b = $("ogStart"); if (b) b.addEventListener("click", ogStartShow);
@@ -8144,7 +8154,8 @@ function avatarSVG(id, state, seat) {
     var top = '<div class="q-headrow"><span class="cat-pill' + (e.special ? " gilded" : "") + (headline ? " headline" : "") + '">' + catEmblem(e.cat) + (e.special ? "TONIGHT'S GILDED QUESTION" : esc(e.cat.toUpperCase()) + (headline ? " · HEADLINE" : "")) + '</span>' + bandTagHTML(ogBandOf(q, e)) + (head ? '<span class="q-kind">' + head + "</span>" : "") + "</div>" +
       stakeRibbonHTML(stakeCallout(ogStakeCtx(e, q)), OG.players) +
       '<div class="q-cardwrap">' + (isDec ? '<div class="headline-banner decider-banner">★ THE DECIDER ★</div>' : (headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "")) +
-      '<div class="q-text' + (headline ? " headline-card" : "") + wearCls(e.round, isDec) + '">' + esc(e.bank.q) + cardDressHTML(isDec ? 1 : ogMeltMult(q)) + "</div></div>";
+      '<div class="q-text' + (headline ? " headline-card" : "") + wearCls(e.round, isDec) + '">' + esc(e.bank.q) + cardDressHTML(isDec ? 1 : ogMeltMult(q)) + "</div></div>" +
+      (e.special ? '<div class="special-note">THE SAME QUESTION AT EVERY TABLE TONIGHT</div>' : "");
     var meta = '<div class="q-meta">' + (isDec
       ? '<div class="q-for">No money on this one — the crown only.</div>'
       : q.betted
@@ -8611,6 +8622,11 @@ function avatarSVG(id, state, seat) {
       tieNote +
       '<div class="podium-row finale-row">' + pods + "</div>" +
       reportHTMLO +
+      /* Surfacing pass (2026-11-13): the online finale says who
+         settled it — the room's referee, from the server's own
+         ledger. The table finale needs no such line: its host
+         tapped every verdict in by hand, in the open. */
+      '<div class="og-ref-note">Settled by the room\u2019s referee \u2014 every figure on this card comes from the server\u2019s own ledger.</div>' +
       '<div class="finale-btns"><button class="btn-gold" id="ogAgain">REMATCH</button>' +
       '<button class="btn-ghost" id="ogShareNight">SHARE THE NIGHT</button>' +
       '<button class="btn-ghost" id="ogLobby">BACK TO LOBBY</button></div></div>');

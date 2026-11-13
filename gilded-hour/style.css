@@ -3410,6 +3410,15 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .award-who b{font-weight:800;color:var(--cream)}
 .award-v{font-weight:700;color:#F0DCA3}
 
+/* ===== SURFACING PASS (2026-11-13) — the machinery, named =====
+   Three fine lines, each stating a truth the game already keeps:
+   the lobby's room is server-held (rejoin by code, seat reclaimed);
+   the Gilded Question is the same at every table tonight; the
+   online finale's figures were settled by the room's referee. */
+.og-room-note{font-size:11px;line-height:1.45;color:rgba(255,246,232,.55);text-align:center;max-width:46ch;margin:8px auto 0}
+.special-note{text-align:center;font-size:10px;font-weight:700;letter-spacing:.24em;color:rgba(240,220,163,.75);margin-top:6px}
+.og-ref-note{text-align:center;font-size:10.5px;line-height:1.4;color:rgba(255,246,232,.55);max-width:52ch;margin:8px auto 0}
+
 /* ===== PERFECTIONIST PASS (2026-11-13) — the nine findings =====
    1. Portrait title: the sticky START bar (top at 763 of 844)
    lay across the SHOW PACE cards at rest — paceBlock ended at
