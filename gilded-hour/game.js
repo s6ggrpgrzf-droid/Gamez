@@ -733,6 +733,7 @@
     '<path d="M199,255 L223,249 L219,265 L203,265 Z" fill="#FFF6E8"/>' +
     '<path d="M211,252 L223,249 L221,257 Z" fill="#E9CD8A"/>' +
     '<svg x="111" y="222" width="19" height="19" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem"></use></svg>' +
+    '<path d="M194,196 L215,199 L210,216 L182,310 L160,310 L160,242 Z" fill="#000" opacity=".12"/>' +
     '<rect x="146" y="158" width="28" height="42" rx="9" fill="#E89A63"/>' +
     '<rect x="146" y="184" width="28" height="13" fill="#D97F4A"/>';
   var STERLING_HEADART =
@@ -744,7 +745,10 @@
     '<path d="M163,113 L157,136 Q156,143 163,144 Q168,144 170,141" stroke="#D97F4A" stroke-width="4" stroke-linecap="round" fill="none"/>' +
     '<ellipse cx="110" cy="142" rx="11" ry="6.5" fill="#FF9D8A" opacity=".5"/>' +
     '<ellipse cx="206" cy="140" rx="10" ry="6" fill="#FF9D8A" opacity=".42"/>' +
+    '<path d="M210,80 A64 70 0 0 1 154,188 C180,170 201,138 204,112 C205,98 208,88 210,80 Z" fill="#000" opacity=".05"/>' +
+    '<ellipse cx="126" cy="94" rx="30" ry="36" transform="rotate(-10 126 94)" fill="#FFF" opacity=".07"/>' +
     '<path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z" fill="#0E1C33"/>' +
+    '<ellipse cx="207" cy="64" rx="21" ry="27" transform="rotate(8 207 64)" fill="#000" opacity=".15"/>' +
     '<path d="M148,31 C132,35 119,46 111,60 C121,44 134,35 148,31 Z" fill="#C2CEDF" opacity=".65"/>' +
     '<path d="M101,100 C104,84 110,72 120,65 C112,76 108,90 108,108 C104,105 102,102 101,100 Z" fill="#A9B8D2" opacity=".55"/>' +
     '<path d="M219,100 C216,84 210,72 200,65 C208,76 212,90 212,108 C216,105 218,102 219,100 Z" fill="#A9B8D2" opacity=".55"/>' +
@@ -785,13 +789,16 @@
      and no gesture ever fires there. */
   var STERLING_PODIUM =
     '<g class="st-podium">' +
-    '<path d="M74,380 L88,306 L232,306 L246,380 Z" fill="#170B22"/>' +
+    '<path d="M74,380 L88,306 L232,306 L246,380 Z" fill="#0A1424"/>' +
     '<path d="M84,380 L96,314 L224,314 L236,380 Z" fill="#0D1B33"/>' +
-    '<path d="M100,372 L108,322 L212,322 L220,372 Z" fill="#2E1A40" stroke="#C9A962" stroke-opacity=".45" stroke-width="2"/>' +
+    '<path d="M160,306 L232,306 L246,380 L160,380 Z" fill="#000" opacity=".16"/>' +
+    '<path d="M74,380 L88,306 L160,306 L160,380 Z" fill="#FFF" opacity=".05"/>' +
+    '<path d="M100,372 L108,322 L212,322 L220,372 Z" fill="#1D3357" stroke="#C9A962" stroke-opacity=".45" stroke-width="2"/>' +
     '<svg x="132" y="318" width="56" height="56" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem"></use></svg>' +
-    '<rect x="56" y="285" width="208" height="26" rx="12" fill="#170B22"/>' +
+    '<rect x="56" y="285" width="208" height="26" rx="12" fill="#0A1424"/>' +
     '<rect x="56" y="285" width="208" height="8" rx="4" fill="#C9A962" opacity=".8"/>' +
     '<rect x="56" y="306" width="208" height="5" fill="#C9A962"/>' +
+    '<rect x="56" y="311" width="208" height="4" fill="#000" opacity=".35"/>' +
     "</g>";
   var STERLING_ARMS =
     '<g class="st-plane st-plane-arm-l"><g class="st-arm st-arm-l"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke-width="29"/><path d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke="#22385E" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="104" cy="293" r="10" fill="#FFF6E8"/><circle cx="122" cy="290" r="13" fill="#F6B183"/></g></g>' +
@@ -1059,6 +1066,8 @@ function avatarSVG(id, state, seat) {
   s += A.back +
     '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="' + A.shirt + '"/>' +
     '<path d="M106,124 Q102,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
+    '<path d="M106,124 Q102,90 60,88 L60,124 Z" fill="#000" opacity=".05"/>' +
+    '<ellipse cx="60" cy="93" rx="13" ry="4" fill="#000" opacity=".10"/>' +
     '<rect x="51" y="66" width="18" height="18" rx="6" fill="' + A.neck + '"/>';
   if (A.ears) s += '<circle cx="31.5" cy="49" r="5.5" fill="' + A.skin + '"/><circle cx="32.3" cy="48" r="2.4" fill="' + A.neck + '"/>' +
     '<circle cx="88.5" cy="49" r="5.5" fill="' + A.skin + '"/><circle cx="87.7" cy="48" r="2.4" fill="' + A.neck + '"/>';
@@ -1073,8 +1082,10 @@ function avatarSVG(id, state, seat) {
        the features will draw. Nothing here touches identity art:
        hair, accessories and features stay each face's own. */
     '<path d="M83,30 A28 28 0 0 1 56,74 C68,67 79,54 80,45 C80.5,39 81,34 83,30 Z" fill="#000" opacity=".07"/>' +
+    '<path d="M83,30 A28 28 0 0 1 56,74 C68,67 79,54 80,45 C80.5,39 81,34 83,30 Z" fill="#000" opacity=".05"/>' +
     '<ellipse cx="60" cy="73" rx="12.5" ry="3.6" fill="' + dk(A.neck, .78) + '" opacity=".38"/>' +
     '<path d="M39.5,32 A25.5 25.5 0 0 1 65,21.8" stroke="#FFF6E8" stroke-width="3.2" stroke-linecap="round" fill="none" opacity=".16"/>' +
+    '<ellipse cx="44" cy="36" rx="13" ry="9" fill="#FFF" opacity=".10"/>' +
     '<ellipse cx="43" cy="55" rx="5.5" ry="3.2" fill="#FF9D8A" opacity="' + (A.blush || .45) + '"/>' +
     '<ellipse cx="77" cy="55" rx="5.5" ry="3.2" fill="#FF9D8A" opacity="' + ((A.blush || .45) * .85) + '"/>' +
     A.front + avFeatures(A, id, state) + (A.acc || "") + (A.collar || "");
@@ -1768,7 +1779,8 @@ function avatarSVG(id, state, seat) {
       for (var i = 0; i < MOTES; i++) {
         motes.parts.push({
           x: Math.random(), y: Math.random(), r: 0.8 + Math.random() * 1.5,
-          vy: 3 + Math.random() * 7, ph: Math.random() * 6.28, sw: 4 + Math.random() * 9
+          vy: 3 + Math.random() * 7, ph: Math.random() * 6.28, sw: 4 + Math.random() * 9,
+          z: i % 3 === 0 ? 0.55 : i % 3 === 1 ? 1 : 1.6
         });
       }
     }
@@ -1783,12 +1795,23 @@ function avatarSVG(id, state, seat) {
     cx.fillStyle = "#FFD478";
     for (var i = 0; i < motes.parts.length; i++) {
       var p = motes.parts[i];
-      p.ph += dt * 0.7; p.y -= p.vy * dt / H;
+      /* 3D Pass 6 — the motes drift in three planes: far motes
+         (z .55) small, dim and slow; near motes (z 1.6) larger,
+         brighter, faster, with a soft halo so they read as the
+         out-of-focus dust between the audience and the stage. */
+      p.ph += dt * 0.7; p.y -= p.vy * p.z * dt / H;
       if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
       var tw = 0.10 + 0.16 * (0.5 + 0.5 * Math.sin(p.ph * 1.7));
-      cx.globalAlpha = tw;
+      var mx = (p.x + Math.sin(p.ph) * p.sw * p.z / W) * W, my = p.y * H;
+      if (p.z > 1.3) {
+        cx.globalAlpha = tw * 0.30;
+        cx.beginPath();
+        cx.arc(mx, my, p.r * p.z * 2.6 * dpr, 0, 6.2832);
+        cx.fill();
+      }
+      cx.globalAlpha = tw * (p.z < 0.8 ? 0.5 : p.z > 1.3 ? 1.1 : 0.8);
       cx.beginPath();
-      cx.arc((p.x + Math.sin(p.ph) * p.sw / W) * W, p.y * H, p.r * dpr, 0, 6.2832);
+      cx.arc(mx, my, p.r * p.z * dpr, 0, 6.2832);
       cx.fill();
     }
     cx.globalAlpha = 1;

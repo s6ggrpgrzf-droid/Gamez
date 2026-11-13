@@ -3221,6 +3221,157 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .q-text.golden-card,.golden-card{box-shadow:inset 0 0 0 2px #D6AC4E,inset 0 1px 0 rgba(255,255,255,.30),inset 0 -16px 28px -16px rgba(0,0,0,.55),0 24px 48px rgba(0,0,0,.48),0 0 34px rgba(233,205,138,.45)}
 .ans-btn{border-width:1px}
 
+/* ===== 3D PASS 1 — THE ROOM IN PERSPECTIVE (2026-11-12) =====
+   Jimmy's 3D programme, drawn depth only (his 2026-11-10 lock):
+   the flat backdrop becomes a room. The floor is a real plane —
+   a pseudo-element laid back with perspective + rotateX, so its
+   board seams genuinely converge on a vanishing point and its
+   plank ends compress toward the horizon; the plane's far edge
+   fades into the wall's base shade. The walls fall off at the
+   sides and the ceiling, like a room's corners. The horizon seam
+   brightens. The audience splits into two depth planes: a near
+   row, larger, lower, darker and softer (closest to the camera),
+   and a far row, smaller, higher, a touch sharper — Pass C's
+   blanket blur on the strip is retired in favour of per-figure
+   depth. One plum straggler in the floor's base gradient is swept
+   to navy while the floor is open. */
+.set>div.set-walls{background:linear-gradient(180deg,rgba(2,4,9,.35),rgba(2,4,9,0) 18%),linear-gradient(90deg,rgba(2,4,9,.42),rgba(2,4,9,0) 24%,rgba(2,4,9,0) 76%,rgba(2,4,9,.42)),repeating-linear-gradient(90deg, rgba(255,246,232,.020) 0, rgba(255,246,232,.020) calc(25% - 2px), rgba(0,0,0,.10) calc(25% - 2px), rgba(0,0,0,.10) 25%),repeating-linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) calc(25% - 1px), rgba(201,169,98,.14) calc(25% - 1px), rgba(201,169,98,.14) 25%),linear-gradient(180deg, rgba(201,169,98,.11), rgba(201,169,98,.11) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 56%, rgba(0,0,0,.20) 82.5%, rgba(0,0,0,.20))}
+.set>div.set-floor{background:linear-gradient(180deg, rgba(255,220,160,.40), rgba(255,220,160,0) 3px),linear-gradient(180deg, rgba(255,205,130,.10), rgba(255,205,130,0) 26%),linear-gradient(180deg, rgba(17,31,55,.88), rgba(13,24,44,.94) 55%, rgba(7,13,26,.97))}
+.set>div.set-floor::before{content:"";position:absolute;left:-30%;right:-30%;bottom:0;height:250%;transform-origin:50% 100%;transform:perspective(340px) rotateX(57deg);background:linear-gradient(180deg, rgba(10,18,34,0) 0, rgba(10,18,34,.55) 16%, rgba(10,18,34,0) 34%),radial-gradient(58% 40% at 50% 6%, rgba(255,196,100,.16), rgba(255,196,100,0) 62%),repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0, rgba(0,0,0,.22) 2px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 132px),repeating-linear-gradient(0deg, rgba(0,0,0,.15) 0, rgba(0,0,0,.15) 2px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 54px),linear-gradient(180deg, rgba(23,38,66,.0), rgba(23,38,66,.35) 70%, rgba(30,46,76,.5));pointer-events:none}
+.set-aud{filter:none}
+.aud-fig:nth-child(2),.aud-fig:nth-child(5),.aud-fig:nth-child(8),.aud-fig:nth-child(10){--s:1.30;--b:-16px;z-index:2;filter:brightness(.72) blur(1.1px)}
+.aud-fig:nth-child(1),.aud-fig:nth-child(3),.aud-fig:nth-child(6),.aud-fig:nth-child(9),.aud-fig:nth-child(11){--s:.78;--b:7px;filter:brightness(.95) blur(.3px)}
+
+/* ===== 3D PASS 2 — DESKS AS OBJECTS (2026-11-12) =====
+   The desk is a trapezoid panel (clip-path silhouette); this pass
+   builds its faces inside that silhouette. A lit TOP FACE (bright
+   band + the shadow line under its lip), flank shading so the
+   slanted sides turn away from the light, a centre sheen column,
+   and a dark plinth at the foot — over the seat colour it already
+   wears. The ground shadow deepens a step, and each desk now
+   throws a soft colour reflection onto the perspective floor
+   (Pass 1's plane) — a blurred wash in the seat's own colour
+   fading down. The finale and race podiums reuse .desk, so they
+   are built by the same hands. */
+.seat .desk{background:linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.16) 11px, rgba(0,0,0,.14) 12px, rgba(0,0,0,0) 15px),radial-gradient(62% 92% at 50% 0%, rgba(255,255,255,.15), rgba(255,255,255,0) 70%),linear-gradient(90deg, rgba(0,0,0,.20), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 82%, rgba(0,0,0,.27)),linear-gradient(0deg, rgba(0,0,0,.30), rgba(0,0,0,0) 13px),linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 42%),linear-gradient(180deg,var(--c),var(--cd))}
+.seat::before{background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.55),rgba(0,0,0,0) 68%);height:17px}
+.seat::after{content:"";position:absolute;left:8%;right:8%;bottom:-27px;height:27px;background:linear-gradient(180deg, color-mix(in srgb, var(--c) 34%, transparent), color-mix(in srgb, var(--c) 0%, transparent) 80%);filter:blur(3px);border-radius:0 0 50% 50%;z-index:-1;pointer-events:none}
+
+/* ===== 3D PASS 4 — THE CENTREPIECES (2026-11-12) =====
+   The pot and the dial, built as objects. THE POT becomes a
+   vessel: its rim is now a mouth you look INTO — a dark hollow
+   ringed by the metal lip, with a catch of light on the lip's top
+   edge — and the body stands on a foot ring, throwing a contact
+   shadow with a warm halo onto the floor (the glow the fed-pot
+   animation already flashes now has a resting state). THE DIAL
+   becomes a drum: the whole frame tilts back a breath in
+   perspective (the rotor's spin is an SVG transform inside, so
+   the tilt never touches the deal), a dark brass sidewall shows
+   beneath the face, and a bevel ring shades the face's edge —
+   the needle, mounted on the frame, tilts with its machine and
+   keeps its own shadow. */
+.pot-rim{background:radial-gradient(ellipse at 50% 50%,#241A0C 0 50%,#6E5626 63%,#DEC084 80%,#F8F0D6 95%);box-shadow:inset 0 0 0 1px rgba(94,74,34,.65),inset 0 2px 2px rgba(255,255,255,.5),inset 0 -3px 4px rgba(94,74,34,.5)}
+.pot-body::before{content:"";position:absolute;left:16%;right:16%;bottom:-2px;height:7px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#8A6D2F,#4A3A18 75%);box-shadow:inset 0 1px 1px rgba(255,240,200,.5)}
+.pot-body::after{content:"";position:absolute;left:-14%;right:-14%;bottom:-11px;height:13px;border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.5),rgba(226,183,107,.16) 58%,rgba(226,183,107,0) 78%);z-index:-1;pointer-events:none}
+.wheel-frame{transform:perspective(700px) rotateX(16deg);transform-origin:50% 42%}
+.wheel-frame::before{content:"";position:absolute;inset:0;border-radius:50%;background:linear-gradient(180deg,#4A3A18,#17100A 70%);transform:translateY(13px);z-index:-1;pointer-events:none}
+.wheel-frame::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 3px 6px rgba(246,235,203,.35),inset 0 -10px 16px rgba(0,0,0,.45);z-index:3;pointer-events:none}
+.pot-body{isolation:isolate}
+
+/* ===== 3D PASS 5 — CONTROLS IN RELIEF (2026-11-12) =====
+   The springs (earlier tonight) gave the buttons motion; this
+   pass gives them somewhere to travel. The gold's flat seat
+   becomes a MILLED SIDE WALL — six 1px steps of descending gold
+   shade — which grows a step on hover and crushes to two when
+   pressed, so the 4px press travel seats the slab flush. The
+   plaques get the same wall in their category's dark side
+   (stepped by colour-mix), and the ghost buttons a short dark
+   wall. The sheets float: the setup card's chunky slab shadow
+   becomes a deep soft float with a lit top edge, and the how
+   card's shadow deepens to match. The report card is NOT floated
+   — it is a printed ledger and stays printed. */
+.btn-gold{box-shadow:0 1px 0 #A5853F,0 2px 0 #9C7C3A,0 3px 0 #927334,0 4px 0 #886A2F,0 5px 0 #7E612A,0 6px 0 #745826,0 16px 24px rgba(0,0,0,.42),inset 0 2px 0 rgba(255,255,255,.7)}
+.btn-gold:active{box-shadow:0 1px 0 #927334,0 2px 0 #745826,0 8px 14px rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.7)}
+.btn-ghost{box-shadow:0 1px 0 rgba(3,6,12,.55),0 2px 0 rgba(3,6,12,.50),0 3px 0 rgba(3,6,12,.45),0 4px 0 rgba(3,6,12,.40),0 12px 20px rgba(0,0,0,.35)}
+.btn-ghost:active{box-shadow:0 1px 0 rgba(3,6,12,.55),0 2px 0 rgba(3,6,12,.45),0 6px 12px rgba(0,0,0,.35)}
+.ans-btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -3px 0 rgba(0,0,0,.30),inset 2px 0 0 rgba(255,255,255,.13),inset -2px 0 0 rgba(0,0,0,.13),0 0 12px rgba(233,205,138,.28),0 2px 0 color-mix(in srgb, var(--cat-sh) 88%, #000),0 5px 0 color-mix(in srgb, var(--cat-sh) 74%, #000),0 7px 0 color-mix(in srgb, var(--cat-sh) 60%, #000),0 14px 22px rgba(0,0,0,.40)}
+.ans-btn:active{box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -3px 0 rgba(0,0,0,.30),inset 2px 0 0 rgba(255,255,255,.13),inset -2px 0 0 rgba(0,0,0,.13),0 0 12px rgba(233,205,138,.28),0 1px 0 color-mix(in srgb, var(--cat-sh) 88%, #000),0 3px 0 color-mix(in srgb, var(--cat-sh) 60%, #000),0 8px 14px rgba(0,0,0,.40)}
+@media (hover:hover){
+.btn-gold:hover{box-shadow:0 1px 0 #A5853F,0 2px 0 #9C7C3A,0 3px 0 #927334,0 4px 0 #886A2F,0 5px 0 #7E612A,0 6px 0 #745826,0 7px 0 #6B4F22,0 20px 28px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.7),0 0 14px rgba(233,205,138,.35)}
+.ans-btn:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -3px 0 rgba(0,0,0,.30),inset 2px 0 0 rgba(255,255,255,.13),inset -2px 0 0 rgba(0,0,0,.13),0 0 18px rgba(233,205,138,.45),0 2px 0 color-mix(in srgb, var(--cat-sh) 88%, #000),0 6px 0 color-mix(in srgb, var(--cat-sh) 74%, #000),0 9px 0 color-mix(in srgb, var(--cat-sh) 60%, #000),0 18px 28px rgba(0,0,0,.42)}
+}
+.setup-card{box-shadow:0 30px 55px rgba(0,0,0,.5),0 10px 20px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.14)}
+.how-card{box-shadow:0 34px 64px rgba(0,0,0,.6),0 10px 22px rgba(0,0,0,.4),inset 0 0 0 2px rgba(146,104,32,.3)}
+
+/* ===== 3D PASS 6 — DEPTH IN MOTION (2026-11-12) =====
+   The room starts to move like a place. The question card DEALS
+   IN with a flip — tipping toward the audience off its top edge
+   on the soft spring — and the plaques cascade in tipping
+   forward off their bases, staggered as they were, in place of
+   the flat pop (the game's own animation-clearing keeps hover
+   and press free afterwards, exactly as it did for pop). On
+   phase changes the set's layers PARALLAX a few pixels against
+   each other — back wall least, audience most — and the finale
+   gets a slow camera PUSH-IN: the whole set scales a breath
+   larger over three seconds while the UI stands still. The
+   motes gained their three depth planes in game.js. */
+.q-cardwrap{animation:cardFlip .6s cubic-bezier(.3,1.3,.4,1) both}
+@keyframes cardFlip{0%{transform:perspective(900px) rotateX(-36deg) translateY(16px);opacity:0}55%{opacity:1}100%{transform:perspective(900px) rotateX(0deg) translateY(0);opacity:1}}
+.answers.pop-in .ans-btn{animation:plaqueIn .55s cubic-bezier(.34,1.45,.5,1) backwards;animation-delay:var(--d,0s);transform-origin:50% 100%}
+@keyframes plaqueIn{0%{transform:perspective(720px) rotateX(54deg) translateY(14px);opacity:0}100%{transform:perspective(720px) rotateX(0deg) translateY(0);opacity:1}}
+#scr-game .set{transition:filter 1.2s ease,transform 2.8s cubic-bezier(.3,.7,.25,1)}
+#scr-game .set-deep,#scr-game .set-walls,#scr-game .set-floor,#scr-game .set-aud{transition:transform 1.4s cubic-bezier(.3,.7,.25,1)}
+#scr-game[data-phase="reveal"] .set-deep{transform:translateY(-2px) scale(1.012)}
+#scr-game[data-phase="reveal"] .set-walls{transform:translateY(-1px)}
+#scr-game[data-phase="reveal"] .set-floor{transform:translateY(1px)}
+#scr-game[data-phase="reveal"] .set-aud{transform:translateY(3px)}
+#scr-game[data-phase="over"] .set{transform:scale(1.035)}
+
+/* ===== 3D PASS 7 — TYPE DEPTH (2026-11-13) =====
+   The last pass gives the type itself a body. Three crafts, all
+   edge-and-shadow work — no font, size, spacing or layout changes
+   anywhere, so every measured fit in the game stands untouched.
+
+   EXTRUDED DISPLAY TYPE: the logo, the winner's word and the
+   wager amount already wore a single 4px navy drop shadow; that
+   gap is now FILLED with three stepped shades of descending
+   gold, so the shadow reads as a solid side wall — a gold face
+   standing off a navy seat — with a hair of light caught on the
+   top edge and the old soft ambient kept underneath. The
+   clipped-gradient figures that cannot take text-shadow (the
+   winner's total, the question's value) get the same wall built
+   from their filter chain: their engraved 1px edges stay first,
+   a bronze step is inserted, and the navy seat stays last at
+   its audited offset.
+
+   THE WINNER'S NAME, EMBOSSED: where the display type stands
+   proud, the name sinks in — pressed into the marquee like a
+   name stamped into a plate. The hard lifting shadow it wore
+   is replaced by the letterpress pair (dark incise above, lit
+   catch below) over a soft seat, and the defending champion's
+   name on the title plaque takes the same stamp in miniature.
+
+   NUMERALS SEATED IN PANELS: the figures that used to float on
+   their surfaces — the desk scores, the podium money, the pot's
+   total, the topbar counter — now sit in shallow recesses: a
+   dark inset slot with a pressed top shadow and a hairline of
+   light along its floor, painted with background and inset
+   box-shadow only, so nothing moves. The desk score's banking
+   shimmer (a higher-specificity background of its own) still
+   sweeps over its slot, and the engraved text edges from the
+   Lettering Pass are untouched everywhere. */
+.logo{filter:drop-shadow(0 -1px 0 rgba(255,248,220,.35)) drop-shadow(0 1px 0 #B08D3E) drop-shadow(0 2px 0 #8F6E2E) drop-shadow(0 3px 0 #6E5524) drop-shadow(0 4px 0 #27436E) drop-shadow(0 14px 26px rgba(0,0,0,.45))}
+.winner-word{filter:drop-shadow(0 -1px 0 rgba(255,248,220,.35)) drop-shadow(0 1px 0 #B08D3E) drop-shadow(0 2px 0 #8F6E2E) drop-shadow(0 3px 0 #6E5524) drop-shadow(0 4px 0 #27436E) drop-shadow(0 12px 24px rgba(0,0,0,.45))}
+.wager-amt{filter:drop-shadow(0 -1px 0 rgba(255,248,220,.30)) drop-shadow(0 1px 0 #B08D3E) drop-shadow(0 2px 0 #8F6E2E) drop-shadow(0 3px 0 #6E5524) drop-shadow(0 4px 0 #27436E)}
+.winner-total{filter:drop-shadow(0 -1px 0 rgba(43,16,0,.55)) drop-shadow(0 1px 0 rgba(248,238,210,.28)) drop-shadow(0 2px 0 #8F6E2E) drop-shadow(0 3px 0 #27436E)}
+.q-value span{filter:drop-shadow(0 -1px 0 rgba(43,16,0,.55)) drop-shadow(0 1px 0 rgba(248,238,210,.28)) drop-shadow(0 2px 0 rgba(143,110,46,.9)) drop-shadow(0 3px 0 rgba(6,11,24,.5))}
+.winner-name{text-shadow:0 -1px 0 rgba(3,6,12,.65),0 1px 0 rgba(246,235,203,.30),0 2px 4px rgba(0,0,0,.30)}
+.champ-plaque{text-shadow:0 -1px 0 rgba(59,36,2,.45),0 1px 0 rgba(255,240,200,.25)}
+.seat-score{background:linear-gradient(180deg,rgba(3,6,12,.40),rgba(3,6,12,.20));border-radius:7px;box-shadow:inset 0 1px 3px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.10);margin:0 4px}
+.pmoney{background:linear-gradient(180deg,rgba(3,6,12,.38),rgba(3,6,12,.18));border-radius:7px;box-shadow:inset 0 1px 3px rgba(0,0,0,.50),inset 0 -1px 0 rgba(255,255,255,.10);padding:0 6px}
+.pot-total{background:linear-gradient(180deg,rgba(3,6,12,.42),rgba(3,6,12,.20));border-radius:6px;box-shadow:inset 0 1px 2px rgba(0,0,0,.55),inset 0 -1px 0 rgba(248,238,210,.14);padding:1px 7px}
+#qCounter{background:linear-gradient(180deg,rgba(3,6,12,.42),rgba(3,6,12,.20));border-radius:6px;box-shadow:inset 0 1px 2px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.10);padding:1px 7px}
+
 /* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
    for tall compositions — measured with the report rows pinned
