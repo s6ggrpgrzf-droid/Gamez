@@ -3018,6 +3018,8 @@ function avatarSVG(id, state, seat) {
   function timerHTML() {
     var C = (2 * Math.PI * 30).toFixed(1);
     return '<div class="timer-wrap"><svg id="timerSvg" class="timer-ring" width="76" height="76" viewBox="0 0 76 76">' +
+      '<defs><linearGradient id="timerGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6EBCB"/><stop offset=".55" stop-color="#E9CD8A"/><stop offset="1" stop-color="#C9A962"/></linearGradient></defs>' +
+      '<circle class="hair" cx="38" cy="38" r="34.5" fill="none"></circle>' +
       '<circle class="track" cx="38" cy="38" r="30" fill="none" stroke-width="5"></circle>' +
       '<circle id="timerProg" class="prog" cx="38" cy="38" r="30" fill="none" stroke-width="5" stroke-linecap="round" stroke-dasharray="' + C + '" stroke-dashoffset="0"></circle>' +
       '<text id="timerNum" class="timer-num" x="38" y="44" transform="rotate(90 38 38)">20</text></svg></div>';
