@@ -5001,9 +5001,16 @@ function avatarSVG(id, state, seat) {
       return '<button class="ans-btn' + (o.gone ? " cut" : "") + '" style="--d:' + (i * 0.09).toFixed(2) + 's" disabled>' +
         '<span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + "</span></button>";
     }).join("");
-    var head = c.kind === "survey" ? "MOST PEOPLE SAY…" : c.diff.toUpperCase();
+    /* Perfectionist pass (2026-11-13): the header carried TWO
+       difficulty vocabularies — the dealt band (WARM · MIDDLE ·
+       DEEP CUT) beside the pill and the bank's own diff word
+       (EASY…) at the right. The band is the show's word; the bank
+       word is backstage metadata (it still prices the question
+       and derives the band fallback — it just no longer prints).
+       A plain MCQ now wears no right-hand word at all. */
+    var head = c.kind === "survey" ? "MOST PEOPLE SAY…" : "";
     var pill = c.special ? "TONIGHT'S GILDED QUESTION" : esc(c.cat.toUpperCase()) + (c.headline ? " · HEADLINE" : "");
-    return '<div class="q-headrow"><span class="cat-pill' + (c.special ? " gilded" : "") + (c.headline ? " headline" : "") + '">' + catEmblem(c.cat) + pill + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind">' + head + "</span></div>" +
+    return '<div class="q-headrow"><span class="cat-pill' + (c.special ? " gilded" : "") + (c.headline ? " headline" : "") + '">' + catEmblem(c.cat) + pill + '</span>' + bandTagHTML(c.q && c.q.d) + (head ? '<span class="q-kind">' + head + "</span>" : "") + "</div>" +
       stakeRibbonHTML(c.stake, G.players) +
       '<div class="q-cardwrap">' + (c.headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "") +
       '<div class="q-text' + (c.headline ? " headline-card" : "") + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(c.betRound ? 1 : meltMult(c.elapsed, c.clockTotal)) + "</div></div>" +
@@ -8133,8 +8140,8 @@ function avatarSVG(id, state, seat) {
        them (doubled multiplier, halved window), never its own claim */
     var headline = q.headline != null ? !!q.headline : isHeadline(e.round, e.qInRound);
     OG.meltDbl = headline; /* G1: the vessel's doubled grammar follows the same flag the banner wears */
-    var head = e.kind === "survey" ? "MOST PEOPLE SAY…" : e.kind === "num" ? "CLOSEST NUMBER" : (e.diff || "").toUpperCase();
-    var top = '<div class="q-headrow"><span class="cat-pill' + (e.special ? " gilded" : "") + (headline ? " headline" : "") + '">' + catEmblem(e.cat) + (e.special ? "TONIGHT'S GILDED QUESTION" : esc(e.cat.toUpperCase()) + (headline ? " · HEADLINE" : "")) + '</span>' + bandTagHTML(ogBandOf(q, e)) + '<span class="q-kind">' + head + "</span></div>" +
+    var head = e.kind === "survey" ? "MOST PEOPLE SAY…" : e.kind === "num" ? "CLOSEST NUMBER" : "";
+    var top = '<div class="q-headrow"><span class="cat-pill' + (e.special ? " gilded" : "") + (headline ? " headline" : "") + '">' + catEmblem(e.cat) + (e.special ? "TONIGHT'S GILDED QUESTION" : esc(e.cat.toUpperCase()) + (headline ? " · HEADLINE" : "")) + '</span>' + bandTagHTML(ogBandOf(q, e)) + (head ? '<span class="q-kind">' + head + "</span>" : "") + "</div>" +
       stakeRibbonHTML(stakeCallout(ogStakeCtx(e, q)), OG.players) +
       '<div class="q-cardwrap">' + (isDec ? '<div class="headline-banner decider-banner">★ THE DECIDER ★</div>' : (headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "")) +
       '<div class="q-text' + (headline ? " headline-card" : "") + wearCls(e.round, isDec) + '">' + esc(e.bank.q) + cardDressHTML(isDec ? 1 : ogMeltMult(q)) + "</div></div>";
