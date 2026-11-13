@@ -4011,7 +4011,7 @@ function avatarSVG(id, state, seat) {
   function reportFactsOf(d) {
     var out = [];
     if (!d) return out;
-    if (d.best) out.push({ k: "BEST", full: "BEST CATEGORY", v: d.best.cat.toUpperCase() + " " + money(d.best.amt) });
+    if (d.best) out.push({ k: "BEST", full: "BEST CATEGORY", v: d.best.cat + " " + money(d.best.amt) });
     if (d.fastest != null) out.push({ k: "FASTEST HAND", full: "FASTEST HAND", v: (Math.round(d.fastest * 10) / 10).toFixed(1) + "s" });
     if (d.biggest > 0) out.push({ k: "BIGGEST BANK", full: "BIGGEST BANK", v: money(d.biggest) });
     if (d.peak >= 2) out.push({ k: "HOTTEST STREAK", full: "HOTTEST STREAK", v: String(d.peak) });
@@ -4038,21 +4038,58 @@ function avatarSVG(id, state, seat) {
     taken[idx] = true;
     return REPORT_QUIET[idx];
   }
+  /* The Awards Board (2026-11-13, Jimmy's call — "the report card
+     is all crammed in there. Fix it all"): the per-seat fact rows
+     are retired. The card now prints the night's four HONOURS —
+     one line per honour, whoever holds it, however many seats
+     played — so the closing card is four composed lines instead
+     of four facts times every seat poured into the leftover
+     corner of the busiest screen in the game. Same recorded
+     tallies, same derivation underneath (reportFactsOf still
+     feeds the pad and the share flourish); only the telling
+     changed. A tie prints every holder. An honour nobody earned
+     is simply not on the board. */
+  function reportAwardsOf(rows) {
+    function holders(val, mode) {
+      var best = null;
+      rows.forEach(function (r) {
+        if (!r.d) return;
+        var v = val(r.d);
+        if (v == null) return;
+        if (best === null || (mode === "min" ? v < best : v > best)) best = v;
+      });
+      if (best === null) return null;
+      return rows.filter(function (r) { return r.d && val(r.d) === best; });
+    }
+    function fmtFast(x) { return (Math.round(x * 10) / 10).toFixed(1) + "s"; }
+    var out = [];
+    var h;
+    h = holders(function (d) { return d.best ? d.best.amt : null; }, "max");
+    if (h) out.push({ k: "BEST CATEGORY", winners: h.map(function (r) { return { name: r.name, v: r.d.best.cat + " " + money(r.d.best.amt) }; }) });
+    h = holders(function (d) { return d.fastest; }, "min");
+    if (h) out.push({ k: "FASTEST HAND", winners: h.map(function (r) { return { name: r.name, v: fmtFast(r.d.fastest) }; }) });
+    h = holders(function (d) { return d.biggest > 0 ? d.biggest : null; }, "max");
+    if (h) out.push({ k: "BIGGEST BANK", winners: h.map(function (r) { return { name: r.name, v: money(r.d.biggest) }; }) });
+    h = holders(function (d) { return d.peak >= 2 ? d.peak : null; }, "max");
+    if (h) out.push({ k: "HOTTEST STREAK", winners: h.map(function (r) { return { name: r.name, v: String(r.d.peak) }; }) });
+    return out;
+  }
   function reportPanelHTML(rows, say) {
-    var taken = {};
-    var body = rows.map(function (r, seat) {
-      var list = reportFactsOf(r.d);
-      var facts;
-      if (list.length) {
-        facts = list.map(function (f) {
-          return '<span class="report-fact"><span class="report-fk">' + f.k + "</span> " + esc(f.v) + "</span>";
+    var awards = reportAwardsOf(rows);
+    var body;
+    if (awards.length) {
+      body = awards.map(function (a) {
+        var who = a.winners.map(function (w) {
+          return '<span class="award-win"><b>' + esc(w.name) + '</b> <span class="award-v">' + esc(w.v) + "</span></span>";
         }).join('<span class="report-dot">·</span>');
-      } else {
-        facts = '<span class="report-fact report-quiet"><span class="report-fk">THE NIGHT</span> ' +
-          esc(quietLineFor(r.name, seat, taken)) + "</span>";
-      }
-      return '<div class="report-row"><span class="report-name">' + esc(r.name) + '</span><span class="report-facts">' + facts + "</span></div>";
-    }).join("");
+        return '<div class="award-row"><span class="award-k">' + a.k + '</span><span class="award-who">' + who + "</span></div>";
+      }).join("");
+    } else {
+      /* a night where nobody recorded a thing still gets one
+         honest line — voice, never an invented fact */
+      body = '<div class="award-row"><span class="award-k">THE NIGHT</span><span class="award-who">' +
+        '<span class="award-win report-quiet">a quiet one — nobody troubled the pot</span></span></div>';
+    }
     return '<div class="report-card"><div class="report-head">THE REPORT CARD</div>' +
       (say ? '<div class="report-say">' + esc(say) + "</div>" : "") + body + "</div>";
   }

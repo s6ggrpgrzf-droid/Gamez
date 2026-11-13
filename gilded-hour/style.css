@@ -1427,7 +1427,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
    element's own letter-tracking (sizes untouched). Sterling's
    speech, question/answer text and player names are NOT labels and
    are deliberately absent from both lists. */
-.tnum,.pmoney,.seat-score,.seat-delta,.gain-chip,.podium .delta,.winner-total,.wager-amt,.q-value span,.timer-num,.bet-amt,.og-count,.og-code,.code-box,.count-btn,.rank-badge,.jp-id-score,.jp-id-secs,.jp-id-place,.jp-gain,.jp-standrow .sc,.jp-vscore,.jp-betamt,.jp-chipdisc,.jp-num,.jp-pickstate,.jp-numstate,.jp-betstate,#qCounter,.proj-amt,.jp-proj{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-kerning:none}
+.tnum,.pmoney,.seat-score,.seat-delta,.gain-chip,.podium .delta,.winner-total,.wager-amt,.q-value span,.timer-num,.bet-amt,.og-count,.og-code,.code-box,.count-btn,.rank-badge,.jp-id-score,.jp-id-secs,.jp-id-place,.jp-gain,.jp-standrow .sc,.jp-vscore,.jp-betamt,.jp-chipdisc,.jp-num,.jp-pickstate,.jp-numstate,.jp-betstate,#qCounter,.proj-amt,.jp-proj,.award-who,.award-v{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-kerning:none}
 .lbl,.kicker,.setup-label,.name-seat,.microline,.how-kicker,.how-skip,.how-close,.round-kicker,.co-kicker,.q-cat,.q-kind,.cat-pill,.q-value small,.host-name,#topbar,.tb-btn,.mute-btn,.mode-tab,.chip,.cat-chip,.og-pill,.og-qr-cap,.og-count,.jp-head,.jp-room,.jp-conn,.jp-phaseword,.jp-betlabel,.jp-herotag,.jp-ans-tag,.jp-cutnote,.jp-pickstate,.jp-numstate,.jp-betstate,.seat .tag,.closest-tag{text-transform:uppercase}
 
 /* ================= Design pass item 6 — emblems + portraits =================
@@ -1623,12 +1623,30 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
      beneath both columns, in one row — stacked in the narrow
      column they cost the finale its fit */
   .finale-wrap.has-report .finale-btns{grid-column:1/-1;margin-top:2px;gap:10px}
+  /* Awards Board fit (2026-11-13): the landscape finale's tall side
+     is the LEFT column, not the card — measured live: card 140px in
+     a 289px column pair, and shrinking the card 16px moved the
+     stage's 336px scrollHeight not at all. The last 6px live in
+     the podium desks' top padding and the button row's margin;
+     both give a little, invisibly (the desks carry 12px of air
+     above a 34px-minimum body in a 71px row) */
+  #stage .finale-wrap.has-report .finale-row .desk{padding-top:6px}
+  .finale-wrap.has-report .finale-btns{margin-top:0}
   .finale-wrap.has-report .report-card{grid-column:2;grid-row:1/3;margin-top:0;padding:4px 10px 3px}
   .finale-wrap.has-report .report-head{font-size:10px;line-height:1.1}
   .finale-wrap.has-report .report-say{font-size:10.5px;margin-top:1px;line-height:1.2}
   .finale-wrap.has-report .report-row{padding:1px 2px}
   .finale-wrap.has-report .report-name{flex-basis:98px;font-size:12.5px}
   .finale-wrap.has-report .report-facts{font-size:11.5px;line-height:1.2}
+  /* Awards Board (2026-11-13): in the narrow landscape report
+     column the board's lines take a one-step squeeze (14px,
+     tighter leading, 5px row padding) so a long winner line
+     wraps less — headroom insurance for the column, kept after
+     the fit probe showed the stage's tall side is the left
+     column (see the fit note at the finale-btns rule below) */
+  .finale-wrap.has-report .award-row{padding-top:5px;padding-bottom:5px}
+  .finale-wrap.has-report .award-who{font-size:14px;line-height:1.25}
+  .finale-wrap.has-report .award-k{flex-basis:100px}
   /* #5 — the pad answers two-up in landscape; portrait untouched.
      The column must fit for real: a flex-shrunk grid paints its rows
      over the pick-state and the Cut Two button, so the question line,
@@ -3371,6 +3389,26 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .pmoney{background:linear-gradient(180deg,rgba(3,6,12,.38),rgba(3,6,12,.18));border-radius:7px;box-shadow:inset 0 1px 3px rgba(0,0,0,.50),inset 0 -1px 0 rgba(255,255,255,.10);padding:0 6px}
 .pot-total{background:linear-gradient(180deg,rgba(3,6,12,.42),rgba(3,6,12,.20));border-radius:6px;box-shadow:inset 0 1px 2px rgba(0,0,0,.55),inset 0 -1px 0 rgba(248,238,210,.14);padding:1px 7px}
 #qCounter{background:linear-gradient(180deg,rgba(3,6,12,.42),rgba(3,6,12,.20));border-radius:6px;box-shadow:inset 0 1px 2px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.10);padding:1px 7px}
+
+/* ===== REPORT CARD REBUILD — THE AWARDS BOARD (Jimmy's
+   "fix it all", 2026-11-13): the per-seat fact rows are retired;
+   the card prints four honours, one composed line each. The
+   typography faults go with the rows: the old fact keys were
+   9.5px tracked .16em (letters scattered at phone size), the
+   values were forced to all-caps so label and fact blurred
+   into one ribbon, and the amounts never rode the tabular
+   face. Here the honour keys sit at 10.5px tracked just .05em,
+   names and values set at a readable 15.5px in sentence case,
+   and the figures route through GHTab (see the .tnum list) so
+   the money sits as evenly as everywhere else in the game.
+   The heading's masthead tracking eases from .30em to .18em. */
+.report-head{letter-spacing:.18em}
+.award-row{display:flex;gap:14px;align-items:baseline;padding:7px 2px;border-bottom:1px solid rgba(201,169,98,.16)}
+.award-row:last-child{border-bottom:none}
+.award-k{flex:0 0 clamp(104px,27%,140px);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--gold);white-space:nowrap;padding-top:3px}
+.award-who{font-size:15.5px;line-height:1.3;color:rgba(255,246,232,.92);min-width:0}
+.award-who b{font-weight:800;color:var(--cream)}
+.award-v{font-weight:700;color:#F0DCA3}
 
 /* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
