@@ -50,7 +50,7 @@
     "Music":            { hi: "#B983F0", mid: "#9B5DE5", lo: "#7C3AC9", sh: "#55239E", rgb: "155,93,229", shi: "#855EAD", smid: "#8C54CE" },
     "Ads & Jingles":    { hi: "#FFA25E", mid: "#FF8C42", lo: "#E56F1D", sh: "#A34D0E", rgb: "255,140,66", shi: "#FF9750", smid: "#F37F31" },
     "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#34B35E", sh: "#177A38", rgb: "62,207,110", shi: "#48D678", smid: "#30B15B" },
-    "Saturday Morning": { hi: "#FFD76A", mid: "#FFC93C", lo: "#F0A90B", sh: "#A87408", rgb: "255,201,60" },
+    "Saturday Morning": { hi: "#F0DCA3", mid: "#E9CD8A", lo: "#D6AC4E", sh: "#9A7B38", rgb: "255,201,60" },
     "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#27ACAA", sh: "#076B6E", rgb: "23,190,187", shi: "#27C8C5", smid: "#13ACAA" }
   };
   /* shi/smid are the answer-slab gradient stops (perfectionist fix #3):
@@ -720,18 +720,18 @@
     '<g class="st-shadow"><ellipse cx="150" cy="372" rx="122" ry="11" fill="url(#stShadGrad)"/></g>';
   var STERLING_TORSO =
     '<g class="st-rim" transform="translate(-2.5,-2)"><path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z"/></g>' +
-    '<path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z" fill="#241331"/>' +
-    '<path d="M196,197 Q250,208 254,258 L266,380 L200,380 C206,320 206,250 196,197 Z" fill="#1D0E29"/>' +
+    '<path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z" fill="#0D1B33"/>' +
+    '<path d="M196,197 Q250,208 254,258 L266,380 L200,380 C206,320 206,250 196,197 Z" fill="#0A1526"/>' +
     '<path d="M134,196 L186,196 L160,292 Z" fill="#FFF6E8"/>' +
-    '<path d="M126,196 L160,242 L138,310 L110,216 L119,207 L105,199 Q114,193 126,196 Z" fill="#3A2150"/>' +
-    '<path d="M194,196 L160,242 L182,310 L210,216 L201,207 L215,199 Q206,193 194,196 Z" fill="#2C1842"/>' +
+    '<path d="M126,196 L160,242 L138,310 L110,216 L119,207 L105,199 Q114,193 126,196 Z" fill="#1C3258"/>' +
+    '<path d="M194,196 L160,242 L182,310 L210,216 L201,207 L215,199 Q206,193 194,196 Z" fill="#142847"/>' +
     '<path d="M150,199 L170,199 L166,221 L154,221 Z" fill="#C93A68"/>' +
     '<path d="M154,221 L166,221 L171,261 L160,283 L149,261 Z" fill="#E8437C"/>' +
     '<path d="M160,221 L166,221 L171,261 L160,283 Z" fill="#D1356B"/>' +
     '<path d="M134,196 L152,196 L146,210 L133,205 Z" fill="#FFF6E8"/>' +
     '<path d="M186,196 L168,196 L174,210 L187,205 Z" fill="#F3E4CE"/>' +
     '<path d="M199,255 L223,249 L219,265 L203,265 Z" fill="#FFF6E8"/>' +
-    '<path d="M211,252 L223,249 L221,257 Z" fill="#FFC93C"/>' +
+    '<path d="M211,252 L223,249 L221,257 Z" fill="#E9CD8A"/>' +
     '<svg x="111" y="222" width="19" height="19" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem"></use></svg>' +
     '<rect x="146" y="158" width="28" height="42" rx="9" fill="#E89A63"/>' +
     '<rect x="146" y="184" width="28" height="13" fill="#D97F4A"/>';
@@ -744,30 +744,30 @@
     '<path d="M163,113 L157,136 Q156,143 163,144 Q168,144 170,141" stroke="#D97F4A" stroke-width="4" stroke-linecap="round" fill="none"/>' +
     '<ellipse cx="110" cy="142" rx="11" ry="6.5" fill="#FF9D8A" opacity=".5"/>' +
     '<ellipse cx="206" cy="140" rx="10" ry="6" fill="#FF9D8A" opacity=".42"/>' +
-    '<path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z" fill="#2A1530"/>' +
-    '<path d="M148,31 C132,35 119,46 111,60 C121,44 134,35 148,31 Z" fill="#C9BCD6" opacity=".65"/>' +
-    '<path d="M101,100 C104,84 110,72 120,65 C112,76 108,90 108,108 C104,105 102,102 101,100 Z" fill="#BBA9D2" opacity=".55"/>' +
-    '<path d="M219,100 C216,84 210,72 200,65 C208,76 212,90 212,108 C216,105 218,102 219,100 Z" fill="#BBA9D2" opacity=".55"/>' +
-    '<path d="M124,41 C142,30 166,28 186,34 C164,32 142,34 124,41 Z" fill="#452A5E" opacity=".85"/>';
+    '<path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z" fill="#0E1C33"/>' +
+    '<path d="M148,31 C132,35 119,46 111,60 C121,44 134,35 148,31 Z" fill="#C2CEDF" opacity=".65"/>' +
+    '<path d="M101,100 C104,84 110,72 120,65 C112,76 108,90 108,108 C104,105 102,102 101,100 Z" fill="#A9B8D2" opacity=".55"/>' +
+    '<path d="M219,100 C216,84 210,72 200,65 C208,76 212,90 212,108 C216,105 218,102 219,100 Z" fill="#A9B8D2" opacity=".55"/>' +
+    '<path d="M124,41 C142,30 166,28 186,34 C164,32 142,34 124,41 Z" fill="#24365E" opacity=".85"/>';
   /* The eye: almond white, iris, the r=6.5 pupil the rig animates,
      one spec dot — wrapped in .st-eye so st-blink can flatten the
      whole eye now that there is a white to close (see style.css). */
   function STERLING_EYE(cx) {
     return '<g class="st-eye">' +
-      '<path d="M' + (cx - 14) + ',110 Q' + cx + ',98 ' + (cx + 14) + ',110 Q' + cx + ',120 ' + (cx - 14) + ',110 Z" fill="#FFF9F0" stroke="#2A1530" stroke-width="3"/>' +
+      '<path d="M' + (cx - 14) + ',110 Q' + cx + ',98 ' + (cx + 14) + ',110 Q' + cx + ',120 ' + (cx - 14) + ',110 Z" fill="#FFF9F0" stroke="#0E1C33" stroke-width="3"/>' +
       '<circle cx="' + cx + '" cy="110" r="8.6" fill="#7A4A21"/>' +
-      '<circle cx="' + cx + '" cy="110" r="6.5" fill="#2A1530"/>' +
+      '<circle cx="' + cx + '" cy="110" r="6.5" fill="#0E1C33"/>' +
       '<circle cx="' + (cx - 2.5) + '" cy="107.5" r="2.2" fill="#FFF6E8"/></g>';
   }
   var STERLING_FACE_SMIRK =
-    '<path d="M106,93 Q128,84 151,89 L149,95 Q128,89 108,98 Z" fill="#2A1530"/>' +
-    '<path d="M169,83 Q192,69 214,81 L212,88 Q192,76 171,89 Z" fill="#2A1530"/>' +
+    '<path d="M106,93 Q128,84 151,89 L149,95 Q128,89 108,98 Z" fill="#0E1C33"/>' +
+    '<path d="M169,83 Q192,69 214,81 L212,88 Q192,76 171,89 Z" fill="#0E1C33"/>' +
     STERLING_EYE(131) + STERLING_EYE(189) +
     '<path d="M125,149 Q160,168 197,139" stroke="#7C2D3E" stroke-width="6.5" stroke-linecap="round" fill="none"/>' +
     '<path d="M197,139 Q203,134 204,127" stroke="#7C2D3E" stroke-width="5" stroke-linecap="round" fill="none"/>';
   var STERLING_FACE_PRESENT =
-    '<path d="M106,91 Q128,78 151,85 L149,91 Q128,84 108,96 Z" fill="#2A1530"/>' +
-    '<path d="M169,85 Q192,78 214,91 L212,96 Q192,84 171,91 Z" fill="#2A1530"/>' +
+    '<path d="M106,91 Q128,78 151,85 L149,91 Q128,84 108,96 Z" fill="#0E1C33"/>' +
+    '<path d="M169,85 Q192,78 214,91 L212,96 Q192,84 171,91 Z" fill="#0E1C33"/>' +
     STERLING_EYE(131) + STERLING_EYE(189) +
     '<path d="M121,143 Q160,188 199,143 Q160,162 121,143 Z" fill="#7C2D3E"/>' +
     '<path d="M129,146 Q160,158 191,146 Q160,151.5 129,146 Z" fill="#FFFFFF"/>';
@@ -786,16 +786,16 @@
   var STERLING_PODIUM =
     '<g class="st-podium">' +
     '<path d="M74,380 L88,306 L232,306 L246,380 Z" fill="#170B22"/>' +
-    '<path d="M84,380 L96,314 L224,314 L236,380 Z" fill="#241331"/>' +
-    '<path d="M100,372 L108,322 L212,322 L220,372 Z" fill="#2E1A40" stroke="#C6A45E" stroke-opacity=".45" stroke-width="2"/>' +
+    '<path d="M84,380 L96,314 L224,314 L236,380 Z" fill="#0D1B33"/>' +
+    '<path d="M100,372 L108,322 L212,322 L220,372 Z" fill="#2E1A40" stroke="#C9A962" stroke-opacity=".45" stroke-width="2"/>' +
     '<svg x="132" y="318" width="56" height="56" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem"></use></svg>' +
     '<rect x="56" y="285" width="208" height="26" rx="12" fill="#170B22"/>' +
-    '<rect x="56" y="285" width="208" height="8" rx="4" fill="#C6A45E" opacity=".8"/>' +
-    '<rect x="56" y="306" width="208" height="5" fill="#C6A45E"/>' +
+    '<rect x="56" y="285" width="208" height="8" rx="4" fill="#C9A962" opacity=".8"/>' +
+    '<rect x="56" y="306" width="208" height="5" fill="#C9A962"/>' +
     "</g>";
   var STERLING_ARMS =
-    '<g class="st-plane st-plane-arm-l"><g class="st-arm st-arm-l"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke-width="29"/><path d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke="#4E2C68" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="104" cy="293" r="10" fill="#FFF6E8"/><circle cx="122" cy="290" r="13" fill="#F6B183"/></g></g>' +
-    '<g class="st-plane st-plane-arm-r"><g class="st-arm st-arm-r"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke-width="29"/><path d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke="#4E2C68" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="216" cy="293" r="10" fill="#FFF6E8"/><circle cx="198" cy="290" r="13" fill="#F6B183"/></g></g>';
+    '<g class="st-plane st-plane-arm-l"><g class="st-arm st-arm-l"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke-width="29"/><path d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke="#22385E" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="104" cy="293" r="10" fill="#FFF6E8"/><circle cx="122" cy="290" r="13" fill="#F6B183"/></g></g>' +
+    '<g class="st-plane st-plane-arm-r"><g class="st-arm st-arm-r"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke-width="29"/><path d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke="#22385E" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="216" cy="293" r="10" fill="#FFF6E8"/><circle cx="198" cy="290" r="13" fill="#F6B183"/></g></g>';
   function sterlingSVG(variant, cls) {
     var face = variant === "present" ? STERLING_FACE_PRESENT : STERLING_FACE_SMIRK;
     var inner = STERLING_DEFS + STERLING_SHADOW +
@@ -829,32 +829,32 @@ var AVATARS = [
     mouth: "#C2255C", blush: .5, mouthStyle: "lips",
     back: '<path d="M28,44 C24,16 40,6 60,6 C80,6 96,16 92,44 L94,78 C86,84 78,78 79,66 L80,44 C68,34 52,34 40,44 L41,66 C42,78 34,84 26,78 Z" fill="#F2C14E"/>',
     front: '<path d="M32,44 C31,19 45,10 60,10 C75,10 89,19 88,44 C86,31 80,25 71,25 C75,29 76,34 74.5,39 C68,30 55,28 46,32 C38,35 34,39 32,44 Z" fill="#F2C14E"/>' +
-      '<path d="M40,20 Q56,13 76,19 Q58,18 40,20 Z" fill="#FFE29A" opacity=".8"/>' +
-      '<path d="M38,26 Q50,20 64,22 Q50,23.5 38,26 Z" fill="#FFE29A" opacity=".5"/>',
-    acc: '<circle cx="29.5" cy="60" r="4.4" fill="none" stroke="#FFC93C" stroke-width="2.4"/>' +
-      '<circle cx="90.5" cy="60" r="4.4" fill="none" stroke="#FFC93C" stroke-width="2.4"/>' +
+      '<path d="M40,20 Q56,13 76,19 Q58,18 40,20 Z" fill="#F6EBCB" opacity=".8"/>' +
+      '<path d="M38,26 Q50,20 64,22 Q50,23.5 38,26 Z" fill="#F6EBCB" opacity=".5"/>',
+    acc: '<circle cx="29.5" cy="60" r="4.4" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>' +
+      '<circle cx="90.5" cy="60" r="4.4" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>' +
       '<circle cx="27.8" cy="57.8" r="1" fill="#FFF6E8"/><circle cx="88.8" cy="57.8" r="1" fill="#FFF6E8"/>' +
-      '<circle cx="75" cy="55" r="1.7" fill="#2A1530"/>'
+      '<circle cx="75" cy="55" r="1.7" fill="#0E1C33"/>'
   },
   { /* 1 — the Crooner: swept quiff, gold chain over a blue shirt */
     skin: "#B96F3E", neck: "#9A5527", shirt: "#1563B2", hair: "#17101F", brow: "#17101F",
     mouth: "#5E2408", blush: .35, mouthStyle: "grin", ears: true,
     back: "",
     front: '<path d="M31,44 C30,20 44,10 58,10 C56,5 66,3 73,8 C86,13 90,26 89,44 C85,29 76,25 64,26 C49,27 37,30 31,44 Z" fill="#17101F"/>' +
-      '<path d="M38,26 C46,16 58,12 70,14 C58,15 46,19 38,26 Z" fill="#4A3566" opacity=".85"/>',
-    acc: '<path d="M38,92 Q60,106 82,92" stroke="#FFC93C" stroke-width="3.4" fill="none" stroke-linecap="round"/>' +
-      '<path d="M52,97 L60,108 L68,97 L60,101 Z" fill="#FFC93C"/>',
+      '<path d="M38,26 C46,16 58,12 70,14 C58,15 46,19 38,26 Z" fill="#2F4674" opacity=".85"/>',
+    acc: '<path d="M38,92 Q60,106 82,92" stroke="#E9CD8A" stroke-width="3.4" fill="none" stroke-linecap="round"/>' +
+      '<path d="M52,97 L60,108 L68,97 L60,101 Z" fill="#E9CD8A"/>',
     collar: '<path d="M48,88 L60,100 L72,88 L72,96 L60,106 L48,96 Z" fill="#FFF6E8"/>'
   },
   { /* 2 — the Kid: backwards cap, freckles, grin for days */
-    skin: "#F2B183", neck: "#D98E57", shirt: "#3ECF6E", hair: "#2A1530", brow: "#2A1530",
+    skin: "#F2B183", neck: "#D98E57", shirt: "#3ECF6E", hair: "#0E1C33", brow: "#0E1C33",
     mouth: "#7C2D3E", blush: .5, mouthStyle: "kidgrin", ears: true, bigEyes: true,
     back: "",
-    front: '<path d="M33,40 C36,24 46,17 60,17 C74,17 84,24 87,40 C76,31 44,31 33,40 Z" fill="#2A1530"/>' +
+    front: '<path d="M33,40 C36,24 46,17 60,17 C74,17 84,24 87,40 C76,31 44,31 33,40 Z" fill="#0E1C33"/>' +
       '<path d="M30,33 C32,16 44,7 60,7 C76,7 88,16 90,33 C74,25 46,25 30,33 Z" fill="#E8437C"/>' +
       '<path d="M42,14 Q60,9 78,14 Q60,12.5 42,14 Z" fill="#C2255C" opacity=".65"/>' +
       '<rect x="12" y="24" width="20" height="7" rx="3.5" transform="rotate(14 22 27)" fill="#C2255C"/>' +
-      '<circle cx="60" cy="10" r="3" fill="#FFC93C"/>',
+      '<circle cx="60" cy="10" r="3" fill="#E9CD8A"/>',
     acc: '<circle cx="42" cy="54" r="1.7" fill="#D98E57"/><circle cx="48" cy="57" r="1.7" fill="#D98E57"/><circle cx="41" cy="59" r="1.7" fill="#D98E57"/>' +
       '<circle cx="78" cy="54" r="1.7" fill="#D98E57"/><circle cx="72" cy="57" r="1.7" fill="#D98E57"/><circle cx="79" cy="59" r="1.7" fill="#D98E57"/>'
   },
@@ -865,42 +865,42 @@ var AVATARS = [
       '<path d="M40,20 Q60,13 80,20 Q60,17 40,20 Z" fill="#FFFFFF" opacity=".35"/>',
     front: "",
     acc: '<circle cx="31" cy="61" r="2.7" fill="#FFF6E8"/><circle cx="89" cy="61" r="2.7" fill="#FFF6E8"/>' +
-      '<circle cx="60" cy="100" r="4.2" fill="#FFC93C"/><circle cx="60" cy="100" r="1.9" fill="#E8437C"/>',
-    glasses: "#FFC93C"
+      '<circle cx="60" cy="100" r="4.2" fill="#E9CD8A"/><circle cx="60" cy="100" r="1.9" fill="#E8437C"/>',
+    glasses: "#E9CD8A"
   },
   { /* 4 — the Rocker: long mane, gold headband, lightning drop */
-    skin: "#F6B183", neck: "#E89A63", shirt: "#3A2150", hair: "#8E3B2F", brow: "#5E2408",
+    skin: "#F6B183", neck: "#E89A63", shirt: "#1C3258", hair: "#8E3B2F", brow: "#5E2408",
     mouth: "#7C2D3E", blush: .42, mouthStyle: "half", lid: true,
     back: '<path d="M25,40 C23,11 42,3 60,3 C78,3 97,11 95,40 L98,104 L79,104 L80.5,50 C70,40 50,40 39.5,50 L41,104 L22,104 Z" fill="#8E3B2F"/>' +
       '<path d="M80.5,50 L79,104 L87,104 L86,42 C84,45.5 82.5,47.8 80.5,50 Z" fill="#6E2A20" opacity=".55"/>',
     front: '<path d="M32,41 C34,19 46,12 60,12 C74,12 86,19 88,41 L79,29 L72,40 L64,28 L56,39 L48,28 L40,38 Z" fill="#8E3B2F"/>' +
-      '<rect x="31" y="31" width="58" height="7.5" rx="3.75" transform="rotate(-2 60 35)" fill="#FFC93C"/>',
-    acc: '<path d="M91,58 L85,70 L89.5,70 L84,82 L95,66 L90.5,66 Z" fill="#FFC93C"/>',
-    collar: '<path d="M43,89 L60,110 L51,91 L46,88 Z" fill="#1D0E29"/><path d="M77,89 L60,110 L69,91 L74,88 Z" fill="#1D0E29"/><circle cx="60" cy="97" r="2.2" fill="#C9BCD6"/>'
+      '<rect x="31" y="31" width="58" height="7.5" rx="3.75" transform="rotate(-2 60 35)" fill="#E9CD8A"/>',
+    acc: '<path d="M91,58 L85,70 L89.5,70 L84,82 L95,66 L90.5,66 Z" fill="#E9CD8A"/>',
+    collar: '<path d="M43,89 L60,110 L51,91 L46,88 Z" fill="#0A1526"/><path d="M77,89 L60,110 L69,91 L74,88 Z" fill="#0A1526"/><circle cx="60" cy="97" r="2.2" fill="#C2CEDF"/>'
   },
   { /* 5 — the Cowboy: tan hat, moustache, neckerchief */
-    skin: "#C68642", neck: "#A66A2E", shirt: "#17BEBB", hair: "#2A1530", brow: "#2A1530",
+    skin: "#C68642", neck: "#A66A2E", shirt: "#17BEBB", hair: "#0E1C33", brow: "#0E1C33",
     mouth: "#5E2408", blush: .35, mouthStyle: "stache", squint: true,
-    back: '<path d="M33,44 L33,64 L39,64 L39,46 Z M87,44 L87,64 L81,64 L81,46 Z" fill="#2A1530"/>',
+    back: '<path d="M33,44 L33,64 L39,64 L39,46 Z M87,44 L87,64 L81,64 L81,46 Z" fill="#0E1C33"/>',
     front: '<path d="M38,28 C39,13 46,6 60,6 C74,6 81,13 82,28 C69,23.5 51,23.5 38,28 Z" fill="#C97B3D"/>' +
       '<path d="M52,7.5 Q60,12.5 68,7.5 Q60,10 52,7.5 Z" fill="#A66A2E" opacity=".85"/>' +
       '<path d="M40.5,19.5 C52,16.5 68,16.5 79.5,19.5 L80,24 C66,20.8 54,20.8 40,24 Z" fill="#E8437C"/>' +
       '<path d="M23,29.5 C36,24 84,24 97,29.5 C84,35 36,35 23,29.5 Z" fill="#C97B3D"/>' +
       '<path d="M23,29.5 C36,35 84,35 97,29.5 C84,32.8 36,32.8 23,29.5 Z" fill="#A66A2E" opacity=".8"/>',
-    acc: '<path d="M40,57 Q50,50 60,57 Q70,50 80,57 Q72,66 60,61.5 Q48,66 40,57 Z" fill="#2A1530"/>',
-    collar: '<path d="M47,87 L60,104 L73,87 L66,87 L60,94 L54,87 Z" fill="#E8437C"/><circle cx="60" cy="96" r="3.4" fill="#FFC93C"/>',
+    acc: '<path d="M40,57 Q50,50 60,57 Q70,50 80,57 Q72,66 60,61.5 Q48,66 40,57 Z" fill="#0E1C33"/>',
+    collar: '<path d="M47,87 L60,104 L73,87 L66,87 L60,94 L54,87 Z" fill="#E8437C"/><circle cx="60" cy="96" r="3.4" fill="#E9CD8A"/>',
     stache: true
   },
   { /* 6 — the Professor: side part, round glasses, bowtie + moustache */
-    skin: "#F2B183", neck: "#D98E57", shirt: "#241331", hair: "#B9C7D6", brow: "#B9C7D6",
+    skin: "#F2B183", neck: "#D98E57", shirt: "#0D1B33", hair: "#B9C7D6", brow: "#B9C7D6",
     mouth: "#7C2D3E", blush: .5, mouthStyle: "stache",
     back: '<path d="M31,52 C29,40 33,32 38,28 L40,44 C35,46 33,48 31,52 Z M89,52 C87,48 85,46 80,44 L82,28 C87,32 91,40 89,52 Z" fill="#B9C7D6"/>',
     front: '<path d="M34,38 C33,21 45,12 60,12 C73,12 84,18 87,28 C79,21 68,19 57,22 C45,25 37,30 34,38 Z" fill="#B9C7D6"/>' +
       '<path d="M47.5,14.5 Q44.5,21 45.5,27.5" stroke="#8FA2B5" stroke-width="1.7" stroke-linecap="round" fill="none"/>' +
       '<path d="M42,19 Q54,14.5 68,16.5 Q54,17.5 42,19 Z" fill="#E8EEF4" opacity=".55"/>',
     acc: '<path d="M41,59 Q51,53 60,59 Q69,53 79,59 Q71,67 60,63 Q49,67 41,59 Z" fill="#B9C7D6"/>',
-    glasses: "#FFC93C",
-    collar: '<path d="M50,88 L70,88 L60,102 Z" fill="#FFF6E8"/><path d="M60,96 L48,89 Q44,96 48,103 Z" fill="#E8437C"/><path d="M60,96 L72,89 Q76,96 72,103 Z" fill="#E8437C"/><rect x="55.5" y="92.5" width="9" height="8" rx="3" fill="#FFC93C"/>',
+    glasses: "#E9CD8A",
+    collar: '<path d="M50,88 L70,88 L60,102 Z" fill="#FFF6E8"/><path d="M60,96 L48,89 Q44,96 48,103 Z" fill="#E8437C"/><path d="M60,96 L72,89 Q76,96 72,103 Z" fill="#E8437C"/><rect x="55.5" y="92.5" width="9" height="8" rx="3" fill="#E9CD8A"/>',
     stache: true
   },
   { /* 7 — the Mod: sharp black bob, gold hoops, unhurried */
@@ -908,9 +908,9 @@ var AVATARS = [
     mouth: "#E8437C", blush: .3, mouthStyle: "dry",
     back: '<path d="M27,42 C25,14 42,5 60,5 C78,5 95,14 93,42 L95,80 C86,85 81,79 81.5,68 L82,42 L38,42 L38.5,68 C39,79 34,85 25,80 Z" fill="#17101F"/>',
     front: '<path d="M33,40 C34,20 46,13 60,13 C74,13 86,20 87,40 L87,28 L33,32.5 Z" fill="#17101F"/>' +
-      '<path d="M36,16 Q48,10 62,11 Q48,13 36,16 Z" fill="#452A5E" opacity=".9"/>',
-    acc: '<circle cx="28.5" cy="66" r="4.6" fill="none" stroke="#FFC93C" stroke-width="2.4"/>' +
-      '<circle cx="91.5" cy="66" r="4.6" fill="none" stroke="#FFC93C" stroke-width="2.4"/>',
+      '<path d="M36,16 Q48,10 62,11 Q48,13 36,16 Z" fill="#24365E" opacity=".9"/>',
+    acc: '<circle cx="28.5" cy="66" r="4.6" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>' +
+      '<circle cx="91.5" cy="66" r="4.6" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>',
     collar: '<path d="M45,81 L75,81 L76,92 Q60,96.5 44,92 Z" fill="#D96F24"/>',
     glassesBold: "#17101F"
   }
@@ -918,9 +918,9 @@ var AVATARS = [
 function avEye(A, cx, o) {
   o = o || {};
   var rx = o.rx || 6.6, ry = o.ry || 4.9, ir = o.ir || 4.1, pu = o.pu || 3.1, sw = o.sw || 1.7;
-  var s = '<ellipse cx="' + cx + '" cy="46" rx="' + rx + '" ry="' + ry + '" fill="#FFF9F0" stroke="#2A1530" stroke-width="' + sw + '"/>' +
+  var s = '<ellipse cx="' + cx + '" cy="46" rx="' + rx + '" ry="' + ry + '" fill="#FFF9F0" stroke="#0E1C33" stroke-width="' + sw + '"/>' +
     '<circle cx="' + cx + '" cy="46" r="' + ir + '" fill="#7A4A21"/>' +
-    '<circle cx="' + cx + '" cy="46" r="' + pu + '" fill="#2A1530"/>' +
+    '<circle cx="' + cx + '" cy="46" r="' + pu + '" fill="#0E1C33"/>' +
     '<circle cx="' + (cx - 1) + '" cy="44.9" r="1" fill="#FFF6E8"/>';
   if (o.lid) s += '<path d="M' + (cx - rx) + ',' + (46 - ry + 0.6) + ' Q' + cx + ',' + (46 - ry - 2.8) + ' ' + (cx + rx) + ',' + (46 - ry + 0.6) + '" stroke="' + dk(A.neck, .8) + '" stroke-width="1.6" stroke-linecap="round" fill="none"/>';
   return s;
@@ -936,16 +936,16 @@ function avFeatures(A, id, state) {
   var sweat = '<path d="M98,18 C104,29 106,35 98,41 C90,35 92,29 98,18 Z" fill="#7FD4FF"/><circle cx="95.5" cy="32" r="2" fill="#E8FAFF"/>';
   var s = "";
   if (state === "cheer") {
-    s += '<path d="M40.5,47 Q49,39.5 57.5,47" stroke="#2A1530" stroke-width="3.2" stroke-linecap="round" fill="none"/>' +
-      '<path d="M62.5,47 Q71,39.5 79.5,47" stroke="#2A1530" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
+    s += '<path d="M40.5,47 Q49,39.5 57.5,47" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>' +
+      '<path d="M62.5,47 Q71,39.5 79.5,47" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
     if (!A.stache) s += '<path d="M44,58 Q60,80 76,58 Q60,67 44,58 Z" fill="' + A.mouth + '"/>' +
       '<path d="M52,68 Q60,74 68,68 Q60,71 52,68 Z" fill="#FF8FA3"/>';
     else s += '<path d="M50,66 Q60,74 70,66 Q60,69.5 50,66 Z" fill="' + A.mouth + '"/>';
   } else if (state === "slump") {
     s += avBrow(A, 49, { y: 34, arch: 1, th: 3.2, dL: 2.5, dR: -2 }) +
       avBrow(A, 71, { y: 34, arch: 1, th: 3.2, dL: -2, dR: 2.5 });
-    s += '<path d="M40.5,44.5 Q49,50.5 57.5,44.5" stroke="#2A1530" stroke-width="3.2" stroke-linecap="round" fill="none"/>' +
-      '<path d="M62.5,44.5 Q71,50.5 79.5,44.5" stroke="#2A1530" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
+    s += '<path d="M40.5,44.5 Q49,50.5 57.5,44.5" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>' +
+      '<path d="M62.5,44.5 Q71,50.5 79.5,44.5" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
     if (!A.stache) s += '<path d="M48,66 Q55,62 60,66 Q65,70 72,66" stroke="' + A.mouth + '" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
     s += sweat;
   } else if (state === "wince") {
@@ -956,10 +956,10 @@ function avFeatures(A, id, state) {
        the expression layer moves. */
     s += avBrow(A, 49, { y: 32.5, arch: 0, th: 3.4, dL: -2, dR: 3.5 }) +
       avBrow(A, 71, { y: 32.5, arch: 0, th: 3.4, dL: 3.5, dR: -2 });
-    s += '<path d="M41.5,43 L56.5,48.5" stroke="#2A1530" stroke-width="3.4" stroke-linecap="round" fill="none"/>' +
-      '<path d="M78.5,43 L63.5,48.5" stroke="#2A1530" stroke-width="3.4" stroke-linecap="round" fill="none"/>' +
-      '<path d="M43,50.5 L52,53" stroke="#2A1530" stroke-width="2" stroke-linecap="round" fill="none" opacity=".65"/>' +
-      '<path d="M77,50.5 L68,53" stroke="#2A1530" stroke-width="2" stroke-linecap="round" fill="none" opacity=".65"/>';
+    s += '<path d="M41.5,43 L56.5,48.5" stroke="#0E1C33" stroke-width="3.4" stroke-linecap="round" fill="none"/>' +
+      '<path d="M78.5,43 L63.5,48.5" stroke="#0E1C33" stroke-width="3.4" stroke-linecap="round" fill="none"/>' +
+      '<path d="M43,50.5 L52,53" stroke="#0E1C33" stroke-width="2" stroke-linecap="round" fill="none" opacity=".65"/>' +
+      '<path d="M77,50.5 L68,53" stroke="#0E1C33" stroke-width="2" stroke-linecap="round" fill="none" opacity=".65"/>';
     if (!A.stache) s += '<path d="M47,66 L47,63.5 L73,63.5 L73,66" stroke="' + A.mouth + '" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
   } else if (state === "keen") {
     /* Visual pass V2 — KEEN: the focused face of a live streak.
@@ -1050,7 +1050,7 @@ function avatarSVG(id, state, seat) {
   var si = Number.isInteger(seat) ? ((seat % 4) + 4) % 4 : id % 4;
   var open = '<svg class="avatar" viewBox="0 0 120 124" aria-hidden="true">';
   var s = '<circle cx="60" cy="57" r="54" fill="' + PCHEAD[si] + '"/>' +
-    '<circle cx="60" cy="57" r="54" fill="none" stroke="#FFC93C" stroke-width="2" opacity=".45"/>';
+    '<circle cx="60" cy="57" r="54" fill="none" stroke="#E9CD8A" stroke-width="2" opacity=".45"/>';
   if (state === "cheer") {
     s += '<path d="M20,102 Q0,80 6,52" stroke="' + A.shirt + '" stroke-width="13" stroke-linecap="round" fill="none"/>' +
       '<path d="M100,102 Q120,80 114,52" stroke="' + A.shirt + '" stroke-width="13" stroke-linecap="round" fill="none"/>' +
@@ -1702,7 +1702,7 @@ function avatarSVG(id, state, seat) {
      Pass P: three depths (far/mid/near — size, speed and alpha ride the
      depth), leaf-shaped flecks among the rounds, and gold runs heavy. */
   var leaves = { active: false, parts: [], cv: null, cx: null, dpr: 1 };
-  var LEAF_COLORS = ["#E8437C", "#2E9BFF", "#9B5DE5", "#FF8C42", "#3ECF6E", "#FFC93C", "#17BEBB", "#FFD76A", "#FFB03A", "#FFE29A"];
+  var LEAF_COLORS = ["#E8437C", "#2E9BFF", "#9B5DE5", "#FF8C42", "#3ECF6E", "#E9CD8A", "#17BEBB", "#F0DCA3", "#E2B76B", "#F6EBCB"];
   var LEAF_GOLD = [5, 7, 8, 9];
   var LEAF_DEPTH_SIZE = [0.55, 1, 1.55], LEAF_DEPTH_SPEED = [0.55, 1, 1.5], LEAF_DEPTH_ALPHA = [0.45, 0.8, 0.95];
   function resetLeaf(p, scatter) {
@@ -2207,9 +2207,9 @@ function avatarSVG(id, state, seat) {
       cx.beginPath(); cx.arc(0, 0, r, 0, 6.2832);
       cx.fillStyle = "#D9930D"; cx.fill();
       cx.beginPath(); cx.arc(0, 0, r * 0.8, 0, 6.2832);
-      cx.fillStyle = "#FFC93C"; cx.fill();
+      cx.fillStyle = "#E9CD8A"; cx.fill();
       cx.beginPath(); cx.arc(-r * 0.19, -r * 0.19, r * 0.4, 0, 6.2832);
-      cx.fillStyle = "#FFE29A"; cx.fill();
+      cx.fillStyle = "#F6EBCB"; cx.fill();
       cx.restore();
     }
     if (!anyOn) { pool.busy = false; cv.classList.remove("on"); cx.clearRect(0, 0, cv.width, cv.height); }
@@ -2419,12 +2419,12 @@ function avatarSVG(id, state, seat) {
      reads at 30px. Same viewBox, same two homes (the travelling
      #laurel and the seat's .laurel-badge). */
   var LAUREL_SVG = '<svg viewBox="0 0 40 40" aria-hidden="true">' +
-    '<path d="M7,29 L5,13 L13.5,19 L20,8.5 L26.5,19 L35,13 L33,29 Z" fill="#FFC93C" stroke="#8A5E0D" stroke-width="1.8" stroke-linejoin="round"/>' +
-    '<circle cx="5" cy="11" r="2.7" fill="#FFE29A" stroke="#8A5E0D" stroke-width="1.4"/>' +
-    '<circle cx="20" cy="6.8" r="3" fill="#FFE29A" stroke="#8A5E0D" stroke-width="1.4"/>' +
-    '<circle cx="35" cy="11" r="2.7" fill="#FFE29A" stroke="#8A5E0D" stroke-width="1.4"/>' +
-    '<rect x="6" y="29" width="28" height="5.2" rx="2.4" fill="#E9B94F" stroke="#8A5E0D" stroke-width="1.6"/>' +
-    '<circle cx="20" cy="23" r="3" fill="#E8437C" stroke="#8A5E0D" stroke-width="1.3"/></svg>';
+    '<path d="M7,29 L5,13 L13.5,19 L20,8.5 L26.5,19 L35,13 L33,29 Z" fill="#E9CD8A" stroke="#7E6530" stroke-width="1.8" stroke-linejoin="round"/>' +
+    '<circle cx="5" cy="11" r="2.7" fill="#F6EBCB" stroke="#7E6530" stroke-width="1.4"/>' +
+    '<circle cx="20" cy="6.8" r="3" fill="#F6EBCB" stroke="#7E6530" stroke-width="1.4"/>' +
+    '<circle cx="35" cy="11" r="2.7" fill="#F6EBCB" stroke="#7E6530" stroke-width="1.4"/>' +
+    '<rect x="6" y="29" width="28" height="5.2" rx="2.4" fill="#DEC084" stroke="#7E6530" stroke-width="1.6"/>' +
+    '<circle cx="20" cy="23" r="3" fill="#E8437C" stroke="#7E6530" stroke-width="1.3"/></svg>';
   var laurelState = { seat: -1 };
   function laurelBadge() { return '<span class="laurel-badge">' + LAUREL_SVG + "</span>"; }
   function updateLaurel(source) {
@@ -4185,28 +4185,28 @@ function avatarSVG(id, state, seat) {
     }
     function goldGrad(y0, y1) {
       var g = ctx.createLinearGradient(0, y0, 0, y1);
-      g.addColorStop(0, "#FFE29A"); g.addColorStop(0.55, "#FFB03A"); g.addColorStop(1, "#FF8A3C");
+      g.addColorStop(0, "#F6EBCB"); g.addColorStop(0.55, "#E2B76B"); g.addColorStop(1, "#DFAF63");
       return g;
     }
     /* the room itself: deep plum, warmer at the heart */
     var bg = ctx.createLinearGradient(0, 0, 0, SHARE_H);
-    bg.addColorStop(0, "#2B1138"); bg.addColorStop(0.45, "#24102F"); bg.addColorStop(1, "#150820");
+    bg.addColorStop(0, "#0A1730"); bg.addColorStop(0.45, "#0C1930"); bg.addColorStop(1, "#060E1D");
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, SHARE_H);
     var glow = ctx.createRadialGradient(CX, 430, 60, CX, 430, 660);
-    glow.addColorStop(0, "rgba(255,176,58,.20)"); glow.addColorStop(1, "rgba(255,176,58,0)");
+    glow.addColorStop(0, "rgba(226,183,107,.20)"); glow.addColorStop(1, "rgba(226,183,107,0)");
     ctx.fillStyle = glow; ctx.fillRect(0, 0, W, SHARE_H);
     /* the brass frame, double-ruled like the marquee's */
-    ctx.strokeStyle = "#C6A45E"; ctx.lineWidth = 4; ctx.strokeRect(36, 36, W - 72, SHARE_H - 72);
+    ctx.strokeStyle = "#C9A962"; ctx.lineWidth = 4; ctx.strokeRect(36, 36, W - 72, SHARE_H - 72);
     ctx.strokeStyle = "rgba(255,183,58,.45)"; ctx.lineWidth = 2; ctx.strokeRect(54, 54, W - 108, SHARE_H - 108);
     /* the masthead */
     centered("THE", 148, "600 30px " + F, "#FFF6E8", "14px");
-    ctx.shadowColor = "#571C46"; ctx.shadowOffsetY = 5;
+    ctx.shadowColor = "#27436E"; ctx.shadowOffsetY = 5;
     centered("GILDED HOUR", 244, "700 96px " + F, goldGrad(160, 248));
     ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
-    ctx.strokeStyle = "rgba(198,164,94,.85)"; ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(201,169,98,.85)"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(228, 294); ctx.lineTo(474, 294); ctx.moveTo(606, 294); ctx.lineTo(852, 294); ctx.stroke();
-    centered("★", 310, "38px " + F, "#FFC93C");
-    centered("FINAL RESULT", 356, "700 30px " + F, "#FFE29A", "7px");
+    centered("★", 310, "38px " + F, "#E9CD8A");
+    centered("FINAL RESULT", 356, "700 30px " + F, "#F6EBCB", "7px");
     centered(d.date, 400, "500 29px " + F, "rgba(255,246,232,.78)", "2px");
     var cursor;
     if (d.champion) {
@@ -4216,15 +4216,15 @@ function avatarSVG(id, state, seat) {
         ctx.drawImage(av.champ, CX - 104, 530 - 108, 208, 215);
         ctx.restore();
         ctx.beginPath(); ctx.arc(CX, 530, 104, 0, Math.PI * 2);
-        ctx.strokeStyle = "#FFC93C"; ctx.lineWidth = 5; ctx.stroke();
+        ctx.strokeStyle = "#E9CD8A"; ctx.lineWidth = 5; ctx.stroke();
       }
-      centered(d.champion.house ? "★ HOUSE WIN ★" : "★ CHAMPION ★", 700, "700 30px " + F, "#FFC93C", "6px");
+      centered(d.champion.house ? "★ HOUSE WIN ★" : "★ CHAMPION ★", 700, "700 30px " + F, "#E9CD8A", "6px");
       var nameUp = d.champion.name.toUpperCase();
       var npx = fitPx(nameUp, 66, 872, "700", F);
       centered(nameUp, 768, "700 " + npx + "px " + F, "#FFF6E8");
       var tot = money(d.champion.total);
       var tpx = fitPx(tot, 96, 820, "700", FM);
-      ctx.shadowColor = "#571C46"; ctx.shadowOffsetY = 4;
+      ctx.shadowColor = "#27436E"; ctx.shadowOffsetY = 4;
       centered(tot, 862, "700 " + tpx + "px " + FM, goldGrad(786, 866));
       ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
       cursor = 916;
@@ -4233,11 +4233,11 @@ function avatarSVG(id, state, seat) {
           ? "THE HOUSE KEEPS THE POT TOO — " + money(d.pot)
           : "★ AND TOOK THE " + money(d.pot) + " POT ★";
         var ppx = fitPx(potTxt, 36, 872, "700", F);
-        centered(potTxt, cursor + 20, "700 " + ppx + "px " + F, "#FFE29A");
+        centered(potTxt, cursor + 20, "700 " + ppx + "px " + F, "#F6EBCB");
         cursor += 76;
       }
     } else {
-      ctx.shadowColor = "#571C46"; ctx.shadowOffsetY = 5;
+      ctx.shadowColor = "#27436E"; ctx.shadowOffsetY = 5;
       centered("DEAD LEVEL", 548, "700 88px " + F, goldGrad(478, 552));
       ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
       centered("NO CROWN TONIGHT — THE TABLE STANDS MATCHED AT " + money(d.standings.length ? d.standings[0].score : 0), 606, "500 30px " + F, "rgba(255,246,232,.85)");
@@ -4254,13 +4254,13 @@ function avatarSVG(id, state, seat) {
         ctx.drawImage(img, 105, base - 36, 42, 43);
         ctx.restore();
         ctx.beginPath(); ctx.arc(126, base - 14, 21, 0, Math.PI * 2);
-        ctx.strokeStyle = isChamp ? "#FFC93C" : "rgba(255,201,60,.45)"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = isChamp ? "#E9CD8A" : "rgba(233,205,138,.45)"; ctx.lineWidth = 2; ctx.stroke();
       }
       ctx.textBaseline = "alphabetic"; ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
-      ctx.fillStyle = isChamp ? "#FFE29A" : "rgba(255,246,232,.6)";
+      ctx.fillStyle = isChamp ? "#F6EBCB" : "rgba(255,246,232,.6)";
       ctx.font = "700 36px " + F; ctx.textAlign = "left";
       ctx.fillText((k + 1) + ".", 168, base);
-      ctx.fillStyle = isChamp ? "#FFE29A" : "#FFF6E8";
+      ctx.fillStyle = isChamp ? "#F6EBCB" : "#FFF6E8";
       var spx = fitPx(r.name.toUpperCase(), 38, 560, "700", F);
       ctx.font = "700 " + spx + "px " + F;
       ctx.fillText(r.name.toUpperCase(), 226, base);
@@ -4274,15 +4274,15 @@ function avatarSVG(id, state, seat) {
     if (d.flourish) {
       var fl = "★ BIGGEST BANK OF THE NIGHT — " + money(d.flourish.amt) + " BY " + d.flourish.name.toUpperCase();
       var fpx = fitPx(fl, 34, 880, "700", F);
-      centered(fl, cursor + 16, "700 " + fpx + "px " + F, "#FFC93C");
+      centered(fl, cursor + 16, "700 " + fpx + "px " + F, "#E9CD8A");
       cursor += 66;
     }
     if (d.seriesLine) {
       var sx = fitPx(d.seriesLine, 31, 880, "700", F);
-      centered(d.seriesLine, cursor + 16, "700 " + sx + "px " + F, "#C6A45E");
+      centered(d.seriesLine, cursor + 16, "700 " + sx + "px " + F, "#C9A962");
       cursor += 60;
     }
-    centered("s6ggrpgrzf-droid.github.io/Gamez/gilded-hour", 1282, "500 23px " + F, "rgba(198,164,94,.8)", "1px");
+    centered("s6ggrpgrzf-droid.github.io/Gamez/gilded-hour", 1282, "500 23px " + F, "rgba(201,169,98,.8)", "1px");
   }
   /* compose the card: the real letterforms first (the draw waits
      on document.fonts), every needed avatar alongside, then the
@@ -4698,9 +4698,9 @@ function avatarSVG(id, state, seat) {
     var parts = [];
     parts.push('<svg class="wheel-svg" viewBox="0 0 400 400" aria-hidden="true">');
     parts.push('<defs><linearGradient id="wheelBrass" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#FFE29A"/><stop offset=".45" stop-color="#C9971F"/>' +
-      '<stop offset=".75" stop-color="#8A5E0D"/><stop offset="1" stop-color="#FFD76A"/></linearGradient></defs>');
-    parts.push('<circle cx="200" cy="200" r="195" fill="#150820"/>');
+      '<stop offset="0" stop-color="#F6EBCB"/><stop offset=".45" stop-color="#B9974F"/>' +
+      '<stop offset=".75" stop-color="#7E6530"/><stop offset="1" stop-color="#F0DCA3"/></linearGradient></defs>');
+    parts.push('<circle cx="200" cy="200" r="195" fill="#060E1D"/>');
     parts.push('<circle cx="200" cy="200" r="195" fill="none" stroke="url(#wheelBrass)" stroke-width="6"/>');
     parts.push('<g class="wheel-rotor" transform="rotate(' + wheelRest + ' 200 200)">');
     CATS.forEach(function (cat, i) {
@@ -4711,15 +4711,15 @@ function avatarSVG(id, state, seat) {
         " A184,184 0 0 1 " + p2[0].toFixed(1) + "," + p2[1].toFixed(1) +
         " L" + p3[0].toFixed(1) + "," + p3[1].toFixed(1) +
         " A63,63 0 0 0 " + p4[0].toFixed(1) + "," + p4[1].toFixed(1) +
-        ' Z" fill="' + cs.mid + '" stroke="#150820" stroke-width="2.5"/>');
+        ' Z" fill="' + cs.mid + '" stroke="#060E1D" stroke-width="2.5"/>');
       var bp = wheelPolar(178, a0);
-      parts.push('<circle cx="' + bp[0].toFixed(1) + '" cy="' + bp[1].toFixed(1) + '" r="3.4" fill="#FFD76A" opacity=".85"/>');
+      parts.push('<circle cx="' + bp[0].toFixed(1) + '" cy="' + bp[1].toFixed(1) + '" r="3.4" fill="#F0DCA3" opacity=".85"/>');
       parts.push('<g transform="rotate(' + am.toFixed(2) + ' 200 200)">' +
         '<svg x="176" y="53" width="48" height="48" viewBox="0 0 48 48"><use href="#' + (CATEMBLEM[cat] || "") + '"/></svg>' +
         '<text class="wheel-label" x="200" y="34" fill="' + (CATTX[cat] || "#FFF6E8") + '">' + esc(cat.toUpperCase()) + "</text></g>");
     });
     parts.push("</g>");
-    parts.push('<circle cx="200" cy="200" r="57" fill="#24102F" stroke="url(#wheelBrass)" stroke-width="4"/>');
+    parts.push('<circle cx="200" cy="200" r="57" fill="#0C1930" stroke="url(#wheelBrass)" stroke-width="4"/>');
     parts.push('<svg x="168" y="168" width="64" height="64" viewBox="0 0 120 120"><use href="#emblem"/></svg>');
     parts.push("</svg>");
     return '<div class="wheel-frame" data-target="' + esc(targetCat || "") + '"><div class="wheel-needle"></div>' + parts.join("") + "</div>";
@@ -7576,7 +7576,7 @@ function avatarSVG(id, state, seat) {
       var ctx = cv.getContext("2d");
       ctx.fillStyle = "#FFF6E8";
       ctx.fillRect(0, 0, px, px);
-      ctx.fillStyle = "#241331";
+      ctx.fillStyle = "#0D1B33";
       for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
         if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, Math.ceil(cell), Math.ceil(cell));
       }
@@ -8791,7 +8791,7 @@ function avatarSVG(id, state, seat) {
   /* a category the pad genuinely can't place (a fallback pad whose
      question never resolved) degrades to neutral gold, never to
      another category's colours */
-  var JP_GOLD = { hi: "#FFE29A", mid: "#FFB03A", lo: "#FF8A3C", sh: "#B96A12", rgb: "255,185,58", tx: "#431A04" };
+  var JP_GOLD = { hi: "#F6EBCB", mid: "#E2B76B", lo: "#DFAF63", sh: "#A5853F", rgb: "255,185,58", tx: "#431A04" };
   function jpApplyCat(cat) {
     var known = !!CATSTYLE[cat];
     var cs = known ? catStyle(cat) : JP_GOLD, g = $("scr-join");
