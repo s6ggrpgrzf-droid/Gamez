@@ -1442,21 +1442,15 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .jp-qline{display:flex;align-items:flex-start;gap:9px}
 .jp-catemb{flex:none;line-height:0;margin-top:2px}
 .jp-catemb .emb{width:22px;height:22px;display:block}
-/* table setup: the portrait disc in each name row is the picker */
-.ava-pick{width:36px;height:38px;flex:none;padding:0;border-radius:12px;background:rgba(255,246,232,.06);transition:transform .08s ease}
+/* table setup: the medallion in each name row wears the initial
+   of the name being typed (THE FACE PASS — no longer a picker) */
+.ava-pick{width:36px;height:36px;flex:none;padding:0;border-radius:50%;background:rgba(255,246,232,.06)}
 @media (max-height:500px){
-  .ava-pick{width:20px;height:20px;border-radius:7px}
+  .ava-pick{width:20px;height:20px;border-radius:50%}
   .cat-pill .emb{width:15px;height:15px}
   .cat-chip .emb{width:16px;height:16px}
 }
 .ava-pick .avatar{width:100%;height:auto;display:block;margin:0;filter:none}
-.ava-pick:active{transform:scale(.93)}
-/* pad join: the eight-portrait picker grid */
-.jp-ava-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:12px}
-.jp-ava-btn{padding:2px;border-radius:14px;border:2px solid rgba(255,246,232,.14);background:rgba(255,246,232,.05);line-height:0;transition:transform .08s ease}
-.jp-ava-btn .avatar{width:100%;height:auto;display:block;margin:0;filter:none}
-.jp-ava-btn:active{transform:scale(.93)}
-.jp-ava-btn.sel{border-color:var(--gold);background:rgba(233,205,138,.16);box-shadow:0 0 0 2px rgba(233,205,138,.35)}
 
 /* ================= Design pass item 7 — short-stage fit =================
    The paper card carries its own padding; on the short landscape stage
@@ -1498,10 +1492,6 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
    ============================================================ */
 /* #12 — hit areas grow invisibly to 44px; the artwork never changes.
    (wide-short links/count buttons: 44 in the tapping dimension) */
-.ava-pick{position:relative}
-.ava-pick::after{content:"";position:absolute;inset:-4px}
-.jp-ava-btn{position:relative}
-.jp-ava-btn::after{content:"";position:absolute;inset:-8px}
 .how-link{position:relative}
 .how-link::after{content:"";position:absolute;inset:-10px 0}
 
@@ -3570,6 +3560,75 @@ button.dbl-token:active{transform:scale(.92)}
      blank paper tucks behind the vessel, which reads as depth.
      The breath below the strip (margin-top) rides along. */
   #scr-game[data-phase="reveal"] .why-wrap{margin-top:14px;margin-left:64px}
+}
+
+/* ================================================================
+   THE BLUFF (research programme pass 2, 2026-11-13): the invent
+   rows, the pick-marking plaques, the reveal's accounting of
+   lies, and the seat tag. Dressed in the show's grammar — glass
+   plaques, champagne lettering, one plum accent that belongs to
+   the Bluff alone. */
+.bluff-kind{color:#E7C8F2}
+.bluff-rows{display:flex;flex-direction:column;gap:9px;margin-top:12px;text-align:left}
+.bluff-row{display:flex;align-items:center;gap:10px;background:rgba(10,20,40,.55);border:1px solid rgba(216,183,106,.35);border-radius:10px;padding:8px 12px}
+.bluff-seat{font-family:var(--sans);font-weight:600;font-size:14px;color:var(--gold);min-width:86px}
+.bluff-in{flex:1;background:rgba(4,8,18,.8);border:1px solid rgba(216,183,106,.4);border-radius:8px;color:#FFF6E8;font-family:var(--sans);font-size:15px;padding:8px 10px;min-width:0}
+.bluff-in:focus{outline:2px solid rgba(216,183,106,.75);outline-offset:1px}
+.bluff-note{font-size:13px;color:#B9A8CC;font-style:italic}
+.answers.bluff-marking{margin-top:10px}
+.answers.bluff-marking .ans-btn.bluff-pick{cursor:pointer;position:relative;overflow:visible}
+.answers.bluff-marking .ans-btn.bluff-pick.sel{border-color:#E7C8F2;box-shadow:0 0 0 2px rgba(231,200,242,.55),0 10px 24px rgba(0,0,0,.45)}
+.bluff-credits{margin-top:12px;display:flex;flex-direction:column;gap:6px;text-align:left}
+.bluff-credit{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;background:rgba(10,20,40,.5);border:1px solid rgba(216,183,106,.25);border-radius:9px;padding:7px 11px;font-size:14px}
+.bluff-credit.truth{border-color:rgba(216,183,106,.75)}
+.bc-tag{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.12em;color:#0A1428;background:linear-gradient(180deg,#EBD9A0,#C8A24F);border-radius:5px;padding:2.5px 7px;white-space:nowrap}
+.bluff-credit:not(.truth) .bc-tag{background:linear-gradient(180deg,#5C3A6E,#3E2549);color:#E7C8F2;border:1px solid rgba(231,200,242,.4)}
+.bc-text{color:#FFF6E8;font-weight:600}
+.bc-fooled{color:var(--gold);font-size:13px}
+.bc-fooled.none{color:#8E9BB5;font-style:italic}
+.closest-tag.blufftag{background:rgba(92,58,110,.5);color:#E7C8F2;border-color:rgba(231,200,242,.45)}
+.jp-foolline{font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:.08em;color:#E7C8F2;margin-top:6px}
+/* THE BLUFF — stage fit (found in the pass's own screenshots,
+   2026-11-13): the invent stage and the credit-carrying reveal
+   are the bluff's two tall stages. In short landscape the invent
+   stage overflowed its frame (question text bursting the card,
+   rows colliding with the pot) and the reveal's four credit rows
+   pushed CONTINUE off the stage and slid under the pot in both
+   orientations. Both compress inside their own :has scope, the
+   dial-reveal audit's pattern, so no other stage moves. The
+   credits also run one step compacter at every size. */
+.bluff-credits{gap:3px;margin-top:7px}
+.bluff-credit{padding:2px 10px;font-size:13px}
+.stage-inner:has(.bluff-credits) .why-slip{padding-top:4px;padding-bottom:4px}
+.stage-inner:has(.bluff-credits)>div:last-child{margin-top:4px !important}
+.stage-inner:has(.bluff-credits) .answers .ans-btn{padding-top:6px;padding-bottom:6px}
+@media (min-height:501px){
+  .stage-inner:has(.bluff-credits) .q-text{font-size:20px;line-height:1.3}
+}
+@media (max-height:500px){
+  .stage-inner:has(.bluff-rows) .q-text{font-size:15px;line-height:1.28}
+  .stage-inner:has(.bluff-rows) .round-text{display:none}
+  .stage-inner:has(.bluff-rows) .bluff-rows{gap:5px;margin-top:7px}
+  .stage-inner:has(.bluff-rows) .bluff-row{padding:3px 10px}
+  .stage-inner:has(.bluff-rows) .bluff-seat{min-width:62px;font-size:12.5px}
+  .stage-inner:has(.bluff-rows) .bluff-in{padding:5px 8px;font-size:13.5px}
+  .stage-inner:has(.bluff-rows)>div:last-child{margin-top:5px !important}
+  .stage-inner:has(.bluff-rows) .btn-gold{padding:8px 20px}
+  .stage-inner:has(.bluff-credits) .q-text{font-size:12.5px;line-height:1.28}
+  .stage-inner:has(.bluff-credits) .answers{margin-top:2px}
+  .stage-inner:has(.bluff-credits) .bluff-credits{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px;margin-left:80px}
+  .stage-inner:has(.bluff-credits) .why-slip{font-size:11px;line-height:1.25}
+  .stage-inner:has(.bluff-credits) .bluff-credit{padding:3px 7px;font-size:11.5px;gap:4px}
+  .stage-inner:has(.bluff-credits) .bc-tag{font-size:9.5px;padding:2px 5px}
+  .stage-inner:has(.bluff-credits) .bc-fooled{font-size:11px}
+  .stage-inner:has(.bluff-credits) .why-slip{padding-top:2px;padding-bottom:2px}
+  .stage-inner:has(.bluff-credits)>div:last-child{margin-top:2px !important}
+  /* the mark screen's plaques run the stage's full width, and
+     the pot's corner is plaque 1's letter chip — the pot sits
+     this one stage out, as it already does behind CALL IT.
+     The invent rows run full width the same way. */
+  #stage:has(.bluff-marking) .pot-vessel{display:none}
+  #stage:has(.bluff-rows) .pot-vessel{display:none}
 }
 
 /* ================================================================

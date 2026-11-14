@@ -1625,6 +1625,174 @@ const BANK = [
       "Whatchoo talkin' 'bout, Willis?"
     ],
     "why": "Joey Tribbiani's three words outlasted the decade — Willis belongs to the seventies and eighties, whatever your memory tells you."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "Long before the films, Pixar made its money selling what?",
+    "a": "A graphics computer",
+    "decoys": [
+      "A movie camera",
+      "Animation software",
+      "A film projector"
+    ],
+    "why": "The Pixar Image Computer — a $135,000 graphics machine sold to hospitals and studios. The cartoons were the side project that ate the company."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "The first McDonald's, opened in 1940, had no Big Mac and no fries on the menu. Its headline act was what?",
+    "a": "Barbecue",
+    "decoys": [
+      "Hot dogs",
+      "Fried chicken",
+      "Thick milkshakes"
+    ],
+    "why": "McDonald's Famous Barbecue, San Bernardino, 1940 — fifteen-cent barbecue plates. The burgers-and-fries reset came eight years later."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "bluff",
+    "q": "Nintendo was founded in 1889, generations before the video game. What did it sell?",
+    "a": "Playing cards",
+    "decoys": [
+      "Wooden toys",
+      "Board games",
+      "Kites"
+    ],
+    "why": "Handmade hanafuda playing cards — Nintendo sold cards for nearly eighty years before it touched a screen."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "kind": "bluff",
+    "q": "The Cheers bar in the opening shots is a real Boston pub. Before television made it famous, it was called what?",
+    "a": "The Bull & Finch",
+    "decoys": [
+      "The Hungry Pilgrim",
+      "The Salty Dog",
+      "The Warren Tavern"
+    ],
+    "why": "The Bull & Finch Pub, on Beacon Street since 1969. The show's interior was a set; the little bar downstairs is real, and tiny."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "kind": "bluff",
+    "q": "Ringo Starr was not The Beatles' first drummer. The man he replaced in 1962 was named what?",
+    "a": "Pete Best",
+    "decoys": [
+      "Stu Sutcliffe",
+      "Jimmy Nicol",
+      "Andy White"
+    ],
+    "why": "Pete Best — sacked on the eve of fame. Sutcliffe played bass, Nicol filled in on tour in '64, and White drummed on one single."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "In the very first Scooby-Doo designs, the gang's dog was a completely different animal. What was he?",
+    "a": "A sheepdog",
+    "decoys": [
+      "A bloodhound",
+      "A talking cat",
+      "A miniature horse"
+    ],
+    "why": "A big shaggy sheepdog named Too Much. The Great Dane arrived later in the drawing — the name Scooby came last of all."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "kind": "bluff",
+    "q": "The first thing ever sold on eBay, back in 1995, was a broken what?",
+    "a": "A laser pointer",
+    "decoys": [
+      "A pocket calculator",
+      "A digital watch",
+      "A computer mouse"
+    ],
+    "why": "Pierre Omidyar's broken laser pointer, $14.83. The buyer collected broken laser pointers, which is how empires start."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "Psycho, in 1960, was the first American film ever to show what perfectly ordinary bathroom object on screen?",
+    "a": "A flushing toilet",
+    "decoys": [
+      "A shower drain",
+      "A bathroom mirror",
+      "A toothbrush"
+    ],
+    "why": "A toilet, flushing, in a mainstream American film — a genuine scandal of plumbing in 1960. The shower had to wait its turn."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "Seinfeld's pilot episode, in 1989, aired under a different title: The Seinfeld what?",
+    "a": "Chronicles",
+    "decoys": [
+      "Tapes",
+      "Files",
+      "Diaries"
+    ],
+    "why": "The Seinfeld Chronicles — one episode under that name, then the title lost the tail and the show found its feet."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "'Weird Al' Yankovic's first parody, recorded in a men's room for its acoustics, spoofed which hit song?",
+    "a": "My Sharona",
+    "decoys": [
+      "My Girl",
+      "My Generation",
+      "My Sweet Lord"
+    ],
+    "why": "'My Bologna', after The Knack's My Sharona — recorded across from his college radio station, in the bathroom, for the echo."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "Ernő Rubik invented his Cube as a teaching aid. Back in Budapest, he was a professor of what?",
+    "a": "Architecture",
+    "decoys": [
+      "Mathematics",
+      "Mechanical engineering",
+      "Art"
+    ],
+    "why": "Architecture — the Cube was built to teach his students about three-dimensional space. It escaped the classroom."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "kind": "bluff",
+    "q": "The Energizer Bunny was invented as a parody of a rival's drumming bunny. Which battery brand had the bunny first?",
+    "a": "Duracell",
+    "decoys": [
+      "Rayovac",
+      "Eveready",
+      "Kodak"
+    ],
+    "why": "Duracell's bunny drummed first, in 1973. Energizer's 1989 parody bunny walked through the rival's own advert and never stopped."
   }
 ];
 

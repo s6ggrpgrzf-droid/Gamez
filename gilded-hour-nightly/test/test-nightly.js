@@ -60,8 +60,8 @@ async function main() {
     const win = {};
     new Function('window', gameSrc)(win);
     const gameBank = win.GH_BANK;
-    ok(Array.isArray(gameBank) && gameBank.length === 126, 'the game bank has 126 entries', 'len=' + (gameBank && gameBank.length));
-    ok(BANK.length === 126, "the worker's bank.js has 126 entries", 'len=' + BANK.length);
+    ok(Array.isArray(gameBank) && gameBank.length === 138, 'the game bank has 138 entries', 'len=' + (gameBank && gameBank.length));
+    ok(BANK.length === 138, "the worker's bank.js has 138 entries", 'len=' + BANK.length);
     ok(deepEqual(BANK, gameBank), "bank.js deep-equals the game's bank (same order, same fields, same values)");
     // Spot checks, named and exact.
     ok(BANK[0].q === 'In Forrest Gump, Forrest says life is like a box of what?'
@@ -74,10 +74,10 @@ async function main() {
     const surveyEntry = BANK.find((e) => e.kind === 'survey' && e.cat === 'Saturday Morning');
     ok(!!surveyEntry && surveyEntry.a === 'Scooby-Doo' && Array.isArray(surveyEntry.w) && surveyEntry.w.length === 3,
       'spot check: the Saturday Morning survey entry keys Scooby-Doo', JSON.stringify(surveyEntry).slice(0, 100));
-    const kinds = { normal: 0, num: 0, survey: 0 };
-    for (const e of BANK) kinds[e.kind === 'num' ? 'num' : e.kind === 'survey' ? 'survey' : 'normal']++;
-    ok(kinds.normal === 102 && kinds.num === 12 && kinds.survey === 12,
-      'kind distribution is 102 normal / 12 num / 12 survey', JSON.stringify(kinds));
+    const kinds = { normal: 0, num: 0, survey: 0, bluff: 0 };
+    for (const e of BANK) kinds[e.kind === 'num' ? 'num' : e.kind === 'survey' ? 'survey' : e.kind === 'bluff' ? 'bluff' : 'normal']++;
+    ok(kinds.normal === 102 && kinds.num === 12 && kinds.survey === 12 && kinds.bluff === 12,
+      'kind distribution is 102 normal / 12 num / 12 survey / 12 bluff', JSON.stringify(kinds));
     const pool = eligiblePool();
     ok(pool.length === 102, 'the eligible pool is exactly the 102 ordinary questions', 'len=' + pool.length);
     ok(pool.every((e) => typeof e.a === 'string' && Array.isArray(e.w) && e.w.length === 3),

@@ -289,6 +289,8 @@ const QUICK_DRAW_BONUS = 50; // flat, on a 'normal' question's first correct rec
 const STREAK_BONUS = 25; // flat, per bank once a streak reaches STREAK_MIN
 const STREAK_MIN = 3; // banks in a row before the bonus starts paying
 const STREAK_DEATH_MIN = 4; // a dying run of this length or more earns a named moment
+const BLUFF_FOOL = 25; // THE BLUFF (research programme pass 2): per player a lie fools, paid by the house
+const BLUFF_INVENT_MS = 60000; // the bluff's collecting window before the room deals what it has
 const CLOCK_STRETCH = 1.5; // House Rules (N2): Longer Clock stretches every window by this
 
 /* House Rules (pass N2): the night's three toggles, normalized
@@ -479,6 +481,19 @@ function snapshotFor(room, view) {
       decider: q.decider === true,
       eligible: q.decider ? (q.eligible || []).slice() : null,
       cut: q.cutBy != null ? { bySeat: q.cutBy, indices: q.cutIndices.slice() } : null,
+      /* THE DOUBLE: the seats whose token is riding on this
+       * question — public the moment it is declared, like every
+       * other stake at this table */
+      dblArmed: q.dbl ? Object.keys(q.dbl).map(Number) : [],
+      vsArmed: q.vs ? Object.keys(q.vs).map(Number) : [],
+      /* THE BLUFF: which of its two lives the question is in and
+       * how many lies are in; once dealt, the answer texts are
+       * public — their authors stay secret until the reveal */
+      ...(q.kind === 'bluff' ? {
+        bluffPhase: room.phase === 'invent' ? 'invent' : 'answer',
+        fakesIn: q.fakes ? Object.keys(q.fakes).length : 0,
+        options: q.options ? q.options.map((o) => o.t) : null,
+      } : {}),
       answersIn: Object.keys(q.kind === 'num' ? q.nums : q.picks).length,
     };
     if (view.role === 'host') { // the host authored the secrets; resync may echo them to it alone
@@ -507,7 +522,7 @@ function snapshotFor(room, view) {
        * through cutCountOf), and cutCount rides beside it as the
        * number, so a screen that knows the count reads the count
        * and a screen that doesn't reads exactly what it always did */
-      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, vsRound: p.vsRound || 0, connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
     /* The Table Pot (D1): the running total, public from the
@@ -545,9 +560,50 @@ function snapshotFor(room, view) {
     if (q) {
       snap.yourPick = q.picks[seat] != null ? q.picks[seat] : null;
       snap.yourNum = q.nums[seat] != null ? q.nums[seat] : null;
+      snap.yourFake = q.kind === 'bluff' && q.fakes ? (q.fakes[seat] || null) : null;
     }
   }
   return snap;
+}
+
+/* THE BLUFF's dealing (research programme pass 2): the invent
+ * window closes — by the last lie arriving, by the host's DEAL,
+ * or by the clock — and the room builds the plaques itself: the
+ * truth, one lie per player whose lie is usable (a lie that
+ * repeats the truth or another lie is quietly dropped, exactly
+ * as at the table), and authored decoys to fill the board to
+ * three when the room's invention ran thin. Authorship is the
+ * room's secret until the reveal; the texts alone are broadcast. */
+function closeInvent(room) {
+  const q = room.question;
+  if (!q || room.phase !== 'invent' || q.kind !== 'bluff') return null;
+  const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase().replace(/^(the|a|an) /, '');
+  const used = new Set([norm(q.bluffTruth)]);
+  const opts = [{ t: q.bluffTruth, by: -1, truth: true }];
+  for (const seat of joinedSeats(room)) {
+    const fake = q.fakes ? q.fakes[seat] : null;
+    if (typeof fake === 'string' && fake && !used.has(norm(fake))) {
+      used.add(norm(fake));
+      opts.push({ t: fake, by: seat, truth: false });
+    }
+  }
+  for (const d of q.decoys || []) {
+    if (opts.length >= 3) break;
+    if (!used.has(norm(d))) { used.add(norm(d)); opts.push({ t: d, by: -1, truth: false }); }
+  }
+  for (let i = opts.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t2 = opts[i]; opts[i] = opts[j]; opts[j] = t2;
+  }
+  q.options = opts;
+  q.correctIdx = opts.findIndex((o) => o.truth);
+  q.answersCount = opts.length;
+  const t = nowMs();
+  q.openedAt = t;
+  q.windowMs = q.voteWindowMs;
+  q.deadline = t + q.windowMs;
+  room.phase = 'answer';
+  return ok({ all: { t: 'bluff_options', qid: q.qid, options: opts.map((o) => o.t) }, state: true, changed: true });
 }
 
 /* Settle the open question at the current server time: compute the
@@ -560,7 +616,11 @@ function closeQuestion(room) {
   const t = nowMs();
   q.closedAt = t;
   let value = null;
-  if (!q.betted && !isDecider) {
+  if (q.kind === 'bluff') {
+    /* THE BLUFF plays flat — no melt, ever: its value must not
+     * drain while the room is admiring a lie */
+    value = q.baseValue;
+  } else if (!q.betted && !isDecider) {
     const elapsed = Math.min(Math.max(t - q.openedAt, 0), q.windowMs);
     value = Math.round(q.baseValue * q.multiplier * (1 - 0.5 * (elapsed / q.windowMs)));
   }
@@ -603,9 +663,39 @@ function closeQuestion(room) {
       entry.banked = q.betted
         ? (q.bets[seat] != null ? q.bets[seat] : 1) * BET_PAYOUT
         : value;
+      /* THE DOUBLE: a riding token doubles the question's own
+       * value for its seat — the bet never doubles (it was never
+       * armable), and Quick Draw / streak bonuses land flat on
+       * top below, exactly as they treat every other figure */
+      if (!q.betted && q.dbl && q.dbl[seat]) { entry.banked = value * 2; entry.doubled = true; }
     }
     room.players[seat].score += entry.banked;
     results.push(entry);
+  }
+  /* THE DOUBLE settles with the question: every riding token is
+   * spent here, win or lose — the declaration was the spend. */
+  if (q.dbl) {
+    for (const k of Object.keys(q.dbl)) {
+      const sp = room.players[+k];
+      if (sp) sp.dbl = false;
+    }
+  }
+  /* AGAINST THE ROOM (designer pass 4): a declared seat that
+   * banked ALONE takes the question's value a second time — the
+   * adjustment lands here, before Quick Draw and the streaks add
+   * their flat money, and before anything downstream reads
+   * entry.banked (the pot feeds from value and correctness, never
+   * from banked, so it is untouched). A shared bank lapses the
+   * declaration quietly: nothing is owed and nothing is returned —
+   * the round's use was spent in the throwing (vsRound). */
+  if (!q.betted && !q.decider && q.vs) {
+    const bankers = results.filter((r) => r.correct);
+    if (bankers.length === 1 && q.vs[bankers[0].seat]) {
+      const winEntry = bankers[0];
+      winEntry.banked += value;
+      winEntry.vs = true;
+      room.players[winEntry.seat].score += value;
+    }
   }
   /* The Quick-Draw (Design pass 3): 'normal' questions only. The
    * winner is the first seat in q.pickOrder — the receipt order of
@@ -691,6 +781,28 @@ function closeQuestion(room) {
     }
   }
   room.pot = (room.pot || 0) + potFed;
+  /* THE BLUFF settles its second purse here — after the pot has
+   * read the results (the table's order: the pot hears about
+   * banks, never about fool money), before the Report Card reads
+   * entry.banked (a lie's take IS a bank on the night). Every
+   * player a lie fooled pays its author $25 from the house;
+   * decoy lies are authorless and pay nobody; nobody is charged
+   * for being fooled. */
+  if (q.kind === 'bluff' && q.options) {
+    const foolCount = {};
+    for (const entry of results) {
+      if (entry.pick == null || entry.correct) continue;
+      const o = q.options[entry.pick];
+      if (!o || o.truth || o.by == null || o.by < 0 || o.by === entry.seat) continue;
+      foolCount[o.by] = (foolCount[o.by] || 0) + 1;
+    }
+    for (const k of Object.keys(foolCount)) {
+      const amt = foolCount[k] * BLUFF_FOOL;
+      const e2 = results.find((r) => r.seat === +k);
+      if (e2) { e2.banked += amt; e2.fool = amt; }
+      if (room.players[+k]) room.players[+k].score += amt;
+    }
+  }
   /* The Report Card (N1): the night's four facts, written in the
    * same commit as the money they describe — every figure below is
    * read off the settled results, never recomputed later. The
@@ -766,16 +878,23 @@ function closeQuestion(room) {
      * never re-feeds */
     pot: room.pot,
     potFed,
+    /* THE BLUFF: the settled authorship rides the record, so a
+     * resync repaints the same accounting of lies */
+    bluff: q.kind === 'bluff' ? { options: q.options } : null,
   };
   const reveal = { t: 'reveal', qid: q.qid, kind: q.kind, headline: q.headline === true, golden: q.golden === true, value, results, scores, quickDrawSeat, streakMoment, decider: isDecider, eligible: isDecider ? (q.eligible || []).slice() : null, deciderWinner, pot: room.pot, potFed };
   if (q.kind === 'num') reveal.trueNum = q.trueNum;
   else reveal.correctIdx = q.correctIdx;
+  if (q.kind === 'bluff') reveal.bluff = { options: q.options };
   return ok({ all: reveal, state: true, changed: true });
 }
 
 /* Lazy auto-close: if the window has run out, settle before anything
  * else happens. The wrapper also calls this from its alarm. */
 function expireIfNeeded(room) {
+  if (room.phase === 'invent' && room.question && nowMs() >= room.question.inventDeadline) {
+    return closeInvent(room);
+  }
   if (room.phase === 'answer' && room.question && nowMs() >= room.question.deadline) {
     return closeQuestion(room);
   }
@@ -827,6 +946,8 @@ function handleHello(room, msg) {
       token: makeToken(),
       score: 0,
       cutTwo: cutStartFor(room), // House Rules (N2): the starting COUNT — two under Second Cut, else one
+      dbl: true, // THE DOUBLE (designer pass 3): one token per player per show, in hand from the start, spendable from Round 2
+      vsRound: 0, // AGAINST THE ROOM (designer pass 4): the round the gauntlet was last thrown in (0 = never)
       connected: true,
       avatar: cleanAvatar(msg.avatar, seat),
       streak: 0,
@@ -871,7 +992,7 @@ function handleHostMessage(room, msg) {
         return fail('Cannot publish now.');
       }
       const kind = msg.kind;
-      if (kind !== 'normal' && kind !== 'survey' && kind !== 'num') return fail('Unknown question kind.');
+      if (kind !== 'normal' && kind !== 'survey' && kind !== 'num' && kind !== 'bluff') return fail('Unknown question kind.');
       /* The Decider rides this same publish path — no parallel
        * channel — but its two extra fields are validated as hard
        * as any secret: the kind must be 'num' (closest number is
@@ -911,7 +1032,23 @@ function handleHostMessage(room, msg) {
       let trueNum = null;
       let answersCount = 4;
       let cutIndices = null;
-      if (kind === 'num') {
+      /* THE BLUFF (research programme pass 2): the host publishes
+       * the prompt's truth and its authored decoys — never a
+       * correctIdx, because the answers do not exist yet: the
+       * players invent them, and the room deals them itself
+       * (closeInvent). The truth and decoys are server-secret
+       * until the reveal, like every other secret the room keeps. */
+      let bluffTruth = null;
+      let bluffDecoys = null;
+      if (kind === 'bluff') {
+        bluffTruth = typeof msg.bluffTruth === 'string' ? msg.bluffTruth.replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+        const dc = Array.isArray(msg.decoys)
+          ? msg.decoys.filter((d) => typeof d === 'string' && d.replace(/\s+/g, ' ').trim()).map((d) => d.replace(/\s+/g, ' ').trim().slice(0, 60))
+          : [];
+        if (!bluffTruth || dc.length < 3) return fail('A bluff needs its truth and three decoys.');
+        bluffDecoys = dc.slice(0, 3);
+        answersCount = 0;
+      } else if (kind === 'num') {
         trueNum = Number(msg.trueNum);
         if (!Number.isFinite(trueNum)) return fail('A num question needs a trueNum.');
       } else {
@@ -957,7 +1094,7 @@ function handleHostMessage(room, msg) {
         room.published[String(round)] = (room.published[String(round)] || 0) + 1;
         room.lastPubQid = msg.qid;
       }
-      const headline = headlinePublish(room, round);
+      const headline = kind === 'bluff' ? false : headlinePublish(room, round);
       /* The Golden Question (The Ten, pass 4): the host's secret
        * pick, refereed inside its honest envelope (see the header
        * note). A re-publish of the very question that already
@@ -966,7 +1103,7 @@ function handleHostMessage(room, msg) {
        * persisted before the field existed read goldenUsed as
        * undefined, which is falsy: unspent, exactly right. */
       const reGold = !!(room.question && room.question.qid === msg.qid && room.question.golden === true);
-      const golden = msg.golden === true && !decider && !headline
+      const golden = kind !== 'bluff' && msg.golden === true && !decider && !headline
         && (round === 1 || round === 2) && (!room.goldenUsed || reGold);
       if (golden) room.goldenUsed = true;
       const effWindowMs = (headline || golden) ? Math.round(windowMs / 2) : Math.round(windowMs);
@@ -996,13 +1133,36 @@ function handleHostMessage(room, msg) {
         pickOrder: [],
         pickTimes: {},
         nums: {},
+        dbl: {},
+        vs: {}, // AGAINST THE ROOM (designer pass 4): declared seats on this question
         cutBy: null,
         closedAt: null,
         stoppedValue: null,
       };
+      if (kind === 'bluff') {
+        /* the bluff opens in its collecting life: the published
+         * window becomes the VOTE window, held until the dealing,
+         * and the deadline the room minds first is the invent one */
+        room.question.bluffTruth = bluffTruth;
+        room.question.decoys = bluffDecoys;
+        room.question.fakes = {};
+        room.question.options = null;
+        room.question.voteWindowMs = room.question.windowMs;
+        room.question.inventDeadline = t + BLUFF_INVENT_MS;
+        room.question.deadline = room.question.inventDeadline;
+      }
       room.interm = null; // advancing out of the break ends it
-      room.phase = 'answer';
+      room.phase = kind === 'bluff' ? 'invent' : 'answer';
       return ok({ state: true, changed: true });
+    }
+    case 'bluff_deal': {
+      /* THE BLUFF: the host deals the answers early — the table's
+       * DEAL button, refereed. The room builds the plaques from
+       * whatever lies it holds (closeInvent). */
+      if (room.phase !== 'invent' || !room.question) return fail('No bluff is collecting lies.');
+      if (msg.qid != null && msg.qid !== room.question.qid) return fail('Wrong question.');
+      const res = closeInvent(room);
+      return res || fail('No bluff is collecting lies.');
     }
     case 'reveal': {
       if (room.phase === 'reveal' && room.lastReveal && msg.qid != null && room.lastReveal.qid === msg.qid) {
@@ -1070,6 +1230,8 @@ function handleHostMessage(room, msg) {
         if (!p) continue;
         p.score = 0;
         p.cutTwo = cutStartFor(room); // House Rules (N2): a fresh show restocks to the room's starting count — the rules themselves are the room's and stay
+        p.dbl = true; // THE DOUBLE restocks with the show, like every other token
+        p.vsRound = 0; // AGAINST THE ROOM: the new show's gauntlet is unthrown
         p.streak = 0;
       }
       room.bet = null;
@@ -1116,6 +1278,33 @@ function handlePlayerMessage(room, seat, msg) {
   switch (msg.t) {
     case 'ping':
       return ok({ to: [{ dest: seat, msg: { t: 'pong' } }] });
+    case 'bluff': {
+      /* THE BLUFF: a pad submits its seat's lie during the
+       * collecting window. One lie per seat, replaceable until
+       * the dealing; when the last joined seat's lie lands, the
+       * room deals at once — nobody waits on a clock for a full
+       * table. The lie is the room's secret until the reveal:
+       * snapshots carry only that it exists (yourFake, to its
+       * own author alone). */
+      if (room.phase !== 'invent' || !room.question) return fail('No bluff is collecting lies.');
+      const q = room.question;
+      if (msg.qid !== q.qid) return fail('Wrong question.');
+      const text = typeof msg.text === 'string' ? msg.text.replace(/\s+/g, ' ').trim().slice(0, 42) : '';
+      if (!text) return fail('An empty lie fools nobody.');
+      if (!q.fakes || typeof q.fakes !== 'object') q.fakes = {};
+      q.fakes[seat] = text;
+      const joined = joinedSeats(room);
+      if (joined.length && joined.every((s) => q.fakes[s])) {
+        const dealt = closeInvent(room);
+        if (dealt) return dealt;
+      }
+      return ok({
+        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
+        all: { t: 'counts', qid: q.qid, answersIn: Object.keys(q.fakes).length, players: joined.length },
+        state: true,
+        changed: true,
+      });
+    }
     case 'answer': {
       if (room.phase !== 'answer' || !room.question) return fail('No open question.');
       const q = room.question;
@@ -1170,11 +1359,72 @@ function handlePlayerMessage(room, seat, msg) {
         changed: true,
       });
     }
+    case 'double': {
+      /* THE DOUBLE (designer pass 3): a pad declares its seat's
+       * token on the open question. The referee's rules are the
+       * table's: from Round 2, never on a bet question (it carries
+       * its own stake), never on the Decider, only while the
+       * window is open, only a token still in hand, only once. */
+      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
+      const q = room.question;
+      if (msg.qid !== q.qid) return fail('Wrong question.');
+      if (q.decider) return fail('The Decider carries no Double.');
+      if (q.kind === 'bluff') return fail('The Bluff is its own stake — no Double rides it.');
+      if (q.betted) return fail('A bet question carries its own stake.');
+      if (!(q.round >= 2)) return fail('The Double arrives with Double Money.');
+      if (nowMs() > q.deadline) return fail('Window closed.');
+      if (p.dbl === false) return fail('Your Double is spent.');
+      if (!q.dbl || typeof q.dbl !== 'object') q.dbl = {};
+      if (q.dbl[seat]) return fail('Your Double is already riding.');
+      if (q.vs && q.vs[seat]) return fail('Your gauntlet is down on this one — one stake per question.');
+      q.dbl[seat] = true;
+      return ok({
+        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
+        state: true,
+        changed: true,
+      });
+    }
+    case 'vs': {
+      /* AGAINST THE ROOM (designer pass 4): a pad declares its
+       * seat's gauntlet on the open question. The referee's rules
+       * are the table's: the seat sits last (a tie for last is
+       * last; an all-level table has no gauntlet), the declaration
+       * is unused this round, never on a bet question or the
+       * Decider, never alongside the seat's own Double, only
+       * while the window is open. A thrown gauntlet stays thrown:
+       * there is no undeclare message. */
+      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
+      const q = room.question;
+      if (msg.qid !== q.qid) return fail('Wrong question.');
+      if (q.decider) return fail('The Decider carries no gauntlet.');
+      if (q.kind === 'bluff') return fail('The Bluff is its own stake — no gauntlet rides it.');
+      if (q.betted) return fail('A bet question carries its own stake.');
+      if (nowMs() > q.deadline) return fail('Window closed.');
+      if ((p.vsRound || 0) === q.round) return fail('Your gauntlet is thrown for this round.');
+      if (q.dbl && q.dbl[seat]) return fail('Your Double is riding on this one — one stake per question.');
+      const joinedScores = [];
+      for (let i = 0; i < room.players.length; i++) {
+        const rp = room.players[i];
+        if (rp) joinedScores.push(rp.score);
+      }
+      const mn = Math.min(...joinedScores), mx = Math.max(...joinedScores);
+      if (!(mn < mx && p.score === mn)) return fail('The gauntlet belongs to last place.');
+      if (!q.vs || typeof q.vs !== 'object') q.vs = {};
+      if (q.vs[seat]) return fail('Your gauntlet is already down.');
+      q.vs[seat] = true;
+      p.vsRound = q.round; /* spent in the throwing, win, lose or lapse */
+      return ok({
+        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
+        state: true,
+        changed: true,
+      });
+    }
     case 'cuttwo': {
       if (room.phase !== 'answer' || !room.question) return fail('No open question.');
       const q = room.question;
       if (msg.qid !== q.qid) return fail('Wrong question.');
       if (q.kind === 'num') return fail('Nothing to cut on a number question.');
+      if (q.kind === 'bluff') return fail('Nothing to cut on a bluff — the answers are the players’ own.');
       if (!q.cutIndices) return fail('No cut available on this question.');
       if (q.cutBy != null) return fail('Already cut on this question.');
       if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');
@@ -1196,6 +1446,7 @@ function handlePlayerMessage(room, seat, msg) {
       const q = room.question;
       if (msg.qid !== q.qid) return fail('Wrong question.');
       if (q.kind === 'num') return fail('Nothing to cut on a number question.');
+      if (q.kind === 'bluff') return fail('Nothing to cut on a bluff — the answers are the players’ own.');
       if (!q.cutIndices) return fail('No cut available on this question.');
       if (q.cutBy != null) return fail('Already cut on this question.');
       if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');

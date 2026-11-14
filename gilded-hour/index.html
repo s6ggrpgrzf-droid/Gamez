@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=91">
+<link rel="stylesheet" href="style.css?v=94">
 </head>
 <body>
 <div id="app">
@@ -286,8 +286,6 @@
               </div>
               <input id="joinName" class="name-input join-name" maxlength="14" placeholder="Your name" autocomplete="off">
             </div>
-            <div class="setup-label">PICK YOUR PLAYER — TAP ONE</div>
-            <div class="jp-ava-grid" id="jpAvaGrid" role="group" aria-label="Pick your player"></div>
             <button class="btn-ghost wide hidden" id="btnResumePlayer" style="margin-top:10px">REJOIN YOUR SEAT</button>
             <div class="panel-status" id="joinStatus">Four letters, your name, you're in.</div>
           </div>
@@ -325,7 +323,7 @@
             <span class="km lit"></span><span class="km cut"></span><span class="km lit"></span><span class="km cut"></span>
           </div>
           <h3 class="how-title">CUT TWO SAVES YOU ONCE</h3>
-          <p class="how-text">Stuck on a question? Your Cut Two strikes two wrong answers clean off it. One token per player, per show — spend it like it matters, because it does. One mercy: last place at the break gets their Cut Two back — if it's spent. Still holding yours? One is all anyone carries. And from Round 2 you hold a second token: the Double. Spend it on any one question — tap it on your desk, or the button on your phone — and a right answer pays you twice. A miss spends the token and nothing more. One more instrument, and only for whoever sits last: the VS disc on their desk. Once a round they may declare Against the Room — bank a question nobody else banks and it pays double. Declared is declared; there is no taking it back.</p>
+          <p class="how-text">Stuck on a question? Your Cut Two strikes two wrong answers clean off it. One token per player, per show — spend it like it matters, because it does. One mercy: last place at the break gets their Cut Two back — if it's spent. Still holding yours? One is all anyone carries. And from Round 2 you hold a second token: the Double. Spend it on any one question — tap it on your desk, or the button on your phone — and a right answer pays you twice. A miss spends the token and nothing more. One more instrument, and only for whoever sits last: the VS disc on their desk. Once a round they may declare Against the Room — bank a question nobody else banks and it pays double. Declared is declared; there is no taking it back. And once in Round 2 comes the Bluff: a question whose wrong answers the table invents itself. Spot the truth for $200 — and every player your own lie fools pays you $25, from the house, never from them.</p>
         </div>
         <div class="how-dots" aria-hidden="true"><span class="how-dot sel"></span><span class="how-dot"></span><span class="how-dot"></span></div>
         <label class="how-again"><input type="checkbox" id="howAgain"> Don't show this again</label>
@@ -479,9 +477,9 @@
   </div>
 
 </div>
-<script src="questions.js?v=8"></script>
+<script src="questions.js?v=9"></script>
 <script src="qr.js?v=1"></script>
-<script src="game.js?v=87"></script>
+<script src="game.js?v=89"></script>
 <script>
 /* Party-Proof Shell: register the offline worker (sw.js, scoped to
    this directory by its location). http(s) only — a file:// copy

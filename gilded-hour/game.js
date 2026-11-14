@@ -115,6 +115,16 @@
   /* exactly five guess questions: round:qInRound (0-based), interleaved,
      never first or last in a round */
   var GUESS_SLOTS = ["1:1", "1:4", "2:2", "2:5", "3:1"];
+  /* THE BLUFF (research programme pass 2, 2026-11-13 — the Fibbage
+     verb, from the trivia-games survey): one question per show is
+     a bluff — Round 2's fourth question (never a guess slot, never
+     the Headline's seat). The players invent the wrong answers
+     themselves; the truth banks a flat $200 (no melt — the value
+     must not drain while the room is admiring a lie), and every
+     player a lie fools pays its author $25 from the house. No
+     Double, no gauntlet, no Cut Two rides it: the bluff is its
+     own stake, and one stake per question already. */
+  var BLUFF_ROUND = 2, BLUFF_Q = 3, BLUFF_VALUE = 200, BLUFF_FOOL = 25, BLUFF_VOTE_TIME = 25;
   /* Design pass 2 — the Headline Question: Round 2's LAST question
      (overall Q12) plays at double value again under a halved clock.
      Derived from POSITION (round + index) only — never from the seed,
@@ -213,6 +223,22 @@
       "Mark them, table — every seat that knew it gets its due. Tap them in.",
       "The reckoning. Tap the seats whose fingers told the truth; the rest may remain in comfortable denial.",
       "Confessions over, verdicts in: whose hands were honest? Tap those seats and we'll make it official."
+    ],
+    bluffInvent: [
+      "A different animal, this one, table. There is exactly one true answer to it — and the bank is not providing the wrong ones. You are. Lies, please — good ones.",
+      "The Bluff, table. I know the truth and I am saying nothing. What I need from each of you is a lie convincing enough to steal a vote.",
+      "This question's wrong answers have not been written yet — that's your job. Invent one each, make it sound like the truth wearing its best suit.",
+      "One truth hides in this question and the rest is up to you. Write me a lie you'd bet a stranger on, table."
+    ],
+    bluffVote: [
+      "There they are — one truth, and this table's finest fiction. Fingers up for the one you believe.",
+      "Read them carefully. Somebody at this table is lying beautifully, and it might be everybody.",
+      "The answers, as invented by the accused. Pick the one that's actually true — if you can."
+    ],
+    bluffMark: [
+      "Now the accounting of lies. Tap an answer, then the seats that believed it.",
+      "Who fell for what? Tap each answer and point me at its believers.",
+      "The reckoning, table — whose lie caught whom? Tap an answer, then its audience."
     ],
     allHit: [
       "EVERYBODY. The whole table, paid in full. I shall alert the newspapers.",
@@ -812,291 +838,32 @@
     return '<svg class="' + (cls || "sterling sterling-md") + '" viewBox="0 0 320 380" aria-label="Sterling">' + inner + "</svg>";
   }
 
-  /* player avatars (item 6): eight original flat bust portraits.
-     Cast pass 2 — redrawn to the portrait standard Sterling set in
-     cast pass 1, so all nine read as one cast from one hand: eyes
-     with whites, warm-brown irises, ink pupils and a spec dot;
-     tapered brow slivers set per character; Sterling's nose line in
-     the darkened neck tone; one cel shade step (light from
-     upper-left: a neck-tone crescent on the face's lower-right, the
-     bust shade on its right side to match). Each bust rides a ground
-     disc in the SEAT's colour, so a player's colour identity
-     survives any portrait they pick.
-     avatarSVG(avatarId, state, seatIdx): id 0..7, seat defaults to
-     the id (which is exactly the old seat-index behaviour). */
+  /* THE FACE PASS (2026-11-13): the eight player portraits are
+     retired. Sterling is the show's one character now; a player is
+     a name, a colour and a score, and their mark is a brass
+     medallion in the seat's colour carrying their initial — the
+     same medallion grammar as the answer plaques' letter chips
+     and the wheel emblem. medallionSVG(name, seat) draws it at
+     any size (the .avatar class keeps every context's sizing
+     rules; .medallion marks the new art). */
   var PCHEAD = ["#35D461", "#38B6FF", "#FF6B5E", "#B07FE8"];
-  function dk(hex, f) {
-  var n = parseInt(hex.slice(1), 16);
-  var r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
-  return "rgb(" + r + "," + g + "," + b + ")";
-}
-var AVATARS = [
-  { /* 0 — the Starlet: gold waves, hoop earrings, a beauty mark */
-    skin: "#F6B183", neck: "#E89A63", shirt: "#E8437C", hair: "#F2C14E", brow: "#8A5A12",
-    mouth: "#C2255C", blush: .5, mouthStyle: "lips",
-    back: '<path d="M28,44 C24,16 40,6 60,6 C80,6 96,16 92,44 L94,78 C86,84 78,78 79,66 L80,44 C68,34 52,34 40,44 L41,66 C42,78 34,84 26,78 Z" fill="#F2C14E"/>',
-    front: '<path d="M32,44 C31,19 45,10 60,10 C75,10 89,19 88,44 C86,31 80,25 71,25 C75,29 76,34 74.5,39 C68,30 55,28 46,32 C38,35 34,39 32,44 Z" fill="#F2C14E"/>' +
-      '<path d="M40,20 Q56,13 76,19 Q58,18 40,20 Z" fill="#F6EBCB" opacity=".8"/>' +
-      '<path d="M38,26 Q50,20 64,22 Q50,23.5 38,26 Z" fill="#F6EBCB" opacity=".5"/>',
-    acc: '<circle cx="29.5" cy="60" r="4.4" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>' +
-      '<circle cx="90.5" cy="60" r="4.4" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>' +
-      '<circle cx="27.8" cy="57.8" r="1" fill="#FFF6E8"/><circle cx="88.8" cy="57.8" r="1" fill="#FFF6E8"/>' +
-      '<circle cx="75" cy="55" r="1.7" fill="#0E1C33"/>'
-  },
-  { /* 1 — the Crooner: swept quiff, gold chain over a blue shirt */
-    skin: "#B96F3E", neck: "#9A5527", shirt: "#1563B2", hair: "#17101F", brow: "#17101F",
-    mouth: "#5E2408", blush: .35, mouthStyle: "grin", ears: true,
-    back: "",
-    front: '<path d="M31,44 C30,20 44,10 58,10 C56,5 66,3 73,8 C86,13 90,26 89,44 C85,29 76,25 64,26 C49,27 37,30 31,44 Z" fill="#17101F"/>' +
-      '<path d="M38,26 C46,16 58,12 70,14 C58,15 46,19 38,26 Z" fill="#2F4674" opacity=".85"/>',
-    acc: '<path d="M38,92 Q60,106 82,92" stroke="#E9CD8A" stroke-width="3.4" fill="none" stroke-linecap="round"/>' +
-      '<path d="M52,97 L60,108 L68,97 L60,101 Z" fill="#E9CD8A"/>',
-    collar: '<path d="M48,88 L60,100 L72,88 L72,96 L60,106 L48,96 Z" fill="#FFF6E8"/>'
-  },
-  { /* 2 — the Kid: backwards cap, freckles, grin for days */
-    skin: "#F2B183", neck: "#D98E57", shirt: "#3ECF6E", hair: "#0E1C33", brow: "#0E1C33",
-    mouth: "#7C2D3E", blush: .5, mouthStyle: "kidgrin", ears: true, bigEyes: true,
-    back: "",
-    front: '<path d="M33,40 C36,24 46,17 60,17 C74,17 84,24 87,40 C76,31 44,31 33,40 Z" fill="#0E1C33"/>' +
-      '<path d="M30,33 C32,16 44,7 60,7 C76,7 88,16 90,33 C74,25 46,25 30,33 Z" fill="#E8437C"/>' +
-      '<path d="M42,14 Q60,9 78,14 Q60,12.5 42,14 Z" fill="#C2255C" opacity=".65"/>' +
-      '<rect x="12" y="24" width="20" height="7" rx="3.5" transform="rotate(14 22 27)" fill="#C2255C"/>' +
-      '<circle cx="60" cy="10" r="3" fill="#E9CD8A"/>',
-    acc: '<circle cx="42" cy="54" r="1.7" fill="#D98E57"/><circle cx="48" cy="57" r="1.7" fill="#D98E57"/><circle cx="41" cy="59" r="1.7" fill="#D98E57"/>' +
-      '<circle cx="78" cy="54" r="1.7" fill="#D98E57"/><circle cx="72" cy="57" r="1.7" fill="#D98E57"/><circle cx="79" cy="59" r="1.7" fill="#D98E57"/>'
-  },
-  { /* 3 — the Grandmother: silver bun, gold spectacles, pearls */
-    skin: "#8A4B26", neck: "#6B3418", shirt: "#9B5DE5", hair: "#D8C9E8", brow: "#D8C9E8",
-    mouth: "#4A1E08", blush: .3, mouthStyle: "warm",
-    back: '<circle cx="60" cy="9" r="9.5" fill="#D8C9E8"/><path d="M31,46 C29,22 44,12 60,12 C76,12 91,22 89,46 C86,30 74,25 60,25 C46,25 34,30 31,46 Z" fill="#D8C9E8"/>' +
-      '<path d="M40,20 Q60,13 80,20 Q60,17 40,20 Z" fill="#FFFFFF" opacity=".35"/>',
-    front: "",
-    acc: '<circle cx="31" cy="61" r="2.7" fill="#FFF6E8"/><circle cx="89" cy="61" r="2.7" fill="#FFF6E8"/>' +
-      '<circle cx="60" cy="100" r="4.2" fill="#E9CD8A"/><circle cx="60" cy="100" r="1.9" fill="#E8437C"/>',
-    glasses: "#E9CD8A"
-  },
-  { /* 4 — the Rocker: long mane, gold headband, lightning drop */
-    skin: "#F6B183", neck: "#E89A63", shirt: "#1C3258", hair: "#8E3B2F", brow: "#5E2408",
-    mouth: "#7C2D3E", blush: .42, mouthStyle: "half", lid: true,
-    back: '<path d="M25,40 C23,11 42,3 60,3 C78,3 97,11 95,40 L98,104 L79,104 L80.5,50 C70,40 50,40 39.5,50 L41,104 L22,104 Z" fill="#8E3B2F"/>' +
-      '<path d="M80.5,50 L79,104 L87,104 L86,42 C84,45.5 82.5,47.8 80.5,50 Z" fill="#6E2A20" opacity=".55"/>',
-    front: '<path d="M32,41 C34,19 46,12 60,12 C74,12 86,19 88,41 L79,29 L72,40 L64,28 L56,39 L48,28 L40,38 Z" fill="#8E3B2F"/>' +
-      '<rect x="31" y="31" width="58" height="7.5" rx="3.75" transform="rotate(-2 60 35)" fill="#E9CD8A"/>',
-    acc: '<path d="M91,58 L85,70 L89.5,70 L84,82 L95,66 L90.5,66 Z" fill="#E9CD8A"/>',
-    collar: '<path d="M43,89 L60,110 L51,91 L46,88 Z" fill="#0A1526"/><path d="M77,89 L60,110 L69,91 L74,88 Z" fill="#0A1526"/><circle cx="60" cy="97" r="2.2" fill="#C2CEDF"/>'
-  },
-  { /* 5 — the Cowboy: tan hat, moustache, neckerchief */
-    skin: "#C68642", neck: "#A66A2E", shirt: "#17BEBB", hair: "#0E1C33", brow: "#0E1C33",
-    mouth: "#5E2408", blush: .35, mouthStyle: "stache", squint: true,
-    back: '<path d="M33,44 L33,64 L39,64 L39,46 Z M87,44 L87,64 L81,64 L81,46 Z" fill="#0E1C33"/>',
-    front: '<path d="M38,28 C39,13 46,6 60,6 C74,6 81,13 82,28 C69,23.5 51,23.5 38,28 Z" fill="#C97B3D"/>' +
-      '<path d="M52,7.5 Q60,12.5 68,7.5 Q60,10 52,7.5 Z" fill="#A66A2E" opacity=".85"/>' +
-      '<path d="M40.5,19.5 C52,16.5 68,16.5 79.5,19.5 L80,24 C66,20.8 54,20.8 40,24 Z" fill="#E8437C"/>' +
-      '<path d="M23,29.5 C36,24 84,24 97,29.5 C84,35 36,35 23,29.5 Z" fill="#C97B3D"/>' +
-      '<path d="M23,29.5 C36,35 84,35 97,29.5 C84,32.8 36,32.8 23,29.5 Z" fill="#A66A2E" opacity=".8"/>',
-    acc: '<path d="M40,57 Q50,50 60,57 Q70,50 80,57 Q72,66 60,61.5 Q48,66 40,57 Z" fill="#0E1C33"/>',
-    collar: '<path d="M47,87 L60,104 L73,87 L66,87 L60,94 L54,87 Z" fill="#E8437C"/><circle cx="60" cy="96" r="3.4" fill="#E9CD8A"/>',
-    stache: true
-  },
-  { /* 6 — the Professor: side part, round glasses, bowtie + moustache */
-    skin: "#F2B183", neck: "#D98E57", shirt: "#0D1B33", hair: "#B9C7D6", brow: "#B9C7D6",
-    mouth: "#7C2D3E", blush: .5, mouthStyle: "stache",
-    back: '<path d="M31,52 C29,40 33,32 38,28 L40,44 C35,46 33,48 31,52 Z M89,52 C87,48 85,46 80,44 L82,28 C87,32 91,40 89,52 Z" fill="#B9C7D6"/>',
-    front: '<path d="M34,38 C33,21 45,12 60,12 C73,12 84,18 87,28 C79,21 68,19 57,22 C45,25 37,30 34,38 Z" fill="#B9C7D6"/>' +
-      '<path d="M47.5,14.5 Q44.5,21 45.5,27.5" stroke="#8FA2B5" stroke-width="1.7" stroke-linecap="round" fill="none"/>' +
-      '<path d="M42,19 Q54,14.5 68,16.5 Q54,17.5 42,19 Z" fill="#E8EEF4" opacity=".55"/>',
-    acc: '<path d="M41,59 Q51,53 60,59 Q69,53 79,59 Q71,67 60,63 Q49,67 41,59 Z" fill="#B9C7D6"/>',
-    glasses: "#E9CD8A",
-    collar: '<path d="M50,88 L70,88 L60,102 Z" fill="#FFF6E8"/><path d="M60,96 L48,89 Q44,96 48,103 Z" fill="#E8437C"/><path d="M60,96 L72,89 Q76,96 72,103 Z" fill="#E8437C"/><rect x="55.5" y="92.5" width="9" height="8" rx="3" fill="#E9CD8A"/>',
-    stache: true
-  },
-  { /* 7 — the Mod: sharp black bob, gold hoops, unhurried */
-    skin: "#8A4B26", neck: "#6B3418", shirt: "#FF8C42", hair: "#17101F", brow: "#17101F",
-    mouth: "#E8437C", blush: .3, mouthStyle: "dry",
-    back: '<path d="M27,42 C25,14 42,5 60,5 C78,5 95,14 93,42 L95,80 C86,85 81,79 81.5,68 L82,42 L38,42 L38.5,68 C39,79 34,85 25,80 Z" fill="#17101F"/>',
-    front: '<path d="M33,40 C34,20 46,13 60,13 C74,13 86,20 87,40 L87,28 L33,32.5 Z" fill="#17101F"/>' +
-      '<path d="M36,16 Q48,10 62,11 Q48,13 36,16 Z" fill="#24365E" opacity=".9"/>',
-    acc: '<circle cx="28.5" cy="66" r="4.6" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>' +
-      '<circle cx="91.5" cy="66" r="4.6" fill="none" stroke="#E9CD8A" stroke-width="2.4"/>',
-    collar: '<path d="M45,81 L75,81 L76,92 Q60,96.5 44,92 Z" fill="#D96F24"/>',
-    glassesBold: "#17101F"
+  function shade(hex, f) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+    return "rgb(" + r + "," + g + "," + b + ")";
   }
-];
-function avEye(A, cx, o) {
-  o = o || {};
-  var rx = o.rx || 6.6, ry = o.ry || 4.9, ir = o.ir || 4.1, pu = o.pu || 3.1, sw = o.sw || 1.7;
-  var s = '<ellipse cx="' + cx + '" cy="46" rx="' + rx + '" ry="' + ry + '" fill="#FFF9F0" stroke="#0E1C33" stroke-width="' + sw + '"/>' +
-    '<circle cx="' + cx + '" cy="46" r="' + ir + '" fill="#7A4A21"/>' +
-    '<circle cx="' + cx + '" cy="46" r="' + pu + '" fill="#0E1C33"/>' +
-    '<circle cx="' + (cx - 1) + '" cy="44.9" r="1" fill="#FFF6E8"/>';
-  if (o.lid) s += '<path d="M' + (cx - rx) + ',' + (46 - ry + 0.6) + ' Q' + cx + ',' + (46 - ry - 2.8) + ' ' + (cx + rx) + ',' + (46 - ry + 0.6) + '" stroke="' + dk(A.neck, .8) + '" stroke-width="1.6" stroke-linecap="round" fill="none"/>';
-  return s;
-}
-function avBrow(A, cx, o) {
-  o = o || {};
-  var y = o.y || 35, arch = o.arch != null ? o.arch : 3.5, th = o.th || 3.2, sp = o.sp || 9;
-  var dL = o.dL || 0, dR = o.dR || 0;
-  return '<path d="M' + (cx - sp) + ',' + (y + dL) + ' Q' + cx + ',' + (y - arch) + ' ' + (cx + sp) + ',' + (y + dR) +
-    ' L' + (cx + sp - 1.4) + ',' + (y + dR + th) + ' Q' + cx + ',' + (y - arch + th + 1.2) + ' ' + (cx - sp + 1.4) + ',' + (y + dL + th) + ' Z" fill="' + A.brow + '"/>';
-}
-function avFeatures(A, id, state) {
-  var sweat = '<path d="M98,18 C104,29 106,35 98,41 C90,35 92,29 98,18 Z" fill="#7FD4FF"/><circle cx="95.5" cy="32" r="2" fill="#E8FAFF"/>';
-  var s = "";
-  if (state === "cheer") {
-    s += '<path d="M40.5,47 Q49,39.5 57.5,47" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>' +
-      '<path d="M62.5,47 Q71,39.5 79.5,47" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
-    if (!A.stache) s += '<path d="M44,58 Q60,80 76,58 Q60,67 44,58 Z" fill="' + A.mouth + '"/>' +
-      '<path d="M52,68 Q60,74 68,68 Q60,71 52,68 Z" fill="#FF8FA3"/>';
-    else s += '<path d="M50,66 Q60,74 70,66 Q60,69.5 50,66 Z" fill="' + A.mouth + '"/>';
-  } else if (state === "slump") {
-    s += avBrow(A, 49, { y: 34, arch: 1, th: 3.2, dL: 2.5, dR: -2 }) +
-      avBrow(A, 71, { y: 34, arch: 1, th: 3.2, dL: -2, dR: 2.5 });
-    s += '<path d="M40.5,44.5 Q49,50.5 57.5,44.5" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>' +
-      '<path d="M62.5,44.5 Q71,50.5 79.5,44.5" stroke="#0E1C33" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
-    if (!A.stache) s += '<path d="M48,66 Q55,62 60,66 Q65,70 72,66" stroke="' + A.mouth + '" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
-    s += sweat;
-  } else if (state === "wince") {
-    /* Visual pass V2 — WINCE: the flinch. Brows pressed down toward
-       the nose, eyes squeezed into tight slants (never the slump's
-       droopy arcs), lips flat-pressed into one straight line with
-       hooked ends. Identity untouched: same hair, same face, only
-       the expression layer moves. */
-    s += avBrow(A, 49, { y: 32.5, arch: 0, th: 3.4, dL: -2, dR: 3.5 }) +
-      avBrow(A, 71, { y: 32.5, arch: 0, th: 3.4, dL: 3.5, dR: -2 });
-    s += '<path d="M41.5,43 L56.5,48.5" stroke="#0E1C33" stroke-width="3.4" stroke-linecap="round" fill="none"/>' +
-      '<path d="M78.5,43 L63.5,48.5" stroke="#0E1C33" stroke-width="3.4" stroke-linecap="round" fill="none"/>' +
-      '<path d="M43,50.5 L52,53" stroke="#0E1C33" stroke-width="2" stroke-linecap="round" fill="none" opacity=".65"/>' +
-      '<path d="M77,50.5 L68,53" stroke="#0E1C33" stroke-width="2" stroke-linecap="round" fill="none" opacity=".65"/>';
-    if (!A.stache) s += '<path d="M47,66 L47,63.5 L73,63.5 L73,66" stroke="' + A.mouth + '" stroke-width="3.2" stroke-linecap="round" fill="none"/>';
-  } else if (state === "keen") {
-    /* Visual pass V2 — KEEN: the focused face of a live streak.
-       Brows level and low, eyes open but narrowed to a determined
-       squint-lite (the neutral eye grammar, pulled in), the nose
-       kept (the eyes are open, so the face keeps its full set), and
-       the mouth set firm — a near-flat line with one corner risen. */
-    s += avBrow(A, 49, { y: 36, arch: 0.6, th: 3.4 }) +
-      avBrow(A, 71, { y: 36, arch: 0.6, th: 3.4 });
-    var ko = { ry: 3.6, ir: 3.8, pu: 2.9 };
-    if (A.bigEyes) ko = { rx: 7.4, ry: 3.9, ir: 4.6, pu: 3.2, sw: 1.5 };
-    else if (A.lid) ko = { ry: 3.4, lid: true };
-    else if (A.squint) ko = { rx: 6.4, ry: 3.1, ir: 3.6, pu: 2.8 };
-    else if (id === 3) ko = { rx: 6.2, ry: 3.6, ir: 3.7, pu: 2.8 };
-    else if (id === 7) ko = { rx: 7, ry: 4, ir: 4.1, pu: 3 };
-    s += avEye(A, 49, ko) + avEye(A, 71, ko);
-    if (A.stache) s += '<path d="M61.5,49 L59.8,53.8 Q59.5,55.6 61.2,55.6 Q62.8,55.6 63.4,54.6" stroke="' + dk(A.neck, .85) + '" stroke-width="1.8" stroke-linecap="round" fill="none"/>';
-    else if (A.bigEyes) s += '<path d="M60.8,49.5 L59.5,53.5 Q59.2,55.2 60.8,55.2 Q62.2,55.2 62.8,54.2" stroke="' + dk(A.neck, .85) + '" stroke-width="1.7" stroke-linecap="round" fill="none"/>';
-    else s += '<path d="M61.5,49.5 L59.2,56.8 Q58.8,59.2 61.2,59.2 Q63.4,59.2 64.2,57.8" stroke="' + dk(A.neck, .85) + '" stroke-width="1.8" stroke-linecap="round" fill="none"/>';
-    if (!A.stache) s += '<path d="M49,63.5 Q60,64.8 71,61.8" stroke="' + A.mouth + '" stroke-width="3" stroke-linecap="round" fill="none"/>';
-  } else {
-    /* brows — one sliver grammar, per-character set */
-    var B = [
-      [{ y: 34, arch: 4.6, th: 3.1 }, { y: 34, arch: 4.6, th: 3.1 }],
-      [{ y: 35, arch: 3.4, th: 3.4 }, { y: 35, arch: 3.4, th: 3.4 }],
-      [{ y: 31.5, arch: 4, th: 3, sp: 7.5 }, { y: 31.5, arch: 4, th: 3, sp: 7.5 }],
-      [{ y: 33.5, arch: 4, th: 3 }, { y: 33.5, arch: 4, th: 3 }],
-      [{ y: 36.5, arch: 1.8, th: 3.6, dR: 1.2 }, { y: 36.5, arch: 1.8, th: 3.6, dL: 1.2 }],
-      [{ y: 35.5, arch: 2.2, th: 3.4 }, { y: 35.5, arch: 2.2, th: 3.4 }],
-      [{ y: 33, arch: 2.2, th: 3.6 }, { y: 32, arch: 3.4, th: 3.6, dR: 1.2 }],
-      [{ y: 33.5, arch: 2, th: 3.2 }, { y: 33.5, arch: 4.6, th: 3.2, dR: .8 }]
-    ][id];
-    s += avBrow(A, 49, B[0]) + avBrow(A, 71, B[1]);
-    /* eyes — whites + iris + pupil + spec, one grammar */
-    var eo = {};
-    if (A.bigEyes) eo = { rx: 7.4, ry: 5, ir: 5, pu: 3.5, sw: 1.5 };
-    else if (A.lid) eo = { ry: 4.3, lid: true };
-    else if (A.squint) eo = { rx: 6.4, ry: 3.9, ir: 3.9, pu: 3 };
-    else if (id === 3) eo = { rx: 6.2, ry: 4.6, ir: 3.9, pu: 3 };
-    else if (id === 7) eo = { rx: 7, ry: 5.2, ir: 4.4, pu: 3.3 };
-    s += avEye(A, 49, eo) + avEye(A, 71, eo);
-    /* nose — Sterling's line, in the darkened neck tone */
-    if (A.stache) s += '<path d="M61.5,49 L59.8,53.8 Q59.5,55.6 61.2,55.6 Q62.8,55.6 63.4,54.6" stroke="' + dk(A.neck, .85) + '" stroke-width="1.8" stroke-linecap="round" fill="none"/>';
-    else if (A.bigEyes) s += '<path d="M60.8,49.5 L59.5,53.5 Q59.2,55.2 60.8,55.2 Q62.2,55.2 62.8,54.2" stroke="' + dk(A.neck, .85) + '" stroke-width="1.7" stroke-linecap="round" fill="none"/>';
-    else s += '<path d="M61.5,49.5 L59.2,56.8 Q58.8,59.2 61.2,59.2 Q63.4,59.2 64.2,57.8" stroke="' + dk(A.neck, .85) + '" stroke-width="1.8" stroke-linecap="round" fill="none"/>';
-    /* mouths — each character's own */
-    switch (A.mouthStyle) {
-      case "lips":
-        s += '<path d="M44,59.5 Q60,73 76,59.5 Q60,63.8 44,59.5 Z" fill="' + A.mouth + '"/>'; break;
-      case "grin":
-        s += '<path d="M41,58 Q60,76 79,58 Q60,64.5 41,58 Z" fill="' + A.mouth + '"/>' +
-          '<path d="M45,59.8 Q60,61.5 75,59.8 Q60,65.8 45,59.8 Z" fill="#FFF"/>'; break;
-      case "kidgrin":
-        s += '<path d="M43,58 Q60,75 77,58 Q60,64.5 43,58 Z" fill="' + A.mouth + '"/>' +
-          '<rect x="52" y="60.6" width="6" height="3.6" rx="1.3" fill="#FFF"/><rect x="62" y="60.6" width="6" height="3.6" rx="1.3" fill="#FFF"/>'; break;
-      case "warm":
-        /* Cast pass (2026-11-12): the Grandmother's smile, a
-           touch larger — the known call from cast pass 1: at
-           desk sizes her gold spectacles carry the face and
-           the smile was lost behind them. Wider by two a side,
-           deeper by three, the same warm shape. */
-        s += '<path d="M40,58 Q60,79 80,58 Q60,66.5 40,58 Z" fill="' + A.mouth + '"/>' +
-          '<path d="M47.5,60 Q60,63.5 72.5,60 Q60,66 47.5,60 Z" fill="#FFF6E8"/>'; break;
-      case "half":
-        s += '<path d="M45,63 Q59,70.5 73,58.5" stroke="' + A.mouth + '" stroke-width="3" stroke-linecap="round" fill="none"/>' +
-          '<path d="M73,58.5 Q77.5,56.5 78,52.5" stroke="' + A.mouth + '" stroke-width="3" stroke-linecap="round" fill="none"/>'; break;
-      case "dry":
-        s += '<path d="M50,62.5 Q60,67.5 70,60.5" stroke="' + A.mouth + '" stroke-width="2.8" stroke-linecap="round" fill="none"/>'; break;
-      default: /* stache — the moustache is the mouth */
-        break;
-    }
-  }
-  if (A.glasses) {
-    s += '<g stroke="' + A.glasses + '" stroke-width="2.8" fill="none">' +
-      '<circle cx="49" cy="46" r="10"/><circle cx="71" cy="46" r="10"/>' +
-      '<path d="M59,43.5 Q60,42 61,43.5 M39,43 L32.5,40.5 M81,43 L87.5,40.5"/></g>';
-  }
-  if (A.glassesBold) {
-    s += '<g stroke="' + A.glassesBold + '" stroke-width="3.2" fill="none">' +
-      '<rect x="38.5" y="37.5" width="20" height="16.5" rx="6"/><rect x="61.5" y="37.5" width="20" height="16.5" rx="6"/>' +
-      '<path d="M58.5,42 L61.5,42 M38.5,41 L32,39 M81.5,41 L88,39"/></g>';
-  }
-  return s;
-}
-function avatarSVG(id, state, seat) {
-  id = Number.isInteger(id) && id >= 0 && id < 8 ? id : 0;
-  var A = AVATARS[id];
-  var si = Number.isInteger(seat) ? ((seat % 4) + 4) % 4 : id % 4;
-  var open = '<svg class="avatar" viewBox="0 0 120 124" aria-hidden="true">';
-  var s = '<circle cx="60" cy="57" r="54" fill="' + PCHEAD[si] + '"/>' +
-    '<circle cx="60" cy="57" r="54" fill="none" stroke="#E9CD8A" stroke-width="2" opacity=".45"/>';
-  if (state === "cheer") {
-    s += '<path d="M20,102 Q0,80 6,52" stroke="' + A.shirt + '" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-      '<path d="M100,102 Q120,80 114,52" stroke="' + A.shirt + '" stroke-width="13" stroke-linecap="round" fill="none"/>' +
-      '<circle cx="6" cy="47" r="8.5" fill="' + A.skin + '"/><circle cx="114" cy="47" r="8.5" fill="' + A.skin + '"/>';
-  }
-  s += A.back +
-    '<path d="M14,124 Q18,90 60,88 Q102,90 106,124 Z" fill="' + A.shirt + '"/>' +
-    '<path d="M106,124 Q102,90 60,88 L60,124 Z" fill="#000" opacity=".07"/>' +
-    '<path d="M106,124 Q102,90 60,88 L60,124 Z" fill="#000" opacity=".05"/>' +
-    '<ellipse cx="60" cy="93" rx="13" ry="4" fill="#000" opacity=".10"/>' +
-    '<rect x="51" y="66" width="18" height="18" rx="6" fill="' + A.neck + '"/>';
-  if (A.ears) s += '<circle cx="31.5" cy="49" r="5.5" fill="' + A.skin + '"/><circle cx="32.3" cy="48" r="2.4" fill="' + A.neck + '"/>' +
-    '<circle cx="88.5" cy="49" r="5.5" fill="' + A.skin + '"/><circle cx="87.7" cy="48" r="2.4" fill="' + A.neck + '"/>';
-  s += '<circle cx="60" cy="46" r="28" fill="' + A.skin + '"/>' +
-    '<path d="M83,30 A28 28 0 0 1 56,74 C68,67 79,54 80,45 C80.5,39 81,34 83,30 Z" fill="' + A.neck + '"/>' +
-    /* Cast pass (2026-11-12): the modelling layer, drawn at the
-       sizes the faces are actually seen. The cel shade takes a
-       second, deeper pass so the light direction survives
-       miniaturisation; a rim of the same light stands along the
-       face's upper-left edge; and the chin casts its shadow —
-       one soft shape in the darkened neck tone, under everything
-       the features will draw. Nothing here touches identity art:
-       hair, accessories and features stay each face's own. */
-    '<path d="M83,30 A28 28 0 0 1 56,74 C68,67 79,54 80,45 C80.5,39 81,34 83,30 Z" fill="#000" opacity=".07"/>' +
-    '<path d="M83,30 A28 28 0 0 1 56,74 C68,67 79,54 80,45 C80.5,39 81,34 83,30 Z" fill="#000" opacity=".05"/>' +
-    '<ellipse cx="60" cy="73" rx="12.5" ry="3.6" fill="' + dk(A.neck, .78) + '" opacity=".38"/>' +
-    '<path d="M39.5,32 A25.5 25.5 0 0 1 65,21.8" stroke="#FFF6E8" stroke-width="3.2" stroke-linecap="round" fill="none" opacity=".16"/>' +
-    '<ellipse cx="44" cy="36" rx="13" ry="9" fill="#FFF" opacity=".10"/>' +
-    '<ellipse cx="43" cy="55" rx="5.5" ry="3.2" fill="#FF9D8A" opacity="' + (A.blush || .45) + '"/>' +
-    '<ellipse cx="77" cy="55" rx="5.5" ry="3.2" fill="#FF9D8A" opacity="' + ((A.blush || .45) * .85) + '"/>' +
-    A.front + avFeatures(A, id, state) + (A.acc || "") + (A.collar || "");
-  if (state === "slump") return open + '<g transform="translate(0 5) rotate(3 60 60)">' + s + "</g></svg>";
-  return open + s + "</svg>";
-}
-  /* a snapshot player's portrait: their chosen avatar when the
-     server sent a valid one, else the seat default — so an old
-     server (no avatar field) renders exactly as before */
-  function snapAvatar(p, i) {
-    return p && Number.isInteger(p.avatar) && p.avatar >= 0 && p.avatar < 8 ? p.avatar : i % 8;
+  function medallionSVG(name, seat) {
+    var si = Number.isInteger(seat) ? ((seat % 4) + 4) % 4 : 0;
+    var col = PCHEAD[si];
+    var ch = (String(name == null ? "" : name).trim().charAt(0) || "?").toUpperCase();
+    return '<svg class="avatar medallion" viewBox="0 0 48 48" aria-hidden="true">' +
+      '<circle cx="24" cy="24" r="23.5" fill="#6E5626"/>' +
+      '<circle cx="24" cy="24" r="22" fill="#D8B25C"/>' +
+      '<path d="M7,16.5 A19.5 19.5 0 0 1 41,16.5" stroke="#F8ECC8" stroke-width="1.6" fill="none" opacity=".6" stroke-linecap="round"/>' +
+      '<circle cx="24" cy="24" r="17.5" fill="' + shade(col, .48) + '"/>' +
+      '<circle cx="24" cy="24" r="17.5" fill="none" stroke="#F4E3B2" stroke-width="1" opacity=".5"/>' +
+      '<ellipse cx="24" cy="16.5" rx="10.5" ry="5.5" fill="#FFFFFF" opacity=".10"/>' +
+      '<text x="24" y="24.5" text-anchor="middle" dominant-baseline="central" font-family="GHSerif, Georgia, serif" font-size="19" font-weight="700" fill="#FFF6E8">' + esc(ch) + "</text></svg>";
   }
 
   /* ---------- sound (synthesized with WebAudio only — no files) ---------- */
@@ -2643,7 +2410,7 @@ function avatarSVG(id, state, seat) {
   function newGame(names) {
     return {
       players: names.map(function (nm, i) {
-        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, dbl: 1, vsRound: 0, avatar: tableAvatars[i] != null ? tableAvatars[i] : i };
+        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, dbl: 1, vsRound: 0 };
       }),
       round: 1, qInRound: 0,
       rules: null,              // Pass N2: the night's House Rules, fixed by startShow before the first question is born
@@ -2679,10 +2446,6 @@ function avatarSVG(id, state, seat) {
      re-render (an online snapshot, a seat going AWAY) repaints the
      same grammar instead of wiping it. */
   var tableFx = null, ogFx = null, ogQdSeat = -1, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null;
-  /* Visual pass V2 — the wince beat: {cur, seats} armed by the LIVE
-     table reveal only, plus its settle timer (mirrored online by
-     ogWinceTimer below) */
-  var tableWince = null, tableWinceTimer = null, ogWinceTimer = null;
   function decorateSeat(s, fx) {
     if (!fx) return;
     if (fx.closest) {
@@ -2738,6 +2501,17 @@ function avatarSVG(id, state, seat) {
         nm4.appendChild(tg4);
       }
     }
+    /* THE BLUFF: a lie that earned wears its take — counted in
+       players fooled, at the tag width the name line can carry */
+    if (fx.bluffFool) {
+      var nm5 = s.querySelector(".seat-name");
+      if (nm5) {
+        var tg5 = document.createElement("span");
+        tg5.className = "closest-tag blufftag";
+        tg5.textContent = "FOOLED " + Math.round(fx.bluffFool / BLUFF_FOOL) + " · +$" + fx.bluffFool;
+        nm5.appendChild(tg5);
+      }
+    }
     /* Hot Streaks (New programme pass 3): the streak tag rides the
        same seat-name tag space — a bank that earned the flat bonus
        wears it, and the banked figure in the delta already includes
@@ -2777,26 +2551,8 @@ function avatarSVG(id, state, seat) {
     G.players.forEach(function (p, i) {
       var shown = money(Math.round(dispScore[i] != null ? dispScore[i] : p.score));
       writtenScore[i] = shown;
-      var state = "neutral";
-      if (G.phase === "reveal" && G.cur && G.cur.marks) {
-        /* the Decider's reveal: only the tied leaders play, so only
-           they wear the verdict — the spectators keep their faces */
-        state = (G.decider && G.decider.eligible.indexOf(i) < 0) ? "neutral" : (G.cur.marks[i] ? "cheer" : "slump");
-        /* Visual pass V2: the flinch rides the reveal's first beat —
-           a seat the marks record as a miss wears WINCE, then the
-           settle timer hands it the slump above. Armed only by the
-           live revealAnswer (armTableWince), so a repaint or a
-           resumed reveal (paintReveal(true)) lands settled */
-        if (state === "slump" && tableWince && tableWince.cur === G.cur && tableWince.seats[i]) state = "wince";
-      } else if ((G.phase === "question" || G.phase === "vote") && (p.streak || 0) >= 2 &&
-        !(G.decider && G.decider.eligible.indexOf(i) < 0)) {
-        /* Visual pass V2 — KEEN: a live streak (2+) focuses the
-           face while the question is open; the reveal's verdict
-           face replaces it when the reveal lands */
-        state = "keen";
-      }
       var s = el('<div class="seat pod' + i + (p.house != null ? " house" : "") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + dblTokenHTML(p, i) + vsTokenHTML(p, i) +
+        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + dblTokenHTML(p, i) + vsTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + deskBetsHTML(p, i) + fortuneHTML() + "</div></div>");
@@ -2957,7 +2713,7 @@ function avatarSVG(id, state, seat) {
      Outside the question and vote phases the disc is inert: the
      declaration window is while the question is open. */
   function dblInPlay(p, i) {
-    if (!G || !G.cur || G.round < 2 || G.cur.betRound || G.cur.decider) return false;
+    if (!G || !G.cur || G.round < 2 || G.cur.betRound || G.cur.decider || G.cur.kind === "bluff") return false;
     return (p.dbl > 0) || !!(G.cur.dbl && G.cur.dbl[i]);
   }
   function dblTokenHTML(p, i) {
@@ -3050,6 +2806,9 @@ function avatarSVG(id, state, seat) {
   }
   function onSeatTap(i) {
     if (!G || !G.cur || G.phase !== "vote") return;
+    /* THE BLUFF's mark screen assigns picks, not marks — its own
+       grammar, behind the same seat taps */
+    if (G.cur.kind === "bluff") { bluffSeatTap(i); return; }
     /* the Decider's mark screen is for the tied leaders only — a
        spectator's seat is stepped back and takes no marks */
     if (G.decider && G.decider.eligible.indexOf(i) < 0) return;
@@ -3174,7 +2933,7 @@ function avatarSVG(id, state, seat) {
       var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
         '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
-        avatarSVG(snapAvatar(p, pi), pos === 0 ? "cheer" : "neutral", pi) +
+        medallionSVG(p.name, pi) +
         '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
     }).join("");
     var leadName = G.players[order[0]].name, lastName = G.players[order[order.length - 1]].name;
@@ -3373,7 +3132,7 @@ function avatarSVG(id, state, seat) {
           /* House Players (pass 5): a house seat's profile index
              rides along — a resumed solo show restores the same
              cast members, brains included */
-          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, dbl: (p.dbl != null ? p.dbl : 1), vsRound: p.vsRound || 0, avatar: p.avatar, house: (p.house != null ? p.house : null) };
+          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, dbl: (p.dbl != null ? p.dbl : 1), vsRound: p.vsRound || 0, house: (p.house != null ? p.house : null) };
         }),
         round: G.round, qInRound: G.qInRound, showId: G.showId,
         bankedOnce: !!G.bankedOnce, bigLeadDone: !!G.bigLeadDone,
@@ -3487,7 +3246,6 @@ function avatarSVG(id, state, seat) {
           /* a save written before AGAINST THE ROOM has no vsRound
              field — the gauntlet simply hasn't been thrown */
           vsRound: (typeof p.vsRound === "number" && p.vsRound > 0) ? Math.floor(p.vsRound) : 0,
-          avatar: (Number.isInteger(p.avatar) && p.avatar >= 0 && p.avatar < 8) ? p.avatar : i,
           /* House Players (pass 5): a saved profile index restores
              the house seat; anything malformed deals a guest */
           house: (Number.isInteger(p.house) && HOUSE_PROFILES[p.house]) ? p.house : null
@@ -3623,7 +3381,7 @@ function avatarSVG(id, state, seat) {
     return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
   }
   /* Record one completed show, exactly once. finishers are
-     [{name, avatar, score}] in seat order; winnerIdx is the winning
+     [{name, score}] in seat order; winnerIdx is the winning
      finisher's index, or -1 for a drawn show (shows and purses still
      count; no win is recorded and the champion is NOT dethroned).
      The show's own id is the guard: a finale reached a second time
@@ -3638,9 +3396,8 @@ function avatarSVG(id, state, seat) {
         var key = recNameKey(f && f.name);
         if (!key) return;
         var r = rec.players[key];
-        if (!r) { r = { name: "", avatar: 0, wins: 0, shows: 0, purse: 0 }; rec.players[key] = r; }
-        r.name = String(f.name).trim();   /* the record wears the most recent sighting's name and face */
-        if (Number.isInteger(f.avatar) && f.avatar >= 0 && f.avatar < 8) r.avatar = f.avatar;
+        if (!r) { r = { name: "", wins: 0, shows: 0, purse: 0 }; rec.players[key] = r; }
+        r.name = String(f.name).trim();   /* the record wears the most recent sighting's name */
         r.shows += 1;
         r.purse += Math.round(f.score || 0);
       });
@@ -3698,7 +3455,7 @@ function avatarSVG(id, state, seat) {
     }
     list.innerHTML = rows.map(function (row, idx) {
       var r = row.r, isChamp = !!(rec.champion && rec.champion.nameKey === row.key);
-      return '<div class="record-row">' + avatarSVG(r.avatar, "neutral", idx % 4) +
+      return '<div class="record-row">' + medallionSVG(r.name, idx % 4) +
         '<div class="record-who"><div class="record-name">' + esc(r.name) +
         (isChamp ? ' <span class="record-crown">★ REIGNING</span>' : "") + '</div>' +
         '<div class="record-sub">' + r.shows + (r.shows === 1 ? " SHOW" : " SHOWS") + "</div></div>" +
@@ -3963,7 +3720,7 @@ function avatarSVG(id, state, seat) {
       G.houseCast = soloCast.slice();
       soloCast.forEach(function (pi, k) {
         var p = G.players[k + 1];
-        if (p && HOUSE_PROFILES[pi]) { p.house = pi; p.avatar = HOUSE_PROFILES[pi].avatar; }
+        if (p && HOUSE_PROFILES[pi]) { p.house = pi; }
       });
       G.soloLine = authoredLine("house", { a: names[1], b: names[2] });
     }
@@ -4273,9 +4030,9 @@ function avatarSVG(id, state, seat) {
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
     var rows = order.map(function (ii) { return { name: G.players[ii].name, d: deriveReport(G.report ? G.report[ii] : null) }; });
     return finishShareData({
-      champion: { name: p.name, avatar: snapAvatar(p, i), seat: i, total: p.score + (potAmt || 0), house: p.house != null },
+      champion: { name: p.name, seat: i, total: p.score + (potAmt || 0), house: p.house != null },
       pot: potAmt || 0,
-      standings: order.map(function (ii) { return { name: G.players[ii].name, score: G.players[ii].score, avatar: snapAvatar(G.players[ii], ii), seat: ii }; }),
+      standings: order.map(function (ii) { return { name: G.players[ii].name, score: G.players[ii].score, seat: ii }; }),
       seriesLine: seriesLine || null,
       flourish: nightBiggest(rows)
     });
@@ -4290,9 +4047,9 @@ function avatarSVG(id, state, seat) {
     var p = OG.players[winSeat];
     var rows = OG.report ? order.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; }) : [];
     return finishShareData({
-      champion: hasWinner ? { name: p.name, avatar: snapAvatar(p, winSeat), seat: winSeat, total: p.score + (potAmt || 0), house: false } : null,
+      champion: hasWinner ? { name: p.name, seat: winSeat, total: p.score + (potAmt || 0), house: false } : null,
       pot: hasWinner ? (potAmt || 0) : 0,
-      standings: order.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score, avatar: snapAvatar(OG.players[ii], ii), seat: ii }; }),
+      standings: order.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score, seat: ii }; }),
       seriesLine: seriesLine || null,
       flourish: nightBiggest(rows)
     });
@@ -4320,20 +4077,20 @@ function avatarSVG(id, state, seat) {
     var rows = s.report ? order.map(function (ii) { return { name: s.players[ii].name, d: reportView(s.report[ii]) }; }) : [];
     var cp = champSeat != null ? s.players[champSeat] : null;
     return finishShareData({
-      champion: cp ? { name: cp.name, avatar: snapAvatar(cp, champSeat), seat: champSeat, total: cp.score + (s.pot || 0), house: false } : null,
+      champion: cp ? { name: cp.name, seat: champSeat, total: cp.score + (s.pot || 0), house: false } : null,
       pot: cp ? (s.pot || 0) : 0,
-      standings: order.map(function (ii) { return { name: s.players[ii].name, score: s.players[ii].score, avatar: snapAvatar(s.players[ii], ii), seat: ii }; }),
+      standings: order.map(function (ii) { return { name: s.players[ii].name, score: s.players[ii].score, seat: ii }; }),
       seriesLine: null,
       flourish: nightBiggest(rows)
     });
   }
-  /* one avatar, drawn from the game's own SVG: serialized with an
-     explicit size (the bare string carries only a viewBox) into a
-     same-origin blob — the canvas it lands on stays clean and
+  /* one medallion, drawn from the game's own SVG: serialized with
+     an explicit size (the bare string carries only a viewBox) into
+     a same-origin blob — the canvas it lands on stays clean and
      exportable, which the toBlob in composeShareCard proves */
-  function shareAvatarImage(id, state, seat) {
+  function shareMedallionImage(name, seat) {
     return new Promise(function (resolve) {
-      var svg = avatarSVG(id, state, seat).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="248" ');
+      var svg = medallionSVG(name, seat).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" ');
       var url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
       var img = new Image();
       img.onload = function () { resolve({ img: img, url: url }); };
@@ -4391,7 +4148,7 @@ function avatarSVG(id, state, seat) {
       if (av.champ) {
         ctx.save();
         ctx.beginPath(); ctx.arc(CX, 530, 104, 0, Math.PI * 2); ctx.clip();
-        ctx.drawImage(av.champ, CX - 104, 530 - 108, 208, 215);
+        ctx.drawImage(av.champ, CX - 104, 530 - 104, 208, 208);
         ctx.restore();
         ctx.beginPath(); ctx.arc(CX, 530, 104, 0, Math.PI * 2);
         ctx.strokeStyle = "#E9CD8A"; ctx.lineWidth = 5; ctx.stroke();
@@ -4429,7 +4186,7 @@ function avatarSVG(id, state, seat) {
       if (img) {
         ctx.save();
         ctx.beginPath(); ctx.arc(126, base - 14, 21, 0, Math.PI * 2); ctx.clip();
-        ctx.drawImage(img, 105, base - 36, 42, 43);
+        ctx.drawImage(img, 105, base - 36, 42, 42);
         ctx.restore();
         ctx.beginPath(); ctx.arc(126, base - 14, 21, 0, Math.PI * 2);
         ctx.strokeStyle = isChamp ? "#E9CD8A" : "rgba(233,205,138,.45)"; ctx.lineWidth = 2; ctx.stroke();
@@ -4463,21 +4220,21 @@ function avatarSVG(id, state, seat) {
     centered("s6ggrpgrzf-droid.github.io/Gamez/gilded-hour", 1282, "500 23px " + F, "rgba(201,169,98,.8)", "1px");
   }
   /* compose the card: the real letterforms first (the draw waits
-     on document.fonts), every needed avatar alongside, then the
+     on document.fonts), every needed medallion alongside, then the
      PNG itself — the toBlob is the proof the canvas stayed clean */
   function composeShareCard(d) {
     var av = { champ: null, rows: {} };
     var urls = [];
     var jobs = [];
-    function take(key, id, state, seat) {
-      jobs.push(shareAvatarImage(id, state, seat).then(function (got) {
+    function take(key, name, seat) {
+      jobs.push(shareMedallionImage(name, seat).then(function (got) {
         if (!got) return;
         urls.push(got.url);
         if (key === "champ") av.champ = got.img; else av.rows[key] = got.img;
       }));
     }
-    if (d.champion) take("champ", d.champion.avatar, "cheer", d.champion.seat);
-    d.standings.forEach(function (r, k) { take(k, r.avatar, "neutral", r.seat); });
+    if (d.champion) take("champ", d.champion.name, d.champion.seat);
+    d.standings.forEach(function (r, k) { take(k, r.name, r.seat); });
     var loads = Promise.resolve();
     if (document.fonts && document.fonts.load) {
       loads = Promise.all([
@@ -4740,6 +4497,7 @@ function avatarSVG(id, state, seat) {
            ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
            ["Against the Room", "Whoever sits last may throw it once a round — bank a question nobody else banks and it pays double"],
+           ["The Bluff", "One question this round has no written wrong answers — the table invents them. $200 for the truth, $25 for every player your lie fools"],
            ["The Headline", "The round closes with it — double money again, half the clock"]]
         : [["The money", "Same game, double — $200 · $400 · $600"],
            ["Cut Two", "One token each — yours for the whole show"],
@@ -4748,6 +4506,7 @@ function avatarSVG(id, state, seat) {
            ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
            ["Against the Room", "Whoever sits last may throw it once a round — bank a question nobody else banks and it pays double"],
+           ["The Bluff", "One question this round has no written wrong answers — the table invents them. $200 for the truth, $25 for every player your lie fools"],
            ["The Headline", "The round closes with it — double money again, half the clock"]],
       3: [["Questions", "Three"],
           ["The bet", "Before each one, bet on yourself out loud — a chip is $100"],
@@ -4792,7 +4551,11 @@ function avatarSVG(id, state, seat) {
     if (G.round === 2 && G.qInRound >= R2_COUNT) { G.round = 3; G.qInRound = 0; beginIntermission(); return; }
     if (G.round === 3 && G.qInRound >= R3_COUNT) { finishShow(); return; }
     var gid = G.guess ? G.guess[G.round + ":" + G.qInRound] : null;
-    if (gid != null) G.cur = makeCur(BANK[gid], BANK[gid].kind);
+    if (G.round === BLUFF_ROUND && G.qInRound === BLUFF_Q && gid == null) {
+      var bid = pickBluff();
+      G.cur = bid != null ? makeCur(BANK[bid], "bluff") : makeCur(drawNormal(), "mcq");
+    }
+    else if (gid != null) G.cur = makeCur(BANK[gid], BANK[gid].kind);
     else if (G.round === 1 && G.qInRound === 2 && nightlyState.data && nightlyState.key === G.showId) G.cur = makeCurServed(nightlyState.data);
     else G.cur = makeCur(drawNormal(), "mcq");
     if (G.round === 3) betBeat(); else spinBeat();
@@ -4800,6 +4563,17 @@ function avatarSVG(id, state, seat) {
   function drawNormal() {
     var pat = G.round === 1 ? R1_BANDS : G.round === 2 ? R2_BANDS : R3_BANDS;
     return drawBand(pat[G.qInRound] || 2);
+  }
+  /* THE BLUFF's draw: a bluff prompt the table has not seen this
+     show where one exists, marked seen like every other deal */
+  function pickBluff() {
+    var ids = [];
+    BANK.forEach(function (q, i) { if (q.kind === "bluff") ids.push(i); });
+    if (!ids.length) return null;
+    var fresh = ids.filter(function (id) { return !seen[id]; });
+    var id = pick(fresh.length ? fresh : ids);
+    seen[id] = 1;
+    return id;
   }
   function makeCur(q, kind) {
     var diff = q.diff || "medium";
@@ -4838,8 +4612,18 @@ function avatarSVG(id, state, seat) {
       opts: null, marks: {}, resolved: false, cutUsed: false, lockOrder: [],
       betRound: betRound, bankValue: 0, headline: headline, golden: golden
     };
-    if (kind !== "num") {
+    if (kind !== "num" && kind !== "bluff") {
       cur.opts = shuffle([{ t: q.a, ok: true }].concat(q.w.map(function (w) { return { t: w, ok: false }; })));
+    }
+    if (kind === "bluff") {
+      /* THE BLUFF unprices every fold: the Headline/Golden grammar
+         priced the slot before anyone knew what it was, and the
+         bluff plays flat — $200, no melt, a vote window of its
+         own. Its answers do not exist yet: the table invents them
+         in the invent phase, and dealBluff builds the plaques. */
+      cur.value = BLUFF_VALUE; cur.headline = false; cur.golden = false;
+      cur.clockTotal = BLUFF_VOTE_TIME * winScale();
+      cur.bluffDealt = false; cur.bluffFakes = null; cur.bluffPicks = null;
     }
     commitCutPair(cur);
     lastShownValue = null;
@@ -5189,12 +4973,173 @@ function avatarSVG(id, state, seat) {
     h += '<button class="tool-btn" id="btnCallIt">CALL IT<small>everybody — fingers up</small></button>';
     return h + "</div>";
   }
+  /* ================= THE BLUFF (research programme pass 2) =================
+     The invent phase runs off the clock, at the table's pace: the
+     host collects each human player's lie into a row of inputs —
+     the table game has no per-player device, so the lie is spoken
+     and the host types it, the same tap-in trust as the marks.
+     A blank line (or a lie that collides with the truth or with
+     another lie) is dealt an authored decoy instead, so every seat
+     always has a lie in play. House seats play decoys of their
+     own. The vote is the ordinary finger vote over however many
+     plaques the dealing produced — truth plus one lie per seat. */
+  function bluffNorm(s) { return String(s || "").replace(/\s+/g, " ").trim().toLowerCase().replace(/^(the|a|an) /, ""); }
+  function bluffInventStage() {
+    var c = G.cur;
+    stage(bluffInventHTML());
+    if (entTake(c)) entApply(document.querySelector("#stage .q-cardwrap"), c.cat);
+    hostSay("bluffInvent", { cat: c.cat });
+    Snd.playSignature(c.cat);
+    var btn = $("btnDealBluff");
+    if (btn) btn.addEventListener("click", dealBluff);
+    saveTableShow();
+  }
+  function bluffInventHTML() {
+    var c = G.cur;
+    var rows = G.players.map(function (p, i) {
+      if (p.house != null) return '<div class="bluff-row house"><span class="bluff-seat">' + esc(p.name) + '</span><span class="bluff-note">the house is inventing its own…</span></div>';
+      return '<div class="bluff-row"><label class="bluff-seat" for="bluffIn' + i + '">' + esc(p.name) + '</label><input class="bluff-in" id="bluffIn' + i + '" data-seat="' + i + '" type="text" maxlength="42" autocomplete="off" placeholder="their lie, in their words"></div>';
+    }).join("");
+    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
+      '<div class="q-cardwrap"><div class="q-text' + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(1) + '</div></div>' +
+      '<p class="round-text">One answer to this one is true. The rest, this table invents. Ask each player for their lie and type it as they give it — an empty line gets a house lie dealt to it instead.</p>' +
+      '<div class="bluff-rows">' + rows + '</div>' +
+      '<div style="margin-top:14px"><button class="btn-gold" id="btnDealBluff">DEAL THE ANSWERS</button></div>';
+  }
+  function dealBluff() {
+    var c = G.cur; if (!c || c.kind !== "bluff" || c.bluffDealt) return;
+    var decoys = shuffle((c.q.decoys || []).slice());
+    var used = {}; used[bluffNorm(c.q.a)] = 1;
+    function takeDecoy() {
+      while (decoys.length) { var d = decoys.shift(); if (!used[bluffNorm(d)]) { used[bluffNorm(d)] = 1; return d; } }
+      return null;
+    }
+    var fakes = {};
+    G.players.forEach(function (p, i) {
+      if (p.house != null) return;
+      var inp = $("bluffIn" + i);
+      var t = inp ? inp.value.replace(/\s+/g, " ").trim() : "";
+      if (t && !used[bluffNorm(t)]) { used[bluffNorm(t)] = 1; fakes[i] = t; }
+    });
+    G.players.forEach(function (p, i) { if (fakes[i] == null) { var d = takeDecoy(); if (d) fakes[i] = d; } });
+    c.bluffFakes = fakes;
+    var opts = [{ t: c.q.a, ok: true, by: -1 }];
+    Object.keys(fakes).forEach(function (k) { opts.push({ t: fakes[k], ok: false, by: +k }); });
+    c.opts = shuffle(opts);
+    c.bluffDealt = true;
+    Snd.play("coin");
+    askCurrent();
+  }
+  function bluffQuestionHTML() {
+    var c = G.cur;
+    var btns = c.opts.map(function (o, i) {
+      return '<button class="ans-btn" style="--d:' + (i * 0.09).toFixed(2) + 's" disabled><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span></button>';
+    }).join("");
+    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
+      stakeRibbonHTML(c.stake, G.players) +
+      '<div class="q-cardwrap"><div class="q-text' + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(1) + '</div></div>' +
+      '<div class="q-meta"><div class="q-for">One of these is true — the rest were invented at this table. $200 for the truth, and $25 for every player your lie fools.</div>' + timerHTML() + '</div>' +
+      '<div class="answers pop-in">' + btns + '</div>' +
+      '<div class="tools"><button class="tool-btn" id="btnCallIt">CALL IT<small>everybody — fingers up</small></button></div>';
+  }
+  function bluffTruthIx() { var c = G.cur; if (!c || !c.opts) return -1; for (var i = 0; i < c.opts.length; i++) if (c.opts[i].ok) return i; return -1; }
+  /* a house seat's pick, from its own roll at question open: the
+     truth when it rolled right, otherwise a lie that is not its
+     own — the house can be fooled like anybody */
+  function bluffHousePicks() {
+    var c = G.cur; if (!c.house) return;
+    c.bluffPicks = c.bluffPicks || {};
+    var tix = bluffTruthIx();
+    Object.keys(c.house).forEach(function (k) {
+      var i = +k, e = c.house[k];
+      if (c.bluffPicks[i] != null) return;
+      if (e.ok) { c.bluffPicks[i] = tix; return; }
+      var cands = [];
+      c.opts.forEach(function (o, oi) { if (!o.ok && o.by !== i) cands.push(oi); });
+      if (cands.length) c.bluffPicks[i] = cands[Math.floor(rng() * cands.length)];
+    });
+  }
+  function bluffMarkScreen() {
+    G.phase = "vote";
+    var c = G.cur;
+    c.bluffPicks = c.bluffPicks || {};
+    bluffHousePicks();
+    renderSeats();
+    stage(bluffMarkHTML());
+    hostSay("bluffMark");
+    wireBluffMark();
+    saveTableShow();
+  }
+  function bluffMarkHTML() {
+    var c = G.cur;
+    var btns = c.opts.map(function (o, i) {
+      return '<button class="ans-btn bluff-pick" data-opt="' + i + '"><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span><span class="vote-chips" data-chips="' + i + '"></span></button>';
+    }).join("");
+    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">WHO PICKED WHAT?</span></div>' +
+      '<div class="q-text' + wearCls(G.round, false) + '" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + cardDressHTML(1) + '</div>' +
+      '<p class="round-text">Tap an answer, then tap the seats that held up its number. A seat can never be put on its own lie — and a seat left untapped sat this one out.</p>' +
+      '<div class="answers bluff-marking">' + btns + '</div>' +
+      '<button class="btn-gold" id="btnReveal">REVEAL THE ANSWER</button>';
+  }
+  var bluffSelOpt = null;
+  function paintBluffChips() {
+    var c = G.cur; if (!c || !c.bluffPicks) return;
+    document.querySelectorAll(".bluff-marking [data-chips]").forEach(function (box) {
+      var oi = +box.getAttribute("data-chips"), h = "";
+      Object.keys(c.bluffPicks).forEach(function (k) {
+        if (c.bluffPicks[k] !== oi) return;
+        var p = G.players[+k]; if (!p) return;
+        h += '<span class="vote-chip pod' + k + '" title="' + esc(p.name) + '">' + medallionSVG(p.name, +k) + '</span>';
+      });
+      box.innerHTML = h;
+    });
+  }
+  function wireBluffMark() {
+    var c = G.cur;
+    bluffSelOpt = null;
+    document.querySelectorAll(".bluff-pick").forEach(function (b) {
+      b.addEventListener("click", function () {
+        bluffSelOpt = +b.getAttribute("data-opt");
+        document.querySelectorAll(".bluff-pick").forEach(function (x) { x.classList.toggle("sel", +x.getAttribute("data-opt") === bluffSelOpt); });
+      });
+    });
+    paintBluffChips();
+    $("btnReveal").addEventListener("click", function () {
+      c.marks = {};
+      Object.keys(c.bluffPicks || {}).forEach(function (k) {
+        var o = c.opts[c.bluffPicks[k]];
+        if (o && o.ok) c.marks[k] = true;
+      });
+      revealAnswer();
+    });
+  }
+  function bluffSeatTap(i) {
+    var c = G.cur, p = G.players[i];
+    if (!c || c.kind !== "bluff" || !c.bluffPicks) return;
+    if (p.house != null) return; /* a house seat's pick is its own */
+    if (bluffSelOpt == null) return;
+    if (c.opts[bluffSelOpt] && c.opts[bluffSelOpt].by === i) return; /* never your own lie */
+    if (c.bluffPicks[i] === bluffSelOpt) delete c.bluffPicks[i];
+    else c.bluffPicks[i] = bluffSelOpt;
+    paintBluffChips();
+    saveTableShow();
+  }
+  /* the reveal's accounting of lies: whose invention each plaque
+     was, and what it earned — the comedy and the money in one list */
+  function bluffCreditHTML(c) {
+    if (!c || !c.opts) return "";
+    var rows = c.opts.map(function (o, i) {
+      if (o.ok) return '<div class="bluff-credit truth"><span class="bc-tag">THE TRUTH</span><span class="bc-text">' + esc(o.t) + '</span></div>';
+      var author = (o.by != null && o.by >= 0 && G.players[o.by]) ? G.players[o.by].name : "The house";
+      var n = 0;
+      Object.keys(c.bluffPicks || {}).forEach(function (k) { if (c.bluffPicks[k] === i && +k !== o.by) n++; });
+      return '<div class="bluff-credit"><span class="bc-tag">' + esc(author).toUpperCase() + "'S LIE</span><span class=\"bc-text\">" + esc(o.t) + '</span>' +
+        (n ? '<span class="bc-fooled">fooled ' + n + (n === 1 ? " player" : " players") + " · +" + money(n * BLUFF_FOOL) + "</span>" : '<span class="bc-fooled none">fooled nobody</span>') + "</div>";
+    }).join("");
+    return '<div class="bluff-credits">' + rows + '</div>';
+  }
+
   function askCurrent() {
-    /* Visual pass V2: a fresh question buries the last reveal's
-       flinch (the cur-keyed guard already refuses it; this keeps
-       the state honest rather than merely unreachable) */
-    tableWince = null;
-    if (tableWinceTimer) { clearTimeout(tableWinceTimer); tableWinceTimer = null; }
     G.phase = "question"; stagePhase("question");
     audDecider(!!(G.cur && G.cur.decider)); /* V4: the Decider hushed from its first second */
     applyCat(G.cur.cat); setCatBackdrop(G.cur.cat);
@@ -5204,6 +5149,7 @@ function avatarSVG(id, state, seat) {
     G.cur.stake = stakeCallout(tableStakeCtx());
     seatsVisible(true);
     updateTop(); renderSeats();
+    if (G.cur.kind === "bluff" && !G.cur.bluffDealt) { bluffInventStage(); return; }
     if (G.cur.kind === "num") {
       stage(numHTML());
       if (G.cur.decider && G.decider) {
@@ -5215,6 +5161,9 @@ function avatarSVG(id, state, seat) {
           { a: names2[0] || "", b: names2.slice(1).join(" and ") || "" });
       }
       else if (!G.cur.headline) hostSay(G.cur.q && G.cur.q.d === 3 ? "deepcut" : "numQ", { cat: G.cur.cat });
+    } else if (G.cur.kind === "bluff") {
+      stage(bluffQuestionHTML());
+      hostSay("bluffVote", { cat: G.cur.cat });
     } else {
       stage(questionHTML());
       if (!G.cur.headline) hostSay(G.cur.q && G.cur.q.d === 3 ? "deepcut" : "read", { cat: G.cur.cat });
@@ -5359,7 +5308,7 @@ function avatarSVG(id, state, seat) {
   }
   function useCut(i) {
     var c = G.cur, p = G.players[i];
-    if (!c || G.phase !== "question" || c.kind === "num" || c.cutUsed || p.cut <= 0) return;
+    if (!c || G.phase !== "question" || c.kind === "num" || c.kind === "bluff" || c.cutUsed || p.cut <= 0) return;
     p.cut--; c.cutUsed = true;
     /* G6: the spend consumes the pair committed at the deal (a
        pre-pass save commits its pair here, at first touch, by the
@@ -5394,7 +5343,7 @@ function avatarSVG(id, state, seat) {
     if (!G || !G.cur || G.phase !== "question" || G.cur.resolved) return;
     G.cur.resolved = true; stopClock();
     houseLapseCuts();
-    G.cur.bankValue = G.cur.betRound ? 0 : earned(G.cur.value, G.cur.elapsed, G.cur.clockTotal);
+    G.cur.bankValue = G.cur.betRound ? 0 : (G.cur.kind === "bluff" ? G.cur.value : earned(G.cur.value, G.cur.elapsed, G.cur.clockTotal));
     voteBeat();
   }
   function voteBeat() {
@@ -5409,6 +5358,8 @@ function avatarSVG(id, state, seat) {
       '<div class="round-title" id="voteCount">FINGERS UP…</div>' +
       '<p class="round-text">' + (G.cur.decider && G.decider
         ? G.decider.eligible.map(function (i) { return esc(G.players[i].name); }).join(" and ") + " — numbers ready, shout yours on SHOW ME. Everybody else: witness."
+        : G.cur.kind === "bluff"
+        ? "Hold up the number of the answer you believe — one of them is true, and the rest are this table's own lies."
         : G.cur.kind === "num"
         ? "Numbers ready — shout yours on SHOW ME."
         : "Hold up 1, 2, 3 or 4 fingers — your answer, held high, for the whole room to see.") + "</p>");
@@ -5458,11 +5409,12 @@ function avatarSVG(id, state, seat) {
     order.forEach(function (i) {
       if (!G.cur.marks || !G.cur.marks[i]) return;
       var p = G.players[i]; if (!p) return;
-      h += '<span class="vote-chip pod' + i + '" title="' + esc(p.name) + '">' + avatarSVG(snapAvatar(p, i), "neutral", i) + "</span>";
+      h += '<span class="vote-chip pod' + i + '" title="' + esc(p.name) + '">' + medallionSVG(p.name, i) + "</span>";
     });
     box.innerHTML = h;
   }
   function markScreen() {
+    if (G.cur && G.cur.kind === "bluff") { bluffMarkScreen(); return; }
     G.phase = "vote";
     renderSeats();
     stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(G.cur.cat) + esc(G.cur.cat.toUpperCase()) + '</span><span class="q-kind">WHO HAD IT?</span></div>' +
@@ -5868,34 +5820,6 @@ function avatarSVG(id, state, seat) {
     if (before < 1000 && before + fed >= 1000) return "grand";
     return null;
   }
-  /* Visual pass V2 — the table's flinch, armed by the LIVE reveal
-     and by nothing else: every seat the marks record as a miss (at
-     the table the marks ARE the answer record — an unmarked seat
-     already slumps and already wears the miss delta; a Decider
-     spectator, who never played, is excepted) wears WINCE for the
-     reveal's opening ~1.2s, then settles into slump. Transient by
-     construction: never saved, keyed to the question object, and
-     the resumed-reveal path (paintReveal(true)) never arms it, so
-     a repaint lands settled and the wince never replays. */
-  function armTableWince() {
-    var c = G.cur; if (!c) return;
-    var seats = {};
-    G.players.forEach(function (p, i) {
-      if (c.marks && c.marks[i]) return;
-      if (G.decider && G.decider.eligible.indexOf(i) < 0) return;
-      seats[i] = 1;
-    });
-    if (!Object.keys(seats).length) return;
-    tableWince = { cur: c, seats: seats };
-    if (tableWinceTimer) clearTimeout(tableWinceTimer);
-    tableWinceTimer = setTimeout(function () {
-      tableWinceTimer = null;
-      if (tableWince && tableWince.cur === c) {
-        tableWince = null;
-        if (G && G.cur === c && G.phase === "reveal") renderSeats();
-      }
-    }, 1250);
-  }
   /* Visual pass V4 — THE AUDIENCE: the house answers the reveal.
      A bank ripples the row (a staggered lift, left to right), an
      all-miss dips it (a sympathetic slump); the class lives ~1.5s
@@ -5957,7 +5881,7 @@ function avatarSVG(id, state, seat) {
      and no gauntlet), has not declared this round, and carries
      no Double on this question — one stake per question. */
   function vsEligible(i) {
-    if (!G || !G.cur || G.cur.betRound || G.cur.decider) return false;
+    if (!G || !G.cur || G.cur.betRound || G.cur.decider || G.cur.kind === "bluff") return false;
     var p = G.players[i];
     if (!p || (p.vsRound || 0) === G.round) return false;
     if (G.cur.dbl && G.cur.dbl[i]) return false;
@@ -5975,7 +5899,6 @@ function avatarSVG(id, state, seat) {
        the closest call, and its fx paints only that */
     if (c.decider && G.decider) {
       buildDeciderFx();
-      armTableWince();
       audDecider(false); /* V4: no ripple for the Decider — nothing banked; the hush simply lifts */
       paintReveal();
       saveTableShow();
@@ -5999,6 +5922,26 @@ function avatarSVG(id, state, seat) {
     /* THE DOUBLE settles with the question: every riding token is
        spent here, win or lose — the declaration was the spend */
     if (c.dbl) Object.keys(c.dbl).forEach(function (k) { if (!c.betRound) G.players[+k].dbl = 0; });
+    /* THE BLUFF settles its second purse in the same commit: every
+       player a lie fooled pays its author $25 from the house —
+       nobody is ever charged for being fooled. The count rides
+       the question (bluffFool), so the fx, the report tallies
+       below and any resumed repaint all read the same figures. */
+    if (c.kind === "bluff") {
+      c.bluffFool = {};
+      var foolCount = {};
+      Object.keys(c.bluffPicks || {}).forEach(function (k) {
+        var o = c.opts[c.bluffPicks[k]];
+        if (!o || o.ok || o.by == null || o.by < 0 || +k === o.by) return;
+        foolCount[o.by] = (foolCount[o.by] || 0) + 1;
+      });
+      Object.keys(foolCount).forEach(function (k) {
+        var amt = foolCount[k] * BLUFF_FOOL;
+        G.players[+k].score += amt;
+        gains[k] = (gains[k] || 0) + amt;
+        c.bluffFool[k] = amt;
+      });
+    }
     c.streakFx = {}; c.streakMoment = so.moment;
     G.players.forEach(function (p, i) {
       p.streak = so.streakOut[i];
@@ -6025,7 +5968,6 @@ function avatarSVG(id, state, seat) {
        the winner line's generation now, not at the finale screen */
     if (G.round === 3 && G.qInRound === R3_COUNT - 1) winnerPrefetchAtReveal(winnerFactsFrom(G.players));
     potFeedPending = potFed; /* the vessel paints pre-feed; its coins are owed */
-    armTableWince();
     audDecider(false); audReact(winners.length > 0); /* V4: the house ripples a bank, dips an all-miss */
     paintReveal();
     saveTableShow();
@@ -6047,7 +5989,9 @@ function avatarSVG(id, state, seat) {
          re-derives the same fx and never touches the scores */
       var sBonus = (c.streakFx && c.streakFx[i]) ? (c.streakFx[i].bonus || 0) : 0;
       var soleFx = G.players.filter(function (_, j) { return c.marks[j]; }).length === 1;
-      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx), closest: guessQ, quickdraw: i === qdSeat, doubled: dblSpent(c, i), vs: vsPaid(c, i, soleFx), streakBonus: sBonus, delay: bankSeq++ * 0.12 };
+      var foolAmt = (c.kind === "bluff" && c.bluffFool && c.bluffFool[i]) || 0;
+      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx) + foolAmt, closest: guessQ, quickdraw: i === qdSeat, doubled: dblSpent(c, i), vs: vsPaid(c, i, soleFx), streakBonus: sBonus, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
+      else if (foolAmt > 0) fxSeats[i] = { delta: "bank", amt: foolAmt, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
       else fxSeats[i] = { delta: "miss", delay: i * 0.05 };
     });
     tableFx = { seats: fxSeats };
@@ -6122,6 +6066,7 @@ function avatarSVG(id, state, seat) {
         goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + cardDressHTML(1) + sealHTML(c.golden, settled) + "</div>", c.golden) +
         '<div class="answers">' + btns + "</div>" +
         pfStrip +
+        (c.kind === "bluff" ? bluffCreditHTML(c) : "") +
         dMcq +
         whySlip(c.q.why, settled, doubleTag(c.headline, c.golden)) + nextBtn);
       var hk = winners.length === 0 ? "allMiss" : (winners.length === G.players.length ? "allHit" : "someHit");
@@ -6288,7 +6233,7 @@ function avatarSVG(id, state, seat) {
          the pot — it is money they won, so the purse (and the
          crown's amount) includes it. Nobody else's figure moves:
          the pot was never part of any score */
-      guestFinishers.push({ name: pp.name, avatar: snapAvatar(pp, ii), score: pp.score + (ii === i && !tiedIdx ? (G.pot || 0) : 0) });
+      guestFinishers.push({ name: pp.name, score: pp.score + (ii === i && !tiedIdx ? (G.pot || 0) : 0) });
     });
     if (guestFinishers.length) recordShow(G.showId, guestFinishers, guestWin);
     /* Programme pass 4 — Rematch Night: the night advances at the
@@ -6339,7 +6284,7 @@ function avatarSVG(id, state, seat) {
         ? ""
         : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
       return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === i ? " winner-podium lit" : "") + '">' + top + (ii === i ? laurelBadge() : "") +
-        avatarSVG(snapAvatar(pp, ii), ii === i ? "cheer" : "neutral", ii) +
+        medallionSVG(pp.name, ii) +
         '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div>" +
         (ii === i && deciderWon ? '<div class="decider-marker">★ WON THE DECIDER</div>' : "") + "</div></div>";
     }).join("");
@@ -6413,14 +6358,14 @@ function avatarSVG(id, state, seat) {
      player (no purse, no wins, no crown — see winnerScreen), while
      the night's SERIES counts them like any seat. */
   var HOUSE_PROFILES = [
-    /* the Professor: sharp on the screen categories, lost online */
-    { name: "Marlowe", avatar: 6, skill: 0.05, strong: ["Movies", "TV"], weak: ["The Dial-Up Years"] },
-    /* the Starlet: raised on Saturday mornings and the jingles between them */
-    { name: "Vivian", avatar: 0, skill: 0.02, strong: ["Saturday Morning", "Ads & Jingles"], weak: ["Toys & Games"] },
-    /* the Cowboy: a toys-and-games hand, no ear for music at all */
-    { name: "Caspar", avatar: 5, skill: -0.02, strong: ["Toys & Games", "The Dial-Up Years"], weak: ["Music"] },
-    /* the Mod: the strongest seat in the house — music and movies are hers */
-    { name: "Odette", avatar: 7, skill: 0.08, strong: ["Music", "Movies"], weak: ["Saturday Morning"] }
+    /* Marlowe: sharp on the screen categories, lost online */
+    { name: "Marlowe", skill: 0.05, strong: ["Movies", "TV"], weak: ["The Dial-Up Years"] },
+    /* Vivian: raised on Saturday mornings and the jingles between them */
+    { name: "Vivian", skill: 0.02, strong: ["Saturday Morning", "Ads & Jingles"], weak: ["Toys & Games"] },
+    /* Caspar: a toys-and-games hand, no ear for music at all */
+    { name: "Caspar", skill: -0.02, strong: ["Toys & Games", "The Dial-Up Years"], weak: ["Music"] },
+    /* Odette: the strongest seat in the house — music and movies are hers */
+    { name: "Odette", skill: 0.08, strong: ["Music", "Movies"], weak: ["Saturday Morning"] }
   ];
   /* correctness by the question's band (Design pass 5's ladder),
      before skill and leans; the clamp keeps every seat beatable
@@ -6456,16 +6401,17 @@ function avatarSVG(id, state, seat) {
     return g < 0 ? 0 : g;
   }
   /* the deal: two profiles from the show rng, neither wearing the
-     face the human picked */
-  function dealHouseCast(humanAvatar) {
+     human's own name — two same-named seats would blur the desk */
+  function dealHouseCast(humanName) {
+    var hn = String(humanName || "").trim().toLowerCase();
     var order = shuffle([0, 1, 2, 3]), cast = [];
     for (var k = 0; k < order.length && cast.length < 2; k++) {
-      if (HOUSE_PROFILES[order[k]].avatar !== humanAvatar) cast.push(order[k]);
+      if (HOUSE_PROFILES[order[k]].name.toLowerCase() !== hn) cast.push(order[k]);
     }
     return cast;
   }
   function startSoloShow(humanName) {
-    var cast = dealHouseCast(tableAvatars[0]);
+    var cast = dealHouseCast(humanName);
     startShow([humanName, HOUSE_PROFILES[cast[0]].name, HOUSE_PROFILES[cast[1]].name], cast);
   }
   /* the rolls, made once at question open (askCurrent) and kept on
@@ -6491,7 +6437,7 @@ function avatarSVG(id, state, seat) {
            skill pulling it earlier — one honest number on the same
            clock the host's taps are timed by */
         e.lock = Math.max(1.2, (2 + rng() * Math.max(3, c.clockTotal - 4)) * (1 - (prof.skill || 0)));
-        if (p.cut > 0 && !e.ok && rng() < HOUSE_CUT_POLICY) e.cut = "pending";
+        if (c.kind !== "bluff" && p.cut > 0 && !e.ok && rng() < HOUSE_CUT_POLICY) e.cut = "pending";
       }
       /* THE DOUBLE, house policy: the house spends its token the
          way it plays everything else — on its own honest numbers.
@@ -6504,7 +6450,8 @@ function avatarSVG(id, state, seat) {
          INSTEAD — it is the scarcer instrument, and the house
          plays to win the night, not to decorate it. */
       var conf = (c.kind === "num") ? (band === 1 ? 0.88 : band === 2 ? 0.70 : 0.40) : e.prob;
-      if (conf >= 0.8 && vsEligible(i)) {
+      if (c.kind === "bluff") { /* the bluff is its own stake: no house gauntlet, no house Double, ever */
+      } else if (conf >= 0.8 && vsEligible(i)) {
         c.vs = c.vs || {}; c.vs[i] = true; p.vsRound = G.round; e.vs = true;
       } else if ((p.dbl > 0) && G.round >= 2 && !c.betRound && !c.decider) {
         if (conf >= 0.8) { c.dbl = c.dbl || {}; c.dbl[i] = true; e.dbl = true; }
@@ -6584,30 +6531,16 @@ function avatarSVG(id, state, seat) {
   /* ---------- setup screen ---------- */
   var playerCount = 3;
   var soloMode = false;
-  /* table-mode portraits (item 6): one pick per seat slot, defaulting
-     to the seat's own avatar; tapping the disc in a name row cycles.
-     Remembered on this device like the join name is — presentation
-     only, never part of the game state the show scores from */
-  var tableAvatars = [0, 1, 2, 3];
-  try {
-    var _ta = JSON.parse(localStorage.getItem("gh_table_avatars") || "null");
-    if (Array.isArray(_ta)) _ta.forEach(function (v, i) {
-      if (i < 4 && Number.isInteger(v) && v >= 0 && v < 8) tableAvatars[i] = v;
-    });
-  } catch (e) {}
-  function saveTableAvatars() {
-    try { localStorage.setItem("gh_table_avatars", JSON.stringify(tableAvatars)); } catch (e) {}
-  }
   function renderPodiumPreview() {
     var wrap = $("podiumPreview");
     if (!wrap) return;
     var inputs = $("panelTable").querySelectorAll(".name-input");
     if (soloMode) {
       /* the cast is dealt at showtime, so the preview promises the
-         arrangement, not the faces: one named guest, two chairs
+         arrangement, not the players: one named guest, two chairs
          the house will fill */
       var nm0 = (inputs[0] && inputs[0].value.trim()) || PNAMES[0];
-      wrap.innerHTML = '<div class="podium pod0">' + avatarSVG(tableAvatars[0], "neutral", 0) +
+      wrap.innerHTML = '<div class="podium pod0">' + medallionSVG(nm0, 0) +
         '<div class="desk"><div class="pname">' + esc(nm0) + '</div><div class="pmoney">$0</div></div></div>' +
         '<div class="podium house-pod"><div class="house-q">?</div><div class="desk"><div class="pname">A HOUSE PLAYER</div><div class="pmoney">DEALT AT SHOWTIME</div></div></div>' +
         '<div class="podium house-pod"><div class="house-q">?</div><div class="desk"><div class="pname">A HOUSE PLAYER</div><div class="pmoney">DEALT AT SHOWTIME</div></div></div>';
@@ -6616,7 +6549,7 @@ function avatarSVG(id, state, seat) {
     var html = "";
     for (var i = 0; i < playerCount; i++) {
       var nm = (inputs[i] && inputs[i].value.trim()) || PNAMES[i];
-      html += '<div class="podium pod' + i + '">' + avatarSVG(tableAvatars[i], "neutral", i) +
+      html += '<div class="podium pod' + i + '">' + medallionSVG(nm, i) +
         '<div class="desk"><div class="pname">' + esc(nm) + '</div><div class="pmoney">$0</div></div></div>';
     }
     wrap.innerHTML = html;
@@ -6625,20 +6558,11 @@ function avatarSVG(id, state, seat) {
     var wrap = $("nameRows"); wrap.innerHTML = "";
     var rowCount = soloMode ? 1 : playerCount;
     for (var i = 0; i < rowCount; i++) {
-      var row = el('<div class="name-row"><button class="ava-pick" data-avaseat="' + i + '" aria-label="Portrait for seat ' + (i + 1) + ' — tap to change">' +
-        avatarSVG(tableAvatars[i], "neutral", i) + "</button>" +
+      var row = el('<div class="name-row"><span class="ava-pick" data-avaseat="' + i + '" aria-hidden="true">' +
+        medallionSVG(PNAMES[i], i) + "</span>" +
         '<input class="name-input" maxlength="14" value="' + PNAMES[i] + '">' +
         '<span class="name-seat">SEAT ' + (i + 1) + "</span></div>");
-      row.querySelector(".name-input").addEventListener("input", renderPodiumPreview);
-      (function (seat) {
-        row.querySelector(".ava-pick").addEventListener("click", function () {
-          Snd.ensure();
-          tableAvatars[seat] = (tableAvatars[seat] + 1) % 8;
-          saveTableAvatars();
-          paintAvaPicks();
-          renderPodiumPreview();
-        });
-      })(i);
+      row.querySelector(".name-input").addEventListener("input", function () { paintAvaPicks(); renderPodiumPreview(); });
       wrap.appendChild(row);
     }
     if (soloMode) {
@@ -6646,12 +6570,15 @@ function avatarSVG(id, state, seat) {
     }
     renderPodiumPreview();
   }
-  /* repaint just the picker discs (a cycle tap must not rebuild the
-     rows — that would throw away names being typed) */
+  /* repaint just the medallions (typing a name must not rebuild
+     the rows — that would throw away the name being typed); the
+     medallion's letter follows the name in its row */
   function paintAvaPicks() {
+    var inputs = $("panelTable") ? $("panelTable").querySelectorAll(".name-input") : [];
     document.querySelectorAll(".ava-pick").forEach(function (b) {
       var seat = parseInt(b.getAttribute("data-avaseat"), 10);
-      b.innerHTML = avatarSVG(tableAvatars[seat], "neutral", seat);
+      var nm = (inputs[seat] && inputs[seat].value.trim()) || PNAMES[seat] || "?";
+      b.innerHTML = medallionSVG(nm, seat);
     });
   }
   document.querySelectorAll(".count-btn").forEach(function (b) {
@@ -7257,6 +7184,16 @@ function avatarSVG(id, state, seat) {
         var gid = guess[rr[0] + ":" + qi];
         var q, kind;
         if (gid != null) { q = BANK[gid]; kind = q.kind; }
+        else if (rr[0] === BLUFF_ROUND && qi === BLUFF_Q) {
+          /* THE BLUFF rides the script at the table's own slot —
+             the prompt is dealt here; its answers are invented in
+             the room and dealt by the referee, so the entry carries
+             no answers and no correctIdx, only the truth it will
+             publish and the flat money it plays for */
+          var bid2 = pickBluff();
+          if (bid2 != null) { q = BANK[bid2]; kind = "bluff"; }
+          else { q = drawBand(rr[2][qi] || 2); kind = "normal"; }
+        }
         else { q = drawBand(rr[2][qi] || 2); kind = "normal"; }
         var seed = (Math.random() * 2147483646 + 1) | 0;
         var e = {
@@ -7267,7 +7204,8 @@ function avatarSVG(id, state, seat) {
           windowMs: kind === "num" ? NUM_TIME * 1000 : QTIME * 1000
         };
         if (kind === "num") e.trueNum = Number(q.num);
-        else { var o = ogOptsFor(q, seed); e.answers = o.answers; e.correctIdx = o.correctIdx; e.cutIndices = o.cutIndices; }
+        else if (kind !== "bluff") { var o = ogOptsFor(q, seed); e.answers = o.answers; e.correctIdx = o.correctIdx; e.cutIndices = o.cutIndices; }
+        if (kind === "bluff") { e.baseValue = BLUFF_VALUE; e.multiplier = 1; e.windowMs = BLUFF_VOTE_TIME * 1000; }
         e.qid = "q" + e.seq + "." + q.id + "." + seed.toString(36);
         script.push(e);
       }
@@ -7280,7 +7218,7 @@ function avatarSVG(id, state, seat) {
        own saved plan (ogSaveEntry), is named on that one publish
        as a hidden field, and is otherwise never spoken, sent or
        shown until the room's reveal names it back. */
-    var goldCands = script.filter(function (e) { return GOLDEN_SLOTS.indexOf(e.round + ":" + e.qInRound) >= 0; });
+    var goldCands = script.filter(function (e) { return e.kind !== "bluff" && GOLDEN_SLOTS.indexOf(e.round + ":" + e.qInRound) >= 0; });
     if (goldCands.length) goldCands[ri(goldCands.length)].golden = true;
     G = saved;
     saveSeen();
@@ -7494,7 +7432,7 @@ function avatarSVG(id, state, seat) {
       pot: 0,                  // Dynamics pass D1: the room's pot, mirrored from its snapshots and reveals
       report: null,            // Pass N1: the referee's report card, dealt with the ended broadcast / ended snapshot
       breakWind: null,         // Dynamics pass D2: {names, line} — this break's Second Wind grant, as this screen tells it
-      phase: "connecting", lastRevealQid: null, revealState: {},
+      phase: "connecting", lastRevealQid: null,
       bankedOnce: false, bigLeadDone: false,
       disp: [null, null, null, null], lastStand: null,
       backoff: 1000, tickInt: null, spinInt: null,
@@ -7742,6 +7680,13 @@ function avatarSVG(id, state, seat) {
       if (OG.phase !== "bet") { var be = ogEntryByQid(s.bet && s.bet.qid, null); if (be) ogBetWait(be); }
       else ogPaintBets(s.bet ? s.bet.betsIn : 0);
       ogRenderSeats();
+    } else if (s.phase === "invent") {
+      /* THE BLUFF, collecting: the big screen shows the prompt and
+         the lie count while the room invents; the dealing is the
+         host's button or the last lie's arrival */
+      var ie2 = ogEntryByQid(s.question && s.question.qid, s.question);
+      if (ie2) ogShowInvent(ie2, s.question);
+      ogRenderSeats();
     } else if (s.phase === "answer") {
       if (OG.phase !== "answer" || !OG.cur || OG.cur.qid !== s.question.qid) {
         var ae = ogEntryByQid(s.question.qid, s.question);
@@ -7907,13 +7852,6 @@ function avatarSVG(id, state, seat) {
     OG.players.forEach(function (p) { if (p && p.score > best) best = p.score; });
     OG.players.forEach(function (p, i) {
       if (!p) return;
-      var state = OG.phase === "reveal" && OG.revealState ? (OG.revealState[i] || "neutral") : "neutral";
-      /* Visual pass V2 — KEEN on the big screen too: a seat whose
-         snapshot streak is live (2+) wears the focused face while
-         the question is open; the reveal's verdict replaces it.
-         A Decider's spectators never play, so they never focus */
-      if (state === "neutral" && OG.phase === "answer" && (p.streak || 0) >= 2 &&
-        !(OG.cur && OG.cur.decider && OG.decider && (OG.cur.eligible || []).indexOf(i) < 0)) state = "keen";
       var shown = money(Math.round(OG.disp[i] != null ? OG.disp[i] : p.score));
       /* Pass N2: the desk tag reads the snapshot's count — two
          in hand says ×2, exactly as the table's tag does */
@@ -7925,7 +7863,7 @@ function avatarSVG(id, state, seat) {
       var oseg = streakSegHTML(p.streak || 0);
       if (oseg) tags.push(oseg);
       var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + ogDblTokenHTML(p, i) + ogVsTokenHTML(p, i) +
+        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + ogDblTokenHTML(p, i) + ogVsTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tags.join(" · ") + "</span>" + fortuneHTML() + "</div></div>");
@@ -8073,7 +8011,7 @@ function avatarSVG(id, state, seat) {
     OG.pot = 0; /* Dynamics pass D1: a fresh show's pot is empty — the room resets its own on new_show; this mirror follows */
     OG.report = null; /* Pass N1: a fresh show's card is unwritten until its own finale deals it */
     OG.facts = freshFacts();
-    OG.lastRevealQid = null; OG.revealState = {};
+    OG.lastRevealQid = null;
     OG.bankedOnce = false; OG.bigLeadDone = false;
     ogFx = null; ogQdSeat = -1; ogStreakMoment = null; ogRevealGolden = false;
     OG.disp = [null, null, null, null];
@@ -8123,7 +8061,7 @@ function avatarSVG(id, state, seat) {
       var badgeCls = pos === 0 ? "gold" : pos === 1 ? "silver" : pos === 2 ? "bronze" : "plain";
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
         '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
-        avatarSVG(snapAvatar(p, pi), pos === 0 ? "cheer" : "neutral", pi) +
+        medallionSVG(p.name, pi) +
         '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
     }).join("");
     var line = order.length < 2
@@ -8306,6 +8244,7 @@ function avatarSVG(id, state, seat) {
       deadlineMs: e.windowMs, baseValue: e.baseValue, multiplier: e.multiplier
     };
     if (e.kind === "num") msg.trueNum = e.trueNum;
+    else if (e.kind === "bluff") { msg.bluffTruth = e.bank.a; msg.decoys = (e.bank.decoys || []).slice(); }
     else { msg.correctIdx = e.correctIdx; msg.answersCount = 4; msg.cutIndices = e.cutIndices; }
     /* Show the Band (pass 3): the dealt entry's difficulty band
        rides the publish — public information by design; the room
@@ -8353,9 +8292,49 @@ function avatarSVG(id, state, seat) {
       : (q && q.baseValue != null ? q.baseValue : e.baseValue) * (q && q.multiplier != null ? q.multiplier : e.multiplier);
     return { scores: scores, round: e.round, award: award, decider: !!e.decider };
   }
+  /* THE BLUFF, collecting (host screen): the prompt on the big
+     screen, the lies arriving on phones, and the host's DEAL —
+     the same beat the table host plays with its inputs */
+  function ogShowInvent(e, q) {
+    var fakesIn = q && q.fakesIn != null ? q.fakesIn : 0;
+    if (OG.phase === "invent" && OG.cur === e && OG._fakesIn === fakesIn) return;
+    OG.phase = "invent"; OG.cur = e; stagePhase("question");
+    OG._fakesIn = fakesIn;
+    applyCat(e.cat); setCatBackdrop(e.cat);
+    seatsVisible(true); ogRenderSeats();
+    $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
+    stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(e.cat) + esc(e.cat.toUpperCase()) + '</span><span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
+      '<div class="q-cardwrap"><div class="q-text' + wearCls(e.round, false) + '">' + esc(e.bank.q) + cardDressHTML(1) + '</div></div>' +
+      '<p class="round-text">One answer to this one is true — the rest, the players are inventing on their phones right now. $200 for the truth, and $25 for every player a lie fools.</p>' +
+      '<div><span class="og-count">LIES IN&nbsp;<b>' + fakesIn + "</b> / " + ogJoined().length + "</span></div>" +
+      '<div style="margin-top:14px"><button class="btn-gold" id="ogDealBluff">DEAL THE ANSWERS</button></div>');
+    hostSay("bluffInvent", { cat: e.cat });
+    Snd.playSignature(e.cat);
+    var b = $("ogDealBluff");
+    if (b) b.addEventListener("click", function () { ogSend({ t: "bluff_deal", qid: e.qid }); });
+    if (entOnce("og:" + OG.code + ":" + e.qid)) entApply(document.querySelector("#stage .q-cardwrap"), e.cat);
+  }
+  /* the reveal's accounting of lies, host-screen edition — the
+     same list the table prints, fed by the referee's payload */
+  function ogBluffCreditHTML(r) {
+    var opts = (r.bluff && r.bluff.options) || [];
+    if (!opts.length) return "";
+    var rows = opts.map(function (o, i) {
+      if (o.truth) return '<div class="bluff-credit truth"><span class="bc-tag">THE TRUTH</span><span class="bc-text">' + esc(o.t) + '</span></div>';
+      var author = (o.by != null && o.by >= 0 && OG.players[o.by]) ? OG.players[o.by].name : "The house";
+      var n = 0;
+      (r.results || []).forEach(function (res) { if (res.pick === i && res.seat !== o.by) n++; });
+      return '<div class="bluff-credit"><span class="bc-tag">' + esc(author).toUpperCase() + "'S LIE</span><span class=\"bc-text\">" + esc(o.t) + '</span>' +
+        (n ? '<span class="bc-fooled">fooled ' + n + (n === 1 ? " player" : " players") + " · +" + money(n * BLUFF_FOOL) + "</span>" : '<span class="bc-fooled none">fooled nobody</span>') + "</div>";
+    }).join("");
+    return '<div class="bluff-credits">' + rows + '</div>';
+  }
   function ogShowQuestion(e, q) {
-    if (ogWinceTimer) { clearTimeout(ogWinceTimer); ogWinceTimer = null; } /* V2: a fresh question buries the last flinch */
+
     OG.phase = "answer"; OG.cur = e; stagePhase("question");
+    /* THE BLUFF: the answers were dealt by the room — the entry
+       adopts the snapshot's texts (authorship stays in the room) */
+    if (e.kind === "bluff" && q && q.options) e.answers = q.options.slice();
     if (q) e.dblArmed = q.dblArmed || []; /* THE DOUBLE: the snapshot's riding seats, from the first paint */
     if (q) e.vsArmed = q.vsArmed || []; /* AGAINST THE ROOM: the snapshot's declared seats, same rule */
     audDecider(!!e.decider); /* V4: the Decider hushed from its first second */
@@ -8374,13 +8353,15 @@ function avatarSVG(id, state, seat) {
        them (doubled multiplier, halved window), never its own claim */
     var headline = q.headline != null ? !!q.headline : isHeadline(e.round, e.qInRound);
     OG.meltDbl = headline; /* G1: the vessel's doubled grammar follows the same flag the banner wears */
-    var head = e.kind === "survey" ? "MOST PEOPLE SAY…" : e.kind === "num" ? "CLOSEST NUMBER" : "";
+    var head = e.kind === "bluff" ? "★ THE BLUFF ★" : e.kind === "survey" ? "MOST PEOPLE SAY…" : e.kind === "num" ? "CLOSEST NUMBER" : "";
     var top = '<div class="q-headrow"><span class="cat-pill' + (e.special ? " gilded" : "") + (headline ? " headline" : "") + '">' + catEmblem(e.cat) + (e.special ? "TONIGHT'S GILDED QUESTION" : esc(e.cat.toUpperCase()) + (headline ? " · HEADLINE" : "")) + '</span>' + bandTagHTML(ogBandOf(q, e)) + (head ? '<span class="q-kind">' + head + "</span>" : "") + "</div>" +
       stakeRibbonHTML(stakeCallout(ogStakeCtx(e, q)), OG.players) +
       '<div class="q-cardwrap">' + (isDec ? '<div class="headline-banner decider-banner">★ THE DECIDER ★</div>' : (headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "")) +
       '<div class="q-text' + (headline ? " headline-card" : "") + wearCls(e.round, isDec) + '">' + esc(e.bank.q) + cardDressHTML(isDec ? 1 : ogMeltMult(q)) + "</div></div>" +
       (e.special ? '<div class="special-note">THE SAME QUESTION AT EVERY TABLE TONIGHT</div>' : "");
-    var meta = '<div class="q-meta">' + (isDec
+    var meta = '<div class="q-meta">' + (e.kind === "bluff"
+      ? '<div class="q-for">One of these is true — the rest were invented on the phones around this room. $200 for the truth, $25 for every player a lie fools.</div>'
+      : isDec
       ? '<div class="q-for">No money on this one — the crown only.</div>'
       : q.betted
       ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
@@ -8424,6 +8405,7 @@ function avatarSVG(id, state, seat) {
         { a: dNames[0] || "", b: dNames.slice(1).join(" and ") || "" });
     }
     else if (headline && !e.headlineSaid) { e.headlineSaid = true; hostSay("headline", { cat: e.cat }); }
+    else if (e.kind === "bluff") hostSay("bluffVote", { cat: e.cat });
     else if (!headline) hostSay(ogBandOf(q, e) === 3 ? "deepcut" : (e.kind === "num" ? "numQ" : "read"), { cat: e.cat });
     Snd.playSignature(e.cat);
     stSweep();
@@ -8468,6 +8450,10 @@ function avatarSVG(id, state, seat) {
     if (OG.lastRevealQid === r.qid && OG.phase === "reveal") return;
     OG.lastRevealQid = r.qid;
     OG.phase = "reveal"; stagePhase("reveal");
+    /* THE BLUFF: a host that resyncs straight onto the reveal may
+       never have painted the vote — the payload's texts complete
+       the entry either way */
+    if (r.bluff && r.bluff.options && OG.cur) OG.cur.answers = r.bluff.options.map(function (o) { return o.t; });
     clock.running = false;
     (r.scores || []).forEach(function (sc, i) { if (OG.players[i] && sc != null) OG.players[i].score = sc; });
     /* Dynamics pass D1: the pot arrives on the reveal itself —
@@ -8505,24 +8491,7 @@ function avatarSVG(id, state, seat) {
       noteFacts(OG.facts, e.round, ogGains, r.quickDrawSeat != null ? r.quickDrawSeat : -1, e.cat);
     }
     var winners = [];
-    var ogWincers = [];
-    OG.revealState = {};
     (r.results || []).forEach(function (res) {
-      /* a decider's spectators never played — they keep their faces */
-      OG.revealState[res.seat] = (r.decider && r.eligible && r.eligible.indexOf(res.seat) < 0)
-        ? "neutral" : (res.correct ? "cheer" : "slump");
-      /* Visual pass V2: the flinch — a seat that ANSWERED and
-         missed (the result carries its pick/num, the same record
-         the D4 miss delta reads) opens the LIVE reveal with
-         WINCE and settles into slump on the timer below. A
-         resynced reveal (fromSnap) settles straight into slump,
-         and a seat that never answered keeps its plain slump —
-         it passed, it did not miss */
-      if (!fromSnap && !res.correct && (res.pick != null || res.num != null) &&
-        !(r.decider && r.eligible && r.eligible.indexOf(res.seat) < 0)) {
-        OG.revealState[res.seat] = "wince";
-        ogWincers.push(res.seat);
-      }
       if (res.correct) winners.push(res.seat);
     });
     /* Pass D4: the table's scoring grammar, derived from this very
@@ -8550,6 +8519,9 @@ function avatarSVG(id, state, seat) {
       /* AGAINST THE ROOM: the referee marked the lone bank that
        * paid — the desk wears the same tag as the table's */
       if (res.vs) { fx = fx || {}; fx.vs = true; }
+      /* THE BLUFF: the referee marked what the seat's lie earned —
+       * the desk wears the same FOOLED tag as the table's */
+      if (res.fool) { fx = fx || {}; fx.bluffFool = res.fool; }
       /* Hot Streaks: the server settled the streaks too — banked
          already carries the flat +25; the seat wears the tag from
          the per-result record, and the reveal's one named moment
@@ -8570,20 +8542,6 @@ function avatarSVG(id, state, seat) {
     audDecider(false); /* V4: the hush lifts with the reveal */
     if (!fromSnap && !r.decider) audReact(anyBank); /* V4: the house answers a live reveal only — a resync never replays it */
     ogRenderSeats();
-    /* Visual pass V2: the flinch settles — ~1.2s into the reveal
-       the wincing seats trade WINCE for the slump the resync
-       already wears. Guarded by the reveal's own qid, so a stale
-       timer can never reach into a later question */
-    if (ogWincers.length) {
-      if (ogWinceTimer) clearTimeout(ogWinceTimer);
-      var ogWinceQid = r.qid;
-      ogWinceTimer = setTimeout(function () {
-        ogWinceTimer = null;
-        if (!OG || OG.phase !== "reveal" || OG.lastRevealQid !== ogWinceQid) return;
-        ogWincers.forEach(function (si) { if (OG.revealState[si] === "wince") OG.revealState[si] = "slump"; });
-        ogRenderSeats();
-      }, 1250);
-    }
     var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="ogNext">CONTINUE</button></div>';
     var headline = r.headline != null ? !!r.headline : isHeadline(e.round, e.qInRound);
     var head = '<div class="q-headrow"><span class="cat-pill">' + catEmblem(e.cat) + esc(e.cat.toUpperCase()) + '</span>' + bandTagHTML(ogBandOf(OG.snap && OG.snap.question, e)) + '<span class="q-kind">' + (e.kind === "num" ? "THE NUMBER WAS" : "THE ANSWER") + "</span></div>" +
@@ -8628,6 +8586,7 @@ function avatarSVG(id, state, seat) {
       }
       stage(head + '<div class="answers">' + btns + "</div>" +
         pfStripO +
+        (r.bluff ? ogBluffCreditHTML(r) : "") +
         (anyBank ? "" : '<div class="delta"><span class="down">No one had it. The money stays in Sterling\'s pocket — this time.</span></div>') +
         whySlip(e.bank.why, fromSnap, doubleTag(headline, ogRevealGolden)) + nextBtn);
       var joined = ogJoined().length;
@@ -8796,7 +8755,7 @@ function avatarSVG(id, state, seat) {
        and displayed total — the server's scores never carried it,
        and a drawn show (no decided champion) awards it to nobody */
     var potAmtO = OG.pot || 0;
-    recordShow(ogShowId(), idxs.map(function (ii) { return { name: OG.players[ii].name, avatar: snapAvatar(OG.players[ii], ii), score: OG.players[ii].score + (hasWinner && ii === winSeat ? potAmtO : 0) }; }), hasWinner ? winSeat : -1);
+    recordShow(ogShowId(), idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score + (hasWinner && ii === winSeat ? potAmtO : 0) }; }), hasWinner ? winSeat : -1);
     /* Programme pass 4 — Rematch Night: the night advances at the
        same guarded moment, on the finale's own verdict — a crown
        the Decider chose is the series point, exactly as at the
@@ -8821,7 +8780,7 @@ function avatarSVG(id, state, seat) {
         ? ""
         : '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>";
       return '<div class="podium pod' + ii + " big rank" + (pos + 1) + (ii === winSeat ? " winner-podium lit" : "") + '">' + top + (ii === winSeat ? laurelBadge() : "") +
-        avatarSVG(snapAvatar(pp, ii), ii === winSeat ? "cheer" : "neutral", ii) +
+        medallionSVG(pp.name, ii) +
         '<div class="desk"><div class="pname">' + esc(pp.name) + '</div><div class="pmoney">' + money(pp.score) + "</div>" +
         (ii === winSeat && decWin != null ? '<div class="decider-marker">★ WON THE DECIDER</div>' : "") + "</div></div>";
     }).join("");
@@ -8906,21 +8865,12 @@ function avatarSVG(id, state, seat) {
   /* ================= player (online podium) ================= */
   var JP = null;
   function jpSaved() { try { return JSON.parse(localStorage.getItem("gh_player") || "null"); } catch (e) { return null; } }
-  /* the pad's portrait pick (item 6): remembered on-device under its
-     own key, beside the remembered name and never with the room
-     code. null = never picked, in which case no avatar field is
-     sent and the server's seat default applies */
-  function jpAvatarPref() {
-    try {
-      var v = parseInt(localStorage.getItem("gh_avatar"), 10);
-      return Number.isInteger(v) && v >= 0 && v < 8 ? v : null;
-    } catch (e) { return null; }
-  }
-  function jpOwnAvatar() {
+  /* THE FACE PASS: the pad's mark is the medallion of its own
+     name and seat — nothing to pick, nothing to send */
+  function jpOwnMedallion() {
     var me = jpMe();
-    if (me && Number.isInteger(me.avatar) && me.avatar >= 0 && me.avatar < 8) return me.avatar;
-    if (JP && Number.isInteger(JP.avatar)) return JP.avatar;
-    return JP && JP.seat != null ? JP.seat % 8 : 0;
+    var nm = (me && me.name) || (JP && JP.name) || "?";
+    return medallionSVG(nm, JP && JP.seat != null ? JP.seat : 0);
   }
   /* the room a deep link (?room= / ?code=) prefilled, if any — when
      it differs from the saved seat's room, the two doors on the join
@@ -8950,7 +8900,6 @@ function avatarSVG(id, state, seat) {
     jpTeardown();
     JP = {
       code: code, name: name || "", seat: null, reclaimToken: reclaimToken || null,
-      avatar: jpAvatarPref(),
       ws: null, snap: null, offset: 0, dead: false, welcomed: false,
       backoff: 1000, tickInt: null, betSel: 1, sentNum: null, sentBet: null
     };
@@ -8972,10 +8921,6 @@ function avatarSVG(id, state, seat) {
       var hello = JP.reclaimToken
         ? { t: "hello", role: "player", reclaimToken: JP.reclaimToken, name: JP.name || undefined }
         : { t: "hello", role: "player", name: JP.name };
-      /* the portrait pick rides the hello when there is one; without
-         a pick the field stays off the wire entirely (server keeps
-         its stored/default avatar, old-server compatible) */
-      if (Number.isInteger(JP.avatar)) hello.avatar = JP.avatar;
       jpSend(hello);
     };
     ws.onmessage = function (ev) { var m; try { m = JSON.parse(ev.data); } catch (e) { return; } jpOnMsg(m); };
@@ -9155,6 +9100,7 @@ function avatarSVG(id, state, seat) {
     if (!s || JP.seat == null) return "JOINING";
     if (s.phase === "lobby") return "IN THE LOBBY";
     if (s.phase === "bet") return "YOUR BET";
+    if (s.phase === "invent") return "INVENT A LIE";
     if (s.phase === "answer") {
       var q = s.question;
       if (!q || JP._blind) return "WATCH THE SCREEN";
@@ -9266,7 +9212,13 @@ function avatarSVG(id, state, seat) {
     if (!BANK[p.bankId]) return null;
     var bank = BANK[p.bankId];
     var d = { q: q, bank: bank, opts: null };
-    if (q.kind !== "num") d.opts = ogOptsFor(bank, p.seed);
+    if (q.kind === "bluff") {
+      /* THE BLUFF: the pad cannot rebuild these answers from the
+         bank — the room invented them. The snapshot carries the
+         dealt texts; authorship arrives only with the reveal */
+      d.opts = { answers: (q.options || []).slice(), correctIdx: -1, cutIndices: [] };
+    }
+    else if (q.kind !== "num") d.opts = ogOptsFor(bank, p.seed);
     return d;
   }
   /* G2: the pad's stakes context, computed from what this pad
@@ -9429,13 +9381,13 @@ function avatarSVG(id, state, seat) {
      colour, your name, your money — this pad belongs to one person */
   function jpIdBar(secs) {
     var me = jpMe();
-    /* the identity bar as a mini podium: avatar, name, your standing
+    /* the identity bar as a mini podium: medallion, name, standing
        place on a medal disc, your money, the clock */
     var place = 1;
     if (me && JP.snap) JP.snap.players.forEach(function (p) { if (p && p.score > me.score) place++; });
     var ord = ["1ST", "2ND", "3RD", "4TH"][place - 1] || (place + "TH");
     return '<div class="jp-id" style="--me:' + PCOLORS[JP.seat] + '">' +
-      '<span class="jp-id-ava">' + avatarSVG(jpOwnAvatar(), "neutral", JP.seat || 0) + "</span>" +
+      '<span class="jp-id-ava">' + jpOwnMedallion() + "</span>" +
       '<span class="jp-id-idcol"><span class="jp-id-name">' + esc(me ? me.name : (JP.name || "Player")) + '</span>' +
       '<span class="jp-phaseword" id="jpPhaseWord">' + jpPhaseWord() + "</span></span>" +
       '<span class="jp-id-place p' + Math.min(place, 4) + '">' + ord + "</span>" +
@@ -9472,7 +9424,7 @@ function avatarSVG(id, state, seat) {
          show in this same room, no rejoin). The rules card and the
          room's roster live on the big screen's lobby now. */
       main.innerHTML = '<div class="jp-hero" style="--me:' + PCOLORS[JP.seat] + '">' +
-        '<div class="jp-hero-ava">' + avatarSVG(jpOwnAvatar(), "neutral", JP.seat || 0) + "</div>" +
+        '<div class="jp-hero-ava">' + jpOwnMedallion() + "</div>" +
         '<div class="jp-herotag">THAT\'S YOU</div>' +
         '<div class="jp-heroname">' + esc(myName) + "</div>" +
         '<div class="jp-colorband"></div>' +
@@ -9517,6 +9469,38 @@ function avatarSVG(id, state, seat) {
         jpSend({ t: "bet", qid: s.bet.qid, chips: JP.betSel });
         jpRender(); // the server confirms by counts, not snapshot — echo the lock now
       });
+    } else if (s.phase === "invent") {
+      /* THE BLUFF, collecting (pad): invent your lie. The card is
+         painted once per question — snapshots land as the other
+         lies arrive, and a repaint must never eat a half-typed
+         lie; only the count refreshes. The room deals when the
+         last lie lands, the host deals, or the clock does. */
+      var qB = s.question || {};
+      var dB = jpQuestionData();
+      if (JP._bluffQid !== qB.qid) {
+        JP._bluffQid = qB.qid;
+        main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">★ THE BLUFF ★</div>' +
+          '<div class="jp-hi">Invent a lie</div>' +
+          '<p class="jp-sub">' + (dB && dB.bank ? esc(dB.bank.q) : "The question is on the big screen.") + '</p>' +
+          '<p class="jp-sub">One of the answers is true. Yours mustn\'t be — but it has to sound true. $25 for every player it fools.</p>' +
+          '<input id="jpBluffIn" class="jp-num" type="text" maxlength="42" autocomplete="off" placeholder="Your lie" value="' + (s.yourFake ? esc(s.yourFake) : "") + '">' +
+          '<div class="jp-numstate" id="jpBluffState">' + (s.yourFake ? "LIE IN · <b>" + esc(s.yourFake) + "</b> — send a new one to change it" : 'LIES IN · <span id="jpFakesIn">' + (qB.fakesIn || 0) + "</span> / " + s.players.filter(Boolean).length) + '</div>' +
+          '<button class="btn-gold jp-sendbig" id="jpBluffSend">' + (s.yourFake ? "UPDATE YOUR LIE" : "SEND YOUR LIE") + '</button></div>';
+        $("jpBluffSend").addEventListener("click", function () {
+          var v = ($("jpBluffIn").value || "").replace(/\s+/g, " ").trim();
+          if (!v) { jpToast("Write a lie first."); return; }
+          Snd.ensure();
+          jpSend({ t: "bluff", qid: qB.qid, text: v });
+          var bs = $("jpBluffState");
+          if (bs) bs.innerHTML = "LIE IN · <b>" + esc(v) + "</b> — send a new one to change it";
+          var sb = $("jpBluffSend");
+          if (sb) sb.textContent = "UPDATE YOUR LIE";
+        });
+      } else {
+        var fi = $("jpFakesIn");
+        if (fi) fi.textContent = String(qB.fakesIn || 0);
+      }
+      jpPaintClock();
     } else if (s.phase === "answer") {
       var d = jpQuestionData();
       if (!d) { JP._blind = true; main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">WATCH THE SCREEN</div><div class="jp-hi">Question on the big screen</div><p class="jp-sub">This pad couldn\'t load the question — watch the screen and sit this one out.</p></div>'; jpPaintClock(); return; }
@@ -9537,7 +9521,7 @@ function avatarSVG(id, state, seat) {
        * becomes the standing fact. The server validates everything;
        * the pad only offers and reports. */
       var dblBtn = "";
-      if (d.q.round >= 2 && !d.q.betted && !d.q.decider && me) {
+      if (d.q.round >= 2 && !d.q.betted && !d.q.decider && d.q.kind !== "bluff" && me) {
         if ((d.q.dblArmed || []).indexOf(s.seat) >= 0) dblBtn = '<div class="jp-dblnote">×2 YOUR DOUBLE IS RIDING ON THIS ONE</div>';
         else if (me.dbl !== false) dblBtn = '<button class="jp-dbl" id="jpDbl">×2 SPEND YOUR DOUBLE — RIGHT PAYS TWICE</button>';
       }
@@ -9558,7 +9542,7 @@ function avatarSVG(id, state, seat) {
          only offers, and a thrown gauntlet stays thrown (there is
          no undeclare — the button becomes the standing fact). */
       var vsBtn = "";
-      if (!d.q.betted && !d.q.decider && me) {
+      if (!d.q.betted && !d.q.decider && d.q.kind !== "bluff" && me) {
         if ((d.q.vsArmed || []).indexOf(s.seat) >= 0) vsBtn = '<div class="jp-vsnote">VS · YOUR GAUNTLET IS DOWN — BANK ALONE AND IT PAYS DOUBLE</div>';
         else if ((me.vsRound || 0) !== d.q.round && (d.q.dblArmed || []).indexOf(s.seat) < 0) {
           var pscores = s.players.filter(Boolean).map(function (x) { return x.score; });
@@ -9623,7 +9607,7 @@ function avatarSVG(id, state, seat) {
         var cutBtn = "";
         /* Pass N2: the button offers while a blade remains, and
            says how many when the pocket holds two */
-        if (me && snapCutN(me) > 0 && !d.q.cut) cutBtn = '<button class="jp-cut" id="jpCut">✂ CUT TWO — KILL TWO WRONG ANSWERS' + (snapCutN(me) > 1 ? " · " + snapCutN(me) + " IN HAND" : "") + "</button>";
+        if (me && snapCutN(me) > 0 && !d.q.cut && d.q.kind !== "bluff") cutBtn = '<button class="jp-cut" id="jpCut">✂ CUT TWO — KILL TWO WRONG ANSWERS' + (snapCutN(me) > 1 ? " · " + snapCutN(me) + " IN HAND" : "") + "</button>";
         else if (d.q.cut) cutBtn = '<div class="jp-cutnote">CUT TWO PLAYED — TWO ANSWERS ARE GONE</div>';
         main.innerHTML = '<div class="jp-pad">' + padTop +
           '<div class="jp-answers">' + btns + "</div>" +
@@ -9705,6 +9689,7 @@ function avatarSVG(id, state, seat) {
       }
       main.innerHTML = '<div class="jp-verdict' + (vMiss ? " miss" : "") + '"><div class="jp-plaque"><div class="jp-phaseword" id="jpPhaseWord">' + (lr.decider ? "THE DECIDER" : "THE VERDICT") + '</div>' +
         '<div class="jp-vword">' + vWord + '</div>' +
+        (mine && mine.fool ? '<div class="jp-foolline">YOUR LIE FOOLED THE TABLE · +' + money(mine.fool) + "</div>" : "") +
         '<div class="jp-vscore">YOU <b>' + money(me ? me.score : 0) + "</b></div></div></div>";
       /* The minimal pad: no splices ride this card any more — the
          settled dial, the band, the gilt frame, the pot line, the
@@ -9804,30 +9789,6 @@ function avatarSVG(id, state, seat) {
     });
     box.addEventListener("focus", function () { box.select(); });
   });
-  /* the pad's portrait picker: eight tappable busts under the name
-     field. A tap stores the pick on this device (gh_avatar) and it
-     rides the next hello; no pick yet = nothing highlighted and the
-     server assigns the seat's own portrait */
-  function buildAvaGrid() {
-    var grid = $("jpAvaGrid");
-    if (!grid) return;
-    var sel = jpAvatarPref();
-    grid.innerHTML = "";
-    for (var k = 0; k < 8; k++) {
-      var b = el('<button class="jp-ava-btn' + (sel === k ? " sel" : "") + '" data-ava="' + k + '" aria-label="Player portrait ' + (k + 1) + '">' +
-        avatarSVG(k, "neutral", k) + "</button>");
-      (function (kk, btn) {
-        btn.addEventListener("click", function () {
-          Snd.ensure();
-          try { localStorage.setItem("gh_avatar", String(kk)); } catch (e) {}
-          grid.querySelectorAll(".jp-ava-btn").forEach(function (x) {
-            x.classList.toggle("sel", parseInt(x.getAttribute("data-ava"), 10) === kk);
-          });
-        });
-      })(k, b);
-      grid.appendChild(b);
-    }
-  }
   $("btnJoinRoom").addEventListener("click", function () {
     Snd.ensure();
     var code = joinCodeValue();
@@ -9878,7 +9839,6 @@ function avatarSVG(id, state, seat) {
     if (_rn && !$("joinName").value) $("joinName").value = _rn;
   } catch (e) {}
   paintJoinBtn();
-  buildAvaGrid();
   paintHostPanel();
   paintJoinPanel();
   paintTableResume(); /* improvement 4: offer an unfinished show, if one is saved */
@@ -9954,10 +9914,10 @@ function avatarSVG(id, state, seat) {
        drive-cardobject asserts the gilt and the wear with the
        very functions the painters fly by — never copies of them */
     card: { s: giltS, wear: cardWear },
-    /* Visual pass V2: the faces themselves, exposed so
-       drive-faces censuses every mood of every avatar with the
-       very renderer the desks fly by — never a copy of it */
-    faces: { svg: avatarSVG, features: avFeatures, avatars: AVATARS },
+    /* THE FACE PASS: the medallion itself, exposed so drive-faces
+       censuses the marks the desks fly by with the very renderer
+       they use — never a copy of it */
+    marks: { svg: medallionSVG },
     /* Pass N1: the report card's own derivation, exposed so
        drive-report asserts the finale's card against the very
        function the finale renders from — never a copy of it */
