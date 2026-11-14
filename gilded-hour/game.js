@@ -125,6 +125,24 @@
      Double, no gauntlet, no Cut Two rides it: the bluff is its
      own stake, and one stake per question already. */
   var BLUFF_ROUND = 2, BLUFF_Q = 3, BLUFF_VALUE = 200, BLUFF_FOOL = 25, BLUFF_VOTE_TIME = 25;
+  /* Designer pass 6 (research programme Pass 4) — THE DECADE
+     VOTE. At the first intermission the room votes the era the
+     dealer leans toward for the rest of the night: the ordinary
+     bank carries an `era` on every question (the decade its
+     subject belongs to for this cohort, or "any" for evergreen),
+     and drawBand prefers the voted era, then the evergreens,
+     then the whole pool — a lean, never a wall. The eras on
+     offer are the ones the bank can honestly deal: the '80s
+     (35 cards), the '90s (53) and the 2000s (3, plus every
+     evergreen seconding them). There is no '10s plaque: the
+     bank holds nothing from that decade, and Sterling does not
+     offer a choice he cannot deal. */
+  var ERAS = [
+    { id: "80s", plaque: "THE '80S", spoken: "the '80s" },
+    { id: "90s", plaque: "THE '90S", spoken: "the '90s" },
+    { id: "00s", plaque: "THE 2000S", spoken: "the 2000s" }
+  ];
+  function eraById(id) { for (var i = 0; i < ERAS.length; i++) if (ERAS[i].id === id) return ERAS[i]; return null; }
   /* Design pass 2 — the Headline Question: Round 2's LAST question
      (overall Q12) plays at double value again under a halved clock.
      Derived from POSITION (round + index) only — never from the seed,
@@ -471,6 +489,59 @@
       "And look who's back — {name}, the defending champion, returning to guard the crown.",
       "{name} has taken a seat. The defending champion does not surrender a title quietly.",
       "The champion returns: {name} is in the room, and tonight's crown suddenly has a guard."
+    ],
+    /* Designer pass 5 (research programme Pass 3) — Sterling
+       remembers: when a table returns as the same group that
+       played the last recorded show on this device, the opening
+       frame is a callback to that night, composed from the
+       record (composeMemoryLine picks the pool the facts can
+       fill — every line's vars are guaranteed by its gate).
+       rematch: a winner and a real margin. rematchtotal: a
+       winner, told by their total. rematchhonour: one of the
+       night's honours, still held by the named guest.
+       rematchdraw: the last night crowned nobody here. */
+    rematch: [
+      "Welcome back to the scene of the crime. Last time this table played, {winner} took the night by {margin} — a debt the rest of you have carried long enough.",
+      "The same table, back for more. {winner} won the last one by {margin}; I've kept the receipt, and so, I suspect, have they.",
+      "Back again — and not a moment too soon. Last time: {winner}, by {margin}. Somebody balance the books."
+    ],
+    rematchtotal: [
+      "This table has history: last time out, {winner} took the night with {total}. The crown remembers, even if the losers pretend not to.",
+      "Welcome back. {winner} closed the last show at this table with {total} — a number the rest of you have seen in your sleep.",
+      "Same seats, same stakes. {winner} won the last one. That is the whole speech; the rest is revenge."
+    ],
+    rematchhonour: [
+      "{honourName} walked off with {honour} the last time this table played. It is still theirs to lose.",
+      "One thing this table remembers: {honourName} held {honour} last time out. Somebody take it off them.",
+      "Last time here, {honour} belonged to {honourName}. The rest of you were there. You saw it. It clearly still stings."
+    ],
+    rematchdraw: [
+      "The last time this table played, nobody took the crown — dead level, unfinished business. We finish it tonight.",
+      "This table owes me a champion: last time out, the night ended level. Sterling has kept the table set ever since."
+    ],
+    /* Designer pass 6 — the Decade Vote. eravote opens the count
+       at the first intermission; erawin / eratie / eraabstain
+       close it, drawn once at the call and ridden by the state
+       like every other break telling, so a resumed break repeats
+       the identical words. {era} is the spoken name ("the '90s",
+       "the 2000s"). */
+    eravote: [
+      "One question for the room before the money doubles: which years are we playing in? Fingers up — one for the '80s, two for the '90s, three for the 2000s. I deal from the years you choose, all night.",
+      "Before Double Money, the room picks its decade. One finger for the '80s, two for the '90s, three for the 2000s — and I lean the deal toward the years that raised you.",
+      "A show spans two childhoods, so the room chooses: the '80s, the '90s, or the 2000s. Fingers up, one two three in order, and the deal follows the vote."
+    ],
+    erawin: [
+      "The room has spoken: {era}. I deal from those years for the rest of the night — mind your childhoods, they are about to be examined.",
+      "{era} it is, by the room's own vote. The deal leans that way until the crown — nostalgia is now a house advantage.",
+      "Counted and carried: {era}. Sterling deals from the winning years from here in."
+    ],
+    eratie: [
+      "Dead level — the room cannot split its own childhoods. My table, my coin: {era}. Blame the coin, it loves that.",
+      "A tie. Of course. The host's casting vote falls to {era} — democracy, with a small gold thumb on the scale."
+    ],
+    eraabstain: [
+      "No hands at all. Very well — an undecided room gets a dealer's choice, and this dealer deals as he pleases.",
+      "The room abstains, unanimously, which is its own kind of decision. I shall deal the whole shelf, then, and please myself."
     ],
     /* New programme pass 1 — the Decider. All four pools are LOCAL
        (authored, drawn through hostSay / authoredLine — no worker
@@ -2276,18 +2347,28 @@
      band (BAND_ORDER — lower wins a tie). Within a pool, category
      spread: take a card from a least-used category this show (the
      shuffled pool order breaks ties, so the seed still conducts).
-     The draw itself consumes no rng — pools + catUse are the state. */
+     The draw itself consumes no rng — pools + catUse are the state.
+     Designer pass 6: once the room has voted its era (G.era), the
+     scan prefers that era's cards, then the evergreens ("any"),
+     then the rest — category spread still breaks ties inside a
+     tier, and the band ladder still outranks the lean (a fallback
+     band is only entered when the target band is empty, exactly
+     as before). With no era voted every card sits in one tier and
+     the scan is the old scan, card for card. */
   function drawBand(target) {
     if (!pools.catUse) resetDeck(); // a save from before the ramp: build the deck now
     var order = BAND_ORDER[target] || BAND_ORDER[2];
+    var era = (typeof G !== "undefined" && G && G.era) ? G.era : null;
     for (var oi = 0; oi < order.length; oi++) {
       var p = pools["b" + order[oi]];
       if (!p) { p = pools["b" + order[oi]] = bandPoolIds(order[oi]); }
       if (!p.length) continue;
-      var best = 0, bestUse = Infinity;
+      var best = 0, bestUse = Infinity, bestTier = Infinity;
       for (var i = 0; i < p.length; i++) {
-        var u = pools.catUse[BANK[p[i]].cat] || 0;
-        if (u < bestUse) { bestUse = u; best = i; if (u === 0) break; }
+        var q = BANK[p[i]];
+        var tier = !era ? 2 : q.era === era ? 0 : q.era === "any" ? 1 : 2;
+        var u = pools.catUse[q.cat] || 0;
+        if (tier < bestTier || (tier === bestTier && u < bestUse)) { bestTier = tier; bestUse = u; best = i; }
       }
       var id = p.splice(best, 1)[0];
       pools.catUse[BANK[id].cat] = (pools.catUse[BANK[id].cat] || 0) + 1;
@@ -2420,6 +2501,11 @@
       pot: 0,                   // Dynamics pass D1: the table pot — unbanked money the champion takes
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
       goldTease: null,          // the tease line drawn with it, spoken once at the Round 1 intro
+      era: null,                // Designer pass 6: the room's voted era id ("80s"|"90s"|"00s") once the count is called; null before and on an abstention
+      eraCalled: false,         // Designer pass 6: the first break's count has been called (win, tie or abstain)
+      eraVote: null,            // Designer pass 6: {counts:[n,n,n], house:{seat:eraIdx}} while the count stands open at the first break
+      eraVoteLine: null,        // Designer pass 6: Sterling's drawn opening of the vote, ridden like the wind line
+      eraLine: null,            // Designer pass 6: Sterling's drawn verdict on the count, ridden the same way
       showId: null,             // per-show key for the live Sterling lines
       decider: null,            // New programme pass 1: {eligible, usedIds, dealt, winner} once a tied finale triggers it
       facts: freshFacts(),      // New programme pass 2: the round-facts recorder the Intermission is told from
@@ -3181,6 +3267,16 @@
            the grant (the card's row, Sterling's drawn words)
            instead of forgetting it happened */
         windBreak: G.windBreak ? { round: G.windBreak.round, seats: G.windBreak.seats.slice(), line: G.windBreak.line } : null,
+        /* Designer pass 6: the Decade Vote rides the save whole —
+           the open count (tallies and the house's dealt votes),
+           the call, and both drawn lines — so a refresh mid-break
+           resumes the count exactly where the hands left it, and
+           a resumed money round keeps leaning on the called era */
+        era: G.era || null,
+        eraCalled: !!G.eraCalled,
+        eraVote: G.eraVote ? { counts: G.eraVote.counts.slice(), house: Object.assign({}, G.eraVote.house) } : null,
+        eraVoteLine: G.eraVoteLine || null,
+        eraLine: G.eraLine || null,
         phase: G.phase, guess: G.guess, lastStand: G.lastStand,
         cur: saveCurForSave(G.cur),
         pools: pools, rngState: rngBox.a,
@@ -3280,6 +3376,17 @@
       windBreak: (sv.windBreak && Array.isArray(sv.windBreak.seats) && typeof sv.windBreak.line === "string" && sv.windBreak.seats.length)
         ? { round: sv.windBreak.round | 0, seats: sv.windBreak.seats.filter(function (n) { return Number.isInteger(n) && n >= 0 && n < sv.players.length; }), line: sv.windBreak.line }
         : null,
+      /* Designer pass 6: the vote restored as recorded; a save
+         written before the Decade Vote existed resumes with no
+         count standing and no era called — the old break, whole */
+      era: eraById(sv.era) ? sv.era : null,
+      eraCalled: !!sv.eraCalled,
+      eraVote: (sv.eraVote && Array.isArray(sv.eraVote.counts) && sv.eraVote.counts.length === 3)
+        ? { counts: sv.eraVote.counts.map(function (n) { return Math.max(0, Math.floor(n) || 0); }),
+            house: (sv.eraVote.house && typeof sv.eraVote.house === "object") ? sv.eraVote.house : {} }
+        : null,
+      eraVoteLine: typeof sv.eraVoteLine === "string" ? sv.eraVoteLine : null,
+      eraLine: typeof sv.eraLine === "string" ? sv.eraLine : null,
       /* The Golden Question (pass 4): the pick is restored from
          the save, validated against the very list it was drawn
          from — a save written before the Golden existed (or a
@@ -3308,6 +3415,7 @@
       phase: sv.phase, cur: curFromSave(sv.cur), guess: sv.guess, lastStand: sv.lastStand
     };
     G.seriesLine = composeSeriesOpening(liveSeriesFor(G.seriesCtx), G.seriesCtx);
+    G.memoryLine = memoryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }), G.showId);
     /* House Players (pass 5): the cast list rides out of the
        restored seats (seat order is cast order), so a resumed solo
        show's rematch keeps the same two house players */
@@ -3387,14 +3495,16 @@
      The show's own id is the guard: a finale reached a second time
      — a refresh at the winner screen, a host rejoin — finds
      lastShowId already equal and writes nothing. */
-  function recordShow(showId, finishers, winnerIdx) {
+  function recordShow(showId, finishers, winnerIdx, awards) {
     try {
       if (!showId || !finishers || !finishers.length) return false;
       var rec = loadRecords();
       if (rec.lastShowId === showId) return false;
+      var finisherKeys = {};
       finishers.forEach(function (f) {
         var key = recNameKey(f && f.name);
         if (!key) return;
+        finisherKeys[key] = true;
         var r = rec.players[key];
         if (!r) { r = { name: "", wins: 0, shows: 0, purse: 0 }; rec.players[key] = r; }
         r.name = String(f.name).trim();   /* the record wears the most recent sighting's name */
@@ -3409,6 +3519,46 @@
           rec.champion = { nameKey: wKey, streak: streak, amount: Math.round(finishers[winnerIdx].score || 0), date: recToday() };
         }
       }
+      /* Designer pass 5 (research programme Pass 3) — the night
+         leaves two more things in the book. THE HONOURS PERSIST:
+         the Awards Board's four honours (the caller's
+         reportAwardsOf, the finale card's own derivation) are
+         counted onto each holder's record, so the shelf can say
+         how many times a guest has held each one — only holders
+         among this show's finishers are written (the book is
+         for guests; a house holder's honour is the night's,
+         never the record's). And LAST SHOW: the facts the next
+         meeting of this same group will be greeted with — the
+         winner, their total, the margin, and the honours as
+         they fell — keyed by the group's cast key, the series
+         grammar, so a changed cast is a different table and is
+         greeted as one. Both writes ride the same show-id
+         guard as everything else in this function. */
+      var HONOUR_SLOTS = { "BEST CATEGORY": "best", "FASTEST HAND": "fastest", "BIGGEST BANK": "biggest", "HOTTEST STREAK": "streak" };
+      var flatHonours = [];
+      if (awards) awards.forEach(function (a) {
+        var slot = HONOUR_SLOTS[a.k]; if (!slot) return;
+        (a.winners || []).forEach(function (w) {
+          var key = recNameKey(w.name);
+          if (!key || !finisherKeys[key]) return;
+          flatHonours.push({ k: a.k, name: String(w.name).trim(), v: w.v });
+          var r = rec.players[key];
+          if (r) {
+            if (!r.honours) r.honours = { best: 0, fastest: 0, biggest: 0, streak: 0 };
+            r.honours[slot] = (r.honours[slot] || 0) + 1;
+          }
+        });
+      });
+      var sortedScores = finishers.map(function (f) { return Math.round(f.score || 0); }).sort(function (a, b) { return b - a; });
+      var hasWin = winnerIdx != null && winnerIdx >= 0 && !!finishers[winnerIdx];
+      rec.lastShow = {
+        id: showId, date: recToday(),
+        key: castKeyFor(finishers.map(function (f) { return f.name; })),
+        winner: hasWin ? String(finishers[winnerIdx].name).trim() : null,
+        winnerTotal: sortedScores.length ? sortedScores[0] : 0,
+        margin: (hasWin && sortedScores.length > 1) ? Math.max(0, sortedScores[0] - sortedScores[1]) : 0,
+        honours: flatHonours
+      };
       rec.lastShowId = showId;
       saveRecords(rec);
       return true;
@@ -3427,6 +3577,36 @@
       return "DEFENDS THE TITLE" + (newChamp && newChamp.streak > 1 ? " · ×" + newChamp.streak + " IN A ROW" : "");
     if (prevChamp) return "A NEW CHAMPION";
     return "FIRST CHAMPION";
+  }
+  /* Designer pass 5 — Sterling remembers (the greeting half).
+     The stored last show, when the guests now seated are the
+     group that played it: an exact cast-key match or nothing —
+     a changed cast is a new table and gets a new table's
+     greeting. The line is composed from the recorded facts
+     only, through the pool those facts can fill, and the
+     honour-versus-winner choice is hashed off the last show's
+     id so a night is greeted the same way all evening. */
+  var HONOUR_DISPLAY = { "BEST CATEGORY": "the Best Category", "FASTEST HAND": "the Fastest Hand", "BIGGEST BANK": "the Biggest Bank", "HOTTEST STREAK": "the Hottest Streak" };
+  function composeMemoryLine(ls) {
+    if (!ls) return null;
+    if (ls.winner && ls.honours && ls.honours.length) {
+      var hsum = 0, hid = String(ls.id || "");
+      for (var ci = 0; ci < hid.length; ci++) hsum += hid.charCodeAt(ci);
+      if (hsum % 2 === 0) {
+        var h = ls.honours[0];
+        return authoredLine("rematchhonour", { honourName: h.name, honour: HONOUR_DISPLAY[h.k] || h.k });
+      }
+    }
+    if (ls.winner && ls.margin > 0) return authoredLine("rematch", { winner: ls.winner, margin: money(ls.margin) });
+    if (ls.winner) return authoredLine("rematchtotal", { winner: ls.winner, total: money(ls.winnerTotal || 0) });
+    return authoredLine("rematchdraw", {});
+  }
+  function memoryLineFor(guestNames, currentShowId) {
+    var rec = loadRecords();
+    if (!rec.lastShow || !guestNames || !guestNames.length) return null;
+    if (rec.lastShow.id === currentShowId) return null;
+    if (castKeyFor(guestNames) !== rec.lastShow.key) return null;
+    return composeMemoryLine(rec.lastShow);
   }
   /* ---------- the title plaque + the trophy shelf ---------- */
   function paintChampion() {
@@ -3455,12 +3635,27 @@
     }
     list.innerHTML = rows.map(function (row, idx) {
       var r = row.r, isChamp = !!(rec.champion && rec.champion.nameKey === row.key);
+      /* Designer pass 5: the honours a guest has held, counted
+         across every recorded night — the shelf remembers what
+         the finale card only borrows for an evening. The line
+         takes the row's full width, and the reigning crown
+         moves down into it: in the name's own column (89px on
+         a phone) the crown was being ellipsised mid-word —
+         measured, not guessed */
+      var honParts = [];
+      if (r.honours) {
+        var HONOUR_ORDER = [["best", "BEST CATEGORY"], ["fastest", "FASTEST HAND"], ["biggest", "BIGGEST BANK"], ["streak", "HOTTEST STREAK"]];
+        HONOUR_ORDER.forEach(function (pr) { if (r.honours[pr[0]] > 0) honParts.push(pr[1] + " ×" + r.honours[pr[0]]); });
+      }
+      var honLine = "";
+      if (isChamp && honParts.length) honLine = '<div class="record-honours">★ REIGNING · ' + honParts.join(" · ") + "</div>";
+      else if (isChamp) honLine = '<div class="record-honours">★ REIGNING</div>';
+      else if (honParts.length) honLine = '<div class="record-honours">★ ' + honParts.join(" · ") + "</div>";
       return '<div class="record-row">' + medallionSVG(r.name, idx % 4) +
-        '<div class="record-who"><div class="record-name">' + esc(r.name) +
-        (isChamp ? ' <span class="record-crown">★ REIGNING</span>' : "") + '</div>' +
+        '<div class="record-who"><div class="record-name">' + esc(r.name) + '</div>' +
         '<div class="record-sub">' + r.shows + (r.shows === 1 ? " SHOW" : " SHOWS") + "</div></div>" +
         '<div class="record-nums"><div class="record-wins">' + r.wins + (r.wins === 1 ? " WIN" : " WINS") + "</div>" +
-        '<div class="record-purse">' + money(r.purse) + " LIFETIME</div></div></div>";
+        '<div class="record-purse">' + money(r.purse) + " LIFETIME</div></div>" + honLine + "</div>";
     }).join("");
   }
   var recordsClearArmed = false, recordsClearTimer = null;
@@ -3512,6 +3707,23 @@
     var key = rec.champion.nameKey + "|" + OG.code;
     if (ogChampAckCache.key !== key) ogChampAckCache = { key: key, line: authoredLine("champreturn", { name: hit.name }) };
     return ogChampAckCache.line;
+  }
+  /* Designer pass 5 — Sterling remembers, in the lobby: when the
+     seated room is the group that played the last recorded show
+     on this device, the acknowledgement under the greeting is
+     the callback to that night. It outranks the champion's
+     return line — the group's story is the wider one, and the
+     champion is in it. Cached per room + last show, like the
+     champion line, so join/leave re-renders never re-draw it. */
+  var ogMemAckCache = { key: null, line: null };
+  function ogMemoryAckLine() {
+    var rec = loadRecords();
+    if (!rec.lastShow || typeof OG === "undefined" || !OG) { ogMemAckCache = { key: null, line: null }; return null; }
+    var names = ogJoined().map(function (p) { return p.name; });
+    if (!names.length || castKeyFor(names) !== rec.lastShow.key) return null;
+    var key = rec.lastShow.id + "|" + OG.code;
+    if (ogMemAckCache.key !== key) ogMemAckCache = { key: key, line: composeMemoryLine(rec.lastShow) };
+    return ogMemAckCache.line;
   }
 
   /* ================= Programme pass 4 — Rematch Night =================
@@ -3690,6 +3902,12 @@
        intro, where the room can actually read it */
     G.seriesCtx = seriesCtxFor(names);
     G.seriesLine = composeSeriesOpening(liveSeriesFor(G.seriesCtx), G.seriesCtx);
+    /* Designer pass 5 — Sterling remembers: if these guests are
+       the group that played the last recorded show on this
+       device, the Round 1 frame is a callback to that night.
+       The series line (same cast, same night) is the more
+       specific frame and keeps precedence at the intro. */
+    G.memoryLine = memoryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }), G.showId);
     resetDeck();
     resetLineBags();
     /* The Golden Question (pass 4): the pick is drawn from the
@@ -4417,7 +4635,62 @@
       row("SECOND WIND", view.windLine) + row("HOUSE RULES", view.rulesLine) +
       "</div>" +
       '<p class="round-text break-tease">' + esc(view.tease) + "</p>" +
-      '<button class="btn-gold" id="' + btnId + '">' + (view.nextRound === 2 ? "BEGIN ROUND TWO" : "BEGIN THE BIG FINISH") + "</button></div>";
+      /* Designer pass 6: a null btnId renders the card with no
+         way forward — the first break holds its BEGIN back
+         until the room's era has been called */
+      (btnId ? '<button class="btn-gold" id="' + btnId + '">' + (view.nextRound === 2 ? "BEGIN ROUND TWO" : "BEGIN THE BIG FINISH") + "</button>" : "") + "</div>";
+  }
+  /* ---------- Designer pass 6 — the Decade Vote panels ----------
+     One panel grammar for both engines. While the count stands
+     open the plaques are the count itself (at the table the host
+     taps one per hand counted; online they only display — the
+     pads carry the buttons). Once called, the panel becomes the
+     verdict strip and rides every later break unchanged. */
+  function eraTotals(counts, house) {
+    var t = [0, 0, 0];
+    (counts || []).forEach(function (n, i) { t[i] += n || 0; });
+    if (house) Object.keys(house).forEach(function (si) { var ei = house[si]; if (ei >= 0 && ei < 3) t[ei]++; });
+    return t;
+  }
+  function eraPanelHTML(totals, opts) {
+    opts = opts || {};
+    var plaques = ERAS.map(function (e, i) {
+      var n = totals[i] || 0;
+      var inner = '<span class="era-name">' + e.plaque + '</span>' +
+        '<span class="era-pips">' + (n ? "●".repeat(Math.min(n, 8)) : "&nbsp;") + '</span>' +
+        '<span class="era-count">' + (n ? String(n) : "—") + "</span>";
+      return opts.tappable
+        ? '<button class="era-plaque" data-era="' + e.id + '">' + inner + "</button>"
+        : '<div class="era-plaque still">' + inner + "</div>";
+    }).join("");
+    return '<div class="era-panel"><div class="era-kicker">THE ROOM DECIDES</div>' +
+      '<div class="era-q">Which years does Sterling deal from, from Double Money to the crown?</div>' +
+      '<div class="era-plaques">' + plaques + "</div>" +
+      (opts.note ? '<p class="era-note">' + opts.note + "</p>" : "") +
+      (opts.callId ? '<div class="era-actions">' +
+        (opts.resetId ? '<button class="btn-ghost" id="' + opts.resetId + '">START THE COUNT AGAIN</button>' : "") +
+        '<button class="btn-gold" id="' + opts.callId + '">CALL IT</button></div>' : "") +
+      "</div>";
+  }
+  function eraResultHTML(eraId) {
+    var e = eraId ? eraById(eraId) : null;
+    return '<div class="era-panel era-done"><div class="era-kicker">THE ROOM&rsquo;S ERA</div>' +
+      '<div class="era-result">' + (e ? e.plaque : "NO VERDICT") + "</div>" +
+      '<p class="era-note">' + (e ? "Sterling deals from those years for the rest of the night — the evergreens still visit, as evergreens do."
+                                  : "The room abstained — Sterling deals the whole shelf, as he pleases.") + "</p></div>";
+  }
+  /* the count, called: totals in, the verdict written onto the
+     state the caller keeps (G at the table, OG online) — winner,
+     tie broken by the show's own rng, or an honest abstention
+     when no hand went up. Returns the HOST pool the verdict is
+     spoken from. */
+  function eraVerdict(totals) {
+    var top = Math.max.apply(null, totals);
+    if (top <= 0) return { era: null, pool: "eraabstain" };
+    var tied = [];
+    totals.forEach(function (n, i) { if (n === top) tied.push(i); });
+    var win = tied.length === 1 ? tied[0] : tied[ri(tied.length)];
+    return { era: ERAS[win].id, pool: tied.length === 1 ? "erawin" : "eratie" };
   }
   function tableBreakSeats() {
     /* Pass N2: the seats carry the token COUNT now — breakView's
@@ -4438,9 +4711,54 @@
     var wb = (G.windBreak && G.windBreak.round === G.round - 1 && G.windBreak.seats.length) ? G.windBreak : null;
     var view = breakView(tableBreakSeats(), G.facts, G.round - 1, G.pot || 0,
       wb ? wb.seats.map(function (si) { return G.players[si].name; }) : null, G.rules);
-    stage(breakCardHTML(view, "btnBreakGo"));
-    $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "");
+    /* Designer pass 6: at the first break the card holds its
+       BEGIN back until the room's era is called — the vote
+       panel stands in its place, the host tapping a plaque for
+       every hand counted (fingers: one for the '80s, two for
+       the '90s, three for the 2000s — the game's own finger
+       grammar, pointed at decades). Once called, the verdict
+       strip rides this break and the next. A save from before
+       the vote existed carries no eraVote and simply plays the
+       old break, button and all. */
+    var voteOpen = G.round === 2 && !G.eraCalled && !!G.eraVote;
+    if (voteOpen) {
+      var houseNote = "";
+      var hvNames = Object.keys(G.eraVote.house).map(function (si) {
+        var p = G.players[+si]; var e = ERAS[G.eraVote.house[si]];
+        return p && e ? esc(p.name) + " calls " + e.spoken : "";
+      }).filter(Boolean);
+      if (hvNames.length) houseNote = " The house votes too — " + hvNames.join(" · ") + ".";
+      stage(breakCardHTML(view, null) + eraPanelHTML(eraTotals(G.eraVote.counts, G.eraVote.house), {
+        tappable: true, callId: "btnEraCall", resetId: "btnEraReset",
+        note: "Fingers up — one for the &rsquo;80s, two for the &rsquo;90s, three for the 2000s. Tap a plaque for every hand you count." + houseNote
+      }));
+      $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "") + (G.eraVoteLine ? " " + G.eraVoteLine : "");
+      document.querySelectorAll(".era-plaque").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var ei = ERAS.indexOf(eraById(b.getAttribute("data-era")));
+          if (ei >= 0) { G.eraVote.counts[ei]++; Snd.play("tick"); saveTableShow(); paintIntermission(); }
+        });
+      });
+      $("btnEraReset").addEventListener("click", function () { G.eraVote.counts = [0, 0, 0]; saveTableShow(); paintIntermission(); });
+      $("btnEraCall").addEventListener("click", function () { callTableEra(); });
+      return;
+    }
+    stage(breakCardHTML(view, "btnBreakGo") + (G.eraCalled ? eraResultHTML(G.era) : ""));
+    $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "") +
+      (G.round === 2 && G.eraCalled && G.eraLine ? " " + G.eraLine : "");
     $("btnBreakGo").addEventListener("click", function () { roundIntro(); });
+  }
+  /* Designer pass 6: the table's count, called — the verdict is
+     written onto G (era, the drawn words), the save follows, and
+     the break repaints itself with its BEGIN restored */
+  function callTableEra() {
+    if (!G || G.eraCalled || !G.eraVote) return;
+    var v = eraVerdict(eraTotals(G.eraVote.counts, G.eraVote.house));
+    G.era = v.era; G.eraCalled = true;
+    G.eraLine = authoredLine(v.pool, v.era ? { era: eraById(v.era).spoken } : {});
+    Snd.play("chime");
+    saveTableShow();
+    paintIntermission();
   }
   function beginIntermission() {
     G.phase = "intermission";
@@ -4462,6 +4780,21 @@
       granted.forEach(function (si) { G.players[si].cut = Math.min(G.players[si].cut + 1, cutStartOf(G.rules)); });
       var wNames = granted.map(function (si) { return G.players[si].name; });
       G.windBreak = { round: G.round - 1, seats: granted.slice(), line: authoredLine("wind", { name: joinNames(wNames) }) };
+    }
+    /* Designer pass 6 — the Decade Vote stands at THIS break,
+       the first one only: G.round has already advanced to 2.
+       The count is set up here, at the moment the break begins,
+       like the Second Wind grant: house seats deal their votes
+       now (their profiles grew up somewhere too — the pick is
+       the show rng's, drawn once and ridden by the state), and
+       Sterling's opening of the vote is drawn once, so the
+       break that is painted, saved and resumed is the break
+       that was dealt. */
+    if (G.round === 2 && !G.eraCalled && !G.eraVote) {
+      var hv = {};
+      G.players.forEach(function (p, i) { if (p.house != null) hv[i] = ri(ERAS.length); });
+      G.eraVote = { counts: [0, 0, 0], house: hv };
+      G.eraVoteLine = authoredLine("eravote");
     }
     seatsVisible(false);
     updateTop(); renderSeats();
@@ -4515,6 +4848,15 @@
           ["The risk", "Get it wrong and you lose nothing but face"],
           ["The promise", "Nobody leaves this show poorer than they arrived"]]
     };
+    /* Designer pass 6: the room's era is a stated rule of the
+       night from here on — named on the Double Money ledger
+       (however the count went) and again on the Big Finish's,
+       while the deal still leans on it */
+    if (G.round === 2 && G.eraCalled) rows[2].push(["The room's era",
+      G.era ? "The room voted " + eraById(G.era).spoken + " — Sterling deals from those years, evergreens excepted"
+            : "The room abstained — Sterling deals the whole shelf, as he pleases"]);
+    if (G.round === 3 && G.era) rows[3].push(["The room's era",
+      "Still " + eraById(G.era).spoken + " — the vote holds to the crown"]);
     var factRows = rows[G.round].map(function (r) {
       return '<div class="fact-row"><span class="fact-k">' + r[0] + '</span><span class="fact-v">' + r[1] + "</span></div>";
     }).join("");
@@ -4525,8 +4867,12 @@
       '<button class="btn-gold" id="btnRoundGo">' + (G.round === 1 ? "START THE WARM-UP" : G.round === 2 ? "DOUBLE IT" : "TO THE BIG FINISH") + "</button></div>");
     /* Rematch Night: on a series show, Sterling's framing of the
        night owns the Round 1 intro — it waits on this screen for
-       the host's tap, where the room can actually read the score */
+       the host's tap, where the room can actually read the score.
+       Designer pass 5: behind it stands the memory frame — the
+       same guests as the last recorded show, whenever that
+       night was — spoken the same way, in the same slot */
     if (G.round === 1 && G.seriesLine) hostSayText(G.seriesLine);
+    else if (G.round === 1 && G.memoryLine) hostSayText(G.memoryLine);
     else hostSay("r" + G.round);
     /* The Golden Question (pass 4): the tease rides the Round 1
        intro — spoken once per show, appended to whichever line
@@ -6235,7 +6581,11 @@
          the pot was never part of any score */
       guestFinishers.push({ name: pp.name, score: pp.score + (ii === i && !tiedIdx ? (G.pot || 0) : 0) });
     });
-    if (guestFinishers.length) recordShow(G.showId, guestFinishers, guestWin);
+    /* Designer pass 5: the night's honours ride into the record
+       with the show — the same derivation the Report Card is
+       about to print, computed here from the reveal tallies */
+    var awardsT = reportAwardsOf(G.players.map(function (pp, ii) { return { name: pp.name, d: deriveReport(G.report ? G.report[ii] : null) }; }));
+    if (guestFinishers.length) recordShow(G.showId, guestFinishers, guestWin, awardsT);
     /* Programme pass 4 — Rematch Night: the night advances at the
        same guarded moment, under the same show id, on the finale's
        own verdict. What it earns — the night's score, or the
@@ -7171,13 +7521,13 @@
   }
   /* build the 15-question script with the same deck machinery the
      local show uses (pools, seen-set, the five guess slots) */
-  function ogBuildScript() {
-    var saved = G;
-    G = newGame(["—", "—", "—", "—"]); // scratch state for the shared draw helpers
-    resetDeck();
-    var guess = buildGuessSchedule();
-    var script = [];
-    [[1, R1_COUNT, R1_BANDS], [2, R2_COUNT, R2_BANDS], [3, R3_COUNT, R3_BANDS]].forEach(function (rr) {
+  /* One round's worth of script entries, drawn with the shared
+     helpers against the scratch G the caller sets up. seq runs
+     on from seqStart so a script built in two sittings (below)
+     still numbers 1..15 in order. */
+  function ogScriptEntries(rounds, guess, seqStart) {
+    var out = [];
+    rounds.forEach(function (rr) {
       G.round = rr[0];
       for (var qi = 0; qi < rr[1]; qi++) {
         G.qInRound = qi;
@@ -7197,7 +7547,7 @@
         else { q = drawBand(rr[2][qi] || 2); kind = "normal"; }
         var seed = (Math.random() * 2147483646 + 1) | 0;
         var e = {
-          seq: script.length + 1, round: rr[0], qInRound: qi, bank: q, kind: kind,
+          seq: seqStart + out.length + 1, round: rr[0], qInRound: qi, bank: q, kind: kind,
           cat: q.cat, diff: q.diff || "medium",
           baseValue: BASE_VALUES[q.diff || "medium"],
           multiplier: rr[0] === 2 ? 2 : 1,
@@ -7206,23 +7556,63 @@
         if (kind === "num") e.trueNum = Number(q.num);
         else if (kind !== "bluff") { var o = ogOptsFor(q, seed); e.answers = o.answers; e.correctIdx = o.correctIdx; e.cutIndices = o.cutIndices; }
         if (kind === "bluff") { e.baseValue = BLUFF_VALUE; e.multiplier = 1; e.windowMs = BLUFF_VOTE_TIME * 1000; }
+        /* The Golden Question (pass 4): the pick names a SEAT,
+           drawn at show start (ogBuildScript) from the same
+           eleven slots the table draws from, the Bluff's seat
+           excluded — the flag lands on whichever entry is dealt
+           into that seat, in whichever sitting deals it, and
+           rides the host's saved plan (ogSaveEntry) as before */
+        if (OG && OG.goldenSlot === rr[0] + ":" + qi && kind !== "bluff") e.golden = true;
         e.qid = "q" + e.seq + "." + q.id + "." + seed.toString(36);
-        script.push(e);
+        out.push(e);
       }
     });
-    /* The Golden Question (pass 4): the host derives its pick the
-       same way the table does — one slot drawn from the show's
-       seeded rng at show start, from the same eleven slots
-       (Rounds 1-2, the Headline's seat excluded). The flag lives
-       on the script entry, host-side only: it rides the host's
-       own saved plan (ogSaveEntry), is named on that one publish
-       as a hidden field, and is otherwise never spoken, sent or
-       shown until the room's reveal names it back. */
-    var goldCands = script.filter(function (e) { return e.kind !== "bluff" && GOLDEN_SLOTS.indexOf(e.round + ":" + e.qInRound) >= 0; });
-    if (goldCands.length) goldCands[ri(goldCands.length)].golden = true;
+    return out;
+  }
+  function ogBuildScript() {
+    var saved = G;
+    G = newGame(["—", "—", "—", "—"]); // scratch state for the shared draw helpers
+    resetDeck();
+    var guess = buildGuessSchedule();
+    /* Designer pass 6: only Round 1 is dealt now. Rounds 2-3 are
+       dealt at the first intermission (ogBuildTail), AFTER the
+       room has voted its era, so the lean can reach them — the
+       guess map and the golden seat are fixed for the whole show
+       here, as they always were, and ride the host save. */
+    OG.guess = guess;
+    var goldPos = GOLDEN_SLOTS.filter(function (s) { return s !== BLUFF_ROUND + ":" + BLUFF_Q; });
+    OG.goldenSlot = goldPos[ri(goldPos.length)];
+    var script = ogScriptEntries([[1, R1_COUNT, R1_BANDS]], guess, 0);
     G = saved;
     saveSeen();
     return script;
+  }
+  /* Designer pass 6: the tail of the script — Rounds 2 and 3,
+     dealt at the first intermission with the room's era on the
+     scratch state, so drawBand leans the way the room voted.
+     The deck is wherever the show left it: in this session the
+     pools still hold Round 1's leavings; after a host refresh
+     they were rebuilt from the seen ledger, so the questions
+     already on the script are struck from them first and can
+     never be dealt twice. Runs once; the completed script rides
+     the host save like the old single-sitting one. */
+  function ogBuildTail() {
+    if (!OG || OG.tailBuilt) return;
+    if (OG.script && OG.script.length >= R1_COUNT + R2_COUNT + R3_COUNT) { OG.tailBuilt = true; return; } // a plan from before the vote: already whole
+    var saved = G;
+    G = newGame(["—", "—", "—", "—"]); // scratch state for the shared draw helpers
+    G.era = OG.era || null;
+    if (!pools.catUse) resetDeck();
+    var usedIds = {};
+    (OG.script || []).forEach(function (e) { if (e.bank && e.bank.id != null) usedIds[e.bank.id] = 1; });
+    ["b1", "b2", "b3"].forEach(function (k) {
+      if (pools[k]) pools[k] = pools[k].filter(function (id) { return !usedIds[id]; });
+    });
+    var tail = ogScriptEntries([[2, R2_COUNT, R2_BANDS], [3, R3_COUNT, R3_BANDS]], OG.guess || {}, (OG.script || []).length);
+    OG.script = (OG.script || []).concat(tail);
+    OG.tailBuilt = true;
+    G = saved;
+    saveSeen();
   }
 
   /* ---------- title: mode choice ---------- */
@@ -7347,6 +7737,20 @@
            drawn words, so a host restored mid-break retells the
            grant exactly; the room remains the token's authority */
         breakWind: OG.breakWind ? { names: OG.breakWind.names.slice(), line: OG.breakWind.line } : null,
+        /* Designer pass 6: the Decade Vote and the two-sitting
+           script ride the plan — the guess map and golden seat
+           (without them the tail cannot be dealt as drawn), the
+           tail flag, and the era state entire, so a host restored
+           mid-break finds the count exactly where the room left
+           it and a host restored later finds its verdict */
+        guess: OG.guess || null,
+        goldenSlot: OG.goldenSlot || null,
+        tailBuilt: !!OG.tailBuilt,
+        era: OG.era || null,
+        eraCalled: !!OG.eraCalled,
+        eraOpen: !!OG.eraOpen,
+        eraVoteLine: OG.eraVoteLine || null,
+        eraLine: OG.eraLine || null,
         decider: OG.decider ? {
           eligible: OG.decider.eligible.slice(),
           winner: OG.decider.winner != null ? OG.decider.winner : null,
@@ -7429,6 +7833,8 @@
       facts: freshFacts(),     // New programme pass 2: the round-facts recorder the Intermission is told from
       seriesCtx: null, seriesLine: null, // Programme pass 4: the night's series, captured at the show's start
       goldTease: null,         // The Golden Question (pass 4): the tease line drawn at the show's start
+      guess: null, goldenSlot: null, tailBuilt: false, // Designer pass 6: the show's guess map, golden seat, and whether the script's tail (Rounds 2-3) has been dealt
+      era: null, eraCalled: false, eraOpen: false, eraVotes: {}, eraVotesJson: "", eraVoteLine: null, eraLine: null, // Designer pass 6: the Decade Vote — the room's era, its count, and Sterling's drawn words for both
       pot: 0,                  // Dynamics pass D1: the room's pot, mirrored from its snapshots and reveals
       report: null,            // Pass N1: the referee's report card, dealt with the ended broadcast / ended snapshot
       breakWind: null,         // Dynamics pass D2: {names, line} — this break's Second Wind grant, as this screen tells it
@@ -7474,6 +7880,18 @@
          beside the series line; a plan written before the Golden
          existed simply has no tease to re-present */
       OG.goldTease = typeof plan.goldTease === "string" ? plan.goldTease : null;
+      /* Designer pass 6: the vote and the two-sitting script,
+         restored as recorded — a plan written before the vote
+         existed holds a whole fifteen-question script and simply
+         never opens a count (its tail flag reads dealt) */
+      OG.guess = (plan.guess && typeof plan.guess === "object") ? plan.guess : null;
+      OG.goldenSlot = validGoldenSlot(plan.goldenSlot) ? plan.goldenSlot : null;
+      OG.tailBuilt = plan.tailBuilt != null ? !!plan.tailBuilt : true;
+      OG.era = eraById(plan.era) ? plan.era : null;
+      OG.eraCalled = !!plan.eraCalled;
+      OG.eraOpen = !!plan.eraOpen && !OG.eraCalled;
+      OG.eraVoteLine = typeof plan.eraVoteLine === "string" ? plan.eraVoteLine : null;
+      OG.eraLine = typeof plan.eraLine === "string" ? plan.eraLine : null;
       /* Pass N2: the plan's rules bridge the moments before the
          room's first snapshot lands; the snapshot remains their
          authority and overwrites this on arrival. A plan written
@@ -7644,6 +8062,18 @@
        snapshot's question is still the finished round's last one,
        and adopting it would rewind the plan into that reveal. */
     if (s.phase === "intermission") {
+      /* Designer pass 6: the room's era count is the authority —
+         the host's tally mirror follows the snapshot, and while
+         the count stands open on this screen a changed tally
+         repaints the panel, so the room watches it gather */
+      if (s.eraVote) {
+        var evJson = JSON.stringify(s.eraVote.votes || {});
+        if (OG.eraVotesJson !== evJson) {
+          OG.eraVotesJson = evJson;
+          OG.eraVotes = s.eraVote.votes || {};
+          if (OG.phase === "intermission" && OG.eraOpen && !OG.eraCalled) { ogPaintIntermission(2); return; }
+        }
+      }
       /* Dynamics pass D2: the room's record of the grant is the
          authority for the card's row. A host that predicted the
          grant at its own break already holds the same names; one
@@ -7725,8 +8155,11 @@
     var joined = ogJoined().length;
     /* Design pass 4: if the defending champion is among the seated,
        Sterling acknowledges the return — a line of its own under the
-       greeting, never an edit of the greeting itself */
-    var champAck = ogChampAckLine();
+       greeting, never an edit of the greeting itself. Designer
+       pass 5: a returning GROUP outranks the champion — when the
+       room is the cast of the last recorded show, the line is
+       the callback to that night instead */
+    var champAck = ogMemoryAckLine() || ogChampAckLine();
     stage('<div class="q-cat">YOUR ROOM IS OPEN — PLAYERS JOIN WITH THIS CODE</div>' +
       '<div class="og-coderow"><div class="og-code">' + esc(OG.code) + "</div>" +
       '<div class="og-qr" id="ogQr"><svg class="wheel-emblem emblem-lobby" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem-sm"></use></svg><canvas id="ogQrCanvas" width="240" height="240" aria-label="QR code to join this room"></canvas><div class="og-qr-cap">SCAN TO JOIN</div></div>' +
@@ -8010,6 +8443,9 @@
     OG.cur = null; OG.decider = null;
     OG.pot = 0; /* Dynamics pass D1: a fresh show's pot is empty — the room resets its own on new_show; this mirror follows */
     OG.report = null; /* Pass N1: a fresh show's card is unwritten until its own finale deals it */
+    /* Designer pass 6: a fresh show starts un-voted — the era,
+       the count and the dealt tail all belong to the last show */
+    OG.era = null; OG.eraCalled = false; OG.eraOpen = false; OG.eraVotes = {}; OG.eraVotesJson = ""; OG.eraVoteLine = null; OG.eraLine = null; OG.tailBuilt = false;
     OG.facts = freshFacts();
     OG.lastRevealQid = null;
     OG.bankedOnce = false; OG.bigLeadDone = false;
@@ -8078,6 +8514,10 @@
       pods + "</div></div></div>";
   }
   function ogIntro() {
+    /* Designer pass 6: a Round 2 or 3 intro needs its entry —
+       if the tail has somehow not been dealt (a plan restored
+       around the vote), deal it now under whatever era stands */
+    if (!OG.script[OG.idx] && OG.idx < R1_COUNT + R2_COUNT + R3_COUNT) ogBuildTail();
     var e = OG.script[OG.idx]; if (!e) return;
     OG.curRound = e.round;
     OG.phase = "intro"; stagePhase("intro");
@@ -8632,6 +9072,11 @@
       return;
     }
     ogSaveHostShow(); /* every advance re-pins the saved plan's position */
+    /* Pass 6 (the decade vote): the script is dealt in two
+       sittings — an unbuilt tail at the end of Round 1 is not
+       the end of the show, it is the first break, where the
+       vote stands and the call deals the rest */
+    if (OG.idx >= OG.script.length && !OG.tailBuilt) { ogIntermission(2); return; }
     if (OG.idx >= OG.script.length) {
       /* the script is spent. A resolved decider goes to the finale;
          a dead-level one deals another; a FRESH tie at the top
@@ -8694,17 +9139,69 @@
       OG.breakWind = { names: ogWindNames, line: authoredLine("wind", { name: joinNames(ogWindNames) }) };
     }
     ogSend({ t: "intermission", nextRound: nextRound });
+    /* Designer pass 6: the first break also opens the Decade
+       Vote — the room is told (era_open lands after the break
+       itself, the only order the referee accepts), Sterling's
+       opening of the vote is drawn once here, and the pads do
+       the voting on their own screens */
+    if (nextRound === 2 && !OG.eraCalled && !OG.eraOpen) {
+      OG.eraOpen = true;
+      OG.eraVoteLine = authoredLine("eravote");
+      ogSend({ t: "era_open" });
+    }
     $("roundLabel").textContent = { 2: "ROUND 2 · DOUBLE MONEY", 3: "ROUND 3 · THE BIG FINISH" }[nextRound] || "";
     $("qCounter").textContent = "THE INTERMISSION";
     ogPaintIntermission(nextRound);
     ogSaveHostShow();
   }
+  /* Designer pass 6: the pads' votes, counted — the tally the
+     host screen shows and the verdict is called from. The
+     referee's snapshot is the authority; this reads the mirror
+     ogOnState keeps. */
+  function ogEraPadCounts() {
+    var counts = [0, 0, 0];
+    Object.keys(OG.eraVotes || {}).forEach(function (si) {
+      var e = eraById(OG.eraVotes[si]);
+      if (e) counts[ERAS.indexOf(e)]++;
+    });
+    return counts;
+  }
   function ogPaintIntermission(nextRound) {
     var view = breakView(ogBreakSeats(), OG.facts, nextRound - 1, OG.pot || 0, OG.breakWind ? OG.breakWind.names : null, OG.rules);
-    stage(breakCardHTML(view, "ogBreakGo"));
-    $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "");
+    /* Designer pass 6: while the count stands open, the card
+       holds its BEGIN back and the panel shows the room's tally
+       gathering — the pads vote, this screen only counts and
+       calls. Once called, the verdict strip rides the breaks. */
+    var voteOpen = nextRound === 2 && OG.eraOpen && !OG.eraCalled;
+    if (voteOpen) {
+      stage(breakCardHTML(view, null) + eraPanelHTML(ogEraPadCounts(), {
+        callId: "ogEraCall",
+        note: "The room votes on its phones — the &rsquo;80s, the &rsquo;90s or the 2000s. Call it when every phone has spoken; a phone may change its mind until you do."
+      }));
+      $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "") + (OG.eraVoteLine ? " " + OG.eraVoteLine : "");
+      $("ogEraCall").addEventListener("click", function () { ogCallEra(); });
+      return;
+    }
+    stage(breakCardHTML(view, "ogBreakGo") + (OG.eraCalled ? eraResultHTML(OG.era) : ""));
+    $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "") +
+      (nextRound === 2 && OG.eraCalled && OG.eraLine ? " " + OG.eraLine : "");
     var b = $("ogBreakGo");
     if (b) b.addEventListener("click", function () { ogIntro(); });
+  }
+  /* Designer pass 6: the room's count, called from the host
+     screen — the verdict is written here and published to the
+     referee (era_call), the script's tail is dealt under the
+     era it names, and the break repaints with its BEGIN back */
+  function ogCallEra() {
+    if (!OG || OG.eraCalled || !OG.eraOpen) return;
+    var v = eraVerdict(ogEraPadCounts());
+    OG.era = v.era; OG.eraCalled = true; OG.eraOpen = false;
+    OG.eraLine = authoredLine(v.pool, v.era ? { era: eraById(v.era).spoken } : {});
+    ogSend({ t: "era_call", era: v.era });
+    ogBuildTail();
+    Snd.play("chime");
+    ogSaveHostShow();
+    ogPaintIntermission(2);
   }
   /* Design pass 4: an online show's id for the record guard — the
      room code plus the script's first qid. A new room is a new code;
@@ -8755,7 +9252,10 @@
        and displayed total — the server's scores never carried it,
        and a drawn show (no decided champion) awards it to nobody */
     var potAmtO = OG.pot || 0;
-    recordShow(ogShowId(), idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score + (hasWinner && ii === winSeat ? potAmtO : 0) }; }), hasWinner ? winSeat : -1);
+    /* Designer pass 5: the room's honours ride into the record
+       too — from the referee's card when one was dealt */
+    var awardsO = OG.report ? reportAwardsOf(idxs.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; })) : null;
+    recordShow(ogShowId(), idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score + (hasWinner && ii === winSeat ? potAmtO : 0) }; }), hasWinner ? winSeat : -1, awardsO);
     /* Programme pass 4 — Rematch Night: the night advances at the
        same guarded moment, on the finale's own verdict — a crown
        the Decider chose is the series point, exactly as at the
@@ -9657,12 +10157,36 @@
       var placeWord = ["", "1ST", "2ND", "3RD", "4TH"][myPlace] || (myPlace + "TH");
       var windSeatsP = (s.intermission && Array.isArray(s.intermission.wind)) ? s.intermission.wind : [];
       var windMine = windSeatsP.indexOf(JP.seat) >= 0;
+      /* Designer pass 6 — the Decade Vote, pad side: at the
+         first break the pad IS the ballot — three decade
+         buttons, its own pick lit, changeable until the host
+         calls it. After the call (and at the second break) the
+         card carries the verdict in one line. The standing and
+         blade lines stay, exactly as they were. */
+      var evP = s.eraVote || null;
+      var eraOpenPad = !!(evP && !evP.called && s.intermission && s.intermission.nextRound === 2);
+      var myEra = evP && evP.votes ? evP.votes[JP.seat] : null;
+      var eraHTML = "";
+      if (eraOpenPad) {
+        eraHTML = '<div class="jp-era"><div class="jp-era-k">THE ROOM DECIDES — PICK YOUR DECADE</div>' +
+          ERAS.map(function (e) {
+            return '<button class="jp-era-btn' + (myEra === e.id ? " sel" : "") + '" data-era="' + e.id + '">' + e.plaque + "</button>";
+          }).join("") +
+          '<p class="jp-sub">' + (myEra ? "Your vote is in — tap another decade to change it, until the host calls it." : "Sterling deals from the winning years for the rest of the night.") + "</p></div>";
+      } else if (evP && evP.called) {
+        var calledEra = s.era ? eraById(s.era) : null;
+        eraHTML = '<p class="jp-sub jp-era-done">' + (calledEra ? "THE ROOM CHOSE " + calledEra.plaque + " — STERLING DEALS FROM THOSE YEARS" : "NO VERDICT — THE ROOM ABSTAINED") + "</p>";
+      }
       main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">THE INTERMISSION</div>' +
         '<div class="jp-hi">YOU\'RE ' + placeWord + " · " + money(myScore) + "</div>" +
         '<p class="jp-sub">' + (windMine
           ? "SECOND WIND — YOUR CUT TWO IS BACK"
           : "CUT TWO — " + (snapCutN(me) >= 2 ? "TWO IN HAND" : snapCutN(me) === 1 ? "IN HAND" : "SPENT")) + "</p>" +
+        eraHTML +
         '<p class="jp-sub">The show resumes from the big screen.</p></div>';
+      main.querySelectorAll(".jp-era-btn").forEach(function (b) {
+        b.addEventListener("click", function () { jpSend({ t: "era_vote", era: b.getAttribute("data-era") }); Snd.play("tick"); });
+      });
     } else if (s.phase === "reveal") {
       /* The minimal pad: the reveal on the phone is ONE line — what
          your own input earned — over your own score. The answer,
@@ -9867,6 +10391,10 @@
        drive-golden asserts the pick against the very list the
        dealer draws from — never a copy of it */
     golden: { slots: function () { return GOLDEN_SLOTS.slice(); }, valid: validGoldenSlot },
+    /* Designer pass 6: the Decade Vote's own tables, exposed so
+       drive-era asserts the lean with the very era list the
+       dealer reads — never a copy of it */
+    eras: { list: function () { return ERAS.slice(); }, byId: eraById },
     /* The Ten, pass 5: the house itself, exposed so drive-house
        asserts the cast and the brain with the very tables and
        functions the show deals by — never a copy of them */

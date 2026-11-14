@@ -206,7 +206,7 @@ function padStub(bluffId, truth) {
     while (guard++ < 300 && !asserted) {
       const ph = await ogPhase();
       if (ph === 'intro') { await page.tap('#ogRoundGo').catch(() => {}); await sleep(350); continue; }
-      if (ph === 'intermission') { await page.tap('#ogBreakGo').catch(() => {}); await sleep(350); continue; }
+      if (ph === 'intermission') { await page.tap('#ogEraCall').catch(() => {}); await sleep(300); await page.tap('#ogBreakGo').catch(() => {}); await sleep(350); continue; }
       if (ph === 'invent') {
         const pub = await page.evaluate(() => window.__bluffPub || null);
         check('H: the bluff publish carries truth + 3 decoys and no correctIdx',

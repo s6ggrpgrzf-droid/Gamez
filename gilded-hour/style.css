@@ -3631,6 +3631,50 @@ button.dbl-token:active{transform:scale(.92)}
   #stage:has(.bluff-rows) .pot-vessel{display:none}
 }
 
+/* Designer pass 5 (2026-11-13): the records shelf's honours
+   line — the honours a guest has held across every recorded
+   night, counted in Sterling's book, with the reigning crown
+   carried in the same line. It takes the row's full width
+   under the name and numbers: the who column alone is 89px
+   on a phone (measured) and squeezed both the honours into
+   mid-phrase wraps and the crown into an ellipsis. */
+.record-row{flex-wrap:wrap}
+.record-honours{flex:0 0 100%;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--brass-deep);margin-top:1px}
+
+/* Designer pass 6 (2026-11-13): THE DECADE VOTE — the panel
+   that stands under the break card at the first intermission.
+   Cream like the card it follows, ruled like the ledger: three
+   plaques in a row (the eras the bank can honestly deal), each
+   wearing its tally as brass pips over a seated count; the
+   verdict strip centres the room's era in the serif. On a
+   narrow stage the plaques keep their row and let the names
+   shrink — three decades side by side is the whole picture. */
+.era-panel{max-width:560px;margin:10px auto 0;background:linear-gradient(180deg,#FBF4E2,#F3E7CB);border:1px solid #D8C491;border-radius:18px;padding:14px 16px 16px;box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1px 0 #FFFDF4;color:#2A2118}
+/* the panel runs the stage's full width at the break, and the
+   pot's corner is the first plaque's edge — the pot sits the
+   vote out, as it already does behind CALL IT */
+#stage:has(.era-panel) .pot-vessel{display:none}
+.era-kicker{font-size:10px;font-weight:700;letter-spacing:.34em;color:var(--brass-deep);text-align:center}
+.era-q{font-family:GHSerif,Georgia,serif;font-size:16.5px;line-height:1.3;text-align:center;margin:5px 0 11px}
+.era-plaques{display:flex;gap:9px}
+.era-plaque{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:13px;border:1.5px solid #B9974F;background:linear-gradient(180deg,#FFFDF6,#F6ECD2);box-shadow:inset 0 2px 0 #FFFFFF,0 3px 0 #C9AB63;color:#2A2118;font:inherit}
+button.era-plaque{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFFFFF,0 1px 0 #C9AB63}
+.era-name{font-family:GHSerif,Georgia,serif;font-weight:700;font-size:clamp(14px,4.4vw,18px);letter-spacing:.04em;white-space:nowrap}
+.era-pips{font-size:9px;letter-spacing:.22em;color:var(--brass-deep);min-height:11px;line-height:11px}
+.era-count{font-size:10px;font-weight:700;letter-spacing:.18em;color:#8A6D2F}
+.era-note{font-size:12px;line-height:1.45;text-align:center;margin:10px 2px 0;color:#5A4A2E}
+.era-actions{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.era-done{text-align:center}
+.era-result{font-family:GHSerif,Georgia,serif;font-weight:700;font-size:clamp(24px,7vw,32px);letter-spacing:.05em;color:#2A2118;margin-top:3px}
+/* the pad's ballot: three stacked decade buttons in the join
+   screen's own dress, its pick lit gold */
+.jp-era{margin-top:10px}
+.jp-era-k{font-size:10px;font-weight:700;letter-spacing:.26em;color:#EAD9A4;text-align:center;margin-bottom:8px}
+.jp-era-btn{display:block;width:100%;margin:7px 0;padding:13px 10px;border-radius:14px;border:1.5px solid #B9974F;background:linear-gradient(180deg,#FFFDF6,#F1E5C6);box-shadow:0 3px 0 #C9AB63;color:#2A2118;font-family:GHSerif,Georgia,serif;font-weight:700;font-size:17px;letter-spacing:.05em;cursor:pointer}
+.jp-era-btn.sel{background:linear-gradient(180deg,#F6E3AC,#E4C878);border-color:#8A6D2F;box-shadow:0 3px 0 #8A6D2F,inset 0 0 0 2px rgba(138,109,47,.35)}
+.jp-era-done{font-weight:700;letter-spacing:.08em;color:#EAD9A4}
+
 /* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
    for tall compositions — measured with the report rows pinned

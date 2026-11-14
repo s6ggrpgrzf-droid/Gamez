@@ -327,7 +327,7 @@ function padStubs(cfg) {
       if (!s) { await sleep(150); continue; }
       if (s.phase === 'coldopen' || s.phase === 'spin') { await sleep(250); continue; }
       if (s.phase === 'intro') { await page.tap('#btnRoundGo').catch(() => {}); await sleep(300); continue; }
-      if (s.phase === 'intermission') { await page.tap('#btnBreakGo').catch(() => {}); await sleep(300); continue; }
+      if (s.phase === 'intermission') { await page.evaluate(() => { const b = document.getElementById('btnEraCall'); if (b) b.click(); }); await sleep(250); await page.tap('#btnBreakGo').catch(() => {}); await sleep(300); continue; }
       if (s.phase === 'bet') {
         if (!betsSet) {
           await page.tap('[data-bet="0|1"]').catch(() => {}); await sleep(150);
@@ -573,7 +573,7 @@ function padStubs(cfg) {
       }
       if (s.phase === 'intro') await tapOnceC('#ogRoundGo');
       else if (s.phase === 'bet') await tapOnceC('#ogBetsGo');
-      else if (s.phase === 'intermission') await tapOnceC('#ogBreakGo');
+      else if (s.phase === 'intermission') { await tapOnceC('#ogEraCall'); await tapOnceC('#ogBreakGo'); }
       await sleep(100);
     }
     const liveExpect = await host.evaluate(() => window.__game.money.count(175));
@@ -614,7 +614,7 @@ function padStubs(cfg) {
       }
       if (s.phase === 'intro') await tapOnceC('#ogRoundGo');
       else if (s.phase === 'bet') await tapOnceC('#ogBetsGo');
-      else if (s.phase === 'intermission') await tapOnceC('#ogBreakGo');
+      else if (s.phase === 'intermission') { await tapOnceC('#ogEraCall'); await tapOnceC('#ogBreakGo'); }
       await sleep(100);
     }
     check('C: a reveal that lands by snapshot resync paints coinless — no flights on a repaint',

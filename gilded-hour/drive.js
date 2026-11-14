@@ -63,7 +63,7 @@ const round10 = n => Math.max(0, Math.round(n / 10) * 10);
     if (s.phase === 'over') break;
     if (s.phase === 'coldopen') { await sleep(300); continue; }
     if (s.phase === 'intro') { await page.tap('#btnRoundGo'); await sleep(300); continue; }
-    if (s.phase === 'intermission') { await page.tap('#btnBreakGo'); await sleep(300); continue; }
+    if (s.phase === 'intermission') { await page.evaluate(() => { const b = document.getElementById('btnEraCall'); if (b) b.click(); }); await sleep(250); await page.tap('#btnBreakGo'); await sleep(300); continue; }
     if (s.phase === 'spin') { await sleep(250); continue; }
     if (s.phase === 'bet') {
       if (!betsSet) {

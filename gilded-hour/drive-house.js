@@ -148,7 +148,7 @@ async function enterSolo(page, name) {
       if (s.phase === 'over') break;
       if (s.phase === 'coldopen' || s.phase === 'spin' || s.phase === 'vote-count') { await sleep(280); continue; }
       if (s.phase === 'intro') { await page.tap('#btnRoundGo'); await sleep(280); continue; }
-      if (s.phase === 'intermission') { await page.tap('#btnBreakGo'); await sleep(280); continue; }
+      if (s.phase === 'intermission') { await page.evaluate(() => { const b = document.getElementById('btnEraCall'); if (b) b.click(); }); await sleep(250); await page.tap('#btnBreakGo'); await sleep(280); continue; }
       if (s.phase === 'bet') {
         /* house policy: chips by the coming question's band, under the same cap */
         const caps = await page.evaluate(() => {
@@ -368,7 +368,7 @@ async function enterSolo(page, name) {
       if (s.phase === 'over') break;
       if (s.phase === 'coldopen' || s.phase === 'spin' || s.phase === 'vote-count') { await sleep(250); continue; }
       if (s.phase === 'intro') { await page.tap('#btnRoundGo'); await sleep(250); continue; }
-      if (s.phase === 'intermission') { await page.tap('#btnBreakGo'); await sleep(250); continue; }
+      if (s.phase === 'intermission') { await page.evaluate(() => { const b = document.getElementById('btnEraCall'); if (b) b.click(); }); await sleep(250); await page.tap('#btnBreakGo'); await sleep(250); continue; }
       if (s.phase === 'bet') { await page.tap('#btnBetsDone'); await sleep(250); continue; }
       if (s.phase === 'question') {
         /* THE BLUFF (pass 2): deal the invent stage first */

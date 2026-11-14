@@ -376,6 +376,9 @@ export function createRoom(code, hostToken, rules) {
     question: null,           // current/last question record (see publish)
     lastReveal: null,         // payload of the last reveal, for snapshots
     interm: null,             // {nextRound} while the room rests between rounds (the Intermission)
+    eraVote: null,            // The Decade Vote (designer pass 6): {votes:{seat:era}} while the count stands open at the first break
+    era: null,                // The Decade Vote: the era the host called (null until called; null again on an abstention, told apart by eraCalled)
+    eraCalled: false,         // The Decade Vote: this show's count has been called
     deciderWinner: null,      // seat that won a resolved decider, once one resolves
     goldenUsed: false,        // the Golden Question: this show's one double is spent
     pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
@@ -532,6 +535,14 @@ export function snapshotFor(room, view) {
      * reads an empty list, which is exactly what it granted */
     intermission: room.phase === 'intermission' && room.interm
       ? { nextRound: room.interm.nextRound, wind: (room.interm.wind || []).slice() } : null,
+    /* The Decade Vote (designer pass 6): the count rides the
+     * snapshot whole — the ballots by seat (public, as a finger
+     * count at the table is public), whether the host has called
+     * it, and the era it settled on. Screens render the ballot
+     * or the verdict from these facts alone; a room persisted
+     * before the vote existed reads null, which is its truth */
+    eraVote: room.eraVote ? { votes: Object.assign({}, room.eraVote.votes), called: !!room.eraCalled } : null,
+    era: room.eraCalled ? room.era : null,
     bet: room.bet ? {
       qid: room.bet.qid,
       betsIn: Object.keys(room.bet.bySeat).length,
@@ -960,6 +971,11 @@ export function handleHello(room, msg) {
   return { identity: null, res: fail('Unknown role.') };
 }
 
+/* The Decade Vote (designer pass 6): the eras on offer — the
+ * ones the bank can honestly deal. The referee validates the
+ * ballots and the call against this list; it never deals. */
+const ERA_IDS = ['80s', '90s', '00s'];
+
 export function handleHostMessage(room, msg) {
   if (!msg || typeof msg.t !== 'string') return fail('Bad message.');
   switch (msg.t) {
@@ -1211,6 +1227,29 @@ export function handleHostMessage(room, msg) {
       room.phase = 'intermission';
       return ok({ state: true, changed: true });
     }
+    case 'era_open': {
+      /* The Decade Vote (designer pass 6): the host opens the
+       * count at the FIRST break only — the room resting, Round
+       * 2 next, no count standing and none yet called this show.
+       * The referee keeps the ballots; the era's questions are
+       * the host script's business, dealt on its own side. */
+      if (room.phase !== 'intermission' || !room.interm || room.interm.nextRound !== 2) return fail('The era vote stands at the first break.');
+      if (room.eraVote || room.eraCalled) return fail('The count has already stood.');
+      room.eraVote = { votes: {} };
+      return ok({ state: true, changed: true });
+    }
+    case 'era_call': {
+      /* The Decade Vote: the host calls the count it tallied —
+       * the winning era, or null when the room abstained. The
+       * call is final: the count closes, the era rides every
+       * snapshot from here, and no ballot moves again. */
+      if (!room.eraVote || room.eraCalled) return fail('No count stands open.');
+      const era = msg.era == null ? null : String(msg.era);
+      if (era !== null && ERA_IDS.indexOf(era) < 0) return fail('That is not a decade on offer.');
+      room.era = era;
+      room.eraCalled = true;
+      return ok({ state: true, changed: true });
+    }
     case 'new_show': {
       /* Rematch Night (New programme pass 4): a fresh show in the
        * same room. Only an ended show can be succeeded — anything
@@ -1239,6 +1278,11 @@ export function handleHostMessage(room, msg) {
       /* a rematch deals a FRESH golden pick (Rematch Night's
        * reset list is the referee's whole per-show memory) */
       room.goldenUsed = false;
+      /* The Decade Vote (designer pass 6): a fresh show stands
+       * un-voted — the count, the call and the era all reset */
+      room.eraVote = null;
+      room.era = null;
+      room.eraCalled = false;
       /* The Table Pot (D1): a fresh show starts with an empty pot, always */
       room.pot = 0;
       /* The Report Card (N1): the tallies are per-show memory like
@@ -1353,6 +1397,18 @@ export function handlePlayerMessage(room, seat, msg) {
         all: { t: 'counts', qid: room.bet.qid, betsIn: Object.keys(room.bet.bySeat).length, players: joinedSeats(room).length },
         changed: true,
       });
+    }
+    case 'era_vote': {
+      /* The Decade Vote (designer pass 6): a pad casts its
+       * seat's ballot while the count stands open at the first
+       * break. One ballot per seat, changeable until the host
+       * calls it — the last tap is the vote, as a hand that
+       * moves before the count is still just a hand thinking. */
+      if (room.phase !== 'intermission' || !room.eraVote || room.eraCalled) return fail('No count stands open.');
+      const era = String(msg.era || '');
+      if (ERA_IDS.indexOf(era) < 0) return fail('That is not a decade on offer.');
+      room.eraVote.votes[seat] = era;
+      return ok({ state: true, changed: true });
     }
     case 'double': {
       /* THE DOUBLE (designer pass 3): a pad declares its seat's

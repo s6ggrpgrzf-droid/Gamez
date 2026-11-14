@@ -105,7 +105,7 @@ const bandStats = (page, y0, y1) => page.evaluate((a, b) => {
       case 'over': done = true; break;
       case 'coldopen': case 'spin': await sleep(250); break;
       case 'intro': await page.tap('#btnRoundGo'); await sleep(300); break;
-      case 'intermission': await page.tap('#btnBreakGo'); await sleep(300); break;
+      case 'intermission': await page.evaluate(() => { const b = document.getElementById('btnEraCall'); if (b) b.click(); }); await sleep(250); await page.tap('#btnBreakGo'); await sleep(300); break;
       case 'bet': {
         if (!betsDone) {
           await page.tap('[data-bet="0|1"]'); await sleep(150);
@@ -494,7 +494,7 @@ const bandStats = (page, y0, y1) => page.evaluate((a, b) => {
       const click = id => { const b = document.getElementById(id); if (b) { b.click(); return true; } return false; };
       if (click('ogDealBluff')) return false;
       if (o.phase === 'reveal') click('ogNext');
-      else if (o.phase === 'intermission') click('ogBreakGo');
+      else if (o.phase === 'intermission') { click('ogEraCall'); click('ogBreakGo'); }
       else if (o.phase === 'bet') click('ogBetsGo');
       else if (o.phase === 'intro') click('ogRoundGo');
       return false;

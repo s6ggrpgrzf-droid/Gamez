@@ -95,7 +95,7 @@ const server = http.createServer((req, res) => {
       if (s.phase === 'over') return s;
       if (s.phase === 'coldopen' || s.phase === 'spin' || s.phase === 'vote-count') { await sleep(160); continue; }
       if (s.phase === 'intro') { await page.tap('#btnRoundGo'); await sleep(220); continue; }
-      if (s.phase === 'intermission') { await page.tap('#btnBreakGo'); await sleep(220); continue; }
+      if (s.phase === 'intermission') { await page.evaluate(() => { const b = document.getElementById('btnEraCall'); if (b) b.click(); }); await sleep(250); await page.tap('#btnBreakGo'); await sleep(220); continue; }
       if (s.phase === 'bet') { await page.tap('#btnBetsDone'); await sleep(220); continue; }
       if (s.phase === 'question') {
         await page.evaluate(() => { const g = window.__game.G; if (g && g.cur) g.cur.elapsed = 5; });
@@ -466,6 +466,7 @@ const server = http.createServer((req, res) => {
       if (tap('ogDealBluff')) return false;
       if (tap('ogBetsGo')) return false;
       if (tap('ogRoundGo')) return false;
+      if (tap('ogEraCall')) return false;
       if (tap('ogBreakGo')) return false;
       if (tap('ogNext')) return false;
       return false;
