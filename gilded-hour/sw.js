@@ -30,7 +30,7 @@
    ===================================================================== */
 "use strict";
 
-var BUILD = 86; /* == the game.js?v= bust in index.html — keep coupled */
+var BUILD = 87; /* == the game.js?v= bust in index.html — keep coupled */
 var CACHE = "gilded-hour-shell-v" + BUILD;
 var PREFIX = "gilded-hour-shell-";
 
@@ -43,10 +43,10 @@ var PREFIX = "gilded-hour-shell-";
 var PRECACHE = [
   "./",
   "index.html",
-  "style.css?v=89",
+  "style.css?v=91",
   "questions.js?v=7",
   "qr.js?v=1",
-  "game.js?v=85"
+  "game.js?v=87"
 ];
 
 self.addEventListener("install", function (e) {

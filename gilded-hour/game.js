@@ -2643,7 +2643,7 @@ function avatarSVG(id, state, seat) {
   function newGame(names) {
     return {
       players: names.map(function (nm, i) {
-        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, dbl: 1, avatar: tableAvatars[i] != null ? tableAvatars[i] : i };
+        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, dbl: 1, vsRound: 0, avatar: tableAvatars[i] != null ? tableAvatars[i] : i };
       }),
       round: 1, qInRound: 0,
       rules: null,              // Pass N2: the night's House Rules, fixed by startShow before the first question is born
@@ -2696,8 +2696,12 @@ function avatarSVG(id, state, seat) {
     }
     /* Design pass 3: the quick-draw tag lives in the same seat-name
        tag space as CLOSEST (the two never co-occur — guess kinds
-       have no quick-draw, and only guess bankers wear CLOSEST). */
-    if (fx.quickdraw) {
+       have no quick-draw, and only guess bankers wear CLOSEST).
+       AGAINST THE ROOM (pass 4): when the lone-bank tag shows, it
+       carries the desk's whole story and the quick-draw tag stands
+       down — the two together overflow the name line and clip the
+       player's name; the +$50 is still inside the delta. */
+    if (fx.quickdraw && !fx.vs) {
       var nm2 = s.querySelector(".seat-name");
       if (nm2) {
         var tg2 = document.createElement("span");
@@ -2716,6 +2720,22 @@ function avatarSVG(id, state, seat) {
         tg3.className = "closest-tag dbltag";
         tg3.textContent = "×2 DOUBLED";
         nm3.appendChild(tg3);
+      }
+    }
+    /* AGAINST THE ROOM: a lone bank that paid says so too — the
+       room watched the other fingers stay down; the tag is the
+       receipt. The tag word is ALONE: the full phrase lives on
+       the disc, the sheet and the ledgers, and the name line is
+       106px wide on a good day — AGAINST THE ROOM ×2 measured
+       290px of scroll against it and clipped the player's name
+       to an ellipsis. ALONE ×2 is the same fact at tag width. */
+    if (fx.vs) {
+      var nm4 = s.querySelector(".seat-name");
+      if (nm4) {
+        var tg4 = document.createElement("span");
+        tg4.className = "closest-tag vstag";
+        tg4.textContent = "ALONE ×2";
+        nm4.appendChild(tg4);
       }
     }
     /* Hot Streaks (New programme pass 3): the streak tag rides the
@@ -2776,7 +2796,7 @@ function avatarSVG(id, state, seat) {
         state = "keen";
       }
       var s = el('<div class="seat pod' + i + (p.house != null ? " house" : "") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + dblTokenHTML(p, i) +
+        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + dblTokenHTML(p, i) + vsTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + deskBetsHTML(p, i) + fortuneHTML() + "</div></div>");
@@ -2790,6 +2810,8 @@ function avatarSVG(id, state, seat) {
       s.addEventListener("click", function () { onSeatTap(i); });
       var dblBtn = s.querySelector("[data-dbl]");
       if (dblBtn) dblBtn.addEventListener("click", function (e) { e.stopPropagation(); toggleDbl(i); });
+      var vsBtn = s.querySelector("[data-vs]");
+      if (vsBtn) vsBtn.addEventListener("click", function (e) { e.stopPropagation(); declareVs(i); });
       bot.appendChild(s);
       /* Visual stage 4: a rebuilt seat paints its pile at the
          displayed value, so a mid-chase re-render (a vote tap, the
@@ -2949,10 +2971,44 @@ function avatarSVG(id, state, seat) {
     if (!G || !G.cur || (G.phase !== "question" && G.phase !== "vote")) return;
     var p = G.players[i];
     if (!p || p.house != null || !dblInPlay(p, i)) return;
+    if (vsDeclared(i)) return; /* one stake per question: the gauntlet is already down */
     var c = G.cur;
     c.dbl = c.dbl || {};
     if (c.dbl[i]) delete c.dbl[i];
     else { c.dbl[i] = true; Snd.play("coin"); }
+    renderSeats();
+    saveTableShow();
+  }
+  /* AGAINST THE ROOM (designer pass 4): the VS disc and its throw.
+     The disc rides the desk's top-right corner — the Double keeps
+     the left — and shows only while the seat could declare (last
+     place, unused this round) or has declared on this question.
+     A declaration is FINAL: unlike the Double it does not toggle
+     back — a gauntlet thrown down stays down, and the round's
+     one use is spent in the throwing. */
+  function vsTokenHTML(p, i) {
+    if (!G || !G.cur || G.cur.betRound || G.cur.decider) return "";
+    var decl = vsDeclared(i);
+    /* An undeclared disc belongs to the OPEN question only: at
+       the reveal the standings have already moved, and recomputing
+       eligibility there would hang the gauntlet on the NEW last
+       desk — for a question that is already settled. Declared
+       discs ride through the reveal as the receipt. */
+    if (!decl && G.phase !== "question" && G.phase !== "vote") return "";
+    if (!decl && !vsEligible(i)) return "";
+    if (p.house != null) return '<span class="vs-token house' + (decl ? " armed" : "") + '" aria-hidden="true">VS</span>';
+    var live = (G.phase === "question" || G.phase === "vote") && !decl;
+    return '<button type="button" class="vs-token' + (decl ? " armed" : "") + '" data-vs="' + i + '"' + (live ? "" : " disabled") + ' aria-label="Declare Against the Room for ' + esc(p.name) + '">VS</button>';
+  }
+  function declareVs(i) {
+    if (!G || !G.cur || (G.phase !== "question" && G.phase !== "vote")) return;
+    var p = G.players[i];
+    if (!p || p.house != null || !vsEligible(i)) return;
+    var c = G.cur;
+    c.vs = c.vs || {};
+    c.vs[i] = true;
+    p.vsRound = G.round; /* the round's one declaration, spent in the throwing */
+    Snd.play("coin");
     renderSeats();
     saveTableShow();
   }
@@ -3234,6 +3290,9 @@ function avatarSVG(id, state, seat) {
       /* THE DOUBLE (designer pass 3): the armed seats ride the save
          — a refresh mid-question must not un-spend a declaration */
       dbl: c.dbl ? Object.assign({}, c.dbl) : null,
+      /* AGAINST THE ROOM (designer pass 4): the declared seats
+         ride the save on the same rule */
+      vs: c.vs ? Object.assign({}, c.vs) : null,
       /* Design pass 3: the GOT IT tap order is the table's quick-draw
          record — it must survive a host refresh or the winner could
          change across a resume. */
@@ -3281,6 +3340,7 @@ function avatarSVG(id, state, seat) {
          one from the untouched wrong answers (commitCutPair) */
       cutPair: Array.isArray(o.cutPair) ? o.cutPair.slice() : null,
       dbl: (o.dbl && typeof o.dbl === "object") ? Object.assign({}, o.dbl) : null,
+      vs: (o.vs && typeof o.vs === "object") ? Object.assign({}, o.vs) : null,
       /* older saves predate the quick-draw record: fall back to the
          numeric order of the seats already marked — deterministic */
       lockOrder: Array.isArray(o.lockOrder) ? o.lockOrder.slice()
@@ -3313,7 +3373,7 @@ function avatarSVG(id, state, seat) {
           /* House Players (pass 5): a house seat's profile index
              rides along — a resumed solo show restores the same
              cast members, brains included */
-          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, dbl: (p.dbl != null ? p.dbl : 1), avatar: p.avatar, house: (p.house != null ? p.house : null) };
+          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, dbl: (p.dbl != null ? p.dbl : 1), vsRound: p.vsRound || 0, avatar: p.avatar, house: (p.house != null ? p.house : null) };
         }),
         round: G.round, qInRound: G.qInRound, showId: G.showId,
         bankedOnce: !!G.bankedOnce, bigLeadDone: !!G.bigLeadDone,
@@ -3424,6 +3484,9 @@ function avatarSVG(id, state, seat) {
           /* a save written before THE DOUBLE has no dbl field —
              the token is simply still in the player's pocket */
           dbl: (p.dbl != null ? p.dbl : 1),
+          /* a save written before AGAINST THE ROOM has no vsRound
+             field — the gauntlet simply hasn't been thrown */
+          vsRound: (typeof p.vsRound === "number" && p.vsRound > 0) ? Math.floor(p.vsRound) : 0,
           avatar: (Number.isInteger(p.avatar) && p.avatar >= 0 && p.avatar < 8) ? p.avatar : i,
           /* House Players (pass 5): a saved profile index restores
              the house seat; anything malformed deals a guest */
@@ -4667,7 +4730,8 @@ function avatarSVG(id, state, seat) {
           ["The fingers", "1, 2, 3 or 4 when the clock stops — right fingers bank"],
           ["Quick-draw", "First right answer in pockets +$50"],
           ["The streak", "Three in a row starts it — +$25 a bank while it lives"],
-          ["Closest number", "Twice this round — shout a number, nearest takes it"]],
+          ["Closest number", "Twice this round — shout a number, nearest takes it"],
+          ["The gauntlet", "Sit last and the VS disc is yours, once a round: declare Against the Room — bank a question nobody else banks and it pays double"]],
       2: (G.rules && G.rules.secondCut)
         ? [["The money", "Same game, double — $200 · $400 · $600"],
            ["Cut Two", "Two tokens each — yours for the whole show"],
@@ -4675,6 +4739,7 @@ function avatarSVG(id, state, seat) {
            ["The spend", "Spend them like they matter — because they do"],
            ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
+           ["Against the Room", "Whoever sits last may throw it once a round — bank a question nobody else banks and it pays double"],
            ["The Headline", "The round closes with it — double money again, half the clock"]]
         : [["The money", "Same game, double — $200 · $400 · $600"],
            ["Cut Two", "One token each — yours for the whole show"],
@@ -4682,6 +4747,7 @@ function avatarSVG(id, state, seat) {
            ["The spend", "Spend it like it's the last one — it is"],
            ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
+           ["Against the Room", "Whoever sits last may throw it once a round — bank a question nobody else banks and it pays double"],
            ["The Headline", "The round closes with it — double money again, half the clock"]],
       3: [["Questions", "Three"],
           ["The bet", "Before each one, bet on yourself out loud — a chip is $100"],
@@ -5872,12 +5938,34 @@ function avatarSVG(id, state, seat) {
      Double is riding; the bet round already carries its stake and
      never doubles; Quick Draw and the streak bonus stay flat,
      exactly as they treat the bet. */
-  function seatGain(c, p, i, qdSeat, sBonus) {
+  function seatGain(c, p, i, qdSeat, sBonus, sole) {
     var base = c.betRound ? p.bet * 100 : c.bankValue;
     if (!c.betRound && c.dbl && c.dbl[i]) base *= 2;
+    /* AGAINST THE ROOM (designer pass 4): a declared seat that
+       banked ALONE takes the question's value twice — the same
+       doubling grammar as the Double, earned by separation
+       instead of confidence. The two stakes never ride together
+       (both arming paths refuse the overlap), so this never
+       compounds past a single double. */
+    if (!c.betRound && sole && c.vs && c.vs[i]) base *= 2;
     return base + (i === qdSeat ? QUICK_DRAW_BONUS : 0) + (sBonus || 0);
   }
   function dblSpent(c, i) { return !!(c.dbl && c.dbl[i] && !c.betRound); }
+  function vsPaid(c, i, sole) { return !!(!c.betRound && sole && c.vs && c.vs[i]); }
+  /* AGAINST THE ROOM eligibility, read live: the seat sits last
+     (a tie for last is last; an all-level table has no trailer
+     and no gauntlet), has not declared this round, and carries
+     no Double on this question — one stake per question. */
+  function vsEligible(i) {
+    if (!G || !G.cur || G.cur.betRound || G.cur.decider) return false;
+    var p = G.players[i];
+    if (!p || (p.vsRound || 0) === G.round) return false;
+    if (G.cur.dbl && G.cur.dbl[i]) return false;
+    var scores = G.players.map(function (x) { return x.score; });
+    var min = Math.min.apply(null, scores), max = Math.max.apply(null, scores);
+    return min < max && p.score === min;
+  }
+  function vsDeclared(i) { return !!(G && G.cur && G.cur.vs && G.cur.vs[i]); }
   function revealAnswer() {
     if (!G || !G.cur || G.phase !== "vote") return;
     var c = G.cur;
@@ -5901,9 +5989,10 @@ function avatarSVG(id, state, seat) {
        resumed reveal repaints it instead of re-paying it */
     var so = streakOutcomes(c.kind, c.marks, G.players.map(function (p) { return p.streak || 0; }));
     var gains = {};
+    var soleBank = winners.length === 1;
     winners.forEach(function (i) {
       var p = G.players[i];
-      var gain = seatGain(c, p, i, qdSeat, so.bonuses[i] || 0);
+      var gain = seatGain(c, p, i, qdSeat, so.bonuses[i] || 0, soleBank);
       p.score += gain;
       gains[i] = gain;
     });
@@ -5957,7 +6046,8 @@ function avatarSVG(id, state, seat) {
          the question's own record (c.streakFx) — a resumed reveal
          re-derives the same fx and never touches the scores */
       var sBonus = (c.streakFx && c.streakFx[i]) ? (c.streakFx[i].bonus || 0) : 0;
-      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus), closest: guessQ, quickdraw: i === qdSeat, doubled: dblSpent(c, i), streakBonus: sBonus, delay: bankSeq++ * 0.12 };
+      var soleFx = G.players.filter(function (_, j) { return c.marks[j]; }).length === 1;
+      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx), closest: guessQ, quickdraw: i === qdSeat, doubled: dblSpent(c, i), vs: vsPaid(c, i, soleFx), streakBonus: sBonus, delay: bankSeq++ * 0.12 };
       else fxSeats[i] = { delta: "miss", delay: i * 0.05 };
     });
     tableFx = { seats: fxSeats };
@@ -6408,9 +6498,15 @@ function avatarSVG(id, state, seat) {
          It rides when its confidence in this question is high:
          the dealt probability on a picked question, or a Warm
          number, where its shout lands close by construction. One
-         rule for both: confidence of four-in-five or better. */
-      if ((p.dbl > 0) && G.round >= 2 && !c.betRound && !c.decider) {
-        var conf = (c.kind === "num") ? (band === 1 ? 0.88 : band === 2 ? 0.70 : 0.40) : e.prob;
+         rule for both: confidence of four-in-five or better.
+         AGAINST THE ROOM, house policy: a house seat in last
+         place with the same confidence throws the gauntlet
+         INSTEAD — it is the scarcer instrument, and the house
+         plays to win the night, not to decorate it. */
+      var conf = (c.kind === "num") ? (band === 1 ? 0.88 : band === 2 ? 0.70 : 0.40) : e.prob;
+      if (conf >= 0.8 && vsEligible(i)) {
+        c.vs = c.vs || {}; c.vs[i] = true; p.vsRound = G.round; e.vs = true;
+      } else if ((p.dbl > 0) && G.round >= 2 && !c.betRound && !c.decider) {
         if (conf >= 0.8) { c.dbl = c.dbl || {}; c.dbl[i] = true; e.dbl = true; }
       }
       h[i] = e;
@@ -7656,10 +7752,12 @@ function avatarSVG(id, state, seat) {
            a repeat state must hand them over before the seats
            repaint, or the big screen would never see a declaration */
         if (OG.cur && s.question) OG.cur.dblArmed = s.question.dblArmed || [];
+        if (OG.cur && s.question) OG.cur.vsArmed = s.question.vsArmed || [];
         ogRenderSeats();
       }
     } else if (s.phase === "reveal") {
       if (OG.cur && s.question && s.question.qid === OG.cur.qid) OG.cur.dblArmed = s.question.dblArmed || [];
+      if (OG.cur && s.question && s.question.qid === OG.cur.qid) OG.cur.vsArmed = s.question.vsArmed || [];
       if (OG.phase !== "reveal" && s.lastReveal) {
         /* a restored host lands mid-reveal with no current question —
            rebuild it from the script so the reveal can paint */
@@ -7778,6 +7876,29 @@ function avatarSVG(id, state, seat) {
     if (!armed && p.dbl === false) return "";
     return '<span class="dbl-token house' + (armed ? " armed" : "") + '" aria-hidden="true">×2</span>';
   }
+  /* AGAINST THE ROOM (designer pass 4): the big-screen mirror of
+     the VS disc — the table's disc in display dress. It shows on
+     a desk while the seat could declare (the snapshot's own
+     arithmetic: last place in a table with a leader, unused this
+     round, no Double riding) or has declared. Display only: the
+     declaration itself happens on the pad. */
+  function ogVsTokenHTML(p, i) {
+    if (!OG || !OG.cur || (OG.phase !== "answer" && OG.phase !== "reveal")) return "";
+    var q = OG.cur;
+    if (q.betted || q.betRound || q.decider) return "";
+    var decl = (q.vsArmed || []).indexOf(i) >= 0;
+    if (!decl && OG.phase === "reveal") return ""; /* settled standings must not re-deal the gauntlet — see the table's rule */
+    if (!decl) {
+      if ((p.vsRound || 0) === q.round) return "";
+      if ((q.dblArmed || []).indexOf(i) >= 0) return "";
+      var scores = [];
+      OG.players.forEach(function (x) { if (x) scores.push(x.score); });
+      if (!scores.length) return "";
+      var mn = Math.min.apply(null, scores), mx = Math.max.apply(null, scores);
+      if (!(mn < mx && p.score === mn)) return "";
+    }
+    return '<span class="vs-token house' + (decl ? " armed" : "") + '" aria-hidden="true">VS</span>';
+  }
   function ogRenderSeats() {
     if (!OG) return;
     var top = $("seatsTop"), bot = $("seatsBottom");
@@ -7804,7 +7925,7 @@ function avatarSVG(id, state, seat) {
       var oseg = streakSegHTML(p.streak || 0);
       if (oseg) tags.push(oseg);
       var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + ogDblTokenHTML(p, i) +
+        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + ogDblTokenHTML(p, i) + ogVsTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tags.join(" · ") + "</span>" + fortuneHTML() + "</div></div>");
@@ -8236,6 +8357,7 @@ function avatarSVG(id, state, seat) {
     if (ogWinceTimer) { clearTimeout(ogWinceTimer); ogWinceTimer = null; } /* V2: a fresh question buries the last flinch */
     OG.phase = "answer"; OG.cur = e; stagePhase("question");
     if (q) e.dblArmed = q.dblArmed || []; /* THE DOUBLE: the snapshot's riding seats, from the first paint */
+    if (q) e.vsArmed = q.vsArmed || []; /* AGAINST THE ROOM: the snapshot's declared seats, same rule */
     audDecider(!!e.decider); /* V4: the Decider hushed from its first second */
     applyCat(e.cat); setCatBackdrop(e.cat);
     seatsVisible(true); ogRenderSeats();
@@ -8425,6 +8547,9 @@ function avatarSVG(id, state, seat) {
        * results — the desk wears the same ×2 DOUBLED tag as the
        * table's (decorateSeat is shared) */
       if (res.doubled) { fx = fx || {}; fx.doubled = true; }
+      /* AGAINST THE ROOM: the referee marked the lone bank that
+       * paid — the desk wears the same tag as the table's */
+      if (res.vs) { fx = fx || {}; fx.vs = true; }
       /* Hot Streaks: the server settled the streaks too — banked
          already carries the flat +25; the seat wears the tag from
          the per-result record, and the reveal's one named moment
@@ -9426,6 +9551,32 @@ function avatarSVG(id, state, seat) {
           db.textContent = "×2 YOUR DOUBLE IS RIDING…";
         });
       };
+      /* AGAINST THE ROOM (designer pass 4): the pad's gauntlet —
+         offered only while this seat sits last in a table that has
+         a leader, unused this round, and not underneath its own
+         riding Double. The referee validates everything; the pad
+         only offers, and a thrown gauntlet stays thrown (there is
+         no undeclare — the button becomes the standing fact). */
+      var vsBtn = "";
+      if (!d.q.betted && !d.q.decider && me) {
+        if ((d.q.vsArmed || []).indexOf(s.seat) >= 0) vsBtn = '<div class="jp-vsnote">VS · YOUR GAUNTLET IS DOWN — BANK ALONE AND IT PAYS DOUBLE</div>';
+        else if ((me.vsRound || 0) !== d.q.round && (d.q.dblArmed || []).indexOf(s.seat) < 0) {
+          var pscores = s.players.filter(Boolean).map(function (x) { return x.score; });
+          if (pscores.length && Math.min.apply(null, pscores) < Math.max.apply(null, pscores) && me.score === Math.min.apply(null, pscores)) {
+            vsBtn = '<button class="jp-vs" id="jpVs">VS · DECLARE AGAINST THE ROOM — BANK ALONE, PAY DOUBLE</button>';
+          }
+        }
+      }
+      var wireVs = function () {
+        var vb = $("jpVs");
+        if (!vb) return;
+        vb.addEventListener("click", function () {
+          Snd.ensure();
+          jpSend({ t: "vs", qid: d.q.qid });
+          vb.disabled = true;
+          vb.textContent = "VS · YOUR GAUNTLET IS DOWN…";
+        });
+      };
       if (d.q.kind === "num" && d.q.decider && (d.q.eligible || []).indexOf(JP.seat) < 0) {
         /* the spectator's pad: a watch screen, not a dead one — the
            pairing, the stakes, and the count as the numbers land.
@@ -9444,9 +9595,10 @@ function avatarSVG(id, state, seat) {
           '<div class="jp-numpad">' +
           '<input id="jpNum" class="jp-num" type="number" inputmode="decimal" placeholder="Your number" value="' + (numKeep != null ? esc(numKeep) : (effNum != null ? effNum : "")) + '">' +
           '<div class="jp-numstate" id="jpNumState">' + (effNum != null ? "SENT · <b>" + effNum + "</b> — send a new one to change it" : "CLOSEST NUMBER TAKES IT · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
-          '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button>' + dblBtn + "</div></div>";
+          '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button>' + dblBtn + vsBtn + "</div></div>";
         entPadApply(main, padEnt);
         wireDbl();
+        wireVs();
         $("jpNumSend").addEventListener("click", function () {
           var v = parseFloat($("jpNum").value);
           if (!isFinite(v)) { jpToast("Give a number first."); return; }
@@ -9476,7 +9628,7 @@ function avatarSVG(id, state, seat) {
         main.innerHTML = '<div class="jp-pad">' + padTop +
           '<div class="jp-answers">' + btns + "</div>" +
           '<div class="jp-pickstate" id="jpPickState">' + (s.yourPick != null ? "✓ <b>PICK " + (s.yourPick + 1) + " IS IN</b> — TAP ANOTHER TO CHANGE IT" : "TAP YOUR ANSWER · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
-          cutBtn + dblBtn + "</div>";
+          cutBtn + dblBtn + vsBtn + "</div>";
         entPadApply(main, padEnt);
         main.querySelectorAll(".jp-ans").forEach(function (b) {
           b.addEventListener("click", function () {
@@ -9494,6 +9646,7 @@ function avatarSVG(id, state, seat) {
         var cb = $("jpCut");
         if (cb) jpWirePadCut(cb, d.q.qid);
         wireDbl();
+        wireVs();
         /* Design pass 6: the spender's pad plays the moment when its
            own cut lands — the two slabs shear under the fresh-cut
            animation and the snip sounds. It is keyed to THIS pad's

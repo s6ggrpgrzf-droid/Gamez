@@ -3436,6 +3436,51 @@ button.dbl-token:active{transform:scale(.92)}
 .jp-dbl[disabled]{opacity:.75;cursor:default}
 .jp-dblnote{margin-top:10px;text-align:center;font:700 13px GHSans,system-ui,sans-serif;letter-spacing:.14em;color:var(--gold);border:1px solid rgba(216,183,106,.45);border-radius:14px;padding:12px 10px;background:rgba(216,183,106,.08)}
 
+/* ===== AGAINST THE ROOM PASS (2026-11-13) ===== */
+/* The VS disc: the desk's top-right corner (the Double keeps the
+   left). Oxblood where the Double is gold — the gauntlet should
+   never be mistaken for the token. Armed is lit crimson; a house
+   seat's disc is display dress in the same colours. */
+.vs-token{
+  position:absolute; top:1px; right:1px; z-index:5;
+  width:23px; height:23px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:GHTab, ui-monospace, monospace;
+  font-size:9.5px; font-weight:700; letter-spacing:.02em;
+  color:#E8D9C8; background:radial-gradient(circle at 35% 30%, #4A1B28, #2A0E18 75%);
+  border:1.5px solid #8C4A56; padding:0; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1), background .18s ease, box-shadow .18s ease;
+}
+.vs-token:not(:disabled):active{ transform:scale(.92); }
+.vs-token.armed{
+  background:linear-gradient(160deg, #C22E3C, #7E1620);
+  color:#FFF3E4; border-color:#E8A0A8; transform:scale(1.14);
+  box-shadow:0 0 0 2px rgba(194,46,60,.45), 0 2px 8px rgba(0,0,0,.5);
+}
+.vs-token.house{ cursor:default; opacity:.92; }
+.vs-token:disabled{ cursor:default; }
+/* the reveal tag: a lone bank that paid Against the Room */
+.closest-tag.vstag{
+  color:#F0B7BC; border-color:rgba(194,46,60,.6);
+  background:rgba(60,12,20,.55);
+}
+/* the pad's gauntlet: crimson where the Double's button is gold */
+.jp-vs{
+  display:block; width:100%; margin-top:10px; padding:13px 10px;
+  border-radius:12px; border:1.5px solid #B3505C;
+  background:linear-gradient(160deg, #5A1E2A, #33101A);
+  color:#F5D9CE; font-family:GHSans, sans-serif; font-weight:700;
+  font-size:12.5px; letter-spacing:.05em; cursor:pointer;
+}
+.jp-vs:disabled{ opacity:.75; }
+.jp-vsnote{
+  margin-top:10px; padding:10px; text-align:center;
+  border-radius:10px; border:1px solid rgba(194,46,60,.55);
+  background:rgba(60,12,20,.4); color:#F0B7BC;
+  font-family:GHSans, sans-serif; font-weight:700; font-size:12px; letter-spacing:.05em;
+}
+
 /* ===== SURFACING PASS (2026-11-13) — the machinery, named =====
    Three fine lines, each stating a truth the game already keeps:
    the lobby's room is server-held (rejoin by code, seat reclaimed);

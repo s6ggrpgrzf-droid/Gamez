@@ -478,6 +478,7 @@ export function snapshotFor(room, view) {
        * question — public the moment it is declared, like every
        * other stake at this table */
       dblArmed: q.dbl ? Object.keys(q.dbl).map(Number) : [],
+      vsArmed: q.vs ? Object.keys(q.vs).map(Number) : [],
       answersIn: Object.keys(q.kind === 'num' ? q.nums : q.picks).length,
     };
     if (view.role === 'host') { // the host authored the secrets; resync may echo them to it alone
@@ -506,7 +507,7 @@ export function snapshotFor(room, view) {
        * through cutCountOf), and cutCount rides beside it as the
        * number, so a screen that knows the count reads the count
        * and a screen that doesn't reads exactly what it always did */
-      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, vsRound: p.vsRound || 0, connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
     /* The Table Pot (D1): the running total, public from the
@@ -617,6 +618,23 @@ export function closeQuestion(room) {
     for (const k of Object.keys(q.dbl)) {
       const sp = room.players[+k];
       if (sp) sp.dbl = false;
+    }
+  }
+  /* AGAINST THE ROOM (designer pass 4): a declared seat that
+   * banked ALONE takes the question's value a second time — the
+   * adjustment lands here, before Quick Draw and the streaks add
+   * their flat money, and before anything downstream reads
+   * entry.banked (the pot feeds from value and correctness, never
+   * from banked, so it is untouched). A shared bank lapses the
+   * declaration quietly: nothing is owed and nothing is returned —
+   * the round's use was spent in the throwing (vsRound). */
+  if (!q.betted && !q.decider && q.vs) {
+    const bankers = results.filter((r) => r.correct);
+    if (bankers.length === 1 && q.vs[bankers[0].seat]) {
+      const winEntry = bankers[0];
+      winEntry.banked += value;
+      winEntry.vs = true;
+      room.players[winEntry.seat].score += value;
     }
   }
   /* The Quick-Draw (Design pass 3): 'normal' questions only. The
@@ -840,6 +858,7 @@ export function handleHello(room, msg) {
       score: 0,
       cutTwo: cutStartFor(room), // House Rules (N2): the starting COUNT — two under Second Cut, else one
       dbl: true, // THE DOUBLE (designer pass 3): one token per player per show, in hand from the start, spendable from Round 2
+      vsRound: 0, // AGAINST THE ROOM (designer pass 4): the round the gauntlet was last thrown in (0 = never)
       connected: true,
       avatar: cleanAvatar(msg.avatar, seat),
       streak: 0,
@@ -1010,6 +1029,7 @@ export function handleHostMessage(room, msg) {
         pickTimes: {},
         nums: {},
         dbl: {},
+        vs: {}, // AGAINST THE ROOM (designer pass 4): declared seats on this question
         cutBy: null,
         closedAt: null,
         stoppedValue: null,
@@ -1085,6 +1105,7 @@ export function handleHostMessage(room, msg) {
         p.score = 0;
         p.cutTwo = cutStartFor(room); // House Rules (N2): a fresh show restocks to the room's starting count — the rules themselves are the room's and stay
         p.dbl = true; // THE DOUBLE restocks with the show, like every other token
+        p.vsRound = 0; // AGAINST THE ROOM: the new show's gauntlet is unthrown
         p.streak = 0;
       }
       room.bet = null;
@@ -1201,7 +1222,42 @@ export function handlePlayerMessage(room, seat, msg) {
       if (p.dbl === false) return fail('Your Double is spent.');
       if (!q.dbl || typeof q.dbl !== 'object') q.dbl = {};
       if (q.dbl[seat]) return fail('Your Double is already riding.');
+      if (q.vs && q.vs[seat]) return fail('Your gauntlet is down on this one — one stake per question.');
       q.dbl[seat] = true;
+      return ok({
+        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
+        state: true,
+        changed: true,
+      });
+    }
+    case 'vs': {
+      /* AGAINST THE ROOM (designer pass 4): a pad declares its
+       * seat's gauntlet on the open question. The referee's rules
+       * are the table's: the seat sits last (a tie for last is
+       * last; an all-level table has no gauntlet), the declaration
+       * is unused this round, never on a bet question or the
+       * Decider, never alongside the seat's own Double, only
+       * while the window is open. A thrown gauntlet stays thrown:
+       * there is no undeclare message. */
+      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
+      const q = room.question;
+      if (msg.qid !== q.qid) return fail('Wrong question.');
+      if (q.decider) return fail('The Decider carries no gauntlet.');
+      if (q.betted) return fail('A bet question carries its own stake.');
+      if (nowMs() > q.deadline) return fail('Window closed.');
+      if ((p.vsRound || 0) === q.round) return fail('Your gauntlet is thrown for this round.');
+      if (q.dbl && q.dbl[seat]) return fail('Your Double is riding on this one — one stake per question.');
+      const joinedScores = [];
+      for (let i = 0; i < room.players.length; i++) {
+        const rp = room.players[i];
+        if (rp) joinedScores.push(rp.score);
+      }
+      const mn = Math.min(...joinedScores), mx = Math.max(...joinedScores);
+      if (!(mn < mx && p.score === mn)) return fail('The gauntlet belongs to last place.');
+      if (!q.vs || typeof q.vs !== 'object') q.vs = {};
+      if (q.vs[seat]) return fail('Your gauntlet is already down.');
+      q.vs[seat] = true;
+      p.vsRound = q.round; /* spent in the throwing, win, lose or lapse */
       return ok({
         to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
         state: true,
