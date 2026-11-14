@@ -1107,6 +1107,240 @@ export const BANK = [
     "why": "NCSA Mosaic came first; its creators went on to build Netscape Navigator in 1994."
   },
   {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "q": "In The Lion King, whose deep voice speaks for Simba's father, Mufasa?",
+    "a": "James Earl Jones",
+    "w": [
+      "Jeremy Irons",
+      "Rowan Atkinson",
+      "Nathan Lane"
+    ],
+    "why": "Irons voiced Scar, Atkinson Zazu and Lane Timon — but the King's rumble is James Earl Jones, Darth Vader himself."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "q": "Which 1999 film ends with the reveal that its narrator and the man called Tyler Durden are the same person?",
+    "a": "Fight Club",
+    "w": [
+      "The Sixth Sense",
+      "Se7en",
+      "Memento"
+    ],
+    "why": "The first rule of the twist is that it rewired every rewatch of Fight Club since 1999."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "q": "In The Princess Bride, what does the fire-swamp acronym R.O.U.S. stand for?",
+    "a": "Rodents of Unusual Size",
+    "w": [
+      "Rats of Unusual Size",
+      "Rodents of Unusual Strength",
+      "Rats of the Underground Swamp"
+    ],
+    "why": "'Rodents of Unusual Size? I don't think they exist.' They did."
+  },
+  {
+    "cat": "TV",
+    "diff": "easy",
+    "d": 1,
+    "q": "On The Simpsons, what is the name of the family's greyhound dog?",
+    "a": "Santa's Little Helper",
+    "w": [
+      "Snowball",
+      "Comet",
+      "Brian"
+    ],
+    "why": "Snowball is the Simpsons' cat and Comet belonged to Full House; Santa's Little Helper joined the family in the very first episode, Christmas 1989."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "q": "On Seinfeld, what is Kramer's first name — the one he guarded for six seasons?",
+    "a": "Cosmo",
+    "w": [
+      "Art Vandelay",
+      "Frank Costanza",
+      "David Puddy"
+    ],
+    "why": "Cosmo Kramer, revealed by his mother Babs in 1995. Art Vandelay was George's imaginary architect."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "q": "On The X-Files, the poster hanging in Mulder's office shows a UFO and reads what?",
+    "a": "I Want to Believe",
+    "w": [
+      "The Truth Is Out There",
+      "Trust No One",
+      "Believe the Lie"
+    ],
+    "why": "'The Truth Is Out There' opened the credits; the poster over the desk said I Want to Believe."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "q": "Which trio sang 'Creep', 'Waterfalls' and 'No Scrubs'?",
+    "a": "TLC",
+    "w": [
+      "Destiny's Child",
+      "En Vogue",
+      "SWV"
+    ],
+    "why": "T-Boz, Left Eye and Chilli — CrazySexyCool sold by the truckload and 'No Scrubs' closed the decade."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "q": "'Smells Like Teen Spirit' took its title from Teen Spirit, which was originally a brand of what?",
+    "a": "Deodorant",
+    "w": [
+      "Hair gel",
+      "Bubble gum",
+      "Nail polish"
+    ],
+    "why": "A deodorant for teenage girls. Kathleen Hanna spray-painted 'Kurt smells like Teen Spirit' and Cobain thought it was poetry."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "q": "Purple Rain and Parade credit Prince with which backing band?",
+    "a": "The Revolution",
+    "w": [
+      "The New Power Generation",
+      "The Time",
+      "Vanity 6"
+    ],
+    "why": "The Revolution backed him through the Purple Rain years; the New Power Generation arrived in the nineties."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "easy",
+    "d": 1,
+    "q": "Finish the Big Mac jingle: 'two all-beef patties, special sauce, lettuce, cheese, pickles, onions on a…'",
+    "a": "Sesame seed bun",
+    "w": [
+      "Kaiser roll",
+      "Potato bun",
+      "Toasted brioche"
+    ],
+    "why": "A sesame seed bun — the whole list was written to be sung, and a generation can still sing it in order."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "q": "In the first famous 'Got Milk?' ad, a history buff can't win the radio quiz — 'Who shot Alexander Hamilton?' — because his mouth is stuck shut with what?",
+    "a": "A peanut butter sandwich",
+    "w": [
+      "A mouthful of milk and cookies",
+      "A sticky caramel bar",
+      "A dry turkey sandwich"
+    ],
+    "why": "He knows it's Aaron Burr and cannot say it — peanut butter, no milk, 1993. Michael Bay directed it, of all people."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "easy",
+    "d": 1,
+    "q": "Which boxed side dish called itself, in jingle after jingle, 'the San Francisco treat'?",
+    "a": "Rice-A-Roni",
+    "w": [
+      "Hamburger Helper",
+      "Stove Top Stuffing",
+      "Shake 'n Bake"
+    ],
+    "why": "Rice-A-Roni, ding ding — named for the cable cars, eaten everywhere else."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "q": "In Monopoly, how much money do you collect every time you pass Go?",
+    "a": "$200",
+    "w": [
+      "$100",
+      "$250",
+      "$500"
+    ],
+    "why": "Two hundred dollars, by the rules as written — whatever your family's house rules did to it afterwards is between you and them."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "q": "Which Nintendo console, launched in 1996, was named for its 64-bit heart?",
+    "a": "The Nintendo 64",
+    "w": [
+      "The GameCube",
+      "The Super Nintendo",
+      "The Virtual Boy"
+    ],
+    "why": "The Nintendo 64 — three prongs on the controller, four controller ports, and Mario in 3D for the first time."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "q": "In the board game Clue, what is the space at the very centre of the board — the one no player can enter?",
+    "a": "The cellar",
+    "w": [
+      "The conservatory",
+      "The ballroom",
+      "The study"
+    ],
+    "why": "The cellar holds the solution envelope. Every room around it can be entered; the middle stays sealed until the accusation."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "q": "What food would the Teenage Mutant Ninja Turtles cross the city, and most known toppings, for?",
+    "a": "Pizza",
+    "w": [
+      "Burgers",
+      "Tacos",
+      "Spaghetti"
+    ],
+    "why": "Pizza — the weirder the topping, the better. A generation's Saturday mornings ran on it."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "q": "In DuckTales, Scrooge McDuck famously swims — actually swims — in a money bin full of what?",
+    "a": "Gold coins",
+    "w": [
+      "Dollar bills",
+      "Diamonds",
+      "Silver dollars"
+    ],
+    "why": "Gold coins, dived into like water since 1987. Do not attempt this with your own savings."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "q": "In ThunderCats, Lion-O's sword — the one that gives him sight beyond sight — is called what?",
+    "a": "The Sword of Omens",
+    "w": [
+      "The Sword of Power",
+      "The Cat's Claw Shield",
+      "The Eye of Eternity"
+    ],
+    "why": "The Sword of Omens, with the Eye of Thundera set in its hilt. He-Man carried the Sword of Power, one channel over."
+  },
+  {
     "cat": "TV",
     "diff": "easy",
     "d": 1,
@@ -1159,6 +1393,33 @@ export const BANK = [
     "q": "At its peak, to the nearest thousand, how many Blockbuster stores were there in the world?",
     "num": 9000,
     "why": "Over 9,000 stores at the 2004 peak — and every single one of them wanted its tapes rewound."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many studio albums are in The Beatles' core canon — Please Please Me through Let It Be, the set in every remastered box?",
+    "num": 13,
+    "why": "Thirteen, in seven years. Fans have argued about every one of them for fifty years and counting."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many minutes long is the theatrical cut of The Lord of the Rings: The Return of the King — not the extended edition?",
+    "num": 201,
+    "why": "201 minutes at the cinema; the extended edition runs 263 and nobody's bladder has forgiven it."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many Pokémon were there to catch in the very first generation — the original Red and Blue roster?",
+    "num": 151,
+    "why": "151 — Mew hiding at the end of the list like a rumour. Gotta catch 'em all was a bigger ask than it sounded."
   },
   {
     "cat": "Movies",
@@ -1312,5 +1573,47 @@ export const BANK = [
       "Cobra Commander"
     ],
     "why": "Mark Hamill's Joker, from Batman: The Animated Series — that laugh alone sent a generation behind the couch, and the show knew exactly what it was doing."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The movie line most people say they can produce on command, word-perfect, any time, is…",
+    "a": "May the Force be with you",
+    "w": [
+      "I'll be back",
+      "Here's looking at you, kid",
+      "You can't handle the truth"
+    ],
+    "why": "Four words and a blessing — more weddings, exams and hospital wards have heard it than any line in film history."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "The karaoke song most people say gets wheeled out at every party, every single time, is…",
+    "a": "Sweet Caroline",
+    "w": [
+      "Don't Stop Believin'",
+      "Livin' on a Prayer",
+      "Wonderwall"
+    ],
+    "why": "Sweet Caroline — the 'so good, so good' arrives whether the singer invites it or not. It is less a song than a room reflex."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "The TV catchphrase most people say IS the nineties, distilled into one line, is…",
+    "a": "How you doin'?",
+    "w": [
+      "Did I do that?",
+      "No soup for you!",
+      "Whatchoo talkin' 'bout, Willis?"
+    ],
+    "why": "Joey Tribbiani's three words outlasted the decade — Willis belongs to the seventies and eighties, whatever your memory tells you."
   }
 ];

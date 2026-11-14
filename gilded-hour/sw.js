@@ -44,7 +44,7 @@ var PRECACHE = [
   "./",
   "index.html",
   "style.css?v=91",
-  "questions.js?v=7",
+  "questions.js?v=8",
   "qr.js?v=1",
   "game.js?v=87"
 ];

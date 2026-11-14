@@ -60,8 +60,8 @@ async function main() {
     const win = {};
     new Function('window', gameSrc)(win);
     const gameBank = win.GH_BANK;
-    ok(Array.isArray(gameBank) && gameBank.length === 102, 'the game bank has 102 entries', 'len=' + (gameBank && gameBank.length));
-    ok(BANK.length === 102, "the worker's bank.js has 102 entries", 'len=' + BANK.length);
+    ok(Array.isArray(gameBank) && gameBank.length === 126, 'the game bank has 126 entries', 'len=' + (gameBank && gameBank.length));
+    ok(BANK.length === 126, "the worker's bank.js has 126 entries", 'len=' + BANK.length);
     ok(deepEqual(BANK, gameBank), "bank.js deep-equals the game's bank (same order, same fields, same values)");
     // Spot checks, named and exact.
     ok(BANK[0].q === 'In Forrest Gump, Forrest says life is like a box of what?'
@@ -76,13 +76,13 @@ async function main() {
       'spot check: the Saturday Morning survey entry keys Scooby-Doo', JSON.stringify(surveyEntry).slice(0, 100));
     const kinds = { normal: 0, num: 0, survey: 0 };
     for (const e of BANK) kinds[e.kind === 'num' ? 'num' : e.kind === 'survey' ? 'survey' : 'normal']++;
-    ok(kinds.normal === 84 && kinds.num === 9 && kinds.survey === 9,
-      'kind distribution is 84 normal / 9 num / 9 survey', JSON.stringify(kinds));
+    ok(kinds.normal === 102 && kinds.num === 12 && kinds.survey === 12,
+      'kind distribution is 102 normal / 12 num / 12 survey', JSON.stringify(kinds));
     const pool = eligiblePool();
-    ok(pool.length === 84, 'the eligible pool is exactly the 84 ordinary questions', 'len=' + pool.length);
+    ok(pool.length === 102, 'the eligible pool is exactly the 102 ordinary questions', 'len=' + pool.length);
     ok(pool.every((e) => typeof e.a === 'string' && Array.isArray(e.w) && e.w.length === 3),
       'every eligible entry has a correct string and three wrong answers');
-    ok(shuffledPool().length === 84 && shuffledPool() !== pool
+    ok(shuffledPool().length === 102 && shuffledPool() !== pool
       && deepEqual(shuffledPool().slice().sort((x, y) => BANK.indexOf(x) - BANK.indexOf(y)), pool),
       'the shuffled pool is a permutation of the eligible pool');
   }
@@ -105,7 +105,7 @@ async function main() {
   {
     const i0 = pickIndexForDate(DATE);
     const i1 = pickIndexForDate(addDays(DATE, 1));
-    ok(i1 === (i0 + 1) % 84, 'the next date picks the next slot in the shuffled pool', i0 + ' -> ' + i1);
+    ok(i1 === (i0 + 1) % 102, 'the next date picks the next slot in the shuffled pool', i0 + ' -> ' + i1);
     ok(pickEntryForDate(addDays(DATE, 1)) === shuffledPool()[i1]
       && pickEntryForDate(addDays(DATE, 1)) !== pickEntryForDate(DATE),
       'adjacent dates deal adjacent (different) entries');
@@ -113,18 +113,18 @@ async function main() {
       'dayNumberForDate is the UTC day number');
   }
 
-  // ---- 4. reachability: 84 consecutive dates deal the whole pool ----
+  // ---- 4. reachability: 102 consecutive dates deal the whole pool ----
   {
     const idxSeen = new Set();
     const entrySeen = new Set();
-    for (let n = 0; n < 84; n++) {
+    for (let n = 0; n < 102; n++) {
       const d = addDays(DATE, n);
       idxSeen.add(pickIndexForDate(d));
       entrySeen.add(pickEntryForDate(d));
     }
-    ok(idxSeen.size === 84, '84 consecutive dates hit 84 distinct pool slots', 'seen=' + idxSeen.size);
-    ok(entrySeen.size === 84, '84 consecutive dates deal 84 distinct questions', 'seen=' + entrySeen.size);
-    ok(pickEntryForDate(addDays(DATE, 84)) === pickEntryForDate(DATE),
+    ok(idxSeen.size === 102, '102 consecutive dates hit 102 distinct pool slots', 'seen=' + idxSeen.size);
+    ok(entrySeen.size === 102, '102 consecutive dates deal 102 distinct questions', 'seen=' + entrySeen.size);
+    ok(pickEntryForDate(addDays(DATE, 102)) === pickEntryForDate(DATE),
       'the 85th date repeats the 1st pick (the walk wraps the pool)');
   }
 
