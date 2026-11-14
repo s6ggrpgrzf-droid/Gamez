@@ -30,7 +30,7 @@
    ===================================================================== */
 "use strict";
 
-var BUILD = 85; /* == the game.js?v= bust in index.html — keep coupled */
+var BUILD = 86; /* == the game.js?v= bust in index.html — keep coupled */
 var CACHE = "gilded-hour-shell-v" + BUILD;
 var PREFIX = "gilded-hour-shell-";
 

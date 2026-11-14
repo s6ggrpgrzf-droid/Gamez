@@ -474,6 +474,10 @@ export function snapshotFor(room, view) {
       decider: q.decider === true,
       eligible: q.decider ? (q.eligible || []).slice() : null,
       cut: q.cutBy != null ? { bySeat: q.cutBy, indices: q.cutIndices.slice() } : null,
+      /* THE DOUBLE: the seats whose token is riding on this
+       * question — public the moment it is declared, like every
+       * other stake at this table */
+      dblArmed: q.dbl ? Object.keys(q.dbl).map(Number) : [],
       answersIn: Object.keys(q.kind === 'num' ? q.nums : q.picks).length,
     };
     if (view.role === 'host') { // the host authored the secrets; resync may echo them to it alone
@@ -502,7 +506,7 @@ export function snapshotFor(room, view) {
        * through cutCountOf), and cutCount rides beside it as the
        * number, so a screen that knows the count reads the count
        * and a screen that doesn't reads exactly what it always did */
-      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
     /* The Table Pot (D1): the running total, public from the
@@ -598,9 +602,22 @@ export function closeQuestion(room) {
       entry.banked = q.betted
         ? (q.bets[seat] != null ? q.bets[seat] : 1) * BET_PAYOUT
         : value;
+      /* THE DOUBLE: a riding token doubles the question's own
+       * value for its seat — the bet never doubles (it was never
+       * armable), and Quick Draw / streak bonuses land flat on
+       * top below, exactly as they treat every other figure */
+      if (!q.betted && q.dbl && q.dbl[seat]) { entry.banked = value * 2; entry.doubled = true; }
     }
     room.players[seat].score += entry.banked;
     results.push(entry);
+  }
+  /* THE DOUBLE settles with the question: every riding token is
+   * spent here, win or lose — the declaration was the spend. */
+  if (q.dbl) {
+    for (const k of Object.keys(q.dbl)) {
+      const sp = room.players[+k];
+      if (sp) sp.dbl = false;
+    }
   }
   /* The Quick-Draw (Design pass 3): 'normal' questions only. The
    * winner is the first seat in q.pickOrder — the receipt order of
@@ -822,6 +839,7 @@ export function handleHello(room, msg) {
       token: makeToken(),
       score: 0,
       cutTwo: cutStartFor(room), // House Rules (N2): the starting COUNT — two under Second Cut, else one
+      dbl: true, // THE DOUBLE (designer pass 3): one token per player per show, in hand from the start, spendable from Round 2
       connected: true,
       avatar: cleanAvatar(msg.avatar, seat),
       streak: 0,
@@ -991,6 +1009,7 @@ export function handleHostMessage(room, msg) {
         pickOrder: [],
         pickTimes: {},
         nums: {},
+        dbl: {},
         cutBy: null,
         closedAt: null,
         stoppedValue: null,
@@ -1065,6 +1084,7 @@ export function handleHostMessage(room, msg) {
         if (!p) continue;
         p.score = 0;
         p.cutTwo = cutStartFor(room); // House Rules (N2): a fresh show restocks to the room's starting count — the rules themselves are the room's and stay
+        p.dbl = true; // THE DOUBLE restocks with the show, like every other token
         p.streak = 0;
       }
       room.bet = null;
@@ -1162,6 +1182,29 @@ export function handlePlayerMessage(room, seat, msg) {
       return ok({
         to: [{ dest: seat, msg: { t: 'accepted', qid: room.bet.qid } }],
         all: { t: 'counts', qid: room.bet.qid, betsIn: Object.keys(room.bet.bySeat).length, players: joinedSeats(room).length },
+        changed: true,
+      });
+    }
+    case 'double': {
+      /* THE DOUBLE (designer pass 3): a pad declares its seat's
+       * token on the open question. The referee's rules are the
+       * table's: from Round 2, never on a bet question (it carries
+       * its own stake), never on the Decider, only while the
+       * window is open, only a token still in hand, only once. */
+      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
+      const q = room.question;
+      if (msg.qid !== q.qid) return fail('Wrong question.');
+      if (q.decider) return fail('The Decider carries no Double.');
+      if (q.betted) return fail('A bet question carries its own stake.');
+      if (!(q.round >= 2)) return fail('The Double arrives with Double Money.');
+      if (nowMs() > q.deadline) return fail('Window closed.');
+      if (p.dbl === false) return fail('Your Double is spent.');
+      if (!q.dbl || typeof q.dbl !== 'object') q.dbl = {};
+      if (q.dbl[seat]) return fail('Your Double is already riding.');
+      q.dbl[seat] = true;
+      return ok({
+        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
+        state: true,
         changed: true,
       });
     }

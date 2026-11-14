@@ -3410,6 +3410,32 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .award-who b{font-weight:800;color:var(--cream)}
 .award-v{font-weight:700;color:#F0DCA3}
 
+/* ===== THE DOUBLE PASS (2026-11-13) =====
+   The ×2 token disc on a desk: a small brass-ringed coin pinned
+   at the seat's top-left corner, over the portrait's edge — held
+   reads as dark glass with gold lettering; riding on the current
+   question it fills with gold and lifts. The house's disc is the
+   same coin, display only. The DOUBLED tag rides the seat-name
+   tag space at the reveal, beside CLOSEST and QUICK DRAW. */
+.dbl-token{position:absolute;top:1px;left:1px;z-index:5;width:23px;height:23px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font:700 10.5px GHSans,system-ui,sans-serif;letter-spacing:.01em;
+  color:var(--gold);background:rgba(10,18,36,.88);
+  border:1.5px solid rgba(216,183,106,.75);
+  box-shadow:0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.14);
+  padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:transform .18s cubic-bezier(.34,1.4,.44,1), background .18s, color .18s, box-shadow .18s}
+button.dbl-token:active{transform:scale(.92)}
+.dbl-token.armed{background:linear-gradient(180deg,#E9CD8A,#C9A44F);color:#23190A;border-color:#F2DFA9;
+  transform:scale(1.14);box-shadow:0 0 0 2px rgba(216,183,106,.35),0 3px 9px rgba(0,0,0,.5)}
+.dbl-token[disabled]{opacity:.55;cursor:default}
+.dbl-token.house{cursor:default}
+.closest-tag.dbltag{background:rgba(216,183,106,.22);color:var(--gold);border-color:rgba(216,183,106,.5)}
+/* the pad's spend button + its riding note (same family as .jp-cut) */
+.jp-dbl{display:block;width:100%;margin-top:10px;min-height:60px;font-weight:700;font-size:17px;letter-spacing:.04em;color:#23190A;background:linear-gradient(180deg,#E9CD8A,#C9A44F);border:none;border-radius:20px;padding:14px 16px;box-shadow:0 6px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.35);flex:none;cursor:pointer}
+.jp-dbl[disabled]{opacity:.75;cursor:default}
+.jp-dblnote{margin-top:10px;text-align:center;font:700 13px GHSans,system-ui,sans-serif;letter-spacing:.14em;color:var(--gold);border:1px solid rgba(216,183,106,.45);border-radius:14px;padding:12px 10px;background:rgba(216,183,106,.08)}
+
 /* ===== SURFACING PASS (2026-11-13) — the machinery, named =====
    Three fine lines, each stating a truth the game already keeps:
    the lobby's room is server-held (rejoin by code, seat reclaimed);

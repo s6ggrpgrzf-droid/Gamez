@@ -2643,7 +2643,7 @@ function avatarSVG(id, state, seat) {
   function newGame(names) {
     return {
       players: names.map(function (nm, i) {
-        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, avatar: tableAvatars[i] != null ? tableAvatars[i] : i };
+        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, dbl: 1, avatar: tableAvatars[i] != null ? tableAvatars[i] : i };
       }),
       round: 1, qInRound: 0,
       rules: null,              // Pass N2: the night's House Rules, fixed by startShow before the first question is born
@@ -2706,6 +2706,18 @@ function avatarSVG(id, state, seat) {
         nm2.appendChild(tg2);
       }
     }
+    /* THE DOUBLE: a banked doubled question says so on the desk,
+       in the same tag space — the room should see why the number
+       is twice the size of the question */
+    if (fx.doubled) {
+      var nm3 = s.querySelector(".seat-name");
+      if (nm3) {
+        var tg3 = document.createElement("span");
+        tg3.className = "closest-tag dbltag";
+        tg3.textContent = "×2 DOUBLED";
+        nm3.appendChild(tg3);
+      }
+    }
     /* Hot Streaks (New programme pass 3): the streak tag rides the
        same seat-name tag space — a bank that earned the flat bonus
        wears it, and the banked figure in the delta already includes
@@ -2764,7 +2776,7 @@ function avatarSVG(id, state, seat) {
         state = "keen";
       }
       var s = el('<div class="seat pod' + i + (p.house != null ? " house" : "") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" +
+        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + dblTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + deskBetsHTML(p, i) + fortuneHTML() + "</div></div>");
@@ -2776,6 +2788,8 @@ function avatarSVG(id, state, seat) {
       if (G.cur && G.cur.marks && G.cur.marks[i]) s.classList.add("gotit");
       if (G.phase === "reveal" && tableFx) decorateSeat(s, tableFx.seats[i]);
       s.addEventListener("click", function () { onSeatTap(i); });
+      var dblBtn = s.querySelector("[data-dbl]");
+      if (dblBtn) dblBtn.addEventListener("click", function (e) { e.stopPropagation(); toggleDbl(i); });
       bot.appendChild(s);
       /* Visual stage 4: a rebuilt seat paints its pile at the
          displayed value, so a mid-chase re-render (a vote tap, the
@@ -2909,6 +2923,38 @@ function avatarSVG(id, state, seat) {
     return '<div class="desk-bets"><button class="chip bet-step" data-bet="' + i + '|-1">− 1</button>' +
       '<span class="bet-amt" id="betAmt' + i + '">' + betLabel(p.bet) + "</span>" +
       '<button class="chip bet-step" data-bet="' + i + '|1">+ 1</button></div>';
+  }
+  /* THE DOUBLE (designer pass 3, 2026-11-13 — Jimmy's pick): the
+     token disc on a desk. It exists only while the Double is in
+     play: from Round 2, on an ordinary question (a bet question
+     carries its own stake; the Decider carries none), while the
+     seat still holds it or has it riding on THIS question. A human
+     seat's disc is a button — the host taps it as the player calls
+     the spend, the same public tap-in grammar as GOT IT; a house
+     seat's disc is display only, spent by the house's own policy.
+     Outside the question and vote phases the disc is inert: the
+     declaration window is while the question is open. */
+  function dblInPlay(p, i) {
+    if (!G || !G.cur || G.round < 2 || G.cur.betRound || G.cur.decider) return false;
+    return (p.dbl > 0) || !!(G.cur.dbl && G.cur.dbl[i]);
+  }
+  function dblTokenHTML(p, i) {
+    if (!dblInPlay(p, i)) return "";
+    var armed = !!(G.cur.dbl && G.cur.dbl[i]);
+    if (p.house != null) return '<span class="dbl-token house' + (armed ? " armed" : "") + '" aria-hidden="true">×2</span>';
+    var live = (G.phase === "question" || G.phase === "vote");
+    return '<button type="button" class="dbl-token' + (armed ? " armed" : "") + '" data-dbl="' + i + '"' + (live ? "" : " disabled") + ' aria-label="The Double for ' + esc(p.name) + '">×2</button>';
+  }
+  function toggleDbl(i) {
+    if (!G || !G.cur || (G.phase !== "question" && G.phase !== "vote")) return;
+    var p = G.players[i];
+    if (!p || p.house != null || !dblInPlay(p, i)) return;
+    var c = G.cur;
+    c.dbl = c.dbl || {};
+    if (c.dbl[i]) delete c.dbl[i];
+    else { c.dbl[i] = true; Snd.play("coin"); }
+    renderSeats();
+    saveTableShow();
   }
   /* P11: the projector strip is the desks' shared header — it
      lives in #deskHead, between the stage and the seats, filled
@@ -3185,6 +3231,9 @@ function avatarSVG(id, state, seat) {
          question previews and spends the pair it was dealt, and a
          holding finger after a refresh sees the truth */
       cutPair: c.cutPair ? c.cutPair.slice() : null,
+      /* THE DOUBLE (designer pass 3): the armed seats ride the save
+         — a refresh mid-question must not un-spend a declaration */
+      dbl: c.dbl ? Object.assign({}, c.dbl) : null,
       /* Design pass 3: the GOT IT tap order is the table's quick-draw
          record — it must survive a host refresh or the winner could
          change across a resume. */
@@ -3231,6 +3280,7 @@ function avatarSVG(id, state, seat) {
          pair — null here, and the first preview or spend commits
          one from the untouched wrong answers (commitCutPair) */
       cutPair: Array.isArray(o.cutPair) ? o.cutPair.slice() : null,
+      dbl: (o.dbl && typeof o.dbl === "object") ? Object.assign({}, o.dbl) : null,
       /* older saves predate the quick-draw record: fall back to the
          numeric order of the seats already marked — deterministic */
       lockOrder: Array.isArray(o.lockOrder) ? o.lockOrder.slice()
@@ -3263,7 +3313,7 @@ function avatarSVG(id, state, seat) {
           /* House Players (pass 5): a house seat's profile index
              rides along — a resumed solo show restores the same
              cast members, brains included */
-          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, avatar: p.avatar, house: (p.house != null ? p.house : null) };
+          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, dbl: (p.dbl != null ? p.dbl : 1), avatar: p.avatar, house: (p.house != null ? p.house : null) };
         }),
         round: G.round, qInRound: G.qInRound, showId: G.showId,
         bankedOnce: !!G.bankedOnce, bigLeadDone: !!G.bigLeadDone,
@@ -3371,6 +3421,9 @@ function avatarSVG(id, state, seat) {
           name: p.name, color: PCOLORS[i], score: p.score, cut: p.cut, bet: p.bet,
           /* a save written before Hot Streaks has no streak field */
           streak: (typeof p.streak === "number" && p.streak > 0) ? Math.floor(p.streak) : 0,
+          /* a save written before THE DOUBLE has no dbl field —
+             the token is simply still in the player's pocket */
+          dbl: (p.dbl != null ? p.dbl : 1),
           avatar: (Number.isInteger(p.avatar) && p.avatar >= 0 && p.avatar < 8) ? p.avatar : i,
           /* House Players (pass 5): a saved profile index restores
              the house seat; anything malformed deals a guest */
@@ -4620,11 +4673,15 @@ function avatarSVG(id, state, seat) {
            ["Cut Two", "Two tokens each — yours for the whole show"],
            ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
            ["The spend", "Spend them like they matter — because they do"],
+           ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
+           ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
            ["The Headline", "The round closes with it — double money again, half the clock"]]
         : [["The money", "Same game, double — $200 · $400 · $600"],
            ["Cut Two", "One token each — yours for the whole show"],
            ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
            ["The spend", "Spend it like it's the last one — it is"],
+           ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
+           ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
            ["The Headline", "The round closes with it — double money again, half the clock"]],
       3: [["Questions", "Three"],
           ["The bet", "Before each one, bet on yourself out loud — a chip is $100"],
@@ -5808,6 +5865,19 @@ function avatarSVG(id, state, seat) {
     g.classList.toggle("aud-hush", !!on);
     if (on) g.classList.remove("aud-ripple", "aud-dip");
   }
+  /* THE DOUBLE (designer pass 3, 2026-11-13): one question's pay
+     for one seat, from the one formula both the settlement and the
+     seat fx read — so the number that moves is always the number
+     that paints. The question's own value doubles for a seat whose
+     Double is riding; the bet round already carries its stake and
+     never doubles; Quick Draw and the streak bonus stay flat,
+     exactly as they treat the bet. */
+  function seatGain(c, p, i, qdSeat, sBonus) {
+    var base = c.betRound ? p.bet * 100 : c.bankValue;
+    if (!c.betRound && c.dbl && c.dbl[i]) base *= 2;
+    return base + (i === qdSeat ? QUICK_DRAW_BONUS : 0) + (sBonus || 0);
+  }
+  function dblSpent(c, i) { return !!(c.dbl && c.dbl[i] && !c.betRound); }
   function revealAnswer() {
     if (!G || !G.cur || G.phase !== "vote") return;
     var c = G.cur;
@@ -5833,12 +5903,13 @@ function avatarSVG(id, state, seat) {
     var gains = {};
     winners.forEach(function (i) {
       var p = G.players[i];
-      var gain = c.betRound ? p.bet * 100 : c.bankValue;
-      if (i === qdSeat) gain += QUICK_DRAW_BONUS; /* flat: never bet- or headline-scaled */
-      if (so.bonuses[i]) gain += so.bonuses[i]; /* the streak bonus: flat $25, same rule */
+      var gain = seatGain(c, p, i, qdSeat, so.bonuses[i] || 0);
       p.score += gain;
       gains[i] = gain;
     });
+    /* THE DOUBLE settles with the question: every riding token is
+       spent here, win or lose — the declaration was the spend */
+    if (c.dbl) Object.keys(c.dbl).forEach(function (k) { if (!c.betRound) G.players[+k].dbl = 0; });
     c.streakFx = {}; c.streakMoment = so.moment;
     G.players.forEach(function (p, i) {
       p.streak = so.streakOut[i];
@@ -5886,7 +5957,7 @@ function avatarSVG(id, state, seat) {
          the question's own record (c.streakFx) — a resumed reveal
          re-derives the same fx and never touches the scores */
       var sBonus = (c.streakFx && c.streakFx[i]) ? (c.streakFx[i].bonus || 0) : 0;
-      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: (c.betRound ? p.bet * 100 : c.bankValue) + (i === qdSeat ? QUICK_DRAW_BONUS : 0) + sBonus, closest: guessQ, quickdraw: i === qdSeat, streakBonus: sBonus, delay: bankSeq++ * 0.12 };
+      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus), closest: guessQ, quickdraw: i === qdSeat, doubled: dblSpent(c, i), streakBonus: sBonus, delay: bankSeq++ * 0.12 };
       else fxSeats[i] = { delta: "miss", delay: i * 0.05 };
     });
     tableFx = { seats: fxSeats };
@@ -6331,6 +6402,16 @@ function avatarSVG(id, state, seat) {
            clock the host's taps are timed by */
         e.lock = Math.max(1.2, (2 + rng() * Math.max(3, c.clockTotal - 4)) * (1 - (prof.skill || 0)));
         if (p.cut > 0 && !e.ok && rng() < HOUSE_CUT_POLICY) e.cut = "pending";
+      }
+      /* THE DOUBLE, house policy: the house spends its token the
+         way it plays everything else — on its own honest numbers.
+         It rides when its confidence in this question is high:
+         the dealt probability on a picked question, or a Warm
+         number, where its shout lands close by construction. One
+         rule for both: confidence of four-in-five or better. */
+      if ((p.dbl > 0) && G.round >= 2 && !c.betRound && !c.decider) {
+        var conf = (c.kind === "num") ? (band === 1 ? 0.88 : band === 2 ? 0.70 : 0.40) : e.prob;
+        if (conf >= 0.8) { c.dbl = c.dbl || {}; c.dbl[i] = true; e.dbl = true; }
       }
       h[i] = e;
     });
@@ -7569,8 +7650,16 @@ function avatarSVG(id, state, seat) {
       if (OG.phase !== "answer" || !OG.cur || OG.cur.qid !== s.question.qid) {
         var ae = ogEntryByQid(s.question.qid, s.question);
         if (ae) ogShowQuestion(ae, s.question);
-      } else ogRenderSeats();
+      } else {
+        /* THE DOUBLE: OG.cur is the host's local script entry —
+           the riding seats live only on the referee's snapshot, so
+           a repeat state must hand them over before the seats
+           repaint, or the big screen would never see a declaration */
+        if (OG.cur && s.question) OG.cur.dblArmed = s.question.dblArmed || [];
+        ogRenderSeats();
+      }
     } else if (s.phase === "reveal") {
+      if (OG.cur && s.question && s.question.qid === OG.cur.qid) OG.cur.dblArmed = s.question.dblArmed || [];
       if (OG.phase !== "reveal" && s.lastReveal) {
         /* a restored host lands mid-reveal with no current question —
            rebuild it from the script so the reveal can paint */
@@ -7677,6 +7766,18 @@ function avatarSVG(id, state, seat) {
     btn.textContent = "CODE: " + OG.code;
     setTimeout(function () { if (btn.isConnected) btn.textContent = "COPY CODE"; }, 1600);
   }
+  /* THE DOUBLE on the big screen: the same disc as the table's,
+     read off the snapshot — the seat's token in hand (players[].dbl)
+     and the seats riding on the open question (question.dblArmed).
+     Display only: the declaration itself happens on the pad. */
+  function ogDblTokenHTML(p, i) {
+    if (!OG || !OG.cur || (OG.phase !== "answer" && OG.phase !== "reveal")) return "";
+    var q = OG.cur;
+    if (!(q.round >= 2) || q.betted || q.betRound || q.decider) return "";
+    var armed = (q.dblArmed || []).indexOf(i) >= 0;
+    if (!armed && p.dbl === false) return "";
+    return '<span class="dbl-token house' + (armed ? " armed" : "") + '" aria-hidden="true">×2</span>';
+  }
   function ogRenderSeats() {
     if (!OG) return;
     var top = $("seatsTop"), bot = $("seatsBottom");
@@ -7703,7 +7804,7 @@ function avatarSVG(id, state, seat) {
       var oseg = streakSegHTML(p.streak || 0);
       if (oseg) tags.push(oseg);
       var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" +
+        '<div class="seat-ava">' + avatarSVG(snapAvatar(p, i), state, i) + "</div>" + ogDblTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tags.join(" · ") + "</span>" + fortuneHTML() + "</div></div>");
@@ -8134,6 +8235,7 @@ function avatarSVG(id, state, seat) {
   function ogShowQuestion(e, q) {
     if (ogWinceTimer) { clearTimeout(ogWinceTimer); ogWinceTimer = null; } /* V2: a fresh question buries the last flinch */
     OG.phase = "answer"; OG.cur = e; stagePhase("question");
+    if (q) e.dblArmed = q.dblArmed || []; /* THE DOUBLE: the snapshot's riding seats, from the first paint */
     audDecider(!!e.decider); /* V4: the Decider hushed from its first second */
     applyCat(e.cat); setCatBackdrop(e.cat);
     seatsVisible(true); ogRenderSeats();
@@ -8319,6 +8421,10 @@ function avatarSVG(id, state, seat) {
          banked carries the +50; the client only wears the tag and
          names the winner (ogRevealSay reads ogQdSeat). */
       if (res.quickDraw) { fx = fx || {}; fx.quickdraw = true; }
+      /* THE DOUBLE: the referee marked the doubled banks in the
+       * results — the desk wears the same ×2 DOUBLED tag as the
+       * table's (decorateSeat is shared) */
+      if (res.doubled) { fx = fx || {}; fx.doubled = true; }
       /* Hot Streaks: the server settled the streaks too — banked
          already carries the flat +25; the seat wears the tag from
          the per-result record, and the reveal's one named moment
@@ -9299,6 +9405,27 @@ function avatarSVG(id, state, seat) {
          buttons carry the answer texts, which are the input. */
       var padTop = jpIdBar(true) +
         '<div class="jp-barwrap" id="jpBarWrap"><div class="jp-bar" id="jpBar" style="width:100%"></div></div>';
+      /* THE DOUBLE (designer pass 3): the pad's spend button —
+       * offered while the token is in hand on an eligible question
+       * (Round 2+, not a bet question, not the Decider); once the
+       * referee's snapshot shows this seat riding, the button
+       * becomes the standing fact. The server validates everything;
+       * the pad only offers and reports. */
+      var dblBtn = "";
+      if (d.q.round >= 2 && !d.q.betted && !d.q.decider && me) {
+        if ((d.q.dblArmed || []).indexOf(s.seat) >= 0) dblBtn = '<div class="jp-dblnote">×2 YOUR DOUBLE IS RIDING ON THIS ONE</div>';
+        else if (me.dbl !== false) dblBtn = '<button class="jp-dbl" id="jpDbl">×2 SPEND YOUR DOUBLE — RIGHT PAYS TWICE</button>';
+      }
+      var wireDbl = function () {
+        var db = $("jpDbl");
+        if (!db) return;
+        db.addEventListener("click", function () {
+          Snd.ensure();
+          jpSend({ t: "double", qid: d.q.qid });
+          db.disabled = true;
+          db.textContent = "×2 YOUR DOUBLE IS RIDING…";
+        });
+      };
       if (d.q.kind === "num" && d.q.decider && (d.q.eligible || []).indexOf(JP.seat) < 0) {
         /* the spectator's pad: a watch screen, not a dead one — the
            pairing, the stakes, and the count as the numbers land.
@@ -9317,8 +9444,9 @@ function avatarSVG(id, state, seat) {
           '<div class="jp-numpad">' +
           '<input id="jpNum" class="jp-num" type="number" inputmode="decimal" placeholder="Your number" value="' + (numKeep != null ? esc(numKeep) : (effNum != null ? effNum : "")) + '">' +
           '<div class="jp-numstate" id="jpNumState">' + (effNum != null ? "SENT · <b>" + effNum + "</b> — send a new one to change it" : "CLOSEST NUMBER TAKES IT · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
-          '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button></div></div>';
+          '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button>' + dblBtn + "</div></div>";
         entPadApply(main, padEnt);
+        wireDbl();
         $("jpNumSend").addEventListener("click", function () {
           var v = parseFloat($("jpNum").value);
           if (!isFinite(v)) { jpToast("Give a number first."); return; }
@@ -9348,7 +9476,7 @@ function avatarSVG(id, state, seat) {
         main.innerHTML = '<div class="jp-pad">' + padTop +
           '<div class="jp-answers">' + btns + "</div>" +
           '<div class="jp-pickstate" id="jpPickState">' + (s.yourPick != null ? "✓ <b>PICK " + (s.yourPick + 1) + " IS IN</b> — TAP ANOTHER TO CHANGE IT" : "TAP YOUR ANSWER · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
-          cutBtn + "</div>";
+          cutBtn + dblBtn + "</div>";
         entPadApply(main, padEnt);
         main.querySelectorAll(".jp-ans").forEach(function (b) {
           b.addEventListener("click", function () {
@@ -9365,6 +9493,7 @@ function avatarSVG(id, state, seat) {
         });
         var cb = $("jpCut");
         if (cb) jpWirePadCut(cb, d.q.qid);
+        wireDbl();
         /* Design pass 6: the spender's pad plays the moment when its
            own cut lands — the two slabs shear under the fresh-cut
            animation and the snip sounds. It is keyed to THIS pad's
