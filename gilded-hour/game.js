@@ -1131,6 +1131,93 @@
   var pageHidden = false, lastShownValue = null, coldTimer = null;
   var spinTimer = null, voteTimer = null;
   function setLight(state) { var g = $("scr-game"); if (g) g.setAttribute("data-light", state); }
+  /* Graphics Pass 2 — THE LIGHTING PLOT: data-light keeps the
+     round's mood; data-plot keeps the moment. house (lobby,
+     intros, breaks) / question (the room falls away, the card is
+     lit) / breath (the last seconds before a reveal) / reveal
+     (the footlights wash in the banking seat's colour). */
+  var plotState = "house";
+  function setPlot(state, washSeat) {
+    var g = $("scr-game"); if (!g) return;
+    plotState = state;
+    g.setAttribute("data-plot", state);
+    if (state === "reveal") g.style.setProperty("--wash", washSeat != null ? "var(--p" + washSeat + ")" : "#33507e");
+  }
+  /* Graphics Pass 3 — THE CAMERA PUSH-IN: the framing tightens
+     by round (1 wide / 2 closer / 3 closest / decider closest
+     of all); the CSS moves it on a slow push. Same-value sets
+     are no-ops, so per-question hooks never restart the move. */
+  var camState = "";
+  function setCam(level) {
+    var g = $("scr-game"); if (!g) return;
+    var v = level === "decider" ? "decider" : String(level || 1);
+    if (camState === v) return;
+    camState = v;
+    g.setAttribute("data-cam", v);
+  }
+  /* Graphics Pass 4 — SPLIT-FLAP STANDINGS: the podium board's
+     money is printed on flap wheels. flapSpan renders a figure
+     as flap cells showing the last figure this seat displayed
+     (a fresh seat starts at $0); when the target differs, the
+     span carries data-to and flapSweep — called at the foot of
+     every stage paint — rolls each digit wheel forward to it,
+     staggered cell by cell like a station board. */
+  var flapShown = {}, flapTimers = {};
+  function flapCells(cur, to) {
+    while (cur.length < to.length) cur = " " + cur;
+    var out = "";
+    for (var i = 0; i < to.length; i++) out += '<span class="flap-ch">' + esc(cur[i] || " ") + "</span>";
+    return out;
+  }
+  function flapSpan(id, target) {
+    var cur = flapShown[id];
+    if (cur == null) cur = "$0";
+    flapShown[id] = cur;
+    return '<span class="flap-val" data-flap="' + id + '"' + (cur === target ? "" : ' data-to="' + esc(target) + '"') + ">" + flapCells(cur, target) + "</span>";
+  }
+  function flapRun(el) {
+    var id = el.getAttribute("data-flap"), to = el.getAttribute("data-to");
+    if (!id || !to) return;
+    if (flapTimers[id]) clearInterval(flapTimers[id]);
+    var cells = el.querySelectorAll(".flap-ch");
+    var cur = "";
+    for (var n = 0; n < cells.length; n++) cur += cells[n].textContent;
+    while (cur.length < to.length) cur = " " + cur;
+    var step = 0;
+    flapTimers[id] = setInterval(function () {
+      step++;
+      var done = true, out = "";
+      for (var i = 0; i < to.length; i++) {
+        var tc = to[i], cc = cur[i] || " ";
+        if (cc !== tc) {
+          if (step <= i) { out += cc; done = false; continue; } /* this wheel has not started yet */
+          if (/\d/.test(tc)) {
+            if (!/\d/.test(cc)) cc = "0"; /* a digit wheel always starts at 0 and rolls up to its figure */
+            else cc = String((+cc + 1) % 10);
+          } else cc = tc; /* the $ and the comma snap */
+          if (cc !== tc) done = false;
+        }
+        out += cc;
+      }
+      cur = out;
+      flapShown[id] = cur;
+      for (var j = 0; j < cells.length && j < cur.length; j++) {
+        if (cells[j].textContent !== cur[j]) {
+          cells[j].textContent = cur[j];
+          cells[j].classList.remove("flip"); void cells[j].offsetWidth; cells[j].classList.add("flip");
+        }
+      }
+      if (done) {
+        clearInterval(flapTimers[id]); delete flapTimers[id];
+        flapShown[id] = to;
+        el.removeAttribute("data-to");
+      }
+    }, 55);
+  }
+  function flapSweep() {
+    var els = document.querySelectorAll(".flap-val[data-to]");
+    for (var n = 0; n < els.length; n++) flapRun(els[n]);
+  }
   /* Visual stage 1: the footlights read the room's phase. Every
      phase presenter in both modes mirrors its phase here; the set's
      CSS warms the footlights on "reveal" and holds them full on
@@ -3035,6 +3122,9 @@
     if (sg7) sg7.classList.toggle("hurry", !calm && clock.left <= 5.05 && clock.left > 0 && (clock.running || (OG && OG.phase === "answer")));
     var dfx = $("dangerFx");
     if (dfx) dfx.classList.toggle("on", !calm && clock.running && clock.left <= 5.05 && clock.left > 0);
+    /* Graphics Pass 2: the clock's final three seconds hold the
+       room's breath, on the same Calm Table gate as the hurry */
+    if (clock.running && !calm && clock.left <= 3.05 && clock.left > 0 && plotState === "question") setPlot("breath");
     if (clock.running) {
       var w = Math.ceil(clock.left);
       if (w !== Snd._lw) { Snd._lw = w; if (w <= 10 && w >= 1) Snd.play("tick"); }
@@ -3054,7 +3144,38 @@
   /* every stage repaint is a curtain: coins still in the air from
      the last card come down with it (pass 7) — flights start only
      after their own reveal has painted, so this never eats one */
-  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); }
+  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); flapSweep(); }
+  /* Graphics Pass 1 — THE CURTAIN: one element, three postures.
+     Closed BEHIND the front-of-curtain cards (round intros, the
+     breaks, the finale); raised over the stage for one beat while
+     it closes over a finished round or parts over a round's first
+     question; open — panels bunched at the edges — while the show
+     plays. The seq token keeps a stale timer from dropping the
+     curtain's z-order after a newer posture has been set. */
+  var curtainSeq = 0;
+  function curtainSnapClosed() {
+    var c = $("curtain"); if (!c) return; curtainSeq++;
+    c.classList.add("snap"); c.dataset.state = "closed"; c.classList.add("behind");
+    requestAnimationFrame(function () { requestAnimationFrame(function () { c.classList.remove("snap"); }); });
+  }
+  function curtainEnsureClosed() {
+    var c = $("curtain"); if (!c) return;
+    if (c.dataset.state !== "closed") curtainSnapClosed();
+  }
+  function curtainClose() {
+    var c = $("curtain"); if (!c) return;
+    if (c.dataset.state === "closed" && c.classList.contains("behind")) return;
+    var my = ++curtainSeq;
+    c.classList.remove("behind"); c.dataset.state = "closed";
+    setTimeout(function () { if (curtainSeq === my) c.classList.add("behind"); }, 980);
+  }
+  function curtainPart() {
+    var c = $("curtain"); if (!c) return;
+    if (c.dataset.state === "open") return;
+    var my = ++curtainSeq;
+    c.classList.remove("behind"); c.dataset.state = "open";
+    setTimeout(function () { if (curtainSeq === my) c.classList.add("behind"); }, 1020);
+  }
   function standingsHTML() {
     var order = G.players.map(function (p, i) { return i; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
@@ -3075,7 +3196,7 @@
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
         '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
         medallionSVG(p.name, pi) +
-        '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
+        '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + flapSpan("stand" + pi, money(p.score)) + "</div></div></div>";
     }).join("");
     var leadName = G.players[order[0]].name, lastName = G.players[order[order.length - 1]].name;
     var line = order[0] === order[order.length - 1]
@@ -4783,6 +4904,8 @@
      round just played is G.round - 1 — at entry and on a resume
      alike, which is what makes the repaint identical */
   function paintIntermission() {
+    setPlot("house"); /* Graphics Pass 2: the break rests at house light */
+    curtainEnsureClosed(); /* Graphics Pass 1: the break is a front-of-curtain card */
     stagePhase("intermission");
     /* Pass 8: while the Decade Vote stands open the desks are the
        ballot box, so the seats show; every other break rests
@@ -4841,6 +4964,7 @@
     paintIntermission();
   }
   function beginIntermission() {
+    curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
     G.phase = "intermission";
     /* Dynamics pass D2 — Second Wind: the grant fires HERE, at
        the moment the break begins — every seat tied for last
@@ -4883,6 +5007,9 @@
   }
 
   function roundIntro() {
+    setCam(G.round); /* Graphics Pass 3: the push happens at the round intro */
+    setPlot("house"); /* Graphics Pass 2: intros play at house light */
+    curtainEnsureClosed(); /* Graphics Pass 1: the intro card hangs on the closed curtain */
     G.phase = "intro"; stagePhase("intro"); setLight(G.round === 1 ? "open" : G.round === 2 ? "hot" : "vault");
     seatsVisible(false);
     updateTop(); renderSeats();
@@ -5708,6 +5835,9 @@
   }
 
   function askCurrent() {
+    setCam(G.decider ? "decider" : G.round); /* Graphics Pass 3: resumes land at the round's framing */
+    setPlot("question"); /* Graphics Pass 2: the room falls away, the card is lit */
+    curtainPart(); /* Graphics Pass 1: a round's first question opens the curtain */
     G.phase = "question"; stagePhase("question");
     if (G.cur) G.cur.picksLive = true; /* Pass 8: dealt under the no-host flow */
     audDecider(!!(G.cur && G.cur.decider)); /* V4: the Decider hushed from its first second */
@@ -5970,9 +6100,11 @@
     });
     if (!allIn) {
       if (tableGraceTimer && tableGraceCur === c) { clearTimeout(tableGraceTimer); tableGraceTimer = null; tableGraceCur = null; }
+      if (plotState === "breath") setPlot("question"); /* a withdrawn pick lets the room breathe again */
       return;
     }
     if (tableGraceTimer && tableGraceCur === c) return;
+    setPlot("breath"); /* Graphics Pass 2: everyone is in — the room holds its breath */
     tableGraceCur = c;
     tableGraceTimer = setTimeout(function () {
       tableGraceTimer = null;
@@ -6611,12 +6743,24 @@
     if (c.decider && G.decider) {
       buildDeciderFx();
       audDecider(false); /* V4: no ripple for the Decider — nothing banked; the hush simply lifts */
+      setPlot("reveal", null); /* Graphics Pass 2: the verdict lands in cool light — nothing was banked */
       paintReveal();
       saveTableShow();
       return;
     }
     var winners = Object.keys(c.marks).map(Number).sort(function (a, b) { return a - b; });
     var qdSeat = quickDrawWinner(c);
+    /* Graphics Pass 2: the footlights wash in the colour of the
+       seat that banked first — the Quick Draw winner when they
+       banked, else the earliest banker in the lock order; a
+       room-wide miss keeps the cool slate */
+    var washSeat = null;
+    if (qdSeat != null && c.marks[qdSeat]) washSeat = qdSeat;
+    else if (winners.length) {
+      var bankOrder = (c.lockOrder || []).filter(function (i) { return c.marks[i]; });
+      washSeat = bankOrder.length ? bankOrder[0] : winners[0];
+    }
+    setPlot("reveal", washSeat);
     /* Hot Streaks: settle the runs BEFORE the money moves, so the
        bonus lands inside the same single commit as every other
        dollar this reveal pays; the record rides the question so a
@@ -6885,6 +7029,7 @@
     };
   }
   function beginDecider(tied) {
+    setCam("decider"); /* Graphics Pass 3: one step closer for the Decider */
     G.decider = { eligible: tied.slice(), usedIds: [], dealt: 0, winner: null };
     dealDeciderQuestion();
   }
@@ -6927,7 +7072,52 @@
     if (tied.length > 1) { beginDecider(tied); return; }
     winnerScreen(tied[0], null);
   }
+  /* Graphics Pass 5 — THE SEALED ENVELOPE: the crowning is a
+     ritual now. Before the winner screen paints, Sterling
+     produces the envelope — sealed, in the fiction, when the
+     Big Finish began — and the champion's name comes out of it
+     on a card. The seal breaks on its own clock (or the room's
+     tap); the card's button then deals the crowning proper.
+     Drawn shows (tiedIdx) skip the envelope: there is no single
+     name to seal. Resumed finales never see it — a finished
+     show clears its save before this can be re-entered. */
+  function envelopeHTML(name, total) {
+    return '<div class="env-wrap"><div class="round-kicker">THE GILDED HOUR · THE RESULT</div>' +
+      '<div class="env-scene"><div class="env" id="envBox">' +
+      '<div class="env-card"><div class="env-card-k">★ THE GILDED HOUR CHAMPION ★</div><div class="env-card-name">' + esc(name) + '</div><div class="env-card-rule"></div><div class="env-card-sub">' + esc(total) + '</div></div>' +
+      '<div class="env-back"></div><div class="env-pocket"></div><div class="env-flap"></div><div class="env-seal">GH</div>' +
+      '</div></div>' +
+      '<p class="round-text env-cap" id="envCap">Sealed when the Big Finish began — not even Sterling has seen the name since.</p>' +
+      '<button class="btn-gold" id="btnEnvOpen">BREAK THE SEAL</button></div>';
+  }
+  function envelopeWire(onDone) {
+    var opened = false, t = 0;
+    function open() {
+      var box = $("envBox"); if (!box || opened) return;
+      opened = true;
+      box.classList.add("open");
+      Snd.play("coin");
+      var cap = $("envCap"); if (cap) cap.textContent = "The card reads…";
+      var b = $("btnEnvOpen"); if (b) b.textContent = "TO THE CROWNING";
+    }
+    t = setTimeout(open, 2800);
+    $("btnEnvOpen").addEventListener("click", function () {
+      if (!opened) { clearTimeout(t); open(); return; }
+      onDone();
+    });
+  }
+  function envelopeBeat(i, tiedIdx) {
+    setCam(1); /* Graphics Pass 3: the crowning pulls back wide */
+    setPlot("house"); /* Graphics Pass 2: house light for the ritual */
+    var p = G.players[i];
+    stage(envelopeHTML(p.name, money(p.score + (G.pot || 0))));
+    envelopeWire(function () { G._envDone = true; winnerScreen(i, tiedIdx); });
+    autoGo("btnEnvOpen", "env", 14000, function () { return !!G && !G._envDone; });
+  }
   function winnerScreen(i, tiedIdx) {
+    if (!tiedIdx && !G._envDone) { envelopeBeat(i, tiedIdx); return; }
+    setCam(1); /* Graphics Pass 3: the crowning pulls back wide */
+    setPlot("house"); /* Graphics Pass 2: the room comes back up for the crowning */
     G.phase = "over"; stagePhase("over");
     setMood("delight");
     clearTableSave(); /* the show is complete — nothing left to resume */
@@ -8885,7 +9075,7 @@
       return '<div class="podium pod' + pi + " big rank" + (pos + 1) + (pos === 0 ? " lit" : "") + '">' +
         '<span class="rank-badge ' + badgeCls + '">' + (pos + 1) + "</span>" + (pos === 0 ? laurelBadge() : "") + chips +
         medallionSVG(p.name, pi) +
-        '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + money(p.score) + "</div></div></div>";
+        '<div class="desk"><div class="pname">' + esc(p.name) + '</div><div class="pmoney">' + flapSpan("stand" + pi, money(p.score)) + "</div></div></div>";
     }).join("");
     var line = order.length < 2
       ? "The race is young. The kitchen is everybody's tonight."
@@ -8901,12 +9091,15 @@
       pods + "</div></div></div>";
   }
   function ogIntro() {
+    setPlot("house"); /* Graphics Pass 2: intros play at house light */
+    curtainEnsureClosed(); /* Graphics Pass 1: the intro card hangs on the closed curtain */
     /* Designer pass 6: a Round 2 or 3 intro needs its entry —
        if the tail has somehow not been dealt (a plan restored
        around the vote), deal it now under whatever era stands */
     if (!OG.script[OG.idx] && OG.idx < R1_COUNT + R2_COUNT + R3_COUNT) ogBuildTail();
     var e = OG.script[OG.idx]; if (!e) return;
     OG.curRound = e.round;
+    setCam(e.round); /* Graphics Pass 3: the push happens at the round intro */
     OG.phase = "intro"; stagePhase("intro");
     setLight(e.round === 1 ? "open" : e.round === 2 ? "hot" : "vault");
     seatsVisible(false);
@@ -9163,7 +9356,8 @@
     return '<div class="bluff-credits">' + rows + '</div>';
   }
   function ogShowQuestion(e, q) {
-
+    setPlot("question"); /* Graphics Pass 2: the room falls away, the card is lit */
+    curtainPart(); /* Graphics Pass 1: a round's first question opens the curtain */
     OG.phase = "answer"; OG.cur = e; stagePhase("question");
     /* THE BLUFF: the answers were dealt by the room — the entry
        adopts the snapshot's texts (authorship stays in the room) */
@@ -9279,6 +9473,7 @@
   }
   function ogOnReveal(r, fromSnap) {
     if (!OG || !OG.cur) return;
+    setPlot("reveal", (r.winners && r.winners.length) ? r.winners[0] : null); /* Graphics Pass 2: the wash takes the first banker's colour */
     if (OG.lastRevealQid === r.qid && OG.phase === "reveal") return;
     OG.lastRevealQid = r.qid;
     OG.phase = "reveal"; stagePhase("reveal");
@@ -9560,6 +9755,8 @@
     return counts;
   }
   function ogPaintIntermission(nextRound) {
+    setPlot("house"); /* Graphics Pass 2: the break rests at house light */
+    curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
     var view = breakView(ogBreakSeats(), OG.facts, nextRound - 1, OG.pot || 0, OG.breakWind ? OG.breakWind.names : null, OG.rules);
     /* Designer pass 6: while the count stands open, the card
        holds its BEGIN back and the panel shows the room's tally
@@ -9647,6 +9844,31 @@
   }
   function ogWinner() {
     if (!OG || OG.phase === "over") return;
+    /* Graphics Pass 5: the online crowning takes the envelope
+       too — the same verdict computation ogWinner is about to
+       run, read early so the card can carry the name; a drawn
+       show has no name to seal and goes straight through */
+    if (!OG._envDone) {
+      var eIdxs = [];
+      OG.players.forEach(function (p, i) { if (p) eIdxs.push(i); });
+      if (eIdxs.length) {
+        var eBest = Math.max.apply(null, eIdxs.map(function (i) { return OG.players[i].score; }));
+        var eTied = eIdxs.filter(function (i) { return OG.players[i].score === eBest; });
+        var eDec = (OG.decider && OG.decider.winner != null && OG.players[OG.decider.winner]) ? OG.decider.winner : null;
+        if (eDec != null || eTied.length === 1) {
+          var eSeat = eDec != null ? eDec : eTied[0];
+          OG._envDone = "pending";
+          setCam(1);
+          setPlot("house");
+          stage(envelopeHTML(OG.players[eSeat].name, money(OG.players[eSeat].score + (OG.pot || 0))));
+          envelopeWire(function () { OG._envDone = true; ogWinner(); });
+          return;
+        }
+      }
+      OG._envDone = true;
+    }
+    setCam(1); /* Graphics Pass 3: the crowning pulls back wide */
+    setPlot("house"); /* Graphics Pass 2: the room comes back up for the crowning */
     OG.phase = "over"; stagePhase("over");
     setMood("delight");
     ogClearHostSave(); /* the show ended — its save retires with it */

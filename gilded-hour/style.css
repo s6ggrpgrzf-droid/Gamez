@@ -3711,6 +3711,135 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
 .num-lock{min-width:196px}
 
 /* ================================================================
+   GRAPHICS PASS 1 — THE CURTAIN (2026-11-14): the set gains a
+   working theatre curtain. Drawn velvet only — folded navy
+   gradients, a scalloped swag valance, gold fringe and cord, the
+   show's GH medallion at the seam. The curtain is the backdrop
+   for the front-of-curtain cards (round intros, the breaks, the
+   finale): closed behind them, it covers the stage for one beat
+   when a round ends, and it parts over the first question of a
+   round to open the show again. Pointer-events none throughout —
+   it never stands between a tap and the game.
+   ================================================================ */
+#stageWrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+#curtain{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+#curtain.behind{z-index:0}
+#curtain.snap,#curtain.snap .cur-panel,#curtain.snap .cur-valance,#curtain.snap .cur-medallion{transition:none!important}
+.cur-panel{position:absolute;top:0;bottom:0;width:51%;transition:transform .95s cubic-bezier(.22,.8,.24,1);
+  background:
+   linear-gradient(180deg,rgba(240,210,150,.06),rgba(0,0,0,.24) 55%,rgba(0,0,0,.5)),
+   repeating-linear-gradient(90deg,rgba(4,8,18,.5) 0 7px,rgba(4,8,18,0) 7px 36px,rgba(130,165,235,.09) 42px 50px,rgba(4,8,18,0) 56px 84px),
+   repeating-linear-gradient(90deg,rgba(4,8,18,.34) 0 3px,rgba(4,8,18,0) 3px 61px,rgba(130,165,235,.05) 66px 71px,rgba(4,8,18,0) 76px 113px),
+   linear-gradient(90deg,#152b52,#0b1830 55%,#14294e);
+  box-shadow:inset 0 -26px 34px rgba(0,0,0,.5)}
+.cur-left{left:0;border-right:2px solid rgba(201,164,92,.55)}
+.cur-right{right:0;border-left:2px solid rgba(201,164,92,.55)}
+.cur-panel::before{content:"";position:absolute;left:0;right:0;bottom:0;height:11px;opacity:.55;
+  background:linear-gradient(180deg,rgba(201,164,92,.7),rgba(201,164,92,0) 3px),repeating-linear-gradient(90deg,#caa657 0 2px,rgba(202,166,87,0) 2px,rgba(202,166,87,0) 7px)}
+.cur-left::after{content:"";position:absolute;top:0;bottom:0;right:0;width:34%;background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.42))}
+.cur-right::after{content:"";position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(270deg,rgba(0,0,0,0),rgba(0,0,0,.42))}
+#curtain[data-state="open"] .cur-left{transform:translateX(-93%)}
+#curtain[data-state="open"] .cur-right{transform:translateX(93%)}
+.cur-valance{position:absolute;top:0;left:0;right:0;height:54px;transition:transform .7s ease .5s;
+  background:
+   radial-gradient(circle at 50% -30%,rgba(240,210,150,.10),rgba(0,0,0,0) 60%),
+   repeating-linear-gradient(90deg,rgba(4,8,18,.45) 0 6px,rgba(4,8,18,0) 6px 30px,rgba(130,165,235,.08) 35px 42px,rgba(4,8,18,0) 47px 68px),
+   linear-gradient(90deg,#122544,#0a1730 55%,#122544);
+  box-shadow:0 10px 22px rgba(0,0,0,.45)}
+.cur-valance::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;opacity:.6;
+  background:radial-gradient(circle at 50% 0,rgba(202,166,87,.9) 0 2px,rgba(202,166,87,0) 3px) 0 0/46px 10px repeat-x,linear-gradient(180deg,rgba(201,164,92,0) 6px,rgba(201,164,92,.65) 6px,rgba(201,164,92,.65) 8px,rgba(201,164,92,0) 8px)}
+#curtain[data-state="open"] .cur-valance{transform:translateY(-106%);transition-delay:0s}
+.cur-medallion{position:absolute;left:50%;top:34%;width:84px;height:84px;margin:-42px 0 0 -42px;transition:opacity .45s ease,transform .45s ease;filter:drop-shadow(0 6px 16px rgba(0,0,0,.55))}
+.cur-medallion .cm-ring{fill:#0d1b33;stroke:#c9a45c;stroke-width:2}
+.cur-medallion .cm-face{fill:#122544;stroke:rgba(201,164,92,.45);stroke-width:1}
+.cur-medallion .cm-text{font:700 30px GHSerif,serif;fill:#e7c87e;text-anchor:middle;letter-spacing:2px}
+#curtain[data-state="open"] .cur-medallion{opacity:0;transform:scale(.82)}
+/* the medallion belongs to the moving beats — while the curtain
+   rests behind a card it is gone, so it never floats in the
+   card's text */
+#curtain.behind .cur-medallion{opacity:0}
+
+/* ================================================================
+   GRAPHICS PASS 2 — THE LIGHTING PLOT (2026-11-14): one lighting
+   system with a script, layered over the round moods (data-light
+   keeps the round; data-plot keeps the moment). HOUSE: lobby,
+   intros and breaks at full even light. QUESTION: the room falls
+   away — seats and host bar dim, the set's glow drops, and the
+   spot pool rises over the card. BREATH: the last seconds before
+   a reveal (the all-in grace, or the clock's final three) drop
+   the room further. REVEAL: the footlights wash up in the
+   banking seat's colour (--wash, set by the game; a cool slate
+   when nobody banks). Calm Table stands the breath down with
+   the rest of the hurry layer.
+   ================================================================ */
+#wash{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.1s ease;
+  background:radial-gradient(115% 62% at 50% 112%,var(--wash,#33507e) 0%,rgba(0,0,0,0) 62%)}
+#scr-game[data-plot="reveal"] #wash{opacity:.5}
+#scr-game .seats,#scr-game #hostbar{transition:filter .9s ease}
+#scr-game[data-plot="question"] .seats,#scr-game[data-plot="question"] #hostbar{filter:brightness(.84)}
+#scr-game[data-plot="breath"] .seats,#scr-game[data-plot="breath"] #hostbar{filter:brightness(.66)}
+#scr-game[data-plot="question"] .set-glow,#scr-game[data-plot="question"] .set-lights{opacity:.45}
+#scr-game[data-plot="breath"] .set-glow,#scr-game[data-plot="breath"] .set-lights{opacity:.22}
+#scr-game[data-plot="question"] #spot{opacity:.9}
+#scr-game[data-plot="breath"] #spot{opacity:.95}
+
+/* ================================================================
+   GRAPHICS PASS 3 — THE CAMERA PUSH-IN (2026-11-14): the framing
+   tightens across the night. One scale, applied to the set and
+   the table together (the top bar and host bar stay the
+   broadcast frame), moving on a slow 2.8s push at each round
+   intro: the Warm-Up wide, Double Money a step closer, the Big
+   Finish closest, and one step more for a Decider. The crowning
+   pulls back wide. #scr-game crops the overflow, so a push reads
+   as a camera move, never as a resize.
+   ================================================================ */
+#scr-game{--cam:1}
+#scr-game[data-cam="2"]{--cam:1.045}
+#scr-game[data-cam="3"]{--cam:1.09}
+#scr-game[data-cam="decider"]{--cam:1.13}
+#scr-game .set{transition:filter 1.2s ease,transform 2.8s cubic-bezier(.25,.7,.25,1)}
+#scr-game #table{transition:transform 2.8s cubic-bezier(.25,.7,.25,1)}
+#scr-game .set,#scr-game #table{transform:scale(var(--cam));transform-origin:50% 36%}
+
+/* ================================================================
+   GRAPHICS PASS 4 — SPLIT-FLAP STANDINGS (2026-11-14): the
+   podium board's money prints on flap wheels, station-board
+   style — each digit its own tile, split at the middle like a
+   Solari flap, cream figures on deep navy. A figure that changed
+   since the board last stood rolls its wheels forward to the
+   new number (the roll itself is driven from game.js).
+   ================================================================ */
+.flap-val{display:inline-flex;gap:1px;vertical-align:baseline}
+.flap-ch{display:inline-block;min-width:.58em;padding:0 .05em;text-align:center;border-radius:2px;color:#F3E9CF;background:linear-gradient(180deg,#26335a 0%,#1a2440 48%,#0a0f20 50%,#131d36 54%,#1a2440 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08)}
+.flap-ch.flip{animation:ghFlapFlip .1s ease}
+@keyframes ghFlapFlip{50%{transform:rotateX(82deg)}}
+
+/* ================================================================
+   GRAPHICS PASS 5 — THE SEALED ENVELOPE (2026-11-14): the
+   crowning opens with a cream envelope under a gold wax seal.
+   On the break: the seal cracks and falls, the flap folds back,
+   and the champion's card rises out of the pocket — ivory stock,
+   the name in the serif, the total beneath a gold rule. Drawn
+   in gradients and clip-paths only, like everything on this set.
+   ================================================================ */
+.env-wrap{text-align:center;padding-top:6px}
+.env-scene{display:flex;justify-content:center;padding:66px 0 6px}
+.env{position:relative;width:min(320px,80vw);height:198px}
+.env-back{position:absolute;inset:0;z-index:0;border-radius:6px;background:linear-gradient(160deg,#f1e5c6,#e3d2a8);box-shadow:0 18px 34px rgba(0,0,0,.5)}
+.env-card{position:absolute;left:14px;right:14px;top:12px;bottom:12px;z-index:1;border-radius:4px;background:#fbf6e9;box-shadow:0 2px 8px rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;transform:translateY(8px);transition:transform 1.05s cubic-bezier(.22,.8,.24,1) .5s}
+.env.open .env-card{transform:translateY(-56px)}
+.env-card-k{font:600 9px var(--font);letter-spacing:.22em;color:#8a6d2f}
+.env-card-name{font-family:'GHSerif',serif;font-size:30px;line-height:1.05;color:#221a10}
+.env-card-rule{width:54px;height:2px;background:var(--gold)}
+.env-card-sub{font:600 10px var(--font);letter-spacing:.14em;color:#6b5a33}
+.env-pocket{position:absolute;inset:0;z-index:2;border-radius:6px;background:linear-gradient(180deg,#ecdcb4,#dfcb9c);clip-path:polygon(0 30%,50% 60%,100% 30%,100% 100%,0 100%)}
+.env-flap{position:absolute;inset:0;z-index:4;border-radius:6px;background:linear-gradient(180deg,#f6ecd4,#e9dab4);clip-path:polygon(0 0,100% 0,50% 56%);transform-origin:50% 0;transition:transform .8s cubic-bezier(.5,0,.3,1) .1s}
+.env.open .env-flap{transform:rotateX(180deg);z-index:0}
+.env-seal{position:absolute;left:50%;top:52%;z-index:5;width:48px;height:48px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 30%,#e8c877,#b98a2e 55%,#8a5f16);color:#3d2703;font-family:'GHSerif',serif;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.45),inset 0 1px 2px rgba(255,255,255,.6),inset 0 -2px 4px rgba(0,0,0,.3);transition:opacity .4s ease,transform .4s ease}
+.env.open .env-seal{opacity:0;transform:translate(-50%,-28%) rotate(30deg) scale(.82)}
+.env-cap{margin-top:12px}
+
+/* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
    for tall compositions — measured with the report rows pinned
    to their full four facts (a real night's card, long category

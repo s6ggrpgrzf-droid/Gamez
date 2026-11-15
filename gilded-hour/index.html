@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#12061A">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=99">
+<link rel="stylesheet" href="style.css?v=104">
 </head>
 <body>
 <div id="app">
@@ -355,7 +355,7 @@
   </section>
 
   <!-- ============ GAME ============ -->
-  <section id="scr-game" class="screen" data-light="open">
+  <section id="scr-game" class="screen" data-light="open" data-plot="house">
     <div class="set" aria-hidden="true"><div class="set-deep"></div><div class="set-walls"></div><div class="set-mid"></div><div class="set-glow"></div><div class="set-cat"><div class="set-cat-glow"></div><svg class="set-cat-emb set-cat-a" viewBox="0 0 48 48" aria-hidden="true"><use href="#emb-movies"></use></svg><svg class="set-cat-emb set-cat-b" viewBox="0 0 48 48" aria-hidden="true"><use href="#emb-movies"></use></svg></div><div class="set-floor"></div><div class="set-fore"></div><div class="set-rim"><div class="rim-wide"></div><div class="rim-tight"></div></div><div class="set-lights"></div><div class="set-aud" aria-hidden="true"><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span><span class="aud-fig"></span></div></div>
     <div id="bloom" aria-hidden="true"></div>
     <canvas id="moteCanvas" aria-hidden="true"></canvas>
@@ -368,10 +368,19 @@
 
     <div id="table">
       <div id="spot" aria-hidden="true"></div>
+      <div id="wash" aria-hidden="true"></div>
       <div id="laurel" class="off" aria-hidden="true"></div>
       <div id="seatsTop" class="seats seats-top"></div>
+      <div id="stageWrap">
+      <div id="curtain" data-state="closed" class="behind snap" aria-hidden="true">
+        <div class="cur-panel cur-left"></div>
+        <div class="cur-panel cur-right"></div>
+        <div class="cur-valance"></div>
+        <div class="cur-medallion"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="39" class="cm-ring"/><circle cx="42" cy="42" r="33" class="cm-face"/><text x="42" y="53" class="cm-text">GH</text></svg></div>
+      </div>
       <div id="stage">
         <!-- dynamic stage content rendered by game.js -->
+      </div>
       </div>
       <div id="deskHead" class="desk-head"></div>
       <div id="seatsBottom" class="seats seats-bottom"></div>
@@ -479,7 +488,7 @@
 </div>
 <script src="questions.js?v=11"></script>
 <script src="qr.js?v=1"></script>
-<script src="game.js?v=94"></script>
+<script src="game.js?v=99"></script>
 <script>
 /* Review Pass 7 (2026-11-14): the Party-Proof Shell is retired —
    the show plays online only, and nothing registers a worker any
