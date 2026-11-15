@@ -134,7 +134,12 @@ const server = http.createServer((req, res) => {
       if (s.phase === 'vote' || s.phase === 'vote-count') { await sleep(180); continue; }
       if (s.phase === 'reveal') {
         if (!jumped && s.round === 1) { await page.evaluate(() => { const g = window.__game.G; g.qInRound = 5; }); jumped = true; }
-        await page.tap('#btnNext'); await sleep(200); continue;
+        /* no-host (Review Pass 8): reveals advance on Sterling's
+           clock and do not always present #btnNext — tap it when
+           it is there, otherwise let the clock carry the beat. */
+        const nb = await page.$('#btnNext');
+        if (nb) { await nb.tap(); }
+        await sleep(200); continue;
       }
       await sleep(180);
     }

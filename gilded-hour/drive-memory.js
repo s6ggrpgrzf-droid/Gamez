@@ -219,7 +219,13 @@ function memoryCandidates(page, ls) {
           await page3.evaluate(() => { const g = window.__game.G; g.round = 3; g.qInRound = 1; });
           jumped = true;
         }
-        await page3.tap('#btnNext'); await sleep(220); continue;
+        /* no-host (Review Pass 8): reveals advance on Sterling's
+           clock and do not always present #btnNext — tap it when
+           it is there, otherwise let the clock carry the beat
+           (the same guarded pattern drive.js uses). */
+        const nb = await page3.$('#btnNext');
+        if (nb) { await nb.tap(); }
+        await sleep(220); continue;
       }
       await sleep(200);
     }
