@@ -3880,6 +3880,59 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
 .sterling-lg{filter:drop-shadow(0 0 3px rgba(246,235,203,.5)) drop-shadow(0 0 22px rgba(233,205,138,.4))}
 
 /* ================================================================
+   FIT PASS (2026-11-15) — the paperwork screens, fitted to their
+   frames. From the design review: the core beats were polished;
+   the transitional screens overflowed theirs. Each rule answers
+   a measured overflow (drive-fit.js holds the numbers):
+   (1) the round-intro ledger ran past a short stage — last row
+   15px over, its GO button ~130px below the fold, the pot
+   vessel sitting on its rows. On a short stage the ledger now
+   reads in two columns, and the vessel sits card beats out,
+   the same courtesy it already paid questions.
+   (2) the IF THEY BANK strip was sized to the viewport rather
+   than the stage and spilled past both edges under the
+   camera's crop — it takes the desk head's own width now and
+   may wrap instead of spilling.
+   (3) portrait CUT TWO tags truncated mid-word ("Player One's
+   one lif…") at nowrap 8.5px — they wrap to a second line.
+   (5) the sealed envelope's button never reached the screen
+   on a short stage: the scene stood 314px against the
+   stage's 233, so the button fell below the stage's clip
+   (elementFromPoint at its centre named the table's floor,
+   not the button). The scene now fits the stage whole —
+   tighter crown padding, a lower envelope, a smaller
+   caption — and the button paints inside the frame.
+   (6) the cold-open sub-line spent most of its 2.1s beat
+   half-faded (a .85s delay on a .6s fade) — it lands by .9s.
+   (7) Sterling's longest break lines ran past the bottom of
+   his rail — the rail's line gets the smaller, tighter dress
+   the race and finale bubbles already wear.
+   (Item 4, the portrait clock ring, measured clear of the
+   question card by 12px settled — a mid-relayout frame in the
+   review tour, not a defect; no rule here, the drive keeps
+   the measurement as a guard.)
+   ================================================================ */
+.co-sub{animation-delay:.4s;animation-duration:.5s}
+@media (max-width:560px){
+  #scr-game .tool-btn small{white-space:normal;line-height:1.25}
+}
+@media (max-height:500px){
+  .break-card .fact-list{columns:2;column-gap:26px}
+  .break-card .fact-row{break-inside:avoid;padding:2px 2px}
+  .break-card .fact-k{flex-basis:86px;font-size:10px}
+  .break-card .fact-v{font-size:12.5px;line-height:1.3}
+  #stage:has(.fact-list) .pot-vessel{display:none}
+  #stage:has(.fact-list) #btnRoundGo{position:sticky;bottom:8px;z-index:3}
+  .desk-head .proj-wrap{width:100%;max-width:100%;flex-wrap:wrap}
+  .desk-head .proj-strip{flex-wrap:wrap}
+  .env-wrap{padding-top:2px}
+  .env-scene{padding-top:8px}
+  .env{width:min(300px,80vw);height:140px}
+  .env-cap{font-size:11.5px;line-height:1.3;margin:5px auto 7px;max-width:430px}
+  #scr-game #hostbar .host-line{font-size:12px;line-height:1.3;min-height:0}
+}
+
+/* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
    for tall compositions — measured with the report rows pinned
    to their full four facts (a real night's card, long category
