@@ -1772,7 +1772,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
    below). The coin flights target the element itself, so they
    follow it to whichever dock the phase uses. */
 @media (max-height:500px){
-  #stage:has(#btnCallIt) .pot-vessel,#stage:has(#ogCallIt) .pot-vessel{top:40px;bottom:auto}
+  #stage:has(.q-cardwrap) .pot-vessel{top:40px;bottom:auto}
   #stage:has(.bet-row) .pot-vessel{left:10px;bottom:2px}
   #stage:has(.bet-row) .pot-vessel .pot-label{display:none}
   #stage:has(.bet-row) .pot-vessel .pot-body{height:20px}
@@ -1784,7 +1784,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
      every edge — so there the vessel sits the question out. It is
      back at its bottom-left home for the vote (that stage's foot
      is empty), the reveal its moment lives in, and the bet. */
-  #stage:has(#btnCallIt) .pot-vessel,#stage:has(#ogCallIt) .pot-vessel{display:none}
+  #stage:has(.q-cardwrap) .pot-vessel{display:none}
 }
 .seat .desk .seat-name,.seat .desk .seat-score{position:relative;z-index:1}
 @media (max-height:500px){
@@ -2790,7 +2790,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
      pot is not spendable mid-question, its feed moment is the
      reveal, and there it returns. The tools row reclaims the
      88px the dock used to hold. */
-  #scr-game #stage:has(#btnCallIt) .pot-vessel,#scr-game #stage:has(#ogCallIt) .pot-vessel{display:none}
+  #scr-game #stage:has(.q-cardwrap) .pot-vessel{display:none}
 }
 
 /* Designer's pass P16 (2026-11-11): Sterling's expressions.
@@ -3823,7 +3823,7 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
    in gradients and clip-paths only, like everything on this set.
    ================================================================ */
 .env-wrap{text-align:center;padding-top:6px}
-.env-scene{display:flex;justify-content:center;padding:66px 0 6px}
+.env-scene{display:flex;justify-content:center;padding:78px 0 6px}
 .env{position:relative;width:min(320px,80vw);height:198px}
 .env-back{position:absolute;inset:0;z-index:0;border-radius:6px;background:linear-gradient(160deg,#f1e5c6,#e3d2a8);box-shadow:0 18px 34px rgba(0,0,0,.5)}
 .env-card{position:absolute;left:14px;right:14px;top:12px;bottom:12px;z-index:1;border-radius:4px;background:#fbf6e9;box-shadow:0 2px 8px rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;transform:translateY(8px);transition:transform 1.05s cubic-bezier(.22,.8,.24,1) .5s}
@@ -3832,12 +3832,31 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
 .env-card-name{font-family:'GHSerif',serif;font-size:30px;line-height:1.05;color:#221a10}
 .env-card-rule{width:54px;height:2px;background:var(--gold)}
 .env-card-sub{font:600 10px var(--font);letter-spacing:.14em;color:#6b5a33}
+.env-side{position:absolute;inset:0;z-index:2;border-radius:6px;background:linear-gradient(90deg,#e7d6ae,#e0cd9e)}
+.env-side-l{clip-path:polygon(0 0,0 100%,47% 50%)}
+.env-side-r{clip-path:polygon(100% 0,100% 100%,53% 50%);background:linear-gradient(270deg,#e7d6ae,#e0cd9e)}
 .env-pocket{position:absolute;inset:0;z-index:2;border-radius:6px;background:linear-gradient(180deg,#ecdcb4,#dfcb9c);clip-path:polygon(0 30%,50% 60%,100% 30%,100% 100%,0 100%)}
 .env-flap{position:absolute;inset:0;z-index:4;border-radius:6px;background:linear-gradient(180deg,#f6ecd4,#e9dab4);clip-path:polygon(0 0,100% 0,50% 56%);transform-origin:50% 0;transition:transform .8s cubic-bezier(.5,0,.3,1) .1s}
 .env.open .env-flap{transform:rotateX(180deg);z-index:0}
 .env-seal{position:absolute;left:50%;top:52%;z-index:5;width:48px;height:48px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 30%,#e8c877,#b98a2e 55%,#8a5f16);color:#3d2703;font-family:'GHSerif',serif;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.45),inset 0 1px 2px rgba(255,255,255,.6),inset 0 -2px 4px rgba(0,0,0,.3);transition:opacity .4s ease,transform .4s ease}
 .env.open .env-seal{opacity:0;transform:translate(-50%,-28%) rotate(30deg) scale(.82)}
 .env-cap{margin-top:12px}
+
+/* ================================================================
+   GRAPHICS PASS 6 — THE POT, FILLED HONESTLY (2026-11-14): the
+   brass vessel now SHOWS its contents — a fill of coin-gold
+   whose level is the pot against a $3,000 full bowl, its top a
+   bumpy coin surface. The level is set from the same displayed
+   figure the total prints, so it rises as a feed's coins land
+   and the count ticks up. An empty pot shows dark brass, as it
+   should. (This pass also re-keys the vessel's short-landscape
+   question dock: the old rules keyed on the CALL IT buttons the
+   no-host pass removed, so they never fired — the living key is
+   the question card itself.)
+   ================================================================ */
+.pot-body{overflow:hidden}
+.pot-fill{position:absolute;left:2px;right:2px;bottom:2px;height:0;border-radius:0 0 42% 42%/0 0 58% 58%;background:linear-gradient(180deg,#EFC65E,#D9A83F 55%,#B9822C);transition:height .45s ease}
+.pot-fill::before{content:"";position:absolute;top:-3px;left:0;right:0;height:8px;border-radius:50%;background:radial-gradient(circle at 28% 55%,#FFE9A8 2.2px,transparent 3px),radial-gradient(circle at 52% 35%,#FFE9A8 2.2px,transparent 3px),radial-gradient(circle at 74% 55%,#FFDF8E 2.2px,transparent 3px),linear-gradient(180deg,#F6D67C,#EFC65E)}
 
 /* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled

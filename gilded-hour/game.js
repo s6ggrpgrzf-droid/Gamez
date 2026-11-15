@@ -2263,7 +2263,7 @@
       v = document.createElement("div");
       v.className = "pot-vessel";
       v.setAttribute("aria-hidden", "true");
-      v.innerHTML = '<div class="pot-rim"></div><div class="pot-body"><span class="pot-shine"></span></div>' +
+      v.innerHTML = '<div class="pot-rim"></div><div class="pot-body"><div class="pot-fill"></div><span class="pot-shine"></span></div>' +
         '<div class="pot-label">THE POT</div><div class="pot-total">$0</div>';
       st.appendChild(v);
       /* born settled at the truth, minus a feed whose flight is
@@ -2277,6 +2277,13 @@
     var v = ensurePotVessel(); if (!v) return;
     var t = v.querySelector(".pot-total");
     if (t) t.textContent = money(Math.round(potDisp));
+    /* Graphics Pass 6 — THE POT, FILLED HONESTLY: the vessel
+       carries a visible fill of coin-gold, its level the pot
+       itself against a $3,000 full bowl, so the room reads the
+       stakes at a glance. paintPot runs on every tick of a
+       feed's count-up, so the fill rises as the coins land. */
+    var f = v.querySelector(".pot-fill");
+    if (f) f.style.height = Math.min(100, Math.max(0, potDisp / 3000 * 100)) + "%";
   }
   /* a feed is a flight whose target is the pot (Money That Flies'
      own machinery and banding): the coins arc from the answer into
@@ -7085,7 +7092,7 @@
     return '<div class="env-wrap"><div class="round-kicker">THE GILDED HOUR · THE RESULT</div>' +
       '<div class="env-scene"><div class="env" id="envBox">' +
       '<div class="env-card"><div class="env-card-k">★ THE GILDED HOUR CHAMPION ★</div><div class="env-card-name">' + esc(name) + '</div><div class="env-card-rule"></div><div class="env-card-sub">' + esc(total) + '</div></div>' +
-      '<div class="env-back"></div><div class="env-pocket"></div><div class="env-flap"></div><div class="env-seal">GH</div>' +
+      '<div class="env-back"></div><div class="env-side env-side-l"></div><div class="env-side env-side-r"></div><div class="env-pocket"></div><div class="env-flap"></div><div class="env-seal">GH</div>' +
       '</div></div>' +
       '<p class="round-text env-cap" id="envCap">Sealed when the Big Finish began — not even Sterling has seen the name since.</p>' +
       '<button class="btn-gold" id="btnEnvOpen">BREAK THE SEAL</button></div>';
