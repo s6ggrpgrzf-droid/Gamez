@@ -58,10 +58,15 @@ function extractFn(name) {
 }
 
 /* ================= Part 1 — the matrix, on the game's own function ================= */
+/* The bonuses moved to the shared rules core (2026-11-15):
+   game.js now declares them from GH_RULES, so the matrix takes
+   its figures from rules-core.js, the same source the game
+   and the room both build from. */
+const coreSrc = fs.readFileSync(__dirname + '/rules-core.js', 'utf8');
 const decls = [
   src.match(/var BASE_VALUES = \{[^}]*\};/)[0],
-  src.match(/var QUICK_DRAW_BONUS = \d+;/)[0],
-  src.match(/var STREAK_BONUS = \d+;/)[0],
+  'var QUICK_DRAW_BONUS = ' + coreSrc.match(/GH_QUICK_DRAW_BONUS = (\d+)/)[1] + ';',
+  'var STREAK_BONUS = ' + coreSrc.match(/GH_STREAK_BONUS = (\d+)/)[1] + ';',
 ].join('\n');
 const jpToYou = new Function(decls + '\nreturn (' + extractFn('jpToYou') + ');')();
 const C = (over) => Object.assign({ kind: 'normal', round: 1, headline: false, decider: false,

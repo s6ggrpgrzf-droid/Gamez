@@ -1,0 +1,560 @@
+/* ================================================================
+   FIX-UP PASS — four paint/geometry defects from the first-hand
+   visual pass (mypass frames 17/12/10/08). Paint and geometry
+   only: no logic, no copy, and every verified fit is repaid to
+   the pixel where a fix spends vertical room.
+   ================================================================ */
+
+/* FIX 3 (all tiers) — the desk tag's centred text box ends before
+   the fortune cluster's footprint (48px incl. its right offset),
+   so "CUT TWO · BET 3 CHIPS" reads in full at maximum stack
+   height instead of sliding under the coins. Short-landscape and
+   portrait refinements live in their media blocks below. */
+.seat .tag{padding-right:50px}
+
+/* FIX 4 — on the standings bumper the go button is foreground
+   furniture: positioned above the race (podiums sit at z-index 1),
+   so it paints whole and hit-tests whole at every moment of the
+   riseIn entrance, not just once the podiums settle. The R1
+   bumper (no race) is untouched. The 6px of air the button gains
+   in the short tiers is repaid by the race-podiums padding cuts
+   in those same blocks — bumper height is unchanged. */
+.bumper:has(.race-wrap) .btn-gold{position:relative;z-index:2}
+
+@media (max-height:500px){
+  /* FIX 1 — landscape tools row, whole at last. The defect was
+     three layers deep: .tools had margin-top:0 here, so the row
+     ABUTTED the answer slabs; the slabs are positioned and the
+     pills were static, so the slabs' 6px ledge shadow painted
+     across the pills' tops; and the two-line squeeze (label +
+     "one lifeline" in a 27px pill) put the label glyphs 1px from
+     the pill's top edge, squarely in that shadow band. Portrait
+     already runs this row single-line — short landscape joins
+     it: the subtext goes inline, the pill is honestly one line
+     tall (22px), positioned so it paints above the slab shadow,
+     given 5px of real air (financed by the 5px the single line
+     saves — stage height unchanged), and the perfectionist hit
+     expansion keeps the tap target at 30px. */
+  .tools{margin-top:5px}
+  .tool-btn{position:relative;flex-direction:row;align-items:baseline;justify-content:center;padding-top:4px;padding-bottom:4px}
+  .tool-btn small{display:inline;margin:0 0 0 5px}
+  .tool-btn::after{content:"";position:absolute;inset:-4px 0}
+  /* FIX 3 (short landscape) — cluster footprint is 45px here;
+     47px of right padding plus a breath less letter-spacing ends
+     the longest tag ~14px clear of the stacks at 844px wide, and
+     still clear at the 150px seat minimum. */
+  .seat .tag{padding-right:47px;letter-spacing:.12em}
+  /* FIX 4 repay + FIX 2a repay (see below) */
+  .race-podiums{padding-top:10px}
+  .bumper:has(.race-wrap) .btn-gold{margin-top:6px}
+  /* FIX 2a — the ★ CHAMPION pill now rides the winner-name line
+     inside the marquee (it used to hang off the winner's podium
+     and land on the total). The pill is ~3px taller than the
+     19px name line here, repaid from the name's own margin so
+     the finale fit does not move. */
+  .winner-name{margin-top:0}
+}
+
+/* Portrait-only geometry (never on a short landscape: the
+   min-height guard keeps the two fixes from fighting on small
+   landscape phones, which take the short-landscape rules). */
+@media (max-width:560px) and (min-height:501px){
+  /* FIX 3 (portrait) — the portrait desk is 106px of content:
+     the longest tag (91.8px) and the coin cluster (29px) cannot
+     share one line at any padding. So the tag trades places with
+     the score: name, tag, score top to bottom — the tag sits a
+     full line above the bottom-anchored stacks, and the score
+     (centred, ~45px of glyphs, z-index 1) never reaches the
+     cluster either. Same three lines, same desk height. */
+  .seat .desk{display:flex;flex-direction:column}
+  .seat .seat-name{order:1}
+  /* …and the tag type squeezes a step in this tier: with the streak
+     segment the longest combination ("CUT SPENT · BET 3 CHIPS ·
+     STREAK ×9") measures 144px at 7px/.08em against the 122px
+     desk, so 6px/.05em brings it to ~117px — every segment whole
+     on the line, nothing truncated, nothing under the stacks. */
+  .seat .tag{order:2;padding-right:0;font-size:6px;letter-spacing:.05em}
+  /* …and the house line, one segment longer again, squeezes one
+     step further in this tier (5px/.02em): the longest house
+     combination measures ~111px against the 122px desk */
+  .seat.house .tag{order:2;padding-right:0;font-size:5px;letter-spacing:.02em}
+  .seat .seat-guess{order:3;font-size:9.5px}
+  .seat .seat-score{order:4}
+  /* FIX 4 (portrait leg of the repay) */
+  .race-podiums{padding-top:16px}
+  .bumper:has(.race-wrap) .btn-gold{margin-top:6px}
+}
+
+/* ================= Design pass 2 — the Headline Question =================
+   One question a show wears the front-page treatment: a brass ribbon
+   banner pinned across the question card's top edge, a double-rule
+   brass frame inside the card, and a brass ring on the category pill.
+   Brass and newsprint — deliberately NOT the nightly special's gilded
+   pill, which replaces the category outright. The banner rides the
+   card's top edge from inside the card's own wrapper, so the stage
+   gains no height anywhere: the wrapper carries the card's margin
+   and the card itself keeps every other rule it ever had. */
+.q-cardwrap{position:relative;width:fit-content;max-width:100%;margin:clamp(10px,2.2vmin,20px) auto 0}
+.q-cardwrap .q-text{margin-top:0}
+.headline-banner{position:absolute;left:50%;top:-14px;transform:translate(-50%,-50%) rotate(-1.2deg);z-index:3;background:var(--brass-grad);color:#431A04;font-weight:800;letter-spacing:.13em;font-size:clamp(10px,1.5vmin,13px);padding:4px 14px;border-radius:999px;box-shadow:0 4px 0 rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.7);white-space:nowrap}
+.headline-banner.inflow{position:relative;left:auto;top:auto;transform:rotate(-1.2deg);display:inline-block;margin:8px auto 0}
+/* ---------- Gameplay-visuals pass G2: stakes callouts ----------
+   A ribbon pinned across the question card's top edge, under its
+   header — a zero-height overlay in the headline banner's grammar,
+   so no measured fit moves. FOR THE LEAD wears the stage's plum
+   with brass lettering; FOR THE NIGHT wears the Decider's crimson
+   family, the crown's colours. The pad's ribbon is an in-flow line
+   in its own grammar. */
+.stake-ribbon{position:relative;z-index:4;height:0;text-align:center}
+.stake-ribbon>span{position:absolute;left:50%;top:0;transform:translate(-50%,-50%) rotate(-1.2deg);background:linear-gradient(180deg,#1A2E4D,#0C1930);color:#F0DCA3;border:1px solid rgba(240,220,163,.5);font-weight:800;letter-spacing:.15em;font-size:clamp(10px,1.5vmin,13px);padding:4px 16px;border-radius:999px;box-shadow:0 4px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.16);white-space:nowrap}
+.stake-ribbon.night>span{background:linear-gradient(180deg,#2C4A78,#213A63 60%,#16294A);color:#FFE9C9;border-color:rgba(255,233,201,.45);box-shadow:0 4px 0 rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.35)}
+.jp-stakeribbon{text-align:center;width:fit-content;margin:8px auto 0;padding:3px 14px;border-radius:999px;background:linear-gradient(180deg,#1A2E4D,#0C1930);color:#F0DCA3;border:1px solid rgba(240,220,163,.5);font-weight:800;letter-spacing:.14em;font-size:11px}
+.jp-stakeribbon.night{background:linear-gradient(180deg,#2C4A78,#213A63 60%,#16294A);color:#FFE9C9;border-color:rgba(255,233,201,.45)}
+.hl-slot{margin-top:-4px;margin-bottom:-10px}
+.q-text.headline-card{box-shadow:0 16px 30px rgba(0,0,0,.38),inset 0 0 0 2px var(--brass-frame),inset 0 0 0 4px var(--paper-flat),inset 0 0 0 6px rgba(146,104,32,.5)}
+.cat-pill.headline{box-shadow:0 6px 0 var(--cat-sh),inset 0 0 0 2px var(--brass-hi),inset 0 2px 0 rgba(255,255,255,.35)}
+.why-tag{display:inline-block;background:var(--brass-pill);color:#431A04;font-weight:700;letter-spacing:.06em;border-radius:6px;padding:1px 8px;margin-right:8px;font-size:.85em;vertical-align:1px;white-space:nowrap}
+.jp-headline{text-align:center;color:var(--brass-hi);font-weight:700;letter-spacing:.11em;font-size:12px;margin:8px 2px 0}
+
+/* ---------- Design pass 4: the short-landscape squeezes ----------
+   Appended last on purpose: this viewport's finale and title are
+   already squeezed by several max-height blocks, so a crowned
+   finale / a plaque-bearing title reclaims the new elements'
+   height from the tightest values in force — never new scroll. */
+@media (max-height:500px){
+  /* the title, with the champion's plaque up */
+  #scr-title:has(.champ-plaque:not(.hidden)) .title-scroll{padding-top:2px;padding-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) #marqueeTitle{padding-top:1px;padding-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) #marqueeTitle>.kicker{margin-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) #marqueeTitle .logo{font-size:27px;line-height:1.02}
+  /* the plaque keeps real air under the marquee: its bottom bulbs
+     protrude ~6px below the frame, and the line must clear them */
+  #scr-title:has(.champ-plaque:not(.hidden)) .champ-plaque{margin-top:8px;padding-top:1px;padding-bottom:1px}
+  #scr-title:has(.champ-plaque:not(.hidden)) .champ-plaque + .chips{margin-top:1px;gap:2px}
+  #scr-title:has(.champ-plaque:not(.hidden)) .chip{padding-top:1px;padding-bottom:1px}
+  /* a crowned finale, with its subline up */
+  .finale-marquee:has(.winner-sub){padding-top:1px;padding-bottom:1px}
+  .finale-wrap:has(.winner-sub) .winner-sub{margin-top:1px}
+  .finale-wrap:has(.winner-sub) .winner-word{font-size:20px}
+  .finale-wrap:has(.winner-sub) .winner-name{font-size:16px}
+  .finale-wrap:has(.winner-sub) .champ-tag{padding:3px 10px}
+  .finale-wrap:has(.winner-sub) .winner-total{font-size:20px}
+  .finale-wrap:has(.winner-sub) .sterling-lg{width:64px}
+  .finale-wrap:has(.winner-sub){gap:3px}
+  .finale-wrap:has(.winner-sub) .finale-row{padding-top:1px}
+  .finale-wrap:has(.winner-sub) .finale-row .podium.big .avatar{width:38px}
+  /* the lobby, with the champion's acknowledgement up: the stack
+     was fitted to the stage to the pixel, so the line's height
+     comes out of the QR plate and its own margin */
+  #stage:has(.champ-return) .og-qr canvas{width:92px;height:92px}
+  #stage:has(.champ-return) .champ-return{margin-top:4px}
+}
+
+/* ---------- Design pass 6 — Cut Two's moment ----------
+   The cut slab is NOT the reveal's dim: deeper desaturation, a
+   brass seam slashed diagonally across the face, and a scissors
+   badge in the corner — a slab that has been CUT, readable across
+   the room. The settled class paints identically on a repaint or
+   a resumed show; only the live spend adds .cutfresh, whose shear
+   animation runs once and settles into the same look. The banner
+   is a pure overlay on #stage (which is position:relative): it
+   moves no layout box and answers to no clock. */
+.ans-btn.cut{opacity:.4;filter:saturate(.26) brightness(.82)}
+.ans-btn.cut::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:2px;background:linear-gradient(90deg,transparent,rgba(240,220,163,.9) 16%,rgba(240,220,163,.9) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.ans-btn.cut::after{content:"✂";position:absolute;top:3px;right:9px;font-size:13px;color:#F0DCA3;opacity:.95;pointer-events:none}
+.answers .ans-btn.cutfresh{animation:cutShear .6s cubic-bezier(.3,1.4,.4,1) both}
+.answers .ans-btn.cutfresh::before{transform-origin:left center;animation:cutSlashDraw .45s ease-out .05s both}
+@keyframes cutShear{0%{transform:translateX(0) skewX(0deg)}18%{transform:translateX(-5px) skewX(-5deg)}38%{transform:translateX(4px) skewX(3deg)}62%{transform:translateX(-2px) skewX(-1.5deg)}100%{transform:translateX(0) skewX(0deg)}}
+@keyframes cutSlashDraw{from{transform:rotate(-7deg) scaleX(0)}to{transform:rotate(-7deg) scaleX(1)}}
+.jp-ans.cut{opacity:.42;filter:saturate(.26) brightness(.82)}
+.jp-ans.cut::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:2px;background:linear-gradient(90deg,transparent,rgba(240,220,163,.9) 16%,rgba(240,220,163,.9) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.jp-ans.cut::after{content:"✂";position:absolute;top:3px;right:9px;font-size:13px;color:#F0DCA3;opacity:.95;pointer-events:none}
+.jp-answers .jp-ans.cutfresh{animation:cutShear .6s cubic-bezier(.3,1.4,.4,1) both}
+.jp-answers .jp-ans.cutfresh::before{transform-origin:left center;animation:cutSlashDraw .45s ease-out .05s both}
+.cut-banner{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-1.2deg);z-index:6;background:var(--brass-grad);color:#431A04;font-weight:800;letter-spacing:.14em;font-size:clamp(13px,2.2vmin,19px);padding:9px 22px;border-radius:999px;box-shadow:0 6px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7),0 18px 34px rgba(0,0,0,.45);white-space:nowrap;pointer-events:none;text-transform:uppercase;animation:cutBannerIn 1.3s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes cutBannerIn{0%{opacity:0;transform:translate(-50%,-50%) rotate(-1.2deg) scale(.7)}14%{opacity:1;transform:translate(-50%,-50%) rotate(-1.2deg) scale(1.07)}24%{transform:translate(-50%,-50%) rotate(-1.2deg) scale(1)}76%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) rotate(-1.2deg) scale(1)}}
+.seat.cutflash .tag{animation:tagCutFlash 1.15s ease both}
+@keyframes tagCutFlash{0%{color:#F0DCA3;text-shadow:0 0 14px rgba(240,220,163,.95);transform:scale(1.18)}100%{transform:scale(1)}}
+
+/* ---------- Gameplay-visuals pass G6 — Cut Two, Previewed ----------
+   The ghost of a cut not yet spent: the same slashed seam as the
+   settled cut above, at GHOST strength — the slab stays legible
+   (opacity .68 against the cut's .4, colour half-kept), the seam
+   is the same brass line thinned and paled, and there is NO
+   scissors badge: the badge belongs to a cut that has happened.
+   The class exists only while a finger holds the lifeline down;
+   on release it comes off and the slab is untouched. The held
+   control itself answers with a pressed, lit rim so the hand
+   knows the preview is live, and both controls refuse the
+   long-press callout / text selection a hold would invite. */
+.ans-btn.cutghost{opacity:.68;filter:saturate(.5) brightness(.94)}
+.ans-btn.cutghost::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:1px;background:linear-gradient(90deg,transparent,rgba(240,220,163,.5) 16%,rgba(240,220,163,.5) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.jp-ans.cutghost{opacity:.68;filter:saturate(.5) brightness(.94)}
+.jp-ans.cutghost::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:1px;background:linear-gradient(90deg,transparent,rgba(240,220,163,.5) 16%,rgba(240,220,163,.5) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+.tool-btn.holding,.jp-cut.holding{box-shadow:inset 0 0 0 2px rgba(240,220,163,.85),inset 0 2px 10px rgba(0,0,0,.35);transform:translateY(1px)}
+[data-cut],.jp-cut{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* ============ New programme pass 1 — the Decider ============
+   The banner keeps the Headline's grammar (an overlay pill on the
+   card — no layout box moves) but wears the show's deepest rose,
+   so a room can tell at a glance this is not the Headline: this
+   one is for the crown. Spectator seats step out of the light;
+   the winner's podium carries its marker in the same rose. */
+.headline-banner.decider-banner{background:linear-gradient(180deg,#2C4A78,#213A63 60%,#16294A);color:#FFE9C9;box-shadow:0 4px 0 rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.35)}
+.seat.spectator{opacity:.42;filter:saturate(.35) brightness(.82)}
+.decider-marker{display:inline-block;margin-top:4px;padding:2px 9px 3px;border-radius:999px;background:linear-gradient(180deg,#2C4A78,#213A63);color:#FFE9C9;font-size:9px;font-weight:800;letter-spacing:.14em;box-shadow:0 2px 0 rgba(0,0,0,.3);white-space:nowrap}
+.jp-headline.decider{color:#FF9EBB}
+.jp-decider-vs{text-align:center;font-weight:800;letter-spacing:.05em;font-size:clamp(17px,4.6vw,22px);margin-top:8px;color:var(--cream);text-shadow:0 2px 0 rgba(6,11,24,.4)}
+
+/* ============ Programme pass 4 — Rematch Night ============
+   The series line rides inside the finale marquee under the
+   champion subline, in the same letter-spaced capitals — a step
+   quieter for a running score, full brass and glowing on the one
+   night it becomes the taking of the night. The pad's rematch
+   banner is the headline grammar at lobby scale: a framed plate
+   that tells the player the table stayed together. */
+.winner-sub.series-line{color:var(--cream);opacity:.92;letter-spacing:.18em}
+.winner-sub.series-line.night-won{color:var(--gold);opacity:1;font-size:clamp(12px,2.2vmin,17px);text-shadow:0 0 14px rgba(233,205,138,.45),0 2px 0 rgba(6,11,24,.4)}
+.jp-rematch{text-align:center;margin:10px auto 0;padding:8px 14px 7px;max-width:300px;border:1px solid rgba(240,220,163,.55);border-radius:12px;color:var(--brass-hi);font-weight:800;letter-spacing:.13em;font-size:13px;background:linear-gradient(180deg,rgba(240,220,163,.12),rgba(240,220,163,.03))}
+.jp-rematch span{display:block;margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.22em;color:var(--cream);opacity:.75}
+.og-lobby-note{max-width:520px;margin-left:auto;margin-right:auto}
+/* Pass N2: the rules named where the room gathers — the host
+   stage's centered line and the pad's quiet brass note */
+.og-rules-line{max-width:520px;margin-left:auto;margin-right:auto;letter-spacing:.14em;font-weight:700;color:var(--brass-hi)}
+.jp-rules{text-align:center;margin:10px auto 0;padding:7px 12px;max-width:300px;border:1px solid rgba(240,220,163,.45);border-radius:12px;color:var(--brass-hi);font-weight:700;letter-spacing:.12em;font-size:11.5px}
+/* the short-landscape finale with a series line up: the line's
+   height comes out of the same places Design pass 4's squeeze
+   took the subline's (this block out-specifies and follows it) */
+@media (max-height:500px){
+  .finale-wrap.has-series .winner-word{font-size:18px}
+  .finale-wrap.has-series .winner-name{font-size:15px}
+  .finale-wrap.has-series .winner-total{font-size:18px}
+  .finale-wrap.has-series .winner-sub{font-size:9px;margin-top:1px;letter-spacing:.16em}
+  .finale-wrap.has-series .sterling-lg{width:56px}
+  .finale-wrap.has-series{gap:2px}
+  .finale-wrap.has-series .finale-row .podium.big .avatar{width:34px}
+}
+
+/* The Ten, pass 1 — the wheel's sizes per stage, appended last so
+   they hold over every earlier block. Short landscape is the tight
+   stage: the wheel shrinks to 120px and the spin's caption line
+   yields (the race stage's precedent) so the stage fit holds even
+   with the Headline slot mounted above the wheel. */
+@media (max-height:860px) and (min-height:501px){
+  .wheel-frame{width:200px}
+}
+@media (max-height:500px){
+  .wheel-frame{width:120px;margin:4px auto 0}
+  .stage-inner:has(.wheel-frame) .round-text{display:none}
+}
+
+/* ============ The Ten, pass 2 — the Number Dial ============
+   Drawn depth, never an engine: the rail is brass with a lit top
+   rim and end finials, the pins stand on the rail as lollipops —
+   stem, a disc with a painted top light and a cast shadow — the
+   truth is a framed brass portal with its number on a plaque, and
+   the needle is a slim brass pointer with a diamond at the rail.
+   Row 0 pins fly their labels above the rail, row 1 below, so
+   equal guesses split instead of colliding. A label is dark until
+   the needle passes its pin (the settled painters light them
+   all). The count dial's readout IS the wager-amt treatment; its
+   rail fills toward a gate post at the truth end, and landing
+   pops the number once. */
+.dial.spread{position:relative;height:118px;margin:10px auto 2px;width:100%;max-width:660px}
+.dial-rail{position:absolute;left:0;right:0;top:50%;height:10px;margin-top:-5px;border-radius:6px;background:linear-gradient(180deg,#F8EFD2 0%,#DEC084 30%,#B9974F 55%,#7E6530 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -2px 3px rgba(60,32,0,.55),0 4px 8px rgba(0,0,0,.45)}
+.dial-rail::before,.dial-rail::after{content:"";position:absolute;top:-4px;width:6px;height:18px;border-radius:3px;background:linear-gradient(180deg,#F6EBCB,#7E6530);box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.dial-rail::before{left:-1px}
+.dial-rail::after{right:-1px}
+.dial-gate{position:absolute;top:6px;bottom:6px;width:36px;transform:translateX(-50%);border-radius:18px 18px 7px 7px;border:3px solid transparent;background:linear-gradient(180deg,#14273F,#0C1930) padding-box,linear-gradient(180deg,#F6EBCB,#B9974F 55%,#7E6530) border-box;z-index:1}
+.dial.landed .dial-gate{box-shadow:0 0 20px rgba(233,205,138,.5),inset 0 0 14px rgba(233,205,138,.25)}
+.dial-gate-num{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--brass-grad);color:#431A04;font-weight:800;font-size:12.5px;line-height:1;padding:3px 8px 4px;border-radius:999px;box-shadow:0 3px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7);white-space:nowrap}
+.dial-gate-num,.dial-lab i{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.dial-pin{position:absolute;top:0;bottom:0;width:0;z-index:2}
+.dial-stem{position:absolute;left:-1px;width:2px;border-radius:1px;background:var(--pin);opacity:.85}
+.dial-pin.r0 .dial-stem{bottom:calc(50% + 5px);height:23px}
+.dial-pin.r1 .dial-stem{top:calc(50% + 5px);height:23px}
+.dial-disc{position:absolute;left:0;width:16px;height:16px;border-radius:50%;background:var(--pin);border:2px solid rgba(24,6,32,.6);box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.35),0 3px 5px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;color:#431A04;z-index:2}
+.dial-pin.r0 .dial-disc{bottom:calc(50% + 26px);transform:translateX(-50%)}
+.dial-pin.r1 .dial-disc{top:calc(50% + 26px);transform:translateX(-50%)}
+.dial-pin.mine .dial-disc{box-shadow:0 0 0 2px #FFF6E8,inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.35),0 3px 5px rgba(0,0,0,.5)}
+.dial-disc.closest{width:19px;height:19px;box-shadow:0 0 0 2px #F0DCA3,0 0 16px rgba(233,205,138,.85),inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.3)}
+.dial-lab{position:absolute;left:0;transform:translateX(-50%);white-space:nowrap;text-align:center;font-size:11px;line-height:1.25;color:var(--cream);text-shadow:0 1px 2px rgba(0,0,0,.65);opacity:0;transition:opacity .25s ease;z-index:3}
+.dial-pin.r0 .dial-lab{bottom:calc(50% + 47px)}
+.dial-pin.r1 .dial-lab{top:calc(50% + 47px)}
+.dial-lab.lit{opacity:1}
+.dial-lab b{font-weight:800}
+.dial-lab i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.12em;color:#F0DCA3}
+.dial-lab.edge-l{transform:translateX(-6%)}
+.dial-lab.edge-r{transform:translateX(-94%)}
+.dial-needle{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;border-radius:2px;background:linear-gradient(180deg,#FFF6E8,#F0DCA3 55%,#B9974F);box-shadow:0 0 6px rgba(240,220,163,.65),1px 0 2px rgba(0,0,0,.4);z-index:4}
+.dial-needle::after{content:"";position:absolute;top:50%;left:50%;width:11px;height:11px;transform:translate(-50%,-50%) rotate(45deg);background:linear-gradient(135deg,#F6EBCB,#B9974F);border:1.5px solid rgba(24,6,32,.55);box-shadow:0 2px 4px rgba(0,0,0,.5)}
+.dial.pad{height:104px;margin:10px 0 2px;max-width:none}
+.dial.pad .dial-lab{font-size:10px}
+.dial.pad .dial-gate{width:30px}
+.count-dial{margin:4px auto 0;max-width:520px;text-align:center}
+.count-rail{position:relative;height:8px;margin:12px 10px 0;border-radius:5px;background:rgba(255,246,232,.1);box-shadow:inset 0 1px 3px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.08)}
+.count-fill{height:100%;border-radius:5px;background:linear-gradient(180deg,#F6EBCB,#B9974F 60%,#7E6530);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 0 10px rgba(233,205,138,.35)}
+.count-rail::after{content:"";position:absolute;right:-2px;top:-4px;width:5px;height:16px;border-radius:3px;background:linear-gradient(180deg,#F6EBCB,#7E6530);box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.count-dial.landed .count-num{animation:countPop .5s cubic-bezier(.2,1.8,.4,1) both}
+@keyframes countPop{0%{transform:scale(1)}35%{transform:scale(1.09)}100%{transform:scale(1)}}
+/* ============ THE PHOTO-FINISH (gameplay-visuals pass G5) ============
+   The quick-draw race, drawn on the reveal in the dial's own brass:
+   a slim rail, the correct finishers' discs standing on it in
+   lock-in order — the first gilded and starred — names above,
+   margins lettered in gold tabular figures, and the caption
+   engraved beneath. Pure furniture: it is painted whole from the
+   record on every repaint, so no keyframe ever runs on it. */
+.pf-strip{position:relative;height:70px;margin:8px auto 0;width:100%;max-width:660px}
+.pf-rail{position:absolute;left:0;right:0;top:42px;height:6px;border-radius:4px;background:linear-gradient(180deg,#F8EFD2 0%,#DEC084 30%,#B9974F 55%,#7E6530 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1px 2px rgba(60,32,0,.55),0 3px 6px rgba(0,0,0,.45)}
+.pf-cap{position:absolute;left:0;right:0;top:57px;text-align:center;font-size:8.5px;font-weight:800;letter-spacing:.3em;color:rgba(255,217,118,.72);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.pf-chip{position:absolute;top:0;bottom:0;width:0;z-index:2}
+.pf-disc{position:absolute;top:42px;left:0;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;background:var(--pin);border:2px solid rgba(24,6,32,.6);box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.35),0 3px 5px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:8.5px;line-height:1;color:#431A04;z-index:2}
+.pf-disc.first{width:18px;height:18px;box-shadow:0 0 0 2px #F0DCA3,0 0 14px rgba(233,205,138,.85),inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 4px rgba(0,0,0,.3)}
+.pf-lab{position:absolute;left:0;top:0;transform:translateX(-50%);white-space:nowrap;text-align:center;font-size:11px;line-height:1.25;color:var(--cream);text-shadow:0 1px 2px rgba(0,0,0,.65);z-index:3}
+.pf-lab b{display:block;font-weight:800}
+.pf-lab i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.1em;color:#F0DCA3;font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.pf-lab.edge-l{transform:translateX(-8%)}
+.pf-lab.edge-r{transform:translateX(-92%)}
+/* the short-landscape reveal is the tight stage: the dial
+   compresses like everything else there — stems shorten, labels
+   shrink, the gate narrows — appended last so it holds */
+@media (max-height:500px){
+  .dial.spread{height:88px;margin-top:4px}
+  .dial-pin.r0 .dial-stem{height:14px}
+  .dial-pin.r1 .dial-stem{height:14px}
+  .dial-pin.r0 .dial-disc{bottom:calc(50% + 17px)}
+  .dial-pin.r1 .dial-disc{top:calc(50% + 17px)}
+  .dial-pin.r0 .dial-lab{bottom:calc(50% + 33px)}
+  .dial-pin.r1 .dial-lab{top:calc(50% + 33px)}
+  .dial-lab{font-size:9.5px}
+  .dial-disc{width:13px;height:13px}
+  .dial-disc.closest{width:15px;height:15px}
+  .dial-gate{width:28px;top:4px;bottom:4px}
+  .dial-gate-num{font-size:10.5px;top:-10px;padding:2px 6px 3px}
+  .count-rail{margin-top:7px}
+  .pf-strip{height:23px;margin-top:-6px}
+  .pf-rail{top:4px;height:5px}
+  .pf-disc{top:4px;width:10px;height:10px;font-size:7px}
+  .pf-disc.first{width:11px;height:11px}
+  .pf-lab{top:9.5px;font-size:8px;line-height:.95}
+  .pf-lab i{font-size:6.5px;letter-spacing:.05em}
+  .pf-cap{display:none}
+}
+/* Audit A1: the dial reveal outgrew the short-landscape stage —
+   the reveal column around the dial (band headrow, why-slip, pot
+   era spacing) added ~38px after pass 2's own squeeze was tuned,
+   leaving the host's CONTINUE below the fold (stage scroll 222 vs
+   184). A dial-carrying reveal compresses one step further: the
+   dial itself slims and the column's spacing tightens, scoped by
+   :has(.dial.spread) so no other reveal moves. */
+@media (max-height:500px){
+  .stage-inner:has(.dial.spread) .dial.spread{height:60px;margin-top:0}
+  .stage-inner:has(.dial.spread) .dial-pin.r0 .dial-stem{height:7px}
+  .stage-inner:has(.dial.spread) .dial-pin.r1 .dial-stem{height:7px}
+  .stage-inner:has(.dial.spread) .dial-pin.r0 .dial-disc{bottom:calc(50% + 10px)}
+  .stage-inner:has(.dial.spread) .dial-pin.r1 .dial-disc{top:calc(50% + 10px)}
+  .stage-inner:has(.dial.spread) .dial-pin.r0 .dial-lab{bottom:calc(50% + 22px)}
+  .stage-inner:has(.dial.spread) .dial-pin.r1 .dial-lab{top:calc(50% + 22px)}
+  .stage-inner:has(.dial.spread) .dial-gate{top:2px;bottom:2px}
+  .stage-inner:has(.dial.spread) .q-text{margin-top:0}
+  .stage-inner:has(.dial.spread) .delta{margin-top:3px;font-size:12.5px;min-height:0}
+  .stage-inner:has(.dial.spread) .why-wrap{margin-top:4px}
+  /* Audit finding 4 (2026-11-11): the OG host's stage is 4px
+     shorter than the local one, and this composition still read
+     186 against its 184 — the question's top margin carries the
+     first of it; the why slip's share sits in the addendum at
+     the foot of this file (a plainer selector loses the cascade
+     to the reveal blocks there) */
+  .stage-inner:has(.dial.spread) .why-slip{padding-top:2px;padding-bottom:2px}
+  /* the reveal templates carry the CONTINUE wrapper's 12px as an
+     inline style; on this one tight stage the squeeze outranks it */
+  .stage-inner:has(.dial.spread)>div:last-child{margin-top:2px !important}
+}
+
+/* ============ SHOW THE BAND (The Ten, pass 3) ============
+   The difficulty band, printed in the question card's header line
+   beside the category pill: an engraved tag — letter-spaced small
+   caps behind a hairline rule, in restrained tones. WARM sits in
+   soft cream, MIDDLE a step warmer, DEEP CUT in the warmest brass
+   of the three — still lettering, never a fill, never an alarm.
+   On pads the same word rides its own centred line in the
+   jp-headline grammar, dot-separated. Depth is a hairline and a
+   tone, drawn — no engine. The short-landscape squeeze keeps the
+   header composition honest at 844x390: the tag narrows its
+   tracking before anything else gives. */
+.band-tag{flex:none;display:inline-flex;align-items:center;gap:10px;font-weight:700;
+  letter-spacing:.24em;font-size:clamp(9.5px,1.45vmin,12px);line-height:1;
+  color:rgba(255,246,232,.55);text-transform:uppercase;white-space:nowrap;
+  /* Queue #3 (2026-11-12): over a light category wash (the
+     Dial-Up teal) the tag's 55% cream lost its thinnest strokes
+     first — "WARM" read "W ARM", the W's diagonals gone while
+     the geometry sat 14px clear of the pill. An engraved shadow
+     in the pill's own grammar (cf. .cat-pill's text-shadow)
+     holds the lettering over any wash. */
+  text-shadow:0 1px 3px rgba(16,6,20,.85),0 0 2px rgba(16,6,20,.6)}
+.band-tag::before{content:"";width:1px;height:15px;flex:none;
+  background:linear-gradient(180deg,transparent,rgba(255,233,201,.5),transparent)}
+.band-tag.b2{color:rgba(255,216,158,.78)}
+.band-tag.b3{color:#EBBE6D}
+.jp-bandline{text-align:center;color:rgba(255,246,232,.55);font-weight:700;
+  letter-spacing:.26em;font-size:10.5px;margin:7px 2px 0;text-transform:uppercase}
+.jp-bandline.b2{color:rgba(255,216,158,.78)}
+.jp-bandline.b3{color:#EBBE6D}
+@media (max-height:500px){
+  .band-tag{font-size:9px;letter-spacing:.17em;gap:7px}
+  .band-tag::before{height:10px}
+}
+
+/* ================= The Golden Question (The Ten, pass 4) =================
+   The reveal's gilt, and nothing before it: every selector here is
+   reveal-only (the question phase never carries these classes, which
+   is the secrecy the mechanic runs on). The frame is PAINTED gold —
+   inset brass steps richer than the Headline's card, plus a warm
+   outer bloom — and the shimmer is drawn light: a gilt band crossing
+   the card on a slow loop while the reveal stands, transform-only,
+   no filters, no backdrop blur, no 3D anything. The banner is the
+   Headline banner's grammar struck in full gilt. On the pad, the
+   verdict card takes a gilt inner frame and the banner becomes a
+   struck-gilt strip. */
+.headline-banner.golden-banner{background:linear-gradient(180deg,#FBF3DA,#F0DCA3 55%,#D6AC4E);color:#431A04;box-shadow:0 4px 0 rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.85),0 0 20px rgba(233,205,138,.5)}
+.q-text.golden-card{box-shadow:0 16px 30px rgba(0,0,0,.38),inset 0 0 0 2px #D6AC4E,inset 0 0 0 4px #FBF3DA,inset 0 0 0 6px rgba(168,116,8,.8),0 0 28px rgba(233,205,138,.35)}
+.q-text.golden-card::after{content:"";position:absolute;inset:-20% -45%;pointer-events:none;background:linear-gradient(100deg,rgba(255,220,120,0) 32%,rgba(255,224,150,.32) 45%,rgba(255,246,205,.55) 50%,rgba(255,224,150,.32) 55%,rgba(255,220,120,0) 68%);transform:translateX(-110%) skewX(-12deg);animation:giltShimmer 2.8s cubic-bezier(.4,0,.2,1) .3s infinite}
+@keyframes giltShimmer{0%{transform:translateX(-110%) skewX(-12deg)}42%,100%{transform:translateX(110%) skewX(-12deg)}}
+.jp-headline.golden{color:#431A04;background:linear-gradient(180deg,#FBF3DA,#F0DCA3 55%,#D6AC4E);border-radius:999px;padding:5px 14px;box-shadow:0 3px 0 rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.85),0 0 16px rgba(233,205,138,.45)}
+.jp-verdict.golden{box-shadow:inset 0 0 0 2px #D6AC4E,inset 0 0 0 5px rgba(255,243,196,.85),inset 0 0 0 7px rgba(168,116,8,.7),inset 0 0 44px rgba(233,205,138,.22);border-radius:18px}
+
+/* ================= The Card as an Object (Visual pass V3) =================
+   The question card is a handled object, and it shows. Three drawn
+   treatments, all paint — two absolutely-positioned children inside
+   the card, no layout anywhere, nothing animated by a new timer
+   (the gilt rides the melt's existing tick):
+   THE GILT EDGE — a gold-leaf line traced by the .card-gilt child's
+   border, driven by ONE custom property, --gilt-f: the melt's own
+   s (1 at the open, 0 at the value's 50% floor). At s=1 the edge is
+   3px at full light; at the floor it is a 1px hairline at half
+   light. Card, vessel (G1) and rim light (G7) all tell the same
+   time because all three read the same multiplier.
+   THE WEARING CORNERS — the .card-wear child's four pale corner
+   rubs, switched by the round's class on the card: Round 1 crisp
+   (no class, opacity 0), Round 2 wear2 (.38), Round 3 — and the
+   Decider, which inherits the night's most-handled state — wear3
+   (.8). The state is the round's, set at the render; a repaint
+   rebuilds it identically.
+   THE WAX SEAL — .wax-seal, born ONLY in a Golden Question's
+   reveal render, from the unmasked record: a deep red-gold wax
+   disc with an irregular hand-stamped edge, a pressed ring, and
+   the show's star pressed into it. It lands with a small
+   scale-settle (sealStamp); a settled repaint (.set) wears it
+   already landed. Before the reveal a golden card carries no
+   seal, no gilt difference, no telling class — the mask holds. */
+.q-text .card-gilt{position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-sizing:border-box;border:calc(1px + 2px*var(--gilt-f,1)) solid rgba(240,203,110,calc(.40 + .42*var(--gilt-f,1)))}
+.q-text .card-wear{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(46px 46px at 0% 0%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%),radial-gradient(46px 46px at 100% 0%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%),radial-gradient(46px 46px at 0% 100%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%),radial-gradient(46px 46px at 100% 100%,rgba(255,254,248,.9),rgba(255,254,248,0) 72%)}
+.q-text.wear2 .card-wear{opacity:.38}
+.q-text.wear3 .card-wear{opacity:.8}
+.q-text .wax-seal{position:absolute;right:14px;bottom:12px;width:50px;height:50px;border-radius:48% 52% 55% 45%/52% 47% 53% 48%;pointer-events:none;background:radial-gradient(circle at 34% 28%,#D8542F,#A52E18 52%,#7E2110 82%,#6E1B0C);box-shadow:inset 0 2px 3px rgba(255,190,140,.45),inset 0 -3px 5px rgba(40,5,0,.45),0 3px 7px rgba(60,20,0,.35);transform:rotate(-8deg);animation:sealStamp .38s cubic-bezier(.25,.9,.3,1.15) both}
+.q-text .wax-seal.set{animation:none}
+.q-text .wax-seal::before{content:"";position:absolute;inset:6px;border-radius:50%;border:2px solid rgba(66,13,4,.38);box-shadow:inset 0 1px 1px rgba(255,180,120,.28)}
+.q-text .wax-seal::after{content:"★";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:rgba(66,13,4,.52);text-shadow:0 1px 0 rgba(255,186,128,.30)}
+@keyframes sealStamp{0%{transform:rotate(-8deg) scale(1.75);opacity:0}55%{opacity:1}78%{transform:rotate(-8deg) scale(.93)}100%{transform:rotate(-8deg) scale(1)}}
+
+/* ================= Seven Entrances (The Ten, pass 6) =================
+   Every category's question arrives its own way: one keyframed
+   class on the question card, fresh opens only (the JS proves
+   freshness; a repaint never carries these classes, and the
+   classes come off when the motion ends, leaving the settled
+   card exactly as it always was). Each motion is transform,
+   clip-path, opacity or filter — never layout — so the inputs
+   are live from the first frame and the drain clock's timeline
+   is untouched. Longest is the Dial-Up's 700ms; all seven sit
+   inside the cap. Depth is DRAWN throughout: the starburst is a
+   conic gradient, the marquee bulbs are radial gradients, the
+   static is a repeating gradient — no images, no 3D engine. On
+   the big screen the card is .q-text inside .q-cardwrap; on a
+   pad the pad itself wears the class. */
+.q-cardwrap.ent{isolation:isolate}
+.jp-pad.ent,.jp-card.ent{position:relative;isolation:isolate}
+
+/* MOVIES — an iris opens on the card while a ring of marquee
+   bulbs chases around its inner frame and dies with the motion */
+.q-cardwrap.ent-movies .q-text,.jp-pad.ent-movies,.jp-card.ent-movies{animation:entMovies .62s cubic-bezier(.3,.7,.3,1) both}
+@keyframes entMovies{0%{clip-path:circle(0% at 50% 42%);transform:scale(.94);opacity:.35}55%{opacity:1}100%{clip-path:circle(120% at 50% 42%);transform:scale(1);opacity:1}}
+.q-cardwrap.ent-movies .q-text::before,.jp-pad.ent-movies::before,.jp-card.ent-movies::before{content:"";position:absolute;inset:5px;border-radius:14px;pointer-events:none;z-index:2;background:radial-gradient(circle,#F8F0D6 2.3px,rgba(255,233,168,0) 3.4px) 0 0/26px 11px repeat-x,radial-gradient(circle,#F8F0D6 2.3px,rgba(255,233,168,0) 3.4px) 0 100%/26px 11px repeat-x,radial-gradient(circle,#F8F0D6 2.3px,rgba(255,233,168,0) 3.4px) 0 0/11px 26px repeat-y,radial-gradient(circle,#F8F0D6 2.3px,rgba(255,233,168,0) 3.4px) 100% 0/11px 26px repeat-y;animation:entBulbs .62s linear both}
+@keyframes entBulbs{0%{opacity:0;background-position:0 0,0 100%,0 0,100% 0}14%{opacity:1}30%{background-position:13px 0,-13px 100%,0 13px,100% -13px}55%{opacity:.4}80%{opacity:1}100%{opacity:0;background-position:26px 0,-26px 100%,0 26px,100% -26px}}
+
+/* TV — a channel change: the card thunks sideways through a
+   rolling band of static that settles as the picture locks */
+.q-cardwrap.ent-tv .q-text,.jp-pad.ent-tv,.jp-card.ent-tv{animation:entTV .54s cubic-bezier(.2,.8,.3,1) both}
+@keyframes entTV{0%{transform:translateX(-7px) skewX(-2deg);filter:brightness(1.7) saturate(.35);opacity:.5}18%{transform:translateX(5px) skewX(1.4deg);filter:brightness(1.25) saturate(.8);opacity:.9}38%{transform:translateX(-3px) skewX(-.6deg);filter:brightness(1.08)}58%{transform:translateX(1px);filter:brightness(1.02)}100%{transform:none;filter:none;opacity:1}}
+.q-cardwrap.ent-tv .q-text::before,.jp-pad.ent-tv::before,.jp-card.ent-tv::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(255,255,255,.16) 0 2px,rgba(20,16,28,.13) 2px 4px,rgba(255,255,255,.05) 4px 7px);background-size:100% 28px;animation:entStatic .54s steps(9) both}
+@keyframes entStatic{0%{opacity:1;background-position:0 0}70%{opacity:.85}100%{opacity:0;background-position:0 -56px}}
+
+/* MUSIC — the card rides in on a beat (two bounces, like a
+   downbeat answered), equalizer bars flourishing at its foot */
+.q-cardwrap.ent-music .q-text,.jp-pad.ent-music,.jp-card.ent-music{animation:entMusic .56s cubic-bezier(.3,.7,.3,1) both}
+@keyframes entMusic{0%{transform:translateY(30px);opacity:0}30%{transform:translateY(0);opacity:1}48%{transform:translateY(-8px)}64%{transform:translateY(0)}80%{transform:translateY(-3px)}100%{transform:none;opacity:1}}
+.q-cardwrap.ent-music .q-text::before,.jp-pad.ent-music::before,.jp-card.ent-music::before{content:"";position:absolute;left:12%;right:12%;bottom:7px;height:13px;pointer-events:none;z-index:2;background:repeating-linear-gradient(90deg,var(--cat) 0 5px,rgba(0,0,0,0) 5px 12px);transform-origin:50% 100%;opacity:0;animation:entEQ .56s ease-out both}
+@keyframes entEQ{0%{transform:scaleY(.15);opacity:0}18%{opacity:.95;transform:scaleY(1)}38%{transform:scaleY(.4)}58%{transform:scaleY(.85)}78%{transform:scaleY(.3);opacity:.8}100%{transform:scaleY(.15);opacity:0}}
+
+/* ADS & JINGLES — a product-shot pop: the card scales in over a
+   drawn starburst blooming behind it (a repeating conic
+   gradient, radially masked — pure CSS, no asset) */
+.q-cardwrap.ent-ads .q-text,.jp-pad.ent-ads,.jp-card.ent-ads{animation:entAds .6s cubic-bezier(.2,1.2,.3,1) both}
+@keyframes entAds{0%{transform:scale(.55);opacity:0}55%{transform:scale(1.07);opacity:1}78%{transform:scale(.985)}100%{transform:scale(1);opacity:1}}
+.q-cardwrap.ent-ads::before,.jp-pad.ent-ads::before,.jp-card.ent-ads::before{content:"";position:absolute;left:50%;top:50%;width:340px;height:340px;margin:-170px 0 0 -170px;pointer-events:none;z-index:-1;background:repeating-conic-gradient(from -8deg,rgba(255,205,92,.9) 0deg 9deg,rgba(255,205,92,0) 9deg 18deg);-webkit-mask-image:radial-gradient(closest-side,#000 26%,transparent 70%);mask-image:radial-gradient(closest-side,#000 26%,transparent 70%);opacity:0;animation:entBurst .6s ease-out both}
+@keyframes entBurst{0%{transform:scale(.25) rotate(0deg);opacity:0}25%{opacity:.95}100%{transform:scale(1.12) rotate(24deg);opacity:0}}
+
+/* TOYS & GAMES — the card tumbles in like a tossed game piece
+   and settles with overshoot */
+.q-cardwrap.ent-toys .q-text,.jp-pad.ent-toys,.jp-card.ent-toys{animation:entToys .64s cubic-bezier(.3,.7,.3,1) both;transform-origin:50% 62%}
+@keyframes entToys{0%{transform:translateY(-52px) rotate(-10deg);opacity:0}38%{transform:translateY(7px) rotate(5.5deg);opacity:1}62%{transform:translateY(-4px) rotate(-2.4deg)}82%{transform:translateY(1px) rotate(.8deg)}100%{transform:none;opacity:1}}
+
+/* SATURDAY MORNING — a cartoon spring-in, squash at the landing */
+.q-cardwrap.ent-sat .q-text,.jp-pad.ent-sat,.jp-card.ent-sat{animation:entSat .58s cubic-bezier(.3,.7,.3,1) both;transform-origin:50% 100%}
+@keyframes entSat{0%{transform:translateY(34px) scale(.55,1.06);opacity:0}42%{transform:translateY(0) scale(1.14,.84);opacity:1}60%{transform:scale(.94,1.07)}76%{transform:scale(1.03,.98)}100%{transform:none;opacity:1}}
+
+/* THE DIAL-UP YEARS — the card assembles in scanline steps,
+   modem-patient: seven chunks down the card under a fading
+   scanline grain. The slowest of the seven, still in the cap */
+.q-cardwrap.ent-dialup .q-text,.jp-pad.ent-dialup,.jp-card.ent-dialup{animation:entDial .7s steps(7,end) both}
+@keyframes entDial{from{clip-path:inset(-3% -3% 103% -3%)}to{clip-path:inset(-3% -3% -3% -3%)}}
+.q-cardwrap.ent-dialup .q-text::before,.jp-pad.ent-dialup::before,.jp-card.ent-dialup::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(24,20,34,.20) 0 1px,rgba(0,0,0,0) 1px 3px);animation:entScan .7s linear both}
+@keyframes entScan{from{opacity:1}to{opacity:0}}
+
+/* ================= The Broadcast Finish (Visual pass V5) =================
+   One pre-rendered finishing overlay (.bc-grade) standing in the two
+   shared screens — the title and the game stage (the finale renders
+   inside the stage, in the graded room). The phone pad (#scr-join)
+   never gets one: a controller read at arm's length in a bright
+   room stays clean.
+   Three still layers, painted once, never animated, no JS:
+     the element itself — the warm grade, a whisper of amber light
+       pooled over the stage's heart;
+     ::before — the vignette, the frame's edges deepening toward the
+       plum-black the stage already falls to;
+     ::after — the grain, ONE baked 96x96 noise tile (generated once
+       from a fixed seed, shipped as a data URI) tiled at opacity .05:
+       texture, never dirt, and it never moves — no keyframes touch
+       this element or its pseudos, ever.
+   pointer-events:none, so taps pass through it wherever it stands.
+   STACKING — measured, not guessed (drive-broadcast has the sums):
+   a uniform grade over EVERYTHING was built first and indicted by
+   its own spot-check: warm + grain regress every colour toward
+   their means, and the tightest audited slab stops (4.52:1, two
+   hundredths of headroom) fell to ~3.97:1. So the finish stands
+   where a broadcast grade can stand without touching the words:
+   on the TITLE it rides z-70 over the whole screen, dialog cards
+   (z-60) and all — display type carries contrast to spare. In the
+   GAME it rides z-0: above the room itself (.set — walls, category
+   glow, rim light, footlights, the V4 audience — bloom and motes),
+   level with the set and beneath the furniture, whose stacking the
+   stage already declares (#table z-1, #topbar/#hostbar z-2, the
+   effect canvases 21-30 keep their own colours above it). The room
+   takes the finish; every card, slab, seat and line of text keeps
+   its audited contrast untouched — the drive re-proves a slab at
+   drop ~0.00 from real pixels. */
+.bc-grade{position:absolute;inset:0;z-index:40;pointer-events:none;background:radial-gradient(115% 95% at 50% 38%,rgba(255,178,96,.07),rgba(255,152,74,.03) 55%,rgba(255,132,64,0) 78%)}
+#scr-title .bc-grade{z-index:70}
+#scr-game .bc-grade{z-index:0}
+.bc-grade::before{content:"";position:absolute;inset:0;background:radial-gradient(112% 88% at 50% 46%,rgba(4,1,9,0) 56%,rgba(4,1,9,.16) 80%,rgba(3,1,7,.40) 100%)}
+.bc-grade::after{content:"";position:absolute;inset:0;opacity:.05;background-image:url("data:image/png;base64,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");background-size:96px 96px;background-repeat:repeat}
+

@@ -1,0 +1,292 @@
+/* ================= game frame ================= */
+#scr-game{position:relative;overflow:hidden;background:radial-gradient(120% 95% at 50% 28%,#1A2E52 0%,#0C1930 54%,#060E1D 100%);padding:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.set{position:absolute;inset:0;z-index:0;pointer-events:none;transition:filter 1.2s ease}
+.set>div{position:absolute;inset:0}
+.set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(233,205,138,.14),rgba(233,205,138,0) 70%)}
+.set-mid{background:radial-gradient(52% 46% at 50% 40%,rgba(var(--cat-rgb),.26),rgba(var(--cat-rgb),0) 70%),radial-gradient(60% 20% at 50% 97%,rgba(var(--cat-rgb),.20),rgba(var(--cat-rgb),0) 70%);transition:opacity 1.2s ease}
+.set-fore{background:linear-gradient(0deg,rgba(10,3,16,.5),transparent 34%)}
+/* ================= Visual stage 1 — Sterling's set =================
+   The room itself: a panelled back wall, a stage floor, a row of
+   footlights. Pure backdrop — every layer lives inside .set (z-index
+   0, pointer-events none, behind #table), so nothing here can move a
+   single layout pixel. The polish pass's round tint reaches the set
+   through the same data-light filter already on .set; the category
+   wash (.set-mid) paints over the walls, so the room takes the
+   category too. Footlight warmth is keyed to data-phase, mirrored
+   onto #scr-game by the phase presenters in game.js — no timers;
+   the warmth itself is the CSS transition below. Material law:
+   ink room, brass trim, warm practical light. */
+/* the walls: four large quiet panels, brass stiles in dark grooves,
+   one top rail, the base falling into shade where wall meets floor */
+.set>div.set-walls{
+  background:
+    repeating-linear-gradient(90deg, rgba(255,246,232,.020) 0, rgba(255,246,232,.020) calc(25% - 2px), rgba(0,0,0,.10) calc(25% - 2px), rgba(0,0,0,.10) 25%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0) 0, rgba(0,0,0,0) calc(25% - 1px), rgba(201,169,98,.14) calc(25% - 1px), rgba(201,169,98,.14) 25%),
+    linear-gradient(180deg, rgba(201,169,98,.11), rgba(201,169,98,.11) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 56%, rgba(0,0,0,.20) 82.5%, rgba(0,0,0,.20));
+}
+/* the floor: a deep ink-plum deck from the wall's base (82.5%) to the
+   front edge — one bright hairline where wall meets floor, a warm
+   light pool centre-stage, board seams running toward the audience */
+.set>div.set-floor{
+  top:auto; bottom:0; height:17.5%;
+  background:
+    linear-gradient(180deg, rgba(255,214,140,.22), rgba(255,214,140,0) 3px),
+    radial-gradient(62% 130% at 50% -10%, rgba(255,196,100,.13), rgba(255,196,100,0) 62%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0, rgba(0,0,0,.16) 2px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 132px),
+    linear-gradient(180deg, rgba(17,31,55,.88), rgba(27,11,42,.94) 55%, rgba(15,5,24,.97));
+}
+/* the footlights: ::before is the upward wash, ::after the bulbs —
+   a dotted row of small warm lamps along the floor's front edge,
+   behind the seats row's plane; the glow does most of the talking */
+.set-lights::before{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(0deg, rgba(255,170,64,.16), rgba(255,160,60,.07) 16%, rgba(255,160,60,0) 34%);
+  opacity:.5; transition:opacity 1.15s ease;
+}
+.set-lights::after{
+  content:""; position:absolute; left:0; right:0; bottom:11.5%; height:26px;
+  background-image:radial-gradient(circle, rgba(248,238,210,.95) 0, rgba(248,238,210,.95) 2.4px, rgba(255,190,84,.55) 4.6px, rgba(226,183,107,.18) 8.5px, rgba(226,183,107,0) 12px);
+  background-size:48px 26px; background-repeat:repeat-x; background-position:50% 50%;
+  opacity:.45; transition:opacity 1.15s ease;
+}
+@media (orientation:portrait){ .set-lights::after{ bottom:9.8% } }
+/* the room applauds: at the reveal the footlights warm up; the
+   finale holds them at full warmth */
+#scr-game[data-phase="reveal"] .set-lights::before{ opacity:1 }
+#scr-game[data-phase="reveal"] .set-lights::after{ opacity:1 }
+#scr-game[data-phase="over"] .set-lights::before{
+  opacity:1;
+  background:linear-gradient(0deg, rgba(255,178,70,.24), rgba(255,165,64,.09) 18%, rgba(255,165,64,0) 38%);
+}
+#scr-game[data-phase="over"] .set-lights::after{ opacity:1 }
+/* New programme pass 2 — the Intermission: the footlights settle
+   to a resting warmth, between the working glow and the reveal's
+   applause — the room itself takes the break */
+#scr-game[data-phase="intermission"] .set-lights::before{ opacity:.8 }
+#scr-game[data-phase="intermission"] .set-lights::after{ opacity:.75 }
+/* the story-so-far card: fact rows in the bumper's grammar — a
+   brass label, a ruled line, the fact itself */
+.fact-list{ max-width:540px; margin:12px auto 2px; text-align:left }
+.fact-row{ display:flex; gap:14px; align-items:baseline; padding:5px 2px; border-bottom:1px solid rgba(201,169,98,.18) }
+.fact-row:last-child{ border-bottom:none }
+.fact-k{ flex:0 0 104px; font-size:10.5px; font-weight:700; letter-spacing:.22em; color:var(--gold); padding-top:2px }
+.fact-v{ font-size:clamp(13px,1.9vw,15.5px); font-weight:600; color:rgba(255,246,232,.94); line-height:1.35 }
+.break-tease{ margin-top:10px }
+/* short landscape: the break card carries four fact rows and a
+   tease where the intro carries a paragraph — the facts tighten
+   harder to fit the same stage (after the base rules, so it wins) */
+@media (max-height:500px){
+  .break-card .round-title{ font-size:23px; margin:2px 0 1px }
+  .fact-list{ margin:4px auto 0 }
+  .fact-row{ padding:2.5px 2px }
+  .fact-k{ flex-basis:92px; padding-top:1px }
+  .fact-v{ font-size:13px }
+  .break-tease{ margin-top:5px }
+  /* Dynamics pass D2: a full house — all six fact rows aboard
+     (the pot row from D1 and a Second Wind row) — tightens one
+     step further, keyed to the sixth row actually existing, so
+     the four- and five-row cards keep the rhythm above as-is */
+  .break-card:has(.fact-row:nth-child(6)) .fact-list{ margin:0 auto }
+  .break-card:has(.fact-row:nth-child(6)) .round-title{ font-size:21px; margin:1px 0 0 }
+  .break-card:has(.fact-row:nth-child(6)) .fact-row{ padding:.5px 2px }
+  .break-card:has(.fact-row:nth-child(6)) .fact-v{ font-size:12.5px; line-height:1.15 }
+  .break-card:has(.fact-row:nth-child(6)) .break-tease{ margin-top:2px; margin-bottom:3px }
+}
+/* under the Big Finish gloom the practicals burn a little harder,
+   the way real footlights do */
+#scr-game[data-light="vault"] .set-lights{ filter:brightness(1.3) }
+
+/* ================= Gameplay-visuals pass G7 — THE CLOCK AS LIGHT ===
+   The stage's rim of warm light IS the answer clock. Two pre-rendered
+   glow layers live in .set (pure backdrop, pointer-events none, below
+   the footlights): rim-wide, a soft wash standing at the stage's edge,
+   and rim-tight, the same light pulled inward toward the card in a
+   deeper amber. One custom property — --rim-f, the DISPLAYED share of
+   the window still remaining (1 at the open, 0 at the close) — is
+   written by drawClockLight() in game.js off the clock's own tick,
+   and the layers cross-fade and contract on it by opacity/transform
+   alone (never an animated box-shadow, never a layout property).
+   Visibility follows the set-cat grammar: the rim belongs to the
+   question's life — present in question and reveal (at the reveal it
+   has eased back to its wide rest pose, under the footlights' existing
+   applause), faded everywhere else: spin, bet, intermission, finale.
+   data-light still filters .set as a whole, so the Big Finish vault
+   dims the rim with the rest of the room. */
+.set>div.set-rim{--rim-f:1;opacity:0;transition:opacity .6s ease}
+#scr-game[data-phase="question"] .set-rim,
+#scr-game[data-phase="reveal"] .set-rim{opacity:1}
+.set-rim>div{position:absolute;inset:0}
+.rim-wide{
+  background:radial-gradient(118% 102% at 50% 46%, rgba(255,206,120,0) 60%, rgba(255,198,110,.10) 84%, rgba(255,186,92,.30) 100%);
+  opacity:calc(.22 + .78 * var(--rim-f));
+}
+.rim-tight{
+  background:radial-gradient(104% 94% at 50% 47%, rgba(255,150,60,0) 44%, rgba(255,146,58,.15) 66%, rgba(255,116,40,.32) 88%, rgba(122,44,10,.16) 100%);
+  opacity:calc(.95 * (1 - var(--rim-f)));
+  transform:scale(calc(1.05 - .07 * (1 - var(--rim-f))));
+  transform-origin:50% 47%;
+}
+/* the hurry: under five seconds the footlights themselves breathe —
+   two soft beats a second at low amplitude around their standing
+   warmth, keyed by the .hurry class drawClock() toggles on the very
+   threshold the danger glow already watches. The class dies with the
+   clock, so the pulse stops the instant the question closes; the red
+   danger vignette (#dangerFx) is a separate, louder instrument and
+   keeps its own grammar. No reduced-motion gating (standing rule). */
+#scr-game.hurry .set-lights::before{ animation:rimPulseWash .5s ease-in-out infinite }
+#scr-game.hurry .set-lights::after{ animation:rimPulseBulbs .5s ease-in-out infinite }
+@keyframes rimPulseWash{ 0%,100%{opacity:.40} 50%{opacity:.64} }
+@keyframes rimPulseBulbs{ 0%,100%{opacity:.36} 50%{opacity:.60} }
+
+/* Visual pass V4 — THE AUDIENCE: the show gains a house. One drawn
+   silhouette (head and shoulders, near-black plum, a whisper of
+   stage light on the crown) repeated eleven times along the floor's
+   front edge, in front of the footlights and behind every piece of
+   furniture — the front row, seen from behind. The figures own no
+   layout: the layer is the set's own full-frame box, pointer-events
+   none, and every behaviour is a class the game already keeps —
+   data-phase for the question's bob, .hurry (drawClock's own under-
+   5s class) and .aud-hush (the Decider's whole question) for the
+   hush, .aud-ripple / .aud-dip for the reveal's answer, armed only
+   by the live reveal in game.js. Between questions the row rests in
+   a sway almost at rest; on the title screen the same house sits
+   perfectly still — it is waiting for the show. Amplitudes are a
+   few pixels throughout: felt, not watched. No reduced-motion
+   gating (standing rule). */
+.set-aud{pointer-events:none;overflow:hidden}
+#scr-title .set-aud{position:absolute;left:0;right:0;bottom:0;height:min(170px,30vh);z-index:1}
+.aud-fig{
+  position:absolute;bottom:calc(-10px + var(--b,0px));left:var(--l,0%);
+  width:9.4%;height:min(112px,28vh);
+  opacity:var(--o,1);scale:var(--s,1);
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 76'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%231E1129'/%3E%3Cstop offset='.45' stop-color='%230D0517'/%3E%3Cstop offset='1' stop-color='%2305020A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='30' cy='15' r='12.5' fill='url(%23g)'/%3E%3Cpath d='M3 76C3 50 15 39 30 39C45 39 57 50 57 76Z' fill='url(%23g)'/%3E%3Cellipse cx='30' cy='5' rx='8' ry='3' fill='%23FFD9A0' opacity='.34'/%3E%3Cpath d='M10 50C16 42 23 39.8 30 39.8C37 39.8 44 42 50 50C43 44.5 36.5 42.6 30 42.6C23.5 42.6 17 44.5 10 50Z' fill='%23FFD9A0' opacity='.16'/%3E%3C/svg%3E") bottom center/contain no-repeat;
+  transition:translate .5s ease;
+}
+@media (orientation:portrait){ .aud-fig{width:15%;height:min(140px,17.5vh)} }
+.aud-fig:nth-child(1){--l:.2%;--s:.92;--o:.90;--b:0px;--d:-.4s;--rd:0s;--dd:.00s}
+.aud-fig:nth-child(2){--l:9.3%;--s:1.04;--o:.96;--b:-3px;--d:-1.7s;--rd:.05s;--dd:.02s}
+.aud-fig:nth-child(3){--l:18.4%;--s:.87;--o:.85;--b:2px;--d:-2.9s;--rd:.10s;--dd:.05s}
+.aud-fig:nth-child(4){--l:27.5%;--s:1.10;--o:1;--b:-2px;--d:-.9s;--rd:.15s;--dd:.01s}
+.aud-fig:nth-child(5){--l:36.6%;--s:.95;--o:.92;--b:1px;--d:-2.2s;--rd:.20s;--dd:.07s}
+.aud-fig:nth-child(6){--l:45.7%;--s:1.07;--o:.97;--b:-4px;--d:-1.2s;--rd:.25s;--dd:.03s}
+.aud-fig:nth-child(7){--l:54.8%;--s:.89;--o:.87;--b:2px;--d:-3.1s;--rd:.30s;--dd:.06s}
+.aud-fig:nth-child(8){--l:63.9%;--s:1.02;--o:.94;--b:-1px;--d:-.2s;--rd:.35s;--dd:.00s}
+.aud-fig:nth-child(9){--l:73%;--s:.93;--o:.90;--b:3px;--d:-2.6s;--rd:.40s;--dd:.04s}
+.aud-fig:nth-child(10){--l:82.1%;--s:1.08;--o:.98;--b:-3px;--d:-1.5s;--rd:.45s;--dd:.02s}
+.aud-fig:nth-child(11){--l:91.2%;--s:.90;--o:.88;--b:0px;--d:-2s;--rd:.50s;--dd:.05s}
+/* the resting sway — every game phase that is not an open question */
+#scr-game .aud-fig{animation:audSway 7s ease-in-out infinite alternate;animation-delay:var(--d,0s)}
+/* the bob — an open question breathes */
+#scr-game[data-phase="question"] .aud-fig{animation-name:audBob;animation-duration:3.6s}
+/* the hush — the last five seconds (.hurry is drawClock's own class,
+   the same threshold the footlights breathe on) and the Decider's
+   whole question (.aud-hush, kept by game.js): the bob dies, the
+   row leans a hair toward the stage, and holds */
+#scr-game.hurry .aud-fig,
+#scr-game.aud-hush .aud-fig{animation:none;translate:0 -3px}
+/* the reveal's answer — one pass of the class, then game.js lifts it */
+#scr-game.aud-ripple .aud-fig{animation:audRipple .85s ease-in-out 1 both;animation-delay:var(--rd,0s)}
+#scr-game.aud-dip .aud-fig{animation:audDip .95s ease-in-out 1 both;animation-delay:var(--dd,0s)}
+@keyframes audSway{from{translate:0 0}to{translate:0 1px}}
+@keyframes audBob{0%,100%{translate:0 0}50%{translate:0 -2px}}
+@keyframes audRipple{0%{translate:0 0}38%{translate:0 -5px}100%{translate:0 0}}
+@keyframes audDip{0%{translate:0 0}32%{translate:0 4px}68%{translate:0 4px}100%{translate:0 0}}
+
+#scr-game[data-light="hot"] .set{filter:brightness(.9) saturate(1.5)}
+#scr-game[data-light="hot"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(226,183,107,.22),rgba(226,183,107,0) 70%)}
+#scr-game[data-light="vault"] .set{filter:brightness(.58) saturate(1.15)}
+#scr-game[data-light="vault"] .set-mid{opacity:.45}
+#scr-game[data-light="vault"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(226,183,107,.10),rgba(226,183,107,0) 70%)}
+
+/* ================= Visual stage 3 — category backdrops =================
+   While a question is live, the room itself announces the category:
+   the back wall blooms in the category's colour and the category's
+   emblem hangs huge and faint behind the question card, like a
+   backdrop logo on a television set. The glow extends .set-mid's
+   category wash upward — same --cat-rgb, same architecture — and
+   needs no JS: applyCat already sets the colour at question open.
+   The emblem swap is a two-copy crossfade driven by setCatBackdrop()
+   in game.js (the incoming copy takes the new emblem while dark,
+   then the .on class trades places; opacity/transform only).
+   Visibility belongs to the question's life: the group is keyed to
+   data-phase — shown in question and reveal (data-phase stays
+   "question" through the table's marking beat, so the backdrop
+   holds for the question's whole life) and faded everywhere else:
+   spin, bet, standings, finale, lobby. data-light still filters
+   .set as a whole, so the Big Finish vault dims the backdrop with
+   the rest of the room. Pure backdrop: inside .set, below set-fore,
+   pointer-events none — it cannot move a layout pixel. */
+.set>div.set-cat{opacity:0;transition:opacity .6s ease}
+#scr-game[data-phase="question"] .set-cat,
+#scr-game[data-phase="reveal"] .set-cat{opacity:1}
+.set-cat-glow{position:absolute;inset:0;background:radial-gradient(58% 50% at 50% 30%,rgba(var(--cat-rgb),.34),rgba(var(--cat-rgb),.10) 52%,rgba(var(--cat-rgb),0) 72%)}
+.set-cat-emb{position:absolute;left:50%;top:41%;width:min(92vmin,520px);aspect-ratio:1;transform:translate(-50%,-50%) scale(.94);opacity:0;transition:opacity .6s ease,transform .6s ease}
+.set-cat-emb.on{opacity:.17;transform:translate(-50%,-50%) scale(1)}
+@media (orientation:portrait){
+  .set-cat-emb{top:36%;width:min(88vw,380px)}
+}
+#spot{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .9s ease;background:radial-gradient(42% 58% at 50% 34%,rgba(240,220,163,.20),rgba(240,220,163,.05) 48%,transparent 72%)}
+#scr-game[data-light="vault"] #spot{opacity:.95}
+#scr-game[data-light="hot"] #spot{opacity:.5}
+#topbar{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:rgba(18,6,26,.55);border-bottom:2px solid rgba(233,205,138,.30);font-size:12px;font-weight:600;letter-spacing:.22em;color:rgba(255,246,232,.65)}
+.tb-show{color:var(--gold)}
+.tb-mid{white-space:nowrap}
+.tb-dot{margin:0 8px}
+.tb-right{display:flex;gap:8px;align-items:center}
+.tb-btn{letter-spacing:.16em;font-size:11px;font-weight:700;color:var(--cream);background:var(--glass-ink);padding:7px 12px;border-radius:999px;box-shadow:0 3px 0 rgba(0,0,0,.4);min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+#btnMuteShow.on{color:#431A04;background:var(--brass-pill);box-shadow:0 3px 0 var(--gold-sh)}
+.tb-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+/* Audit A2: in portrait the bar's three pieces sum wider than the
+   phone on the longest round label (Round 3, a two-digit question
+   count) — the mid, which may not wrap, ran the END SHOW button
+   off the right edge and squeezed its label into two lines. The
+   buttons no longer shrink, and the mid ellipsises as the last
+   resort instead of pushing them out. */
+@media (max-width:560px){
+  #topbar{gap:6px;padding:10px}
+  .tb-mid{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;letter-spacing:.12em}
+  .tb-right{flex:none}
+  .tb-btn{white-space:nowrap;padding:6px 8px;font-size:10px}
+  /* even shrunk, round label + question counter + both buttons
+     sum wider than the phone; the counter is the piece the show
+     can spare in portrait — the round keeps its name */
+  #qCounter,.tb-dot{display:none}
+}
+#table{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;min-height:0}
+.seats{display:flex;gap:clamp(10px,2.4vw,26px);justify-content:center;align-items:flex-end;padding:6px 14px 10px}
+.seats-top{display:none}
+#scr-game.noseats .seats{display:none}
+.seat{position:relative;width:clamp(150px,21vw,248px);text-align:center;cursor:pointer}
+.seat .avatar{width:clamp(58px,9.5vmin,84px)}
+.seat .desk{position:relative;padding:14px 8px 11px}
+.seat-name{display:block;color:var(--cream);font-weight:800;letter-spacing:.1em;font-size:clamp(11.5px,1.7vmin,15px);text-shadow:0 1px 0 rgba(0,0,0,.5),0 0 7px rgba(8,15,29,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat-score{display:block;color:#FFF;font-weight:700;font-size:clamp(18px,3.2vmin,28px);line-height:1.1;text-shadow:0 3px 0 rgba(0,0,0,.25);transition:color .3s}
+.seat .tag{display:block;font-size:9px;font-weight:600;letter-spacing:.16em;color:rgba(255,246,232,.75);margin-top:1px}
+/* House Players (pass 5): the HOUSE segment leads the tag line in
+   brass; a house seat's line runs a segment longer than any human
+   combination, so house tags take one squeeze step at base size,
+   and a further step in each tight tier below — the portrait fix's
+   grammar, extended to the longest line the desk can now carry
+   ("HOUSE · CUT SPENT · BET 3 CHIPS · STREAK ×9") */
+.tag .houseseg{color:#F0DCA3}
+.seat.house .tag{font-size:8px;letter-spacing:.1em}
+.seat .seat-guess{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#F6EBCB;margin-top:1px}
+.seat.lead .desk{background:linear-gradient(180deg,#F0DCA3 0 5px,transparent 5px),linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 42%),linear-gradient(180deg,var(--c),var(--cd))}
+.seat.gotit .desk{filter:drop-shadow(0 0 14px rgba(62,207,110,.9))}
+.seat.gotit{animation:gotBounce .45s cubic-bezier(.2,1.8,.4,1)}
+@keyframes gotBounce{0%{transform:translateY(0)}40%{transform:translateY(-10px)}100%{transform:translateY(0)}}
+.seat.tick-up .seat-score{color:#B6FFCB}
+.seat.tick-down .seat-score{color:#FFB3AB}
+#stage{flex:1;display:flex;flex-direction:column;padding:10px 16px;min-height:0;overflow-y:auto;width:100%;position:relative;z-index:1}
+.stage-inner{width:min(900px,96vw);margin:auto;text-align:center}
+.stage-inner:has(.race-wrap),.stage-inner:has(.finale-wrap){width:min(1160px,97vw)}
+.stage-inner.enter{animation:fadeUp .38s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#hostbar{position:relative;z-index:2;display:flex;gap:12px;align-items:center;padding:10px 18px 12px;background:linear-gradient(180deg,rgba(18,6,26,0),rgba(18,6,26,.5))}
+.host-face{width:54px;height:54px;flex:none;border-radius:50%;padding:3px;background:linear-gradient(180deg,#F0DCA3,#DFAF63);box-shadow:0 6px 14px rgba(0,0,0,.35)}
+.host-face svg{width:100%;height:100%;display:block;border-radius:50%;background:var(--glass-ink)}
+.host-bubble{position:relative;background:var(--paper-bg);border-radius:18px;padding:8px 16px 10px;box-shadow:0 8px 18px rgba(0,0,0,.3);max-width:min(860px,88vw)}
+.host-bubble::before{content:"";position:absolute;left:-11px;top:50%;margin-top:-13px;width:12px;height:26px;background:var(--paper-flat);clip-path:polygon(100% 0,100% 100%,0 50%)}
+.host-name{font-size:9px;font-weight:700;letter-spacing:.3em;color:#A11E50}
+.host-line{font-size:clamp(14.5px,2.2vw,18px);font-weight:600;line-height:1.35;color:var(--ink);min-height:4.05em}
+

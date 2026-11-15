@@ -187,9 +187,18 @@ const round10 = n => Math.max(0, Math.round(n / 10) * 10);
           const gain = now[0] - plan.pre[0];
           /* Pass 8: seat 0 is the only correct desk pick, so they
              are also the quick-draw — the gain is the question's
-             own banked value (read from its record) + $50 (R1). */
+             own banked value (read from its record) + $50 (R1).
+             The range guard is the dealing grammar's own, re-pinned
+             2026-11-15: an R1 base is $100/$200/$300, the melt
+             drains it to half at worst ($50 floor), and the Golden
+             Question can hide in slot 1:0 and double it ($600
+             ceiling). The old 40–100 pin assumed an easy deal and
+             failed exact money on a medium one (bankValue 160,
+             gain 210). The equality above is the assertion; the
+             range only vouches the record is a plausible first
+             question. */
           const stR = await S();
-          check('Correct player banks the drained value + the $50 quick-draw (sole correct lock-in)', gain === (stR.bankValue + 50) && stR.bankValue >= 40 && stR.bankValue <= 100 && now[1] === plan.pre[1] && now[2] === plan.pre[2],
+          check('Correct player banks the drained value + the $50 quick-draw (sole correct lock-in)', gain === (stR.bankValue + 50) && stR.bankValue >= 50 && stR.bankValue <= 600 && now[1] === plan.pre[1] && now[2] === plan.pre[2],
             'gain=' + gain + ' bankValue=' + stR.bankValue + ' pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now));
         } else if (plan.type === 'num') {
           check('Closest-number: tapped winner banks the value, others unchanged', now[1] > plan.pre[1] && now[0] === plan.pre[0] && now[2] === plan.pre[2],

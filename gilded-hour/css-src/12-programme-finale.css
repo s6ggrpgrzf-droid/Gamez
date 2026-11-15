@@ -1,0 +1,494 @@
+/* ================================================================
+   THE BLUFF (research programme pass 2, 2026-11-13): the invent
+   rows, the pick-marking plaques, the reveal's accounting of
+   lies, and the seat tag. Dressed in the show's grammar — glass
+   plaques, champagne lettering, one plum accent that belongs to
+   the Bluff alone. */
+.bluff-kind{color:#E7C8F2}
+.bluff-rows{display:flex;flex-direction:column;gap:9px;margin-top:12px;text-align:left}
+.bluff-row{display:flex;align-items:center;gap:10px;background:rgba(10,20,40,.55);border:1px solid rgba(216,183,106,.35);border-radius:10px;padding:8px 12px}
+.bluff-seat{font-family:var(--sans);font-weight:600;font-size:14px;color:var(--gold);min-width:86px}
+.bluff-in{flex:1;background:rgba(4,8,18,.8);border:1px solid rgba(216,183,106,.4);border-radius:8px;color:#FFF6E8;font-family:var(--sans);font-size:15px;padding:8px 10px;min-width:0}
+.bluff-in:focus{outline:2px solid rgba(216,183,106,.75);outline-offset:1px}
+.bluff-note{font-size:13px;color:#B9A8CC;font-style:italic}
+.answers.bluff-marking{margin-top:10px}
+.answers.bluff-marking .ans-btn.bluff-pick{cursor:pointer;position:relative;overflow:visible}
+.answers.bluff-marking .ans-btn.bluff-pick.sel{border-color:#E7C8F2;box-shadow:0 0 0 2px rgba(231,200,242,.55),0 10px 24px rgba(0,0,0,.45)}
+.bluff-credits{margin-top:12px;display:flex;flex-direction:column;gap:6px;text-align:left}
+.bluff-credit{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;background:rgba(10,20,40,.5);border:1px solid rgba(216,183,106,.25);border-radius:9px;padding:7px 11px;font-size:14px}
+.bluff-credit.truth{border-color:rgba(216,183,106,.75)}
+.bc-tag{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.12em;color:#0A1428;background:linear-gradient(180deg,#EBD9A0,#C8A24F);border-radius:5px;padding:2.5px 7px;white-space:nowrap}
+.bluff-credit:not(.truth) .bc-tag{background:linear-gradient(180deg,#5C3A6E,#3E2549);color:#E7C8F2;border:1px solid rgba(231,200,242,.4)}
+.bc-text{color:#FFF6E8;font-weight:600}
+.bc-fooled{color:var(--gold);font-size:13px}
+.bc-fooled.none{color:#8E9BB5;font-style:italic}
+.closest-tag.blufftag{background:rgba(92,58,110,.5);color:#E7C8F2;border-color:rgba(231,200,242,.45)}
+.jp-foolline{font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:.08em;color:#E7C8F2;margin-top:6px}
+/* THE BLUFF — stage fit (found in the pass's own screenshots,
+   2026-11-13): the invent stage and the credit-carrying reveal
+   are the bluff's two tall stages. In short landscape the invent
+   stage overflowed its frame (question text bursting the card,
+   rows colliding with the pot) and the reveal's four credit rows
+   pushed CONTINUE off the stage and slid under the pot in both
+   orientations. Both compress inside their own :has scope, the
+   dial-reveal audit's pattern, so no other stage moves. The
+   credits also run one step compacter at every size. */
+.bluff-credits{gap:3px;margin-top:7px}
+.bluff-credit{padding:2px 10px;font-size:13px}
+.stage-inner:has(.bluff-credits) .why-slip{padding-top:4px;padding-bottom:4px}
+.stage-inner:has(.bluff-credits)>div:last-child{margin-top:4px !important}
+.stage-inner:has(.bluff-credits) .answers .ans-btn{padding-top:6px;padding-bottom:6px}
+@media (min-height:501px){
+  .stage-inner:has(.bluff-credits) .q-text{font-size:20px;line-height:1.3}
+}
+@media (max-height:500px){
+  .stage-inner:has(.bluff-rows) .q-text{font-size:15px;line-height:1.28}
+  .stage-inner:has(.bluff-rows) .round-text{display:none}
+  .stage-inner:has(.bluff-rows) .bluff-rows{gap:5px;margin-top:7px}
+  .stage-inner:has(.bluff-rows) .bluff-row{padding:3px 10px}
+  .stage-inner:has(.bluff-rows) .bluff-seat{min-width:62px;font-size:12.5px}
+  .stage-inner:has(.bluff-rows) .bluff-in{padding:5px 8px;font-size:13.5px}
+  .stage-inner:has(.bluff-rows)>div:last-child{margin-top:5px !important}
+  .stage-inner:has(.bluff-rows) .btn-gold{padding:8px 20px}
+  .stage-inner:has(.bluff-credits) .q-text{font-size:12.5px;line-height:1.28}
+  .stage-inner:has(.bluff-credits) .answers{margin-top:2px}
+  .stage-inner:has(.bluff-credits) .bluff-credits{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px;margin-left:80px}
+  .stage-inner:has(.bluff-credits) .why-slip{font-size:11px;line-height:1.25}
+  .stage-inner:has(.bluff-credits) .bluff-credit{padding:3px 7px;font-size:11.5px;gap:4px}
+  .stage-inner:has(.bluff-credits) .bc-tag{font-size:9.5px;padding:2px 5px}
+  .stage-inner:has(.bluff-credits) .bc-fooled{font-size:11px}
+  .stage-inner:has(.bluff-credits) .why-slip{padding-top:2px;padding-bottom:2px}
+  .stage-inner:has(.bluff-credits)>div:last-child{margin-top:2px !important}
+  /* the mark screen's plaques run the stage's full width, and
+     the pot's corner is plaque 1's letter chip — the pot sits
+     this one stage out, as it already does behind CALL IT.
+     The invent rows run full width the same way. */
+  #stage:has(.bluff-marking) .pot-vessel{display:none}
+  #stage:has(.bluff-rows) .pot-vessel{display:none}
+}
+
+/* Designer pass 5 (2026-11-13): the records shelf's honours
+   line — the honours a guest has held across every recorded
+   night, counted in Sterling's book, with the reigning crown
+   carried in the same line. It takes the row's full width
+   under the name and numbers: the who column alone is 89px
+   on a phone (measured) and squeezed both the honours into
+   mid-phrase wraps and the crown into an ellipsis. */
+.record-row{flex-wrap:wrap}
+.record-honours{flex:0 0 100%;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--brass-deep);margin-top:1px}
+
+/* Designer pass 6 (2026-11-13): THE DECADE VOTE — the panel
+   that stands under the break card at the first intermission.
+   Cream like the card it follows, ruled like the ledger: three
+   plaques in a row (the eras the bank can honestly deal), each
+   wearing its tally as brass pips over a seated count; the
+   verdict strip centres the room's era in the serif. On a
+   narrow stage the plaques keep their row and let the names
+   shrink — three decades side by side is the whole picture. */
+.era-panel{max-width:560px;margin:10px auto 0;background:linear-gradient(180deg,#FBF4E2,#F3E7CB);border:1px solid #D8C491;border-radius:18px;padding:14px 16px 16px;box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1px 0 #FFFDF4;color:#2A2118}
+/* the panel runs the stage's full width at the break, and the
+   pot's corner is the first plaque's edge — the pot sits the
+   vote out, as it already does behind CALL IT */
+#stage:has(.era-panel) .pot-vessel{display:none}
+.era-kicker{font-size:10px;font-weight:700;letter-spacing:.34em;color:var(--brass-deep);text-align:center}
+.era-q{font-family:GHSerif,Georgia,serif;font-size:16.5px;line-height:1.3;text-align:center;margin:5px 0 11px}
+.era-plaques{display:flex;gap:9px}
+.era-plaque{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:13px;border:1.5px solid #B9974F;background:linear-gradient(180deg,#FFFDF6,#F6ECD2);box-shadow:inset 0 2px 0 #FFFFFF,0 3px 0 #C9AB63;color:#2A2118;font:inherit}
+button.era-plaque{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFFFFF,0 1px 0 #C9AB63}
+.era-name{font-family:GHSerif,Georgia,serif;font-weight:700;font-size:clamp(14px,4.4vw,18px);letter-spacing:.04em;white-space:nowrap}
+.era-pips{font-size:9px;letter-spacing:.22em;color:var(--brass-deep);min-height:11px;line-height:11px}
+.era-count{font-size:10px;font-weight:700;letter-spacing:.18em;color:#8A6D2F}
+.era-note{font-size:12px;line-height:1.45;text-align:center;margin:10px 2px 0;color:#5A4A2E}
+.era-actions{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.era-done{text-align:center}
+.era-result{font-family:GHSerif,Georgia,serif;font-weight:700;font-size:clamp(24px,7vw,32px);letter-spacing:.05em;color:#2A2118;margin-top:3px}
+/* the pad's ballot: three stacked decade buttons in the join
+   screen's own dress, its pick lit gold */
+.jp-era{margin-top:10px}
+.jp-era-k{font-size:10px;font-weight:700;letter-spacing:.26em;color:#EAD9A4;text-align:center;margin-bottom:8px}
+.jp-era-btn{display:block;width:100%;margin:7px 0;padding:13px 10px;border-radius:14px;border:1.5px solid #B9974F;background:linear-gradient(180deg,#FFFDF6,#F1E5C6);box-shadow:0 3px 0 #C9AB63;color:#2A2118;font-family:GHSerif,Georgia,serif;font-weight:700;font-size:17px;letter-spacing:.05em;cursor:pointer}
+.jp-era-btn.sel{background:linear-gradient(180deg,#F6E3AC,#E4C878);border-color:#8A6D2F;box-shadow:0 3px 0 #8A6D2F,inset 0 0 0 2px rgba(138,109,47,.35)}
+.jp-era-done{font-weight:700;letter-spacing:.08em;color:#EAD9A4}
+
+/* ================================================================
+   REVIEW PASS 6 (2026-11-14): air for Sterling in portrait. The
+   bottom seats row ended flush against the host bar (the seats
+   container's bottom was the host bar's top, 0px between), so
+   Sterling's bubble read as sitting on the desks. Ten pixels of
+   air under the seats; the stage absorbs it. Short landscape's
+   rail layout is untouched (its seats live in the table column
+   and the rail stands apart already). */
+#scr-game #seatsBottom{margin-bottom:10px}
+
+/* ================================================================
+   REVIEW PASS 8 (2026-11-14): the no-host furniture. Desk pick
+   chips — small matte brass-rimmed keys on each desk: a question's
+   letters (or the Bluff's numbers, or the break's eras); the
+   locked one fills champagne. The number entry: one seat at a
+   time, a lit desk, a shared pad with a readout. Drawn depth
+   only, like everything else in the room. */
+.pick-chips{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:8px;vertical-align:middle}
+.pick-chip{min-width:23px;height:23px;padding:0 5px;border-radius:7px;border:1px solid rgba(198,164,94,.75);background:rgba(18,6,26,.55);color:#EAD9A4;font:700 11px/1 GHSans,sans-serif;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.45)}
+.pick-chip.locked{background:linear-gradient(180deg,#F6E3AC,#E4C878);color:#2A1A08;border-color:#8A6D2F;box-shadow:0 2px 0 #8A6D2F}
+.pick-chip[disabled]{opacity:.32;cursor:default;box-shadow:none}
+.seat.entering .desk{box-shadow:0 0 0 2px #E4C878,0 0 18px rgba(228,200,120,.45)}
+.num-entry{margin-top:14px;text-align:center}
+.num-turn{font:700 12px/1.3 GHSans,sans-serif;letter-spacing:.14em;color:#EAD9A4}
+.num-buf{margin:8px auto 10px;min-width:170px;display:inline-block;padding:7px 18px;border-radius:9px;border:1px solid rgba(198,164,94,.6);background:rgba(18,6,26,.55);color:#FFF6DC;font:700 24px/1.1 GHSerif,serif;letter-spacing:.06em}
+.num-pad{display:grid;grid-template-columns:repeat(3,58px);gap:6px;justify-content:center;margin-bottom:10px}
+.num-key{height:42px;border-radius:9px;border:1px solid rgba(198,164,94,.65);background:rgba(255,246,220,.06);color:#FFF6DC;font:700 17px/1 GHSans,sans-serif;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.45)}
+.num-key:active{transform:translateY(1px);box-shadow:none}
+.num-lock{min-width:196px}
+
+/* ================================================================
+   GRAPHICS PASS 1 — THE CURTAIN (2026-11-14): the set gains a
+   working theatre curtain. Drawn velvet only — folded navy
+   gradients, a scalloped swag valance, gold fringe and cord, the
+   show's GH medallion at the seam. The curtain is the backdrop
+   for the front-of-curtain cards (round intros, the breaks, the
+   finale): closed behind them, it covers the stage for one beat
+   when a round ends, and it parts over the first question of a
+   round to open the show again. Pointer-events none throughout —
+   it never stands between a tap and the game.
+   ================================================================ */
+#stageWrap{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+#curtain{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+#curtain.behind{z-index:0}
+#curtain.snap,#curtain.snap .cur-panel,#curtain.snap .cur-valance,#curtain.snap .cur-medallion{transition:none!important}
+.cur-panel{position:absolute;top:0;bottom:0;width:51%;transition:transform .95s cubic-bezier(.22,.8,.24,1);
+  background:
+   linear-gradient(180deg,rgba(240,210,150,.06),rgba(0,0,0,.24) 55%,rgba(0,0,0,.5)),
+   repeating-linear-gradient(90deg,rgba(4,8,18,.5) 0 7px,rgba(4,8,18,0) 7px 36px,rgba(130,165,235,.09) 42px 50px,rgba(4,8,18,0) 56px 84px),
+   repeating-linear-gradient(90deg,rgba(4,8,18,.34) 0 3px,rgba(4,8,18,0) 3px 61px,rgba(130,165,235,.05) 66px 71px,rgba(4,8,18,0) 76px 113px),
+   linear-gradient(90deg,#152b52,#0b1830 55%,#14294e);
+  box-shadow:inset 0 -26px 34px rgba(0,0,0,.5)}
+.cur-left{left:0;border-right:2px solid rgba(201,164,92,.55)}
+.cur-right{right:0;border-left:2px solid rgba(201,164,92,.55)}
+.cur-panel::before{content:"";position:absolute;left:0;right:0;bottom:0;height:11px;opacity:.55;
+  background:linear-gradient(180deg,rgba(201,164,92,.7),rgba(201,164,92,0) 3px),repeating-linear-gradient(90deg,#caa657 0 2px,rgba(202,166,87,0) 2px,rgba(202,166,87,0) 7px)}
+.cur-left::after{content:"";position:absolute;top:0;bottom:0;right:0;width:34%;background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.42))}
+.cur-right::after{content:"";position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(270deg,rgba(0,0,0,0),rgba(0,0,0,.42))}
+#curtain[data-state="open"] .cur-left{transform:translateX(-93%)}
+#curtain[data-state="open"] .cur-right{transform:translateX(93%)}
+.cur-valance{position:absolute;top:0;left:0;right:0;height:54px;transition:transform .7s ease .5s;
+  background:
+   radial-gradient(circle at 50% -30%,rgba(240,210,150,.10),rgba(0,0,0,0) 60%),
+   repeating-linear-gradient(90deg,rgba(4,8,18,.45) 0 6px,rgba(4,8,18,0) 6px 30px,rgba(130,165,235,.08) 35px 42px,rgba(4,8,18,0) 47px 68px),
+   linear-gradient(90deg,#122544,#0a1730 55%,#122544);
+  box-shadow:0 10px 22px rgba(0,0,0,.45)}
+.cur-valance::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;opacity:.6;
+  background:radial-gradient(circle at 50% 0,rgba(202,166,87,.9) 0 2px,rgba(202,166,87,0) 3px) 0 0/46px 10px repeat-x,linear-gradient(180deg,rgba(201,164,92,0) 6px,rgba(201,164,92,.65) 6px,rgba(201,164,92,.65) 8px,rgba(201,164,92,0) 8px)}
+#curtain[data-state="open"] .cur-valance{transform:translateY(-106%);transition-delay:0s}
+.cur-medallion{position:absolute;left:50%;top:34%;width:84px;height:84px;margin:-42px 0 0 -42px;transition:opacity .45s ease,transform .45s ease;filter:drop-shadow(0 6px 16px rgba(0,0,0,.55))}
+.cur-medallion .cm-ring{fill:#0d1b33;stroke:#c9a45c;stroke-width:2}
+.cur-medallion .cm-face{fill:#122544;stroke:rgba(201,164,92,.45);stroke-width:1}
+.cur-medallion .cm-text{font:700 30px GHSerif,serif;fill:#e7c87e;text-anchor:middle;letter-spacing:2px}
+#curtain[data-state="open"] .cur-medallion{opacity:0;transform:scale(.82)}
+/* the medallion belongs to the moving beats — while the curtain
+   rests behind a card it is gone, so it never floats in the
+   card's text */
+#curtain.behind .cur-medallion{opacity:0}
+
+/* ================================================================
+   GRAPHICS PASS 2 — THE LIGHTING PLOT (2026-11-14): one lighting
+   system with a script, layered over the round moods (data-light
+   keeps the round; data-plot keeps the moment). HOUSE: lobby,
+   intros and breaks at full even light. QUESTION: the room falls
+   away — seats and host bar dim, the set's glow drops, and the
+   spot pool rises over the card. BREATH: the last seconds before
+   a reveal (the all-in grace, or the clock's final three) drop
+   the room further. REVEAL: the footlights wash up in the
+   banking seat's colour (--wash, set by the game; a cool slate
+   when nobody banks). Calm Table stands the breath down with
+   the rest of the hurry layer.
+   ================================================================ */
+#wash{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.1s ease;
+  background:radial-gradient(115% 62% at 50% 112%,var(--wash,#33507e) 0%,rgba(0,0,0,0) 62%)}
+#scr-game[data-plot="reveal"] #wash{opacity:.5}
+#scr-game .seats,#scr-game #hostbar{transition:filter .9s ease}
+#scr-game[data-plot="question"] .seats,#scr-game[data-plot="question"] #hostbar{filter:brightness(.84)}
+#scr-game[data-plot="breath"] .seats,#scr-game[data-plot="breath"] #hostbar{filter:brightness(.66)}
+#scr-game[data-plot="question"] .set-glow,#scr-game[data-plot="question"] .set-lights{opacity:.45}
+#scr-game[data-plot="breath"] .set-glow,#scr-game[data-plot="breath"] .set-lights{opacity:.22}
+#scr-game[data-plot="question"] #spot{opacity:.9}
+#scr-game[data-plot="breath"] #spot{opacity:.95}
+
+/* ================================================================
+   GRAPHICS PASS 3 — THE CAMERA PUSH-IN (2026-11-14): the framing
+   tightens across the night. One scale, applied to the set and
+   the table together (the top bar and host bar stay the
+   broadcast frame), moving on a slow 2.8s push at each round
+   intro: the Warm-Up wide, Double Money a step closer, the Big
+   Finish closest, and one step more for a Decider. The crowning
+   pulls back wide. #scr-game crops the overflow, so a push reads
+   as a camera move, never as a resize.
+   ================================================================ */
+#scr-game{--cam:1}
+#scr-game[data-cam="2"]{--cam:1.045}
+#scr-game[data-cam="3"]{--cam:1.09}
+#scr-game[data-cam="decider"]{--cam:1.13}
+#scr-game .set{transition:filter 1.2s ease,transform 2.8s cubic-bezier(.25,.7,.25,1)}
+#scr-game #table{transition:transform 2.8s cubic-bezier(.25,.7,.25,1)}
+#scr-game .set,#scr-game #table{transform:scale(var(--cam));transform-origin:50% 36%}
+
+/* ================================================================
+   GRAPHICS PASS 4 — SPLIT-FLAP STANDINGS (2026-11-14): the
+   podium board's money prints on flap wheels, station-board
+   style — each digit its own tile, split at the middle like a
+   Solari flap, cream figures on deep navy. A figure that changed
+   since the board last stood rolls its wheels forward to the
+   new number (the roll itself is driven from game.js).
+   ================================================================ */
+.flap-val{display:inline-flex;gap:1px;vertical-align:baseline}
+.flap-ch{display:inline-block;min-width:.58em;padding:0 .05em;text-align:center;border-radius:2px;color:#F3E9CF;background:linear-gradient(180deg,#26335a 0%,#1a2440 48%,#0a0f20 50%,#131d36 54%,#1a2440 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08)}
+.flap-ch.flip{animation:ghFlapFlip .1s ease}
+@keyframes ghFlapFlip{50%{transform:rotateX(82deg)}}
+
+/* ================================================================
+   GRAPHICS PASS 5 — THE SEALED ENVELOPE (2026-11-14): the
+   crowning opens with a cream envelope under a gold wax seal.
+   On the break: the seal cracks and falls, the flap folds back,
+   and the champion's card rises out of the pocket — ivory stock,
+   the name in the serif, the total beneath a gold rule. Drawn
+   in gradients and clip-paths only, like everything on this set.
+   ================================================================ */
+.env-wrap{text-align:center;padding-top:6px}
+.env-scene{display:flex;justify-content:center;padding:78px 0 6px}
+.env{position:relative;width:min(320px,80vw);height:198px}
+.env-back{position:absolute;inset:0;z-index:0;border-radius:6px;background:linear-gradient(160deg,#f1e5c6,#e3d2a8);box-shadow:0 18px 34px rgba(0,0,0,.5)}
+.env-card{position:absolute;left:14px;right:14px;top:12px;bottom:12px;z-index:1;border-radius:4px;background:#fbf6e9;box-shadow:0 2px 8px rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;transform:translateY(8px);transition:transform 1.05s cubic-bezier(.22,.8,.24,1) .5s}
+.env.open .env-card{transform:translateY(-56px)}
+.env-card-k{font:600 9px var(--font);letter-spacing:.22em;color:#8a6d2f}
+.env-card-name{font-family:'GHSerif',serif;font-size:30px;line-height:1.05;color:#221a10}
+.env-card-rule{width:54px;height:2px;background:var(--gold)}
+.env-card-sub{font:600 10px var(--font);letter-spacing:.14em;color:#6b5a33}
+.env-side{position:absolute;inset:0;z-index:2;border-radius:6px;background:linear-gradient(90deg,#e7d6ae,#e0cd9e)}
+.env-side-l{clip-path:polygon(0 0,0 100%,47% 50%)}
+.env-side-r{clip-path:polygon(100% 0,100% 100%,53% 50%);background:linear-gradient(270deg,#e7d6ae,#e0cd9e)}
+.env-pocket{position:absolute;inset:0;z-index:2;border-radius:6px;background:linear-gradient(180deg,#ecdcb4,#dfcb9c);clip-path:polygon(0 30%,50% 60%,100% 30%,100% 100%,0 100%)}
+.env-flap{position:absolute;inset:0;z-index:4;border-radius:6px;background:linear-gradient(180deg,#f6ecd4,#e9dab4);clip-path:polygon(0 0,100% 0,50% 56%);transform-origin:50% 0;transition:transform .8s cubic-bezier(.5,0,.3,1) .1s}
+.env.open .env-flap{transform:rotateX(180deg);z-index:0}
+.env-seal{position:absolute;left:50%;top:52%;z-index:5;width:48px;height:48px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 30%,#e8c877,#b98a2e 55%,#8a5f16);color:#3d2703;font-family:'GHSerif',serif;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.45),inset 0 1px 2px rgba(255,255,255,.6),inset 0 -2px 4px rgba(0,0,0,.3);transition:opacity .4s ease,transform .4s ease}
+.env.open .env-seal{opacity:0;transform:translate(-50%,-28%) rotate(30deg) scale(.82)}
+.env-cap{margin-top:12px}
+
+/* ================================================================
+   GRAPHICS PASS 6 — THE POT, FILLED HONESTLY (2026-11-14): the
+   brass vessel now SHOWS its contents — a fill of coin-gold
+   whose level is the pot against a $3,000 full bowl, its top a
+   bumpy coin surface. The level is set from the same displayed
+   figure the total prints, so it rises as a feed's coins land
+   and the count ticks up. An empty pot shows dark brass, as it
+   should. (This pass also re-keys the vessel's short-landscape
+   question dock: the old rules keyed on the CALL IT buttons the
+   no-host pass removed, so they never fired — the living key is
+   the question card itself.)
+   ================================================================ */
+.pot-body{overflow:hidden}
+.pot-fill{position:absolute;left:2px;right:2px;bottom:2px;height:0;border-radius:0 0 42% 42%/0 0 58% 58%;background:linear-gradient(180deg,#EFC65E,#D9A83F 55%,#B9822C);transition:height .45s ease}
+.pot-fill::before{content:"";position:absolute;top:-3px;left:0;right:0;height:8px;border-radius:50%;background:radial-gradient(circle at 28% 55%,#FFE9A8 2.2px,transparent 3px),radial-gradient(circle at 52% 35%,#FFE9A8 2.2px,transparent 3px),radial-gradient(circle at 74% 55%,#FFDF8E 2.2px,transparent 3px),linear-gradient(180deg,#F6D67C,#EFC65E)}
+
+/* ================================================================
+   GRAPHICS PASS 7 — STERLING IN RIM LIGHT (2026-11-14): the
+   host is lit like a host. His medallion in the host bar carries
+   a rim of light keyed to the Lighting Plot: a soft gold edge
+   at house light; a stronger, tighter rim while a question
+   drops the room (he watches from the edge of the light); a
+   slow pulse on the held breath; and at the reveal the rim
+   takes the banking seat's own colour, off the same --wash the
+   footlights use. Standing Sterling — the board, the title,
+   the finale — takes a true silhouette rim, gold and quiet,
+   and the finale's large figure a full halo.
+   ================================================================ */
+.host-face{transition:transform .35s ease,box-shadow .8s ease}
+#scr-game[data-plot="house"] .host-face{box-shadow:0 6px 14px rgba(0,0,0,.35),0 0 10px 1px rgba(233,205,138,.28)}
+#scr-game[data-plot="question"] .host-face{box-shadow:0 6px 14px rgba(0,0,0,.35),0 0 14px 2px rgba(233,205,138,.5)}
+#scr-game[data-plot="breath"] .host-face{animation:ghRimBreath 1.6s ease-in-out infinite}
+@keyframes ghRimBreath{0%,100%{box-shadow:0 6px 14px rgba(0,0,0,.35),0 0 10px 1px rgba(233,205,138,.35)}50%{box-shadow:0 6px 14px rgba(0,0,0,.35),0 0 20px 4px rgba(233,205,138,.65)}}
+#scr-game[data-plot="reveal"] .host-face{box-shadow:0 6px 14px rgba(0,0,0,.35),0 0 18px 3px var(--wash)}
+.sterling{filter:drop-shadow(0 0 5px rgba(233,205,138,.22))}
+.sterling-lg{filter:drop-shadow(0 0 3px rgba(246,235,203,.5)) drop-shadow(0 0 22px rgba(233,205,138,.4))}
+
+/* ================================================================
+   FIT PASS (2026-11-15) — the paperwork screens, fitted to their
+   frames. From the design review: the core beats were polished;
+   the transitional screens overflowed theirs. Each rule answers
+   a measured overflow (drive-fit.js holds the numbers):
+   (1) the round-intro ledger ran past a short stage — last row
+   15px over, its GO button ~130px below the fold, the pot
+   vessel sitting on its rows. On a short stage the ledger now
+   reads in two columns, and the vessel sits card beats out,
+   the same courtesy it already paid questions.
+   (2) the IF THEY BANK strip was sized to the viewport rather
+   than the stage and spilled past both edges under the
+   camera's crop — it takes the desk head's own width now and
+   may wrap instead of spilling.
+   (3) portrait CUT TWO tags truncated mid-word ("Player One's
+   one lif…") at nowrap 8.5px — they wrap to a second line.
+   (5) the sealed envelope's button never reached the screen
+   on a short stage: the scene stood 314px against the
+   stage's 233, so the button fell below the stage's clip
+   (elementFromPoint at its centre named the table's floor,
+   not the button). The scene now fits the stage whole —
+   tighter crown padding, a lower envelope, a smaller
+   caption — and the button paints inside the frame.
+   (6) the cold-open sub-line spent most of its 2.1s beat
+   half-faded (a .85s delay on a .6s fade) — it lands by .9s.
+   (7) Sterling's longest break lines ran past the bottom of
+   his rail — the rail's line gets the smaller, tighter dress
+   the race and finale bubbles already wear.
+   (Item 4, the portrait clock ring, measured clear of the
+   question card by 12px settled — a mid-relayout frame in the
+   review tour, not a defect; no rule here, the drive keeps
+   the measurement as a guard.)
+   ================================================================ */
+.co-sub{animation-delay:.4s;animation-duration:.5s}
+@media (max-width:560px){
+  #scr-game .tool-btn small{white-space:normal;line-height:1.25}
+}
+@media (max-height:500px){
+  .break-card .fact-list{columns:2;column-gap:26px}
+  .break-card .fact-row{break-inside:avoid;padding:2px 2px}
+  .break-card .fact-k{flex-basis:86px;font-size:10px}
+  .break-card .fact-v{font-size:12.5px;line-height:1.3}
+  #stage:has(.fact-list) .pot-vessel{display:none}
+  #stage:has(.fact-list) #btnRoundGo{position:sticky;bottom:8px;z-index:3}
+  .desk-head .proj-wrap{width:100%;max-width:100%;flex-wrap:wrap}
+  .desk-head .proj-strip{flex-wrap:wrap}
+  .env-wrap{padding-top:2px}
+  .env-scene{padding-top:8px}
+  .env{width:min(300px,80vw);height:140px}
+  .env-cap{font-size:11.5px;line-height:1.3;margin:5px auto 7px;max-width:430px}
+  #scr-game #hostbar .host-line{font-size:12px;line-height:1.3;min-height:0}
+}
+
+/* ================================================================
+   RESIDUALS PASS (2026-11-15): the Bluff reveal fitted to the
+   short stage. Measured: in short landscape the reveal's six
+   beats stacked to ~300px against a ~190px stage, so the
+   accounting of lies and the Continue button lived below the
+   fold (the stage scrolled; nothing was clipped). On short
+   stages the bluff reveal now reads in two columns — the
+   question's story on the left, the credits and the way on
+   on the right. Scoped to bluff reveals only; the ordinary
+   reveal keeps its single column. Portrait measured clean
+   and is untouched. */
+@media (max-height:500px){
+  /* the settled plaques sit this beat out — the credits below
+     carry every plaque's text, the truth tagged — and the
+     accounting reads two to a row in its compact dress */
+  #stage .stage-inner:has(.bluff-credits)>.answers{display:none}
+  #stage .stage-inner:has(.bluff-credits)>.q-headrow{display:none}
+  #stage .stage-inner:has(.bluff-credits)>.q-text{margin-top:2px;padding-top:6px;padding-bottom:6px}
+  #stage .stage-inner:has(.bluff-credits)>.bluff-credits{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}
+  #stage .stage-inner:has(.bluff-credits) .bluff-credit{padding:2px 9px;font-size:12.5px;line-height:1.15;gap:2px 8px}
+  #stage .stage-inner:has(.bluff-credits)>.why-wrap{margin-top:5px}
+  #stage .stage-inner:has(.bluff-credits) .why-slip{padding-top:3px;padding-bottom:3px}
+  #stage .stage-inner:has(.bluff-credits)>div:last-child{margin-top:2px}
+  /* the why-slip reads last, below the docked Continue's
+     natural place — docked over the slip, the button covered
+     its middle line; a short scroll now brings the story up
+     whole and clear instead */
+  #stage .stage-inner:has(.bluff-credits){display:flex;flex-direction:column}
+  #stage .stage-inner:has(.bluff-credits)>.q-text{order:1}
+  #stage .stage-inner:has(.bluff-credits)>.bluff-credits{order:2}
+  #stage .stage-inner:has(.bluff-credits)>div:last-child{order:3}
+  #stage .stage-inner:has(.bluff-credits)>.why-wrap{order:4}
+  /* the way on is docked to the stage's foot, so Continue is
+     reachable however long the night's lies run */
+  #stage .stage-inner:has(.bluff-credits)>div:last-child{position:sticky;bottom:4px}
+}
+
+/* ================================================================
+   DESK-TAG FIT PASS (2026-11-15): the Long Shot tag line is the
+   longest line the desks ever print, and in portrait it overran
+   its desk — canvas-measured in the tag's own font at 133px for
+   a house seat and 171px for a human seat against a 122px desk.
+   The line wears a .lsl span (tagsFor in game.js) and steps
+   down a size in portrait only; every other tag line, and every
+   other layout, is untouched. Measured after: 113 / 93.
+   ================================================================ */
+@media (max-width:560px){
+  .seat .tag .lsl{font-size:5.2px;letter-spacing:0}
+}
+
+/* ================================================================
+   FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
+   for tall compositions — measured with the report rows pinned
+   to their full four facts (a real night's card, long category
+   names and all): the portrait stage overflows and the landscape
+   grid's report column is the tall side. Audit A2's has-report
+   squeeze (portrait block ~line 1009, landscape grid ~line 1591)
+   already owns this cascade — an earlier draft of this block
+   appended competing values and made landscape WORSE (its
+   report-facts line-height beat the grid's tighter one), so
+   this pass works inside A2's scopes and says so per rule.
+   One global piece: report rows align from the top — baseline
+   alignment let a wrapping row's name ride ~12px low.
+   ================================================================ */
+#scr-game[data-phase="over"] .report-row{align-items:flex-start}
+#scr-game[data-phase="over"] .report-name{line-height:1.3}
+/* Portrait addendum to A2's squeeze (same scope, tighter by a
+   step): the pinned card still stood ~41px proud of the stage.
+   The marquee's padding and the name's lead-in, Sterling's
+   figure, the report's type and the buttons' padding each give
+   a few — the winner's word and total keep A2's sizes. */
+@media (max-width:560px){
+  #scr-game[data-phase="over"] .finale-wrap.has-report .marquee{padding-top:4px;padding-bottom:4px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .marquee .kicker{display:none}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-name{margin-top:2px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-total{line-height:1}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-sub{margin-top:2px}
+  #stage #scr-game[data-phase="over"] .finale-wrap.has-report .sterling-lg{width:44px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .champ-tag{padding-top:2px;padding-bottom:2px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-card{margin-top:2px;padding-bottom:0}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-head{line-height:1.1}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-name{flex-basis:88px}
+}
+/* Landscape addendum, same pass: the online finale still stood
+   ~58px proud. In the grid the report column is ~300px wide and
+   its 98px name column leaves ~170px for the facts, so a full
+   row stacks its four facts a line apiece and the column becomes
+   the tall side; the marquee meanwhile wraps three sub lines
+   (pot, champion, series) in its share of the left column. The
+   rows stack the ledger way — the name as a line of its own over
+   facts at the column's full width — and the subs and Sterling
+   give back a step. Portrait rows keep their columns (stacking
+   there was measured net-negative). */
+@media (max-height:500px){
+  /* the name runs in at the head of its facts, statement-style —
+     a separate name line per row cost the column ~15px a row */
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-row{display:block;padding-top:1px;padding-bottom:1px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-facts{line-height:1.12}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-name{display:inline;margin-right:8px;line-height:1.1}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-facts{display:inline;font-size:10.5px}
+  /* the card's say line steps out in short landscape: the host
+     rail's bubble already carries Sterling's winner line there,
+     and the card keeps its head and every row */
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-say{display:none}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-head{line-height:1.05}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-dot{margin:0 3px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-sub.pot-line{font-size:10px;line-height:1.15}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-sub:not(.pot-line){line-height:1.12}
+  /* the series finale's marquee is starved by its own row:
+     measured, its three sub lines wrap to ~186px of a 260px
+     column because Sterling's zone holds ~142px of the row
+     beside it (its bubble will not shrink, and flex ratios do
+     not move a min-content floor). On series nights in short
+     landscape the zone steps out of the finale-main row — the
+     host rail six inches right already carries Sterling and
+     his winner line — the marquee takes the full column, and
+     the grid gives the report column a larger share. */
+  #scr-game[data-phase="over"] .finale-wrap.has-report{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr)}
+  #scr-game[data-phase="over"] .finale-wrap.has-series .sterling-zone{display:none}
+}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-say{line-height:1.2}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-facts{font-size:11px}
+  #stage #scr-game[data-phase="over"] .finale-wrap.has-report .finale-row{padding-top:6px;margin-top:0}
+  #stage #scr-game[data-phase="over"] .finale-wrap.has-report .finale-row .podium .avatar{width:26px}
+  #stage #scr-game[data-phase="over"] .finale-wrap.has-report .finale-row .desk{padding-top:4px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns{margin-top:6px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-gold,
+  #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-ghost{padding-top:4px;padding-bottom:4px}
+

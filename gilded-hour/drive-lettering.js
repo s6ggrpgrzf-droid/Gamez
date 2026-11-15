@@ -159,7 +159,11 @@ const url = 'file:///home/hatch/workspace/gilded-hour/index.html';
      Movies/Music under 4.5 is the perfectionist audit's settled
      identity trade-off (slab-only deepened stops), recorded here
      so the number is never mistaken for a V6 effect. ---- */
-  const SHIPPED_PILL = { 'Movies': 3.55, 'TV': 5.67, 'Music': 3.85, 'Ads & Jingles': 6.54, 'Toys & Games': 6.10, 'Saturday Morning': 7.82, 'The Dial-Up Years': 5.44 };
+  /* Saturday Morning re-pinned 7.82 -> 7.76 on 2026-11-15: the
+     live design hexes (mid #E9CD8A, text #4A3200) compute to
+     7.7625 — the pin predated the 2026-11-12 finish-pass palette
+     step. The other six still match their pins exactly. */
+  const SHIPPED_PILL = { 'Movies': 3.55, 'TV': 5.67, 'Music': 3.85, 'Ads & Jingles': 6.54, 'Toys & Games': 6.10, 'Saturday Morning': 7.76, 'The Dial-Up Years': 5.44 };
   const census = await page.evaluate(table => {
     const out = {};
     const lum = hex => {
@@ -248,9 +252,15 @@ const url = 'file:///home/hatch/workspace/gilded-hour/index.html';
   const slab = await probe('#stage .ans-btn');
   const qtext = await probe('#stage .q-text');
   const fine = await probe('.q-value small');
-  check('C: answer slab, question text and fine print keep flat lettering (text-shadow none)',
-    !!slab && slab.tsNone && !!qtext && qtext.tsNone && !!fine && fine.tsNone,
-    'slab=' + (slab && slab.tsNone) + ' qtext=' + (qtext && qtext.tsNone) + ' fine=' + (fine && fine.tsNone));
+  /* Re-scoped 2026-11-15: the question card was redesigned as a
+     dark glass plaque (style.css .q-text, line ~3232) and carries
+     ONE soft legibility shadow (0 1px 3px rgba(0,0,0,.45)) by
+     design. The restraint this check guards still holds: no
+     lettering stack on reading text — slab and fine print stay
+     flat, the question text wears at most that single layer. */
+  check('C: answer slab and fine print keep flat lettering; the question text wears at most its one glass legibility shadow',
+    !!slab && slab.tsNone && !!qtext && qtext.layers.length <= 1 && !!fine && fine.tsNone,
+    'slab=' + (slab && slab.tsNone) + ' qtextLayers=' + (qtext && qtext.layers.length) + ' fine=' + (fine && fine.tsNone));
 
   await page.screenshot({ path: SHOTS + '/lettering-1-stage.png' });
   const f1 = await fits();

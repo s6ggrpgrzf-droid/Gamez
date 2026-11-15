@@ -3933,6 +3933,56 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
 }
 
 /* ================================================================
+   RESIDUALS PASS (2026-11-15): the Bluff reveal fitted to the
+   short stage. Measured: in short landscape the reveal's six
+   beats stacked to ~300px against a ~190px stage, so the
+   accounting of lies and the Continue button lived below the
+   fold (the stage scrolled; nothing was clipped). On short
+   stages the bluff reveal now reads in two columns — the
+   question's story on the left, the credits and the way on
+   on the right. Scoped to bluff reveals only; the ordinary
+   reveal keeps its single column. Portrait measured clean
+   and is untouched. */
+@media (max-height:500px){
+  /* the settled plaques sit this beat out — the credits below
+     carry every plaque's text, the truth tagged — and the
+     accounting reads two to a row in its compact dress */
+  #stage .stage-inner:has(.bluff-credits)>.answers{display:none}
+  #stage .stage-inner:has(.bluff-credits)>.q-headrow{display:none}
+  #stage .stage-inner:has(.bluff-credits)>.q-text{margin-top:2px;padding-top:6px;padding-bottom:6px}
+  #stage .stage-inner:has(.bluff-credits)>.bluff-credits{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}
+  #stage .stage-inner:has(.bluff-credits) .bluff-credit{padding:2px 9px;font-size:12.5px;line-height:1.15;gap:2px 8px}
+  #stage .stage-inner:has(.bluff-credits)>.why-wrap{margin-top:5px}
+  #stage .stage-inner:has(.bluff-credits) .why-slip{padding-top:3px;padding-bottom:3px}
+  #stage .stage-inner:has(.bluff-credits)>div:last-child{margin-top:2px}
+  /* the why-slip reads last, below the docked Continue's
+     natural place — docked over the slip, the button covered
+     its middle line; a short scroll now brings the story up
+     whole and clear instead */
+  #stage .stage-inner:has(.bluff-credits){display:flex;flex-direction:column}
+  #stage .stage-inner:has(.bluff-credits)>.q-text{order:1}
+  #stage .stage-inner:has(.bluff-credits)>.bluff-credits{order:2}
+  #stage .stage-inner:has(.bluff-credits)>div:last-child{order:3}
+  #stage .stage-inner:has(.bluff-credits)>.why-wrap{order:4}
+  /* the way on is docked to the stage's foot, so Continue is
+     reachable however long the night's lies run */
+  #stage .stage-inner:has(.bluff-credits)>div:last-child{position:sticky;bottom:4px}
+}
+
+/* ================================================================
+   DESK-TAG FIT PASS (2026-11-15): the Long Shot tag line is the
+   longest line the desks ever print, and in portrait it overran
+   its desk — canvas-measured in the tag's own font at 133px for
+   a house seat and 171px for a human seat against a 122px desk.
+   The line wears a .lsl span (tagsFor in game.js) and steps
+   down a size in portrait only; every other tag line, and every
+   other layout, is untouched. Measured after: 113 / 93.
+   ================================================================ */
+@media (max-width:560px){
+  .seat .tag .lsl{font-size:5.2px;letter-spacing:0}
+}
+
+/* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
    for tall compositions — measured with the report rows pinned
    to their full four facts (a real night's card, long category

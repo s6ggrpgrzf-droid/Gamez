@@ -1,0 +1,334 @@
+/* ================= Pass P — the polish pass =================
+   Six visual enhancements. Juice is feedback: every motion below
+   answers a game event. No backdrop-filter, no reduced-motion reads. */
+
+/* ---- 1. the living stage: breathing glow, motes, landing bloom ---- */
+.set-glow{background:radial-gradient(40% 34% at 50% 30%,rgba(255,196,86,.20),rgba(255,196,86,.05) 55%,rgba(255,196,86,0) 72%);opacity:.55;transform-origin:50% 30%;animation:stageBreathe 7.5s ease-in-out infinite alternate}
+@keyframes stageBreathe{from{opacity:.42;transform:scale(1)}to{opacity:.78;transform:scale(1.07)}}
+#scr-game[data-light="hot"] .set-glow{opacity:.8;filter:hue-rotate(-14deg) saturate(1.3)}
+#scr-game[data-light="vault"] .set-glow{opacity:1;filter:saturate(1.25)}
+#moteCanvas{position:absolute;inset:0;z-index:0;pointer-events:none}
+#bloom{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0}
+#bloom.on{animation:bloomPulse 1s ease-out both}
+@keyframes bloomPulse{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
+
+/* ---- 2. Sterling, alive: blink, glance, lean, nod, tip ---- */
+.host-face{transition:transform .35s ease}
+#scr-game.st-glance .host-face{transform:rotate(3deg) translateY(-1px)}
+#scr-game.st-lean .host-face{transform:scale(1.08) translateY(1px)}
+#scr-game.st-tip .host-face{transform:rotate(-5deg) translateY(3px)}
+#scr-game.st-nod .host-face{animation:nodA .55s ease}
+@keyframes nodA{0%,100%{transform:translateY(0)}30%{transform:translateY(3px)}55%{transform:translateY(0)}78%{transform:translateY(2px)}}
+.host-face svg circle[r="3.6"],.sterling circle[r="6.5"]{transform-box:fill-box;transform-origin:center;transition:transform .07s ease}
+#scr-game.st-blink .host-face svg circle[r="3.6"],#scr-game.st-blink .sterling circle[r="6.5"]{transform:scaleY(.08)}
+/* Cast pass 1: eyes have whites now, so the blink flattens the whole
+   .st-eye group on the same st-blink hook (the pupil rule above still
+   applies inside it); pupil travel (glance/sweep/point) is untouched */
+.sterling .st-eye,.host-face .st-eye{transform-box:fill-box;transform-origin:center;transition:transform .07s ease}
+#scr-game.st-blink .sterling .st-eye,#scr-game.st-blink .host-face .st-eye{transform:scaleY(.1)}
+#scr-game.st-glance .host-face svg circle[r="3.6"]{transform:translateX(1.6px)}
+.finale-wrap .sterling-zone{animation:tipBow 1.5s cubic-bezier(.2,.7,.3,1) .35s 1 both}
+@keyframes tipBow{0%{transform:rotate(0)}35%{transform:rotate(-2.6deg) translateY(5px)}70%{transform:rotate(.8deg) translateY(-1px)}100%{transform:rotate(0)}}
+
+/* ---- Visual stage 2: the podium, the arms, the gestures ----
+   The podium and arms are drawn inside Sterling's own SVGs (game.js
+   STERLING_PODIUM / STERLING_ARMS, and the host-face bust in
+   index.html wears the same kit at badge scale). Arms pivot at the
+   shoulders — transform-box:view-box pins each origin to the SVG's
+   own coordinates, so the same angles serve the full figure and the
+   badge. One ease for both gestures: out fast, a breath of overshoot,
+   settle — the show's 20/80 tween feel. The classes are transient
+   (stClass timers), fired only from the question/reveal presenters,
+   and the pupils travel with the arm so the point and the gaze agree.
+   The finale never carries these classes: the bow owns it. */
+.sterling .st-arm,.host-face .st-arm{transition:transform .55s cubic-bezier(.25,1.3,.4,1)}
+.sterling .st-arm-l{transform-box:view-box;transform-origin:84px 218px}
+.sterling .st-arm-r{transform-box:view-box;transform-origin:236px 218px}
+.host-face .st-arm-l{transform-box:view-box;transform-origin:27px 90px}
+.host-face .st-arm-r{transform-box:view-box;transform-origin:93px 90px}
+/* the presenting sweep: the right arm swings out across the podium
+   toward the card, holds while the class lives (~1.5s), settles back */
+#scr-game.st-sweep .sterling .st-arm-r,#scr-game.st-sweep .host-face .st-arm-r{transform:rotate(-46deg)}
+#scr-game.st-sweep .host-face svg circle[r="3.6"],#scr-game.st-sweep .sterling circle[r="6.5"]{transform:translateX(1.8px)}
+/* the point: left arm for a seat to his left, right arm dropped for
+   centre, right arm swung wide for a seat to his right */
+#scr-game.st-point-l .sterling .st-arm-l,#scr-game.st-point-l .host-face .st-arm-l{transform:rotate(36deg)}
+#scr-game.st-point-c .sterling .st-arm-r,#scr-game.st-point-c .host-face .st-arm-r{transform:rotate(-15deg)}
+#scr-game.st-point-r .sterling .st-arm-r,#scr-game.st-point-r .host-face .st-arm-r{transform:rotate(-36deg)}
+#scr-game.st-point-l .host-face svg circle[r="3.6"],#scr-game.st-point-l .sterling circle[r="6.5"]{transform:translate(-1.8px,1px)}
+#scr-game.st-point-c .host-face svg circle[r="3.6"],#scr-game.st-point-c .sterling circle[r="6.5"]{transform:translate(0,1.2px)}
+#scr-game.st-point-r .host-face svg circle[r="3.6"],#scr-game.st-point-r .sterling circle[r="6.5"]{transform:translate(1.8px,1px)}
+/* at badge scale the arm alone is a whisper, so the whole face leans
+   into the point — composed with the reveal's lean-in, never instead
+   of it */
+#scr-game.st-point-l .host-face{transform:rotate(-4deg) translateY(1px)}
+#scr-game.st-point-c .host-face{transform:translateY(2px)}
+#scr-game.st-point-r .host-face{transform:rotate(4deg) translateY(1px)}
+#scr-game.st-lean.st-point-l .host-face{transform:scale(1.08) rotate(-4deg) translateY(2px)}
+#scr-game.st-lean.st-point-c .host-face{transform:scale(1.08) translateY(3px)}
+#scr-game.st-lean.st-point-r .host-face{transform:scale(1.08) rotate(4deg) translateY(2px)}
+
+/* ---- Visual pass V1: Sterling in planes ----
+   The figure is built in planes (game.js sterlingSVG; the title
+   figure and the host-face bust in index.html wear the same
+   groups): a cast shadow (.st-shadow), body, head, and an arm
+   wrapper around each untouched .st-arm gesture group. The pose
+   classes the rig already fires translate the planes a few
+   pixels with a hair of stagger — the pointing arm leads (no
+   delay), the head follows a beat later (.06s), the body
+   settles last (.12s) — via these transitions, so the depth
+   rides motions that already exist and no pose changes shape.
+   The painted rim (.st-rim shapes, .st-rim-stroke copies) is a
+   silhouette offset toward the light, filled with the live
+   category's colour inside the game screen (applyCat keeps
+   --cat-rgb current there) and warm brass everywhere else.
+   The shadow drifts opposite the lean and the point, the way
+   a cast shadow answers a moving figure. */
+.sterling,.host-face{--rim-rgb:198,164,94}
+#scr-game .sterling,#scr-game .host-face{--rim-rgb:var(--cat-rgb)}
+.sterling .st-rim,.host-face .st-rim{fill:rgb(var(--rim-rgb));opacity:.5}
+.sterling .st-rim-stroke,.host-face .st-rim-stroke{fill:none;stroke:rgb(var(--rim-rgb));opacity:.45;stroke-linecap:round}
+.sterling .st-plane,.host-face .st-plane{transition:transform .5s cubic-bezier(.25,1.2,.4,1)}
+.sterling .st-plane-head,.host-face .st-plane-head{transition-delay:.06s}
+.sterling .st-plane-body,.host-face .st-plane-body{transition-delay:.12s}
+.sterling .st-shadow,.host-face .st-shadow{transform-box:fill-box;transform-origin:center;transition:transform .6s ease .04s}
+/* the glance and the lean — written first, so a point composed
+   with the lean keeps the point's offsets below, the same
+   composition the host-face rules above observe */
+#scr-game.st-glance .st-plane-head{transform:translate(1px,-.3px)}
+#scr-game.st-lean .st-plane-head{transform:translate(1.5px,1.5px)}
+#scr-game.st-lean .st-plane-body{transform:translate(.8px,.8px)}
+#scr-game.st-lean .st-plane-arm-l,#scr-game.st-lean .st-plane-arm-r{transform:translate(.8px,.4px)}
+#scr-game.st-lean .st-shadow{transform:translate(-2.5px,0) scale(1.05,1)}
+/* the nod rides the head plane (the badge already nods as one
+   piece on nodA); the dip mirrors nodA's shape at plane scale */
+#scr-game.st-nod .st-plane-head{animation:planeNod .55s ease}
+@keyframes planeNod{0%,100%{transform:translate(0,0)}30%{transform:translate(.4px,1.8px)}55%{transform:translate(0,0)}78%{transform:translate(.3px,1px)}}
+/* the presenting sweep: the arm plane leads toward the card */
+#scr-game.st-sweep .st-plane-arm-r{transform:translate(2.5px,-1.5px)}
+#scr-game.st-sweep .st-plane-head{transform:translate(1.5px,-.5px)}
+#scr-game.st-sweep .st-plane-body{transform:translate(.5px,0)}
+#scr-game.st-sweep .st-shadow{transform:translate(-2px,0) scale(1.02,1)}
+/* the point: the pointing arm's plane reaches furthest, the
+   head follows it, the shadow falls the other way */
+#scr-game.st-point-l .st-plane-arm-l{transform:translate(-3px,-1px)}
+#scr-game.st-point-l .st-plane-head{transform:translate(-2px,.5px)}
+#scr-game.st-point-l .st-plane-body{transform:translate(-1px,0)}
+#scr-game.st-point-l .st-shadow{transform:translate(3.5px,.5px) scale(1.03,1)}
+#scr-game.st-point-c .st-plane-arm-r{transform:translate(1.5px,1px)}
+#scr-game.st-point-c .st-plane-head{transform:translate(1px,1px)}
+#scr-game.st-point-c .st-plane-body{transform:translate(.5px,.5px)}
+#scr-game.st-point-c .st-shadow{transform:translate(0,.5px) scale(1.02,1)}
+#scr-game.st-point-r .st-plane-arm-r{transform:translate(3px,-1px)}
+#scr-game.st-point-r .st-plane-head{transform:translate(2px,.5px)}
+#scr-game.st-point-r .st-plane-body{transform:translate(1px,0)}
+#scr-game.st-point-r .st-shadow{transform:translate(-3.5px,.5px) scale(1.03,1)}
+
+/* ---- 3. money moves: coin canvas, score shimmer, the laurel ---- */
+#coinCanvas{position:fixed;inset:0;z-index:26;pointer-events:none;display:none}
+#coinCanvas.on{display:block}
+/* The Ten, pass 7: the pad's twin coin canvas, inside the join screen */
+#jpCoinCanvas{position:fixed;inset:0;z-index:30;pointer-events:none;display:none}
+#jpCoinCanvas.on{display:block}
+.seat.banking .seat-score{background:linear-gradient(100deg,#FFF 15%,#F6EBCB 38%,#E2B76B 50%,#FFF 72%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:shimmerX .85s linear}
+@keyframes shimmerX{from{background-position:110% 0}to{background-position:-110% 0}}
+
+/* ---- Pass D4: the scoring grammar — one seat delta, one tag ----
+   Every host reveal speaks the same language at the seat: a bank is a
+   gold "+$N" rising off the desk while the coins land; a miss is a
+   muted "$0" falling away; a guess-question banker wears CLOSEST. */
+.seat-delta{position:absolute;left:50%;top:0;transform:translateX(-50%);z-index:6;pointer-events:none;font-weight:800;white-space:nowrap;opacity:0}
+.seat-delta.bank{color:var(--brass-figure);font-size:clamp(16px,2.4vmin,22px);text-shadow:0 2px 0 #27436E,0 0 14px rgba(226,183,107,.45);animation:deltaRise 2.6s cubic-bezier(.2,.9,.3,1) both}
+.seat-delta.miss{color:#A79BC0;font-size:clamp(12px,1.8vmin,16px);text-shadow:0 2px 0 rgba(8,15,29,.6);animation:deltaFall 2s ease-out both}
+@keyframes deltaRise{0%{opacity:0;transform:translate(-50%,8px) scale(.8)}14%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}24%{transform:translate(-50%,-8px) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px) scale(1)}}
+@keyframes deltaFall{0%{opacity:0;transform:translate(-50%,-6px)}18%{opacity:.95}70%{opacity:.8}100%{opacity:0;transform:translate(-50%,10px)}}
+.closest-tag{display:inline-block;margin-left:7px;padding:2px 7px 3px;border-radius:999px;background:var(--brass-pill);color:#431A04;font-size:9px;font-weight:800;letter-spacing:.1em;vertical-align:2px;box-shadow:0 2px 0 rgba(0,0,0,.3);animation:tagIn .4s cubic-bezier(.2,1.6,.4,1) both}
+/* Design pass 3: the quick-draw tag — same pill, hotter metal (a
+   near-white gold flash) so speed reads at a glance across the room;
+   same geometry, so the seat's tag space and fit guards are unmoved. */
+.closest-tag.qdtag{background:linear-gradient(180deg,#FBF3DA,#F0DCA3 70%,#FFC53D);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,213,106,.55)}
+.jp-qdtag{display:inline-block;margin:2px auto 4px;padding:3px 10px 4px;border-radius:999px;background:linear-gradient(180deg,#FBF3DA,#F0DCA3 70%,#FFC53D);color:#431A04;font-size:10px;font-weight:800;letter-spacing:.12em;box-shadow:0 2px 0 rgba(0,0,0,.3)}
+/* Gameplay-visuals pass G5: the pad's photo-finish line — a quiet
+   gold caps line above the score line, lettered in the race's own
+   grammar (FIRST IN / 2ND IN / the margin in tabular figures). */
+.jp-pfline{text-align:center;margin:2px auto 4px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#F0DCA3;text-shadow:0 1px 2px rgba(0,0,0,.55);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+/* Hot Streaks (New programme pass 3): the warm family. The desk
+   tag's streak segment is amber in the tag's own caps grammar,
+   deepening to a lit ember at 5+; the reveal tags are the qdtag
+   pill in heated metal — same geometry throughout, so the seat's
+   tag space and fit guards are unmoved. The pad's live streak line
+   is a small warm caps line under the question. */
+.tag .streakseg{color:#FFC53D}
+.tag .streakseg.hot{color:#FF9A3C;text-shadow:0 0 8px rgba(255,154,60,.55)}
+.closest-tag.streaktag{background:linear-gradient(180deg,#FFE3B3,#E2B76B 70%,#DFAF63);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,154,60,.5)}
+.jp-qdtag.streak{background:linear-gradient(180deg,#FFE3B3,#E2B76B 70%,#DFAF63)}
+.jp-streakline{margin:8px auto 0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.14em;color:#E2B76B;text-shadow:0 0 10px rgba(255,154,60,.35)}
+/* Gameplay-visuals pass G8 — THREAT DISPLAYS: the streak made
+   ambient. The tag prints the run from 3; the seat itself carries
+   the temperature from 2, in the same warm family — kindling is a
+   faint warm rim along the desk's top edge, ember (3–4, the bonus
+   live) is a steady glow with the nameplate warmed to match, and
+   at 5+ — the tag's own hot tier — the glow breathes on a slow
+   pulse whose rest frame is exactly the ember frame, so the class
+   landing never jumps. Paint only (box-shadow, filter, colour):
+   no layout property moves, no hit target shifts, zero height.
+   A marked seat keeps its green GOT IT glow composed over the
+   heat; at full ember the pulse subsumes it (the bounce remains).
+   No reduced-motion gating (standing rule). */
+.seat.kindling .desk{filter:drop-shadow(0 0 5px rgba(255,176,66,.25));box-shadow:inset 0 2px 0 rgba(255,197,61,.5),inset 0 0 13px rgba(255,166,58,.13)}
+.seat.ember .desk{filter:drop-shadow(0 0 8px rgba(255,140,50,.5));box-shadow:inset 0 2px 0 rgba(255,186,84,.9),inset 0 0 18px rgba(255,132,46,.3)}
+.seat.ember .seat-name{color:#FFE0B0;text-shadow:0 0 9px rgba(255,154,60,.4),0 2px 0 rgba(0,0,0,.22)}
+.seat.gotit.kindling .desk{filter:drop-shadow(0 0 5px rgba(255,176,66,.25)) drop-shadow(0 0 14px rgba(62,207,110,.9))}
+.seat.gotit.ember .desk{filter:drop-shadow(0 0 8px rgba(255,140,50,.5)) drop-shadow(0 0 14px rgba(62,207,110,.9))}
+.seat.emberfull .desk{animation:emberPulse 2.6s ease-in-out infinite}
+@keyframes emberPulse{0%,100%{filter:drop-shadow(0 0 8px rgba(255,140,50,.5));box-shadow:inset 0 2px 0 rgba(255,186,84,.9),inset 0 0 18px rgba(255,132,46,.3)}50%{filter:drop-shadow(0 0 15px rgba(255,118,38,.8));box-shadow:inset 0 2px 0 rgba(255,205,105,1),inset 0 0 26px rgba(255,118,38,.45)}}
+/* the pad's standings rows warm by the same thresholds — an inset
+   ember bar at the row's leading edge and a wash of the warm
+   family; the me-row keeps its gold border (identity outranks
+   heat), and the full-ember row pulses its bar, never its text */
+.jp-standrow.kindling{box-shadow:inset 3px 0 0 rgba(255,197,61,.55),inset 0 0 12px rgba(255,166,58,.08)}
+.jp-standrow.ember{border-color:rgba(255,154,60,.5);background-image:linear-gradient(90deg,rgba(255,140,50,.12),rgba(255,140,50,0) 55%);box-shadow:inset 3px 0 0 rgba(255,160,60,.95),inset 0 0 14px rgba(255,140,50,.12)}
+.jp-standrow.me.ember{border-color:var(--gold)}
+.jp-standrow.emberfull{animation:emberRowPulse 2.6s ease-in-out infinite}
+@keyframes emberRowPulse{0%,100%{box-shadow:inset 3px 0 0 rgba(255,160,60,.95),inset 0 0 14px rgba(255,140,50,.12)}50%{box-shadow:inset 3px 0 0 rgba(255,186,84,1),inset 0 0 22px rgba(255,132,46,.24)}}
+.jp-toyou{margin:9px auto 0;text-align:center;font-size:14px;font-weight:900;letter-spacing:.08em;color:#F6EBCB;font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(226,183,107,.4)}
+@keyframes tagIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+#laurel{position:absolute;z-index:3;width:42px;height:42px;pointer-events:none;transform:translate(-50%,-88%);transition:left .65s cubic-bezier(.3,1.25,.4,1),top .65s cubic-bezier(.3,1.25,.4,1),opacity .3s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
+#laurel.snap{transition:none}
+#laurel.off{opacity:0}
+#scr-game.noseats #laurel{opacity:0}
+#laurel svg{width:100%;height:100%;display:block}
+.laurel-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);width:34px;height:34px;z-index:5;pointer-events:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.laurel-badge svg{width:100%;height:100%;display:block}
+
+/* ---- 4. THE WHEEL, REAL (The Ten, pass 1): a drawn wheel — seven
+   segments in the category colours under a fixed brass needle.
+   The rotor is an SVG group turned by the runner in game.js; the
+   needle lives outside it and only flicks as boundaries pass. ---- */
+.wheel-frame{position:relative;width:min(74vw,340px);margin:12px auto 2px}
+.wheel-svg{display:block;width:100%;height:auto;filter:drop-shadow(0 16px 26px rgba(0,0,0,.5))}
+.wheel-needle{position:absolute;top:-10px;left:50%;width:26px;height:20px;z-index:4;pointer-events:none;background:linear-gradient(180deg,#F6EBCB,#E2B76B 60%,#D9930D);clip-path:polygon(0 0,100% 0,50% 100%);filter:drop-shadow(0 3px 3px rgba(0,0,0,.45));transform:translateX(-50%);transition:transform .06s ease-out}
+.wheel-needle.land{animation:needleSettle .34s cubic-bezier(.2,2.2,.4,1)}
+@keyframes needleSettle{0%{margin-top:0}35%{margin-top:3px}70%{margin-top:-1px}100%{margin-top:0}}
+.wheel-label{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-anchor:middle}
+
+/* ---- 8. the wheel emblem: the show's key art ----
+   One medallion (index.html #emblem / #emblem-sm), three stamps:
+   title marquee, online lobby QR plate, finale seal. Brass comes
+   from the item-7 tokens (the SVG paints with the same values);
+   segments carry the seven category mids. */
+.wheel-emblem{display:block}
+#marqueeTitle>.kicker{margin-bottom:3px}
+.marquee-row{display:flex;align-items:center;justify-content:center;gap:clamp(12px,2.4vmin,22px)}
+.marquee-text{min-width:0}
+.emblem-title{width:clamp(72px,13vmin,96px);height:auto;flex:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.45))}
+.emblem-lobby{position:absolute;top:-13px;left:-13px;width:36px;height:36px;z-index:2;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+.emblem-seal{width:100%;height:100%}
+
+/* ---- 5. the finale ceremony: spotlight, seal, foil ---- */
+.finale-wrap{position:relative}
+.spot-cone{position:absolute;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(240,220,163,.30),rgba(240,220,163,.09) 72%,rgba(240,220,163,.14)),radial-gradient(52% 16% at 50% 100%,rgba(240,220,163,.34),rgba(240,220,163,0) 70%);clip-path:polygon(43% 0,57% 0,100% 100%,0 100%);opacity:0}
+.spot-cone.on{animation:coneIn 1.15s ease-out .25s both}
+@keyframes coneIn{from{opacity:0;transform:translateX(-50%) translateY(-12px) scaleY(.94)}to{opacity:1;transform:translateX(-50%) translateY(0) scaleY(1)}}
+.gold-seal{position:absolute;bottom:-16px;right:-14px;width:60px;height:60px;display:block;opacity:0;transform:scale(2.4) rotate(-30deg);pointer-events:none;z-index:5;filter:drop-shadow(0 5px 9px rgba(0,0,0,.4))}
+#scr-game.sealed .gold-seal{animation:sealStamp .5s cubic-bezier(.2,1.6,.4,1) .55s both}
+#scr-game.sealed .host-bubble{padding-right:58px}
+@keyframes sealStamp{0%{opacity:0;transform:scale(2.4) rotate(-30deg)}60%{opacity:1;transform:scale(.92) rotate(-11deg)}100%{opacity:1;transform:scale(1) rotate(-12deg)}}
+.finale-marquee{border:3px solid transparent;background:linear-gradient(180deg,rgba(24,44,76,.88),rgba(10,20,38,.92)) padding-box,linear-gradient(155deg,#F6EBCB,#A5853F 30%,#F0DCA3 50%,#8A4D0C 72%,#E9CD8A) border-box;background-size:auto,230% 230%;animation:foilShift 6.5s ease-in-out infinite alternate}
+@keyframes foilShift{from{background-position:0 0,0% 0%}to{background-position:0 0,100% 100%}}
+
+/* ---- 6. phones dressed for the show ---- */
+#scr-join::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(95% 55% at 50% 0%,rgba(var(--cat-rgb,255,185,58),.5),rgba(var(--cat-rgb,255,185,58),0) 70%);opacity:0;transition:opacity .7s ease}
+#scr-join.cat-on::before{opacity:.85}
+.jp-pulse{position:absolute;left:0;right:0;bottom:0;height:62%;z-index:1;pointer-events:none;background:radial-gradient(62% 100% at 50% 100%,rgba(233,205,138,.55),rgba(233,205,138,0) 70%);animation:jpPulseRise 1.2s ease-out both}
+@keyframes jpPulseRise{0%{opacity:0;transform:translateY(46%)}22%{opacity:1}100%{opacity:0;transform:translateY(-8%)}}
+.jp-verdict{position:relative}
+.jp-verdict.miss::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(22,9,30,0),rgba(22,9,30,.42));animation:missFall 1.1s ease-out both}
+@keyframes missFall{0%{opacity:.55;transform:translateY(-14%)}100%{opacity:0;transform:translateY(7%)}}
+.jp-ans{transition:transform .16s cubic-bezier(.2,1.5,.4,1),box-shadow .16s ease,filter .16s ease}
+.jp-ans:active{transform:translateY(5px) scale(.965);box-shadow:inset 0 3px 0 var(--glass-hl),inset 0 -6px 0 var(--glass-depth),0 3px 0 var(--cat-sh)}
+.jp-step:active{transform:translateY(4px) scale(.93)}
+.jp-cut{transition:transform .14s ease,box-shadow .14s ease}
+.jp-cut:active{transform:translateY(3px) scale(.98)}
+.jp-chipdisc{animation:chipPop .32s cubic-bezier(.2,1.8,.4,1) both}
+@keyframes chipPop{0%{transform:scale(.5)}100%{transform:scale(1)}}
+.jp-id{box-shadow:0 6px 0 rgba(0,0,0,.3)}
+.jp-id-place{flex:none;display:flex;align-items:center;justify-content:center;min-width:43px;height:43px;padding:0 7px;border-radius:50%;font-size:14.5px;font-weight:700;color:#431A04;box-shadow:0 3px 0 rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.6)}
+.jp-id-place.p1{background:radial-gradient(circle at 35% 30%,#F6EBCB,#E2B76B)}
+.jp-id-place.p2{background:radial-gradient(circle at 35% 30%,#FFFFFF,#B9C7D6);color:#33404F}
+.jp-id-place.p3{background:radial-gradient(circle at 35% 30%,#FFC79A,#C97B3D);color:#4A2405}
+.jp-id-place.p4{background:radial-gradient(circle at 35% 30%,#D8C9E8,#9B85C4);color:#2E1A40}
+
+/* ================= Design pass item 5 — the numbers' voice =================
+   Two systems, typography only (no geometry, no copy, no behaviour):
+   .tnum — every money/number surface: tabular figures requested AND
+   the numeral glyphs routed through 'GHTab' (see the @font-face at
+   the top), so count-ups, drains and deltas hold one width.
+   font-kerning:none rides along: Arial-metric faces kern digit
+   pairs (measured: "1,111" rendered 2.2px narrower than "8,888" at
+   20px despite identical advances) — with kerning off, a string's
+   width is exactly the sum of its tabular advances.
+   .lbl — every structural label: one treatment, uppercase with the
+   element's own letter-tracking (sizes untouched). Sterling's
+   speech, question/answer text and player names are NOT labels and
+   are deliberately absent from both lists. */
+.tnum,.pmoney,.seat-score,.seat-delta,.gain-chip,.podium .delta,.winner-total,.wager-amt,.q-value span,.timer-num,.bet-amt,.og-count,.og-code,.code-box,.count-btn,.rank-badge,.jp-id-score,.jp-id-secs,.jp-id-place,.jp-gain,.jp-standrow .sc,.jp-vscore,.jp-betamt,.jp-chipdisc,.jp-num,.jp-pickstate,.jp-numstate,.jp-betstate,#qCounter,.proj-amt,.jp-proj,.award-who,.award-v{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-kerning:none}
+.lbl,.kicker,.setup-label,.name-seat,.microline,.how-kicker,.how-skip,.how-close,.round-kicker,.co-kicker,.q-cat,.q-kind,.cat-pill,.q-value small,.host-name,#topbar,.tb-btn,.mute-btn,.mode-tab,.chip,.cat-chip,.og-pill,.og-qr-cap,.og-count,.jp-head,.jp-room,.jp-conn,.jp-phaseword,.jp-betlabel,.jp-herotag,.jp-ans-tag,.jp-cutnote,.jp-pickstate,.jp-numstate,.jp-betstate,.seat .tag,.closest-tag{text-transform:uppercase}
+
+/* ================= Design pass item 6 — emblems + portraits =================
+   The seven category emblems ride the pill, the cycler chips and the
+   pad's category chip; the eight portraits ride a seat-colour disc.
+   No backdrop-filter, no motion gating — same rules as ever. */
+.emb{display:inline-block;vertical-align:middle}
+.cat-pill{display:inline-flex;align-items:center;gap:8px}
+.cat-pill .emb{width:20px;height:20px;flex:none}
+.cat-chip{display:inline-flex;align-items:center;gap:7px}
+.cat-chip .emb{width:18px;height:18px;flex:none}
+.jp-qline{display:flex;align-items:flex-start;gap:9px}
+.jp-catemb{flex:none;line-height:0;margin-top:2px}
+.jp-catemb .emb{width:22px;height:22px;display:block}
+/* table setup: the medallion in each name row wears the initial
+   of the name being typed (THE FACE PASS — no longer a picker) */
+.ava-pick{width:36px;height:36px;flex:none;padding:0;border-radius:50%;background:rgba(255,246,232,.06)}
+@media (max-height:500px){
+  .ava-pick{width:20px;height:20px;border-radius:50%}
+  .cat-pill .emb{width:15px;height:15px}
+  .cat-chip .emb{width:16px;height:16px}
+}
+.ava-pick .avatar{width:100%;height:auto;display:block;margin:0;filter:none}
+
+/* ================= Design pass item 7 — short-stage fit =================
+   The paper card carries its own padding; on the short landscape stage
+   that padding is paid for out of the gaps around the card, so the
+   question screen's fit is the fit it always was. */
+@media (max-height:500px){
+  .q-text{padding:5px 12px;border-radius:12px;margin-top:0}
+  .q-cardwrap{margin-top:0}
+  .answers{margin-top:2px}
+  .tools{margin-top:1px}
+  .why{padding:5px 10px;border-radius:10px}
+  .jp-qline{padding:8px 12px}
+}
+
+/* ---- item 8 responsive sizing (kept last so it wins the cascade
+   over the base emblem rules above) ---- */
+@media (max-height:500px){
+  .emblem-title{width:64px}
+  .marquee-row{gap:10px}
+  #marqueeTitle{padding-top:4px;padding-bottom:4px}
+  #marqueeTitle .logo{font-size:29.5px}
+}
+@media (max-width:560px){
+  /* portrait: the emblem row costs the marquee height (the tagline
+     wraps in the narrower text column) — repaid inside the marquee
+     only: slimmer padding, a step down on the wordmark, tighter logo
+     margins — so START keeps its first-viewport place. The kicker
+     rides full-width above the row (its original line), clear of
+     the SOUND button that overlaps the marquee's top-right. */
+  .emblem-title{width:72px}
+  .marquee-row{gap:10px}
+  .title-zone .marquee{padding:5px 12px}
+  .logo{font-size:10vw}
+  #marqueeTitle .logo{margin:0 0 .06em}
+}
+

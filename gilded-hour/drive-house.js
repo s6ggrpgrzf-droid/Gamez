@@ -189,12 +189,29 @@ async function enterSolo(page, name) {
             const tag = document.querySelector('.seat.house .tag');
             const desk = document.querySelector('.seat.house .desk');
             if (!tag || !desk) return null;
-            const cs = getComputedStyle(tag);
             const cv = document.createElement('canvas').getContext('2d');
-            cv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
-            const longest = 'HOUSE · CUT SPENT · BET 3 CHIPS · STREAK ×9';
-            const w = cv.measureText(longest).width + (parseFloat(cs.letterSpacing) || 0) * (longest.length - 1);
-            return { rendered: tag.scrollWidth <= tag.clientWidth + 1, longestW: Math.round(w), deskW: desk.clientWidth };
+            const width = (el, text) => {
+              const cs = getComputedStyle(el);
+              cv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+              return cv.measureText(text).width + (parseFloat(cs.letterSpacing) || 0) * (text.length - 1);
+            };
+            /* The grammar's true longest lines (re-pinned 2026-11-15,
+               desk-tag fit pass): the standard tag's longest is the
+               Round 3 form; the Long Shot line is longer still and
+               wears the .lsl span, so it is measured in the span's
+               own font. (The old synthetic line mixed CUT SPENT with
+               a bet — segments the grammar never prints together —
+               and understated the true worst case.) */
+            const standard = 'HOUSE · BET 3 CHIPS · STREAK ×12';
+            const longshot = 'HOUSE · LONG SHOT · BET 5 CHIPS · STREAK ×12';
+            const probe = document.createElement('span');
+            probe.className = 'lsl';
+            probe.textContent = longshot;
+            tag.appendChild(probe);
+            const wStd = width(tag, standard);
+            const wLs = width(probe, longshot);
+            probe.remove();
+            return { rendered: tag.scrollWidth <= tag.clientWidth + 1, longestW: Math.round(Math.max(wStd, wLs)), deskW: desk.clientWidth };
           });
           check('A: the longest house desk-tag combination fits the portrait desk',
             !!fit && fit.rendered && fit.longestW <= fit.deskW, JSON.stringify(fit));

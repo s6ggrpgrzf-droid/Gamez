@@ -280,15 +280,12 @@
 export const CODE_LEN = 4;
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no I/L/O/0/1
 export const MAX_PLAYERS = 4;
-export const BET_PAYOUT = 100; // one chip is worth $100 in the finale
-export const BASE_BET_CAP = 3;
-export const MAX_BET_CAP = 5;
-export const LONG_SHOT_STEP = 1000;
-export const QUICK_DRAW_BONUS = 50; // base, on a 'normal' question's first correct receipt — paid x the round (review Pass 5: $50/$100/$150)
-export const STREAK_BONUS = 25; // base, per bank once a streak reaches STREAK_MIN — paid x the round ($25/$50/$75)
-export const STREAK_MIN = 3; // banks in a row before the bonus starts paying
-export const STREAK_DEATH_MIN = 4; // a dying run of this length or more earns a named moment
-export const BLUFF_FOOL = 25; // THE BLUFF (research programme pass 2): per player a lie fools, paid by the house
+/* The money rules live in ONE place now: rules.js, generated
+ * from the canonical core in the game folder (rules-core.js)
+ * so the room and the host's client can never drift apart.
+ * Re-exported here so this module's public surface is unchanged. */
+import { QUICK_DRAW_BONUS, STREAK_BONUS, STREAK_MIN, STREAK_DEATH_MIN, BET_PAYOUT, BASE_BET_CAP, MAX_BET_CAP, LONG_SHOT_STEP, BLUFF_FOOL, qdAmount, streakAmount, melt, betCap } from './rules.js';
+export { QUICK_DRAW_BONUS, STREAK_BONUS, STREAK_MIN, STREAK_DEATH_MIN, BET_PAYOUT, BASE_BET_CAP, MAX_BET_CAP, LONG_SHOT_STEP, BLUFF_FOOL };
 export const BLUFF_INVENT_MS = 60000; // the bluff's collecting window before the room deals what it has
 export const CLOCK_STRETCH = 1.5; // House Rules (N2): Longer Clock stretches every window by this
 
@@ -331,9 +328,10 @@ export function cutCountOf(p) {
 export function betCapFor(room, seat) {
   const p = room && room.players ? room.players[seat] : null;
   if (!p) return BASE_BET_CAP;
-  let lead = p.score;
-  for (const s of joinedSeats(room)) if (room.players[s].score > lead) lead = room.players[s].score;
-  return Math.min(MAX_BET_CAP, BASE_BET_CAP + Math.floor(Math.max(0, lead - p.score) / LONG_SHOT_STEP));
+  const js = joinedSeats(room);
+  const ix = js.indexOf(seat);
+  if (ix < 0) return BASE_BET_CAP;
+  return betCap(js.map(s => room.players[s].score), ix);
 }
 
 /* The Headline derivation: the room counts its own publishes per
@@ -632,7 +630,7 @@ export function closeQuestion(room) {
     value = q.baseValue;
   } else if (!q.betted && !isDecider) {
     const elapsed = Math.min(Math.max(t - q.openedAt, 0), q.windowMs);
-    value = Math.round(q.baseValue * q.multiplier * (1 - 0.5 * (elapsed / q.windowMs)));
+    value = melt(q.baseValue, q.multiplier, elapsed / q.windowMs);
   }
   q.stoppedValue = value;
   /* a decider's closeness is judged over the ELIGIBLE seats only —
@@ -721,7 +719,7 @@ export function closeQuestion(room) {
     }
     if (quickDrawSeat !== null) {
       const winEntry = results.find((e) => e.seat === quickDrawSeat);
-      const qdAmt = QUICK_DRAW_BONUS * (q.round || 1);
+      const qdAmt = qdAmount(q.round);
       winEntry.banked += qdAmt;
       winEntry.quickDraw = true;
       winEntry.quickDrawBonus = qdAmt;
@@ -752,7 +750,7 @@ export function closeQuestion(room) {
         p.streak = nowStreak;
         entry.streak = nowStreak;
         if (nowStreak >= STREAK_MIN) {
-          entry.streakBonus = STREAK_BONUS * (q.round || 1);
+          entry.streakBonus = streakAmount(q.round);
           entry.banked += entry.streakBonus;
           p.score += entry.streakBonus;
         }

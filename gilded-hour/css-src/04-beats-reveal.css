@@ -1,0 +1,415 @@
+/* ================= stage beats ================= */
+.round-kicker{letter-spacing:.34em;font-size:12px;font-weight:600;color:var(--gold);text-indent:.34em}
+.round-title{font-size:clamp(28px,4.8vw,44px);margin:8px 0 6px;font-weight:700;line-height:1.05;text-shadow:0 3px 0 rgba(39,67,110,.8),0 10px 24px rgba(0,0,0,.4)}
+.round-text{color:rgba(255,246,232,.72);font-weight:500;font-size:clamp(13.5px,2vw,16.5px);line-height:1.5;max-width:58ch;margin:0 auto 10px}
+.bumper{position:relative;animation:fadeUp .55s cubic-bezier(.2,.7,.3,1) both}
+#voteCount{font-size:clamp(42px,8.5vmin,76px)}
+#voteCount.pop{animation:votePop .38s cubic-bezier(.2,1.8,.4,1)}
+@keyframes votePop{0%{transform:scale(.55) rotate(-2deg)}100%{transform:scale(1) rotate(0)}}
+
+/* cold open */
+.coldopen{position:relative;padding:10px 0}
+.co-marquee{max-width:660px;margin:0 auto;text-align:center;overflow:visible}
+.co-sweep{position:absolute;inset:-20% -30%;pointer-events:none;background:linear-gradient(105deg,transparent 42%,rgba(255,226,154,.14) 50%,transparent 58%);transform:translateX(-70%);animation:coSweep 1.6s ease .1s both}
+@keyframes coSweep{to{transform:translateX(70%)}}
+.co-kicker{letter-spacing:.42em;font-size:11px;font-weight:600;color:var(--gold);text-indent:.42em}
+.co-title{font-size:clamp(36px,7.6vw,66px);line-height:1.04;font-weight:700;margin-top:12px;color:#F0DCA3;text-shadow:0 4px 0 #27436E,0 12px 28px rgba(0,0,0,.5)}
+.co-l{display:inline-block;opacity:0;transform:translateY(16px) scale(.96);animation:coIn .6s cubic-bezier(.2,.7,.3,1) both}
+@keyframes coIn{to{opacity:1;transform:none}}
+.co-sub{color:rgba(255,246,232,.75);font-weight:600;margin-top:12px;opacity:0;animation:coIn .6s ease .85s both}
+
+/* spin */
+.q-cat{letter-spacing:.3em;font-size:12px;font-weight:600;color:var(--gold);text-indent:.3em}
+.cat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0 8px}
+.cat-chip{border-radius:999px;padding:10px 18px;font-weight:700;letter-spacing:.05em;font-size:clamp(12px,1.8vmin,15.5px);background:var(--chip);box-shadow:0 5px 0 var(--chipd),inset 0 2px 0 rgba(255,255,255,.35);opacity:.5;transform:scale(.96);transition:all .08s ease;white-space:nowrap}
+.cat-chip.sel{opacity:1;transform:scale(1.13) rotate(-1.5deg);box-shadow:0 7px 0 var(--chipd),0 0 24px var(--chip),inset 0 2px 0 rgba(255,255,255,.4)}
+
+/* question */
+.q-headrow{display:flex;align-items:center;gap:14px;width:min(900px,96%);margin:0 auto}
+.cat-pill{background:var(--cat);color:var(--cat-tx);font-weight:700;letter-spacing:.1em;padding:9px 18px;border-radius:999px;font-size:clamp(12.5px,1.9vmin,17px);box-shadow:0 6px 0 var(--cat-sh),inset 0 2px 0 rgba(255,255,255,.35);white-space:nowrap}
+.cat-pill.gilded{letter-spacing:.07em;font-size:clamp(11.5px,1.75vmin,16px)}
+.q-kind{margin-left:auto;color:rgba(255,246,232,.7);font-weight:600;letter-spacing:.22em;font-size:clamp(10.5px,1.6vmin,13.5px);white-space:nowrap}
+.q-text{font-size:clamp(23px,4.2vmin,40px);line-height:1.18;margin:clamp(10px,2.2vmin,20px) auto 0;max-width:24em;font-weight:700;background:var(--paper-bg);color:var(--paper-ink);border-radius:20px;padding:clamp(16px,2.6vmin,26px) clamp(20px,3.6vmin,36px);box-shadow:0 16px 30px rgba(0,0,0,.38),inset 0 0 0 1px var(--paper-edge)}
+.q-meta{display:flex;align-items:center;gap:18px;width:min(900px,96%);margin:clamp(6px,1.6vmin,12px) auto 0}
+.q-value{flex:1;display:flex;align-items:center;justify-content:center;gap:12px}
+.q-valmain{text-align:center}
+.q-value small{display:block;letter-spacing:.3em;font-size:10.5px;font-weight:600;color:rgba(255,246,232,.65);text-indent:.3em}
+.q-value span{display:inline-block;font-size:clamp(32px,6vmin,54px);line-height:1.05;font-weight:700;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 3px 0 rgba(6,11,24,.5))}
+.q-value.low span{background:linear-gradient(180deg,#FF9A8A,#E05244);-webkit-background-clip:text;background-clip:text}
+.q-value.bump span{animation:valBump .18s ease}
+@keyframes valBump{40%{transform:scale(1.13)}}
+/* G1 — THE MELTING VALUE: a slim vessel beside the numeral, filled
+   with molten gold. The gold column stands full-height inside an
+   overflow-hidden glass and rides a translateY, so the tick path
+   touches transform and opacity only. Depth is painted: an inset
+   brass rim, a dark well behind the gold, a glass streak down the
+   face, and the meniscus lit like a surface catching the footlights */
+.melt{flex:none;width:17px;height:60px;position:relative}
+.melt-glass{position:absolute;inset:0;border-radius:4px 4px 7px 7px;overflow:hidden;background:linear-gradient(180deg,rgba(12,5,18,.78),rgba(12,5,18,.55));box-shadow:inset 0 0 0 1.5px rgba(255,214,130,.42),inset 0 3px 6px rgba(0,0,0,.6),inset -3px 0 5px rgba(255,255,255,.05),0 2px 5px rgba(10,2,14,.45)}
+.melt-fill{position:absolute;left:1px;right:1px;top:0;height:100%;background:linear-gradient(180deg,#FFEFAF 0%,#F0DCA3 24%,#E2B76B 56%,#D97E26 84%,#A85A1A 100%);will-change:transform}
+.melt-men{position:absolute;left:0;right:0;top:0;height:3px;border-radius:2px;background:linear-gradient(180deg,#FFF8DC,#F8F0D6);box-shadow:0 0 6px 1px rgba(255,214,110,.75)}
+.melt-cool{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,30,48,.10),rgba(46,14,30,.62))}
+.melt-mark{position:absolute;height:0;border-top:1px solid rgba(248,238,210,.5)}
+.mk-floor{left:0;right:0;bottom:50%;border-top:1.5px solid rgba(255,214,130,.95);box-shadow:0 0 4px rgba(255,190,80,.55)}
+.mk-full{left:22%;right:0;bottom:86%}
+.mk-2x{left:45%;right:0;bottom:96%;border-top-color:rgba(248,238,210,.72)}
+.melt.dbl .mk-2x{border-top-color:#F8F0D6;box-shadow:0 0 4px rgba(255,214,110,.65)}
+.melt-glass::after{content:"";position:absolute;top:0;bottom:0;left:2px;width:4px;background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.04));border-radius:2px;pointer-events:none}
+.q-for{flex:1;text-align:center;color:rgba(255,246,232,.8);font-weight:600;font-size:clamp(13.5px,2vmin,16.5px)}
+.timer-wrap{flex:none;display:flex;justify-content:center}
+.timer-ring{transform:rotate(-90deg);width:66px;height:66px}
+.timer-ring .track{stroke:rgba(255,246,232,.16)}
+.timer-ring .prog{stroke:var(--gold);transition:stroke .3s}
+.timer-ring circle{stroke-width:8}
+.timer-ring.low .prog{stroke:var(--red)}
+.timer-num{font-size:17px;font-weight:700;fill:var(--cream);text-anchor:middle;font-family:var(--font)}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,2vmin,18px);width:min(900px,94%);margin:clamp(12px,2.4vmin,20px) auto 0}
+.ans-btn{display:flex;align-items:center;gap:14px;text-align:left;color:var(--cat-tx);font-weight:700;font-size:clamp(17px,3vmin,27px);line-height:1.2;padding:clamp(12px,2.2vmin,19px) clamp(14px,2.6vmin,24px);border-radius:22px;background:linear-gradient(180deg,var(--cat-shi,var(--cat-hi)),var(--cat-smid,var(--cat)) 60%,var(--cat-lo));box-shadow:inset 0 3px 0 var(--glass-hl),inset 0 -7px 0 var(--glass-depth),0 9px 0 var(--cat-sh),0 18px 28px rgba(0,0,0,.42);transition:transform .1s ease,box-shadow .1s ease,opacity .3s ease,filter .3s ease}
+.ans-btn .letter{flex:none;width:clamp(32px,5.2vmin,44px);height:clamp(32px,5.2vmin,44px);border-radius:50%;background:var(--cream);color:var(--cat-sh);display:flex;align-items:center;justify-content:center;font-size:.85em;box-shadow:inset 0 -3px 0 rgba(0,0,0,.14),0 3px 0 rgba(0,0,0,.18)}
+.answers.pop-in .ans-btn{animation:pop .55s cubic-bezier(.2,1.6,.4,1) both;animation-delay:var(--d,0s)}
+@keyframes pop{0%{transform:scale(.5) translateY(26px);opacity:0}60%{transform:scale(1.05) translateY(-3px);opacity:1}100%{transform:scale(1) translateY(0)}}
+.ans-btn:disabled{cursor:default}
+.ans-btn.dim{opacity:.42;filter:saturate(.35) brightness(.85)}
+.ans-btn.correct{box-shadow:inset 0 3px 0 var(--glass-hl),inset 0 -7px 0 var(--glass-depth),0 0 0 4px #F0DCA3,0 9px 0 var(--cat-sh),0 22px 34px rgba(0,0,0,.5);animation:jumpIn .55s cubic-bezier(.2,1.8,.4,1) both}
+.ans-btn.correct .letter{background:var(--brass-pill);color:#431A04}
+@keyframes jumpIn{0%{transform:scale(.7) translateY(16px) rotate(1.5deg)}55%{transform:scale(1.07) translateY(-12px) rotate(-2deg)}100%{transform:scale(1.04) translateY(-7px) rotate(-1.4deg)}}
+.tools{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:clamp(12px,2.2vmin,18px)}
+.tool-btn{font-weight:700;letter-spacing:.03em;color:var(--cream);background:var(--glass-ink);border-radius:999px;padding:10px 16px;font-size:14px;box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
+.tool-btn small{display:block;color:rgba(255,246,232,.55);font-size:10.5px;font-weight:600;margin-top:1px}
+.tool-btn:not(:disabled):active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.tool-btn:disabled{opacity:.38}
+#btnCallIt{background:var(--brass-grad-btn);color:#431A04;box-shadow:0 6px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
+#btnCallIt small{color:rgba(67,26,4,.65)}
+.delta{font-size:clamp(15px,2.3vmin,19px);font-weight:700;margin-top:14px;min-height:24px}
+.delta .down{color:#FFB3AB}
+.why{color:var(--paper-ink-soft);background:var(--paper-bg);font-weight:500;font-size:clamp(13.5px,2vmin,16px);margin-top:10px;line-height:1.5;max-width:58ch;margin-left:auto;margin-right:auto;border-radius:14px;padding:10px 18px;box-shadow:0 10px 20px rgba(0,0,0,.3),inset 0 0 0 1px var(--paper-edge)}
+
+/* ============ Visual stage 5 — reveal theatre ============
+   Two pieces of ceremony, both pure presentation over the reveal's
+   existing layout. (1) The light sweep: a soft band of stage light
+   crosses the question card once as the reveal paints, with a
+   matching sheen over the correct slab — clipped overlays, transform
+   only, fired by revealTheatre() adding .sweep/.sheen. The band is
+   wide-feathered warm paper-light, never a hard glare stripe.
+   (2) The receipt: the why-line's reveal presentation is a paper
+   slip that PRINTS out of a slot at the top of its own space. The
+   .why-wrap carries exactly the margins/max-width/shadow the .why
+   carried alone, so the stage's layout height is the why-line's
+   height it always was; the slip inside is the same .why (same
+   paper, same ink, same padding — the perfectionist contrast ground
+   is untouched), torn along its bottom edge by clip-path, sliding
+   down with a steps() advance like a receipt printer's feed. A
+   resumed reveal paints the wrap without .printing: settled, fully
+   out, nothing in flight. */
+.q-text{position:relative;overflow:hidden}
+.q-text.sweep::after{content:"";position:absolute;inset:-20% -45%;pointer-events:none;background:linear-gradient(100deg,rgba(255,190,80,0) 30%,rgba(255,196,84,.30) 43%,rgba(255,216,130,.52) 50%,rgba(255,196,84,.30) 57%,rgba(255,190,80,0) 70%);transform:translateX(-110%) skewX(-12deg);animation:cardSweep .7s cubic-bezier(.4,0,.2,1) both}
+@keyframes cardSweep{from{transform:translateX(-110%) skewX(-12deg)}to{transform:translateX(110%) skewX(-12deg)}}
+.ans-btn{position:relative}
+.ans-btn.sheen{overflow:hidden}
+.ans-btn.sheen::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(100deg,rgba(255,255,255,0) 32%,rgba(255,255,255,.34) 46%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.34) 54%,rgba(255,255,255,0) 68%);transform:translateX(-130%) skewX(-12deg);animation:slabSheen .7s cubic-bezier(.4,0,.2,1) .05s both;z-index:1}
+@keyframes slabSheen{from{transform:translateX(-130%) skewX(-12deg)}to{transform:translateX(130%) skewX(-12deg)}}
+.why-wrap{position:relative;margin-top:10px;max-width:58ch;margin-left:auto;margin-right:auto;border-radius:14px 14px 4px 4px;overflow:hidden;box-shadow:0 10px 20px rgba(0,0,0,.3)}
+.why-wrap::before{content:"";position:absolute;left:5%;right:5%;top:0;height:4px;border-radius:0 0 4px 4px;background:linear-gradient(180deg,#2A1A33,#17101F);box-shadow:0 2px 4px rgba(0,0,0,.35);z-index:2}
+.why-wrap .why{margin:0;max-width:none;box-shadow:inset 0 0 0 1px var(--paper-edge)}
+.why-slip{clip-path:polygon(0 0, 100% 0, 100% calc(100% - 4px), 97.5% 100%, 95% calc(100% - 4px), 92.5% 100%, 90% calc(100% - 4px), 87.5% 100%, 85% calc(100% - 4px), 82.5% 100%, 80% calc(100% - 4px), 77.5% 100%, 75% calc(100% - 4px), 72.5% 100%, 70% calc(100% - 4px), 67.5% 100%, 65% calc(100% - 4px), 62.5% 100%, 60% calc(100% - 4px), 57.5% 100%, 55% calc(100% - 4px), 52.5% 100%, 50% calc(100% - 4px), 47.5% 100%, 45% calc(100% - 4px), 42.5% 100%, 40% calc(100% - 4px), 37.5% 100%, 35% calc(100% - 4px), 32.5% 100%, 30% calc(100% - 4px), 27.5% 100%, 25% calc(100% - 4px), 22.5% 100%, 20% calc(100% - 4px), 17.5% 100%, 15% calc(100% - 4px), 12.5% 100%, 10% calc(100% - 4px), 7.5% 100%, 5% calc(100% - 4px), 2.5% 100%, 0 calc(100% - 4px))}
+.why-wrap.printing .why-slip{animation:whyPrint .8s steps(9) .25s both}
+@keyframes whyPrint{from{transform:translateY(-104%)}to{transform:translateY(0)}}
+.wager-amt{font-size:clamp(52px,10vmin,92px);font-weight:700;line-height:1.05;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 4px 0 #27436E);animation:jumpIn .55s cubic-bezier(.2,1.8,.4,1) both}
+
+/* bet beat — the amount pill (the steppers and the strip moved
+   to the desks in the designer's pass P11; their dress is in
+   the P11 block at the foot of this file) */
+.bet-amt{flex:none;min-width:118px;text-align:center;font-weight:700;font-size:16.5px;color:#431A04;background:var(--brass-pill);border-radius:999px;padding:7px 13px;box-shadow:0 4px 0 var(--gold-sh)}
+.chip{font-weight:700;border-radius:999px;padding:9px 15px;font-size:14px;color:var(--cream);background:var(--glass-ink);box-shadow:0 4px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
+button.chip{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.chip:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+/* G3 — the Bet Projector: the standings the chips would create */
+.proj-wrap{width:min(480px,94vw);margin:10px auto 4px;text-align:center}
+.proj-label{font-size:10.5px;font-weight:800;letter-spacing:.24em;color:var(--gold)}
+.proj-strip{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px}
+.proj-seat{display:inline-flex;align-items:center;gap:6px;background:var(--glass-ink);border:1px solid rgba(240,220,163,.28);border-radius:999px;padding:5px 11px 5px 8px;font-weight:700;font-size:13.5px;box-shadow:inset 0 2px 0 rgba(255,255,255,.10)}
+.proj-move{font-size:11px;font-weight:800;min-width:20px;text-align:center}
+.proj-move.up{color:#8BF0AB}
+.proj-move.down{color:#FFB3AB}
+.proj-move.flat{color:rgba(255,246,232,.38)}
+.proj-amt{color:#F0DCA3}
+
+/* race / standings */
+.race-wrap{animation:riseIn .7s cubic-bezier(.2,1.5,.4,1) both .1s;text-align:left}
+@keyframes riseIn{from{transform:translateY(38px);opacity:0}to{transform:translateY(0);opacity:1}}
+.race-stage{display:flex;align-items:flex-end;gap:2vmin;position:relative}
+.race-sterling{display:flex;flex-direction:column;align-items:center;width:clamp(155px,17.5vw,200px);flex:none;align-self:flex-end}
+.race-sterling .sterling-md{width:100%}
+.bubble-stand{margin-bottom:10px;transform:rotate(-1.5deg)}
+.race-podiums{flex:1;display:flex;justify-content:center;align-items:flex-end;gap:clamp(10px,2vmin,26px);position:relative;min-width:0;padding-top:22px}
+.swap-arrows{position:absolute;left:4%;width:92%;top:-14px;height:52px;z-index:0}
+.race-podiums .podium{z-index:1}
+.race-podiums .rank1{transform:rotate(-1.1deg) translateY(-6px)}
+.race-podiums .rank2{transform:rotate(.8deg)}
+.race-podiums .rank3{transform:rotate(-.5deg)}
+.rank1 .desk{min-height:96px}
+.rank2 .desk{min-height:80px}
+.rank3 .desk{min-height:66px}
+.rank4 .desk{min-height:56px}
+.race-podiums .rank1 .desk,.finale-row .rank1 .desk{background:linear-gradient(180deg,#F0DCA3 0 6px,transparent 6px),linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 42%),linear-gradient(180deg,var(--c),var(--cd))}
+
+/* finale */
+.finale-wrap{display:flex;flex-direction:column;align-items:stretch}
+.finale-main{display:flex;gap:3vmin;align-items:center;justify-content:center;position:relative}
+.finale-marquee{flex:1.15;max-width:580px;text-align:center}
+.winner-word{font-weight:700;line-height:1;font-size:clamp(46px,9.5vmin,84px);background:linear-gradient(180deg,#FFF3D6 5%,#F0DCA3 45%,#DFAF63 92%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 4px 0 #27436E) drop-shadow(0 12px 24px rgba(0,0,0,.45))}
+.winner-name{color:var(--cream);font-weight:700;letter-spacing:.05em;font-size:clamp(21px,3.8vmin,34px);margin-top:8px;text-shadow:0 3px 0 rgba(6,11,24,.45)}
+.winner-total{font-weight:700;font-size:clamp(30px,5.8vmin,50px);line-height:1.1;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 3px 0 #27436E)}
+.finale-wrap .sterling-zone{flex:.85}
+.finale-wrap .sterling-lg{width:clamp(165px,23vmin,225px)}
+.bubble-finale{margin-bottom:12px;transform:rotate(1.5deg)}
+.finale-row{margin-top:16px;padding-top:14px}
+.winner-podium .desk{min-height:96px}
+.finale-btns{display:flex;gap:14px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.tie-note{margin-top:10px}
+/* Pass N1 — THE REPORT CARD: the night's four recorded facts per
+   seat, brass-ruled under the podium in the statement register.
+   A row is the name and the facts they earned, in tabular type;
+   a fact that was never recorded is simply not on the row. */
+.report-card{max-width:660px;margin:16px auto 0;text-align:left;border-top:2px solid rgba(201,169,98,.55);border-bottom:1px solid rgba(201,169,98,.3);padding:9px 6px 5px}
+.report-head{font-size:10.5px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-align:center}
+.report-say{font-size:12.5px;font-style:italic;color:rgba(255,246,232,.78);text-align:center;margin-top:3px;line-height:1.35}
+.report-row{display:flex;gap:12px;align-items:baseline;padding:4px 2px;border-bottom:1px solid rgba(201,169,98,.16)}
+.report-row:last-child{border-bottom:none}
+.report-name{flex:0 0 108px;font-weight:700;color:var(--cream);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-facts{font-size:12.5px;color:rgba(255,246,232,.92);line-height:1.5;min-width:0}
+/* Audit A2: a fact is one thought — it wraps as a unit or not at
+   all. Before this, a fact could split across lines (FASTEST HAND
+   ending one line, its seconds opening the next) */
+.report-fact{display:inline-block;white-space:nowrap}
+.report-quiet{font-style:italic;color:rgba(255,246,232,.78);white-space:normal}
+.report-fk{font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--gold);white-space:nowrap}
+.report-dot{margin:0 7px;color:rgba(201,169,98,.6)}
+
+/* fx layers */
+#edgeFx{position:fixed;inset:0;z-index:21;pointer-events:none;opacity:0}
+#dangerFx{position:fixed;inset:0;z-index:22;pointer-events:none;opacity:0;transition:opacity .25s;box-shadow:inset 0 0 90px 24px rgba(255,80,60,.34)}
+#dangerFx.on{opacity:1;animation:dangerPulse .5s ease-in-out infinite alternate}
+@keyframes dangerPulse{from{box-shadow:inset 0 0 70px 18px rgba(255,80,60,.26)}to{box-shadow:inset 0 0 115px 36px rgba(255,80,60,.44)}}
+#leafCanvas{position:fixed;inset:0;z-index:30;pointer-events:none;display:none}
+/* Designer's pass P3 (2026-11-11): on the finale the falling
+   leaves drop behind the show's content — the winner's card, the
+   report and Sterling's words stay clean while the celebration
+   still falls around them (the stage already sits at z-index 1;
+   anything the canvas still crosses gets raised by name below,
+   from the evidence screenshot, not by guess) */
+#scr-game[data-phase="over"] #leafCanvas{z-index:0}
+#leafCanvas.on{display:block}
+
+/* ================= mid tier ================= */
+@media (max-height:860px) and (min-height:501px){
+  .q-text{font-size:clamp(21px,3.6vmin,32px)}
+  .timer-ring{width:56px;height:56px}
+  .ans-btn{padding:11px 15px;font-size:19px}
+  .seat .avatar{width:60px}
+  .sterling-lg{width:clamp(190px,28vmin,260px)}
+}
+
+/* ================= short landscape (844x390) ================= */
+@media (max-height:500px){
+  #topbar{padding:0 14px;font-size:10.5px}
+  .tb-btn{padding:5px 10px;font-size:10px}
+  #stage{padding:0 18px}
+  #hostbar{padding:1px 14px 2px}
+  .host-face{width:32px;height:32px}
+  .host-bubble{padding:2px 12px 3px}
+  .host-name{font-size:8px}
+  .host-line{font-size:13.5px}
+  .seats{padding:2px 10px 3px}
+  .seat .avatar{width:34px}
+  .seat .desk{padding:12px 6px 3px}
+  .podium .desk{padding-top:14px}
+  .seat-name{font-size:12px}
+  .seat-score{font-size:14px}
+  .seat .tag{font-size:7.5px}
+  #stage{padding:3px 12px}
+  .round-kicker{font-size:10px}
+  .round-title{font-size:clamp(21px,3.8vw,29px);margin:3px 0 2px}
+  .round-text{font-size:12.5px;margin-bottom:8px;line-height:1.4}
+  .btn-gold{padding:3px 18px;font-size:14px;border-radius:16px}
+  .btn-ghost{padding:8px 20px;font-size:14px;border-radius:16px}
+  .coldopen{padding:2px 0}
+  .co-marquee{padding:10px 18px;border-radius:20px}
+  .co-title{font-size:30px;margin-top:5px}
+  .co-kicker{font-size:9px}
+  .co-sub{margin-top:5px;font-size:12px}
+  .cat-row{margin:8px 0 4px;gap:7px}
+  .cat-chip{height:32px;padding:0 13px;font-size:12.5px}
+  .q-cat{font-size:10.5px}
+  .cat-pill{padding:2px 10px}
+  .q-text{font-size:15px !important;margin-top:4px;line-height:1.2}
+  .q-cardwrap{margin-top:4px}
+  .q-meta{margin-top:2px;gap:10px}
+  .q-value span{font-size:25px}
+  .melt{width:14px;height:46px}
+  .q-value small{display:inline-block;margin-right:8px;text-indent:0}
+  .q-for{font-size:12.5px}
+  .timer-ring{width:28px;height:28px}
+  .timer-num{font-size:19px}
+  .answers{gap:6px;margin-top:4px}
+  .ans-btn{padding:1px 10px;font-size:13.5px;border-radius:16px;gap:10px;box-shadow:inset 0 3px 0 var(--glass-hl),inset 0 -5px 0 var(--glass-depth),0 6px 0 var(--cat-sh),0 10px 16px rgba(0,0,0,.4)}
+  .ans-btn .letter{width:20px;height:20px}
+  .tools{margin-top:5px;gap:6px;flex-wrap:nowrap}
+  .tool-btn{padding:5px 11px;font-size:11.5px;flex:1 1 0;min-width:0}
+  .tool-btn small{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .answers:not(.pop-in){grid-template-columns:repeat(4,1fr)}
+  .answers:not(.pop-in) .ans-btn{font-size:12.5px}
+  .delta{margin-top:3px;min-height:16px;font-size:12px}
+  .why{font-size:11px;line-height:1.32;margin-top:2px;max-width:94%}
+  .why-wrap{margin-top:2px;max-width:94%}
+  .wager-amt{font-size:40px}
+  #voteCount{font-size:42px}
+  .name-row{padding:3px 10px}
+  .chip{padding:5px 11px;font-size:13px}
+  .bet-amt{min-width:104px;font-size:14px;padding:5px 10px}
+  /* race */
+  .stage-inner:has(.race-wrap) .round-text{display:none}
+  .race-stage{gap:10px}
+  .race-sterling{flex-direction:row;width:auto;align-items:flex-end}
+  .race-sterling .sterling-md{width:84px}
+  .race-sterling .bubble{font-size:11px;padding:7px 10px;margin:0 0 12px 6px;max-width:210px}
+  .race-podiums{padding-top:16px;gap:8px}
+  .swap-arrows{height:30px;top:-8px}
+  .podium.big .avatar{width:58px}
+  .rank1 .desk{min-height:58px}.rank2 .desk{min-height:51px}.rank3 .desk{min-height:44px}.rank4 .desk{min-height:39px}
+  .rank-badge{width:27px;height:27px;font-size:13px;top:30px}
+  .gain-chip{font-size:12px;padding:4px 9px}
+  .podium .delta{font-size:10px;padding:3px 7px;right:6px;top:5px}
+  .pmoney{font-size:16px}
+  .pname{font-size:11.5px}
+  /* finale */
+  .finale-marquee{padding:8px 16px;border-radius:18px}
+  .winner-word{font-size:36px}
+  .winner-name{font-size:19px;margin-top:3px}
+  .winner-total{font-size:27px}
+  .winner-sub{font-size:10px;margin-top:3px;letter-spacing:.2em}
+  .finale-wrap .sterling-zone{flex-direction:row;align-items:flex-end}
+  .finale-wrap .sterling-lg{width:96px}
+  .finale-wrap .bubble{font-size:11px;padding:7px 10px;margin:0 0 14px 6px;max-width:210px}
+  .finale-row{margin-top:8px;padding-top:10px}
+  .finale-row .podium.big .avatar{width:52px}
+  .finale-btns{margin-top:8px}
+  /* title */
+  .curtain{width:44px}
+  .title-scroll{padding:6px 56px 4px}
+  #marqueeTitle{padding:7px 18px;border-radius:20px}
+  .logo{font-size:31px}
+  .tagline{font-size:12px}
+  .kicker{font-size:9px}
+  .chips{gap:5px;margin-top:6px}
+  .chip{padding:3px 9px;font-size:10.5px}
+
+  .setup-card{margin-top:8px;padding:6px 14px 5px;border-radius:18px}
+  .setup-label{margin:3px 0 4px;font-size:9.5px}
+  .mode-tabs{margin-bottom:8px}
+  .count-btn{width:52px;height:32px;font-size:18px;border-radius:12px}
+  #nameRows{gap:5px}
+  .fineprint{margin-top:7px;font-size:11px;line-height:1.4}
+  .start-btn{margin-top:6px;padding:7px 24px;font-size:16px;border-radius:18px}
+  #btnStart{margin-top:6px}
+  .microline{display:none}
+  .how-link{margin-top:2px;padding:5px 10px;font-size:10.5px}
+  .how-card{padding:12px 18px 10px;border-radius:20px}
+  .how-kicker{font-size:10px}
+  .how-mark{height:40px;margin-top:6px}
+  .mark-fingers .fm{width:32px;height:38px;font-size:16px;border-radius:10px}
+  .mark-chips .cm{width:38px;height:38px;font-size:16px}
+  .mark-cut .km{width:50px;height:13px}
+  .how-title{font-size:20px;margin:6px 0 4px}
+  .how-text{font-size:13.5px;line-height:1.42}
+  .how-dots{margin:10px 0 2px}
+  .how-again{margin-top:6px;font-size:12px}
+  .how-nav{margin-top:10px}
+  .sterling-lg{width:148px}
+  #scr-title .sterling-zone{flex-direction:row;align-items:flex-end;justify-content:center}
+  #scr-title .sterling-zone .sterling-lg{width:106px}
+  .bubble{padding:8px 12px}
+  .bubble-title{margin:0 0 14px 6px}
+  .title-bottom{margin-top:8px}
+  #nameRows{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:5px}
+  .name-row{padding:2px 8px}
+  #scr-title .name-input{font-size:15px}
+  .fineprint{display:none}
+  #podiumPreview{display:none}
+}
+
+/* ================= portrait phones (390x844) ================= */
+@media (max-width:560px){
+  .curtain{width:26px}
+  .title-scroll{padding:6px 32px 4px}
+  .title-main{flex-direction:column;align-items:center;gap:2px}
+  .title-bottom{flex-direction:column;align-items:stretch;width:100%;margin-top:8px}
+  .title-zone{align-items:center;flex:none;width:100%}
+  .title-zone .marquee{align-self:center;width:100%;padding:9px 14px}
+  .chips{justify-content:center;gap:6px;margin-top:8px}
+  .chip{padding:4px 9px;font-size:10px}
+  .setup-card{width:100%;padding:10px 12px 9px}
+  .mode-tabs{gap:6px;margin-bottom:7px}
+  .mode-tab{font-size:11px;padding:8px 10px;letter-spacing:.03em}
+  .setup-label{margin:3px 0 5px}
+  .name-row{padding:2px 10px}
+  .fineprint{font-size:11.5px;line-height:1.42;margin-top:5px}
+  .microline{text-align:center;margin:6px auto 2px}
+  .how-link{margin-top:2px;padding:8px 12px;font-size:11px}
+  .sterling-zone{flex:none;flex-direction:row;align-items:flex-end;justify-content:center;width:100%}
+  #scr-title .sterling-zone .sterling-lg{width:84px}
+  .bubble-title{margin:0 0 12px 2px;max-width:178px;font-size:12.5px;padding:9px 12px}
+  #podiumPreview{display:none}
+  .start-btn{padding:9px 24px}
+  .logo{font-size:11vw}
+  #podiumPreview .podium{width:29vw}
+  #podiumPreview .avatar{width:56px}
+  #podiumPreview .pname{font-size:8.5px;letter-spacing:.06em}
+  #podiumPreview .pmoney{font-size:15px}
+  .tb-left{display:none}
+  #topbar{letter-spacing:.08em;font-size:10px;padding:8px 10px}
+  .tb-dot{margin:0 4px}
+  .tb-btn{font-size:10px;padding:5px 9px}
+  .marquee .kicker{font-size:8.5px;letter-spacing:.18em}
+  .mute-btn{top:10px;right:10px;padding:6px 10px;font-size:9.5px}
+  #stage{padding:6px 10px}
+  .q-meta{gap:10px;margin-top:4px}
+  .timer-ring{width:44px;height:44px}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+  .tool-btn{padding:7px 8px;font-size:12.5px}
+  .tool-btn small{display:inline;margin:0 0 0 4px;font-size:10px}
+  #btnCallIt{grid-column:1/-1}
+  /* Designer's pass P8 (2026-11-11): portrait answers run 2×2
+     like landscape — the four-slab column halved the stage */
+  .answers{grid-template-columns:1fr 1fr;width:min(430px,96%);gap:8px;margin-top:8px}
+  .ans-btn{padding:9px 12px;font-size:16px}
+  .ans-btn .letter{width:28px;height:28px}
+  .q-text{font-size:20px}
+  .seats{gap:6px;padding:3px 6px 5px}
+  .seat{flex:1 1 0;width:auto;min-width:0}
+  .seat .avatar{width:30px}
+  .seat-name{font-size:11px;letter-spacing:.04em}
+  .seat-score{font-size:15px}
+  .seat .tag{font-size:7px;letter-spacing:.08em}
+  .seat.house .tag{font-size:6px;letter-spacing:.04em}
+  .host-bubble{max-width:82vw}
+  .host-face{width:46px;height:46px}
+  .race-stage{flex-direction:column;align-items:center;gap:6px}
+  .race-sterling{flex-direction:row;width:auto;align-self:center;align-items:flex-end}
+  .race-sterling .sterling-md{width:100px}
+  .bubble-stand{margin:0 0 14px 6px;max-width:230px}
+  .race-podiums{width:100%}
+  .swap-arrows{display:none}
+  .podium.big{max-width:none}
+  .podium.big .avatar{width:64px}
+  .rank-badge{width:28px;height:28px;font-size:14px;top:36px}
+  .finale-main{flex-direction:column;gap:4px}
+  .finale-wrap .sterling-zone{flex-direction:row;align-items:flex-end}
+  .finale-wrap .sterling-lg{width:118px}
+  .bubble-finale{margin:0 0 18px 6px;max-width:230px}
+  .winner-word{font-size:14.5vw}
+  .finale-row{gap:8px}
+  .finale-row .podium.big .avatar{width:60px}
+  .co-title{font-size:32px}
+}
+

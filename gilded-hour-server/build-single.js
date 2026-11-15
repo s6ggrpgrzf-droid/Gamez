@@ -9,13 +9,14 @@ const root = __dirname;
 function stripImportsExports(src) {
   return src
     .split('\n')
-    .filter((l) => !l.startsWith('import '))
+    .filter((l) => !l.startsWith('import ') && !l.startsWith('export {'))
     .map((l) => l
       .replace(/^export function /, 'function ')
       .replace(/^export const /, 'const '))
     .join('\n');
 }
 
+const rules = stripImportsExports(fs.readFileSync(path.join(root, 'rules.js'), 'utf8'));
 const room = stripImportsExports(fs.readFileSync(path.join(root, 'room.js'), 'utf8'));
 let server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 server = server
@@ -29,6 +30,7 @@ const out = [
   ' * binding:  name: ROOMS   class: GildedRoom',
   ' * (or) deploy via Workers Builds / wrangler using the split sources. */',
   "'use strict';",
+  rules,
   room,
   server,
 ].join('\n');

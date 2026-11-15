@@ -1,0 +1,297 @@
+/* ================================================================
+   THE MINIMAL PAD — THE PHYSICAL PASS (Jimmy's word, 2026-11-11:
+   polish and enhance, 3D look and feel). The pad is a controller
+   now, so what remains gets the full drawn-depth treatment in the
+   game's own hand: keys that travel, a verdict that lands like a
+   stamp, a drain that runs in a channel. Painted depth only —
+   gradients and shadows, nothing that costs the touch.
+   ================================================================ */
+/* the bet steppers and the Cut Two key had shadows but no travel —
+   now they press like the answer keys do */
+.jp-step{transition:transform .1s ease,box-shadow .1s ease}
+.jp-step:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14)}
+.jp-cut:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14)}
+/* a picked key reads HELD DOWN, not just lit: the light pools
+   inside it while it sits sunk on its shadow */
+.jp-ans.sel{box-shadow:inset 0 3px 0 rgba(255,255,255,.55),inset 0 -6px 0 var(--glass-depth),inset 0 12px 20px rgba(6,11,24,.30),0 0 0 5px #F0DCA3,0 4px 0 var(--cat-sh),0 14px 22px rgba(0,0,0,.4)}
+/* the drain runs in a channel now, with the bar lit from above;
+   run low, it glows hot so a glance reads the danger */
+.jp-barwrap{box-shadow:inset 0 2px 5px rgba(10,2,16,.55),inset 0 -1px 0 rgba(255,246,232,.12)}
+.jp-bar{box-shadow:inset 0 2px 0 rgba(255,255,255,.4)}
+.jp-barwrap.low .jp-bar{box-shadow:inset 0 2px 0 rgba(255,255,255,.4),0 0 12px rgba(255,107,94,.55)}
+/* the one-line verdict LANDS: a bank stamps in with overshoot and
+   your money pulses once as it settles; a miss sinks in quietly —
+   no bounce for bad news */
+.jp-verdict .jp-vword{animation:verdictStamp .38s cubic-bezier(.2,1.5,.4,1) both}
+.jp-verdict.miss .jp-vword{animation:verdictSink .3s ease both}
+@keyframes verdictStamp{0%{transform:scale(1.35);opacity:0}60%{opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes verdictSink{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.jp-verdict .jp-vscore b{display:inline-block;animation:scorePulse .5s ease .12s both}
+@keyframes scorePulse{0%{transform:scale(1)}35%{transform:scale(1.22)}100%{transform:scale(1)}}
+/* the lobby face stands off the plum — your phone is yours at a
+   glance across the couch */
+.jp-hero-ava{filter:drop-shadow(0 12px 16px rgba(0,0,0,.5))}
+/* a dropped connection pulses amber until it is back — a silent
+   pad must never look like a working one */
+.jp-conn.warn{animation:connWarn 1.1s ease-in-out infinite}
+@keyframes connWarn{0%,100%{opacity:1}50%{opacity:.55}}
+/* found by eye on the pass's own answer shot: the pick-state line
+   sat UNDER the last key's hard shadow (the keys are positioned,
+   the line was not, so their depth painted over its glyphs) and
+   its tracked capitals ran a hair past both edges of the phone.
+   The line takes its own layer, a breath more air, and slightly
+   tighter tracking. */
+.jp-pickstate{position:relative;margin-top:16px;letter-spacing:.08em;font-size:13px;padding:0 6px}
+
+/* ================================================================
+   THE RICH PAD (Jimmy's word, 2026-11-11: "Doesn't have to be
+   minimal in looks"). The phone's JOB stays minimal — buttons,
+   bet, verdict — but its wardrobe is the full show dress: the
+   lobby hero in a medallion, the resting cards dealt onto
+   plaques, the verdict on an ornamented plaque of its own, the
+   bet stack in a tray over a brass-ringed hero number. No new
+   information anywhere; everything new is to see.
+   ================================================================ */
+/* --- the lobby stage: medallion, billing, footboard, docked exit */
+.jp-hero{justify-content:flex-start;padding-top:8vh}
+.jp-hero-ava{border-radius:50%;padding:6px;background:linear-gradient(160deg,#F6EBCB,#A5853F 55%,#F0DCA3);box-shadow:0 0 0 3px rgba(10,20,38,.65),0 0 46px var(--me,#E9CD8A),0 16px 28px rgba(0,0,0,.5);filter:drop-shadow(0 8px 10px rgba(0,0,0,.4))}
+.jp-heroname{font-size:clamp(38px,10.5vw,46px);text-shadow:0 4px 0 rgba(6,11,24,.5)}
+.jp-colorband{width:190px;height:12px;margin-top:16px;box-shadow:0 3px 0 rgba(0,0,0,.35),0 0 22px var(--me,#E9CD8A)}
+.jp-hero .jp-leave{margin-top:auto}
+/* --- the resting cards dealt onto plaques (break, ended, the
+   blind and spectator cards): a panel in the plum, a brass
+   hairline, a diamond seal pressed into the top edge */
+.jp-card{position:relative;background:linear-gradient(180deg,rgba(24,44,76,.66),rgba(10,20,38,.78));border:1px solid rgba(240,220,163,.35);border-radius:24px;padding:26px 20px 24px;box-shadow:0 18px 34px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,246,232,.1)}
+.jp-card::before{content:"";position:absolute;top:-7px;left:calc(50% - 6px);width:12px;height:12px;transform:rotate(45deg);background:linear-gradient(135deg,#F6EBCB,#A5853F);box-shadow:0 2px 5px rgba(0,0,0,.45)}
+/* --- the verdict plaque: the finale-marquee's foil frame at pad
+   scale, diamond seals top and bottom, the word a size up and
+   your money in a medal chip */
+.jp-plaque{position:relative;width:100%;text-align:center;padding:28px 18px 24px;border-radius:24px;border:3px solid transparent;background:linear-gradient(180deg,rgba(24,44,76,.88),rgba(10,20,38,.92)) padding-box,linear-gradient(155deg,#F6EBCB,#A5853F 30%,#F0DCA3 50%,#8A4D0C 72%,#E9CD8A) border-box;box-shadow:0 22px 40px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,246,232,.12)}
+.jp-plaque::before,.jp-plaque::after{content:"";position:absolute;left:calc(50% - 7px);width:14px;height:14px;transform:rotate(45deg);background:linear-gradient(135deg,#F6EBCB,#A5853F);box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.jp-plaque::before{top:-9px}
+.jp-plaque::after{bottom:-9px}
+.jp-verdict .jp-vword{font-size:clamp(40px,11.5vw,54px)}
+.jp-vscore{display:inline-block;background:var(--glass-ink);border:2px solid rgba(240,220,163,.5);border-radius:999px;padding:8px 20px;box-shadow:0 4px 0 rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.14)}
+/* --- the bet, dressed: the discs rest in a rimmed tray, the
+   amount is a brass-ringed hero pill, the steppers mount on a
+   rail, and the whole middle composes at the centre */
+.jp-betmid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.jp-chipstack{background:linear-gradient(180deg,rgba(255,246,232,.07),rgba(6,11,24,.28));border:1px solid rgba(240,220,163,.28);border-radius:999px;padding:12px 22px;box-shadow:inset 0 2px 6px rgba(10,2,16,.5),0 6px 14px rgba(0,0,0,.3)}
+.jp-betamt{display:inline-block;background:var(--glass-ink);border:2px solid rgba(240,220,163,.55);border-radius:999px;padding:8px 22px;font-size:clamp(28px,8vw,36px);box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14)}
+.jp-betrow{background:rgba(10,20,38,.45);border:1px solid rgba(255,246,232,.1);border-radius:999px;padding:10px 18px;box-shadow:inset 0 2px 5px rgba(10,2,16,.45)}
+
+/* ================================================================
+   QUEUE #2 (2026-11-12, from the designer's review): the Cut Two
+   row in short landscape. Perfectionist Fix 1 made the pill a
+   single line (small inline beside the title) and Fix 3 gave the
+   small nowrap + ellipsis — but text-overflow cannot bite on an
+   inline box, so with four seats and long names the small line
+   simply overflowed the pill and ran into its neighbour
+   ("Alexandri…", "Bartholom…" printed across the next chip).
+   The arithmetic never fit one line: four pills share ~430px
+   beside CALL IT. So the small goes back to its own line (the
+   base design), the ellipsis Fix 3 promised can finally bite,
+   and the small's suffix ("'s one lifeline" / " plays their
+   own" — wrapped in .ct-rest by toolsHTML) steps out in this
+   scope: the pill reads CUT TWO over the player's name, which
+   is the whole of its job; the token count lives on the desks.
+   Portrait keeps the full phrase. The extra line's height is
+   financed from the row's own air (margin 5px -> 2px) and the
+   pills' vertical padding.
+   ================================================================ */
+@media (max-height:500px){
+  .tools .tool-btn small{display:block;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tools .tool-btn small .ct-rest{display:none}
+  .tools .tool-btn{padding-top:3px;padding-bottom:3px}
+  #scr-game[data-phase="question"] .tools{margin-top:2px}
+}
+
+/* ================================================================
+   QUEUE #3 (2026-11-12, from the designer's review): "W ARM".
+   Measured three ways, there is no collision — the pill's right
+   edge sits 14px clear of the tag, and elementsFromPoint at the
+   W's centre returns the tag itself, unmasked and unclipped.
+   The W is lost to raster physics: at 9px and 55% cream, its
+   four thin diagonals anti-alias into the backdrop while the
+   vertical strokes of A/R/M survive. In short landscape (the
+   TV-distance case) the tag gains a point of size, a step of
+   ink, and tighter tracking; the engraved shadow on the base
+   rule holds it over the light category washes.
+   ================================================================ */
+@media (max-height:500px){
+  .band-tag{font-size:10px;letter-spacing:.13em;color:rgba(255,246,232,.78)}
+}
+
+/* ================================================================
+   QUEUE #5 (2026-11-12, from the designer's review): the vote
+   chips on the marking screen were 25px faces — at TV distance
+   the cluster on the correct slab read as a coloured dot, and
+   whose face it was (the whole point of gathering them there)
+   was lost. The chips grow to 30px, 34px in short landscape,
+   keep their seat-colour rims, and gain a faint gilt edge so
+   the cluster reads as one deliberate badge group; the stack
+   overlap scales with them. Worst case measured first: four
+   chips on a 138px landscape slab, 33px of air above.
+   ================================================================ */
+.vote-chip{width:30px;height:30px;box-shadow:0 2px 6px rgba(0,0,0,.5),0 0 0 2px rgba(255,190,80,.25)}
+.vote-chips{top:-15px}
+@media (max-height:500px){
+  .vote-chip{width:34px;height:34px;margin-left:-9px}
+  .vote-chips{top:-17px}
+}
+
+/* ================================================================
+   PASS #2 — THE REVEAL, STAGED (2026-11-12, improvement list #2):
+   under .rv-live the reveal's later voices wait for their beats
+   (game.js drives data-rvbeat 1 -> 2 -> 3 on #scr-game and clears
+   the whole state when the phase leaves "reveal"). Beat 1 shows
+   the answer alone: the why-slip, the photo-finish strip, the
+   stage's verdict line and the seat grammar are held by
+   visibility — their own animations keep their clocks running
+   underneath, and the slip's print itself is re-armed by game.js
+   at beat 2 so it prints then, not early. Sterling's bubble (the
+   host rail's .host-bubble) waits through beats 1-2 and arrives
+   at beat 3 with a small rise. Settled repaints never carry
+   .rv-live, so none of this can touch a resumed reveal.
+   ================================================================ */
+#scr-game.rv-live[data-rvbeat="1"] .why-wrap,
+#scr-game.rv-live[data-rvbeat="1"] .pf-strip,
+#scr-game.rv-live[data-rvbeat="1"] #stage .delta,
+#scr-game.rv-live[data-rvbeat="1"] .seat-delta,
+#scr-game.rv-live[data-rvbeat="1"] .closest-tag{visibility:hidden}
+#scr-game.rv-live[data-rvbeat="1"] .host-bubble,
+#scr-game.rv-live[data-rvbeat="2"] .host-bubble{opacity:0;transform:translateY(8px)}
+#scr-game.rv-live.rv-line-in .host-bubble{animation:rvLineIn .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes rvLineIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ================================================================
+   PASS #3 — SHOW PACE (2026-11-12, improvement list #3): the
+   setup sheet's pace choices wear the house-rule toggles' dress
+   (one of the three is always lit — HOST LED is the resting
+   state). An armed CONTINUE carries a thin gold drain along its
+   foot, running the dwell the host chose: the room can see the
+   show about to move, and the host's own tap always beats the
+   timer — the drain is a promise, not a trap.
+   ================================================================ */
+.pace-toggle{flex:1;padding:9px 8px;border-radius:16px;background:var(--glass-ink);color:rgba(255,246,232,.85);font-weight:700;letter-spacing:.05em;font-size:13px;box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
+.pace-toggle small{display:block;font-size:10px;font-weight:600;letter-spacing:.03em;opacity:.75;margin-top:2px;text-transform:none}
+.pace-toggle:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+.pace-toggle.on{background:var(--brass-pill);color:#431A04;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
+.btn-gold.pacing{position:relative;overflow:hidden}
+.btn-gold.pacing::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(67,26,4,.55);transform-origin:left center;animation:paceDrain var(--pace-ms,6000ms) linear forwards}
+@keyframes paceDrain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* ================================================================
+   REPAIRS PASS (2026-11-12, from the expensive-look audit): four
+   rendered collisions, each measured in the live DOM before it
+   was touched (probe-repairs.js), each repaired inside its own
+   scope, nothing else moved.
+   1) Portrait finale: the report card's say line ended EXACTLY
+      where the first row began (say bottom 444 = row top 444 —
+      zero air, so two voices read as one collision). The say
+      takes 4px of air beneath it, repaid from the card's own
+      top padding (6→2) in the same scope: the finale's fit,
+      measured exact at 653/653, does not move.
+   2) Short-landscape reveal: the photo-finish strip borrowed
+      its room from its neighbours — margin-top −6 pulled its
+      rail across the answer row's foot (strip top 179 against
+      the buttons' bottom 185), and the two-line micro labels
+      (8px type on a 7.6px line) ran past the strip's foot into
+      the why-slip (labels ending 203, the slip starting 202).
+      The strip now stands on its own feet: no negative margin,
+      the rail at its top, each label ONE line under the rail —
+      name and delta side by side at 8.5px on an honest line.
+      Cost +11px, repaid inside the same compositions: the
+      answers' top margin 7→3 and the CONTINUE wrapper's 12px
+      inline margin taken to 6 (the dial reveal's own trick),
+      so the column's total is unchanged.
+   3) Portrait question headrow: pill + band + kind measured
+      405px of content in a 360px row — the kind label's right
+      edge landed at x422 in a 390px viewport and clipped
+      mid-word ("CLOSEST NUM…"). The row compresses its dress,
+      never its words: narrower gaps, the pill's shoulders in
+      a step, the band's and kind's tracking eased — ~54px
+      recovered against the 45px overflow.
+   4) Portrait desk tags: the tier squeezed the tag to 6px so
+      the longest line would fit whole — it fit, and read as
+      garble pressed against the score. The line itself is
+      shorter now (tagsFor steps the CUT segment off the tag
+      in round 3, where the bet is the story — the long-shot
+      line already read exactly that way), so the type comes
+      back up: 7px for a live seat; 6px kept for the house and
+      away seats, whose longest lines still need the step.
+   ================================================================ */
+@media (max-width:560px){
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-card{padding-top:2px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-say{margin-bottom:4px}
+  .q-headrow{gap:9px}
+  .q-headrow .cat-pill{padding-left:12px;padding-right:12px}
+  .q-headrow .band-tag{gap:6px;letter-spacing:.14em}
+  .q-headrow .q-kind{font-size:10px;letter-spacing:.09em}
+}
+@media (max-width:560px) and (min-height:501px){
+  .seat .tag{font-size:7px;letter-spacing:.06em}
+  .seat.house .tag{font-size:6px;letter-spacing:.02em}
+  .seat.away .tag{font-size:6px;letter-spacing:.03em}
+}
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .stage-inner:has(.pf-strip) .answers{margin-top:3px}
+  #scr-game[data-phase="reveal"] .stage-inner:has(.pf-strip)>div:last-child{margin-top:6px !important}
+  .pf-strip{height:27px;margin-top:0}
+  .pf-rail{top:5px}
+  .pf-disc{top:5px}
+  .pf-lab{top:14px;font-size:8.5px;line-height:1.1;white-space:nowrap}
+  .pf-lab b{display:inline}
+  .pf-lab i{display:inline;margin-left:4px;font-size:8.5px;letter-spacing:.04em}
+}
+
+/* ================================================================
+   LIGHT & STAGE PASS (2026-11-12, from the expensive-look
+   audit): the room's light learns to land, the desks gain form,
+   and the stage's empty places are furnished. Paint only —
+   backgrounds, shadows, opacities — not one layout pixel
+   moves, so every measured fit in the game stands.
+   1) The footlights at rest burned at half strength outside
+      the reveal, so the stage's front edge read unlit and the
+      audience row in front of it read as dark holes. Rest is
+      now a lit room — the reveal and finale still warm to
+      full, the hurry still breathes — and the audience figures
+      carry the light on their crowns and shoulders, baked
+      into their silhouette in the .aud-fig rule above.
+   2) The desks: the trapezoid was one flat gradient. It gains
+      its geometry — the slanted flanks in shade, the front
+      face darkening toward the floor, the top sheen it already
+      had — and a cast shadow where it meets the floor, an
+      ellipse under every seat and under the setup and race
+      podiums (the finale's podiums stand too close to the
+      report card to borrow its air). Colour identity is
+      untouched: the shades are black at low alpha over each
+      seat's own --c, so a green desk stays a green desk, lit.
+   3) The bet phase: the stage's middle stood empty while the
+      room waited on the wheel, so the category wash gains a
+      warm pool centre-stage in that phase — the light the
+      wheel is about to spin under. The lobby's empty chairs
+      are built in game.js (ogRenderSeats) in the setup
+      screen's own grammar for an unfilled seat, styled below.
+   ================================================================ */
+.set-lights::before{opacity:.62}
+.set-lights::after{opacity:.6}
+.desk{background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 42%),linear-gradient(90deg,rgba(0,0,0,.20),rgba(0,0,0,0) 16%,rgba(0,0,0,0) 84%,rgba(0,0,0,.20)),linear-gradient(0deg,rgba(0,0,0,.30),rgba(0,0,0,0) 26%),linear-gradient(180deg,var(--c),var(--cd))}
+.seat{isolation:isolate}
+.seat::before{content:"";position:absolute;left:3%;right:3%;bottom:-7px;height:15px;background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.5),rgba(0,0,0,0) 68%);z-index:-1;pointer-events:none}
+#podiumPreview .podium{isolation:isolate}
+#podiumPreview .podium::before{content:"";position:absolute;left:3%;right:3%;bottom:-7px;height:15px;background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.5),rgba(0,0,0,0) 68%);z-index:-1;pointer-events:none}
+.race-podiums .podium{isolation:isolate}
+.race-podiums .podium::before{content:"";position:absolute;left:3%;right:3%;bottom:-7px;height:15px;background:radial-gradient(50% 50% at 50% 50%,rgba(0,0,0,.5),rgba(0,0,0,0) 68%);z-index:-1;pointer-events:none}
+#scr-game[data-phase="bet"] .set-mid{background:radial-gradient(46% 30% at 50% 64%,rgba(255,196,100,.15),rgba(255,196,100,0) 70%),radial-gradient(52% 46% at 50% 40%,rgba(var(--cat-rgb),.26),rgba(var(--cat-rgb),0) 70%),radial-gradient(60% 20% at 50% 97%,rgba(var(--cat-rgb),.20),rgba(var(--cat-rgb),0) 70%)}
+.seat.ghost-seat{cursor:default}
+.seat.ghost-seat .desk{--c:#2F4674;--cd:#0C1930}
+.seat.ghost-seat .seat-name{color:rgba(255,246,232,.55)}
+.seat.ghost-seat .tag{color:rgba(255,217,160,.6)}
+.ghost-q{display:flex;align-items:center;justify-content:center;width:clamp(58px,9.5vmin,84px);aspect-ratio:120/124;margin:0 auto -10px;border:2px dashed rgba(233,205,138,.45);border-radius:50%;font-size:clamp(24px,4vmin,34px);font-weight:700;color:rgba(255,217,160,.7);box-sizing:border-box}
+/* the ring follows the avatar's own size in every tier, so an
+   open seat stands exactly as tall as a taken one */
+@media (max-height:860px) and (min-height:501px){ .ghost-q{width:60px} }
+@media (max-height:500px){ .ghost-q{width:34px;font-size:17px;border-width:1.6px} }
+@media (max-width:560px){ .ghost-q{width:30px;font-size:15px;border-width:1.6px} }
+

@@ -1,0 +1,317 @@
+/* ============================================================
+   PERFECTIONIST FIX PASS — audit 2 (all findings, one pass)
+   ============================================================ */
+/* #12 — hit areas grow invisibly to 44px; the artwork never changes.
+   (wide-short links/count buttons: 44 in the tapping dimension) */
+.how-link{position:relative}
+.how-link::after{content:"";position:absolute;inset:-10px 0}
+
+/* #2 — portrait title: ~40px repaid inside the setup column so
+   START + the in-card HOW link hold the fold at 3 AND 4 players */
+@media (max-width:560px){
+  .title-scroll{padding-top:2px}
+  .chips{margin-top:5px}
+  .chip{padding-top:3px;padding-bottom:3px}
+  #scr-title .sterling-zone .sterling-lg{width:76px}
+  .title-bottom{margin-top:4px}
+  .setup-card{padding:7px 12px 3px}
+  .mode-tabs{margin-bottom:4px}
+  .setup-label{margin:2px 0 3px}
+  #nameRows{gap:5px}
+  .name-row{padding-top:1px;padding-bottom:1px}
+  .fineprint{margin-top:3px;line-height:1.30}
+  .microline{margin-top:4px}
+  #btnStart{margin-top:4px}
+  .title-zone .marquee{padding-top:3px;padding-bottom:3px}
+  .count-btn{height:44px}
+  .setup-card .how-link{margin-top:0;padding:6px 12px}
+}
+
+/* short landscape — one block for the whole pass */
+@media (max-height:500px){
+  .ava-pick::after{inset:-12px}
+  .how-link::after{inset:-11px 0}
+  .count-btn{position:relative}
+  .count-btn::after{content:"";position:absolute;inset:-6px 0}
+  /* the bet stage's words run small in short landscape (the
+     strip's own one-line dress lives in the P11 block now) */
+  #scr-game[data-phase="bet"] .round-kicker{font-size:9px}
+  #scr-game[data-phase="bet"] .round-text{max-width:76ch;margin-bottom:0;font-size:12px;line-height:1.3}
+  /* #4/#8 — stage air: the host bubble gives back a line, desks slim */
+  .host-line{min-height:3.3em}
+  #stage{padding-top:1px;padding-bottom:1px}
+  .seat .desk{padding-top:9px}
+  #stage .q-card{padding:9px 16px 8px}
+  .q-text{padding:2px 6px 3px;max-width:34em;margin-top:0;font-size:14px !important;line-height:1.08}
+  .q-cardwrap{margin-top:0}
+  .ans-btn{padding-top:3px;padding-bottom:3px}
+  .answers{gap:5px;margin-top:0}
+  .tools{margin-top:0}
+  .tool-btn{padding-top:1px;padding-bottom:1px}
+  .cat-pill{margin-bottom:2px;padding-top:1px;padding-bottom:1px;font-size:12px}
+  .q-meta{margin-top:0}
+  .q-value span{font-size:22px}
+  .melt{width:13px;height:40px}
+  .timer-ring{width:22px;height:22px}
+  #topbar{padding-top:7px;padding-bottom:7px}
+  #stage{padding-top:0;padding-bottom:0}
+  /* while the tools row is on stage (the question beat), the desks
+     give back a few px so CALL IT never hides behind the seats */
+  #scr-game:has(.tools) .seat .desk{padding-top:5px;padding-bottom:1px}
+  /* #6 — the gain chip shrinks a step and hugs the podium's top-left,
+     clear of the leader's laurel (both standings renderers share the
+     .race-podiums furniture, so one rule covers table and online) */
+  .gain-chip{left:-13px;font-size:11px;padding:4px 7px}
+  .finale-wrap{gap:5px}
+  .finale-row{margin-top:0;padding-top:4px}
+  .finale-btns{margin-top:2px}
+  .winner-word{font-size:26px}
+  .finale-marquee{padding-top:4px;padding-bottom:4px}
+  .finale-wrap .bubble{margin-bottom:8px}
+  #stage .winner-podium .desk{min-height:72px}
+  #stage .finale-row .desk{padding-top:18px}
+  .finale-row .podium.big .avatar{width:46px}
+  .winner-total{font-size:24px}
+  .winner-name{font-size:18px}
+  .finale-wrap .sterling-lg{width:76px}
+  .finale-btns .btn-gold,.finale-btns .btn-ghost{padding:7px 20px}
+  /* Pass N1: a finale carrying the report card earns the card's
+     height back across the whole finale — the marquee's display
+     sizes step down one notch, Sterling and the podium slim, the
+     card's own head and Sterling's line share a single line, and
+     its rows run hairline-tight. Measured against the pre-card
+     finale, which itself just fits: the champion line and the
+     buttons stay on screen, and no type drops below the game's
+     floors (the facts' 11.5px matches the break card's own
+     short-landscape floor). */
+  /* …and in short landscape the card earns its height
+     structurally: the finale composes as a broadcast two-column
+     graphic — champion and podium left, the report card right,
+     the buttons full-width beneath — so no type anywhere drops
+     below the game's floors and nothing scrolls. */
+  .finale-wrap.has-report{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);column-gap:16px;row-gap:1px;align-items:start;padding-top:0;padding-bottom:0}
+  .finale-wrap.has-report .marquee{padding-top:2px;padding-bottom:2px}
+  .finale-wrap.has-report .finale-main{grid-column:1}
+  .finale-wrap.has-report .finale-row{grid-column:1}
+  .finale-wrap.has-report .btn-row{grid-column:1/-1}
+  .finale-wrap.has-report .marquee .kicker{display:none}
+  #stage .finale-wrap.has-report .winner-word{font-size:19px;line-height:1}
+  .finale-wrap.has-report .winner-name{font-size:14px;margin-top:1px;line-height:1.1}
+  .finale-wrap.has-report .winner-total{font-size:18px;line-height:1}
+  .finale-wrap.has-report .winner-sub.pot-line{font-size:10.5px;margin-top:0;line-height:1.2}
+  .finale-wrap.has-report .winner-sub:not(.pot-line){display:inline;font-size:11px;margin-top:0;line-height:1.2}
+  /* Audit A2: two inline subs back to back printed as one word
+     ("A NEW CHAMPIONON THE NIGHT") — the series line takes a
+     breath of space when it follows the champion's own sub */
+  .finale-wrap.has-report .winner-sub:not(.pot-line) + .winner-sub.series-line{margin-left:12px}
+  .finale-wrap.has-report .winner-streak{display:inline-block;font-size:10px;margin:0 0 0 8px;vertical-align:2px}
+  .finale-wrap.has-report .sterling-lg{width:54px}
+  #stage .finale-wrap.has-report .finale-row .podium.big .avatar{width:24px}
+  #stage .finale-wrap.has-report .finale-row .desk{min-height:34px}
+  /* Audit A2: padding-top 2px slid the nameplate under the avatar
+     (the avatar wears a -10px hem into the desk), printing the
+     middle of every name behind a face. 12px clears the hem; the
+     height is earned back from the marquee's padding, this row's
+     own top padding and the buttons' top margin. */
+  #stage .finale-wrap.has-report .finale-row .desk{padding-top:12px;padding-bottom:4px}
+  .finale-wrap.has-report .finale-row{padding-top:0}
+  #stage .finale-wrap.has-report .finale-row .pname{font-size:10.5px;line-height:1.1}
+  #stage .finale-wrap.has-report .finale-row .pmoney{font-size:13px;line-height:1.1}
+  #stage .finale-wrap.has-report .desk-tag{display:none}
+  .finale-wrap.has-report .btn{padding-top:4px;padding-bottom:4px}
+  /* Pass N3: with a third button aboard (SHARE THE NIGHT), the
+     buttons leave their auto-placed cell and take the full width
+     beneath both columns, in one row — stacked in the narrow
+     column they cost the finale its fit */
+  .finale-wrap.has-report .finale-btns{grid-column:1/-1;margin-top:2px;gap:10px}
+  /* Awards Board fit (2026-11-13): the landscape finale's tall side
+     is the LEFT column, not the card — measured live: card 140px in
+     a 289px column pair, and shrinking the card 16px moved the
+     stage's 336px scrollHeight not at all. The last 6px live in
+     the podium desks' top padding and the button row's margin;
+     both give a little, invisibly (the desks carry 12px of air
+     above a 34px-minimum body in a 71px row) */
+  #stage .finale-wrap.has-report .finale-row .desk{padding-top:6px}
+  .finale-wrap.has-report .finale-btns{margin-top:0}
+  .finale-wrap.has-report .report-card{grid-column:2;grid-row:1/3;margin-top:0;padding:4px 10px 3px}
+  .finale-wrap.has-report .report-head{font-size:10px;line-height:1.1}
+  .finale-wrap.has-report .report-say{font-size:10.5px;margin-top:1px;line-height:1.2}
+  .finale-wrap.has-report .report-row{padding:1px 2px}
+  .finale-wrap.has-report .report-name{flex-basis:98px;font-size:12.5px}
+  .finale-wrap.has-report .report-facts{font-size:11.5px;line-height:1.2}
+  /* Awards Board (2026-11-13): in the narrow landscape report
+     column the board's lines take a one-step squeeze (14px,
+     tighter leading, 5px row padding) so a long winner line
+     wraps less — headroom insurance for the column, kept after
+     the fit probe showed the stage's tall side is the left
+     column (see the fit note at the finale-btns rule below) */
+  .finale-wrap.has-report .award-row{padding-top:5px;padding-bottom:5px}
+  .finale-wrap.has-report .award-who{font-size:14px;line-height:1.25}
+  .finale-wrap.has-report .award-k{flex-basis:100px}
+  /* #5 — the pad answers two-up in landscape; portrait untouched.
+     The column must fit for real: a flex-shrunk grid paints its rows
+     over the pick-state and the Cut Two button, so the question line,
+     the identity bar and the buttons all give back height. */
+  .jp-pad>*{flex:none}
+  .jp-answers{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+  .jp-ans{flex:none;min-height:46px;padding:8px 14px}
+  .jp-qline{margin-top:6px;font-size:13.5px;line-height:1.25}
+  .jp-pickstate{margin-top:4px}
+  .jp-cut{margin-top:6px;padding:9px 12px;min-height:44px}
+  .jp-barwrap{margin-top:4px}
+  .jp-id{padding:2px 10px 2px 8px}
+  .jp-id-name{font-size:15px}
+  .jp-id-ava{width:34px;height:34px}
+  /* #2 — landscape title repays the in-card HOW row */
+  .title-scroll{padding-top:3px}
+  .chips{margin-top:3px}
+  #marqueeTitle{padding-top:2px;padding-bottom:2px}
+  .setup-card{padding-top:4px;padding-bottom:3px}
+  .mode-tabs{margin-bottom:4px}
+  .setup-label{margin:2px 0 2px}
+  #btnStart{margin-top:3px}
+  .setup-card .how-link{padding:6px 10px;margin-top:0}
+}
+
+/* #6 (portrait) — a portrait podium is 90px wide: no top corner is
+   free of the laurel or the avatar, so the gain chip shrinks a step
+   and sits on the desk's foot, clear of crown, badge, face and the
+   button below the row */
+@media (max-width:560px){
+  .race-podiums .gain-chip{top:auto;bottom:5px;left:50%;transform:translateX(-50%) rotate(-2deg);font-size:11px;padding:4px 7px}
+}
+
+/* #11 — the SOUND pill stops leaning on the wordmark under 400px */
+@media (max-width:400px){
+  .mute-btn{top:6px;right:8px;font-size:9px;letter-spacing:.06em;padding:5px 8px}
+  #marqueeTitle .kicker{padding-right:66px}
+}
+@media (max-width:370px){
+  /* the narrowest phones: the wordmark itself steps down and the
+     marquee row buys back its right side, so the pill clears the D */
+  #marqueeTitle .logo{font-size:8.8vw}
+  .marquee-row{padding-right:52px}
+}
+
+/* improvement 4 — the resume chip: a brass line inside the table
+   setup card, present only while a saved show waits. Slim by design;
+   the buttons carry an expanded invisible hit area, the house rule
+   for named controls. When the chip is present the card is in
+   .has-resume and gives back the chip's height elsewhere, so the
+   title's verified folds (START in the first viewport, 3p and 4p,
+   both orientations) hold with the chip showing. */
+.resume-chip{display:flex;align-items:center;gap:10px;background:rgba(233,205,138,.08);border:1.5px solid var(--gold);border-radius:14px;padding:7px 10px;margin-bottom:9px}
+.resume-chip.hidden{display:none}
+.resume-txt{flex:1;display:flex;flex-direction:column;gap:1px;text-align:left;min-width:0}
+.resume-kicker{font-weight:700;font-size:12.5px;letter-spacing:.08em;color:var(--gold)}
+.resume-detail{font-size:11px;font-weight:600;letter-spacing:.1em;color:rgba(255,246,232,.75)}
+.resume-btns{display:flex;gap:7px;flex:none}
+.resume-chip .resume-btn{position:relative;padding:7px 11px;font-size:12px;border-radius:11px}
+.resume-btn::after{content:"";position:absolute;inset:-7px -2px}
+@media (max-width:560px){
+  .setup-card.has-resume .fineprint{display:none}
+  .setup-card.has-resume .resume-chip{flex-direction:column;align-items:stretch;gap:6px;padding:8px 10px;margin-bottom:6px}
+  .setup-card.has-resume .resume-txt{gap:2px}
+  .setup-card.has-resume .resume-kicker{font-size:12px;white-space:nowrap}
+  .setup-card.has-resume .resume-detail{font-size:10.5px;letter-spacing:.06em;white-space:nowrap}
+  .setup-card.has-resume .resume-btn{flex:1;padding:7px 10px}
+  #scr-title:has(.setup-card.has-resume) .sterling-zone .sterling-lg{width:62px}
+  #scr-title:has(.setup-card.has-resume) .chips{display:none}
+}
+@media (max-height:500px){
+  .setup-card.has-resume .resume-chip{padding:4px 8px;margin-bottom:5px;border-radius:11px}
+  .setup-card.has-resume .resume-txt{flex-direction:row;gap:8px;align-items:baseline}
+  .setup-card.has-resume .resume-kicker{font-size:11px}
+  .setup-card.has-resume .resume-detail{font-size:10px}
+  .setup-card.has-resume .resume-btn{padding:5px 10px;font-size:11.5px}
+  #scr-title:has(.setup-card.has-resume) .chips{display:none}
+  .setup-card.has-resume .setup-label{margin-top:0;margin-bottom:2px}
+}
+
+/* ================= Visual stage 4 — visible fortunes =================
+   A cluster of brass coin stacks on the right-hand end of every
+   desk: height IS the score, told relatively — the leader stands
+   full height, everyone else in proportion, $0 is an empty saucer
+   spot. Pure furniture inside the desk (absolute, out of flow), so
+   no seat box moves and no fit changes. game.js sets each stack's
+   height in px from --fmax, owned here per breakpoint; the runged
+   coin edges are a repeating gradient, the bright top coin a
+   pseudo-element, and the only transition is height. Trailers sit
+   in dimmer metal; the leader's cluster takes the full shine, so
+   rank reads in the brass as well as the height. The name and the
+   score keep the top layer — a tall pile may stand beside the
+   digits, never over them. */
+.fortune{--fmax:32px;position:absolute;right:8px;bottom:5px;z-index:2;height:calc(var(--fmax) + 5px);display:flex;align-items:flex-end;gap:3px;pointer-events:none;filter:saturate(.78) brightness(.86)}
+.fortune.lead{filter:none}
+.fstk{position:relative;display:block;height:0;border-radius:2px 2px 1px 1px;background:linear-gradient(90deg,rgba(80,64,32,.5),rgba(255,244,200,.32) 42%,rgba(80,64,32,.42)),repeating-linear-gradient(180deg,#D99A26 0 2px,#A96F0E 2px 3.5px);box-shadow:inset 0 0 0 1px rgba(80,64,32,.35),0 1px 2px rgba(0,0,0,.35);transition:height .8s cubic-bezier(.25,.9,.3,1)}
+.fstk.a{width:13px}
+.fstk.b{width:17px}
+.fstk.c{width:12px}
+.fstk::before{content:"";position:absolute;left:0;right:0;top:-2px;height:5px;border-radius:50%;background:radial-gradient(ellipse at 38% 32%,#F8F0D6,#F5B93F 58%,#C07F12);box-shadow:inset 0 0 0 1px rgba(122,74,8,.5),0 1px 1px rgba(0,0,0,.3)}
+.fortune.lead .fstk::before{box-shadow:inset 0 0 0 1px rgba(122,74,8,.5),0 0 8px rgba(240,220,163,.7)}
+.fstk.off{visibility:hidden}
+.fortune.zero::after{content:"";position:absolute;right:10px;bottom:0;width:21px;height:6px;border-radius:50%;border:1.5px solid rgba(255,224,150,.38);background:rgba(0,0,0,.14)}
+/* Dynamics pass D1: the table pot's vessel — drawn brass at the
+   front-left of the stage, wearing its running total. An overlay
+   child of #stage (zero layout height, pointer-events none), so
+   no measured fit anywhere can move because it exists */
+.pot-vessel{position:absolute;left:12px;bottom:8px;z-index:6;width:64px;text-align:center;pointer-events:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.pot-vessel.fed{animation:potFedGlow .9s ease-out}
+@keyframes potFedGlow{0%{filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}30%{filter:drop-shadow(0 0 14px rgba(255,196,64,.85)) brightness(1.3)}100%{filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}}
+.pot-rim{height:9px;border-radius:50%;background:radial-gradient(ellipse at 42% 34%,#F8F0D6,#DEC084 55%,#8A6D2F 88%);box-shadow:inset 0 0 0 1px rgba(94,74,34,.65),inset 0 -3px 4px rgba(94,74,34,.5)}
+.pot-body{position:relative;height:30px;margin-top:-4px;border-radius:6px 6px 46% 46%/6px 6px 68% 68%;background:linear-gradient(100deg,#6E5626 0%,#BE9A4E 30%,#E3C078 48%,#A98A44 72%,#5E4A22 100%);box-shadow:inset 0 0 0 1px rgba(80,64,32,.55),inset 0 -8px 10px rgba(80,64,32,.45)}
+.pot-vessel.fed .pot-body{animation:potFedBump .9s ease-out}
+@keyframes potFedBump{0%{transform:scale(1)}30%{transform:scale(1.09)}100%{transform:scale(1)}}
+.pot-shine{position:absolute;left:9px;top:4px;width:11px;height:17px;border-radius:50%;background:linear-gradient(180deg,rgba(255,246,214,.65),rgba(255,246,214,0));transform:rotate(14deg)}
+.pot-label{margin-top:3px;font-weight:800;letter-spacing:.3em;font-size:8.5px;color:rgba(255,226,160,.85);text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.pot-total{font-weight:800;font-size:14px;color:#F0DCA3;text-shadow:0 1px 0 rgba(6,11,24,.55);font-variant-numeric:tabular-nums}
+.winner-sub.pot-line{color:#F8F0D6}
+.jp-potline{text-align:center;color:rgba(240,220,163,.8);font-weight:800;letter-spacing:.26em;font-size:10.5px;margin:7px 2px 0;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.jp-potline.fed{color:#F0DCA3;text-shadow:0 0 10px rgba(255,190,60,.45)}
+/* Audit A2: the vessel's docks. Bottom-left is its home only where
+   the stage's bottom-left is scenery (intro, vote, reveal,
+   intermission, the portrait bet). On the question and landscape
+   bet stages that corner is furniture — the first Cut Two pill,
+   the third bet row — so there the vessel moves to measured-clear
+   ground: in short landscape, up beside the question card at the
+   value row's height while a question is open (the answers begin
+   below it, the category pill ends above it), and a compact
+   bottom-left — label folded away, body shortened — under the
+   bet grid, whose rows end higher than the question's tools row
+   does. In portrait a question has no free corner at any player
+   count, so the vessel sits that one phase out (see the block
+   below). The coin flights target the element itself, so they
+   follow it to whichever dock the phase uses. */
+@media (max-height:500px){
+  #stage:has(.q-cardwrap) .pot-vessel{top:40px;bottom:auto}
+  #stage:has(.bet-row) .pot-vessel{left:10px;bottom:2px}
+  #stage:has(.bet-row) .pot-vessel .pot-label{display:none}
+  #stage:has(.bet-row) .pot-vessel .pot-body{height:20px}
+  #stage:has(.bet-row) .pot-vessel .pot-total{font-size:12px}
+}
+@media (max-width:560px){
+  /* Portrait's question stage has no free corner at any player
+     count — the tools grid, the CALL IT bar and the answers take
+     every edge — so there the vessel sits the question out. It is
+     back at its bottom-left home for the vote (that stage's foot
+     is empty), the reveal its moment lives in, and the bet. */
+  #stage:has(.q-cardwrap) .pot-vessel{display:none}
+}
+.seat .desk .seat-name,.seat .desk .seat-score{position:relative;z-index:1}
+@media (max-height:500px){
+  .fortune{--fmax:23px;right:6px;bottom:3px;gap:2px}
+  .fstk.a{width:11px}
+  .fstk.b{width:14px}
+  .fstk.c{width:10px}
+}
+@media (max-width:560px){
+  /* a portrait desk is ~90px wide: the cluster slims, and the short
+     stack takes the corner so the tallest pile stands clear of the
+     tag line's right end */
+  .fortune{--fmax:18px;right:3px;bottom:3px;gap:2px}
+  .fstk.a{width:8px;order:3}
+  .fstk.b{width:10px;order:2}
+  .fstk.c{width:7px;order:1}
+  .fortune.zero::after{width:15px;height:5px;right:5px}
+}
+

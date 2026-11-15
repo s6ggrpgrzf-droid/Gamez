@@ -1,0 +1,444 @@
+/* =====================================================================
+   V6 — THE LETTERING PASS: print-shop material for the display type.
+   Two crafts, nothing else touched — no font, size, spacing or layout
+   changes anywhere, and no fill changes: every colour below is the
+   audited one, the craft lives in the edges of the glyphs.
+
+   LETTERPRESS (category titles + the banner register): a fine dark
+   incise ABOVE the glyph and a hair of light catching BELOW it, as if
+   the type were pressed into the material. One pair serves the pill
+   on every category ground (cream ink on deep candy, dark ink on
+   light) because the alphas are kept where relief reads on both.
+   The brass banner wears the dark-ink variant (stronger catch, the
+   ground is bright metal); the Decider's wine banner reverses it
+   (cream ink on a dark ground: deeper incise, fainter catch).
+
+   ENGRAVED GOLD (the money lettering): an incised dark edge and a
+   fine light catch cut around the figure, the way numerals are cut
+   into a brass plate. The gradient-clipped figures (#qValue,
+   .winner-total) cannot take text-shadow — a shadow under clipped
+   text paints through the transparent fill — so their engraving is
+   built from chained drop-shadow() in the filter, which follows the
+   clipped gradient's own alpha: dark 1px up (the cut's top wall),
+   warm light 1px down (the cut's lit floor), then the depth shadow
+   each figure already wore, byte-identical. Plain-fill figures take
+   the same recipe as a text-shadow stack, their existing depth
+   shadow kept as the last layer. White desk/podium figures keep
+   their audited white fill — engraving is an edge craft, not a
+   recolour — and read as plate-cut lettering in the same hand.
+
+   RESTRAINT: nothing below display size is touched. Answer slabs,
+   question text, body copy and fine print keep today's flat,
+   audited rendering exactly (drive-lettering proves their computed
+   text-shadow stays "none"). The shadows are 1px edges at low
+   alpha — they sit OUTSIDE the glyph core, so effective glyph
+   contrast is unmoved; drive-lettering spot-checks the value
+   numeral and a category title in pixels against the 4.5:1 floor.
+   ===================================================================== */
+.cat-pill{text-shadow:0 -1px 0 rgba(0,0,0,.25),0 1px 0 rgba(255,255,255,.16)}
+.headline-banner{text-shadow:0 -1px 0 rgba(66,26,4,.30),0 1px 0 rgba(255,248,220,.55)}
+.headline-banner.decider-banner{text-shadow:0 -1px 0 rgba(0,0,0,.50),0 1px 0 rgba(255,233,201,.16)}
+.q-value span{filter:drop-shadow(0 -1px 0 rgba(43,16,0,.55)) drop-shadow(0 1px 0 rgba(248,238,210,.28)) drop-shadow(0 3px 0 rgba(6,11,24,.5))}
+.winner-total{filter:drop-shadow(0 -1px 0 rgba(43,16,0,.55)) drop-shadow(0 1px 0 rgba(248,238,210,.28)) drop-shadow(0 3px 0 #27436E)}
+.seat-score{text-shadow:0 -1px 0 rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.13),0 3px 0 rgba(0,0,0,.25)}
+.pmoney{text-shadow:0 -1px 0 rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.13),0 3px 0 rgba(0,0,0,.25)}
+.pot-total{text-shadow:0 -1px 0 rgba(6,11,24,.55),0 1px 0 rgba(248,238,210,.22),0 1px 2px rgba(0,0,0,.40)}
+.jp-id-score{text-shadow:0 -1px 0 rgba(6,11,24,.55),0 1px 0 rgba(248,238,210,.22)}
+.jp-standrow .sc{text-shadow:0 -1px 0 rgba(0,0,0,.42),0 1px 0 rgba(255,255,255,.12),0 2px 2px rgba(0,0,0,.30)}
+
+/* ================= Pass N3 — SHARE THE NIGHT =================
+   The preview sheet rides the how-overlay shell, above it (the
+   finales it opens from sit under confetti layers of their own).
+   The card in the sheet is the canvas itself, sized to the room:
+   its width is the lesser of the screen's width and what the
+   height leaves after the kicker and the buttons, keeping the
+   card's own 1080:1350 face at every size. */
+.share-overlay{z-index:70}
+.share-sheet{display:flex;flex-direction:column;align-items:center;gap:13px;max-height:100%}
+.share-kicker{letter-spacing:.3em;font-weight:700;font-size:12px;color:var(--gold)}
+#shareCanvas{width:min(86vw,58dvh);height:auto;display:block;border-radius:8px;background:#060E1D;box-shadow:0 18px 44px rgba(0,0,0,.6),0 0 0 2px rgba(201,169,98,.55)}
+.share-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.jp-share{display:block;width:100%;margin-top:18px}
+
+/* A3 review, proposal 1 (Jimmy's pick, 2026-11-11): the portrait
+   vote stage floated its short content in auto margins and left a
+   hollow band of bare curtain between the REVEAL dock and the pot.
+   In portrait the table's vote inner now fills the stage above
+   the vessel and distributes its blocks — question at the top,
+   the reveal docked at the bottom — so the phase reads composed.
+   Scoped to the table vote (the #btnReveal scope): the online
+   host's answer phase and every other phase keep their layout. */
+@media (max-width:560px){
+  /* the table's vote keeps data-phase="question" (the vote is the
+     question's beat in the light grammar) — the REVEAL dock is
+     the vote stage's true signature, so :has() does the scoping */
+  #scr-game[data-phase="question"] .stage-inner:has(#btnReveal){flex:1;display:flex;flex-direction:column;margin:0 auto;padding:8px 0 12px}
+  #scr-game[data-phase="question"] .stage-inner:has(#btnReveal) .btn-gold{align-self:center;margin-top:auto}
+}
+
+/* A3 review, proposal 3 (Jimmy's pick, 2026-11-11): in short
+   landscape the reveal's answers sit flush against the question
+   card — layout gap 0 — so the correct slab's resting rise
+   (translateY(-7px) at scale 1.04, plus its 4px gold ring)
+   overlapped the card's bottom edge by ~10px, ~25px at the
+   jump's peak. The fix is height-neutral, because the landscape
+   reveal stage is exactly full: the card lends 8px from its
+   bottom padding and the answers take an 11px margin, for a
+   19px layout gap — about 7px of true air at rest, 2px at the
+   peak, and the stage's total height unchanged. Portrait has
+   over 100px of air already and is untouched. */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .q-text{padding-bottom:8px}
+  #scr-game[data-phase="reveal"] .answers{margin-top:14px}
+}
+/* the slab's own jump, tuned for the clearance above: the shared
+   jumpIn rises 12px at its peak and rests 7px up — against a
+   flush card that rise IS the overlap. jumpSlab keeps the leap's
+   scale and tilt (the personality) on a shorter rise: 8px at the
+   peak, 4px at rest. The wager amount keeps the original jumpIn;
+   it leaps in open space. */
+@keyframes jumpSlab{0%{transform:scale(.7) translateY(10px) rotate(1.5deg)}55%{transform:scale(1.07) translateY(-8px) rotate(-2deg)}100%{transform:scale(1.04) translateY(-4px) rotate(-1.4deg)}}
+.ans-btn.correct{animation-name:jumpSlab}
+/* portrait: the same flush when the correct slab is in the top
+   row (over 100px of air only when it sits lower) — the reveal
+   takes a 16px margin there; the portrait stage carries it */
+@media (max-width:560px){
+  #scr-game[data-phase="reveal"] .answers{margin-top:16px}
+}
+
+/* Perfectionist pass 3, finding 1 (Jimmy's pick, 2026-11-11):
+   four players in short landscape — the tools row is nowrap, so
+   four Cut Two pills + CALL IT exceeded the stage and CALL IT,
+   the shrinkable last item, was crushed to ~110px; its label
+   wrapped into a stack, the button grew taller than the row,
+   and THAT is what pushed the stage 12px over on long questions.
+   Now the pills share what's left equally and may ellipsize
+   their small line instead of wrapping, and CALL IT never
+   shrinks. 3-player and portrait (a grid there) are untouched
+   in effect: the pills' flex only binds when space runs out. */
+@media (max-height:500px){
+  .tools .tool-btn{flex:1 1 0;min-width:0}
+  .tools #btnCallIt{flex:none}
+  .tools .tool-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* finding 1, the height half: measured across the whole bank on
+   the real styles, the landscape question screen's worst total
+   is 217px in a 194px stage (long card + wrapping answers) — an
+   8px tier of long questions sits behind it. The relief comes
+   from the question phase's own spacing in short landscape: the
+   card's top margin and vertical padding, the answers' top
+   margin and row gap. Nothing resizes type or touches the melt
+   bar; portrait keeps its roomier spacing. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-text{margin-top:4px;padding-top:10px;padding-bottom:10px}
+  #scr-game[data-phase="question"] .answers{margin-top:7px;gap:6px}
+}
+
+/* finding 1, the height half (continued): the card's top margin
+   lives on .q-cardwrap (the text's own margin is 0 inside it, and
+   the wrap's base clamp beat the landscape block's 4px on cascade
+   order), the tools row gives back 3px, and Sterling's line —
+   which reserves three lines of desk (min-height 4.05em) under
+   every landscape screen — takes the same 3.3em reservation the
+   bet screens already use, returning the difference to the
+   stage. All question-phase, all short-landscape only. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-cardwrap{margin-top:4px}
+  #scr-game[data-phase="question"] .tools{margin-top:2px}
+  #scr-game[data-phase="question"] .host-line{min-height:3.3em}
+}
+
+/* finding 1, the height half (final trims): with the wrap margin
+   and tools margin already returned, the remaining excess lives
+   in the landscape question screen's type and ticks — the card
+   at 20px (portrait keeps its full size), answers at 12.5px, the
+   melt gauge capped to the value stack's height, and 2px back
+   from the card's padding and the pills'. Sized so the bank's
+   long tier fits outright and the single longest question in
+   the bank lands within a few px of the stage's edge. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-text{font-size:20px;padding-top:7px;padding-bottom:7px}
+  #scr-game[data-phase="question"] .answers .ans-btn{font-size:12.5px}
+  #scr-game[data-phase="question"] .q-meta .melt{height:34px}
+  #scr-game[data-phase="question"] .tools{margin-top:0}
+  #scr-game[data-phase="question"] .tools .tool-btn{padding-top:3px;padding-bottom:3px}
+  #scr-game[data-phase="question"] .cat-pill{padding-top:1px;padding-bottom:1px}
+}
+
+/* finding 1, the height half (last stretch): the stage's own
+   padding gives back its 6px, the letter discs slim to 17px,
+   the meta's value stack steps down a tick, the card to 19px —
+   and the stage's side padding halves in this phase so the
+   answers run a few px wider, which unwraps borderline answer
+   texts outright. The long tier now fits with room; the bank's
+   single longest question lands within a few px. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] #stage{padding:0 6px}
+  #scr-game[data-phase="question"] .q-text{font-size:19px}
+  #scr-game[data-phase="question"] .ans-btn .letter{width:17px;height:17px}
+  #scr-game[data-phase="question"] .q-meta .melt{height:31px}
+}
+
+/* finding 1, the height half (the last ticks for the bank's
+   longest question): 2px each from the answers gap, the card's
+   padding, the pills' type and the headrow — individually
+   invisible, together they bring the Jerrica question home. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .answers{gap:4px}
+  #scr-game[data-phase="question"] .q-text{padding-top:5px;padding-bottom:5px}
+  #scr-game[data-phase="question"] .tools .tool-btn{font-size:11px}
+  #scr-game[data-phase="question"] .q-kind{font-size:11px}
+  #scr-game[data-phase="question"] .q-meta .melt{height:29px}
+}
+
+/* finding 1, the height half (the real lever, saved for last):
+   the question card caps at 24em — a portrait readability
+   measure that forces long questions onto a third line in
+   landscape, where the stage has width to spare. In short
+   landscape the card may run the stage's width; short questions
+   stay snug (the wrap is fit-content), long ones drop a line. */
+@media (max-height:500px){
+  #scr-game[data-phase="question"] .q-text{max-width:100%}
+}
+
+/* Perfectionist fix 3 (2026-11-11): the portrait reveal's tallest
+   compositions (long question, two-row answers, full why slip)
+   stood ~24px proud of the 578px stage — repaid inside the
+   portrait reveal only; the answers' own top margin is left
+   alone (the slab clearance from proposal 3 is not spent here) */
+@media (max-width:560px){
+  #scr-game[data-phase="reveal"] .q-card{padding-top:10px}
+  #scr-game[data-phase="reveal"] .q-cardwrap{margin-top:6px;margin-bottom:6px}
+  #scr-game[data-phase="reveal"] .q-text{line-height:1.18}
+  #scr-game[data-phase="reveal"] .answers{gap:8px}
+  #scr-game[data-phase="reveal"] .ans-btn .letter{width:26px;height:26px}
+  #scr-game[data-phase="reveal"] .delta{margin-top:10px}
+  #scr-game[data-phase="reveal"] .why-wrap{margin-top:6px}
+  #scr-game[data-phase="reveal"] .why{padding-top:7px;padding-bottom:7px;line-height:1.4}
+  #scr-game[data-phase="reveal"] .cat-pill{padding-top:4px;padding-bottom:4px}
+  #scr-game[data-phase="reveal"] #btnNext{padding-top:10px;padding-bottom:10px}
+}
+
+/* Perfectionist fix 4 (2026-11-11): the landscape reveal's tall
+   compositions — count-dial reveals and two-row answer sets —
+   stood up to 19px proud of the host stage; repaid inside the
+   landscape reveal only. The answers' top margin is HELD at
+   12px on purpose: the reveal's slab clearance is not spent. */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .q-card{max-width:100%;padding-top:6px;padding-bottom:5px}
+  #scr-game[data-phase="reveal"] .q-cardwrap{margin-top:2px}
+  #scr-game[data-phase="reveal"] .q-text{line-height:1.15}
+  #scr-game[data-phase="reveal"] .count-dial{margin-top:0}
+  #scr-game[data-phase="reveal"] .dial-rail{margin-top:6px}
+  #scr-game[data-phase="reveal"] .answers{margin-top:12px;gap:2px}
+  #scr-game[data-phase="reveal"] .ans-btn{padding-top:1px;padding-bottom:1px;line-height:1.15;font-size:12.5px}
+  #scr-game[data-phase="reveal"] .ans-btn .letter{width:18px;height:18px}
+  #scr-game[data-phase="reveal"] .delta{margin-top:0;line-height:1.2}
+  #scr-game[data-phase="reveal"] .why-wrap{margin-top:0}
+  #scr-game[data-phase="reveal"] .why{padding-top:3px;padding-bottom:3px;line-height:1.25}
+  #scr-game[data-phase="reveal"] #btnNext{padding-top:9px;padding-bottom:9px}
+}
+
+/* Audit finding 2 (2026-11-11): the fullest break card (six fact
+   rows, two wrapped, Second Wind aboard, the recap at three
+   lines squeezing the stage to ~239) read ~9px over on the short
+   landscape stage — repaid inside the break card only */
+@media (max-height:500px){
+  #scr-game[data-phase="intermission"] .break-card .fact-row{padding-top:1px;padding-bottom:1px}
+  #scr-game[data-phase="intermission"] .break-card .fact-list{margin-top:2px}
+  #scr-game[data-phase="intermission"] .break-card .round-title{margin-top:0;line-height:1}
+  #scr-game[data-phase="intermission"] .break-card .round-kicker{line-height:1.05}
+  #scr-game[data-phase="intermission"] .break-card .break-tease{line-height:1.22;font-size:12px}
+}
+
+/* Audit finding 3 (2026-11-11): on the landscape no-winner
+   reveal, the why slip's scalloped painted trim hangs below the
+   answers' border box and struck through the delta line sitting
+   at margin-top 0. The delta is given air, the answers close up
+   a little to help pay for it, and the funding comes only from
+   compositions that carry this exact delta (winner reveals and
+   portrait are untouched) */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .answers{margin-top:7px}
+  #scr-game[data-phase="reveal"] .answers + .delta{margin-top:14px}
+  #scr-game[data-phase="reveal"] .stage-inner:has(> .answers + .delta) .why{padding-top:3px;padding-bottom:3px}
+  #scr-game[data-phase="reveal"] .stage-inner:has(> .answers + .delta)>div:last-child{margin-top:6px !important}
+}
+
+/* Audit finding 4, addendum: the spread-dial why slip at 3px —
+   scoped with the reveal blocks' own ID prefix so it actually
+   wins the cascade (measured: the slip was still computing 5px
+   under the class-only :has rule above). 5→3 on both faces is
+   the remaining 4px the OG host's shorter stage needed. */
+@media (max-height:500px){
+  #scr-game[data-phase="reveal"] .stage-inner:has(.dial.spread) .why-slip{padding-top:3px;padding-bottom:3px}
+}
+
+/* Designer's pass P6 fit (2026-11-11): the ledger bumper plus
+   the rounds 2–3 standings stood proud of the short landscape
+   stage (R2 by ~47px — the start button fell below the fold).
+   Inside the intro only: the ledger takes the break card's
+   dense dress at any row count, and the standings podiums sit
+   a little tighter. Portrait and the break card are untouched. */
+@media (max-height:500px){
+  #scr-game[data-phase="intro"] .fact-row{padding-top:.5px;padding-bottom:.5px}
+  #scr-game[data-phase="intro"] .fact-v{font-size:12.5px;line-height:1.15}
+  #scr-game[data-phase="intro"] .podium .desk{padding-top:8px;padding-bottom:4px}
+  #scr-game[data-phase="intro"] .race-wrap .podium .avatar{width:46px}
+  #scr-game[data-phase="intro"] .round-title{font-size:20px}
+}
+
+/* Designer's pass P7 (2026-11-11): the start bar. The sheet's
+   start action — START THE SHOW, CREATE A ROOM, JOIN THE ROOM,
+   one per mode — docks at the bottom of the title scroll, so it
+   is always in reach in portrait instead of living below the
+   modes, rules, count and names. It rides a fade of plum so the
+   sheet slides under it; scrolled to the end, it simply rests
+   in place. The rejoin buttons stay in their panels — they are
+   recovery, not the start. */
+.start-bar{position:sticky;bottom:0;z-index:6;display:flex;justify-content:center;padding:16px 16px calc(10px + env(safe-area-inset-bottom));margin-top:10px;background:linear-gradient(180deg,rgba(8,15,29,0),rgba(8,15,29,.9) 38%,#060E1D);pointer-events:none}
+.start-bar>*{pointer-events:auto}
+.start-bar .start-btn{margin-top:0}
+.start-bar .btn-gold{width:min(440px,100%)}
+
+/* Designer's pass P9 (2026-11-11): the mark screen's kept
+   answers. The grid rides dimmed and still while the host
+   marks; each marked seat's face gathers on the correct slab's
+   shoulder, in tap order, ringed in the seat's own colour. */
+.answers.marking{opacity:.66;filter:saturate(.6);pointer-events:none;margin-top:10px}
+.answers.marking .ans-btn{position:relative;overflow:visible;animation:none}
+.vote-chips{position:absolute;top:-10px;right:12px;display:flex;z-index:3}
+.vote-chip{width:25px;height:25px;border-radius:50%;border:2px solid var(--c);background:#0E1C33;overflow:hidden;margin-left:-8px;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.vote-chip:first-child{margin-left:0}
+.vote-chip svg{width:100%;height:100%;display:block}
+@media (max-height:500px){
+  #scr-game[data-phase="vote"] .answers.marking{margin-top:6px}
+  #scr-game[data-phase="vote"] .round-text{margin-top:6px}
+}
+
+/* Designer's pass P10 (2026-11-11): bet-strip clearance in
+   short landscape — the desks side of it. In the bet phase the
+   host line gives back its spare height and the desks sit a
+   touch lower, so the whole seats row — the leader's crown
+   included — drops away from the stage's last row. (The stage
+   side of P10 was subsumed the same night by P11, which moved
+   the strip and the steppers off the stage entirely.) */
+@media (max-height:500px){
+  #scr-game[data-phase="bet"] .host-line{min-height:2.5em}
+  #scr-game[data-phase="bet"] .seat .desk{padding-top:5px}
+}
+
+/* Designer's pass P11 (2026-11-11): the bet consolidation.
+   The strip is the desks' shared header (#deskHead, between
+   stage and seats); the steppers ride each desk. Portrait
+   desks are narrow, so the stepper grid stacks — the amount
+   pill spans the top, − and + sit under it; in short landscape
+   the desks are wide and the three run in one row. The bet
+   stage, words only now, rests its button at the stage's foot,
+   right above the header it feeds. */
+.desk-head:empty{display:none}
+.desk-head .proj-wrap{width:min(680px,96vw);margin:6px auto 0}
+.desk-bets{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;width:100%}
+.desk-bets .bet-amt{grid-column:1/-1;min-width:0;width:100%;font-size:12.5px;padding:5px 6px;white-space:nowrap}
+.desk-bets .bet-step{min-height:36px;padding:4px 6px;font-size:13px;min-width:0}
+.desk-bets.house{display:flex;align-items:center;justify-content:center;gap:6px}
+.desk-bets.house .bet-amt{width:auto}
+#scr-game[data-phase="bet"] .stage-inner:has(#btnBetsDone) #btnBetsDone{margin-top:auto;align-self:center}
+@media (max-height:500px){
+  .desk-head{margin-bottom:15px}
+  .desk-head .proj-wrap{display:flex;align-items:center;justify-content:center;gap:8px;width:min(880px,97vw);margin:2px auto 0}
+  .desk-head .proj-strip{margin-top:0;flex-wrap:nowrap}
+  .desk-head .proj-seat{padding:1px 8px 1px 6px;font-size:12px;gap:4px}
+  .desk-head .proj-move{min-width:16px;font-size:10px}
+  .desk-bets{display:flex;align-items:center;justify-content:center;gap:5px}
+  .desk-bets .bet-amt{width:auto;min-width:104px;font-size:13.5px;padding:6px 9px}
+  .desk-bets .bet-step{min-height:36px}
+}
+
+
+/* Designer's pass P12 (2026-11-11): the online lobby fills its
+   width in landscape. The table becomes two columns — the room
+   controls (code, QR, copy, START) on the left, the seats in a
+   2x2 grid on the right — instead of a narrow centred column
+   floating over a row of desks. The landscape lobby's standing
+   text treatment holds (the giant code and the QR carry the
+   meaning; the cat line and the waiting text stay stood down).
+   Portrait keeps the stacked lobby unchanged. */
+@media (max-height:500px){
+  #scr-game[data-phase="lobby"] #table{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:4px 16px}
+  #scr-game[data-phase="lobby"] #seatsTop{display:none}
+  #scr-game[data-phase="lobby"] #deskHead{display:none}
+  #scr-game[data-phase="lobby"] #stage{grid-column:1}
+  #scr-game[data-phase="lobby"] .stage-inner{max-width:100%}
+  #scr-game[data-phase="lobby"] .og-code{font-size:56px}
+  #scr-game[data-phase="lobby"] #seatsBottom{grid-column:2;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:min-content;gap:8px;align-content:center;padding:4px}
+}
+
+/* Designer's pass P13 (2026-11-11): the setup card reads in two
+   columns in landscape. The explaining lives on the left — HOW
+   TONIGHT WORKS over the house rules, stacked as a list — and
+   the doing lives on the right: the mode tabs over whichever
+   panel they open (count, names, the room forms). The docked
+   start bar narrows to the right column's share, so START THE
+   SHOW waits under the controls it fires. Placement is grid
+   areas only; the DOM order is untouched, and portrait keeps
+   the single stacked card it has always had. */
+@media (max-height:500px){
+  #scr-title .setup-card{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:20px;align-items:start}
+  #scr-title .mode-tabs{grid-column:2;grid-row:1;margin-bottom:6px}
+  #scr-title .how-link{grid-column:1;grid-row:1;justify-self:start}
+  #scr-title #rulesBlock{grid-column:1;grid-row:2}
+  #scr-title #rulesBlock .rules-row{flex-direction:column}
+  #scr-title #panelTable,#scr-title #panelHost,#scr-title #panelJoin{grid-column:2;grid-row:2}
+  #scr-title .start-bar{width:57%;margin-left:auto}
+}
+
+/* Designer's pass P15 (2026-11-11): the landscape host rail.
+   In short landscape the host bar leaves the bottom of the
+   screen and stands as a narrow right-hand column: Sterling's
+   face at the top, his bubble under it with its tail re-aimed
+   upward, and the table — stage and seats — takes the full
+   height the bar used to spend. Everything the stage sizes by
+   the viewport is re-capped to the column it now lives in.
+   Portrait keeps the bottom bar unchanged. */
+@media (max-height:500px){
+  #scr-game.active{display:grid;grid-template-columns:minmax(0,1fr) 232px;grid-template-rows:auto minmax(0,1fr);grid-template-areas:"top top" "table rail"}
+  #scr-game #topbar{grid-area:top}
+  #scr-game #table{grid-area:table}
+  #scr-game #hostbar{grid-area:rail;flex-direction:column;align-items:center;justify-content:flex-start;gap:9px;padding:14px 12px 10px;background:linear-gradient(270deg,rgba(18,6,26,.55),rgba(18,6,26,0))}
+  #scr-game .host-face{width:62px;height:62px}
+  #scr-game .host-bubble{max-width:100%;width:100%;padding:9px 13px 11px}
+  #scr-game .host-bubble::before{left:50%;top:-11px;margin:0 0 0 -13px;width:26px;height:12px;clip-path:polygon(0 100%,100% 100%,50% 0)}
+  #scr-game .host-line{font-size:14.5px;min-height:3.4em}
+  #scr-game .stage-inner{width:100%}
+  #scr-game .desk-head .proj-wrap{width:100%}
+  /* the pot's question-phase perch (top:40px, from the short-
+     stage era) lands on the card now that the stage is tall;
+     the bottom-left dock that replaced it measured clear of the
+     tools row but NOT of the answers: at 844x390 the vessel
+     (y227-301) covers the third plaque's first letters
+     (y213-251) — the 2026-11-14 review's fresh screenshot
+     caught it mid-question. So in this layout the vessel sits
+     the question out, exactly as portrait already rules: the
+     pot is not spendable mid-question, its feed moment is the
+     reveal, and there it returns. The tools row reclaims the
+     88px the dock used to hold. */
+  #scr-game #stage:has(.q-cardwrap) .pot-vessel{display:none}
+}
+
+/* Designer's pass P16 (2026-11-11): Sterling's expressions.
+   The host-face bust carries three feature sets — the greeting
+   face he has always worn, a delight (brows up, eyes wide, the
+   grin opened) and a commiseration (brows slanted in sympathy,
+   gaze dropped, a gentle closed smile). The mood classes ride
+   #scr-game exactly like his gesture classes; the reveal and
+   the finale set them, and every other phase clears back to
+   the greeting. His blink and his pointing pupils work on
+   whichever face is up — the variant eyes are .st-eye groups
+   like the originals. */
+.host-face .face-delight,.host-face .face-sorry{display:none}
+#scr-game.st-mood-delight .host-face .face-base,#scr-game.st-mood-sorry .host-face .face-base{display:none}
+#scr-game.st-mood-delight .host-face .face-delight{display:inline}
+#scr-game.st-mood-sorry .host-face .face-sorry{display:inline}
+

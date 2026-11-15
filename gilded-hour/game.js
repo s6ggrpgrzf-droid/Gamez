@@ -125,7 +125,7 @@
      player a lie fools pays its author $25 from the house. No
      Double, no gauntlet, no Cut Two rides it: the bluff is its
      own stake, and one stake per question already. */
-  var BLUFF_ROUND = 2, BLUFF_Q = 3, BLUFF_VALUE = 200, BLUFF_FOOL = 25, BLUFF_VOTE_TIME = 25;
+  var BLUFF_ROUND = 2, BLUFF_Q = 3, BLUFF_VALUE = 200, BLUFF_FOOL = GH_RULES.BLUFF_FOOL, BLUFF_VOTE_TIME = 25;
   /* Designer pass 6 (research programme Pass 4) — THE DECADE
      VOTE. At the first intermission the room votes the era the
      dealer leans toward for the rest of the night: the ordinary
@@ -2809,9 +2809,8 @@
      never more than 5. It derives from the scores entering the
      question only; nothing about it is persisted. */
   function longShotCap(players, i) {
-    if (!players || !players[i]) return 3;
-    var lead = Math.max.apply(null, players.map(function (p) { return p.score; }));
-    return Math.min(5, 3 + Math.floor(Math.max(0, lead - players[i].score) / 1000));
+    if (!players || !players[i]) return GH_RULES.BASE_BET_CAP;
+    return GH_RULES.betCap(players.map(function (p) { return p.score; }), i);
   }
   function tableBetCap(i) { return G ? longShotCap(G.players, i) : 3; }
   function betLabel(chips) { return chips + (chips === 1 ? " CHIP" : " CHIPS") + " · " + money(chips * 100); }
@@ -2891,7 +2890,11 @@
        further in the tight layouts, the portrait fix's own grammar */
     var houseSeg = p.house != null ? '<span class="houseseg">HOUSE</span>' : "";
     if (G.round === 3 && ((G.phase === "bet" && tableBetCap(i) > 3) || p.bet > 3)) {
-      return (houseSeg ? houseSeg + " · " : "") + "LONG SHOT · BET " + p.bet + (p.bet === 1 ? " CHIP" : " CHIPS") + (seg ? " · " + seg : "");
+      /* Desk-tag fit pass (2026-11-15): this is the longest line
+         a desk ever prints, and in portrait it overran the desk —
+         the .lsl span lets the portrait stylesheet step this one
+         line down a size (see the fit block in style.css). */
+      return '<span class="lsl">' + (houseSeg ? houseSeg + " · " : "") + "LONG SHOT · BET " + p.bet + (p.bet === 1 ? " CHIP" : " CHIPS") + (seg ? " · " + seg : "") + "</span>";
     }
     if (houseSeg) t.push(houseSeg);
     /* Pass N2: a pocket holding two says so on the tag; one is
@@ -6534,7 +6537,7 @@
     var marked = Object.keys(c.marks || {}).map(Number).sort(function (a, b) { return a - b; });
     return marked.length ? marked[0] : -1;
   }
-  var QUICK_DRAW_BONUS = 50;
+  var QUICK_DRAW_BONUS = GH_RULES.QUICK_DRAW_BONUS;
   /* ---------- Gameplay-visuals pass G5 — THE PHOTO-FINISH ----------
      The reveal draws the race the quick-draw already judged: the
      correct finishers standing on a slim brass track, in the order
@@ -6601,7 +6604,7 @@
      and records it on the question (streakFx/streakMoment), so a
      resumed reveal repaints from the record and never re-pays —
      the online room server runs the identical settlement. */
-  var STREAK_BONUS = 25;
+  var STREAK_BONUS = GH_RULES.STREAK_BONUS;
   function streakOutcomes(kind, marks, streaksIn, round) {
     var streakOut = {}, bonuses = {}, events = [];
     var seats = [];
@@ -6614,10 +6617,10 @@
       var before = streaksIn[i] || 0, after = 0, bonus = 0;
       if (marks[i]) {
         after = before + 1;
-        if (after >= 3) bonus = STREAK_BONUS * (round || 1);
+        if (after >= GH_RULES.STREAK_MIN) bonus = STREAK_BONUS * (round || 1);
         if (after >= 5 && before < 5) events.push({ type: "reach5", seat: i, n: after });
-        else if (after >= 3 && before < 3) events.push({ type: "reach3", seat: i, n: after });
-      } else if (before >= 4) events.push({ type: "death", seat: i, n: before });
+        else if (after >= GH_RULES.STREAK_MIN && before < GH_RULES.STREAK_MIN) events.push({ type: "reach3", seat: i, n: after });
+      } else if (before >= GH_RULES.STREAK_DEATH_MIN) events.push({ type: "death", seat: i, n: before });
       streakOut[i] = after; bonuses[i] = bonus;
     });
     var rank = { reach5: 0, reach3: 1, death: 2 };
@@ -8968,7 +8971,7 @@
            question print's mask — a golden entry drains its own
            un-doubled figures on the room's halved window, so the
            shared screen never prices the double early */
-        var v = Math.round((OG.cur.golden ? OG.cur.baseValue : (q.baseValue != null ? q.baseValue : OG.cur.baseValue)) * (OG.cur.golden ? OG.cur.multiplier : (q.multiplier != null ? q.multiplier : OG.cur.multiplier)) * (1 - 0.5 * frac));
+        var v = GH_RULES.melt(OG.cur.golden ? OG.cur.baseValue : (q.baseValue != null ? q.baseValue : OG.cur.baseValue), OG.cur.golden ? OG.cur.multiplier : (q.multiplier != null ? q.multiplier : OG.cur.multiplier), frac);
         var txt = money(v);
         if (vEl.textContent !== txt) {
           vEl.textContent = txt;
