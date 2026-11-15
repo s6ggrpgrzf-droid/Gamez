@@ -175,7 +175,8 @@ async function enterSolo(page, name) {
         /* THE BLUFF (pass 2): the slot opens on the invent stage —
            deal the answers before anything else can happen */
         if (s.kind === 'bluff' && !s.bluffDealt) { await page.tap('#btnDealBluff'); await sleep(500); continue; }
-        plan = { key: s.round + ':' + s.qInRound, kind: s.kind, house: s.house, elapsed: s.elapsed, clockTotal: s.clockTotal, raced: null };
+        if (plan && plan.key === s.round + ':' + s.qInRound) { await sleep(280); continue; }
+        plan = { key: s.round + ':' + s.qInRound, kind: s.kind, house: s.house, elapsed: s.elapsed, clockTotal: s.clockTotal, raced: null, pre: s.players.map(p => p.score), preStreaks: prevStreaks.slice() };
         if (!shotTaken && s.round === 2) {
           await page.screenshot({ path: SHOTS + '/house-1-solo.png' });
           shotTaken = true;
@@ -201,7 +202,7 @@ async function enterSolo(page, name) {
           await page.setViewport({ width: 844, height: 390 });
           await sleep(300);
         }
-        /* Cut Two hunt: a house policy is pending — let it fire before calling time */
+        /* Cut Two hunt: a house policy is pending — let it fire before the human answers */
         const pend = s.house ? Object.keys(s.house).filter(k => s.house[k].cut === 'pending') : [];
         if (pend.length && !cutSpent) {
           const seat = +pend[0];
@@ -221,86 +222,63 @@ async function enterSolo(page, name) {
           }
           cutHunted = true;
         }
-        await page.tap('#btnCallIt');
-        await sleep(280);
-        continue;
-      }
-      if (s.phase === 'vote') {
-        if (!plan) plan = { kind: s.kind, house: s.house, elapsed: s.elapsed };
-        plan.pre = s.players.map(p => p.score);
-        plan.preStreaks = prevStreaks.slice();
-        /* the pre-mark record: option questions open with exactly the rolled-ok house seats marked */
-        if (s.kind === 'mcq' && s.house) {
-          const want = Object.keys(s.house).filter(k => s.house[k].ok).map(Number).sort();
-          const got = Object.keys(s.marks).map(Number).sort();
-          if (JSON.stringify(want) !== JSON.stringify(got)) auditBad.push(plan.key + ' pre-marks ' + JSON.stringify(got) + ' want ' + JSON.stringify(want));
-        }
-        if (s.kind === 'bluff') {
-          /* the bluff's mark screen: the human takes the truth;
-             house seats were dealt their picks at CALL IT */
-          const truthIx = s.optsBy.findIndex(o => o.ok);
-          if (truthIx >= 0) { await page.tap('.bluff-pick[data-opt="' + truthIx + '"]'); await sleep(180); }
-          await page.tap('.seat[data-seat="0"]'); await sleep(180);
-          plan.bluff = true;
-          await page.tap('#btnReveal'); await sleep(300); continue;
-        }
+        /* Pass 8 grammar: the human answers on their own desk —
+           the house's marks are its rolls, settled from the same
+           records the audit reads. The quick-draw race is now a
+           real race: the human's pick is stamped from the clock,
+           the house's locks were rolled at the deal. */
         if (s.kind === 'num') {
-          /* the printed shouts */
-          if (!numPrintChecked && s.house) {
-            const printed = await page.evaluate(() => [...document.querySelectorAll('.seat.house .seat-guess')].map(e => e.textContent));
-            const wantTxt = [1, 2].map(i => 'SHOUTED ' + Number(s.house[i].guess).toLocaleString('en-US'));
-            check('A: house numbers are printed on their seats at the mark screen',
-              printed.length === 2 && printed.every((t, k) => t === wantTxt[k]), JSON.stringify(printed) + ' want ' + JSON.stringify(wantTxt));
-            numPrintChecked = true;
+          let g2 = 0;
+          while (g2++ < 12) {
+            const st = await S(page);
+            if (!st || st.phase !== 'question') break;
+            const turn = await page.evaluate(() => { const g = window.__game.G; return g && g.cur ? g.cur.guessTurn : null; });
+            if (turn == null || turn < 0) break;
+            if (turn !== 0) break; /* only the human keys in; the house's numbers are its rolls */
+            const target = (s.truth || 0) + 7; /* the declared shout: seven off, racing the house's rolls */
+            for (const ch of String(target)) { await page.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(40); }
+            await page.tap('#btnNumLock').catch(() => {}); await sleep(200);
           }
-          /* the host judges closest across all seats: house guesses vs a declared human shout */
-          const humanShout = (s.truth || 0) + 7;
-          const dist = i => i === 0 ? Math.abs(humanShout - s.truth) : Math.abs(s.house[i].guess - s.truth);
-          const best = Math.min(dist(0), dist(1), dist(2));
-          for (let i = 0; i < 3; i++) if (dist(i) === best) { await page.tap('.seat[data-seat="' + i + '"]'); await sleep(160); }
         } else {
-          /* the no-tap rule, proven once: tapping a house seat changes nothing */
-          if (!tapRuleChecked) {
-            const hSeat = s.players.findIndex(p => p.house !== null);
-            const before = JSON.stringify((await S(page)).marks);
-            await page.tap('.seat[data-seat="' + hSeat + '"]');
-            await sleep(220);
-            const after = JSON.stringify((await S(page)).marks);
-            check('A: the host never taps for a house seat — its mark is its roll, tap or no tap',
-              before === after, 'before=' + before + ' after=' + after);
+          if (!tapRuleChecked && s.kind === 'mcq') {
+            const chips = await page.evaluate(() => [0, 1, 2].map(i => document.querySelectorAll('[data-pick^="' + i + '|"]').length));
+            check('A: house seats carry no pick chips — their answer is their roll, never a tap',
+              chips[0] > 0 && chips[1] === 0 && chips[2] === 0, 'chips=' + JSON.stringify(chips));
             tapRuleChecked = true;
           }
-          /* the quick-draw race, both directions */
           const okHouse = s.house ? Object.keys(s.house).filter(k => s.house[k].ok).map(Number) : [];
-          if (!raceFast && okHouse.length) {
+          if (s.kind === 'mcq' && !raceFast && okHouse.length) {
             const slow = okHouse.map(i => s.house[i].lock).sort((a, b) => a - b)[0];
-            if (slow > s.elapsed + 2) {
-              await page.tap('.seat[data-seat="0"]'); await sleep(200);
-              plan.raced = 'fast';
-              raceFast = true;
-            }
+            if (slow > s.elapsed + 2) { plan.raced = 'fast'; raceFast = true; }
           }
-          if (!raceSlow && !plan.raced && okHouse.length) {
+          if (s.kind === 'mcq' && !plan.raced && !raceSlow && okHouse.length) {
             const quick = okHouse.map(i => s.house[i].lock).sort((a, b) => a - b)[0];
             if (quick < s.elapsed + 5) {
               const waitMs = Math.min(12000, Math.max(600, (quick - s.elapsed + 1.5) * 1000));
               await sleep(waitMs);
-              await page.tap('.seat[data-seat="0"]'); await sleep(200);
-              plan.raced = 'slow';
-              raceSlow = true;
+              plan.raced = 'slow'; raceSlow = true;
             }
           }
-          if (!plan.raced) { await page.tap('.seat[data-seat="0"]'); await sleep(200); }
+          if (s.kind === 'bluff') plan.bluff = true;
+          const okIx = s.optsBy.findIndex(o => o.ok);
+          if (okIx >= 0) { await page.tap('[data-pick="0|' + okIx + '"]').catch(() => {}); await sleep(200); }
         }
-        await page.tap('#btnReveal');
-        await sleep(300);
+        await sleep(280);
         continue;
       }
+      if (s.phase === 'vote' || s.phase === 'vote-count') { await sleep(280); continue; }
       if (s.phase === 'reveal') {
         /* the settlement audit: expected money rebuilt from the question's own records */
         if (plan && !plan.audited) {
           plan.audited = true;
           auditCount++;
+          if (plan.kind === 'num' && !numPrintChecked && plan.house) {
+            const printed = await page.evaluate(() => [...document.querySelectorAll('.seat.house .seat-guess')].map(e => e.textContent));
+            const wantTxt = [1, 2].map(i => 'SHOUTED ' + Number(plan.house[i].guess).toLocaleString('en-US'));
+            check('A: house numbers are printed on their seats at the reveal',
+              printed.length === 2 && printed.every((t, k) => t === wantTxt[k]), JSON.stringify(printed) + ' want ' + JSON.stringify(wantTxt));
+            numPrintChecked = true;
+          }
           const qd = s.kind === 'mcq' ? (s.lockOrder.find(x => s.marks[x]) != null ? s.lockOrder.find(x => s.marks[x]) : -1) : -1;
           for (let i = 0; i < 3; i++) {
             /* THE BLUFF audits by its own grammar: a flat $200 for
@@ -317,11 +295,12 @@ async function enterSolo(page, name) {
               : (s.marks[i]
                 ? /* the two stakes (THE DOUBLE / AGAINST THE ROOM)
                      double the question's value only — Quick Draw
-                     and the streak bonus stay flat, as seatGain
-                     settles them */
+                     pays the round's figure (50 x round, review
+                     Pass 5) and the streak bonus rides streakFx's
+                     own recorded figure, as seatGain settles them */
                   ((s.betRound ? s.players[i].bet * 100 : s.bankValue) *
                     (!s.betRound && (s.dblSeats.includes(i) || (s.vsSeats.includes(i) && Object.keys(s.marks).length === 1)) ? 2 : 1)) +
-                  (i === qd ? 50 : 0) + (s.streakFx && s.streakFx[i] ? (s.streakFx[i].bonus || 0) : 0)
+                  (i === qd ? 50 * (s.round || 1) : 0) + (s.streakFx && s.streakFx[i] ? (s.streakFx[i].bonus || 0) : 0)
                 : 0);
             const gotGain = s.players[i].score - plan.pre[i];
             if (gotGain !== want) auditBad.push(plan.key + ' seat' + i + ' gain ' + gotGain + ' want ' + want);
@@ -361,7 +340,8 @@ async function enterSolo(page, name) {
     const houseSeat = 1, houseName = g0.players[houseSeat].name, humanName = g0.players[0].name;
     await page.tap('#btnRoundGo');
     await sleep(300);
-    let staged = false, guard = 0;
+    let staged = false, guard = 0, deciderPrintChecked = false;
+    const actedB = new Set();
     while (guard++ < 1500) {
       const s = await S(page);
       if (!s) throw new Error('game state lost (B)');
@@ -373,29 +353,44 @@ async function enterSolo(page, name) {
       if (s.phase === 'question') {
         /* THE BLUFF (pass 2): deal the invent stage first */
         if (s.kind === 'bluff' && !s.bluffDealt) { await page.tap('#btnDealBluff'); await sleep(500); continue; }
+        const keyB = s.round + ':' + s.qInRound + ':' + s.kind + ':' + (s.decider ? 'dec' : '');
+        if (actedB.has(keyB)) { await sleep(250); continue; }
+        actedB.add(keyB);
         if (s.decider) {
           check('B: the tied house player plays the Decider — eligible, with its number dealt',
             s.decider.eligible.includes(houseSeat) && s.decider.eligible.includes(0) && !!s.house && s.house[houseSeat] && s.house[houseSeat].guess != null,
             'eligible=' + JSON.stringify(s.decider.eligible));
-          await page.tap('#btnCallIt'); await sleep(250); continue;
         }
-        await page.tap('#btnCallIt'); await sleep(250); continue;
+        /* Pass 8 grammar: the human answers on their own desk —
+           on the Decider they key a number nowhere near, and the
+           house's rolled number takes it on the computed closest */
+        if (s.kind === 'num') {
+          let g2 = 0;
+          while (g2++ < 12) {
+            const turn = await page.evaluate(() => { const g = window.__game.G; return g && g.cur ? g.cur.guessTurn : null; });
+            if (turn == null || turn < 0 || turn !== 0) break;
+            const target = s.decider ? (s.truth || 0) + 5000 : (s.truth || 0);
+            for (const ch of String(target)) { await page.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(40); }
+            await page.tap('#btnNumLock').catch(() => {}); await sleep(200);
+            break;
+          }
+        } else {
+          const okIx = s.optsBy.findIndex(o => o.ok);
+          if (okIx >= 0) { await page.tap('[data-pick="0|' + okIx + '"]').catch(() => {}); await sleep(200); }
+        }
+        await sleep(250); continue;
       }
-      if (s.phase === 'vote') {
-        if (s.decider) {
-          /* its number is printed on its desk for the host's closest call */
+      if (s.phase === 'vote' || s.phase === 'vote-count') { await sleep(250); continue; }
+      if (s.phase === 'reveal') {
+        if (s.decider && !deciderPrintChecked) {
+          deciderPrintChecked = true;
           const printed = await page.evaluate(i => {
             const e = document.querySelector('.seat[data-seat="' + i + '"] .seat-guess');
             return e ? e.textContent : null;
           }, houseSeat);
-          check('B: the house Decider number is printed on its seat at the mark screen',
+          check('B: the house Decider number is printed on its seat at the reveal',
             printed === 'SHOUTED ' + Number(s.house[houseSeat].guess).toLocaleString('en-US'), String(printed));
-          /* the human's declared shout is nowhere near; the house number takes it */
-          await page.tap('.seat[data-seat="' + houseSeat + '"]'); await sleep(200);
         }
-        await page.tap('#btnReveal'); await sleep(280); continue;
-      }
-      if (s.phase === 'reveal') {
         if (!staged && s.round === 3 && s.qInRound === 2 && !s.decider) {
           /* stage the tie: human and house seat level at the top */
           await page.evaluate(hs => {

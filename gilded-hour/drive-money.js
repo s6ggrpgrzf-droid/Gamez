@@ -360,15 +360,11 @@ function padStubs(cfg) {
               await sleep(160);
             }
           } else await sleep(350);
-          const still = await page.evaluate(() => window.__game.G && window.__game.G.phase).catch(() => null);
-          if (still === 'question') { await page.tap('#btnCallIt').catch(() => {}); await sleep(250); }
-        }
-        await sleep(150); continue;
-      }
-      if (s.phase === 'vote-count') { await sleep(200); continue; }
-      if (s.phase === 'vote') {
-        if (plan && !plan.marked) {
-          plan.marked = true;
+          /* Pass 8 grammar: the plan's marks become desk picks —
+             marked seats take the truth (or the exact number),
+             everyone else a live wrong one; the question settles
+             itself. scoresPre is read here, before any pick: the
+             money cannot move during a question either way. */
           scoresPre = s.scores.slice();
           if (plan.type === 'small') {
             fortunePre = await page.evaluate(() => {
@@ -376,20 +372,34 @@ function padStubs(cfg) {
               return f ? parseFloat(f.style.height) || 0 : null;
             });
           }
-          if (s.kind === 'bluff' && plan.marks.length) {
-            /* the bluff's mark screen: select the truth plaque
-               before tapping the seats that picked it */
-            const truthIx = await page.evaluate(() => {
-              const c = window.__game.G.cur;
-              return c && c.opts ? c.opts.findIndex(o => o.ok) : -1;
-            }).catch(() => -1);
-            if (truthIx >= 0) { await page.tap('.bluff-pick[data-opt="' + truthIx + '"]').catch(() => {}); await sleep(180); }
+          plan.marked = true;
+          if (s.kind === 'num') {
+            let g2 = 0;
+            while (g2++ < 12) {
+              const st = await page.evaluate(() => { const g = window.__game.G; return g && g.cur ? { phase: g.phase, turn: g.cur.guessTurn, truth: g.cur.q ? g.cur.q.num : null } : null; }).catch(() => null);
+              if (!st || st.phase !== 'question' || st.turn == null || st.turn < 0) break;
+              const target = plan.marks.includes(st.turn) ? st.truth : st.truth + 400 + st.turn * 137;
+              for (const ch of String(target)) { await page.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(40); }
+              await page.tap('#btnNumLock').catch(() => {}); await sleep(180);
+            }
+          } else {
+            const picks = await page.evaluate((marks) => {
+              const g = window.__game.G;
+              if (!g || !g.cur || !g.cur.opts) return [];
+              const ok = g.cur.opts.findIndex(o => o.ok);
+              const out = [];
+              for (let seat = 0; seat < g.players.length; seat++) {
+                const oi = marks.includes(seat) ? ok : g.cur.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat);
+                if (oi >= 0) out.push(seat + '|' + oi);
+              }
+              return out;
+            }, plan.marks).catch(() => []);
+            for (const sel of picks) { await page.tap('[data-pick="' + sel + '"]').catch(() => {}); await sleep(120); }
           }
-          for (const seat of plan.marks) { await page.tap('.seat[data-seat="' + seat + '"]').catch(() => {}); await sleep(180); }
-          await page.tap('#btnReveal').catch(() => {});
         }
-        await sleep(200); continue;
+        await sleep(150); continue;
       }
+      if (s.phase === 'vote-count' || s.phase === 'vote') { await sleep(200); continue; }
       if (s.phase === 'reveal') {
         if (plan && !plan.done) {
           plan.done = true;
@@ -664,36 +674,41 @@ function padStubs(cfg) {
         eligible: null, cut: null, answersIn: 3 };
       window.__padPush(window.__padSnap('reveal', q, lr));
     }, qid, banked, total, ciX);
+    /* Pass 8 re-teach: the minimal pad retired the coin hop by
+       design (its celebration is the big screen's; jpCoinHopOnce
+       has had no caller since that redesign) — D now asserts the
+       minimal pad's own contract: the verdict names the bank, the
+       score line carries the settled total, and no coins fly on
+       the phone */
     await pushReveal('q1.10.zz', 350, 850, ci);
-    let hopActs = null;
-    for (let w = 0; w < 30; w++) {
-      hopActs = await cenActs(p).catch(() => null);
-      if (hopActs && hopActs.length >= 5) break;
-      await sleep(80);
-    }
-    const hopExpect = await p.evaluate(() => Math.min(window.__game.money.count(350), 5));
-    const vscoreTxt = await p.evaluate(() => { const v = document.querySelector('#jpMain .jp-vscore'); return v ? v.textContent : ''; });
-    check('D: the pad\'s banked verdict hops its coins into its own score line (banded, capped at five)',
-      !!hopActs && hopActs.length === hopExpect && hopActs.every(a => a.seat === 0) && /850/.test(vscoreTxt),
-      'acts=' + (hopActs && hopActs.length) + ' expect=' + hopExpect + ' score line: ' + vscoreTxt.trim());
-    /* the same verdict re-pushed (a snapshot resync) never re-fires */
-    await sleep(1200); /* let the hop finish */
-    await p.evaluate(() => window.__cenReset && window.__cenReset());
+    await sleep(500);
+    const verdict1 = await p.evaluate(() => {
+      const w = document.querySelector('#jpMain .jp-vword');
+      const v = document.querySelector('#jpMain .jp-vscore');
+      return { word: w ? w.textContent : '', score: v ? v.textContent : '', coinsOn: window.__fx.jpCoins.parts.filter(x => x.on).length };
+    });
+    check('D: the pad\'s verdict names the bank and its score line carries the settled total — and the minimal pad flies no coins of its own',
+      /BANKED/.test(verdict1.word) && /350/.test(verdict1.word) && /850/.test(verdict1.score) && verdict1.coinsOn === 0,
+      JSON.stringify(verdict1));
+    /* the same verdict re-pushed (a snapshot resync) changes nothing */
     await pushReveal('q1.10.zz', 350, 850, ci);
-    await sleep(900);
-    const refired = await p.evaluate(() => ({ n: window.__cen.acts.length, on: window.__fx.jpCoins.parts.filter(x => x.on).length })).catch(() => null);
-    check('D: the same verdict re-pushed fires nothing — the hop is keyed, not repainted',
-      !!refired && refired.n === 0 && refired.on === 0, JSON.stringify(refired));
-    /* a second bank, then the pad leaves the reveal mid-hop:
-       the pool clears with the card */
-    await p.evaluate(() => window.__cenReset && window.__cenReset());
+    await sleep(500);
+    const verdict2 = await p.evaluate(() => {
+      const w = document.querySelector('#jpMain .jp-vword');
+      const v = document.querySelector('#jpMain .jp-vscore');
+      return { word: w ? w.textContent : '', score: v ? v.textContent : '' };
+    });
+    check('D: the same verdict re-pushed paints the same card — keyed, not repainted',
+      verdict2.word === verdict1.word && verdict2.score === verdict1.score, JSON.stringify(verdict2));
+    /* a second bank replaces the verdict, and the next question's
+       card leaves no orphan verdict behind */
     await pushReveal('q1.10.yy', 200, 1050, ci);
-    let airborne = false;
-    for (let w = 0; w < 25; w++) {
-      const st = await p.evaluate(() => window.__fx.jpCoins.parts.some(x => x.on)).catch(() => false);
-      if (st) { airborne = true; break; }
-      await sleep(50);
-    }
+    await sleep(500);
+    const verdict3 = await p.evaluate(() => {
+      const w = document.querySelector('#jpMain .jp-vword');
+      const v = document.querySelector('#jpMain .jp-vscore');
+      return { word: w ? w.textContent : '', score: v ? v.textContent : '' };
+    });
     await p.evaluate(() => {
       const q = { qid: 'q1.12.zz', round: 1, kind: 'normal', category: 'Movies', answersCount: 4,
         baseValue: 200, multiplier: 1, headline: false, band: 2, windowMs: 30000,
@@ -701,10 +716,11 @@ function padStubs(cfg) {
         eligible: null, cut: null, answersIn: 0 };
       window.__padPush(window.__padSnap('answer', q, null));
     });
-    await sleep(400);
-    const cleared = await p.evaluate(() => window.__fx.jpCoins.parts.filter(x => x.on).length).catch(() => null);
-    check('D: leaving the reveal mid-hop clears the pad\'s pool — no orphan coins on the next card',
-      airborne && cleared === 0, 'airborne=' + airborne + ' still on=' + cleared);
+    await sleep(500);
+    const nextCard = await p.evaluate(() => ({ verdict: !!document.querySelector('#jpMain .jp-verdict'), answers: document.querySelectorAll('#jpMain .jp-ans').length }));
+    check('D: a second bank replaces the verdict whole, and the next question\'s card leaves no orphan verdict behind',
+      /200/.test(verdict3.word) && /1,050/.test(verdict3.score) && !nextCard.verdict && nextCard.answers > 0,
+      JSON.stringify({ verdict3, nextCard }));
     await ctx.close();
   }
 

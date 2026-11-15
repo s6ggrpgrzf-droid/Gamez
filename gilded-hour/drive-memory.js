@@ -94,6 +94,7 @@ function memoryCandidates(page, ls) {
     const g = window.__game.G;
     if (!g) return null;
     return { phase: g.phase, round: g.round, qInRound: g.qInRound, kind: g.cur ? g.cur.kind : null,
+      truth: g.cur && g.cur.q ? g.cur.q.num : null, guessTurn: g.cur ? g.cur.guessTurn : null,
       scores: g.players.map(x => x.score), showId: g.showId };
   });
   async function introLine(p) {
@@ -169,6 +170,7 @@ function memoryCandidates(page, ls) {
   const S3 = () => S(page3);
   async function playShow(winSeat) {
     let jumped = false, guard = 0;
+    const actedKeys = new Set();
     while (guard++ < 700) {
       const s = await S3();
       if (!s) throw new Error('game state lost');
@@ -181,14 +183,37 @@ function memoryCandidates(page, ls) {
         await page3.evaluate(() => { const g = window.__game.G; if (g && g.cur) g.cur.elapsed = 5; });
         const isBluff = await page3.evaluate(() => { const g = window.__game.G; return !!(g && g.cur && g.cur.kind === 'bluff' && !g.cur.bluffDealt); });
         if (isBluff) { await page3.tap('#btnDealBluff'); await sleep(220); continue; }
-        await page3.tap('#btnCallIt'); await sleep(180); continue;
+        /* Pass 8 grammar: the winner answers right on their own
+           desk, the other seat answers wrong, once per question */
+        const key = s.round + ':' + s.qInRound + ':' + s.kind;
+        if (actedKeys.has(key)) { await sleep(180); continue; }
+        actedKeys.add(key);
+        if (s.kind === 'num') {
+          let g2 = 0;
+          while (g2++ < 12) {
+            const st = await S3();
+            if (!st || st.phase !== 'question' || st.guessTurn == null || st.guessTurn < 0) break;
+            const target = st.guessTurn === winSeat ? st.truth : st.truth + 400 + st.guessTurn * 137;
+            for (const ch of String(target)) { await page3.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(30); }
+            await page3.tap('#btnNumLock').catch(() => {}); await sleep(150);
+          }
+        } else {
+          const plan = await page3.evaluate((winSeat) => {
+            const g = window.__game.G;
+            if (!g || !g.cur || !g.cur.opts) return [];
+            const ok = g.cur.opts.findIndex(o => o.ok);
+            const out = [];
+            for (let seat = 0; seat < g.players.length; seat++) {
+              const oi = seat === winSeat ? ok : g.cur.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat);
+              if (oi >= 0) out.push(seat + '|' + oi);
+            }
+            return out;
+          }, winSeat);
+          for (const sel of plan) { await page3.tap('[data-pick="' + sel + '"]').catch(() => {}); await sleep(90); }
+        }
+        await sleep(180); continue;
       }
-      if (s.phase === 'vote') {
-        const bluffTruth = await page3.evaluate(() => { const g = window.__game.G; return (g && g.cur && g.cur.kind === 'bluff' && g.cur.opts) ? g.cur.opts.findIndex(o => o.ok) : -1; });
-        if (bluffTruth >= 0) { await page3.tap('.bluff-pick[data-opt="' + bluffTruth + '"]'); await sleep(150); }
-        await page3.tap('.seat[data-seat="' + winSeat + '"]'); await sleep(150);
-        await page3.tap('#btnReveal'); await sleep(220); continue;
-      }
+      if (s.phase === 'vote' || s.phase === 'vote-count') { await sleep(180); continue; }
       if (s.phase === 'reveal') {
         if (!jumped && s.round === 1 && s.qInRound === 0) {
           await page3.evaluate(() => { const g = window.__game.G; g.round = 3; g.qInRound = 1; });

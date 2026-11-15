@@ -1,11 +1,12 @@
 /* THE GILDED HOUR — Pass B format.
    A 15-question party show for 2-4 players at one table. ONE VERB: ANSWER.
-   Everybody answers every question with a finger-vote (hold up 1-4 fingers);
-   the host taps in who had it right. Round 1 The Warm-Up x6, Round 2 Double
-   Money x6, Round 3 The Big Finish x3 (public 1-3 chip bets). Five of the
-   fifteen are guess questions: closest-number shouts and most-people-say
-   surveys. One lifeline only: Cut Two, one per player per show. Nobody can
-   ever lose money. Pure show logic + DOM rendering; the rAF loop feeds dt. */
+   Everybody answers every question on their own desk (pick chips at the
+   table, their own phone online); Sterling runs the show — nobody hosts.
+   Round 1 The Warm-Up x6, Round 2 Double Money x6, Round 3 The Big Finish
+   x3 (public 1-3 chip bets). Five of the fifteen are guess questions:
+   closest-number entries and most-people-say surveys. One lifeline only:
+   Cut Two, one per player per show. Nobody can ever lose money. Pure
+   show logic + DOM rendering; the rAF loop feeds dt. */
 (function () {
   "use strict";
 
@@ -133,8 +134,9 @@
      and drawBand prefers the voted era, then the evergreens,
      then the whole pool — a lean, never a wall. The eras on
      offer are the ones the bank can honestly deal: the '80s
-     (35 cards), the '90s (53) and the 2000s (3, plus every
-     evergreen seconding them). There is no '10s plaque: the
+     (35 cards), the '90s (53) and the 2000s (15 since the
+     2026-11-14 bench, plus every evergreen seconding them).
+     There is no '10s plaque: the
      bank holds nothing from that decade, and Sterling does not
      offer a choice he cannot deal. */
   var ERAS = [
@@ -223,9 +225,9 @@
     vote: [
       "Fingers up! Three, two, one — SHOW ME!",
       "Hands in the air like you actually know this one. Three, two, one — show me!",
-      "Answers on fingers, please — no conferring, no asking the dog. Three, two, one — show me!",
+      "Answers in, please — no conferring, no asking the dog. Three, two, one — show me!",
       "Commit, table. A guess held high beats a certainty kept quiet. Three, two, one — show me!",
-      "Lock it in with your fingers — three, two, one — SHOW ME!",
+      "Locked in, every one of you — three, two, one — SHOW ME!",
       "No hedging and no half-raised hands. Full commitment, table — three, two, one — show me!",
       "Fingers up: the international sign for 'I absolutely know this.' Three, two, one — show me!",
       "Brave, wrong, or gloriously both — up they go. Three, two, one — show me!"
@@ -249,7 +251,7 @@
       "One truth hides in this question and the rest is up to you. Write me a lie you'd bet a stranger on, table."
     ],
     bluffVote: [
-      "There they are — one truth, and this table's finest fiction. Fingers up for the one you believe.",
+      "There they are — one truth, and this table's finest fiction. Pick the one you believe — on your desk.",
       "Read them carefully. Somebody at this table is lying beautifully, and it might be everybody.",
       "The answers, as invented by the accused. Pick the one that's actually true — if you can."
     ],
@@ -278,7 +280,7 @@
     ],
     numQ: [
       "Closest number wins this one. No options, no hiding — just a number and the courage to shout it.",
-      "A numbers question. Shout your best guess when I call it — the nearest shout takes the money.",
+      "A numbers question. Key in your best guess when your desk lights up — the nearest number takes the money.",
       "A closest-number question. No options, no hiding — just a number and the nerve to shout it.",
       "Numbers, out loud. Nobody needs to be exactly right; somebody needs to be nearest. Make it you."
     ],
@@ -445,11 +447,11 @@
      * winner first and never consume the AI beat latches on such a
      * reveal, so the call-out and the AI beat never fight. */
     quickdraw: [
-      "Quick draw, {name}! First hand up, and right — fifty dollars for the fastest finger in the room.",
-      "{name} beats the whole table to it — first in, and correct. The quick-draw fifty is yours.",
-      "Fastest finger: {name}. Locked in first, locked in right — fifty dollars, no waiting.",
-      "A gunslinger's answer from {name} — drawn first, aimed true. Fifty for the quick draw.",
-      "{name} was in before the ink dried — first AND right. Fifty dollars for sheer speed."
+      "Quick draw, {name}! First hand up, and right — {amt} for the fastest finger in the room.",
+      "{name} beats the whole table to it — first in, and correct. The quick-draw {amt} is yours.",
+      "Fastest finger: {name}. Locked in first, locked in right — {amt}, no waiting.",
+      "A gunslinger's answer from {name} — drawn first, aimed true. {amt} for the quick draw.",
+      "{name} was in before the ink dried — first AND right. {amt} for sheer speed."
     ],
     /* Hot Streaks (New programme pass 3): the named streak moments.
      * Same discipline as the quick-draw pool — a moment REPLACES the
@@ -1854,10 +1856,14 @@
      object, a save, or the room protocol. */
   var PACE_KEY = "gh_pace";
   var PACE_CFG = { flow: { reveal: 6000, grace: 3000 }, brisk: { reveal: 3500, grace: 1500 } };
+  /* Review Pass 8 (2026-11-14): HOST LED is retired — Sterling
+     runs the show now, so the pace is always armed and the stored
+     value is a TEMPO, never a driver. A device still carrying the
+     old "host" value (or anything unknown) reads as FLOWING. */
   function loadPace() {
-    try { var v = localStorage.getItem(PACE_KEY); return PACE_CFG[v] ? v : "host"; } catch (e) { return "host"; }
+    try { var v = localStorage.getItem(PACE_KEY); return PACE_CFG[v] ? v : "flow"; } catch (e) { return "flow"; }
   }
-  function savePace(v) { try { localStorage.setItem(PACE_KEY, PACE_CFG[v] ? v : "host"); } catch (e) {} }
+  function savePace(v) { try { localStorage.setItem(PACE_KEY, PACE_CFG[v] ? v : "flow"); } catch (e) {} }
   function paceCfg() { return PACE_CFG[loadPace()] || null; }
   var paceTimer = null, paceKey = null;
   function paceDisarm() { if (paceTimer) { clearTimeout(paceTimer); paceTimer = null; } paceKey = null; }
@@ -1868,6 +1874,29 @@
     if (OG && OG.phase === "reveal") { var b = $("ogNext"); return b ? { btn: b, key: "og:" + OG.lastRevealQid } : null; }
     if (G && G.phase === "reveal" && G.cur) { var b2 = $("btnNext"); return b2 ? { btn: b2, key: "tb:" + G.round + ":" + G.qInRound + ":" + (G.cur.q ? G.cur.q.id : "?") } : null; }
     return null;
+  }
+  /* Pass 8: the same keyed-timer discipline, generalized — the
+     show's remaining way-on buttons (the break's BEGIN, the round
+     intro's start, the bet beat's SPIN) fire themselves after
+     their dwell; a tap by anyone fires them sooner. The fire is
+     the button's own click, guarded by key, connection and a
+     phase predicate, so a stale timer can never walk a path a
+     tap wouldn't. */
+  var autoGoTimer = null, autoGoKey = null;
+  function autoGo(btnId, key, ms, when) {
+    var b = $(btnId); if (!b) return;
+    if (autoGoTimer && autoGoKey === key) return;
+    if (autoGoTimer) { clearTimeout(autoGoTimer); autoGoTimer = null; }
+    autoGoKey = key;
+    b.classList.add("pacing");
+    b.style.setProperty("--pace-ms", ms + "ms");
+    autoGoTimer = setTimeout(function () {
+      autoGoTimer = null;
+      var k = autoGoKey; autoGoKey = null;
+      if (k !== key) return;
+      var b2 = $(btnId);
+      if (b2 && b2.isConnected && when()) b2.click();
+    }, ms);
   }
   function paceArmReveal() {
     var cfg = paceCfg(); if (!cfg) return;
@@ -2531,7 +2560,7 @@
      renderers paint it whenever the phase is "reveal", so a mid-reveal
      re-render (an online snapshot, a seat going AWAY) repaints the
      same grammar instead of wiping it. */
-  var tableFx = null, ogFx = null, ogQdSeat = -1, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null;
+  var tableFx = null, ogFx = null, ogQdSeat = -1, ogQdBonus = 0, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null;
   function decorateSeat(s, fx) {
     if (!fx) return;
     if (fx.closest) {
@@ -2555,7 +2584,7 @@
       if (nm2) {
         var tg2 = document.createElement("span");
         tg2.className = "closest-tag qdtag";
-        tg2.textContent = "QUICK DRAW +$50";
+        tg2.textContent = "QUICK DRAW +$" + (fx.qdBonus || QUICK_DRAW_BONUS);
         nm2.appendChild(tg2);
       }
     }
@@ -2641,11 +2670,12 @@
         '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + dblTokenHTML(p, i) + vsTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
-        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + deskBetsHTML(p, i) + fortuneHTML() + "</div></div>");
+        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskPicksHTML(p, i) + deskEraHTML(p, i) + fortuneHTML() + "</div></div>");
       /* New programme pass 1: during the Decider, a seat that is not
          playing steps back — dimmed out of the light while the tied
          leaders settle it (the winner is crowned, the class lifts) */
       if (G.decider && G.decider.winner == null && G.decider.eligible.indexOf(i) < 0) s.classList.add("spectator");
+      if (G.cur && G.cur.kind === "num" && G.phase === "question" && G.cur.guessTurn === i) s.classList.add("entering");
       if (p.score === bestScore && bestScore > 0) s.classList.add("lead");
       if (G.cur && G.cur.marks && G.cur.marks[i]) s.classList.add("gotit");
       if (G.phase === "reveal" && tableFx) decorateSeat(s, tableFx.seats[i]);
@@ -2654,6 +2684,20 @@
       if (dblBtn) dblBtn.addEventListener("click", function (e) { e.stopPropagation(); toggleDbl(i); });
       var vsBtn = s.querySelector("[data-vs]");
       if (vsBtn) vsBtn.addEventListener("click", function (e) { e.stopPropagation(); declareVs(i); });
+      s.querySelectorAll("[data-pick]").forEach(function (pb) {
+        pb.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var parts = pb.getAttribute("data-pick").split("|");
+          deskPick(parseInt(parts[0], 10), parseInt(parts[1], 10));
+        });
+      });
+      s.querySelectorAll("[data-eravote]").forEach(function (eb) {
+        eb.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var parts = eb.getAttribute("data-eravote").split("|");
+          eraDeskVote(parseInt(parts[0], 10), parseInt(parts[1], 10));
+        });
+      });
       bot.appendChild(s);
       /* Visual stage 4: a rebuilt seat paints its pile at the
          displayed value, so a mid-chase re-render (a vote tap, the
@@ -2765,7 +2809,18 @@
        desk gives back is a round-3 tag short enough to print
        at a size a room can read (see the repairs block in
        style.css, desk tags). */
-    if (G.round !== 3) t.push(p.cut >= 2 ? "CUT TWO ×2" : p.cut > 0 ? "CUT TWO" : "CUT SPENT");
+    /* Review Pass 6 (2026-11-14): while the MCQ/survey question
+       stage is up, the tools row at its foot already carries a
+       CUT TWO button per player — holder, count and all — so an
+       in-hand cut steps off the desk tag (the round-3 precedent
+       above, extended). CUT SPENT stays on the tag in every
+       phase: the button's small print never says it, and the
+       spender's flash moment is read off this tag. */
+    var toolsUp = G.phase === "question" && G.cur && (G.cur.kind === "mcq" || G.cur.kind === "survey");
+    if (G.round !== 3) {
+      if (!toolsUp) t.push(p.cut >= 2 ? "CUT TWO ×2" : p.cut > 0 ? "CUT TWO" : "CUT SPENT");
+      else if (p.cut <= 0) t.push("CUT SPENT");
+    }
     if (G.round === 3) t.push("BET " + p.bet + (p.bet === 1 ? " CHIP" : " CHIPS"));
     if (seg) t.push(seg);
     return t.join(" · ");
@@ -3149,6 +3204,15 @@
       house: c.house || null,
       lockTimes: c.lockTimes || null,
       lockSeq: c.lockSeq || 0,
+      /* Review Pass 8 (2026-11-14): the desk picks ARE the answer
+         record now — they ride the save beside the lock times, and
+         picksLive marks a question dealt under the no-host flow
+         (a pre-pass save in its vote beat keeps the old mark
+         screen; a live one settles from its picks) */
+      picks: c.picks ? JSON.parse(JSON.stringify(c.picks)) : null,
+      bluffPicks: c.bluffPicks ? Object.assign({}, c.bluffPicks) : null,
+      picksLive: !!c.picksLive,
+      guesses: c.guesses ? Object.assign({}, c.guesses) : null,
       betRound: !!c.betRound, bankValue: c.bankValue || 0,
       special: !!c.special, intro: c.intro || null,
       /* New programme pass 1: a decider question must repaint as a
@@ -3196,6 +3260,22 @@
       house: o.house || null,
       lockTimes: o.lockTimes || {},
       lockSeq: o.lockSeq || 0,
+      picks: (o.picks && typeof o.picks === "object") ? o.picks : null,
+      bluffPicks: (o.bluffPicks && typeof o.bluffPicks === "object") ? o.bluffPicks : null,
+      picksLive: !!o.picksLive,
+      /* Pass 8, the Audit A1 discipline for desk picks: a restored
+         pick was stamped on the pre-refresh timeline and the clock
+         restarts at zero, so a fresh pick could undercut it and
+         steal the quick-draw. The floor remembers the latest
+         restored stamp; deskPick floors new stamps a whisker
+         above it (in-memory only — each restore re-derives it). */
+      pickFloor: (function () {
+        var mx = 0, pk = (o.picks && typeof o.picks === "object") ? o.picks : null;
+        if (pk) Object.keys(pk).forEach(function (k) { if (pk[k] && typeof pk[k].at === "number" && pk[k].at > mx) mx = pk[k].at; });
+        return mx;
+      })(),
+      pickSeq: 0,
+      guesses: (o.guesses && typeof o.guesses === "object") ? o.guesses : null,
       voteAt: null,
       betRound: !!o.betRound, bankValue: o.bankValue || 0, headline: false, golden: false,
       special: !!o.special, intro: o.intro || null, decider: !!o.decider,
@@ -3274,7 +3354,7 @@
            a resumed money round keeps leaning on the called era */
         era: G.era || null,
         eraCalled: !!G.eraCalled,
-        eraVote: G.eraVote ? { counts: G.eraVote.counts.slice(), house: Object.assign({}, G.eraVote.house) } : null,
+        eraVote: G.eraVote ? { counts: G.eraVote.counts.slice(), house: Object.assign({}, G.eraVote.house), ballots: Object.assign({}, G.eraVote.ballots || {}) } : null,
         eraVoteLine: G.eraVoteLine || null,
         eraLine: G.eraLine || null,
         phase: G.phase, guess: G.guess, lastStand: G.lastStand,
@@ -3383,7 +3463,8 @@
       eraCalled: !!sv.eraCalled,
       eraVote: (sv.eraVote && Array.isArray(sv.eraVote.counts) && sv.eraVote.counts.length === 3)
         ? { counts: sv.eraVote.counts.map(function (n) { return Math.max(0, Math.floor(n) || 0); }),
-            house: (sv.eraVote.house && typeof sv.eraVote.house === "object") ? sv.eraVote.house : {} }
+            house: (sv.eraVote.house && typeof sv.eraVote.house === "object") ? sv.eraVote.house : {},
+            ballots: (sv.eraVote.ballots && typeof sv.eraVote.ballots === "object") ? sv.eraVote.ballots : {} }
         : null,
       eraVoteLine: typeof sv.eraVoteLine === "string" ? sv.eraVoteLine : null,
       eraLine: typeof sv.eraLine === "string" ? sv.eraLine : null,
@@ -4561,8 +4642,8 @@
       if (qmax > 0) {
         var qNames = seats.filter(function (s) { return facts.qd[s.seat] === qmax; }).map(function (s) { return s.name; });
         if (qNames.length === 1) {
-          qdLine = qNames[0] + " owns the quick-draw — " + qmax + (qmax === 1 ? " first-and-right fifty" : " first-and-right fifties") + " so far.";
-          qdFrag = qNames[0] + " is first-and-rightest, with " + qmax + (qmax === 1 ? " quick-draw fifty" : " quick-draw fifties");
+          qdLine = qNames[0] + " owns the quick-draw — " + qmax + (qmax === 1 ? " first-and-right bonus" : " first-and-right bonuses") + " so far.";
+          qdFrag = qNames[0] + " is first-and-rightest, with " + qmax + (qmax === 1 ? " quick-draw bonus" : " quick-draw bonuses");
         } else if (qNames.length > 1) {
           qdLine = joinNames(qNames) + " share the quick-draw — " + qmax + " apiece.";
           qdFrag = joinNames(qNames) + " share the quick-draw honours";
@@ -4703,6 +4784,10 @@
      alike, which is what makes the repaint identical */
   function paintIntermission() {
     stagePhase("intermission");
+    /* Pass 8: while the Decade Vote stands open the desks are the
+       ballot box, so the seats show; every other break rests
+       without them, as before */
+    seatsVisible(G.round === 2 && !G.eraCalled && !!G.eraVote);
     audDecider(false); /* V4: the break rests — no hush survives into it */
     setLight(G.round === 2 ? "open" : "hot"); /* the finished round's light — the break rests in it */
     /* Dynamics pass D2: this break's grant, retold from its
@@ -4729,24 +4814,19 @@
       }).filter(Boolean);
       if (hvNames.length) houseNote = " The house votes too — " + hvNames.join(" · ") + ".";
       stage(breakCardHTML(view, null) + eraPanelHTML(eraTotals(G.eraVote.counts, G.eraVote.house), {
-        tappable: true, callId: "btnEraCall", resetId: "btnEraReset",
-        note: "Fingers up — one for the &rsquo;80s, two for the &rsquo;90s, three for the 2000s. Tap a plaque for every hand you count." + houseNote
+        tappable: false, callId: "btnEraCall",
+        note: "Vote on your own desk — tap your era, change it while the count stands open. Sterling calls it when every desk is in." + houseNote
       }));
       $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "") + (G.eraVoteLine ? " " + G.eraVoteLine : "");
-      document.querySelectorAll(".era-plaque").forEach(function (b) {
-        b.addEventListener("click", function () {
-          var ei = ERAS.indexOf(eraById(b.getAttribute("data-era")));
-          if (ei >= 0) { G.eraVote.counts[ei]++; Snd.play("tick"); saveTableShow(); paintIntermission(); }
-        });
-      });
-      $("btnEraReset").addEventListener("click", function () { G.eraVote.counts = [0, 0, 0]; saveTableShow(); paintIntermission(); });
       $("btnEraCall").addEventListener("click", function () { callTableEra(); });
+      eraDwellArm();
       return;
     }
     stage(breakCardHTML(view, "btnBreakGo") + (G.eraCalled ? eraResultHTML(G.era) : ""));
     $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "") +
       (G.round === 2 && G.eraCalled && G.eraLine ? " " + G.eraLine : "");
     $("btnBreakGo").addEventListener("click", function () { roundIntro(); });
+    autoGo("btnBreakGo", "break:" + G.round, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!G && G.phase === "intermission"; });
   }
   /* Designer pass 6: the table's count, called — the verdict is
      written onto G (era, the drawn words), the save follows, and
@@ -4793,7 +4873,7 @@
     if (G.round === 2 && !G.eraCalled && !G.eraVote) {
       var hv = {};
       G.players.forEach(function (p, i) { if (p.house != null) hv[i] = ri(ERAS.length); });
-      G.eraVote = { counts: [0, 0, 0], house: hv };
+      G.eraVote = { counts: [0, 0, 0], house: hv, ballots: {} };
       G.eraVoteLine = authoredLine("eravote");
     }
     seatsVisible(false);
@@ -4818,9 +4898,9 @@
           ["The pay", "$100 easy · $200 medium · $300 hard"],
           ["The drain", "The value melts while the room thinks — commit early"],
           ["The fingers", "1, 2, 3 or 4 when the clock stops — right fingers bank"],
-          ["Quick-draw", "First right answer in pockets +$50"],
-          ["The streak", "Three in a row starts it — +$25 a bank while it lives"],
-          ["Closest number", "Twice this round — shout a number, nearest takes it"],
+          ["Quick-draw", "First right answer in pockets the bonus — $50 in Round 1, $100 in Round 2, $150 in the Big Finish"],
+          ["The streak", "Three in a row starts it — a bonus on every bank while it lives, growing with the round: $25, $50, $75"],
+          ["Closest number", "Twice this round — key in a number, nearest takes it"],
           ["The gauntlet", "Sit last and the VS disc is yours, once a round: declare Against the Room — bank a question nobody else banks and it pays double"]],
       2: (G.rules && G.rules.secondCut)
         ? [["The money", "Same game, double — $200 · $400 · $600"],
@@ -4890,6 +4970,7 @@
        so a resumed intro re-presents the identical words */
     if (G.round === 1 && G.rulesLine) { var hRules = $("hostLine"); if (hRules) hRules.textContent += " " + G.rulesLine; }
     $("btnRoundGo").addEventListener("click", function () { nextQuestion(); });
+    autoGo("btnRoundGo", "intro:" + G.round, (paceCfg() ? paceCfg().reveal : 6000) + 4000, function () { return !!G && G.phase === "intro"; });
     saveTableShow();
   }
   function nextQuestion() {
@@ -5149,6 +5230,7 @@
     hostSay("bet");
     betLongShotCalled = {};
     $("btnBetsDone").addEventListener("click", spinBeat);
+    autoGo("btnBetsDone", "bet:" + G.round + ":" + G.qInRound, 12000, function () { return !!G && G.phase === "bet"; });
     saveTableShow();
   }
   /* P11: the steppers' one delegated listener — registered once,
@@ -5296,11 +5378,151 @@
       (c.decider
         ? '<div class="q-for">No money on this one — the crown only.</div>'
         : c.betRound
-        ? '<div class="q-for">Bets are on — the closest shout takes their bet money.</div>'
+        ? '<div class="q-for">Bets are on — the closest number takes their bet money.</div>'
         : '<div class="q-value">' + meltHTML(!!c.headline, meltMult(c.elapsed, c.clockTotal)) + '<div class="q-valmain"><small>QUESTION VALUE</small><span id="qValue">' + money(c.golden ? c.value / 2 : c.value) + "</span></div></div>") +
       timerHTML() + "</div>" +
-      '<div class="q-for">' + (c.decider ? vsLine : "No options. No hiding. Think of a number — shout it when Sterling calls it.") + "</div>" +
-      '<div style="margin-top:14px"><button class="btn-gold" id="btnCallIt">CALL IT — NUMBERS OUT</button></div>';
+      '<div class="q-for">' + (c.decider ? vsLine : "No options. No hiding. Sterling takes each number in turn — key yours in when your desk lights up.") + "</div>" +
+      '<div id="numEntry"></div>';
+  }
+
+  /* Pass 8: the number entry — one seat at a time, Sterling's
+     order, on a single shared pad. A locked number is the seat's
+     answer of record; the closest is COMPUTED at the settle from
+     every locked number and the house seats' rolled guesses —
+     nobody judges closest by ear any more. The melt keeps
+     running while the room keys: a slow entry is a cheaper
+     question, exactly as a slow shout was. */
+  var numBuf = "";
+  function numEntryOrder() {
+    var c = G.cur;
+    return G.players.map(function (_, i) { return i; }).filter(function (i) {
+      if (G.players[i].house != null) return false;
+      if (c.decider && G.decider && G.decider.eligible.indexOf(i) < 0) return false;
+      return true;
+    });
+  }
+  function numEntryBegin() {
+    var c = G.cur;
+    if (!c || c.kind !== "num" || c.resolved) return;
+    c.guesses = c.guesses || {};
+    var order = numEntryOrder(), next = -1;
+    for (var k = 0; k < order.length; k++) if (c.guesses[order[k]] == null) { next = order[k]; break; }
+    c.guessTurn = next;
+    numBuf = "";
+    if (next < 0) { callIt(); return; }
+    paintNumEntry();
+    renderSeats();
+  }
+  function paintNumEntry() {
+    var host = $("numEntry");
+    var c = G.cur;
+    if (!host || !c || c.guessTurn == null || c.guessTurn < 0) return;
+    var p = G.players[c.guessTurn];
+    var keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "neg", "0", "del"];
+    host.innerHTML = '<div class="num-entry"><div class="num-turn">' + esc(p.name).toUpperCase() + " — YOUR NUMBER</div>" +
+      '<div class="num-buf">' + (numBuf === "" ? "· · ·" : esc(numBuf)) + "</div>" +
+      '<div class="num-pad">' + keys.map(function (k) {
+        var label = k === "neg" ? "−" : k === "del" ? "⌫" : k;
+        return '<button class="num-key" data-numk="' + k + '">' + label + "</button>";
+      }).join("") + "</div>" +
+      '<button class="btn-gold num-lock" id="btnNumLock"' + (numBuf === "" || numBuf === "-" ? " disabled" : "") + ">LOCK IT IN</button></div>";
+    host.querySelectorAll("[data-numk]").forEach(function (b) {
+      b.addEventListener("click", function () { numKey(b.getAttribute("data-numk")); });
+    });
+    var lock = $("btnNumLock");
+    if (lock) lock.addEventListener("click", numLock);
+  }
+  function numKey(k) {
+    var c = G.cur;
+    if (!c || c.guessTurn == null || c.guessTurn < 0 || c.resolved) return;
+    if (k === "del") numBuf = numBuf.slice(0, -1);
+    else if (k === "neg") numBuf = numBuf.charAt(0) === "-" ? numBuf.slice(1) : (numBuf === "" ? "-" : numBuf);
+    else if (numBuf.replace("-", "").length < 7) numBuf += k;
+    Snd.play("tick");
+    paintNumEntry();
+  }
+  function numLock() {
+    var c = G.cur;
+    if (!c || c.guessTurn == null || c.guessTurn < 0 || numBuf === "" || numBuf === "-") return;
+    var v = parseInt(numBuf, 10);
+    if (!isFinite(v)) return;
+    c.guesses[c.guessTurn] = v;
+    Snd.play("coin");
+    saveTableShow();
+    numEntryBegin();
+  }
+  /* the settle for a number question: closest to the truth among
+     every locked human number and every house roll — ties share
+     the mark, as a dead heat always has */
+  function settleFromGuesses() {
+    var c = G.cur; if (!c) return;
+    G.phase = "vote";
+    c.marks = {}; c.lockOrder = []; c.lockTimes = {}; c.lockSeq = 0;
+    var truth = c.q.num, best = null, cand = {};
+    G.players.forEach(function (p, i) {
+      var g = null;
+      if (p.house != null) { if (c.house && c.house[i] && c.house[i].guess != null) g = c.house[i].guess; }
+      else if (c.guesses && c.guesses[i] != null) g = c.guesses[i];
+      if (g == null) return;
+      if (c.decider && G.decider && G.decider.eligible.indexOf(i) < 0) return;
+      cand[i] = g;
+      var d = Math.abs(g - truth);
+      if (best == null || d < best) best = d;
+    });
+    Object.keys(cand).forEach(function (k) { if (Math.abs(cand[k] - truth) === best) c.marks[k] = 1; });
+    c.voteAt = Date.now();
+    renderSeats();
+    revealAnswer();
+  }
+  /* Pass 8: the Decade Vote moves to the desks — each seat taps
+     its own era, changeable until Sterling calls it. He calls it
+     when every desk is in (after a breath), or when the break's
+     dwell runs out with whatever is in — an empty ballot box is
+     still an honest abstention. The panel plaques are now the
+     scoreboard, not the ballot box. */
+  function deskEraHTML(p, i) {
+    if (p.house != null) return "";
+    if (!G || G.phase !== "intermission" || !G.eraVote || G.eraCalled) return "";
+    var mine = G.eraVote.ballots ? G.eraVote.ballots[i] : null;
+    return '<span class="pick-chips era-chips">' + ERAS.map(function (e, ei) {
+      return '<button class="pick-chip' + (mine === ei ? " locked" : "") + '" data-eravote="' + i + "|" + ei + '">' + e.plaque.replace("THE ", "") + "</button>";
+    }).join("") + "</span>";
+  }
+  var eraCallTimer = null, eraDwellCur = null;
+  function eraDeskVote(i, ei) {
+    if (!G || !G.eraVote || G.eraCalled || G.phase !== "intermission") return;
+    if (!G.eraVote.ballots) G.eraVote.ballots = {};
+    G.eraVote.ballots[i] = ei;
+    var counts = [0, 0, 0];
+    Object.keys(G.eraVote.ballots).forEach(function (k) { var v = G.eraVote.ballots[k]; if (v >= 0 && v < 3) counts[v]++; });
+    G.eraVote.counts = counts;
+    Snd.play("tick");
+    saveTableShow();
+    paintIntermission();
+    renderSeats();
+    var allIn = G.players.every(function (p, si) { return p.house != null || G.eraVote.ballots[si] != null; });
+    if (allIn && !eraCallTimer) {
+      var vote0 = G.eraVote;
+      eraCallTimer = setTimeout(function () {
+        eraCallTimer = null;
+        if (G && G.eraVote === vote0 && !G.eraCalled) callTableEra();
+      }, 2500);
+    }
+  }
+  function eraDwellArm() {
+    if (!G || !G.eraVote || G.eraCalled) return;
+    if (eraDwellCur === G.eraVote) return;
+    eraDwellCur = G.eraVote;
+    var vote0 = G.eraVote;
+    setTimeout(function () {
+      if (G && G.eraVote === vote0 && !G.eraCalled && G.phase === "intermission") callTableEra();
+    }, 30000);
+  }
+  function humanGuessHTML(p, i) {
+    var c = G.cur;
+    if (p.house != null || !c || c.kind !== "num" || !c.guesses || c.guesses[i] == null) return "";
+    if (G.phase !== "vote" && G.phase !== "reveal") return "";
+    return '<span class="seat-guess">SAID ' + Number(c.guesses[i]).toLocaleString("en-US") + "</span>";
   }
   function toolsHTML() {
     if (!G.cur || G.cur.kind === "num") return "";
@@ -5316,7 +5538,8 @@
         h += '<button class="tool-btn" data-cut="' + i + '"' + (p.cut > 0 && !G.cur.cutUsed ? "" : " disabled") + ">CUT TWO<small>" + esc(p.name) + '<span class="ct-rest">' + (p.cut >= 2 ? "'s lifeline · two in hand" : "'s one lifeline") + "</span></small></button>";
       }
     });
-    h += '<button class="tool-btn" id="btnCallIt">CALL IT<small>everybody — fingers up</small></button>';
+    /* Pass 8: no CALL IT — Sterling's clock closes the window,
+       or a full house of desk picks closes it early */
     return h + "</div>";
   }
   /* ================= THE BLUFF (research programme pass 2) =================
@@ -5348,7 +5571,7 @@
     }).join("");
     return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
       '<div class="q-cardwrap"><div class="q-text' + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(1) + '</div></div>' +
-      '<p class="round-text">One answer to this one is true. The rest, this table invents. Ask each player for their lie and type it as they give it — an empty line gets a house lie dealt to it instead.</p>' +
+      '<p class="round-text">One answer to this one is true. The rest, this table invents. Each player types their own lie — an empty line gets a house lie dealt to it instead. When every lie is in, anyone deals.</p>' +
       '<div class="bluff-rows">' + rows + '</div>' +
       '<div style="margin-top:14px"><button class="btn-gold" id="btnDealBluff">DEAL THE ANSWERS</button></div>';
   }
@@ -5384,9 +5607,8 @@
     return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
       stakeRibbonHTML(c.stake, G.players) +
       '<div class="q-cardwrap"><div class="q-text' + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(1) + '</div></div>' +
-      '<div class="q-meta"><div class="q-for">One of these is true — the rest were invented at this table. $200 for the truth, and $25 for every player your lie fools.</div>' + timerHTML() + '</div>' +
-      '<div class="answers pop-in">' + btns + '</div>' +
-      '<div class="tools"><button class="tool-btn" id="btnCallIt">CALL IT<small>everybody — fingers up</small></button></div>';
+      '<div class="q-meta"><div class="q-for">One of these is true — the rest were invented at this table. $200 for the truth, and $25 for every player your lie fools. Pick on your own desk.</div>' + timerHTML() + '</div>' +
+      '<div class="answers pop-in">' + btns + '</div>';
   }
   function bluffTruthIx() { var c = G.cur; if (!c || !c.opts) return -1; for (var i = 0; i < c.opts.length; i++) if (c.opts[i].ok) return i; return -1; }
   /* a house seat's pick, from its own roll at question open: the
@@ -5487,6 +5709,7 @@
 
   function askCurrent() {
     G.phase = "question"; stagePhase("question");
+    if (G.cur) G.cur.picksLive = true; /* Pass 8: dealt under the no-host flow */
     audDecider(!!(G.cur && G.cur.decider)); /* V4: the Decider hushed from its first second */
     applyCat(G.cur.cat); setCatBackdrop(G.cur.cat);
     /* G2: the stakes snapshot — computed once, here at the open,
@@ -5521,6 +5744,8 @@
     wireQuestion();
     houseRolls();
     startClock(G.cur.clockTotal, function () { callIt(); });
+    if (G.cur.kind === "num") numEntryBegin();
+    tableAllInCheck();
     saveTableShow();
   }
   /* Gameplay-visuals pass G6 — CUT TWO, PREVIEWED. The honesty
@@ -5647,10 +5872,8 @@
         spend: function () { useCut(seat); }
       });
     });
-    var call = $("btnCallIt");
-    if (call) call.addEventListener("click", callIt);
-    var qt = document.querySelector(".q-text");
-    if (qt) qt.addEventListener("click", callIt);
+    /* Pass 8: the question card and the tools row carry no call —
+       the clock (or a full house) closes the window */
   }
   function useCut(i) {
     var c = G.cur, p = G.players[i];
@@ -5684,6 +5907,108 @@
     saveTableShow();
   }
 
+  /* ================= Review Pass 8 (2026-11-14) — NO HOST =================
+     Sterling runs the show; nobody works the screen. At the table
+     the answers now come in through the desks themselves: during
+     a question each human seat's desk carries its pick chips, a
+     tap locks that seat's answer with the clock's own timestamp,
+     and the settlement is derived from the picks — the mark
+     screen's tap-in trust is gone, and Quick Draw is judged on
+     real locks for the first time at the table. The window closes
+     on the clock, or early — after the pace grace — when every
+     human seat is in. The old mark screen survives only as the
+     landing for a save written before this pass. */
+  function deskPicksHTML(p, i) {
+    var c = G.cur;
+    if (!c || G.phase !== "question" || c.resolved || p.house != null || !c.opts) return "";
+    if (c.kind === "bluff") {
+      if (!c.bluffDealt) return "";
+      var bp = (c.bluffPicks && c.bluffPicks[i] != null) ? c.bluffPicks[i] : -1;
+      return '<span class="pick-chips">' + c.opts.map(function (o, oi) {
+        return '<button class="pick-chip' + (bp === oi ? " locked" : "") + '" data-pick="' + i + "|" + oi + '"' + (o.by === i ? " disabled" : "") + ">" + (oi + 1) + "</button>";
+      }).join("") + "</span>";
+    }
+    if (c.kind !== "mcq" && c.kind !== "survey") return "";
+    var pk = (c.picks && c.picks[i]) ? c.picks[i].opt : -1;
+    return '<span class="pick-chips">' + c.opts.map(function (o, oi) {
+      return '<button class="pick-chip' + (pk === oi ? " locked" : "") + '" data-pick="' + i + "|" + oi + '"' + (o.gone ? " disabled" : "") + ">" + (oi + 1) + "</button>";
+    }).join("") + "</span>";
+  }
+  function deskPick(i, oi) {
+    var c = G.cur, p = G.players[i];
+    if (!c || G.phase !== "question" || c.resolved || !p || p.house != null) return;
+    if (c.kind === "bluff") {
+      if (!c.bluffDealt || !c.opts || !c.opts[oi] || c.opts[oi].by === i) return;
+      c.bluffPicks = c.bluffPicks || {};
+      if (c.bluffPicks[i] === oi) delete c.bluffPicks[i]; else c.bluffPicks[i] = oi;
+    } else if (c.kind === "mcq" || c.kind === "survey") {
+      if (!c.opts || !c.opts[oi] || c.opts[oi].gone) return;
+      c.picks = c.picks || {};
+      /* a fresh lock restamps the seat: changing your mind trades
+         your place in the quick-draw race for the new certainty */
+      if (c.picks[i] && c.picks[i].opt === oi) delete c.picks[i];
+      else {
+        var at = c.elapsed || 0;
+        if (c.pickFloor && at <= c.pickFloor) { c.pickSeq = (c.pickSeq || 0) + 1; at = c.pickFloor + c.pickSeq * 0.001; }
+        c.picks[i] = { opt: oi, at: at };
+      }
+    } else return;
+    Snd.play("tick");
+    renderSeats();
+    saveTableShow();
+    tableAllInCheck();
+  }
+  var tableGraceTimer = null, tableGraceCur = null;
+  function tableAllInCheck() {
+    var c = G.cur;
+    if (!c || G.phase !== "question" || c.resolved) return;
+    if (c.kind !== "mcq" && c.kind !== "survey" && c.kind !== "bluff") return;
+    var allIn = G.players.every(function (p, i) {
+      if (p.house != null) return true;
+      if (c.kind === "bluff") return c.bluffPicks && c.bluffPicks[i] != null;
+      return !!(c.picks && c.picks[i]);
+    });
+    if (!allIn) {
+      if (tableGraceTimer && tableGraceCur === c) { clearTimeout(tableGraceTimer); tableGraceTimer = null; tableGraceCur = null; }
+      return;
+    }
+    if (tableGraceTimer && tableGraceCur === c) return;
+    tableGraceCur = c;
+    tableGraceTimer = setTimeout(function () {
+      tableGraceTimer = null;
+      var was = tableGraceCur; tableGraceCur = null;
+      if (!G || G.cur !== was || G.phase !== "question" || was.resolved) return;
+      callIt();
+    }, paceCfg() ? paceCfg().grace : 3000);
+  }
+  /* the vote beat's landing for a live question: the marks, the
+     lock order and the lock times are derived from the picks and
+     the house rolls, and the reveal runs — no screen between */
+  function settleFromPicks() {
+    var c = G.cur; if (!c) return;
+    G.phase = "vote";
+    c.marks = {}; c.lockOrder = []; c.lockTimes = {}; c.lockSeq = 0;
+    if (c.kind === "bluff") {
+      bluffHousePicks();
+      Object.keys(c.bluffPicks || {}).forEach(function (k) {
+        var o = c.opts[c.bluffPicks[k]];
+        if (o && o.ok) c.marks[k] = true;
+      });
+    } else {
+      housePreMark();
+      Object.keys(c.picks || {}).forEach(function (k) {
+        var pk = c.picks[k];
+        if (!pk || !c.opts[pk.opt]) return;
+        c.lockTimes[k] = pk.at;
+        if (c.opts[pk.opt].ok) c.marks[k] = 1;
+      });
+      syncLockOrder();
+    }
+    c.voteAt = Date.now();
+    renderSeats();
+    revealAnswer();
+  }
+
   /* ---------- the finger-vote ---------- */
   function callIt() {
     if (!G || !G.cur || G.phase !== "question" || G.cur.resolved) return;
@@ -5701,14 +6026,14 @@
     G.cur.voteAt = null;
     renderSeats();
     stage('<div class="q-cat">' + (G.cur.decider ? "THE DECIDER" : "EVERYBODY READY?") + '</div>' +
-      '<div class="round-title" id="voteCount">FINGERS UP…</div>' +
+      '<div class="round-title" id="voteCount">ANSWERS IN…</div>' +
       '<p class="round-text">' + (G.cur.decider && G.decider
         ? G.decider.eligible.map(function (i) { return esc(G.players[i].name); }).join(" and ") + " — numbers ready, shout yours on SHOW ME. Everybody else: witness."
         : G.cur.kind === "bluff"
-        ? "Hold up the number of the answer you believe — one of them is true, and the rest are this table's own lies."
+        ? "Every pick is in — one of them is true, and the rest are this table's own lies."
         : G.cur.kind === "num"
-        ? "Numbers ready — shout yours on SHOW ME."
-        : "Hold up 1, 2, 3 or 4 fingers — your answer, held high, for the whole room to see.") + "</p>");
+        ? (G.cur.guesses ? "Every number is locked in. Who came closest?" : "Numbers ready — shout yours on SHOW ME.")
+        : "Every answer is locked on a desk. Who's holding the right one?") + "</p>");
     hostSay("vote");
     Snd.play("vote");
     saveTableShow();
@@ -5721,7 +6046,16 @@
       vc.textContent = steps[si];
       vc.classList.remove("pop"); void vc.offsetWidth; vc.classList.add("pop");
       si++;
-      if (si >= steps.length) { clearInterval(voteTimer); voteTimer = null; markScreen(); }
+      if (si >= steps.length) {
+        clearInterval(voteTimer); voteTimer = null;
+        /* Pass 8: a live question settles from its desk picks —
+           the mark screen remains only for a pre-pass save that
+           lands in this beat with no picks to settle from */
+        var c = G.cur;
+        if (c && c.picksLive && (c.kind === "mcq" || c.kind === "survey" || c.kind === "bluff")) settleFromPicks();
+        else if (c && c.picksLive && c.kind === "num" && c.guesses) settleFromGuesses();
+        else markScreen();
+      }
     }, 450);
   }
   /* Designer's pass P9 (2026-11-11): the mark screen keeps the
@@ -5758,6 +6092,34 @@
       h += '<span class="vote-chip pod' + i + '" title="' + esc(p.name) + '">' + medallionSVG(p.name, i) + "</span>";
     });
     box.innerHTML = h;
+  }
+  /* Pass 8: the mark screens are retired — the desks carry the
+     picks now — so the reveal itself gathers the medallion chips
+     the mark screen used to gather: the banking seats' chips on
+     the correct slab, and on a Bluff every slab wears the chips
+     of the seats it fooled (the Face Pass grammar, kept). Reads
+     only settled state (marks / lockOrder / bluffPicks), so a
+     resumed repaint hangs the same chips. */
+  function paintRevealChips() {
+    var c = G.cur; if (!c || !c.opts) return;
+    document.querySelectorAll("#stage .answers [data-chips]").forEach(function (box) {
+      var oi = +box.getAttribute("data-chips"), h = "";
+      if (c.kind === "bluff") {
+        Object.keys(c.bluffPicks || {}).forEach(function (k) {
+          if (c.bluffPicks[k] !== oi) return;
+          var p = G.players[+k]; if (!p) return;
+          h += '<span class="vote-chip pod' + k + '" title="' + esc(p.name) + '">' + medallionSVG(p.name, +k) + "</span>";
+        });
+      } else if (c.opts[oi] && c.opts[oi].ok) {
+        var order = (Array.isArray(c.lockOrder) && c.lockOrder.length) ? c.lockOrder : Object.keys(c.marks || {}).map(Number);
+        order.forEach(function (i) {
+          if (!c.marks || !c.marks[i]) return;
+          var p = G.players[i]; if (!p) return;
+          h += '<span class="vote-chip pod' + i + '" title="' + esc(p.name) + '">' + medallionSVG(p.name, i) + "</span>";
+        });
+      }
+      box.innerHTML = h;
+    });
   }
   function markScreen() {
     if (G.cur && G.cur.kind === "bluff") { bluffMarkScreen(); return; }
@@ -5828,8 +6190,9 @@
     var rank = -1;
     fin.forEach(function (r, i) { if (r.seat === JP.seat) rank = i; });
     if (rank < 0) return "";
-    if (fin.length === 1) return "ONLY FINISHER — QUICK DRAW +$50";
-    if (rank === 0) return "FIRST IN — QUICK DRAW +$50";
+    var myQd = ((lr.results || []).find(function (r) { return r.seat === JP.seat; }) || {}).quickDrawBonus || QUICK_DRAW_BONUS;
+    if (fin.length === 1) return "ONLY FINISHER — QUICK DRAW +$" + myQd;
+    if (rank === 0) return "FIRST IN — QUICK DRAW +$" + myQd;
     var ord = ["", "1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH"][rank + 1] || (rank + 1) + "TH";
     return "YOU WERE " + ord + " IN — " + pfMargin(fin[rank].lockMs - fin[0].lockMs);
   }
@@ -6039,7 +6402,7 @@
      they locked in, spaced by their margins. One builder serves
      both big screens — the table feeds it the lock order the
      settlement itself used (cur.lockOrder, so the strip can never
-     disagree with who took the +$50) with margins from the stamped
+     disagree with who took the quick-draw) with margins from the stamped
      lockTimes the marks and the house seats' simulated lock-ins
      share; the online host feeds it the reveal's correct results
      ordered by the server-received lockMs. It is furniture, not a
@@ -6047,7 +6410,7 @@
      repaint (a resync rebuilds it identically, with no racing
      animation), and it touches no settlement, timing or line. */
   function pfMargin(ms) { return "+" + (ms / 1000).toFixed(1) + "s"; }
-  function photoFinishHTML(finishers, players) {
+  function photoFinishHTML(finishers, players, qdAmt) {
     if (!finishers || !finishers.length) return "";
     var n = finishers.length;
     var t0 = finishers[0].ms, tN = finishers[n - 1].ms;
@@ -6070,8 +6433,8 @@
       var p = players && players[f.seat];
       var nm = p ? p.name : "Player " + (f.seat + 1);
       var tag;
-      if (n === 1) tag = "ONLY FINISHER — +$50";
-      else if (i === 0) tag = "FIRST · QUICK DRAW +$50";
+      if (n === 1) tag = "ONLY FINISHER — +$" + (qdAmt || QUICK_DRAW_BONUS);
+      else if (i === 0) tag = "FIRST · QUICK DRAW +$" + (qdAmt || QUICK_DRAW_BONUS);
       else tag = (f.ms != null && t0 != null) ? pfMargin(f.ms - t0) : "IN";
       var edge = pos[i] < 10 ? " edge-l" : pos[i] > 90 ? " edge-r" : "";
       return '<div class="pf-chip" data-seat="' + f.seat + '" data-ms="' + (f.ms != null ? Math.round(f.ms) : "") + '" style="left:' + pos[i].toFixed(2) + '%">' +
@@ -6085,9 +6448,11 @@
      Guess kinds (num/survey) are NEUTRAL — they neither build nor
      break a run — and the Decider never reaches this code (its
      branch in revealAnswer returns first). From the bank that
-     REACHES 3 onward, each bank pays a flat +$25: never scaled by
-     the round multiplier, the Headline x2, or a Big Finish bet —
-     the Quick-Draw's flat grammar, one size down. This function is
+     REACHES 3 onward, each bank pays the streak bonus: the base
+     $25 scaled by the ROUND (review Pass 5, 2026-11-14: $25/$50/
+     $75 — the bonuses grow as the night does), never scaled by
+     the value multiplier, the Headline x2, or a Big Finish bet.
+     This function is
      the table's whole settlement, and it is PURE: given the kind,
      the marks and the runs going in, it returns the runs coming
      out, the bonus per seat, and the reveal's ONE named moment
@@ -6098,7 +6463,7 @@
      resumed reveal repaints from the record and never re-pays —
      the online room server runs the identical settlement. */
   var STREAK_BONUS = 25;
-  function streakOutcomes(kind, marks, streaksIn) {
+  function streakOutcomes(kind, marks, streaksIn, round) {
     var streakOut = {}, bonuses = {}, events = [];
     var seats = [];
     for (var k = 0; k < streaksIn.length; k++) seats.push(k);
@@ -6110,7 +6475,7 @@
       var before = streaksIn[i] || 0, after = 0, bonus = 0;
       if (marks[i]) {
         after = before + 1;
-        if (after >= 3) bonus = STREAK_BONUS;
+        if (after >= 3) bonus = STREAK_BONUS * (round || 1);
         if (after >= 5 && before < 5) events.push({ type: "reach5", seat: i, n: after });
         else if (after >= 3 && before < 3) events.push({ type: "reach3", seat: i, n: after });
       } else if (before >= 4) events.push({ type: "death", seat: i, n: before });
@@ -6206,8 +6571,8 @@
      seat fx read — so the number that moves is always the number
      that paints. The question's own value doubles for a seat whose
      Double is riding; the bet round already carries its stake and
-     never doubles; Quick Draw and the streak bonus stay flat,
-     exactly as they treat the bet. */
+     never doubles; Quick Draw and the streak bonus scale by the
+     round alone (review Pass 5), never by the bet or the Double. */
   function seatGain(c, p, i, qdSeat, sBonus, sole) {
     var base = c.betRound ? p.bet * 100 : c.bankValue;
     if (!c.betRound && c.dbl && c.dbl[i]) base *= 2;
@@ -6218,7 +6583,7 @@
        (both arming paths refuse the overlap), so this never
        compounds past a single double. */
     if (!c.betRound && sole && c.vs && c.vs[i]) base *= 2;
-    return base + (i === qdSeat ? QUICK_DRAW_BONUS : 0) + (sBonus || 0);
+    return base + (i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0) + (sBonus || 0);
   }
   function dblSpent(c, i) { return !!(c.dbl && c.dbl[i] && !c.betRound); }
   function vsPaid(c, i, sole) { return !!(!c.betRound && sole && c.vs && c.vs[i]); }
@@ -6256,7 +6621,7 @@
        bonus lands inside the same single commit as every other
        dollar this reveal pays; the record rides the question so a
        resumed reveal repaints it instead of re-paying it */
-    var so = streakOutcomes(c.kind, c.marks, G.players.map(function (p) { return p.streak || 0; }));
+    var so = streakOutcomes(c.kind, c.marks, G.players.map(function (p) { return p.streak || 0; }), G.round);
     var gains = {};
     var soleBank = winners.length === 1;
     winners.forEach(function (i) {
@@ -6336,7 +6701,7 @@
       var sBonus = (c.streakFx && c.streakFx[i]) ? (c.streakFx[i].bonus || 0) : 0;
       var soleFx = G.players.filter(function (_, j) { return c.marks[j]; }).length === 1;
       var foolAmt = (c.kind === "bluff" && c.bluffFool && c.bluffFool[i]) || 0;
-      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx) + foolAmt, closest: guessQ, quickdraw: i === qdSeat, doubled: dblSpent(c, i), vs: vsPaid(c, i, soleFx), streakBonus: sBonus, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
+      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx) + foolAmt, closest: guessQ, quickdraw: i === qdSeat, qdBonus: i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0, doubled: dblSpent(c, i), vs: vsPaid(c, i, soleFx), streakBonus: sBonus, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
       else if (foolAmt > 0) fxSeats[i] = { delta: "bank", amt: foolAmt, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
       else fxSeats[i] = { delta: "miss", delay: i * 0.05 };
     });
@@ -6391,8 +6756,8 @@
     } else {
       var correctIdx = c.opts.findIndex(function (o) { return o.ok; });
       var btns = c.opts.map(function (o, i) {
-        var cls = "ans-btn" + (i === correctIdx ? " correct" : (o.gone ? " dim wrong" : " dim"));
-        return '<button class="' + cls + '" disabled><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + "</span></button>";
+        var cls = "ans-btn" + (c.kind === "bluff" ? " bluff-pick" : "") + (i === correctIdx ? " correct" : (o.gone ? " dim wrong" : " dim"));
+        return '<button class="' + cls + '" disabled data-opt="' + i + '"><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span><span class="vote-chips" data-chips="' + i + '"></span></button>';
       }).join("");
       var dMcq = winners.length ? ""
         : '<div class="delta"><span class="down">No fingers on it. The money stays in Sterling\'s pocket — this time.</span></div>';
@@ -6406,7 +6771,7 @@
         var pfFin = (c.lockOrder || []).filter(function (si) { return c.marks[si]; }).map(function (si) {
           return { seat: si, ms: (c.lockTimes && c.lockTimes[si] != null) ? c.lockTimes[si] * 1000 : null };
         });
-        pfStrip = photoFinishHTML(pfFin, G.players);
+        pfStrip = photoFinishHTML(pfFin, G.players, QUICK_DRAW_BONUS * (G.round || 1));
       }
       stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind">THE ANSWER</span></div>' +
         goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + cardDressHTML(1) + sealHTML(c.golden, settled) + "</div>", c.golden) +
@@ -6415,6 +6780,7 @@
         (c.kind === "bluff" ? bluffCreditHTML(c) : "") +
         dMcq +
         whySlip(c.q.why, settled, doubleTag(c.headline, c.golden)) + nextBtn);
+      paintRevealChips();
       var hk = winners.length === 0 ? "allMiss" : (winners.length === G.players.length ? "allHit" : "someHit");
       revealSay(hk, { name: winners.length ? G.players[winners[0]].name : "" }, winners);
       Snd.play(winners.length ? "correct" : "wrong");
@@ -6446,7 +6812,14 @@
        seat's total award for the reveal */
     if (!c.decider && !settled) queueRevealCoins(function () {
       if (!G) return; /* the flights measure the live stage — at beat 2 it is this reveal's; on an early-advance flush it is still this reveal's, not yet repainted */
-      var flyOrder = winners.slice().sort(function (a, b) {
+      /* Pass 8: the flights follow the fx ledger, not the winners
+         list — a Bluff seat whose lie fooled the table banks its
+         $25 without holding the truth, and its coins fly like any
+         other bank (the fx already records it as one) */
+      var flyOrder = G.players.map(function (_, i) { return i; }).filter(function (i) {
+        var fxr = tableFx && tableFx.seats ? tableFx.seats[i] : null;
+        return fxr && fxr.delta === "bank" && fxr.amt > 0;
+      }).sort(function (a, b) {
         var ia = (c.lockOrder || []).indexOf(a), ib = (c.lockOrder || []).indexOf(b);
         if (ia < 0) ia = 100 + a; if (ib < 0) ib = 100 + b;
         return ia - ib;
@@ -6976,10 +7349,9 @@
     });
   });
   paintRuleToggles();
-  /* Pass #3 — SHOW PACE setup: a three-way choice, not a toggle —
-     one of the three is always the night's pace, HOST LED is the
-     resting state, and the choice persists per device in gh_pace
-     exactly as the rules persist in gh_rules */
+  /* SHOW PACE setup: a two-way tempo choice (Pass 8 retired the
+     HOST LED third way — Sterling drives now), persisting per
+     device in gh_pace exactly as the rules persist in gh_rules */
   function paintPaceToggles() {
     var p = loadPace();
     document.querySelectorAll(".pace-toggle").forEach(function (b) {
@@ -7346,7 +7718,7 @@
       var qdSeatT = -1;
       Object.keys(tableFx.seats).forEach(function (k) { if (tableFx.seats[k].quickdraw) qdSeatT = Number(k); });
       if (qdSeatT >= 0 && G.players[qdSeatT]) {
-        hostSay("quickdraw", { name: G.players[qdSeatT].name });
+        hostSay("quickdraw", { name: G.players[qdSeatT].name, amt: "$" + (QUICK_DRAW_BONUS * (G.round || 1)) });
         return;
       }
     }
@@ -7395,7 +7767,7 @@
        latches stay unconsumed for the next reveal. The winner comes
        from the server's reveal (ogQdSeat, set in ogOnReveal). */
     if (OG && OG.cur && OG.cur.kind === "normal" && ogQdSeat >= 0 && OG.players[ogQdSeat]) {
-      hostSay("quickdraw", { name: OG.players[ogQdSeat].name });
+      hostSay("quickdraw", { name: OG.players[ogQdSeat].name, amt: "$" + (ogQdBonus || QUICK_DRAW_BONUS * (OG.curRound || 1)) });
       return;
     }
     /* Dynamics pass D1: the pot's named beats, same arbitration
@@ -8031,7 +8403,14 @@
     if (s.rules) OG.rules = cleanRulesObj(s.rules);
     if (s.question) OG.offset = s.question.openedAt - Date.now();
     if (s.phase === "lobby") {
-      if (!OG.started) ogShowLobby();
+      if (!OG.started) {
+        ogShowLobby();
+        /* Pass 8: when every connected phone has said READY, the
+           show starts itself — the big screen's START remains as
+           the room's override, not its duty */
+        var rdy = (s.players || []).filter(Boolean);
+        if (rdy.length >= 2 && rdy.every(function (p) { return !p.connected || p.ready; }) && rdy.some(function (p) { return p.connected && p.ready; })) ogStartShow();
+      }
       /* a restored host whose show never left the lobby room-side:
          re-present the round intro it was driving */
       else if (OG.phase === "connecting") ogIntro();
@@ -8071,7 +8450,7 @@
         if (OG.eraVotesJson !== evJson) {
           OG.eraVotesJson = evJson;
           OG.eraVotes = s.eraVote.votes || {};
-          if (OG.phase === "intermission" && OG.eraOpen && !OG.eraCalled) { ogPaintIntermission(2); return; }
+          if (OG.phase === "intermission" && OG.eraOpen && !OG.eraCalled) { ogPaintIntermission(2); ogEraAutoCheck(); return; }
         }
       }
       /* Dynamics pass D2: the room's record of the grant is the
@@ -8182,6 +8561,14 @@
       '<button class="btn-gold" id="ogStart"' + (joined >= 2 ? "" : " disabled") + ">START THE SHOW</button>" +
       '<div class="og-statusline" id="ogLobbyStatus"></div>');
     var b = $("ogStart"); if (b) b.addEventListener("click", ogStartShow);
+    var lst = $("ogLobbyStatus");
+    if (lst) {
+      var connP = OG.players.filter(function (p) { return p && p.connected; });
+      var rdyN = connP.filter(function (p) { return p.ready; }).length;
+      lst.textContent = joined >= 2
+        ? (connP.length && rdyN === connP.length ? "Every phone is ready — Sterling starts the show." : "READY " + rdyN + " / " + connP.length + " — Sterling starts it when every phone is ready.")
+        : "";
+    }
     ogPaintQr();
     var bc = $("ogCopy");
     if (bc) bc.addEventListener("click", function () {
@@ -8449,7 +8836,7 @@
     OG.facts = freshFacts();
     OG.lastRevealQid = null;
     OG.bankedOnce = false; OG.bigLeadDone = false;
-    ogFx = null; ogQdSeat = -1; ogStreakMoment = null; ogRevealGolden = false;
+    ogFx = null; ogQdSeat = -1; ogQdBonus = 0; ogStreakMoment = null; ogRevealGolden = false;
     OG.disp = [null, null, null, null];
     ogFortuneDisp = [];
     OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
@@ -8527,7 +8914,7 @@
     $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
     var titles = { 1: "THE WARM-UP", 2: "DOUBLE MONEY", 3: "THE BIG FINISH" };
     var texts = {
-      1: "Six questions, and everybody answers every one — on your own phones this time. Sterling spins the category. Easy pays $100, medium $200, hard $300, and the value drains while the room thinks. When the window closes, every correct phone banks the money. And on every multiple-choice question, the first correct answer in also pockets a $50 quick-draw — be quick AND right. Three correct in a row starts a streak — every bank after that pays a bonus $25 while it lives. Closest-number questions: type your number — the nearest takes it.",
+      1: "Six questions, and everybody answers every one — on your own phones this time. Sterling spins the category. Easy pays $100, medium $200, hard $300, and the value drains while the room thinks. When the window closes, every correct phone banks the money. And on every multiple-choice question, the first correct answer in also pockets a quick-draw bonus — $50 in this round, and it grows with the night: $100 in Round 2, $150 in the Big Finish — be quick AND right. Three correct in a row starts a streak — every bank after that pays a bonus while it lives, $25 in this round and growing the same way. Closest-number questions: type your number — the nearest takes it.",
       2: (OG.rules && OG.rules.secondCut)
         ? "Same game, double money — $200, $400, $600. Your lifelines are live: each of you holds TWO Cut Two tokens for the whole show. Call one from your phone before the window closes and two wrong answers vanish for everybody. And the round closes with the Headline Question — double money again, half the time on the clock."
         : "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it from your phone before the window closes and two wrong answers vanish for everybody. And the round closes with the Headline Question — double money again, half the time on the clock.",
@@ -8549,6 +8936,7 @@
     if (e.round === 1 && OG.seriesLine) hostSayText(OG.seriesLine);
     else if (e.round !== 1) hostSay("r" + e.round);
     $("ogRoundGo").addEventListener("click", ogServe);
+    autoGo("ogRoundGo", "ogintro:" + e.round, (paceCfg() ? paceCfg().reveal : 6000) + 4000, function () { return !!OG && OG.phase === "intro"; });
     ogSaveHostShow(); /* curRound moved with this intro — the save follows */
   }
   /* ================= New programme pass 1 — the Decider (online) =================
@@ -8746,12 +9134,17 @@
     stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(e.cat) + esc(e.cat.toUpperCase()) + '</span><span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
       '<div class="q-cardwrap"><div class="q-text' + wearCls(e.round, false) + '">' + esc(e.bank.q) + cardDressHTML(1) + '</div></div>' +
       '<p class="round-text">One answer to this one is true — the rest, the players are inventing on their phones right now. $200 for the truth, and $25 for every player a lie fools.</p>' +
-      '<div><span class="og-count">LIES IN&nbsp;<b>' + fakesIn + "</b> / " + ogJoined().length + "</span></div>" +
-      '<div style="margin-top:14px"><button class="btn-gold" id="ogDealBluff">DEAL THE ANSWERS</button></div>');
+      '<div><span class="og-count">LIES IN&nbsp;<b>' + fakesIn + "</b> / " + ogJoined().length + "</span></div>");
     hostSay("bluffInvent", { cat: e.cat });
     Snd.playSignature(e.cat);
-    var b = $("ogDealBluff");
-    if (b) b.addEventListener("click", function () { ogSend({ t: "bluff_deal", qid: e.qid }); });
+    /* Pass 8: no dealer — when every connected phone's lie is in,
+       this screen deals the answers itself (the room also deals
+       on its invent deadline for a phone that never lands) */
+    var ogConn = OG.players.filter(function (p) { return p && p.connected; }).length;
+    if (fakesIn > 0 && ogConn > 0 && fakesIn >= ogConn && OG._bluffDealtFor !== e.qid) {
+      OG._bluffDealtFor = e.qid;
+      ogSend({ t: "bluff_deal", qid: e.qid });
+    }
     if (entOnce("og:" + OG.code + ":" + e.qid)) entApply(document.querySelector("#stage .q-cardwrap"), e.cat);
   }
   /* the reveal's accounting of lies, host-screen edition — the
@@ -8818,8 +9211,7 @@
         : "No options. No hiding. Numbers are being typed on phones — the closest takes it.";
       stage(top + meta +
         '<div class="q-for">' + vsLine + '</div>' +
-        '<div><span class="og-count">ANSWERS IN&nbsp;<b id="ogCount">' + (q.answersIn || 0) + "</b> / " + (isDec ? eligSeats.length : ogJoined().length) + "</span></div>" +
-        '<div style="margin-top:14px"><button class="btn-gold" id="ogCallIt">CALL IT — NUMBERS IN</button></div>');
+        '<div><span class="og-count">ANSWERS IN&nbsp;<b id="ogCount">' + (q.answersIn || 0) + "</b> / " + (isDec ? eligSeats.length : ogJoined().length) + "</span></div>");
     } else {
       /* Design pass 6: the host screen NEVER cuts its own slabs —
          it is the room's shared display, and dimming the two wrong
@@ -8832,8 +9224,7 @@
       }).join("");
       stage(top + meta +
         '<div class="answers pop-in">' + btns + "</div>" +
-        '<div><span class="og-count">ANSWERS IN&nbsp;<b id="ogCount">' + (q.answersIn || 0) + "</b> / " + ogJoined().length + "</span></div>" +
-        '<div style="margin-top:12px"><button class="btn-gold" id="ogCallIt">CALL IT — CLOSE THE WINDOW</button></div>');
+        '<div><span class="og-count">ANSWERS IN&nbsp;<b id="ogCount">' + (q.answersIn || 0) + "</b> / " + ogJoined().length + "</span></div>");
     }
     if (isDec && !e.deciderSaid) {
       /* the Decider's opening line is authored and local, like the
@@ -8849,8 +9240,9 @@
     else if (!headline) hostSay(ogBandOf(q, e) === 3 ? "deepcut" : (e.kind === "num" ? "numQ" : "read"), { cat: e.cat });
     Snd.playSignature(e.cat);
     stSweep();
-    var call = $("ogCallIt");
-    if (call) call.addEventListener("click", function () { ogSend({ t: "reveal", qid: e.qid }); });
+    /* Pass 8: no CALL IT on the big screen — the room's own
+       deadline closes the window, and a full house closes it
+       early through the pace grace (paceCheckAllIn below) */
     if (entOnce("og:" + OG.code + ":" + e.qid)) entApply(document.querySelector("#stage .q-cardwrap"), e.cat);
     clock.total = (q.windowMs || e.windowMs) / 1000; clock.left = clock.total; clock.running = true; Snd._lw = -1;
     drawClock();
@@ -8951,7 +9343,7 @@
       /* Design pass 3: the server already decided the quick-draw —
          banked carries the +50; the client only wears the tag and
          names the winner (ogRevealSay reads ogQdSeat). */
-      if (res.quickDraw) { fx = fx || {}; fx.quickdraw = true; }
+      if (res.quickDraw) { fx = fx || {}; fx.quickdraw = true; fx.qdBonus = res.quickDrawBonus || 0; }
       /* THE DOUBLE: the referee marked the doubled banks in the
        * results — the desk wears the same ×2 DOUBLED tag as the
        * table's (decorateSeat is shared) */
@@ -8978,6 +9370,7 @@
     ogQdSeat = (r.quickDrawSeat != null) ? r.quickDrawSeat
       : ((r.results || []).find(function (res) { return res.quickDraw; }) || {}).seat;
     if (ogQdSeat == null) ogQdSeat = -1;
+    ogQdBonus = ((r.results || []).find(function (res) { return res.quickDraw; }) || {}).quickDrawBonus || 0;
     ogFx = { qid: r.qid, seats: fxSeats };
     audDecider(false); /* V4: the hush lifts with the reveal */
     if (!fromSnap && !r.decider) audReact(anyBank); /* V4: the house answers a live reveal only — a resync never replays it */
@@ -9015,14 +9408,14 @@
          'normal' reveal — the correct results ordered by their
          server-received lockMs, which is the quick-draw's own
          order, so the first disc is always the seat the room paid
-         the +$50. A resync rebuilds it from lastReveal's identical
+         the quick-draw. A resync rebuilds it from lastReveal's identical
          record; guess kinds never race. */
       var pfStripO = "";
       if (e.kind === "normal") {
         var pfFinO = (r.results || []).filter(function (res) { return res.correct && res.lockMs != null; })
           .sort(function (a, b) { return a.lockMs - b.lockMs; })
           .map(function (res) { return { seat: res.seat, ms: res.lockMs }; });
-        pfStripO = photoFinishHTML(pfFinO, OG.players);
+        pfStripO = photoFinishHTML(pfFinO, OG.players, ogQdBonus || QUICK_DRAW_BONUS * (OG.curRound || 1));
       }
       stage(head + '<div class="answers">' + btns + "</div>" +
         pfStripO +
@@ -9180,6 +9573,7 @@
       }));
       $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "") + (OG.eraVoteLine ? " " + OG.eraVoteLine : "");
       $("ogEraCall").addEventListener("click", function () { ogCallEra(); });
+      ogEraDwellArm();
       return;
     }
     stage(breakCardHTML(view, "ogBreakGo") + (OG.eraCalled ? eraResultHTML(OG.era) : ""));
@@ -9187,6 +9581,32 @@
       (nextRound === 2 && OG.eraCalled && OG.eraLine ? " " + OG.eraLine : "");
     var b = $("ogBreakGo");
     if (b) b.addEventListener("click", function () { ogIntro(); });
+    autoGo("ogBreakGo", "ogbreak:" + nextRound, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!OG && OG.phase === "intermission"; });
+  }
+  /* Pass 8: the online era call, Sterling's own — when every
+     connected phone has balloted he calls it after a breath;
+     the break's dwell (30s from the panel's first paint) calls
+     it with whatever is in, exactly as the table's does */
+  var ogEraTimer = null, ogEraDwellFor = null;
+  function ogEraAutoCheck() {
+    if (!OG || !OG.eraOpen || OG.eraCalled) return;
+    var conn = OG.players.filter(function (p) { return p && p.connected; });
+    if (!conn.length) return;
+    var votes = OG.eraVotes || {};
+    var allIn = conn.every(function (p) { return votes[p.seat] != null; });
+    if (!allIn || ogEraTimer) return;
+    ogEraTimer = setTimeout(function () {
+      ogEraTimer = null;
+      if (OG && OG.eraOpen && !OG.eraCalled) ogCallEra();
+    }, 2500);
+  }
+  function ogEraDwellArm() {
+    if (!OG || !OG.eraOpen || OG.eraCalled) return;
+    if (ogEraDwellFor === OG.code) return;
+    ogEraDwellFor = OG.code;
+    setTimeout(function () {
+      if (OG && OG.eraOpen && !OG.eraCalled && OG.phase === "intermission") ogCallEra();
+    }, 30000);
   }
   /* Designer pass 6: the room's count, called from the host
      screen — the verdict is written here and published to the
@@ -9762,10 +10182,11 @@
      settlement's own: Math.round(full x (1 - 0.5 x elapsed)),
      the figure the referee stops the clock on. The flat extras
      ride as segments, each faithful to its rule: the streak's
-     +$25 when this player's own run (the snapshot's per-player
+     bonus (base $25 x the round) when this player's own run
+     (the snapshot's per-player
      streak) makes their next bank the one that reaches three —
      MCQ only, guess kinds are neutral and never earn it; the
-     quick-draw's +$50 as FIRST IN, shown only while it is still
+     quick-draw's bonus (base $50 x the round) as FIRST IN, shown only while it is still
      this pad's to take — the pad learns lock-ins as counts, never
      correctness or order, so the moment another seat's answer is
      in, FIRST IN can no longer be promised and the segment
@@ -9791,13 +10212,14 @@
     }
     var qd = !guess && (ctx.othersIn || 0) === 0;
     var streak = !guess && (ctx.myStreak || 0) >= 2;
-    return { base: base, qd: qd, streak: streak, guess: guess,
-      total: base + (qd ? QUICK_DRAW_BONUS : 0) + (streak ? STREAK_BONUS : 0) };
+    var qdAmt = QUICK_DRAW_BONUS * (ctx.round || 1), streakAmt = STREAK_BONUS * (ctx.round || 1);
+    return { base: base, qd: qd, streak: streak, guess: guess, qdAmt: qdAmt, streakAmt: streakAmt,
+      total: base + (qd ? qdAmt : 0) + (streak ? streakAmt : 0) };
   }
   function jpToYouFormat(comp) {
     var t = "TO YOU: " + money(comp.total);
-    if (comp.qd) t += " · FIRST IN " + mplus(QUICK_DRAW_BONUS);
-    if (comp.streak) t += " · STREAK " + mplus(STREAK_BONUS);
+    if (comp.qd) t += " · FIRST IN " + mplus(comp.qdAmt || QUICK_DRAW_BONUS);
+    if (comp.streak) t += " · STREAK " + mplus(comp.streakAmt || STREAK_BONUS);
     return t;
   }
   /* the composition's inputs, read off what this pad already
@@ -9931,6 +10353,10 @@
         '<div class="jp-phaseword" id="jpPhaseWord">IN THE LOBBY</div>' +
         (s.showSeq >= 2 ? '<div class="jp-rematch">★ REMATCH — SHOW ' + s.showSeq + '<span>THE TABLE STAYS TOGETHER</span></div>' : "") +
         '<p class="jp-sub">Watch the big screen — when a question lands,<br>this pad becomes your answer buttons.</p>' +
+        /* Pass 8: the pad's lobby word — when every phone in the
+           room is ready, Sterling starts the show himself */
+        '<button class="btn-gold jp-ready" id="jpReady">' + (me && me.ready ? "READY ✓ — TAP TO TAKE IT BACK" : "I'M READY") + "</button>" +
+        '<p class="jp-sub">' + (me && me.ready ? "You're in. The show starts when every phone is ready." : "Tap when you're set — the show starts when every phone is ready.") + "</p>" +
         '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
     } else if (s.phase === "bet") {
       var effBet = s.yourBet != null ? s.yourBet : (JP.sentBet && s.bet && JP.sentBet.qid === s.bet.qid ? JP.sentBet.chips : null);
@@ -10172,7 +10598,7 @@
           ERAS.map(function (e) {
             return '<button class="jp-era-btn' + (myEra === e.id ? " sel" : "") + '" data-era="' + e.id + '">' + e.plaque + "</button>";
           }).join("") +
-          '<p class="jp-sub">' + (myEra ? "Your vote is in — tap another decade to change it, until the host calls it." : "Sterling deals from the winning years for the rest of the night.") + "</p></div>";
+          '<p class="jp-sub">' + (myEra ? "Your vote is in — tap another decade to change it, until Sterling calls it." : "Sterling deals from the winning years for the rest of the night.") + "</p></div>";
       } else if (evP && evP.called) {
         var calledEra = s.era ? eraById(s.era) : null;
         eraHTML = '<p class="jp-sub jp-era-done">' + (calledEra ? "THE ROOM CHOSE " + calledEra.plaque + " — STERLING DEALS FROM THOSE YEARS" : "NO VERDICT — THE ROOM ABSTAINED") + "</p>";
@@ -10237,6 +10663,12 @@
     }
     var lv = $("jpLeave");
     if (lv) lv.addEventListener("click", function () { jpTeardown(); showScreen("scr-title"); setMode("join"); });
+    var rdb = $("jpReady");
+    if (rdb) rdb.addEventListener("click", function () {
+      Snd.ensure();
+      var meNow = jpMe();
+      jpSend({ t: "ready", ready: !(meNow && meNow.ready) });
+    });
     var shb = $("jpShareNight");
     if (shb) shb.addEventListener("click", function () { openShareNight(); });
     jpPaintClock();

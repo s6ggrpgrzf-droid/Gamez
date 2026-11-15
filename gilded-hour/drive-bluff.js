@@ -118,17 +118,12 @@ async function advanceToBluff(page) {
       check('C: no Double disc, no VS disc rides the bluff', discs.dbl === 0 && discs.vs === 0, JSON.stringify(discs));
       const anaLieIx = s.opts.findIndex(o => o.t === 'A brass teaspoon');
       const truthIx = s.opts.findIndex(o => o.ok);
-      await page.tap('#btnCallIt');
-      await page.waitForSelector('.bluff-pick', { timeout: 9000 });
-      await sleep(300);
-      /* Ana banks the truth; Bo and Cy both fell for Ana's lie */
-      await page.tap('.bluff-pick[data-opt="' + truthIx + '"]'); await sleep(150);
-      await page.tap('.seat[data-seat="0"]'); await sleep(150);
-      await page.tap('.bluff-pick[data-opt="' + anaLieIx + '"]'); await sleep(150);
-      await page.tap('.seat[data-seat="1"]'); await sleep(150);
-      await page.tap('.seat[data-seat="2"]'); await sleep(150);
-      await page.tap('#btnReveal');
-      await sleep(900);
+      /* Pass 8 grammar: the picks go in on the desks — Ana banks
+         the truth; Bo and Cy both fall for Ana's lie */
+      await page.tap('[data-pick="0|' + truthIx + '"]'); await sleep(200);
+      await page.tap('[data-pick="1|' + anaLieIx + '"]'); await sleep(200);
+      await page.tap('[data-pick="2|' + anaLieIx + '"]'); await sleep(200);
+      for (let i = 0; i < 40; i++) { s = await G(page); if (s && s.phase === 'reveal') break; await sleep(300); }
       s = await G(page);
       check('D: the banker takes the flat $200', s.scores[0] >= 700, 'Ana=' + s.scores[0]);
       check('D: the lie pays $25 per player fooled (Ana +$50 more)', s.scores[0] === 750 && s.bluffFool && s.bluffFool[0] === 50, 'Ana=' + s.scores[0] + ' fool=' + JSON.stringify(s.bluffFool));
@@ -159,17 +154,13 @@ async function advanceToBluff(page) {
       check('E: house seats invented from decoys (4 plaques)', s.opts && s.opts.length === 4 && s.opts.filter(o => !o.ok).length === 3, s.opts ? String(s.opts.length) : 'none');
       const before = s.scores.slice();
       const truthIx = s.opts.findIndex(o => o.ok);
-      await page.tap('#btnCallIt');
-      await page.waitForSelector('.bluff-pick', { timeout: 9000 });
-      await sleep(300);
+      /* Pass 8 grammar: Ana picks the truth on her own desk; the
+         house's picks are rolled as the question settles */
+      await page.tap('[data-pick="0|' + truthIx + '"]'); await sleep(200);
+      for (let i = 0; i < 40; i++) { s = await G(page); if (s && s.phase === 'reveal') break; await sleep(300); }
       s = await G(page);
-      check('E: house picks are on the record before marking', s.bluffPicks && s.bluffPicks[1] != null && s.bluffPicks[2] != null, JSON.stringify(s.bluffPicks));
+      check('E: house picks are on the record once the question settles', s.bluffPicks && s.bluffPicks[1] != null && s.bluffPicks[2] != null, JSON.stringify(s.bluffPicks));
       check('E: no house seat picked its own lie', s.opts[s.bluffPicks[1]].by !== 1 && s.opts[s.bluffPicks[2]].by !== 2);
-      await page.tap('.bluff-pick[data-opt="' + truthIx + '"]'); await sleep(150);
-      await page.tap('.seat[data-seat="0"]'); await sleep(150);
-      await page.tap('#btnReveal');
-      await sleep(900);
-      s = await G(page);
       const gains = s.scores.map((v, i) => v - before[i]);
       const bankers = Object.keys(s.bluffPicks).filter(k => s.opts[s.bluffPicks[k]].ok).length;
       let fooled = 0;

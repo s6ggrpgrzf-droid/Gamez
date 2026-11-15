@@ -148,7 +148,7 @@ export const BANK = [
     "q": "In Die Hard, John McClane's wife Holly works for which corporation, whose tower is attacked?",
     "a": "The Nakatomi Corporation",
     "w": [
-      "Weyland-Yutani",
+      "Weyland-Yutani Corporation",
       "Umbrella Corporation",
       "Cyberdyne Systems"
     ],
@@ -274,7 +274,7 @@ export const BANK = [
     "q": "On Married… with Children, what is Al Bundy's proudest high-school achievement?",
     "a": "Scoring four touchdowns in one game",
     "w": [
-      "Winning a state wrestling title",
+      "Winning the state wrestling championship",
       "Being voted homecoming king",
       "Earning a football scholarship"
     ],
@@ -486,7 +486,7 @@ export const BANK = [
     "w": [
       "Money for Nothing",
       "Take On Me",
-      "Thriller"
+      "Sweet Dreams (Are Made of This)"
     ],
     "why": "MTV signed on just after midnight with The Buggles' 'Video Killed the Radio Star'."
   },
@@ -514,7 +514,7 @@ export const BANK = [
     "w": [
       "Blur",
       "Oasis",
-      "Pulp"
+      "Supergrass"
     ],
     "why": "OK Computer beat its Britpop rivals Blur, Oasis and Pulp into the all-time lists."
   },
@@ -807,7 +807,7 @@ export const BANK = [
     "a": "E.T. the Extra-Terrestrial",
     "w": [
       "Pac-Man",
-      "Custer's Revenge",
+      "The Texas Chainsaw Massacre",
       "Superman"
     ],
     "why": "Atari buried E.T. cartridges in Alamogordo in 1983; the site was excavated in 2014 and the legend proved true."
@@ -864,7 +864,7 @@ export const BANK = [
     "w": [
       "Battletoads",
       "Biker Mice from Mars",
-      "Street Sharks"
+      "Captain Planet and the Planeteers"
     ],
     "why": "Battletoads, Biker Mice and Street Sharks were all riding the Turtles' wave."
   },
@@ -918,7 +918,7 @@ export const BANK = [
     "q": "In Chip 'n Dale: Rescue Rangers, which character is the team's inventive pilot and mechanic?",
     "a": "Gadget Hackwrench",
     "w": [
-      "Zipper",
+      "Professor Norton Nimnul",
       "Monterey Jack",
       "Fat Cat"
     ],
@@ -1158,7 +1158,7 @@ export const BANK = [
     "w": [
       "Handspring",
       "Psion",
-      "Sharp"
+      "Hewlett-Packard"
     ],
     "why": "Palm Computing, then part of U.S. Robotics; Handspring was founded later by Palm's founders."
   },
@@ -1241,7 +1241,7 @@ export const BANK = [
     "a": "Santa's Little Helper",
     "w": [
       "Snowball",
-      "Comet",
+      "Mojo the Helper Monkey",
       "Brian"
     ],
     "why": "Snowball is the Simpsons' cat and Comet belonged to Full House; Santa's Little Helper joined the family in the very first episode, Christmas 1989."
@@ -1885,5 +1885,173 @@ export const BANK = [
       "Kodak"
     ],
     "why": "Duracell's bunny drummed first, in 1973. Energizer's 1989 parody bunny walked through the rival's own advert and never stopped."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "Which 2001 film sends a hobbit named Frodo on a quest to destroy the One Ring?",
+    "a": "The Fellowship of the Ring",
+    "w": [
+      "The Hobbit: An Unexpected Journey",
+      "The Return of the King",
+      "The Two Towers"
+    ],
+    "why": "The Fellowship opened the trilogy in December 2001 — Frodo's road out of the Shire starts there."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "Which Eminem song, from the film 8 Mile, opens with palms sweaty, knees weak, arms heavy?",
+    "a": "Lose Yourself",
+    "w": [
+      "The Real Slim Shady",
+      "Without Me",
+      "Stan"
+    ],
+    "why": "Lose Yourself (2002) won the Oscar for Best Original Song — a first for a rap track."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "Which 2000 game let players build a family a house, then trap them by deleting the pool ladder?",
+    "a": "The Sims",
+    "w": [
+      "RollerCoaster Tycoon",
+      "SimCity 2000",
+      "Zoo Tycoon"
+    ],
+    "why": "Will Wright's dollhouse, February 2000. The pool-ladder trick is the oldest cruelty in the game."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "In Gladiator (2000), Maximus is betrayed by which Roman — the emperor's own son?",
+    "a": "Commodus",
+    "w": [
+      "Marcus Aurelius",
+      "Lucius Verus",
+      "Tiberius"
+    ],
+    "why": "Commodus murders his father Marcus Aurelius and orders Maximus killed; the arena does the rest."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "On The Office, the Scranton branch sells paper for which company?",
+    "a": "Dunder Mifflin",
+    "w": [
+      "Wernham Hogg Paper Company",
+      "Initech",
+      "Sabre"
+    ],
+    "why": "Dunder Mifflin Paper Company — Wernham Hogg is the firm in the British original; Sabre buys the branch years later."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "On How I Met Your Mother, Ted's future wife is first given away by an umbrella of which colour?",
+    "a": "Yellow",
+    "w": [
+      "Red",
+      "Blue",
+      "Green"
+    ],
+    "why": "The yellow umbrella drifts through the show for years before its owner finally gets a name."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Apple's 'Get a Mac' adverts starred Justin Long as the Mac — and which actor as the PC?",
+    "a": "John Hodgman",
+    "w": [
+      "John Krasinski",
+      "Rainn Wilson",
+      "Steve Carell"
+    ],
+    "why": "Hodgman's put-upon PC in the suit, opposite Long, from 2006 to 2009."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Which 2003 cartoon follows Robin's young superhero team in Jump City?",
+    "a": "Teen Titans",
+    "w": [
+      "Justice League Unlimited",
+      "The Powerpuff Girls",
+      "Ben 10"
+    ],
+    "why": "Robin leads Raven, Starfire, Beast Boy and Cyborg from Titans Tower, 2003 to 2006."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Three ex-PayPal workers launched a video site in 2005 whose first upload was a trip to the zoo. Which site?",
+    "a": "YouTube",
+    "w": [
+      "Google Video",
+      "Dailymotion",
+      "Vimeo"
+    ],
+    "why": "'Me at the Zoo', April 2005 — Jawed Karim at San Diego Zoo, elephants over his shoulder."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Which 2001 Apple gadget promised '1,000 songs in your pocket'?",
+    "a": "The iPod",
+    "w": [
+      "The Discman",
+      "The Zune",
+      "The Rio"
+    ],
+    "why": "October 2001: a 5GB hard drive the size of a deck of cards, and the headphone era begins."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Which Outkast song asks you to shake it like a Polaroid picture?",
+    "a": "Hey Ya!",
+    "w": [
+      "The Way You Move",
+      "Ms. Jackson",
+      "Roses"
+    ],
+    "why": "André 3000's Hey Ya! (2003) — Polaroid politely noted that shaking the prints can actually damage them."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "In The Dark Knight (2008), which character keeps asking 'Why so serious?'",
+    "a": "The Joker",
+    "w": [
+      "The Scarecrow",
+      "Ra's al Ghul",
+      "Harvey Dent"
+    ],
+    "why": "Heath Ledger's Joker — the line made the poster before it made the trailer."
   }
 ];

@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#12061A">
 <title>The Gilded Hour — a trivia show for 2–4 players</title>
-<link rel="stylesheet" href="style.css?v=96">
+<link rel="stylesheet" href="style.css?v=99">
 </head>
 <body>
 <div id="app">
@@ -243,10 +244,9 @@
             </div>
           </div>
           <div id="paceBlock">
-            <div class="setup-label">SHOW PACE — WHO MOVES THE SHOW ALONG</div>
+            <div class="setup-label">SHOW PACE — STERLING&rsquo;S TEMPO</div>
             <div class="rules-row">
-              <button class="pace-toggle" data-pace="host" type="button">HOST LED<small>You tap to move on — the show waits for you</small></button>
-              <button class="pace-toggle" data-pace="flow" type="button">FLOWING<small>Reveals roll on; a full house closes its own window</small></button>
+              <button class="pace-toggle" data-pace="flow" type="button">FLOWING<small>Sterling rolls the show on; a full house closes its own window</small></button>
               <button class="pace-toggle" data-pace="brisk" type="button">BRISK<small>The same, quicker — for rooms that know the game</small></button>
             </div>
           </div>
@@ -266,12 +266,12 @@
             </div>
             <div class="setup-label">NAMES — TAP TO EDIT</div>
             <div id="nameRows"></div>
-            <p class="fineprint">One phone, one TV. Everybody answers with their fingers — 1, 2, 3 or 4.
+            <p class="fineprint">One phone, one TV. Sterling runs the show — everybody answers on their own desk, 1, 2, 3 or 4.
             Every question written for this table — the pop culture of the eighties, nineties and two-thousands.</p>
           </div>
           <div id="panelHost" class="hidden">
-            <div class="setup-label">YOU RUN THE SHOW — FRIENDS JOIN ON THEIR PHONES</div>
-            <p class="panel-text">This screen becomes the show. Up to four players join from their own phones with a room code — their answers stay private until Sterling calls the reveal.</p>
+            <div class="setup-label">STERLING RUNS THE SHOW — FRIENDS JOIN ON THEIR PHONES</div>
+            <p class="panel-text">This screen becomes the stage. Up to four players join from their own phones with a room code — when every phone says ready, Sterling starts the show himself. Their answers stay private until he calls the reveal.</p>
             <button class="btn-ghost wide hidden" id="btnRejoinRoom" style="margin-top:10px">REJOIN YOUR ROOM</button>
             <div class="panel-status" id="hostStatus">The room opens on this screen; the code appears here.</div>
           </div>
@@ -309,7 +309,7 @@
             <span class="fm f1">1</span><span class="fm f2">2</span><span class="fm f3">3</span><span class="fm f4">4</span>
           </div>
           <h3 class="how-title">EVERYBODY ANSWERS</h3>
-          <p class="how-text">Every question is for the whole table — hold up 1, 2, 3 or 4 fingers. Sterling keeps score in dollars, and a question's value drains while you think, so quick and right pays best. And one question in the first two rounds is secretly golden: it pays double, and you'll know it when it lands. Questions nobody banks feed the pot — the champion takes it all. Playing alone? Start a Solo Show and the house deals in two of its own players to beat.</p>
+          <p class="how-text">Every question is for the whole table — tap your answer on your own desk: 1, 2, 3 or 4. Sterling keeps score in dollars, and a question's value drains while you think, so quick and right pays best. And one question in the first two rounds is secretly golden: it pays double, and you'll know it when it lands. Questions nobody banks feed the pot — the champion takes it all. Playing alone? Start a Solo Show and the house deals in two of its own players to beat.</p>
         </div>
         <div class="how-beat hidden" data-beat="1">
           <div class="how-mark mark-chips" aria-hidden="true">
@@ -477,17 +477,34 @@
   </div>
 
 </div>
-<script src="questions.js?v=10"></script>
+<script src="questions.js?v=11"></script>
 <script src="qr.js?v=1"></script>
-<script src="game.js?v=91"></script>
+<script src="game.js?v=94"></script>
 <script>
-/* Party-Proof Shell: register the offline worker (sw.js, scoped to
-   this directory by its location). http(s) only — a file:// copy
-   never attempts it, so the plain local load path stays untouched;
-   any registration failure is swallowed and the show plays on. */
+/* Review Pass 7 (2026-11-14): the Party-Proof Shell is retired —
+   the show plays online only, and nothing registers a worker any
+   more. This is the page-side half of the stand-down: a returning
+   browser's lingering registration is unregistered and the shell's
+   cache family swept (sw.js itself is now a kill worker doing the
+   same from its side, so a browser is reached whichever check-in
+   comes first). The sweep is prefix-scoped: caches are origin-wide
+   and the sibling games' caches are never touched. http(s) only —
+   a file:// copy never attempts it; failures are swallowed and
+   the show plays on. */
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', function () {
-    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+    try {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (reg) reg.unregister().catch(function () {});
+      }).catch(function () {});
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (k) {
+            if (k.indexOf('gilded-hour-shell-') === 0) caches.delete(k).catch(function () {});
+          });
+        }).catch(function () {});
+      }
+    } catch (e) {}
   });
 }
 </script>

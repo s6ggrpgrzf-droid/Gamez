@@ -130,13 +130,32 @@ ok((host.last('welcome') || {}).role === 'host', 'host hello with correct token 
   const cs = [];
   for (let i = 0; i < 4; i++) {
     const c = await connect(r2.body.code);
-    await c.send({ t: 'hello', role: 'player', name: 'P' + i });
+    await c.send({ t: 'hello', role: 'player', name: 'P' + i, ...(i === 0 ? { avatar: 5 } : {}) });
     cs.push(c);
   }
   ok(cs.every((c, i) => (c.last('welcome') || {}).seat === i), 'side room fills seats 0..3');
+  ok(cs[1].lastState().players[0].avatar === 5, 'avatar sent in hello is stored and broadcast in snapshots');
+  ok(cs[0].lastState().players[1].avatar === 1 && cs[0].lastState().players[3].avatar === 3,
+    'hello without an avatar field defaults to the seat index (old clients unaffected)');
   const fifth = await connect(r2.body.code);
   await fifth.send({ t: 'hello', role: 'player', name: 'Extra' });
   ok(/full/i.test((fifth.lastError() || {}).msg || ''), 'fifth player rejected: room is full');
+}
+
+// ---- avatar clamping: invalid values fall back to the seat default ----
+{
+  const r3 = await createRoom();
+  const bad = [99, 2.5, '3', -1];
+  const cs = [];
+  for (let i = 0; i < 4; i++) {
+    const c = await connect(r3.body.code);
+    await c.send({ t: 'hello', role: 'player', name: 'B' + i, avatar: bad[i] });
+    cs.push(c);
+  }
+  for (let i = 0; i < 4; i++) {
+    ok(cs[0].lastState().players[i].avatar === i,
+      'invalid avatar ' + JSON.stringify(bad[i]) + ' clamps to seat default ' + i);
+  }
 }
 
 // ---- oversized message is refused, socket survives ----
@@ -163,6 +182,8 @@ ok(tokens.every((t) => /^[0-9a-f]{32}$/.test(t)) && new Set(tokens).size === 3,
   ok(st && st.players.filter(Boolean).length === 3
     && st.players[0].name === 'Ann' && st.players[2].name === 'Cid',
     'host snapshot lists the three players');
+  ok(st.players[0].avatar === 0 && st.players[1].avatar === 1 && st.players[2].avatar === 2,
+    'main room: hellos without avatar keep seat-index defaults');
   ok(!host.text().includes(tokens[0]) && !host.text().includes(tokens[1]),
     'host never receives a player reclaim token');
   ok(!P[0].text().includes(tokens[1]) && !P[0].text().includes(tokens[2]),
@@ -206,11 +227,11 @@ await host.send({ t: 'reveal', qid: 'q1' });
   const rev = P[1].last('reveal');
   ok(rev && rev.value === 75, 'reveal banks the as-stopped drained value ($75 at half-window)', rev && rev.value);
   const bySeat = Object.fromEntries(rev.results.map((r) => [r.seat, r]));
-  ok(bySeat[0].correct && bySeat[0].banked === 75 && bySeat[0].pick === 2,
-    'correct player banks $75; picks are public at reveal');
+  ok(bySeat[0].correct && bySeat[0].banked === 125 && bySeat[0].pick === 2,
+    'correct player banks $75 + the $50 quick-draw (theirs was the first correct receipt); picks are public at reveal');
   ok(!bySeat[1].correct && bySeat[1].banked === 0 && !bySeat[2].correct && bySeat[2].banked === 0,
     'wrong players bank $0');
-  ok(rev.scores[0] === 75 && rev.scores[1] === 0 && rev.scores[2] === 0, 'scores updated server-side');
+  ok(rev.scores[0] === 125 && rev.scores[1] === 0 && rev.scores[2] === 0, 'scores updated server-side');
 }
 await P[1].send({ t: 'answer', qid: 'q1', pick: 2 });
 ok(/open question/i.test((P[1].lastError() || {}).msg || ''), 'answer after reveal rejected');
@@ -233,7 +254,7 @@ await host.send({ t: 'reveal', qid: 'q2' });
     'closest number (240 vs 236) banks');
   ok(!bySeat[0].correct && bySeat[0].banked === 0 && !bySeat[2].correct,
     'further numbers bank nothing');
-  ok(rev.scores[1] === 100, 'scores: [75, 100, 0]');
+  ok(rev.scores[1] === 100, 'scores: [125, 100, 0] (num questions never quick-draw)');
 }
 
 // ---- Q3: Cut Two spends the token; one cut per question ----
@@ -258,9 +279,9 @@ await host.send({ t: 'reveal', qid: 'q3' });
   const rev = P[0].last('reveal');
   const bySeat = Object.fromEntries(rev.results.map((r) => [r.seat, r]));
   ok(rev.value === 200, 'round 2 multiplier doubles the value ($200)');
-  ok(bySeat[0].banked === 200 && bySeat[2].banked === 200 && bySeat[1].banked === 0,
-    'both correct players bank; scores [275, 100, 200]');
-  ok(rev.scores[0] === 275 && rev.scores[1] === 100 && rev.scores[2] === 200, 'scores confirmed');
+  ok(bySeat[0].banked === 300 && bySeat[2].banked === 200 && bySeat[1].banked === 0,
+    'both correct players bank; the first correct receipt (seat 0) adds the round-2 $100 quick-draw; scores [425, 100, 200]');
+  ok(rev.scores[0] === 425 && rev.scores[1] === 100 && rev.scores[2] === 200, 'scores confirmed');
 }
 
 // ---- Q4: a spent token stays spent on later questions ----
@@ -276,8 +297,12 @@ for (let i = 0; i < 3; i++) await P[i].send({ t: 'answer', qid: 'q4', pick: 0 })
 await host.send({ t: 'reveal', qid: 'q4' });
 {
   const rev = P[0].last('reveal');
-  ok(rev.scores[0] === 375 && rev.scores[1] === 200 && rev.scores[2] === 300,
-    'clean sweep banks $100 each; scores [375, 200, 300]');
+  /* Hot Streaks adjustment: this is seat 0's third straight MCQ bank
+   * (q1, q3, q4 — the num q2 in between is neutral), so the round-2
+   * $50 streak bonus rides their bank: 425 + 100 + 100 quick-draw
+   * + 50 = 675. Seats 1 and 2 are at streaks 1 and 2 — no bonus yet. */
+  ok(rev.scores[0] === 675 && rev.scores[1] === 200 && rev.scores[2] === 300,
+    'clean sweep banks $100 each, plus the round-2 $100 quick-draw and a $50 streak bonus (seat 0 third straight) to the first receipt; scores [675, 200, 300]');
 }
 
 // ---- Q5: finale bet phase — secret bets, bet x $100, no losses ----
@@ -308,10 +333,15 @@ await host.send({ t: 'reveal', qid: 'q5' });
   const rev = P[1].last('reveal');
   const bySeat = Object.fromEntries(rev.results.map((r) => [r.seat, r]));
   ok(rev.value === null, 'finale reveal has no drained value');
-  ok(bySeat[0].banked === 300, 'correct 3-chip bet banks bet x $100 = $300');
+  /* Hot Streaks: seat 0's bank is their fourth straight (q1, q3, q4,
+   * q5) — the round-3 $75, never bet-multiplied: 300 + 150 quick-
+   * draw + 75 = 525. Seat 2's bank is their third straight (q3,
+   * q4, q5): 100 + 75 = 175. Totals: seat 0 675 + 525 = 1200;
+   * seat 2 300 + 175 = 475. */
+  ok(bySeat[0].banked === 525, 'correct 3-chip bet banks bet x $100 = $300, plus the round-3 $150 quick-draw and a $75 streak bonus (fourth straight — the streak bonus is never bet-multiplied)');
   ok(bySeat[1].banked === 0 && rev.scores[1] === 200, 'wrong bet loses $0 — score untouched');
-  ok(bySeat[2].banked === 100, 'missing bet defaults to 1 chip ($100)');
-  ok(rev.scores[0] === 675 && rev.scores[2] === 400, 'scores [675, 200, 400]');
+  ok(bySeat[2].banked === 175, 'missing bet defaults to 1 chip ($100), plus a $75 streak bonus (third straight)');
+  ok(rev.scores[0] === 1200 && rev.scores[2] === 475, 'scores [1200, 200, 475]');
 }
 
 // ---- Q6: the window auto-closes at the deadline ----
@@ -325,7 +355,7 @@ await P[2].send({ t: 'ping' });
   const rev = P[0].last('reveal');
   ok(rev && rev.qid === 'q6' && rev.value === 50,
     'expired window auto-closes: reveal broadcast at the 50% floor');
-  ok(rev.scores[0] === 675 && rev.scores[1] === 200 && rev.scores[2] === 400,
+  ok(rev.scores[0] === 1200 && rev.scores[1] === 200 && rev.scores[2] === 475,
     'auto-close banks nothing (no answers), scores unchanged');
   ok((P[2].last('pong') || {}).t === 'pong', 'the triggering message still gets its reply');
 }
@@ -349,7 +379,19 @@ ok((P[0].last('pong') || {}).t === 'pong', 'malformed message ignored; room stil
   const st = back.lastState();
   ok(st.players[1].score === 200 && st.players[1].connected === true,
     'reclaimed seat keeps its score');
+  ok(st.players[1].avatar === 1, 'reclaim without an avatar field preserves the stored avatar');
   P[1] = back;
+  await inst.webSocketClose(back.serverWs);
+  inst.ctx._sockets.splice(inst.ctx._sockets.indexOf(back.serverWs), 1);
+  const back2 = await connect(code);
+  await back2.send({ t: 'hello', role: 'player', reclaimToken: tokens[1], avatar: 6 });
+  ok(back2.lastState().players[1].avatar === 6, 'reclaim with an avatar field updates the stored avatar');
+  await inst.webSocketClose(back2.serverWs);
+  inst.ctx._sockets.splice(inst.ctx._sockets.indexOf(back2.serverWs), 1);
+  const back3 = await connect(code);
+  await back3.send({ t: 'hello', role: 'player', reclaimToken: tokens[1] });
+  ok(back3.lastState().players[1].avatar === 6, 'a later reclaim without the field keeps the updated avatar');
+  P[1] = back3;
 }
 {
   const stranger = await connect(code);
@@ -361,8 +403,8 @@ ok((P[0].last('pong') || {}).t === 'pong', 'malformed message ignored; room stil
 await host.send({ t: 'end_show' });
 {
   const ended = P[0].last('ended');
-  ok(ended && ended.scores[0] === 675 && ended.scores[1] === 200 && ended.scores[2] === 400,
-    'end_show broadcasts final scores [675, 200, 400]');
+  ok(ended && ended.scores[0] === 1200 && ended.scores[1] === 200 && ended.scores[2] === 475,
+    'end_show broadcasts final scores [1200, 200, 475]');
   ok(P[0].lastState().phase === 'ended', 'room lands in the ended phase');
 }
 

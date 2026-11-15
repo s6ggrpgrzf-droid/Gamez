@@ -73,6 +73,7 @@ const server = http.createServer((req, res) => {
      grammar mirrors drive-memory's proven loop */
   async function playUntil(page, stopWhen, collect) {
     let jumped = false, guard = 0;
+    const actedKeys = new Set();
     while (guard++ < 900) {
       const s = await S(page);
       if (!s) throw new Error('game state lost');
@@ -95,14 +96,42 @@ const server = http.createServer((req, res) => {
         await page.evaluate(() => { const g = window.__game.G; if (g && g.cur) g.cur.elapsed = 5; });
         const isBluff = await page.evaluate(() => { const g = window.__game.G; return !!(g && g.cur && g.cur.kind === 'bluff' && !g.cur.bluffDealt); });
         if (isBluff) { await page.tap('#btnDealBluff'); await sleep(200); continue; }
-        await page.tap('#btnCallIt'); await sleep(170); continue;
+        /* Pass 8 grammar: answers go in on the desks — seat 0
+           takes the truth (or the closest keyed number), the
+           rest take live wrong ones, once per question */
+        const key = s.round + ':' + s.qInRound + ':' + s.kind;
+        if (actedKeys.has(key)) { await sleep(170); continue; }
+        actedKeys.add(key);
+        const acted = await page.evaluate(() => {
+          const g = window.__game.G;
+          if (!g || !g.cur) return 'none';
+          if (g.cur.kind === 'num') return 'num';
+          if (!g.cur.opts) return 'none';
+          const ok = g.cur.opts.findIndex(o => o.ok);
+          if (ok < 0) return 'none';
+          const out = [];
+          for (let seat = 0; seat < g.players.length; seat++) {
+            if (g.players[seat].house != null) continue;
+            const oi = seat === 0 ? ok : g.cur.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat);
+            if (oi >= 0) out.push(seat + '|' + oi);
+          }
+          return 'chips:' + out.join(',');
+        });
+        if (acted === 'num') {
+          let g2 = 0;
+          while (g2++ < 12) {
+            const st = await page.evaluate(() => { const g = window.__game.G; return g && g.cur ? { phase: g.phase, turn: g.cur.guessTurn, truth: g.cur.q ? g.cur.q.num : null } : null; });
+            if (!st || st.phase !== 'question' || st.turn == null || st.turn < 0) break;
+            const target = st.turn === 0 ? st.truth : st.truth + 400 + st.turn * 137;
+            for (const ch of String(target)) { await page.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(30); }
+            await page.tap('#btnNumLock').catch(() => {}); await sleep(150);
+          }
+        } else if (acted.indexOf('chips:') === 0 && acted.length > 6) {
+          for (const sel of acted.slice(6).split(',')) { await page.tap('[data-pick="' + sel + '"]').catch(() => {}); await sleep(80); }
+        }
+        await sleep(170); continue;
       }
-      if (s.phase === 'vote') {
-        const bluffTruth = await page.evaluate(() => { const g = window.__game.G; return (g && g.cur && g.cur.kind === 'bluff' && g.cur.opts) ? g.cur.opts.findIndex(o => o.ok) : -1; });
-        if (bluffTruth >= 0) { await page.tap('.bluff-pick[data-opt="' + bluffTruth + '"]'); await sleep(130); }
-        await page.tap('.seat[data-seat="0"]'); await sleep(130);
-        await page.tap('#btnReveal'); await sleep(200); continue;
-      }
+      if (s.phase === 'vote' || s.phase === 'vote-count') { await sleep(180); continue; }
       if (s.phase === 'reveal') {
         if (!jumped && s.round === 1) { await page.evaluate(() => { const g = window.__game.G; g.qInRound = 5; }); jumped = true; }
         await page.tap('#btnNext'); await sleep(200); continue;
@@ -136,36 +165,43 @@ const server = http.createServer((req, res) => {
   check('S1: the first break stands with the vote open — panel, three plaques, CALL IT, and BEGIN held back',
     atBreak.panel && atBreak.plaques === 3 && atBreak.call && !atBreak.begin, JSON.stringify(atBreak));
   check('S1: Sterling opens the vote from the eravote pool', await poolHas(page, 'eravote'));
-  await page.tap('.era-plaque[data-era="90s"]'); await sleep(250);
-  await page.tap('.era-plaque[data-era="90s"]'); await sleep(250);
-  await page.tap('.era-plaque[data-era="80s"]'); await sleep(250);
+  /* Pass 8 grammar: the ballots are cast on the desks — Ana and
+     Bo for the '90s (era index 1); the plaques are the scoreboard */
+  await page.tap('[data-eravote="0|1"]'); await sleep(250);
+  await page.tap('[data-eravote="1|1"]'); await sleep(250);
   let st = await S(page);
   const domCounts = await page.evaluate(() => [...document.querySelectorAll('.era-plaque .era-count')].map(e => e.textContent));
-  check('S1: plaque taps tally in the state and on the plaques (80s 1 · 90s 2 · 00s —)',
-    JSON.stringify(st.counts) === '[1,2,0]' && JSON.stringify(domCounts) === '["1","2","—"]',
+  check('S1: desk ballots tally in the state and on the plaques (80s — · 90s 2 · 00s —)',
+    JSON.stringify(st.counts) === '[0,2,0]' && JSON.stringify(domCounts) === '["—","2","—"]',
     'state=' + JSON.stringify(st.counts) + ' dom=' + JSON.stringify(domCounts));
   await page.screenshot({ path: SHOTS + '/era-vote-port.png' });
   await page.setViewport({ width: 844, height: 390 }); await sleep(350);
   await page.screenshot({ path: SHOTS + '/era-vote-land.png' });
   await page.setViewport({ width: 390, height: 844 }); await sleep(250);
-  await page.tap('#btnEraReset'); await sleep(250);
+  /* a change of mind moves the ballot — there is no reset, the
+     desk simply votes again */
+  await page.tap('[data-eravote="0|0"]'); await sleep(250);
   st = await S(page);
-  check('S1: START THE COUNT AGAIN zeroes the tally', JSON.stringify(st.counts) === '[0,0,0]', JSON.stringify(st.counts));
-  /* one vote back on, then prove the count survives a refresh */
-  await page.tap('.era-plaque[data-era="90s"]'); await sleep(250);
+  check('S1: a change of mind moves the ballot (80s 1 · 90s 1)', JSON.stringify(st.counts) === '[1,1,0]', JSON.stringify(st.counts));
+  await page.tap('[data-eravote="0|1"]'); await sleep(250);
+  st = await S(page);
+  check('S1: and back again (80s — · 90s 2)', JSON.stringify(st.counts) === '[0,2,0]', JSON.stringify(st.counts));
+  /* prove the count survives a refresh, ballots and all */
   await page.reload({ waitUntil: 'load', timeout: 60000 }); await sleep(600);
   await page.tap('#btnResumeShow'); await sleep(700);
   st = await S(page);
-  check('S1: a mid-count refresh resumes the count exactly — one 90s vote standing, the call still open',
-    st.phase === 'intermission' && JSON.stringify(st.counts) === '[0,1,0]' && !st.eraCalled, JSON.stringify(st));
-  await page.tap('.era-plaque[data-era="90s"]'); await sleep(250);
-  await page.tap('#btnEraCall'); await sleep(400);
+  check('S1: a mid-count refresh resumes the count exactly — two 90s ballots standing, the call still open',
+    st.phase === 'intermission' && JSON.stringify(st.counts) === '[0,2,0]' && !st.eraCalled, JSON.stringify(st));
+  /* Cy's '80s ballot completes the house — Sterling calls it
+     himself, no hand on the CALL IT button */
+  await page.tap('[data-eravote="2|0"]'); await sleep(250);
+  for (let i = 0; i < 30; i++) { st = await S(page); if (st.eraCalled) break; await sleep(300); }
   st = await S(page);
   const done = await page.evaluate(() => {
     const d = document.querySelector('.era-done');
     return { era: window.__game.G.era, result: d ? d.textContent.replace(/\s+/g, ' ') : null, begin: !!document.getElementById('btnBreakGo') };
   });
-  check('S1: CALL IT settles the count — era is the 90s, the verdict strip names it, BEGIN is restored',
+  check('S1: the full house settles the count — era is the 90s, the verdict strip names it, BEGIN is restored',
     st.eraCalled && done.era === '90s' && !!done.result && done.result.indexOf("THE '90S") >= 0 && done.begin,
     JSON.stringify(done));
   check('S1: Sterling delivers the verdict from the erawin pool', await poolHas(page, 'erawin', { era: "the '90s" }));
@@ -202,9 +238,10 @@ const server = http.createServer((req, res) => {
   const p3 = await freshPage(390, 844);
   await p3.evaluate(() => window.__game.startShow(['Ana', 'Bo']));
   await playUntil(p3, s => s.phase === 'intermission');
-  await p3.tap('.era-plaque[data-era="80s"]'); await sleep(250);
-  await p3.tap('.era-plaque[data-era="90s"]'); await sleep(250);
-  await p3.tap('#btnEraCall'); await sleep(400);
+  await p3.tap('[data-eravote="0|0"]'); await sleep(250);
+  await p3.tap('[data-eravote="1|1"]'); await sleep(250);
+  /* both desks in — Sterling calls the tie himself */
+  for (let i = 0; i < 30; i++) { st = await S(p3); if (st.eraCalled) break; await sleep(300); }
   st = await S(p3);
   const tieOk = st.era === '80s' || st.era === '90s';
   const tieLine = tieOk && await poolHas(p3, 'eratie', { era: st.era === '80s' ? "the '80s" : "the '90s" });

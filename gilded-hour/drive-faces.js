@@ -123,17 +123,27 @@ const HUMAN = (n, c, s) => ({ name: n, color: c, score: s, cut: 1, bet: 1, strea
   await page.tap('#btnDealBluff');
   await sleep(600);
   const truthIx = await page.evaluate(() => window.__game.G.cur.opts.findIndex(o => o.ok));
-  await page.tap('#btnCallIt');
-  await page.waitForSelector('.bluff-pick', { timeout: 9000 });
-  await page.tap('.bluff-pick[data-opt="' + truthIx + '"]');
-  await sleep(150);
-  await page.tap('.seat[data-seat="0"]');
+  /* Pass 8 grammar: the pick goes in on Ana's own desk — and the
+     question only settles when every desk is in, so Bo and Cy
+     pick a live wrong lie each; the reveal then hangs the
+     voters' chips on the slabs they chose */
+  await page.tap('[data-pick="0|' + truthIx + '"]');
+  const others = await page.evaluate(() => {
+    const g = window.__game.G;
+    return [1, 2].map(seat => seat + '|' + g.cur.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat));
+  });
+  for (const sel of others) { await page.tap('[data-pick="' + sel + '"]'); await sleep(150); }
+  await page.waitForSelector('.bluff-pick .vote-chip', { timeout: 20000 });
   await sleep(300);
-  const chips = await page.evaluate(() => ({
-    n: document.querySelectorAll('.bluff-pick .vote-chip').length,
-    medallions: document.querySelectorAll('.bluff-pick .vote-chip svg.medallion').length,
-    letter: (document.querySelector('.bluff-pick .vote-chip svg.medallion text') || {}).textContent || null
-  }));
+  const chips = await page.evaluate((t) => {
+    const slab = document.querySelector('.bluff-pick[data-opt="' + t + '"]');
+    const chip = slab ? slab.querySelector('.vote-chip') : null;
+    return {
+      n: chip ? 1 : 0,
+      medallions: chip && chip.querySelector('svg.medallion') ? 1 : 0,
+      letter: chip ? ((chip.querySelector('svg.medallion text') || {}).textContent || null) : null
+    };
+  }, truthIx);
   check('Bluff mark: the vote chip wears a medallion', chips.n === 1 && chips.medallions === 1, JSON.stringify(chips));
   check('Bluff mark: the chip\'s medallion carries the voter\'s initial', chips.letter === 'A', 'letter=' + chips.letter);
 

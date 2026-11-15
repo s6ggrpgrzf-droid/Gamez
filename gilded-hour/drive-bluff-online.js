@@ -81,10 +81,19 @@ function hostStub() {
           this.deliver(this.state('invent', q, null));
           const q2 = Object.assign({}, q, { fakesIn: 1 });
           setTimeout(() => this.deliver(this.state('invent', q2, null)), 800);
+          /* Pass 8 grammar: the second pad's lie lands too — and
+             with every lie in, the host screen deals it itself */
+          const q3 = Object.assign({}, q, { fakesIn: 2 });
+          setTimeout(() => this.deliver(this.state('invent', q3, null)), 1700);
           return;
         }
         this._q = { qid: m.qid, round: m.round, kind: m.kind, category: m.category || 'Movies', answersCount: 4, baseValue: m.baseValue || 200, multiplier: 1, headline: false, band: m.band || null, windowMs: m.deadlineMs || 20000, openedAt: Date.now(), deadline: Date.now() + (m.deadlineMs || 20000), betted, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [] };
         this.deliver(this.state('answer', this._q, null));
+        /* Pass 8 grammar: both pads answer — in the room's real
+           protocol that lands as a {t:'counts'} note, and the
+           host screen closes the window itself on it */
+        const qA = Object.assign({}, this._q, { answersIn: 2 });
+        setTimeout(() => { this.deliver(this.state('answer', qA, null)); this.deliver({ t: 'counts', answersIn: 2 }); }, 900);
       }
       if (m.t === 'bluff_deal' && this._bluff) {
         const opts = ['A brass teaspoon', this._bluff.truth, 'A singing kettle'];
@@ -92,6 +101,10 @@ function hostStub() {
         this._q = q;
         this.deliver({ t: 'bluff_options', qid: q.qid, options: opts });
         this.deliver(this.state('answer', q, null));
+        /* both pads pick — the counts note lands, and the host
+           screen closes the window itself (Pass 8 grammar) */
+        const qA = Object.assign({}, q, { answersIn: 2 });
+        setTimeout(() => { this.deliver(this.state('answer', qA, null)); this.deliver({ t: 'counts', answersIn: 2 }); }, 1100);
       }
       if (m.t === 'reveal' && this._q) {
         const q = this._q;
@@ -219,13 +232,26 @@ function padStub(bluffId, truth) {
           await sleep(150);
         }
         check('H: the invent stage shows the prompt and counts the lies in', lies === '1', 'lies=' + lies);
-        await page.tap('#ogDealBluff'); await sleep(700);
-        const dealt = await page.evaluate(() => {
-          const btns = Array.from(document.querySelectorAll('#stage .ans-btn')).map(b => b.textContent.replace(/\s+/g, ' '));
-          return { ph: window.__online.OG.phase, n: btns.length, has: btns.some(t => t.indexOf('brass teaspoon') >= 0) };
-        });
-        check('H: DEAL moves the room to the dealt answers on the big screen', dealt.ph === 'answer' && dealt.n === 3 && dealt.has, JSON.stringify(dealt));
-        await page.tap('#ogCallIt'); await sleep(800);
+        /* Pass 8 grammar: no DEAL button — when the last lie
+           lands the room deals itself; wait for the answers */
+        let dealt = null;
+        for (let i = 0; i < 40; i++) {
+          dealt = await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('#stage .ans-btn')).map(b => b.textContent.replace(/\s+/g, ' '));
+            return { ph: window.__online.OG.phase, n: btns.length, has: btns.some(t => t.indexOf('brass teaspoon') >= 0) };
+          });
+          if (dealt.ph === 'answer') break;
+          await sleep(250);
+        }
+        check('H: the dealt answers arrive on the big screen by themselves', dealt.ph === 'answer' && dealt.n === 3 && dealt.has, JSON.stringify(dealt));
+        /* the pads' picks land (the counts note at +1.1s), the
+           all-in grace runs, and the window closes itself — poll
+           for the reveal's accounting instead of guessing a wait */
+        for (let i = 0; i < 40; i++) {
+          const up = await page.evaluate(() => !!document.querySelector('.bluff-credit'));
+          if (up) break;
+          await sleep(250);
+        }
         const fin = await page.evaluate(() => {
           const rows = Array.from(document.querySelectorAll('.bluff-credit')).map(r => r.textContent.replace(/\s+/g, ' '));
           const tag = document.querySelector('.seat[data-seat="0"] .blufftag');

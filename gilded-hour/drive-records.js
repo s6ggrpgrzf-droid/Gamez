@@ -67,6 +67,8 @@ const server = http.createServer((req, res) => {
     if (!g) return null;
     return {
       phase: g.phase, round: g.round, qInRound: g.qInRound, showId: g.showId,
+      kind: g.cur ? g.cur.kind : null,
+      truth: g.cur && g.cur.q ? g.cur.q.num : null, guessTurn: g.cur ? g.cur.guessTurn : null,
       scores: g.players.map(p => p.score),
       /* Audit A1: the Table Pot at the finale — D1 pays it to the
          champion INSIDE the record, so expectations carry it */
@@ -89,6 +91,7 @@ const server = http.createServer((req, res) => {
      record hangs off is reached genuinely either way). */
   async function playShow(opts) {
     let jumped = false, guard = 0;
+    const actedKeys = new Set();
     while (guard++ < 700) {
       const s = await S();
       if (!s) throw new Error('game state lost');
@@ -102,16 +105,37 @@ const server = http.createServer((req, res) => {
         /* THE BLUFF (pass 2): the slot opens on the invent stage — deal first */
         const isBluff = await page.evaluate(() => { const g = window.__game.G; return !!(g && g.cur && g.cur.kind === 'bluff' && !g.cur.bluffDealt); });
         if (isBluff) { await page.tap('#btnDealBluff'); await sleep(220); continue; }
-        await page.tap('#btnCallIt'); await sleep(180); continue;
+        /* Pass 8 grammar: the win seat answers right on their own
+           desk, every other seat answers wrong, once per question */
+        const key = s.round + ':' + s.qInRound + ':' + s.kind;
+        if (actedKeys.has(key)) { await sleep(180); continue; }
+        actedKeys.add(key);
+        if (s.kind === 'num') {
+          let g2 = 0;
+          while (g2++ < 12) {
+            const st = await S();
+            if (!st || st.phase !== 'question' || st.guessTurn == null || st.guessTurn < 0) break;
+            const target = st.guessTurn === opts.winSeat ? st.truth : st.truth + 400 + st.guessTurn * 137;
+            for (const ch of String(target)) { await page.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(30); }
+            await page.tap('#btnNumLock').catch(() => {}); await sleep(150);
+          }
+        } else {
+          const plan = await page.evaluate((winSeat) => {
+            const g = window.__game.G;
+            if (!g || !g.cur || !g.cur.opts) return [];
+            const ok = g.cur.opts.findIndex(o => o.ok);
+            const out = [];
+            for (let seat = 0; seat < g.players.length; seat++) {
+              const oi = seat === winSeat ? ok : g.cur.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat);
+              if (oi >= 0) out.push(seat + '|' + oi);
+            }
+            return out;
+          }, opts.winSeat);
+          for (const sel of plan) { await page.tap('[data-pick="' + sel + '"]').catch(() => {}); await sleep(90); }
+        }
+        await sleep(180); continue;
       }
-      if (s.phase === 'vote') {
-        /* THE BLUFF: the win seat takes the truth plaque first,
-           then its seat tap lands like any other mark */
-        const bluffTruth = await page.evaluate(() => { const g = window.__game.G; return (g && g.cur && g.cur.kind === 'bluff' && g.cur.opts) ? g.cur.opts.findIndex(o => o.ok) : -1; });
-        if (bluffTruth >= 0) { await page.tap('.bluff-pick[data-opt="' + bluffTruth + '"]'); await sleep(150); }
-        await page.tap('.seat[data-seat="' + opts.winSeat + '"]'); await sleep(150);
-        await page.tap('#btnReveal'); await sleep(220); continue;
-      }
+      if (s.phase === 'vote' || s.phase === 'vote-count') { await sleep(180); continue; }
       if (s.phase === 'reveal') {
         if (opts.jump && !jumped && s.round === 1 && s.qInRound === 0) {
           await page.evaluate(() => { const g = window.__game.G; g.round = 3; g.qInRound = 1; });
@@ -356,6 +380,12 @@ const server = http.createServer((req, res) => {
             window.__bluffTruth = m.bluffTruth;
             window.__bluffQ = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
             deliver({ t: 'state', state: state('invent', { question: window.__bluffQ }) });
+            /* Pass 8 grammar: both pads' lies land — the host
+               screen deals it itself when the snapshot says so */
+            setTimeout(() => {
+              window.__bluffQ = Object.assign({}, window.__bluffQ, { fakesIn: 2 });
+              deliver({ t: 'state', state: state('invent', { question: window.__bluffQ }) });
+            }, 900);
             return;
           }
           if (m.t === 'bluff_deal' && window.__bluffQ) {

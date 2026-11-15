@@ -33,9 +33,11 @@
  *   code running on the effective figures.
  *
  *   The Quick-Draw (Design pass 3): on a 'normal' question, the
- *   first CORRECT answer by server receipt pockets a flat $50 on
- *   top of its banked amount at reveal — never scaled by the round
- *   multiplier, the Headline x2, or a Big Finish bet. Receipt is
+ *   first CORRECT answer by server receipt pockets the quick-draw
+ *   bonus on top of its banked amount at reveal — the base $50
+ *   scaled by the ROUND (review Pass 5: $50/$100/$150), never by
+ *   the value multiplier, the Headline x2, or a Big Finish bet.
+ *   The paid figure rides the result as quickDrawBonus. Receipt is
  *   recorded here as an order list (q.pickOrder): every accepted
  *   pick moves its seat to the back, so the order that counts is
  *   the order in which the answers the players STAND ON arrived —
@@ -118,12 +120,14 @@
  *   one; missing resets it to zero. Guess kinds ('survey', 'num')
  *   are NEUTRAL — they neither build nor break a run — and a
  *   decider never touches one. From the bank that REACHES 3 onward,
- *   every consecutive bank adds a flat STREAK_BONUS ($25) to that
- *   result's banked figure: never scaled by the round multiplier,
- *   the Headline x2, or a Big Finish bet (a bet question banks
- *   bet x $100 + $25, not bet x $125). Each result entry carries
+ *   every consecutive bank adds the STREAK_BONUS to that result's
+ *   banked figure: the base $25 scaled by the ROUND (review
+ *   Pass 5: $25/$50/$75), never by the value multiplier, the
+ *   Headline x2, or a Big Finish bet (a bet question banks
+ *   bet x $100 + the round's bonus, not a multiplied bonus).
+ *   Each result entry carries
  *   the run's outcome — streak (the count after this question) and
- *   streakBonus (0 or 25) — so host and pads paint from the payload
+ *   streakBonus (0 or the round's figure) — so host and pads paint from the payload
  *   and never recompute money; the reveal also names at most one
  *   streakMoment ({type:'reach3'|'reach5'|'death', seat, n}): the
  *   single threshold event Sterling speaks for this reveal, chosen
@@ -280,8 +284,8 @@ export const BET_PAYOUT = 100; // one chip is worth $100 in the finale
 export const BASE_BET_CAP = 3;
 export const MAX_BET_CAP = 5;
 export const LONG_SHOT_STEP = 1000;
-export const QUICK_DRAW_BONUS = 50; // flat, on a 'normal' question's first correct receipt
-export const STREAK_BONUS = 25; // flat, per bank once a streak reaches STREAK_MIN
+export const QUICK_DRAW_BONUS = 50; // base, on a 'normal' question's first correct receipt — paid x the round (review Pass 5: $50/$100/$150)
+export const STREAK_BONUS = 25; // base, per bank once a streak reaches STREAK_MIN — paid x the round ($25/$50/$75)
 export const STREAK_MIN = 3; // banks in a row before the bonus starts paying
 export const STREAK_DEATH_MIN = 4; // a dying run of this length or more earns a named moment
 export const BLUFF_FOOL = 25; // THE BLUFF (research programme pass 2): per player a lie fools, paid by the house
@@ -520,7 +524,7 @@ export function snapshotFor(room, view) {
        * through cutCountOf), and cutCount rides beside it as the
        * number, so a screen that knows the count reads the count
        * and a screen that doesn't reads exactly what it always did */
-      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, vsRound: p.vsRound || 0, connected: p.connected, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, vsRound: p.vsRound || 0, connected: p.connected, ready: !!p.ready, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
     /* The Table Pot (D1): the running total, public from the
@@ -717,9 +721,11 @@ export function closeQuestion(room) {
     }
     if (quickDrawSeat !== null) {
       const winEntry = results.find((e) => e.seat === quickDrawSeat);
-      winEntry.banked += QUICK_DRAW_BONUS;
+      const qdAmt = QUICK_DRAW_BONUS * (q.round || 1);
+      winEntry.banked += qdAmt;
       winEntry.quickDraw = true;
-      room.players[quickDrawSeat].score += QUICK_DRAW_BONUS;
+      winEntry.quickDrawBonus = qdAmt;
+      room.players[quickDrawSeat].score += qdAmt;
     }
   }
   /* Hot Streaks (New programme pass 3): settled here, once, with
@@ -746,9 +752,9 @@ export function closeQuestion(room) {
         p.streak = nowStreak;
         entry.streak = nowStreak;
         if (nowStreak >= STREAK_MIN) {
-          entry.streakBonus = STREAK_BONUS;
-          entry.banked += STREAK_BONUS;
-          p.score += STREAK_BONUS;
+          entry.streakBonus = STREAK_BONUS * (q.round || 1);
+          entry.banked += entry.streakBonus;
+          p.score += entry.streakBonus;
         }
         if (before < 5 && nowStreak >= 5) cands.push({ type: 'reach5', seat: entry.seat, n: nowStreak });
         else if (before < STREAK_MIN && nowStreak >= STREAK_MIN) cands.push({ type: 'reach3', seat: entry.seat, n: nowStreak });
@@ -955,6 +961,7 @@ export function handleHello(room, msg) {
       dbl: true, // THE DOUBLE (designer pass 3): one token per player per show, in hand from the start, spendable from Round 2
       vsRound: 0, // AGAINST THE ROOM (designer pass 4): the round the gauntlet was last thrown in (0 = never)
       connected: true,
+      ready: false, // Review Pass 8 (2026-11-14): the lobby's word — when every connected phone is ready, the show starts itself
       avatar: cleanAvatar(msg.avatar, seat),
       streak: 0,
     };
@@ -1004,6 +1011,9 @@ export function handleHostMessage(room, msg) {
       }
       const kind = msg.kind;
       if (kind !== 'normal' && kind !== 'survey' && kind !== 'num' && kind !== 'bluff') return fail('Unknown question kind.');
+      /* Pass 8: the first publish out of the lobby spends the
+       * room's ready flags — the show they summoned is running */
+      if (room.phase === 'lobby') room.players.forEach((pl) => { if (pl) pl.ready = false; });
       /* The Decider rides this same publish path — no parallel
        * channel — but its two extra fields are validated as hard
        * as any secret: the kind must be 'num' (closest number is
@@ -1317,6 +1327,15 @@ export function handlePlayerMessage(room, seat, msg) {
   switch (msg.t) {
     case 'ping':
       return ok({ to: [{ dest: seat, msg: { t: 'pong' } }] });
+    case 'ready': {
+      /* Review Pass 8: a phone's lobby word. It only speaks in
+       * the lobby — once the show is running the flags are spent
+       * (the first publish clears them) and a stray ready is a
+       * no-op the room politely ignores. */
+      if (room.phase !== 'lobby') return ok({});
+      p.ready = !!msg.ready;
+      return ok({ state: true, changed: true });
+    }
     case 'bluff': {
       /* THE BLUFF: a pad submits its seat's lie during the
        * collecting window. One lie per seat, replaceable until

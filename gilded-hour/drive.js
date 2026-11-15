@@ -1,6 +1,8 @@
-/* Gilded Hour Pass B — full-show drive of the NEW format with real taps.
-   One verb (answer), finger-vote tap-ins, one Cut Two, closest-number flow,
-   Big Finish bets. 10 checks, all mapped to the Pass B spec. */
+/* Gilded Hour — full-show drive with real taps.
+   Pass 8 grammar: no host — answers go in on the desks (pick chips
+   for option questions, the seat-order keypad for numbers), the
+   Bluff is dealt from its invent stage and picked on desks, the
+   era is called from the break, Big Finish bets on the desks. */
 const { launchBrowser } = require('./rig');
 const fs = require('fs');
 const SHOTS = '/home/hatch/workspace/gilded-hour/shots';
@@ -29,10 +31,25 @@ const round10 = n => Math.max(0, Math.round(n / 10) * 10);
       kind: g.cur ? g.cur.kind : null, value: g.cur ? g.cur.value : 0,
       bluffDealt: g.cur ? !!g.cur.bluffDealt : false,
       clockTotal: g.cur ? g.cur.clockTotal : 0, betRound: g.cur ? !!g.cur.betRound : false,
-      opts: g.cur && g.cur.opts ? g.cur.opts.map(o => ({ t: o.t, ok: !!o.ok, gone: !!o.gone })) : null,
+      truth: g.cur && g.cur.q ? g.cur.q.num : null,
+      picks: g.cur ? (g.cur.picks || null) : null,
+      bluffPicks: g.cur ? (g.cur.bluffPicks || null) : null,
+      guessTurn: g.cur ? g.cur.guessTurn : null,
+      bankValue: g.cur ? g.cur.bankValue : null,
+      streakBonus0: g.cur && g.cur.streakFx && g.cur.streakFx[0] ? g.cur.streakFx[0].bonus : null,
+      opts: g.cur && g.cur.opts ? g.cur.opts.map(o => ({ t: o.t, ok: !!o.ok, gone: !!o.gone, by: o.by != null ? o.by : -1 })) : null,
     };
   });
   const clockLeft = () => page.evaluate(() => window.__game.clock.left);
+  /* the desks rebuild on every pick and the keypad on every key —
+     a tap resolved a breath before a rebuild lands on a detached
+     node; re-resolve and tap again (still a real tap) */
+  const tapSel = async (sel) => {
+    for (let a = 0; a < 4; a++) {
+      try { await page.tap(sel); return; }
+      catch (e) { if (!/detached/i.test(e.message) || a === 3) throw e; await sleep(180); }
+    }
+  };
   const retiredScan = () => page.evaluate(() => {
     const bad = [];
     ['#needleFx', '[data-needle]', '#toolTable', '#toolClock', '#cover', '.steal-bar', '#wagerRange', '[data-w]', '[data-vans]', '#btnWager', '.cat-tile'].forEach(sel => {
@@ -50,7 +67,7 @@ const round10 = n => Math.max(0, Math.round(n / 10) * 10);
   await page.waitForSelector('#btnRoundGo', { timeout: 8000 });
 
   const retiredHits = new Set();
-  let guessCount = 0, countedQ = '';
+  let guessCount = 0, countedQ = '', actedQ = '';
   let plan = null;           // per-question assertion plan
   let didCut = false, numChecked = false, toolsChecked = false;
   let betsSet = false;
@@ -93,8 +110,8 @@ const round10 = n => Math.max(0, Math.round(n / 10) * 10);
         if (s.round === 3 && s.qInRound === 0) plan = { type: 'finaleHit', mark: [0] };
         else if (s.round === 3 && s.qInRound === 1) plan = { type: 'finaleMiss', mark: [] };
         else if (s.kind === 'num' && s.round < 3 && !numChecked) plan = { type: 'num', mark: [1] };
-        else if (s.round === 2 && !didCut) plan = { type: 'cut', mark: [1] };
-        else if (s.round === 1 && s.qInRound === 0) plan = { type: 'bank', mark: [0] };
+        else if (s.round === 2 && !didCut && s.kind === 'mcq') plan = { type: 'cut', mark: [1] };
+        else if (s.round === 1 && s.qInRound === 0 && s.kind === 'mcq') plan = { type: 'bank', mark: [0] };
         else plan = { type: 'plain', mark: [0] };
       }
       if (plan.type === 'cut' && !didCut) {
@@ -104,71 +121,93 @@ const round10 = n => Math.max(0, Math.round(n / 10) * 10);
         check('Cut Two greys exactly two wrong answers and spends that player\'s token', gone === 2 && after.cuts[1] === 0 && after.cuts[0] === 1, 'gone=' + gone + ' cuts=' + JSON.stringify(after.cuts));
         didCut = true;
       }
-      if (plan.type === 'bank') {
-        // let the value drain to about half-time, then CALL IT
-        while ((await clockLeft()) > 10.3) await sleep(200);
-        const left = await clockLeft();
-        const elapsed = s.clockTotal - left;
-        plan.expected = round10(s.value * (0.5 + 0.5 * Math.max(0, Math.min(1, 1 - elapsed / s.clockTotal))));
-        plan.pre = (await S()).scores;
-      }
-      /* THE BLUFF (pass 2): the slot opens on the invent stage —
-         deal the answers first, then the usual CALL IT flow */
+      if (!plan.pre) plan.pre = (await S()).scores;
+      /* THE BLUFF: the slot opens on the invent stage — deal the
+         answers first, then pick on the desks like any question */
       if (s.kind === 'bluff' && !s.bluffDealt) {
         await page.tap('#btnDealBluff');
         await sleep(500);
         continue;
       }
-      await sleep(350);
-      await page.tap('#btnCallIt');
-      await sleep(250);
-      continue;
-    }
-    if (s.phase === 'vote-count') { await sleep(250); continue; }
-    if (s.phase === 'vote') {
-      if (!plan) plan = { type: 'plain', mark: [0] };
-      if (!plan.pre) plan.pre = s.scores;
-      if (s.kind === 'bluff') {
-        /* the bluff's mark screen: tap the truth plaque, then the
-           seats that picked it, then reveal */
-        const truthIx = s.opts ? s.opts.findIndex(o => o.ok) : -1;
-        if (truthIx >= 0) { await page.tap('.bluff-pick[data-opt="' + truthIx + '"]'); await sleep(200); }
+      if (s.kind === 'num') {
+        /* seat-order entry: the planned winner keys the truth,
+           the others key numbers safely far away */
+        let guardN = 0;
+        while (guardN++ < 12) {
+          const st = await S();
+          if (!st || st.phase !== 'question' || st.guessTurn == null || st.guessTurn < 0) break;
+          const seat = st.guessTurn;
+          const target = plan.mark.includes(seat) ? st.truth : st.truth + 400 + seat * 137;
+          for (const ch of String(target)) { await tapSel('[data-numk="' + ch + '"]'); await sleep(60); }
+          await tapSel('#btnNumLock');
+          await sleep(250);
+        }
+        continue;
       }
-      for (const seat of plan.mark) { await page.tap('.seat[data-seat="' + seat + '"]'); await sleep(200); }
-      await page.tap('#btnReveal');
+      if (plan.type === 'bank') {
+        // let the value drain to about half-time before the picks land
+        while ((await clockLeft()) > 10.3) await sleep(200);
+      }
+      /* a pick toggles — the sequence runs ONCE per question, or a
+         second pass would unpick what the first one locked */
+      if (actedQ === qkey) { await sleep(250); continue; }
+      actedQ = qkey;
+      /* desk picks: marked seats take the correct chip, everyone
+         else a live wrong one (the Bluff: never your own lie).
+         Each pick is verified from state and re-tapped if the tap
+         missed the chip — a human taps again when it doesn't light */
+      const okIx = s.opts ? s.opts.findIndex(o => o.ok) : -1;
+      for (let seat = 0; seat < 3; seat++) {
+        let oi;
+        if (plan.mark.includes(seat)) oi = okIx;
+        else {
+          const cand = s.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat);
+          oi = cand;
+        }
+        if (oi < 0) continue;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          await tapSel('[data-pick="' + seat + '|' + oi + '"]');
+          await sleep(200);
+          const st = await S();
+          if (!st || st.phase !== 'question') break;
+          const rec = s.kind === 'bluff' ? (st.bluffPicks && st.bluffPicks[seat]) : (st.picks && st.picks[seat] && st.picks[seat].opt);
+          if (rec === oi || (s.kind !== 'bluff' && rec != null && +rec === oi)) break;
+        }
+      }
       await sleep(300);
       continue;
     }
+    if (s.phase === 'vote-count') { await sleep(250); continue; }
+    if (s.phase === 'vote') { await sleep(250); continue; }
     if (s.phase === 'reveal') {
       if (plan && !plan.asserted) {
         plan.asserted = true;
         const now = (await S()).scores;
         if (plan.type === 'bank') {
           const gain = now[0] - plan.pre[0];
-          /* Design pass 3: seat 0 is the ONLY marker here, so they are
-             also the first (only) correct lock-in — the gain is the
-             drained value PLUS the flat $50 quick-draw. */
-          check('Correct player banks the drained value + the $50 quick-draw (sole correct lock-in)', Math.abs(gain - (plan.expected + 50)) <= 10 && now[1] === plan.pre[1] && now[2] === plan.pre[2],
-            'gain=' + gain + ' expected~' + (plan.expected + 50) + ' pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now));
+          /* Pass 8: seat 0 is the only correct desk pick, so they
+             are also the quick-draw — the gain is the question's
+             own banked value (read from its record) + $50 (R1). */
+          const stR = await S();
+          check('Correct player banks the drained value + the $50 quick-draw (sole correct lock-in)', gain === (stR.bankValue + 50) && stR.bankValue >= 40 && stR.bankValue <= 100 && now[1] === plan.pre[1] && now[2] === plan.pre[2],
+            'gain=' + gain + ' bankValue=' + stR.bankValue + ' pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now));
         } else if (plan.type === 'num') {
           check('Closest-number: tapped winner banks the value, others unchanged', now[1] > plan.pre[1] && now[0] === plan.pre[0] && now[2] === plan.pre[2],
             'pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now));
           numChecked = true;
         } else if (plan.type === 'finaleHit') {
-          /* Design pass 3: the 3-chip bank is still bet x $100 — the
-             extra $50 is the flat quick-draw (seat 0 sole marker).
-             Hot Streaks adjustment: seat 0's run entering the finale
-             is 3 (Round 2 banks at slots 1, 3 and 4 — the survey
-             slot 2 and the survey Headline are neutral, and the
-             Round 2 opener's cut plan, which marks seat 1, reset
-             the run seat 0 had built in Round 1), so this bank is
-             its 4th straight and carries the flat $25 streak bonus:
-             300 + 50 + 25 = 375. */
-          check('Big Finish: correct answer banks bet x $100 + the flat $50 quick-draw + a flat $25 streak bonus (never bet-scaled)', now[0] - plan.pre[0] === 375 && now[1] === plan.pre[1] && now[2] === plan.pre[2],
-            'pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now));
+          /* The 3-chip bank is bet x $100, never bet-scaled; on top
+             rides the round-scaled quick-draw (R3: $150 — seat 0 is
+             the sole correct pick) and whatever streak bonus the
+             question's own record says it paid (Pass 5 grammar). */
+          const stF = await S();
+          const expect = 300 + 150 + (stF.streakBonus0 || 0);
+          check('Big Finish: correct answer banks bet x $100 + the R3 $150 quick-draw + its recorded streak bonus (never bet-scaled)', now[0] - plan.pre[0] === expect && now[1] === plan.pre[1] && now[2] === plan.pre[2],
+            'gain=' + (now[0] - plan.pre[0]) + ' expect=' + expect + ' pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now));
         } else if (plan.type === 'finaleMiss') {
+          const stM = await S();
           check('Big Finish: a miss loses $0 (nobody can lose money)', JSON.stringify(now) === JSON.stringify(plan.pre),
-            'pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now));
+            'pre=' + JSON.stringify(plan.pre) + ' now=' + JSON.stringify(now) + ' kind=' + stM.kind + ' picks=' + JSON.stringify(stM.picks) + ' okIx=' + (stM.opts ? stM.opts.findIndex(o => o.ok) : -1));
         }
       }
       plan = null;

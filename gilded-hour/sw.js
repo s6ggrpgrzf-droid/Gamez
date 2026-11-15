@@ -1,60 +1,36 @@
 /* =====================================================================
-   THE GILDED HOUR — PARTY-PROOF SHELL (service worker)
-   After one online visit, the whole show loads and plays offline.
+   THE GILDED HOUR — KILL WORKER (Review Pass 7, 2026-11-14)
 
-   SCOPE: this file lives in the gilded-hour directory, so its default
-   (and maximum) scope IS that directory — a service worker can never
-   govern pages above its own folder without a Service-Worker-Allowed
-   header, which this static host does not send. The hub and every
-   sibling game sit outside the fence by construction.
+   The Party-Proof Shell is retired: the show plays ONLINE ONLY.
+   This file exists for one job — reaching browsers that still hold
+   a registration from the shell era and standing it down cleanly:
 
-   CACHE COUPLING — READ THIS BEFORE BUMPING ANYTHING:
-   BUILD below must match the game.js cache-bust in index.html
-   (game.js?v=80 <-> BUILD 74). Whenever a future pass bumps the
-   ?v= busts in index.html, bump BUILD here to the new game.js
-   number in the same commit. The cache name carries BUILD, so a
-   bumped build installs into a fresh cache and activate deletes
-   the old one — no stale shell can survive its own build.
+   - install: skipWaiting, so the kill lands on the first check-in.
+   - activate: delete every cache in the shell's own family
+     ("gilded-hour-shell-*"), unregister this registration, then
+     navigate every open client back to its own URL so the page it
+     is looking at reloads from the network, worker-free.
+   - no fetch handler, ever: this worker serves nothing.
 
-   UPDATE STRATEGY (no stale-forever trap):
-   - Navigations are NETWORK-FIRST: when the network answers, the
-     fresh page is served (and re-cached); the cache is only the
-     offline fallback.
-   - The shell assets are versioned by their ?v= URLs, so a new
-     build asks for new URLs; cache-first on an exact URL can never
-     hand an old file to a new build, and a miss is filled from the
-     network and runtime-cached.
-   - The browser re-checks this file on navigation; a changed sw.js
-     installs alongside, skipWaiting + clients.claim take over, and
-     activate sweeps every older gilded-hour cache.
+   The sweep is PREFIX-SCOPED on purpose. Caches are origin-wide,
+   and this origin hosts every sibling game on the hub; their
+   caches are theirs and are never touched here. Scope stays this
+   directory by this file's location, exactly as the shell's was.
+
+   The page side helps from the other direction: index.html no
+   longer registers anything and carries a small cleanup that
+   unregisters a lingering registration and sweeps the same cache
+   family, so a browser is reached whichever check-in comes first.
+   Once both have run, nothing about this file matters any more —
+   it stays in the repo as the standing answer to any old
+   registration that comes looking for sw.js.
    ===================================================================== */
 "use strict";
 
-var BUILD = 91; /* == the game.js?v= bust in index.html — keep coupled */
-var CACHE = "gilded-hour-shell-v" + BUILD;
 var PREFIX = "gilded-hour-shell-";
 
-/* The complete shell — the page requests exactly these same-origin
-   files at load and nothing else (audited: the display font is a
-   data: URI inside style.css; every illustration is inline SVG).
-   The three *.workers.dev endpoints are gameplay-time fetches that
-   fail soft in the game itself; they are cross-origin, are never
-   touched by this worker, and are deliberately NOT precached. */
-var PRECACHE = [
-  "./",
-  "index.html",
-  "style.css?v=96",
-  "questions.js?v=10",
-  "qr.js?v=1",
-  "game.js?v=91"
-];
-
-self.addEventListener("install", function (e) {
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(function (c) { return c.addAll(PRECACHE); })
-      .then(function () { return self.skipWaiting(); })
-  );
+self.addEventListener("install", function () {
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", function (e) {
@@ -62,57 +38,18 @@ self.addEventListener("activate", function (e) {
     caches.keys()
       .then(function (names) {
         return Promise.all(names.map(function (n) {
-          if (n.indexOf(PREFIX) === 0 && n !== CACHE) return caches.delete(n);
+          if (n.indexOf(PREFIX) === 0) return caches.delete(n);
           return null;
         }));
       })
-      .then(function () { return self.clients.claim(); })
-  );
-});
-
-self.addEventListener("fetch", function (e) {
-  var req = e.request;
-  if (req.method !== "GET") return;                       /* posts pass through */
-  var url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;        /* workers.dev etc.: untouched */
-
-  if (req.mode === "navigate") {
-    /* Network-first: a reachable new build is always the fresh one;
-       the cache answers only when the network cannot. */
-    e.respondWith(
-      fetch(req).then(function (resp) {
-        if (resp && resp.ok) {
-          var copy = resp.clone();
-          caches.open(CACHE).then(function (c) {
-            c.put("index.html", copy.clone());
-            c.put("./", copy);
-          });
-        }
-        return resp;
-      }).catch(function () {
-        return caches.match("index.html", { ignoreSearch: true })
-          .then(function (hit) { return hit || caches.match("./", { ignoreSearch: true }); });
+      .then(function () { return self.registration.unregister(); })
+      .then(function () { return self.clients.matchAll({ type: "window" }); })
+      .then(function (clients) {
+        clients.forEach(function (c) {
+          if (c.url && typeof c.navigate === "function") {
+            try { c.navigate(c.url); } catch (err) { /* a closing tab owes nothing */ }
+          }
+        });
       })
-    );
-    return;
-  }
-
-  /* Versioned shell assets: cache-first on the exact URL (the ?v=
-     bust makes a stale hit impossible for a new build); a miss is
-     fetched, runtime-cached, and — offline with only an older bust
-     in the cache — the older copy beats a hole in the show. */
-  e.respondWith(
-    caches.match(req).then(function (hit) {
-      if (hit) return hit;
-      return fetch(req).then(function (resp) {
-        if (resp && resp.ok) {
-          var copy = resp.clone();
-          caches.open(CACHE).then(function (c) { c.put(req, copy); });
-        }
-        return resp;
-      }).catch(function () {
-        return caches.match(req, { ignoreSearch: true });
-      });
-    })
   );
 });

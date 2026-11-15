@@ -83,6 +83,11 @@ function hostStub() {
         const betted = this._betQid === m.qid; this._betQid = null;
         this._q = { qid: m.qid, round: m.round, kind: m.kind, category: m.category || 'Movies', answersCount: 4, baseValue: m.baseValue || 200, multiplier: 1, headline: false, band: m.band || null, windowMs: m.deadlineMs || 20000, openedAt: Date.now(), deadline: Date.now() + (m.deadlineMs || 20000), betted, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [] };
         this.deliver(this.state('answer', this._q, null));
+        /* Pass 8 grammar: both pads answer — in the room's real
+           protocol that lands as a {t:'counts'} note, and the
+           host screen closes the window itself on it */
+        const q2 = Object.assign({}, this._q, { answersIn: 2 });
+        setTimeout(() => { this.deliver(this.state('answer', q2, null)); this.deliver({ t: 'counts', answersIn: 2 }); }, 900);
       }
       if (m.t === 'reveal' && this._q) {
         const q = this._q;
@@ -177,7 +182,7 @@ function padStub(calledEra) {
       const ph = await ogPhase();
       if (ph === 'intermission') { atBreak = true; break; }
       if (ph === 'intro') { await page.tap('#ogRoundGo').catch(() => {}); await sleep(350); continue; }
-      if (ph === 'answer') { await page.tap('#ogCallIt').catch(() => {}); await sleep(450); continue; }
+      if (ph === 'answer') { await sleep(450); continue; } /* no CALL IT anymore — the all-in snapshot closes it */
       if (ph === 'reveal') { await page.tap('#ogNext').catch(() => {}); await sleep(350); continue; }
       await sleep(250);
     }
@@ -207,7 +212,10 @@ function padStub(calledEra) {
       !!tally && tally.counts[1] === '2' && tally.mirror && tally.mirror[0] === '90s' && tally.mirror[1] === '90s',
       JSON.stringify(tally));
     await page.screenshot({ path: SHOTS + '/era-og-panel-land.png' });
-    await page.tap('#ogEraCall'); await sleep(600);
+    /* Pass 8 grammar: every connected phone has balloted, so
+       Sterling calls it himself — wait for the call on the wire */
+    for (let i = 0; i < 30; i++) { const cm = await page.evaluate(() => window.__era.callMsg); if (cm) break; await sleep(300); }
+    await sleep(400);
     const called = await page.evaluate(() => {
       const OG = window.__online.OG;
       const tail = OG.script.slice(6);
@@ -219,7 +227,7 @@ function padStub(calledEra) {
         begin: !!document.getElementById('ogBreakGo'),
         done: (document.querySelector('.era-done') || { textContent: '' }).textContent.replace(/\s+/g, ' ') };
     });
-    check('H: CALL IT puts {t:era_call, era:\u201990s\u2019} on the wire and the verdict strip names the 90s',
+    check('H: the full ballot puts {t:era_call, era:\u201990s\u2019} on the wire by itself and the verdict strip names the 90s',
       !!called.msg && called.msg.era === '90s' && called.era === '90s' && called.done.indexOf("THE '90S") >= 0 && called.begin,
       JSON.stringify({ msg: called.msg, done: called.done }));
     check('H: the deferred deal — the tail is built at the call, the script whole at 15, exactly five guess questions kept',

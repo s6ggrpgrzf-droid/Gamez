@@ -76,6 +76,7 @@ const url = 'file:///home/hatch/workspace/gilded-hour/index.html';
     return {
       phase: g.phase, round: g.round, qInRound: g.qInRound,
       kind: g.cur ? g.cur.kind : null, decider: !!(g.cur && g.cur.decider),
+      truth: g.cur && g.cur.q ? g.cur.q.num : null, guessTurn: g.cur ? g.cur.guessTurn : null,
       scores: g.players.map(p => p.score)
     };
   });
@@ -280,12 +281,41 @@ const url = 'file:///home/hatch/workspace/gilded-hour/index.html';
           deciderOk, b ? JSON.stringify(b.layers) : 'banner missing');
       }
       await page.evaluate(() => { const g = window.__game.G; if (g && g.cur) g.cur.elapsed = 5; });
-      await page.tap('#btnCallIt'); await sleep(180); continue;
+      /* Pass 8 grammar: seat 0 answers on its own desk and the
+         question settles itself (banner probes above already ran) */
+      const pick = await page.evaluate(() => {
+        const g = window.__game.G;
+        if (!g || !g.cur) return 'none';
+        if (g.cur.kind === 'bluff' && !g.cur.bluffDealt) return 'deal';
+        if (g.cur.kind === 'num') return 'num';
+        if (!g.cur.opts) return 'none';
+        const ok = g.cur.opts.findIndex(o => o.ok);
+        if (ok < 0) return 'none';
+        const out = [];
+        for (let seat = 0; seat < g.players.length; seat++) {
+          const oi = seat === 0 ? ok : g.cur.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat);
+          if (oi >= 0) out.push(seat + '|' + oi);
+        }
+        return 'chips:' + out.join(',');
+      });
+      if (pick === 'deal') { await page.tap('#btnDealBluff').catch(() => {}); await sleep(180); continue; }
+      if (pick === 'num') {
+        let g2 = 0;
+        while (g2++ < 12) {
+          const st = await S();
+          if (!st || st.phase !== 'question' || st.guessTurn == null || st.guessTurn < 0) break;
+          const target = st.truth + 400 + st.guessTurn * 137;
+          for (const ch of String(target)) { await page.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(30); }
+          await page.tap('#btnNumLock').catch(() => {}); await sleep(150);
+        }
+        await sleep(180); continue;
+      }
+      if (pick.indexOf('chips:') === 0) {
+        for (const sel of pick.slice(6).split(',')) { await page.tap('[data-pick="' + sel + '"]').catch(() => {}); await sleep(80); }
+      }
+      await sleep(180); continue;
     }
-    if (s.phase === 'vote') {
-      await page.tap('.seat[data-seat="0"]'); await sleep(150);
-      await page.tap('#btnReveal'); await sleep(220); continue;
-    }
+    if (s.phase === 'vote' || s.phase === 'vote-count') { await sleep(180); continue; }
     if (s.phase === 'reveal') {
       if (!jumped && s.round === 1) {
         /* the Next handler increments qInRound before dealing, so

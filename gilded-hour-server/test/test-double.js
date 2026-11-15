@@ -149,7 +149,7 @@ await A.host.send({ t: 'reveal', qid: 'r2a' });
   const b = bySeat(rev);
   ok(rev.value === 190, 'R2: the drained value is 190', 'value=' + rev.value);
   ok(b[0].banked === 380 && b[0].doubled === true, 'R2: the riding seat banks exactly twice (380) and wears the flag', JSON.stringify(b[0]));
-  ok(b[1].banked === 240 && !b[1].doubled, 'R2: Quick Draw stays flat on the undoubled seat (190 + 50)', JSON.stringify(b[1]));
+  ok(b[1].banked === 290 && !b[1].doubled, 'R2: Quick Draw pays the round\u2019s $100 on the undoubled seat, unmagnified by any Double (190 + 100)', JSON.stringify(b[1]));
   ok(b[2].banked === 0, 'R2: the wrong seat banks nothing');
   const st = A.P[0].lastState();
   ok(st.players[0].dbl === false && st.players[1].dbl === true && st.players[2].dbl === true,

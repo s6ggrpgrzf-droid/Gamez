@@ -87,7 +87,7 @@ const bandStats = (page, y0, y1) => page.evaluate((a, b) => {
     if (!g) return null;
     return { phase: g.phase, round: g.round, qInRound: g.qInRound, kind: g.cur ? g.cur.kind : null };
   });
-  let guessIdx = 0, betsDone = false;
+  let guessIdx = 0, betsDone = false, actedKey = '';
   const numPlans = [[0], [1], [0, 1]];
   function planFor(s) {
     if (s.kind === 'num') return numPlans[guessIdx++ % numPlans.length];
@@ -115,48 +115,59 @@ const bandStats = (page, y0, y1) => page.evaluate((a, b) => {
         await page.tap('#btnBetsDone'); await sleep(300); break;
       }
       case 'question': {
+        const key = s.round + ':' + s.qInRound + ':' + s.kind;
+        if (key === actedKey) { await sleep(250); break; }
+        if (s.kind === 'bluff') {
+          /* THE BLUFF (pass 2): the invent stage opens first —
+             deal the answers before any pick can be made. This
+             table plays in short landscape, where DEAL can sit
+             below the stage's visible box — bring it into view
+             inside the stage scroller before the tap. */
+          const dealt = await page.evaluate(() => { const g = window.__game.G; return !!(g.cur && g.cur.bluffDealt); });
+          if (!dealt) {
+            await page.evaluate(() => { const b = document.getElementById('btnDealBluff'); if (b) b.scrollIntoView({ block: 'center' }); });
+            await sleep(200);
+            await page.tap('#btnDealBluff');
+            await sleep(300);
+            break;
+          }
+        }
+        actedKey = key;
         const plan = planFor(s);
         await sleep(350);
-        if (s.kind === 'bluff') {
-          /* THE BLUFF (pass 2): the host deals the shuffled
-             plaques first (the stage opens on the invent screen —
-             #btnCallIt only exists once the answers are dealt),
-             then the room finger-votes: tap the truth plaque,
-             then tap each seat the plan marks right */
-          /* this table plays in short landscape, where DEAL can
-             sit below the stage's visible box — bring it into
-             view inside the stage scroller before the tap, or the
-             tap lands on the clip edge and never reaches it */
-          await page.evaluate(() => { const b = document.getElementById('btnDealBluff'); if (b) b.scrollIntoView({ block: 'center' }); });
-          await sleep(200);
-          await page.tap('#btnDealBluff');
-          /* the deal opens the finger-vote window (phase
-             vote-count, plaques up with CALL IT); CALL IT closes
-             it and the mark screen (phase vote) is where the
-             truth plaque takes the seats */
-          const t0c = Date.now();
-          while (Date.now() - t0c < 15000) { const q = await S(); if (q && q.phase === 'vote-count') break; await sleep(120); }
-          await page.tap('#btnCallIt');
-          const t0b = Date.now();
-          while (Date.now() - t0b < 15000) { const q = await S(); if (q && q.phase === 'vote') break; await sleep(120); }
-          const truth = await page.evaluate(() => window.__game.G.cur.opts.findIndex(o => o.ok));
-          await page.evaluate((t) => { const b = document.querySelector('.bluff-pick[data-opt="' + t + '"]'); if (b) b.scrollIntoView({ block: 'center' }); }, truth);
-          await sleep(200);
-          await page.tap('.bluff-pick[data-opt="' + truth + '"]');
-          await sleep(220);
-          for (const seat of plan) { await page.tap('.seat[data-seat="' + seat + '"]'); await sleep(220); }
-          await page.tap('#btnReveal');
-          const t1b = Date.now();
-          while (Date.now() - t1b < 15000) { const q = await S(); if (q && q.phase === 'reveal') break; await sleep(120); }
-          await page.tap('#btnNext'); await sleep(250); break;
+        /* Pass 8 grammar: the plan's seats answer right on their
+           own desks, the rest answer wrong; numbers are keyed in
+           seat order with the plan's seats exact */
+        if (s.kind === 'num') {
+          let g2 = 0;
+          while (g2++ < 12) {
+            const st = await page.evaluate(() => { const g = window.__game.G; return g && g.cur ? { phase: g.phase, turn: g.cur.guessTurn, truth: g.cur.q ? g.cur.q.num : null } : null; });
+            if (!st || st.phase !== 'question' || st.turn == null || st.turn < 0) break;
+            const target = plan.includes(st.turn) ? st.truth : st.truth + 400 + st.turn * 137;
+            for (const ch of String(target)) { await page.tap('[data-numk="' + ch + '"]').catch(() => {}); await sleep(40); }
+            await page.tap('#btnNumLock').catch(() => {}); await sleep(200);
+          }
+        } else {
+          const picks = await page.evaluate((marks) => {
+            const g = window.__game.G;
+            if (!g || !g.cur || !g.cur.opts) return [];
+            const ok = g.cur.opts.findIndex(o => o.ok);
+            const out = [];
+            for (let seat = 0; seat < g.players.length; seat++) {
+              const oi = marks.includes(seat) ? ok : g.cur.opts.findIndex((o, ix) => !o.ok && !o.gone && o.by !== seat);
+              if (oi >= 0) out.push(seat + '|' + oi);
+            }
+            return out;
+          }, plan);
+          for (const sel of picks) {
+            await page.evaluate((sl) => { const b = document.querySelector('[data-pick="' + sl + '"]'); if (b) b.scrollIntoView({ block: 'center' }); }, sel);
+            await sleep(120);
+            await page.tap('[data-pick="' + sel + '"]').catch(() => {});
+            await sleep(180);
+          }
         }
-        await page.tap('#btnCallIt');
-        const t0 = Date.now();
-        while (Date.now() - t0 < 15000) { const q = await S(); if (q && q.phase === 'vote') break; await sleep(120); }
-        for (const seat of plan) { await page.tap('.seat[data-seat="' + seat + '"]'); await sleep(220); }
-        await page.tap('#btnReveal');
         const t1 = Date.now();
-        while (Date.now() - t1 < 15000) { const q = await S(); if (q && q.phase === 'reveal') break; await sleep(120); }
+        while (Date.now() - t1 < 20000) { const q = await S(); if (q && q.phase === 'reveal') break; await sleep(120); }
         await page.tap('#btnNext'); await sleep(250); break;
       }
       default: await sleep(250);
@@ -397,6 +408,12 @@ const bandStats = (page, y0, y1) => page.evaluate((a, b) => {
           window.__bluffTruth = m.bluffTruth;
           window.__bluffQ = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
           deliver({ t: 'state', state: state('invent', { question: window.__bluffQ }) });
+          /* Pass 8 grammar: both pads' lies land — the snapshot
+             says so, and the host screen deals it itself */
+          setTimeout(() => {
+            window.__bluffQ = Object.assign({}, window.__bluffQ, { fakesIn: 2 });
+            deliver({ t: 'state', state: state('invent', { question: window.__bluffQ }) });
+          }, 900);
           return;
         }
         if (m.t === 'bluff_deal' && window.__bluffQ) {

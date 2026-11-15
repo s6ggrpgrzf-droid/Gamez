@@ -2781,11 +2781,16 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   #scr-game .desk-head .proj-wrap{width:100%}
   /* the pot's question-phase perch (top:40px, from the short-
      stage era) lands on the card now that the stage is tall;
-     it goes back to the stage's bottom-left, and the tools row
-     starts after it, the way a row on a real table starts
-     after the bowl resting beside it */
-  #scr-game #stage:has(#btnCallIt) .pot-vessel,#scr-game #stage:has(#ogCallIt) .pot-vessel{top:auto;bottom:8px}
-  #scr-game #stage:has(#btnCallIt) .tools{padding-left:88px}
+     the bottom-left dock that replaced it measured clear of the
+     tools row but NOT of the answers: at 844x390 the vessel
+     (y227-301) covers the third plaque's first letters
+     (y213-251) — the 2026-11-14 review's fresh screenshot
+     caught it mid-question. So in this layout the vessel sits
+     the question out, exactly as portrait already rules: the
+     pot is not spendable mid-question, its feed moment is the
+     reveal, and there it returns. The tools row reclaims the
+     88px the dock used to hold. */
+  #scr-game #stage:has(#btnCallIt) .pot-vessel,#scr-game #stage:has(#ogCallIt) .pot-vessel{display:none}
 }
 
 /* Designer's pass P16 (2026-11-11): Sterling's expressions.
@@ -3676,6 +3681,36 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
 .jp-era-done{font-weight:700;letter-spacing:.08em;color:#EAD9A4}
 
 /* ================================================================
+   REVIEW PASS 6 (2026-11-14): air for Sterling in portrait. The
+   bottom seats row ended flush against the host bar (the seats
+   container's bottom was the host bar's top, 0px between), so
+   Sterling's bubble read as sitting on the desks. Ten pixels of
+   air under the seats; the stage absorbs it. Short landscape's
+   rail layout is untouched (its seats live in the table column
+   and the rail stands apart already). */
+#scr-game #seatsBottom{margin-bottom:10px}
+
+/* ================================================================
+   REVIEW PASS 8 (2026-11-14): the no-host furniture. Desk pick
+   chips — small matte brass-rimmed keys on each desk: a question's
+   letters (or the Bluff's numbers, or the break's eras); the
+   locked one fills champagne. The number entry: one seat at a
+   time, a lit desk, a shared pad with a readout. Drawn depth
+   only, like everything else in the room. */
+.pick-chips{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:8px;vertical-align:middle}
+.pick-chip{min-width:23px;height:23px;padding:0 5px;border-radius:7px;border:1px solid rgba(198,164,94,.75);background:rgba(18,6,26,.55);color:#EAD9A4;font:700 11px/1 GHSans,sans-serif;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.45)}
+.pick-chip.locked{background:linear-gradient(180deg,#F6E3AC,#E4C878);color:#2A1A08;border-color:#8A6D2F;box-shadow:0 2px 0 #8A6D2F}
+.pick-chip[disabled]{opacity:.32;cursor:default;box-shadow:none}
+.seat.entering .desk{box-shadow:0 0 0 2px #E4C878,0 0 18px rgba(228,200,120,.45)}
+.num-entry{margin-top:14px;text-align:center}
+.num-turn{font:700 12px/1.3 GHSans,sans-serif;letter-spacing:.14em;color:#EAD9A4}
+.num-buf{margin:8px auto 10px;min-width:170px;display:inline-block;padding:7px 18px;border-radius:9px;border:1px solid rgba(198,164,94,.6);background:rgba(18,6,26,.55);color:#FFF6DC;font:700 24px/1.1 GHSerif,serif;letter-spacing:.06em}
+.num-pad{display:grid;grid-template-columns:repeat(3,58px);gap:6px;justify-content:center;margin-bottom:10px}
+.num-key{height:42px;border-radius:9px;border:1px solid rgba(198,164,94,.65);background:rgba(255,246,220,.06);color:#FFF6DC;font:700 17px/1 GHSans,sans-serif;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.45)}
+.num-key:active{transform:translateY(1px);box-shadow:none}
+.num-lock{min-width:196px}
+
+/* ================================================================
    FINALE COMPOSITION PASS (2026-11-12): the host finale scrolled
    for tall compositions — measured with the report rows pinned
    to their full four facts (a real night's card, long category
@@ -3753,7 +3788,4 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
   #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns{margin-top:6px}
   #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-gold,
   #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-ghost{padding-top:4px;padding-bottom:4px}
-}
-
-
 
