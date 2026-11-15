@@ -378,9 +378,6 @@ export function createRoom(code, hostToken, rules) {
     question: null,           // current/last question record (see publish)
     lastReveal: null,         // payload of the last reveal, for snapshots
     interm: null,             // {nextRound} while the room rests between rounds (the Intermission)
-    eraVote: null,            // The Decade Vote (designer pass 6): {votes:{seat:era}} while the count stands open at the first break
-    era: null,                // The Decade Vote: the era the host called (null until called; null again on an abstention, told apart by eraCalled)
-    eraCalled: false,         // The Decade Vote: this show's count has been called
     deciderWinner: null,      // seat that won a resolved decider, once one resolves
     goldenUsed: false,        // the Golden Question: this show's one double is spent
     pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
@@ -485,7 +482,6 @@ export function snapshotFor(room, view) {
        * question — public the moment it is declared, like every
        * other stake at this table */
       dblArmed: q.dbl ? Object.keys(q.dbl).map(Number) : [],
-      vsArmed: q.vs ? Object.keys(q.vs).map(Number) : [],
       /* THE BLUFF: which of its two lives the question is in and
        * how many lies are in; once dealt, the answer texts are
        * public — their authors stay secret until the reveal */
@@ -522,7 +518,7 @@ export function snapshotFor(room, view) {
        * through cutCountOf), and cutCount rides beside it as the
        * number, so a screen that knows the count reads the count
        * and a screen that doesn't reads exactly what it always did */
-      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, vsRound: p.vsRound || 0, connected: p.connected, ready: !!p.ready, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, connected: p.connected, ready: !!p.ready, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
     /* The Table Pot (D1): the running total, public from the
@@ -537,14 +533,6 @@ export function snapshotFor(room, view) {
      * reads an empty list, which is exactly what it granted */
     intermission: room.phase === 'intermission' && room.interm
       ? { nextRound: room.interm.nextRound, wind: (room.interm.wind || []).slice() } : null,
-    /* The Decade Vote (designer pass 6): the count rides the
-     * snapshot whole — the ballots by seat (public, as a finger
-     * count at the table is public), whether the host has called
-     * it, and the era it settled on. Screens render the ballot
-     * or the verdict from these facts alone; a room persisted
-     * before the vote existed reads null, which is its truth */
-    eraVote: room.eraVote ? { votes: Object.assign({}, room.eraVote.votes), called: !!room.eraCalled } : null,
-    era: room.eraCalled ? room.era : null,
     bet: room.bet ? {
       qid: room.bet.qid,
       betsIn: Object.keys(room.bet.bySeat).length,
@@ -686,23 +674,6 @@ export function closeQuestion(room) {
     for (const k of Object.keys(q.dbl)) {
       const sp = room.players[+k];
       if (sp) sp.dbl = false;
-    }
-  }
-  /* AGAINST THE ROOM (designer pass 4): a declared seat that
-   * banked ALONE takes the question's value a second time — the
-   * adjustment lands here, before Quick Draw and the streaks add
-   * their flat money, and before anything downstream reads
-   * entry.banked (the pot feeds from value and correctness, never
-   * from banked, so it is untouched). A shared bank lapses the
-   * declaration quietly: nothing is owed and nothing is returned —
-   * the round's use was spent in the throwing (vsRound). */
-  if (!q.betted && !q.decider && q.vs) {
-    const bankers = results.filter((r) => r.correct);
-    if (bankers.length === 1 && q.vs[bankers[0].seat]) {
-      const winEntry = bankers[0];
-      winEntry.banked += value;
-      winEntry.vs = true;
-      room.players[winEntry.seat].score += value;
     }
   }
   /* The Quick-Draw (Design pass 3): 'normal' questions only. The
@@ -957,7 +928,6 @@ export function handleHello(room, msg) {
       score: 0,
       cutTwo: cutStartFor(room), // House Rules (N2): the starting COUNT — two under Second Cut, else one
       dbl: true, // THE DOUBLE (designer pass 3): one token per player per show, in hand from the start, spendable from Round 2
-      vsRound: 0, // AGAINST THE ROOM (designer pass 4): the round the gauntlet was last thrown in (0 = never)
       connected: true,
       ready: false, // Review Pass 8 (2026-11-14): the lobby's word — when every connected phone is ready, the show starts itself
       avatar: cleanAvatar(msg.avatar, seat),
@@ -975,11 +945,6 @@ export function handleHello(room, msg) {
   }
   return { identity: null, res: fail('Unknown role.') };
 }
-
-/* The Decade Vote (designer pass 6): the eras on offer — the
- * ones the bank can honestly deal. The referee validates the
- * ballots and the call against this list; it never deals. */
-const ERA_IDS = ['80s', '90s', '00s'];
 
 export function handleHostMessage(room, msg) {
   if (!msg || typeof msg.t !== 'string') return fail('Bad message.');
@@ -1153,7 +1118,6 @@ export function handleHostMessage(room, msg) {
         pickTimes: {},
         nums: {},
         dbl: {},
-        vs: {}, // AGAINST THE ROOM (designer pass 4): declared seats on this question
         cutBy: null,
         closedAt: null,
         stoppedValue: null,
@@ -1235,29 +1199,6 @@ export function handleHostMessage(room, msg) {
       room.phase = 'intermission';
       return ok({ state: true, changed: true });
     }
-    case 'era_open': {
-      /* The Decade Vote (designer pass 6): the host opens the
-       * count at the FIRST break only — the room resting, Round
-       * 2 next, no count standing and none yet called this show.
-       * The referee keeps the ballots; the era's questions are
-       * the host script's business, dealt on its own side. */
-      if (room.phase !== 'intermission' || !room.interm || room.interm.nextRound !== 2) return fail('The era vote stands at the first break.');
-      if (room.eraVote || room.eraCalled) return fail('The count has already stood.');
-      room.eraVote = { votes: {} };
-      return ok({ state: true, changed: true });
-    }
-    case 'era_call': {
-      /* The Decade Vote: the host calls the count it tallied —
-       * the winning era, or null when the room abstained. The
-       * call is final: the count closes, the era rides every
-       * snapshot from here, and no ballot moves again. */
-      if (!room.eraVote || room.eraCalled) return fail('No count stands open.');
-      const era = msg.era == null ? null : String(msg.era);
-      if (era !== null && ERA_IDS.indexOf(era) < 0) return fail('That is not a decade on offer.');
-      room.era = era;
-      room.eraCalled = true;
-      return ok({ state: true, changed: true });
-    }
     case 'new_show': {
       /* Rematch Night (New programme pass 4): a fresh show in the
        * same room. Only an ended show can be succeeded — anything
@@ -1273,7 +1214,6 @@ export function handleHostMessage(room, msg) {
         p.score = 0;
         p.cutTwo = cutStartFor(room); // House Rules (N2): a fresh show restocks to the room's starting count — the rules themselves are the room's and stay
         p.dbl = true; // THE DOUBLE restocks with the show, like every other token
-        p.vsRound = 0; // AGAINST THE ROOM: the new show's gauntlet is unthrown
         p.streak = 0;
       }
       room.bet = null;
@@ -1286,11 +1226,6 @@ export function handleHostMessage(room, msg) {
       /* a rematch deals a FRESH golden pick (Rematch Night's
        * reset list is the referee's whole per-show memory) */
       room.goldenUsed = false;
-      /* The Decade Vote (designer pass 6): a fresh show stands
-       * un-voted — the count, the call and the era all reset */
-      room.eraVote = null;
-      room.era = null;
-      room.eraCalled = false;
       /* The Table Pot (D1): a fresh show starts with an empty pot, always */
       room.pot = 0;
       /* The Report Card (N1): the tallies are per-show memory like
@@ -1415,18 +1350,6 @@ export function handlePlayerMessage(room, seat, msg) {
         changed: true,
       });
     }
-    case 'era_vote': {
-      /* The Decade Vote (designer pass 6): a pad casts its
-       * seat's ballot while the count stands open at the first
-       * break. One ballot per seat, changeable until the host
-       * calls it — the last tap is the vote, as a hand that
-       * moves before the count is still just a hand thinking. */
-      if (room.phase !== 'intermission' || !room.eraVote || room.eraCalled) return fail('No count stands open.');
-      const era = String(msg.era || '');
-      if (ERA_IDS.indexOf(era) < 0) return fail('That is not a decade on offer.');
-      room.eraVote.votes[seat] = era;
-      return ok({ state: true, changed: true });
-    }
     case 'double': {
       /* THE DOUBLE (designer pass 3): a pad declares its seat's
        * token on the open question. The referee's rules are the
@@ -1444,43 +1367,7 @@ export function handlePlayerMessage(room, seat, msg) {
       if (p.dbl === false) return fail('Your Double is spent.');
       if (!q.dbl || typeof q.dbl !== 'object') q.dbl = {};
       if (q.dbl[seat]) return fail('Your Double is already riding.');
-      if (q.vs && q.vs[seat]) return fail('Your gauntlet is down on this one — one stake per question.');
       q.dbl[seat] = true;
-      return ok({
-        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
-        state: true,
-        changed: true,
-      });
-    }
-    case 'vs': {
-      /* AGAINST THE ROOM (designer pass 4): a pad declares its
-       * seat's gauntlet on the open question. The referee's rules
-       * are the table's: the seat sits last (a tie for last is
-       * last; an all-level table has no gauntlet), the declaration
-       * is unused this round, never on a bet question or the
-       * Decider, never alongside the seat's own Double, only
-       * while the window is open. A thrown gauntlet stays thrown:
-       * there is no undeclare message. */
-      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
-      const q = room.question;
-      if (msg.qid !== q.qid) return fail('Wrong question.');
-      if (q.decider) return fail('The Decider carries no gauntlet.');
-      if (q.kind === 'bluff') return fail('The Bluff is its own stake — no gauntlet rides it.');
-      if (q.betted) return fail('A bet question carries its own stake.');
-      if (nowMs() > q.deadline) return fail('Window closed.');
-      if ((p.vsRound || 0) === q.round) return fail('Your gauntlet is thrown for this round.');
-      if (q.dbl && q.dbl[seat]) return fail('Your Double is riding on this one — one stake per question.');
-      const joinedScores = [];
-      for (let i = 0; i < room.players.length; i++) {
-        const rp = room.players[i];
-        if (rp) joinedScores.push(rp.score);
-      }
-      const mn = Math.min(...joinedScores), mx = Math.max(...joinedScores);
-      if (!(mn < mx && p.score === mn)) return fail('The gauntlet belongs to last place.');
-      if (!q.vs || typeof q.vs !== 'object') q.vs = {};
-      if (q.vs[seat]) return fail('Your gauntlet is already down.');
-      q.vs[seat] = true;
-      p.vsRound = q.round; /* spent in the throwing, win, lose or lapse */
       return ok({
         to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
         state: true,

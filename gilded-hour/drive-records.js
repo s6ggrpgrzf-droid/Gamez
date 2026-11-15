@@ -148,7 +148,8 @@ const server = http.createServer((req, res) => {
             if (g.players[2].score >= g.players[0].score) g.players[2].score = Math.max(0, g.players[0].score - 100);
           });
         }
-        await page.tap('#btnNext'); await sleep(220); continue;
+        const nb = await page.$('#btnNext'); if (nb) { await nb.tap(); }
+        await sleep(220); continue;
       }
       await sleep(160);
     }
@@ -378,7 +379,7 @@ const server = http.createServer((req, res) => {
                fakesIn — and deals only when the host sends
                bluff_deal (see below) */
             window.__bluffTruth = m.bluffTruth;
-            window.__bluffQ = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
+            window.__bluffQ = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
             deliver({ t: 'state', state: state('invent', { question: window.__bluffQ }) });
             /* Pass 8 grammar: both pads' lies land — the host
                screen deals it itself when the snapshot says so */

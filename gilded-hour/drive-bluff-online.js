@@ -11,7 +11,7 @@
    PAD — joins into the invent phase: the prompt rebuilt from its
    own bank, an input for the lie, {t:'bluff'} on the wire; the
    dealt answers arrive from the room (never rebuilt locally);
-   no Double, gauntlet or Cut Two is offered on a bluff; the
+   no Double or Cut Two is offered on a bluff; the
    verdict names the bank and the lie's take separately. */
 const { launchBrowser } = require('./rig');
 const fs = require('fs');
@@ -76,7 +76,7 @@ function hostStub() {
         if (m.kind === 'bluff') {
           window.__bluffPub = m;
           this._bluff = { qid: m.qid, truth: m.bluffTruth };
-          const q = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
+          const q = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
           this._q = q;
           this.deliver(this.state('invent', q, null));
           const q2 = Object.assign({}, q, { fakesIn: 1 });
@@ -87,7 +87,7 @@ function hostStub() {
           setTimeout(() => this.deliver(this.state('invent', q3, null)), 1700);
           return;
         }
-        this._q = { qid: m.qid, round: m.round, kind: m.kind, category: m.category || 'Movies', answersCount: 4, baseValue: m.baseValue || 200, multiplier: 1, headline: false, band: m.band || null, windowMs: m.deadlineMs || 20000, openedAt: Date.now(), deadline: Date.now() + (m.deadlineMs || 20000), betted, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [] };
+        this._q = { qid: m.qid, round: m.round, kind: m.kind, category: m.category || 'Movies', answersCount: 4, baseValue: m.baseValue || 200, multiplier: 1, headline: false, band: m.band || null, windowMs: m.deadlineMs || 20000, openedAt: Date.now(), deadline: Date.now() + (m.deadlineMs || 20000), betted, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [] };
         this.deliver(this.state('answer', this._q, null));
         /* Pass 8 grammar: both pads answer — in the room's real
            protocol that lands as a {t:'counts'} note, and the
@@ -158,7 +158,7 @@ function padStub(bluffId, truth) {
       return { t: 'state', state: Object.assign({ code: 'TEST', phase, role: 'player', seat: 0, rules: {}, players: PLAYERS(), question: question || null, bet: null, lastReveal: null, pot: 0, intermission: null, report: null, yourPick: null, yourNum: null, yourFake: null }, extra || {}) };
     }
     inventQ(fakesIn) {
-      return { qid: QID, round: 2, kind: 'bluff', category: 'Movies', answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: 2, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [], bluffPhase: 'invent', fakesIn, options: null };
+      return { qid: QID, round: 2, kind: 'bluff', category: 'Movies', answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: 2, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], bluffPhase: 'invent', fakesIn, options: null };
     }
     send(data) {
       let m = {}; try { m = JSON.parse(data); } catch (e) {}
@@ -178,7 +178,7 @@ function padStub(bluffId, truth) {
     const ws = window.__ws; if (!ws) return;
     const opts = ['A brass teaspoon', truth, 'A singing kettle'];
     ws.deliver({ t: 'bluff_options', qid: QID, options: opts });
-    const q = { qid: QID, round: 2, kind: 'bluff', category: 'Movies', answersCount: 3, baseValue: 200, multiplier: 1, headline: false, band: 2, windowMs: 25000, openedAt: Date.now(), deadline: Date.now() + 25000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [], bluffPhase: 'answer', fakesIn: 2, options: opts };
+    const q = { qid: QID, round: 2, kind: 'bluff', category: 'Movies', answersCount: 3, baseValue: 200, multiplier: 1, headline: false, band: 2, windowMs: 25000, openedAt: Date.now(), deadline: Date.now() + 25000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], bluffPhase: 'answer', fakesIn: 2, options: opts };
     ws.deliver(ws.state('answer', q));
   };
   window.__stubReveal = () => {
@@ -295,7 +295,7 @@ function padStub(bluffId, truth) {
       dbl: !!document.getElementById('jpDbl'), vs: !!document.getElementById('jpVs'), cut: !!document.getElementById('jpCut')
     }));
     check('P: the dealt answers arrive as three tappable plaques', ans.n === 3, JSON.stringify(ans));
-    check('P: no Double, gauntlet or Cut Two is offered on a bluff', !ans.dbl && !ans.vs && !ans.cut, JSON.stringify(ans));
+    check('P: no Double or Cut Two is offered on a bluff', !ans.dbl && !ans.vs && !ans.cut, JSON.stringify(ans));
     await pad.evaluate(() => { const b = document.querySelectorAll('.jp-ans')[1]; if (b) b.scrollIntoView({ block: 'center' }); });
     await sleep(200);
     await pad.tap('.jp-ans[data-pick="1"]'); await sleep(300);

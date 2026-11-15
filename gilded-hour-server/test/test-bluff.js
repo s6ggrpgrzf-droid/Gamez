@@ -8,7 +8,7 @@
  * Proves: the publish validation; the invent snapshot (phase,
  * fakesIn, yourFake to its author alone); answers refused while
  * collecting; a truth-colliding lie dropped at the dealing;
- * decoy fill to three plaques; Double / gauntlet / Cut Two
+ * decoy fill to three plaques; Double / Cut Two
  * refused on a bluff; the fool purse and its flags; the pot
  * feeding on a no-truth question even when fool money moved;
  * the invent deadline dealing on expiry.
@@ -154,8 +154,6 @@ ok(dealt.options[correctIdx] === TRUTH, 'the host snapshot’s correctIdx points
 /* ---- the stakes refuse the bluff ---- */
 await A.P[0].send({ t: 'double', qid: 'b1' });
 ok(/Bluff/.test((A.P[0].lastError() || {}).msg || ''), 'no Double rides a bluff', JSON.stringify(A.P[0].lastError()));
-await A.P[0].send({ t: 'vs', qid: 'b1' });
-ok(/Bluff/.test((A.P[0].lastError() || {}).msg || ''), 'no gauntlet rides a bluff', JSON.stringify(A.P[0].lastError()));
 await A.P[0].send({ t: 'cuttwo', qid: 'b1' });
 ok(/bluff/i.test((A.P[0].lastError() || {}).msg || ''), 'no Cut Two on a bluff', JSON.stringify(A.P[0].lastError()));
 

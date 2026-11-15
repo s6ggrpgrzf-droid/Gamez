@@ -406,7 +406,7 @@ const bandStats = (page, y0, y1) => page.evaluate((a, b) => {
           window.__pubs++;
           window.__bluffPub = window.__pubs;
           window.__bluffTruth = m.bluffTruth;
-          window.__bluffQ = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
+          window.__bluffQ = { qid: m.qid, round: m.round, kind: 'bluff', category: m.category, answersCount: 0, baseValue: 200, multiplier: 1, headline: false, band: m.band || null, windowMs: 60000, openedAt: Date.now(), deadline: Date.now() + 60000, betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], bluffPhase: 'invent', fakesIn: 0, options: null };
           deliver({ t: 'state', state: state('invent', { question: window.__bluffQ }) });
           /* Pass 8 grammar: both pads' lies land — the snapshot
              says so, and the host screen deals it itself */

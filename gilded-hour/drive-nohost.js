@@ -65,7 +65,7 @@ function hostStub() {
         setTimeout(() => self.deliver(self.state('lobby', null, true)), 1200);
       }
       if (m.t === 'publish_question') {
-        const q = { qid: m.qid, round: m.round, kind: m.kind, category: m.category || 'Movies', answersCount: 4, baseValue: m.baseValue || 200, multiplier: 1, headline: false, band: m.band || null, windowMs: m.deadlineMs || 20000, openedAt: Date.now(), deadline: Date.now() + (m.deadlineMs || 20000), betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [], vsArmed: [] };
+        const q = { qid: m.qid, round: m.round, kind: m.kind, category: m.category || 'Movies', answersCount: 4, baseValue: m.baseValue || 200, multiplier: 1, headline: false, band: m.band || null, windowMs: m.deadlineMs || 20000, openedAt: Date.now(), deadline: Date.now() + (m.deadlineMs || 20000), betted: false, decider: false, eligible: null, cut: null, answersIn: 0, dblArmed: [] };
         this._q = q;
         this.deliver(this.state('answer', q, true));
       }
@@ -134,7 +134,6 @@ function padStub() {
       truth: g.cur && g.cur.q ? g.cur.q.num : null,
       guessTurn: g.cur ? g.cur.guessTurn : null,
       bankValue: g.cur ? g.cur.bankValue : null,
-      era: g.era, eraCalled: !!g.eraCalled,
       opts: g.cur && g.cur.opts ? g.cur.opts.map(o => ({ ok: !!o.ok, gone: !!o.gone, by: o.by != null ? o.by : -1 })) : null,
       picks: g.cur ? (g.cur.picks || null) : null
     };
@@ -144,7 +143,7 @@ function padStub() {
   await page.waitForSelector('#btnRoundGo', { timeout: 8000 });
   await page.tap('#btnRoundGo');
 
-  let qdChecked = false, numChecked = false, noHostChecked = false, eraChecked = false, autoRoundChecked = false, bluffChecked = false;
+  let qdChecked = false, numChecked = false, noHostChecked = false, breakSeen = false, autoRoundChecked = false, bluffChecked = false;
   let actedQ = '', guard = 0, pre = null, qkey = '';
   while (guard++ < 700) {
     const s = await S();
@@ -152,24 +151,14 @@ function padStub() {
     if (s.phase === 'over') break;
     if (s.phase === 'coldopen' || s.phase === 'spin' || s.phase === 'vote-count' || s.phase === 'vote') { await sleep(250); continue; }
     if (s.phase === 'intro') {
-      if (s.round === 2 && eraChecked && !autoRoundChecked) {
+      if (s.round === 2 && breakSeen && !autoRoundChecked) {
         /* do NOT tap GO — Sterling starts this round himself */
         await sleep(400); continue;
       }
       await page.tap('#btnRoundGo'); await sleep(300); continue;
     }
     if (s.phase === 'intermission') {
-      if (!eraChecked) {
-        const chips = await page.evaluate(() => document.querySelectorAll('[data-eravote]').length);
-        check('T: the Decade Vote is cast on the desks (era chips at the break)', chips === 9, 'chips=' + chips);
-        await tapSel(page, '[data-eravote="0|1"]'); await sleep(200);
-        await tapSel(page, '[data-eravote="1|1"]'); await sleep(200);
-        await tapSel(page, '[data-eravote="2|0"]'); await sleep(200);
-        let called = false;
-        for (let i = 0; i < 30 && !called; i++) { const st = await S(); called = st.eraCalled; if (!called) await sleep(300); }
-        check('T: Sterling calls the era himself when every desk is in (90s, 2-1)', called && s.era !== 'x' && (await S()).era === '90s', 'era=' + (await S()).era);
-        eraChecked = true;
-      }
+      breakSeen = true; /* the break is standings and a breath now — BEGIN is simply there */
       await page.tap('#btnBreakGo'); await sleep(300); continue;
     }
     if (s.phase === 'bet') { await page.tap('#btnBetsDone'); await sleep(300); continue; }
@@ -201,7 +190,7 @@ function padStub() {
     }
     if (s.phase === 'question') {
       const key = s.round + ':' + s.qInRound + ':' + s.kind;
-      if (s.round === 2 && !autoRoundChecked && eraChecked) autoRoundChecked = true; /* reached a Round-2 question with no GO tap */
+      if (s.round === 2 && !autoRoundChecked && breakSeen) autoRoundChecked = true; /* reached a Round-2 question with no GO tap */
       if (!noHostChecked && s.kind === 'mcq') {
         const nh = await page.evaluate(() => ({
           call: !!document.getElementById('btnCallIt'), reveal: !!document.getElementById('btnReveal'),
@@ -263,7 +252,7 @@ function padStub() {
   }
   check('T: the quick-draw question was played and proven', qdChecked);
   check('T: a number question was keyed and proven', numChecked);
-  check('T: the Decade Vote was cast and called', eraChecked);
+  check('T: the first break came and went', breakSeen);
   check('T: Round 2 opened on Sterling\'s own GO', autoRoundChecked);
   check('T: the Bluff was invented, dealt and proven', bluffChecked);
   await page.close();

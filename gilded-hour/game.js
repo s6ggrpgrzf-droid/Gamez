@@ -123,28 +123,9 @@
      themselves; the truth banks a flat $200 (no melt — the value
      must not drain while the room is admiring a lie), and every
      player a lie fools pays its author $25 from the house. No
-     Double, no gauntlet, no Cut Two rides it: the bluff is its
-     own stake, and one stake per question already. */
+     Double, no Cut Two rides it: the bluff is its own stake,
+     and one stake per question already. */
   var BLUFF_ROUND = 2, BLUFF_Q = 3, BLUFF_VALUE = 200, BLUFF_FOOL = GH_RULES.BLUFF_FOOL, BLUFF_VOTE_TIME = 25;
-  /* Designer pass 6 (research programme Pass 4) — THE DECADE
-     VOTE. At the first intermission the room votes the era the
-     dealer leans toward for the rest of the night: the ordinary
-     bank carries an `era` on every question (the decade its
-     subject belongs to for this cohort, or "any" for evergreen),
-     and drawBand prefers the voted era, then the evergreens,
-     then the whole pool — a lean, never a wall. The eras on
-     offer are the ones the bank can honestly deal: the '80s
-     (35 cards), the '90s (53) and the 2000s (15 since the
-     2026-11-14 bench, plus every evergreen seconding them).
-     There is no '10s plaque: the
-     bank holds nothing from that decade, and Sterling does not
-     offer a choice he cannot deal. */
-  var ERAS = [
-    { id: "80s", plaque: "THE '80S", spoken: "the '80s" },
-    { id: "90s", plaque: "THE '90S", spoken: "the '90s" },
-    { id: "00s", plaque: "THE 2000S", spoken: "the 2000s" }
-  ];
-  function eraById(id) { for (var i = 0; i < ERAS.length; i++) if (ERAS[i].id === id) return ERAS[i]; return null; }
   /* Design pass 2 — the Headline Question: Round 2's LAST question
      (overall Q12) plays at double value again under a halved clock.
      Derived from POSITION (round + index) only — never from the seed,
@@ -520,30 +501,6 @@
     rematchdraw: [
       "The last time this table played, nobody took the crown — dead level, unfinished business. We finish it tonight.",
       "This table owes me a champion: last time out, the night ended level. Sterling has kept the table set ever since."
-    ],
-    /* Designer pass 6 — the Decade Vote. eravote opens the count
-       at the first intermission; erawin / eratie / eraabstain
-       close it, drawn once at the call and ridden by the state
-       like every other break telling, so a resumed break repeats
-       the identical words. {era} is the spoken name ("the '90s",
-       "the 2000s"). */
-    eravote: [
-      "One question for the room before the money doubles: which years are we playing in? Fingers up — one for the '80s, two for the '90s, three for the 2000s. I deal from the years you choose, all night.",
-      "Before Double Money, the room picks its decade. One finger for the '80s, two for the '90s, three for the 2000s — and I lean the deal toward the years that raised you.",
-      "A show spans two childhoods, so the room chooses: the '80s, the '90s, or the 2000s. Fingers up, one two three in order, and the deal follows the vote."
-    ],
-    erawin: [
-      "The room has spoken: {era}. I deal from those years for the rest of the night — mind your childhoods, they are about to be examined.",
-      "{era} it is, by the room's own vote. The deal leans that way until the crown — nostalgia is now a house advantage.",
-      "Counted and carried: {era}. Sterling deals from the winning years from here in."
-    ],
-    eratie: [
-      "Dead level — the room cannot split its own childhoods. My table, my coin: {era}. Blame the coin, it loves that.",
-      "A tie. Of course. The host's casting vote falls to {era} — democracy, with a small gold thumb on the scale."
-    ],
-    eraabstain: [
-      "No hands at all. Very well — an undecided room gets a dealer's choice, and this dealer deals as he pleases.",
-      "The room abstains, unanimously, which is its own kind of decision. I shall deal the whole shelf, then, and please myself."
     ],
     /* New programme pass 1 — the Decider. All four pools are LOCAL
        (authored, drawn through hostSay / authoredLine — no worker
@@ -2470,28 +2427,19 @@
      band (BAND_ORDER — lower wins a tie). Within a pool, category
      spread: take a card from a least-used category this show (the
      shuffled pool order breaks ties, so the seed still conducts).
-     The draw itself consumes no rng — pools + catUse are the state.
-     Designer pass 6: once the room has voted its era (G.era), the
-     scan prefers that era's cards, then the evergreens ("any"),
-     then the rest — category spread still breaks ties inside a
-     tier, and the band ladder still outranks the lean (a fallback
-     band is only entered when the target band is empty, exactly
-     as before). With no era voted every card sits in one tier and
-     the scan is the old scan, card for card. */
+     The draw itself consumes no rng — pools + catUse are the state. */
   function drawBand(target) {
     if (!pools.catUse) resetDeck(); // a save from before the ramp: build the deck now
     var order = BAND_ORDER[target] || BAND_ORDER[2];
-    var era = (typeof G !== "undefined" && G && G.era) ? G.era : null;
     for (var oi = 0; oi < order.length; oi++) {
       var p = pools["b" + order[oi]];
       if (!p) { p = pools["b" + order[oi]] = bandPoolIds(order[oi]); }
       if (!p.length) continue;
-      var best = 0, bestUse = Infinity, bestTier = Infinity;
+      var best = 0, bestUse = Infinity;
       for (var i = 0; i < p.length; i++) {
         var q = BANK[p[i]];
-        var tier = !era ? 2 : q.era === era ? 0 : q.era === "any" ? 1 : 2;
         var u = pools.catUse[q.cat] || 0;
-        if (tier < bestTier || (tier === bestTier && u < bestUse)) { bestTier = tier; bestUse = u; best = i; }
+        if (u < bestUse) { bestUse = u; best = i; }
       }
       var id = p.splice(best, 1)[0];
       pools.catUse[BANK[id].cat] = (pools.catUse[BANK[id].cat] || 0) + 1;
@@ -2614,7 +2562,7 @@
   function newGame(names) {
     return {
       players: names.map(function (nm, i) {
-        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, dbl: 1, vsRound: 0 };
+        return { name: nm, color: PCOLORS[i], score: 0, cut: 1, bet: 1, streak: 0, dbl: 1 };
       }),
       round: 1, qInRound: 0,
       rules: null,              // Pass N2: the night's House Rules, fixed by startShow before the first question is born
@@ -2624,11 +2572,6 @@
       pot: 0,                   // Dynamics pass D1: the table pot — unbanked money the champion takes
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
       goldTease: null,          // the tease line drawn with it, spoken once at the Round 1 intro
-      era: null,                // Designer pass 6: the room's voted era id ("80s"|"90s"|"00s") once the count is called; null before and on an abstention
-      eraCalled: false,         // Designer pass 6: the first break's count has been called (win, tie or abstain)
-      eraVote: null,            // Designer pass 6: {counts:[n,n,n], house:{seat:eraIdx}} while the count stands open at the first break
-      eraVoteLine: null,        // Designer pass 6: Sterling's drawn opening of the vote, ridden like the wind line
-      eraLine: null,            // Designer pass 6: Sterling's drawn verdict on the count, ridden the same way
       showId: null,             // per-show key for the live Sterling lines
       decider: null,            // New programme pass 1: {eligible, usedIds, dealt, winner} once a tied finale triggers it
       facts: freshFacts(),      // New programme pass 2: the round-facts recorder the Intermission is told from
@@ -2668,12 +2611,8 @@
     }
     /* Design pass 3: the quick-draw tag lives in the same seat-name
        tag space as CLOSEST (the two never co-occur — guess kinds
-       have no quick-draw, and only guess bankers wear CLOSEST).
-       AGAINST THE ROOM (pass 4): when the lone-bank tag shows, it
-       carries the desk's whole story and the quick-draw tag stands
-       down — the two together overflow the name line and clip the
-       player's name; the +$50 is still inside the delta. */
-    if (fx.quickdraw && !fx.vs) {
+       have no quick-draw, and only guess bankers wear CLOSEST). */
+    if (fx.quickdraw) {
       var nm2 = s.querySelector(".seat-name");
       if (nm2) {
         var tg2 = document.createElement("span");
@@ -2692,22 +2631,6 @@
         tg3.className = "closest-tag dbltag";
         tg3.textContent = "×2 DOUBLED";
         nm3.appendChild(tg3);
-      }
-    }
-    /* AGAINST THE ROOM: a lone bank that paid says so too — the
-       room watched the other fingers stay down; the tag is the
-       receipt. The tag word is ALONE: the full phrase lives on
-       the disc, the sheet and the ledgers, and the name line is
-       106px wide on a good day — AGAINST THE ROOM ×2 measured
-       290px of scroll against it and clipped the player's name
-       to an ellipsis. ALONE ×2 is the same fact at tag width. */
-    if (fx.vs) {
-      var nm4 = s.querySelector(".seat-name");
-      if (nm4) {
-        var tg4 = document.createElement("span");
-        tg4.className = "closest-tag vstag";
-        tg4.textContent = "ALONE ×2";
-        nm4.appendChild(tg4);
       }
     }
     /* THE BLUFF: a lie that earned wears its take — counted in
@@ -2761,10 +2684,10 @@
       var shown = money(Math.round(dispScore[i] != null ? dispScore[i] : p.score));
       writtenScore[i] = shown;
       var s = el('<div class="seat pod' + i + (p.house != null ? " house" : "") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + dblTokenHTML(p, i) + vsTokenHTML(p, i) +
+        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + dblTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
-        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskPicksHTML(p, i) + deskEraHTML(p, i) + fortuneHTML() + "</div></div>");
+        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskPicksHTML(p, i) + fortuneHTML() + "</div></div>");
       /* New programme pass 1: during the Decider, a seat that is not
          playing steps back — dimmed out of the light while the tied
          leaders settle it (the winner is crowned, the class lifts) */
@@ -2776,20 +2699,11 @@
       s.addEventListener("click", function () { onSeatTap(i); });
       var dblBtn = s.querySelector("[data-dbl]");
       if (dblBtn) dblBtn.addEventListener("click", function (e) { e.stopPropagation(); toggleDbl(i); });
-      var vsBtn = s.querySelector("[data-vs]");
-      if (vsBtn) vsBtn.addEventListener("click", function (e) { e.stopPropagation(); declareVs(i); });
       s.querySelectorAll("[data-pick]").forEach(function (pb) {
         pb.addEventListener("click", function (e) {
           e.stopPropagation();
           var parts = pb.getAttribute("data-pick").split("|");
           deskPick(parseInt(parts[0], 10), parseInt(parts[1], 10));
-        });
-      });
-      s.querySelectorAll("[data-eravote]").forEach(function (eb) {
-        eb.addEventListener("click", function (e) {
-          e.stopPropagation();
-          var parts = eb.getAttribute("data-eravote").split("|");
-          eraDeskVote(parseInt(parts[0], 10), parseInt(parts[1], 10));
         });
       });
       bot.appendChild(s);
@@ -2965,44 +2879,10 @@
     if (!G || !G.cur || (G.phase !== "question" && G.phase !== "vote")) return;
     var p = G.players[i];
     if (!p || p.house != null || !dblInPlay(p, i)) return;
-    if (vsDeclared(i)) return; /* one stake per question: the gauntlet is already down */
     var c = G.cur;
     c.dbl = c.dbl || {};
     if (c.dbl[i]) delete c.dbl[i];
     else { c.dbl[i] = true; Snd.play("coin"); }
-    renderSeats();
-    saveTableShow();
-  }
-  /* AGAINST THE ROOM (designer pass 4): the VS disc and its throw.
-     The disc rides the desk's top-right corner — the Double keeps
-     the left — and shows only while the seat could declare (last
-     place, unused this round) or has declared on this question.
-     A declaration is FINAL: unlike the Double it does not toggle
-     back — a gauntlet thrown down stays down, and the round's
-     one use is spent in the throwing. */
-  function vsTokenHTML(p, i) {
-    if (!G || !G.cur || G.cur.betRound || G.cur.decider) return "";
-    var decl = vsDeclared(i);
-    /* An undeclared disc belongs to the OPEN question only: at
-       the reveal the standings have already moved, and recomputing
-       eligibility there would hang the gauntlet on the NEW last
-       desk — for a question that is already settled. Declared
-       discs ride through the reveal as the receipt. */
-    if (!decl && G.phase !== "question" && G.phase !== "vote") return "";
-    if (!decl && !vsEligible(i)) return "";
-    if (p.house != null) return '<span class="vs-token house' + (decl ? " armed" : "") + '" aria-hidden="true">VS</span>';
-    var live = (G.phase === "question" || G.phase === "vote") && !decl;
-    return '<button type="button" class="vs-token' + (decl ? " armed" : "") + '" data-vs="' + i + '"' + (live ? "" : " disabled") + ' aria-label="Declare Against the Room for ' + esc(p.name) + '">VS</button>';
-  }
-  function declareVs(i) {
-    if (!G || !G.cur || (G.phase !== "question" && G.phase !== "vote")) return;
-    var p = G.players[i];
-    if (!p || p.house != null || !vsEligible(i)) return;
-    var c = G.cur;
-    c.vs = c.vs || {};
-    c.vs[i] = true;
-    p.vsRound = G.round; /* the round's one declaration, spent in the throwing */
-    Snd.play("coin");
     renderSeats();
     saveTableShow();
   }
@@ -3321,9 +3201,6 @@
       /* THE DOUBLE (designer pass 3): the armed seats ride the save
          — a refresh mid-question must not un-spend a declaration */
       dbl: c.dbl ? Object.assign({}, c.dbl) : null,
-      /* AGAINST THE ROOM (designer pass 4): the declared seats
-         ride the save on the same rule */
-      vs: c.vs ? Object.assign({}, c.vs) : null,
       /* Design pass 3: the GOT IT tap order is the table's quick-draw
          record — it must survive a host refresh or the winner could
          change across a resume. */
@@ -3380,7 +3257,6 @@
          one from the untouched wrong answers (commitCutPair) */
       cutPair: Array.isArray(o.cutPair) ? o.cutPair.slice() : null,
       dbl: (o.dbl && typeof o.dbl === "object") ? Object.assign({}, o.dbl) : null,
-      vs: (o.vs && typeof o.vs === "object") ? Object.assign({}, o.vs) : null,
       /* older saves predate the quick-draw record: fall back to the
          numeric order of the seats already marked — deterministic */
       lockOrder: Array.isArray(o.lockOrder) ? o.lockOrder.slice()
@@ -3429,7 +3305,7 @@
           /* House Players (pass 5): a house seat's profile index
              rides along — a resumed solo show restores the same
              cast members, brains included */
-          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, dbl: (p.dbl != null ? p.dbl : 1), vsRound: p.vsRound || 0, house: (p.house != null ? p.house : null) };
+          return { name: p.name, color: p.color, score: p.score, cut: p.cut, bet: p.bet, streak: p.streak || 0, dbl: (p.dbl != null ? p.dbl : 1), house: (p.house != null ? p.house : null) };
         }),
         round: G.round, qInRound: G.qInRound, showId: G.showId,
         bankedOnce: !!G.bankedOnce, bigLeadDone: !!G.bigLeadDone,
@@ -3478,16 +3354,6 @@
            the grant (the card's row, Sterling's drawn words)
            instead of forgetting it happened */
         windBreak: G.windBreak ? { round: G.windBreak.round, seats: G.windBreak.seats.slice(), line: G.windBreak.line } : null,
-        /* Designer pass 6: the Decade Vote rides the save whole —
-           the open count (tallies and the house's dealt votes),
-           the call, and both drawn lines — so a refresh mid-break
-           resumes the count exactly where the hands left it, and
-           a resumed money round keeps leaning on the called era */
-        era: G.era || null,
-        eraCalled: !!G.eraCalled,
-        eraVote: G.eraVote ? { counts: G.eraVote.counts.slice(), house: Object.assign({}, G.eraVote.house), ballots: Object.assign({}, G.eraVote.ballots || {}) } : null,
-        eraVoteLine: G.eraVoteLine || null,
-        eraLine: G.eraLine || null,
         phase: G.phase, guess: G.guess, lastStand: G.lastStand,
         cur: saveCurForSave(G.cur),
         pools: pools, rngState: rngBox.a,
@@ -3550,9 +3416,6 @@
           /* a save written before THE DOUBLE has no dbl field —
              the token is simply still in the player's pocket */
           dbl: (p.dbl != null ? p.dbl : 1),
-          /* a save written before AGAINST THE ROOM has no vsRound
-             field — the gauntlet simply hasn't been thrown */
-          vsRound: (typeof p.vsRound === "number" && p.vsRound > 0) ? Math.floor(p.vsRound) : 0,
           /* House Players (pass 5): a saved profile index restores
              the house seat; anything malformed deals a guest */
           house: (Number.isInteger(p.house) && HOUSE_PROFILES[p.house]) ? p.house : null
@@ -3587,18 +3450,6 @@
       windBreak: (sv.windBreak && Array.isArray(sv.windBreak.seats) && typeof sv.windBreak.line === "string" && sv.windBreak.seats.length)
         ? { round: sv.windBreak.round | 0, seats: sv.windBreak.seats.filter(function (n) { return Number.isInteger(n) && n >= 0 && n < sv.players.length; }), line: sv.windBreak.line }
         : null,
-      /* Designer pass 6: the vote restored as recorded; a save
-         written before the Decade Vote existed resumes with no
-         count standing and no era called — the old break, whole */
-      era: eraById(sv.era) ? sv.era : null,
-      eraCalled: !!sv.eraCalled,
-      eraVote: (sv.eraVote && Array.isArray(sv.eraVote.counts) && sv.eraVote.counts.length === 3)
-        ? { counts: sv.eraVote.counts.map(function (n) { return Math.max(0, Math.floor(n) || 0); }),
-            house: (sv.eraVote.house && typeof sv.eraVote.house === "object") ? sv.eraVote.house : {},
-            ballots: (sv.eraVote.ballots && typeof sv.eraVote.ballots === "object") ? sv.eraVote.ballots : {} }
-        : null,
-      eraVoteLine: typeof sv.eraVoteLine === "string" ? sv.eraVoteLine : null,
-      eraLine: typeof sv.eraLine === "string" ? sv.eraLine : null,
       /* The Golden Question (pass 4): the pick is restored from
          the save, validated against the very list it was drawn
          from — a save written before the Golden existed (or a
@@ -4847,62 +4698,7 @@
       row("SECOND WIND", view.windLine) + row("HOUSE RULES", view.rulesLine) +
       "</div>" +
       '<p class="round-text break-tease">' + esc(view.tease) + "</p>" +
-      /* Designer pass 6: a null btnId renders the card with no
-         way forward — the first break holds its BEGIN back
-         until the room's era has been called */
       (btnId ? '<button class="btn-gold" id="' + btnId + '">' + (view.nextRound === 2 ? "BEGIN ROUND TWO" : "BEGIN THE BIG FINISH") + "</button>" : "") + "</div>";
-  }
-  /* ---------- Designer pass 6 — the Decade Vote panels ----------
-     One panel grammar for both engines. While the count stands
-     open the plaques are the count itself (at the table the host
-     taps one per hand counted; online they only display — the
-     pads carry the buttons). Once called, the panel becomes the
-     verdict strip and rides every later break unchanged. */
-  function eraTotals(counts, house) {
-    var t = [0, 0, 0];
-    (counts || []).forEach(function (n, i) { t[i] += n || 0; });
-    if (house) Object.keys(house).forEach(function (si) { var ei = house[si]; if (ei >= 0 && ei < 3) t[ei]++; });
-    return t;
-  }
-  function eraPanelHTML(totals, opts) {
-    opts = opts || {};
-    var plaques = ERAS.map(function (e, i) {
-      var n = totals[i] || 0;
-      var inner = '<span class="era-name">' + e.plaque + '</span>' +
-        '<span class="era-pips">' + (n ? "●".repeat(Math.min(n, 8)) : "&nbsp;") + '</span>' +
-        '<span class="era-count">' + (n ? String(n) : "—") + "</span>";
-      return opts.tappable
-        ? '<button class="era-plaque" data-era="' + e.id + '">' + inner + "</button>"
-        : '<div class="era-plaque still">' + inner + "</div>";
-    }).join("");
-    return '<div class="era-panel"><div class="era-kicker">THE ROOM DECIDES</div>' +
-      '<div class="era-q">Which years does Sterling deal from, from Double Money to the crown?</div>' +
-      '<div class="era-plaques">' + plaques + "</div>" +
-      (opts.note ? '<p class="era-note">' + opts.note + "</p>" : "") +
-      (opts.callId ? '<div class="era-actions">' +
-        (opts.resetId ? '<button class="btn-ghost" id="' + opts.resetId + '">START THE COUNT AGAIN</button>' : "") +
-        '<button class="btn-gold" id="' + opts.callId + '">CALL IT</button></div>' : "") +
-      "</div>";
-  }
-  function eraResultHTML(eraId) {
-    var e = eraId ? eraById(eraId) : null;
-    return '<div class="era-panel era-done"><div class="era-kicker">THE ROOM&rsquo;S ERA</div>' +
-      '<div class="era-result">' + (e ? e.plaque : "NO VERDICT") + "</div>" +
-      '<p class="era-note">' + (e ? "Sterling deals from those years for the rest of the night — the evergreens still visit, as evergreens do."
-                                  : "The room abstained — Sterling deals the whole shelf, as he pleases.") + "</p></div>";
-  }
-  /* the count, called: totals in, the verdict written onto the
-     state the caller keeps (G at the table, OG online) — winner,
-     tie broken by the show's own rng, or an honest abstention
-     when no hand went up. Returns the HOST pool the verdict is
-     spoken from. */
-  function eraVerdict(totals) {
-    var top = Math.max.apply(null, totals);
-    if (top <= 0) return { era: null, pool: "eraabstain" };
-    var tied = [];
-    totals.forEach(function (n, i) { if (n === top) tied.push(i); });
-    var win = tied.length === 1 ? tied[0] : tied[ri(tied.length)];
-    return { era: ERAS[win].id, pool: tied.length === 1 ? "erawin" : "eratie" };
   }
   function tableBreakSeats() {
     /* Pass N2: the seats carry the token COUNT now — breakView's
@@ -4917,10 +4713,7 @@
     setPlot("house"); /* Graphics Pass 2: the break rests at house light */
     curtainEnsureClosed(); /* Graphics Pass 1: the break is a front-of-curtain card */
     stagePhase("intermission");
-    /* Pass 8: while the Decade Vote stands open the desks are the
-       ballot box, so the seats show; every other break rests
-       without them, as before */
-    seatsVisible(G.round === 2 && !G.eraCalled && !!G.eraVote);
+    seatsVisible(false); /* the break rests without the desks, as before */
     audDecider(false); /* V4: the break rests — no hush survives into it */
     setLight(G.round === 2 ? "open" : "hot"); /* the finished round's light — the break rests in it */
     /* Dynamics pass D2: this break's grant, retold from its
@@ -4929,49 +4722,10 @@
     var wb = (G.windBreak && G.windBreak.round === G.round - 1 && G.windBreak.seats.length) ? G.windBreak : null;
     var view = breakView(tableBreakSeats(), G.facts, G.round - 1, G.pot || 0,
       wb ? wb.seats.map(function (si) { return G.players[si].name; }) : null, G.rules);
-    /* Designer pass 6: at the first break the card holds its
-       BEGIN back until the room's era is called — the vote
-       panel stands in its place, the host tapping a plaque for
-       every hand counted (fingers: one for the '80s, two for
-       the '90s, three for the 2000s — the game's own finger
-       grammar, pointed at decades). Once called, the verdict
-       strip rides this break and the next. A save from before
-       the vote existed carries no eraVote and simply plays the
-       old break, button and all. */
-    var voteOpen = G.round === 2 && !G.eraCalled && !!G.eraVote;
-    if (voteOpen) {
-      var houseNote = "";
-      var hvNames = Object.keys(G.eraVote.house).map(function (si) {
-        var p = G.players[+si]; var e = ERAS[G.eraVote.house[si]];
-        return p && e ? esc(p.name) + " calls " + e.spoken : "";
-      }).filter(Boolean);
-      if (hvNames.length) houseNote = " The house votes too — " + hvNames.join(" · ") + ".";
-      stage(breakCardHTML(view, null) + eraPanelHTML(eraTotals(G.eraVote.counts, G.eraVote.house), {
-        tappable: false, callId: "btnEraCall",
-        note: "Vote on your own desk — tap your era, change it while the count stands open. Sterling calls it when every desk is in." + houseNote
-      }));
-      $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "") + (G.eraVoteLine ? " " + G.eraVoteLine : "");
-      $("btnEraCall").addEventListener("click", function () { callTableEra(); });
-      eraDwellArm();
-      return;
-    }
-    stage(breakCardHTML(view, "btnBreakGo") + (G.eraCalled ? eraResultHTML(G.era) : ""));
-    $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "") +
-      (G.round === 2 && G.eraCalled && G.eraLine ? " " + G.eraLine : "");
+    stage(breakCardHTML(view, "btnBreakGo"));
+    $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "");
     $("btnBreakGo").addEventListener("click", function () { roundIntro(); });
     autoGo("btnBreakGo", "break:" + G.round, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!G && G.phase === "intermission"; });
-  }
-  /* Designer pass 6: the table's count, called — the verdict is
-     written onto G (era, the drawn words), the save follows, and
-     the break repaints itself with its BEGIN restored */
-  function callTableEra() {
-    if (!G || G.eraCalled || !G.eraVote) return;
-    var v = eraVerdict(eraTotals(G.eraVote.counts, G.eraVote.house));
-    G.era = v.era; G.eraCalled = true;
-    G.eraLine = authoredLine(v.pool, v.era ? { era: eraById(v.era).spoken } : {});
-    Snd.play("chime");
-    saveTableShow();
-    paintIntermission();
   }
   function beginIntermission() {
     curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
@@ -4994,21 +4748,6 @@
       granted.forEach(function (si) { G.players[si].cut = Math.min(G.players[si].cut + 1, cutStartOf(G.rules)); });
       var wNames = granted.map(function (si) { return G.players[si].name; });
       G.windBreak = { round: G.round - 1, seats: granted.slice(), line: authoredLine("wind", { name: joinNames(wNames) }) };
-    }
-    /* Designer pass 6 — the Decade Vote stands at THIS break,
-       the first one only: G.round has already advanced to 2.
-       The count is set up here, at the moment the break begins,
-       like the Second Wind grant: house seats deal their votes
-       now (their profiles grew up somewhere too — the pick is
-       the show rng's, drawn once and ridden by the state), and
-       Sterling's opening of the vote is drawn once, so the
-       break that is painted, saved and resumed is the break
-       that was dealt. */
-    if (G.round === 2 && !G.eraCalled && !G.eraVote) {
-      var hv = {};
-      G.players.forEach(function (p, i) { if (p.house != null) hv[i] = ri(ERAS.length); });
-      G.eraVote = { counts: [0, 0, 0], house: hv, ballots: {} };
-      G.eraVoteLine = authoredLine("eravote");
     }
     seatsVisible(false);
     updateTop(); renderSeats();
@@ -5037,8 +4776,7 @@
           ["The fingers", "1, 2, 3 or 4 when the clock stops — right fingers bank"],
           ["Quick-draw", "First right answer in pockets the bonus — $50 in Round 1, $100 in Round 2, $150 in the Big Finish"],
           ["The streak", "Three in a row starts it — a bonus on every bank while it lives, growing with the round: $25, $50, $75"],
-          ["Closest number", "Twice this round — key in a number, nearest takes it"],
-          ["The gauntlet", "Sit last and the VS disc is yours, once a round: declare Against the Room — bank a question nobody else banks and it pays double"]],
+          ["Closest number", "Twice this round — key in a number, nearest takes it"]],
       2: (G.rules && G.rules.secondCut)
         ? [["The money", "Same game, double — $200 · $400 · $600"],
            ["Cut Two", "Two tokens each — yours for the whole show"],
@@ -5046,7 +4784,6 @@
            ["The spend", "Spend them like they matter — because they do"],
            ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
-           ["Against the Room", "Whoever sits last may throw it once a round — bank a question nobody else banks and it pays double"],
            ["The Bluff", "One question this round has no written wrong answers — the table invents them. $200 for the truth, $25 for every player your lie fools"],
            ["The Headline", "The round closes with it — double money again, half the clock"]]
         : [["The money", "Same game, double — $200 · $400 · $600"],
@@ -5055,7 +4792,6 @@
            ["The spend", "Spend it like it's the last one — it is"],
            ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
-           ["Against the Room", "Whoever sits last may throw it once a round — bank a question nobody else banks and it pays double"],
            ["The Bluff", "One question this round has no written wrong answers — the table invents them. $200 for the truth, $25 for every player your lie fools"],
            ["The Headline", "The round closes with it — double money again, half the clock"]],
       3: [["Questions", "Three"],
@@ -5065,15 +4801,6 @@
           ["The risk", "Get it wrong and you lose nothing but face"],
           ["The promise", "Nobody leaves this show poorer than they arrived"]]
     };
-    /* Designer pass 6: the room's era is a stated rule of the
-       night from here on — named on the Double Money ledger
-       (however the count went) and again on the Big Finish's,
-       while the deal still leans on it */
-    if (G.round === 2 && G.eraCalled) rows[2].push(["The room's era",
-      G.era ? "The room voted " + eraById(G.era).spoken + " — Sterling deals from those years, evergreens excepted"
-            : "The room abstained — Sterling deals the whole shelf, as he pleases"]);
-    if (G.round === 3 && G.era) rows[3].push(["The room's era",
-      "Still " + eraById(G.era).spoken + " — the vote holds to the crown"]);
     var factRows = rows[G.round].map(function (r) {
       return '<div class="fact-row"><span class="fact-k">' + r[0] + '</span><span class="fact-v">' + r[1] + "</span></div>";
     }).join("");
@@ -5610,50 +5337,6 @@
     c.voteAt = Date.now();
     renderSeats();
     revealAnswer();
-  }
-  /* Pass 8: the Decade Vote moves to the desks — each seat taps
-     its own era, changeable until Sterling calls it. He calls it
-     when every desk is in (after a breath), or when the break's
-     dwell runs out with whatever is in — an empty ballot box is
-     still an honest abstention. The panel plaques are now the
-     scoreboard, not the ballot box. */
-  function deskEraHTML(p, i) {
-    if (p.house != null) return "";
-    if (!G || G.phase !== "intermission" || !G.eraVote || G.eraCalled) return "";
-    var mine = G.eraVote.ballots ? G.eraVote.ballots[i] : null;
-    return '<span class="pick-chips era-chips">' + ERAS.map(function (e, ei) {
-      return '<button class="pick-chip' + (mine === ei ? " locked" : "") + '" data-eravote="' + i + "|" + ei + '">' + e.plaque.replace("THE ", "") + "</button>";
-    }).join("") + "</span>";
-  }
-  var eraCallTimer = null, eraDwellCur = null;
-  function eraDeskVote(i, ei) {
-    if (!G || !G.eraVote || G.eraCalled || G.phase !== "intermission") return;
-    if (!G.eraVote.ballots) G.eraVote.ballots = {};
-    G.eraVote.ballots[i] = ei;
-    var counts = [0, 0, 0];
-    Object.keys(G.eraVote.ballots).forEach(function (k) { var v = G.eraVote.ballots[k]; if (v >= 0 && v < 3) counts[v]++; });
-    G.eraVote.counts = counts;
-    Snd.play("tick");
-    saveTableShow();
-    paintIntermission();
-    renderSeats();
-    var allIn = G.players.every(function (p, si) { return p.house != null || G.eraVote.ballots[si] != null; });
-    if (allIn && !eraCallTimer) {
-      var vote0 = G.eraVote;
-      eraCallTimer = setTimeout(function () {
-        eraCallTimer = null;
-        if (G && G.eraVote === vote0 && !G.eraCalled) callTableEra();
-      }, 2500);
-    }
-  }
-  function eraDwellArm() {
-    if (!G || !G.eraVote || G.eraCalled) return;
-    if (eraDwellCur === G.eraVote) return;
-    eraDwellCur = G.eraVote;
-    var vote0 = G.eraVote;
-    setTimeout(function () {
-      if (G && G.eraVote === vote0 && !G.eraCalled && G.phase === "intermission") callTableEra();
-    }, 30000);
   }
   function humanGuessHTML(p, i) {
     var c = G.cur;
@@ -6718,31 +6401,9 @@
   function seatGain(c, p, i, qdSeat, sBonus, sole) {
     var base = c.betRound ? p.bet * 100 : c.bankValue;
     if (!c.betRound && c.dbl && c.dbl[i]) base *= 2;
-    /* AGAINST THE ROOM (designer pass 4): a declared seat that
-       banked ALONE takes the question's value twice — the same
-       doubling grammar as the Double, earned by separation
-       instead of confidence. The two stakes never ride together
-       (both arming paths refuse the overlap), so this never
-       compounds past a single double. */
-    if (!c.betRound && sole && c.vs && c.vs[i]) base *= 2;
     return base + (i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0) + (sBonus || 0);
   }
   function dblSpent(c, i) { return !!(c.dbl && c.dbl[i] && !c.betRound); }
-  function vsPaid(c, i, sole) { return !!(!c.betRound && sole && c.vs && c.vs[i]); }
-  /* AGAINST THE ROOM eligibility, read live: the seat sits last
-     (a tie for last is last; an all-level table has no trailer
-     and no gauntlet), has not declared this round, and carries
-     no Double on this question — one stake per question. */
-  function vsEligible(i) {
-    if (!G || !G.cur || G.cur.betRound || G.cur.decider || G.cur.kind === "bluff") return false;
-    var p = G.players[i];
-    if (!p || (p.vsRound || 0) === G.round) return false;
-    if (G.cur.dbl && G.cur.dbl[i]) return false;
-    var scores = G.players.map(function (x) { return x.score; });
-    var min = Math.min.apply(null, scores), max = Math.max.apply(null, scores);
-    return min < max && p.score === min;
-  }
-  function vsDeclared(i) { return !!(G && G.cur && G.cur.vs && G.cur.vs[i]); }
   function revealAnswer() {
     if (!G || !G.cur || G.phase !== "vote") return;
     var c = G.cur;
@@ -6855,7 +6516,7 @@
       var sBonus = (c.streakFx && c.streakFx[i]) ? (c.streakFx[i].bonus || 0) : 0;
       var soleFx = G.players.filter(function (_, j) { return c.marks[j]; }).length === 1;
       var foolAmt = (c.kind === "bluff" && c.bluffFool && c.bluffFool[i]) || 0;
-      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx) + foolAmt, closest: guessQ, quickdraw: i === qdSeat, qdBonus: i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0, doubled: dblSpent(c, i), vs: vsPaid(c, i, soleFx), streakBonus: sBonus, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
+      if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx) + foolAmt, closest: guessQ, quickdraw: i === qdSeat, qdBonus: i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0, doubled: dblSpent(c, i), streakBonus: sBonus, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
       else if (foolAmt > 0) fxSeats[i] = { delta: "bank", amt: foolAmt, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
       else fxSeats[i] = { delta: "miss", delay: i * 0.05 };
     });
@@ -7367,15 +7028,9 @@
          It rides when its confidence in this question is high:
          the dealt probability on a picked question, or a Warm
          number, where its shout lands close by construction. One
-         rule for both: confidence of four-in-five or better.
-         AGAINST THE ROOM, house policy: a house seat in last
-         place with the same confidence throws the gauntlet
-         INSTEAD — it is the scarcer instrument, and the house
-         plays to win the night, not to decorate it. */
+         rule for both: confidence of four-in-five or better. */
       var conf = (c.kind === "num") ? (band === 1 ? 0.88 : band === 2 ? 0.70 : 0.40) : e.prob;
-      if (c.kind === "bluff") { /* the bluff is its own stake: no house gauntlet, no house Double, ever */
-      } else if (conf >= 0.8 && vsEligible(i)) {
-        c.vs = c.vs || {}; c.vs[i] = true; p.vsRound = G.round; e.vs = true;
+      if (c.kind === "bluff") { /* the bluff is its own stake: no house Double, ever */
       } else if ((p.dbl > 0) && G.round >= 2 && !c.betRound && !c.decider) {
         if (conf >= 0.8) { c.dbl = c.dbl || {}; c.dbl[i] = true; e.dbl = true; }
       }
@@ -8146,9 +7801,8 @@
     G = newGame(["—", "—", "—", "—"]); // scratch state for the shared draw helpers
     resetDeck();
     var guess = buildGuessSchedule();
-    /* Designer pass 6: only Round 1 is dealt now. Rounds 2-3 are
-       dealt at the first intermission (ogBuildTail), AFTER the
-       room has voted its era, so the lean can reach them — the
+    /* Only Round 1 is dealt now. Rounds 2-3 are dealt later by
+       ogBuildTail, when the show first reaches for them — the
        guess map and the golden seat are fixed for the whole show
        here, as they always were, and ride the host save. */
     OG.guess = guess;
@@ -8159,10 +7813,10 @@
     saveSeen();
     return script;
   }
-  /* Designer pass 6: the tail of the script — Rounds 2 and 3,
-     dealt at the first intermission with the room's era on the
-     scratch state, so drawBand leans the way the room voted.
-     The deck is wherever the show left it: in this session the
+  /* The tail of the script — Rounds 2 and 3, dealt when the
+     show first reaches for them (the publish path calls this
+     the moment a tail question is due). The deck is wherever
+     the show left it: in this session the
      pools still hold Round 1's leavings; after a host refresh
      they were rebuilt from the seen ledger, so the questions
      already on the script are struck from them first and can
@@ -8173,7 +7827,6 @@
     if (OG.script && OG.script.length >= R1_COUNT + R2_COUNT + R3_COUNT) { OG.tailBuilt = true; return; } // a plan from before the vote: already whole
     var saved = G;
     G = newGame(["—", "—", "—", "—"]); // scratch state for the shared draw helpers
-    G.era = OG.era || null;
     if (!pools.catUse) resetDeck();
     var usedIds = {};
     (OG.script || []).forEach(function (e) { if (e.bank && e.bank.id != null) usedIds[e.bank.id] = 1; });
@@ -8309,20 +7962,12 @@
            drawn words, so a host restored mid-break retells the
            grant exactly; the room remains the token's authority */
         breakWind: OG.breakWind ? { names: OG.breakWind.names.slice(), line: OG.breakWind.line } : null,
-        /* Designer pass 6: the Decade Vote and the two-sitting
-           script ride the plan — the guess map and golden seat
-           (without them the tail cannot be dealt as drawn), the
-           tail flag, and the era state entire, so a host restored
-           mid-break finds the count exactly where the room left
-           it and a host restored later finds its verdict */
+        /* the two-sitting script rides the plan — the guess map
+           and golden seat (without them the tail cannot be dealt
+           as drawn) and the tail flag */
         guess: OG.guess || null,
         goldenSlot: OG.goldenSlot || null,
         tailBuilt: !!OG.tailBuilt,
-        era: OG.era || null,
-        eraCalled: !!OG.eraCalled,
-        eraOpen: !!OG.eraOpen,
-        eraVoteLine: OG.eraVoteLine || null,
-        eraLine: OG.eraLine || null,
         decider: OG.decider ? {
           eligible: OG.decider.eligible.slice(),
           winner: OG.decider.winner != null ? OG.decider.winner : null,
@@ -8406,7 +8051,7 @@
       seriesCtx: null, seriesLine: null, // Programme pass 4: the night's series, captured at the show's start
       goldTease: null,         // The Golden Question (pass 4): the tease line drawn at the show's start
       guess: null, goldenSlot: null, tailBuilt: false, // Designer pass 6: the show's guess map, golden seat, and whether the script's tail (Rounds 2-3) has been dealt
-      era: null, eraCalled: false, eraOpen: false, eraVotes: {}, eraVotesJson: "", eraVoteLine: null, eraLine: null, // Designer pass 6: the Decade Vote — the room's era, its count, and Sterling's drawn words for both
+      tailBuilt: false,
       pot: 0,                  // Dynamics pass D1: the room's pot, mirrored from its snapshots and reveals
       report: null,            // Pass N1: the referee's report card, dealt with the ended broadcast / ended snapshot
       breakWind: null,         // Dynamics pass D2: {names, line} — this break's Second Wind grant, as this screen tells it
@@ -8452,18 +8097,12 @@
          beside the series line; a plan written before the Golden
          existed simply has no tease to re-present */
       OG.goldTease = typeof plan.goldTease === "string" ? plan.goldTease : null;
-      /* Designer pass 6: the vote and the two-sitting script,
-         restored as recorded — a plan written before the vote
-         existed holds a whole fifteen-question script and simply
-         never opens a count (its tail flag reads dealt) */
+      /* the two-sitting script, restored as recorded — a plan
+         written earlier holds a whole fifteen-question script
+         (its tail flag reads dealt) */
       OG.guess = (plan.guess && typeof plan.guess === "object") ? plan.guess : null;
       OG.goldenSlot = validGoldenSlot(plan.goldenSlot) ? plan.goldenSlot : null;
       OG.tailBuilt = plan.tailBuilt != null ? !!plan.tailBuilt : true;
-      OG.era = eraById(plan.era) ? plan.era : null;
-      OG.eraCalled = !!plan.eraCalled;
-      OG.eraOpen = !!plan.eraOpen && !OG.eraCalled;
-      OG.eraVoteLine = typeof plan.eraVoteLine === "string" ? plan.eraVoteLine : null;
-      OG.eraLine = typeof plan.eraLine === "string" ? plan.eraLine : null;
       /* Pass N2: the plan's rules bridge the moments before the
          room's first snapshot lands; the snapshot remains their
          authority and overwrites this on arrival. A plan written
@@ -8641,18 +8280,6 @@
        snapshot's question is still the finished round's last one,
        and adopting it would rewind the plan into that reveal. */
     if (s.phase === "intermission") {
-      /* Designer pass 6: the room's era count is the authority —
-         the host's tally mirror follows the snapshot, and while
-         the count stands open on this screen a changed tally
-         repaints the panel, so the room watches it gather */
-      if (s.eraVote) {
-        var evJson = JSON.stringify(s.eraVote.votes || {});
-        if (OG.eraVotesJson !== evJson) {
-          OG.eraVotesJson = evJson;
-          OG.eraVotes = s.eraVote.votes || {};
-          if (OG.phase === "intermission" && OG.eraOpen && !OG.eraCalled) { ogPaintIntermission(2); ogEraAutoCheck(); return; }
-        }
-      }
       /* Dynamics pass D2: the room's record of the grant is the
          authority for the card's row. A host that predicted the
          grant at its own break already holds the same names; one
@@ -8706,12 +8333,10 @@
            a repeat state must hand them over before the seats
            repaint, or the big screen would never see a declaration */
         if (OG.cur && s.question) OG.cur.dblArmed = s.question.dblArmed || [];
-        if (OG.cur && s.question) OG.cur.vsArmed = s.question.vsArmed || [];
         ogRenderSeats();
       }
     } else if (s.phase === "reveal") {
       if (OG.cur && s.question && s.question.qid === OG.cur.qid) OG.cur.dblArmed = s.question.dblArmed || [];
-      if (OG.cur && s.question && s.question.qid === OG.cur.qid) OG.cur.vsArmed = s.question.vsArmed || [];
       if (OG.phase !== "reveal" && s.lastReveal) {
         /* a restored host lands mid-reveal with no current question —
            rebuild it from the script so the reveal can paint */
@@ -8841,29 +8466,6 @@
     if (!armed && p.dbl === false) return "";
     return '<span class="dbl-token house' + (armed ? " armed" : "") + '" aria-hidden="true">×2</span>';
   }
-  /* AGAINST THE ROOM (designer pass 4): the big-screen mirror of
-     the VS disc — the table's disc in display dress. It shows on
-     a desk while the seat could declare (the snapshot's own
-     arithmetic: last place in a table with a leader, unused this
-     round, no Double riding) or has declared. Display only: the
-     declaration itself happens on the pad. */
-  function ogVsTokenHTML(p, i) {
-    if (!OG || !OG.cur || (OG.phase !== "answer" && OG.phase !== "reveal")) return "";
-    var q = OG.cur;
-    if (q.betted || q.betRound || q.decider) return "";
-    var decl = (q.vsArmed || []).indexOf(i) >= 0;
-    if (!decl && OG.phase === "reveal") return ""; /* settled standings must not re-deal the gauntlet — see the table's rule */
-    if (!decl) {
-      if ((p.vsRound || 0) === q.round) return "";
-      if ((q.dblArmed || []).indexOf(i) >= 0) return "";
-      var scores = [];
-      OG.players.forEach(function (x) { if (x) scores.push(x.score); });
-      if (!scores.length) return "";
-      var mn = Math.min.apply(null, scores), mx = Math.max.apply(null, scores);
-      if (!(mn < mx && p.score === mn)) return "";
-    }
-    return '<span class="vs-token house' + (decl ? " armed" : "") + '" aria-hidden="true">VS</span>';
-  }
   function ogRenderSeats() {
     if (!OG) return;
     var top = $("seatsTop"), bot = $("seatsBottom");
@@ -8883,7 +8485,7 @@
       var oseg = streakSegHTML(p.streak || 0);
       if (oseg) tags.push(oseg);
       var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + ogDblTokenHTML(p, i) + ogVsTokenHTML(p, i) +
+        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + ogDblTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tags.join(" · ") + "</span>" + fortuneHTML() + "</div></div>");
@@ -9030,9 +8632,7 @@
     OG.cur = null; OG.decider = null;
     OG.pot = 0; /* Dynamics pass D1: a fresh show's pot is empty — the room resets its own on new_show; this mirror follows */
     OG.report = null; /* Pass N1: a fresh show's card is unwritten until its own finale deals it */
-    /* Designer pass 6: a fresh show starts un-voted — the era,
-       the count and the dealt tail all belong to the last show */
-    OG.era = null; OG.eraCalled = false; OG.eraOpen = false; OG.eraVotes = {}; OG.eraVotesJson = ""; OG.eraVoteLine = null; OG.eraLine = null; OG.tailBuilt = false;
+    OG.tailBuilt = false; /* the dealt tail belongs to the last show */
     OG.facts = freshFacts();
     OG.lastRevealQid = null;
     OG.bankedOnce = false; OG.bigLeadDone = false;
@@ -9373,7 +8973,6 @@
        adopts the snapshot's texts (authorship stays in the room) */
     if (e.kind === "bluff" && q && q.options) e.answers = q.options.slice();
     if (q) e.dblArmed = q.dblArmed || []; /* THE DOUBLE: the snapshot's riding seats, from the first paint */
-    if (q) e.vsArmed = q.vsArmed || []; /* AGAINST THE ROOM: the snapshot's declared seats, same rule */
     audDecider(!!e.decider); /* V4: the Decider hushed from its first second */
     applyCat(e.cat); setCatBackdrop(e.cat);
     seatsVisible(true); ogRenderSeats();
@@ -9553,9 +9152,6 @@
        * results — the desk wears the same ×2 DOUBLED tag as the
        * table's (decorateSeat is shared) */
       if (res.doubled) { fx = fx || {}; fx.doubled = true; }
-      /* AGAINST THE ROOM: the referee marked the lone bank that
-       * paid — the desk wears the same tag as the table's */
-      if (res.vs) { fx = fx || {}; fx.vs = true; }
       /* THE BLUFF: the referee marked what the seat's lie earned —
        * the desk wears the same FOOLED tag as the table's */
       if (res.fool) { fx = fx || {}; fx.bluffFool = res.fool; }
@@ -9737,98 +9333,20 @@
       OG.breakWind = { names: ogWindNames, line: authoredLine("wind", { name: joinNames(ogWindNames) }) };
     }
     ogSend({ t: "intermission", nextRound: nextRound });
-    /* Designer pass 6: the first break also opens the Decade
-       Vote — the room is told (era_open lands after the break
-       itself, the only order the referee accepts), Sterling's
-       opening of the vote is drawn once here, and the pads do
-       the voting on their own screens */
-    if (nextRound === 2 && !OG.eraCalled && !OG.eraOpen) {
-      OG.eraOpen = true;
-      OG.eraVoteLine = authoredLine("eravote");
-      ogSend({ t: "era_open" });
-    }
     $("roundLabel").textContent = { 2: "ROUND 2 · DOUBLE MONEY", 3: "ROUND 3 · THE BIG FINISH" }[nextRound] || "";
     $("qCounter").textContent = "THE INTERMISSION";
     ogPaintIntermission(nextRound);
     ogSaveHostShow();
   }
-  /* Designer pass 6: the pads' votes, counted — the tally the
-     host screen shows and the verdict is called from. The
-     referee's snapshot is the authority; this reads the mirror
-     ogOnState keeps. */
-  function ogEraPadCounts() {
-    var counts = [0, 0, 0];
-    Object.keys(OG.eraVotes || {}).forEach(function (si) {
-      var e = eraById(OG.eraVotes[si]);
-      if (e) counts[ERAS.indexOf(e)]++;
-    });
-    return counts;
-  }
   function ogPaintIntermission(nextRound) {
     setPlot("house"); /* Graphics Pass 2: the break rests at house light */
     curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
     var view = breakView(ogBreakSeats(), OG.facts, nextRound - 1, OG.pot || 0, OG.breakWind ? OG.breakWind.names : null, OG.rules);
-    /* Designer pass 6: while the count stands open, the card
-       holds its BEGIN back and the panel shows the room's tally
-       gathering — the pads vote, this screen only counts and
-       calls. Once called, the verdict strip rides the breaks. */
-    var voteOpen = nextRound === 2 && OG.eraOpen && !OG.eraCalled;
-    if (voteOpen) {
-      stage(breakCardHTML(view, null) + eraPanelHTML(ogEraPadCounts(), {
-        callId: "ogEraCall",
-        note: "The room votes on its phones — the &rsquo;80s, the &rsquo;90s or the 2000s. Call it when every phone has spoken; a phone may change its mind until you do."
-      }));
-      $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "") + (OG.eraVoteLine ? " " + OG.eraVoteLine : "");
-      $("ogEraCall").addEventListener("click", function () { ogCallEra(); });
-      ogEraDwellArm();
-      return;
-    }
-    stage(breakCardHTML(view, "ogBreakGo") + (OG.eraCalled ? eraResultHTML(OG.era) : ""));
-    $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "") +
-      (nextRound === 2 && OG.eraCalled && OG.eraLine ? " " + OG.eraLine : "");
+    stage(breakCardHTML(view, "ogBreakGo"));
+    $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "");
     var b = $("ogBreakGo");
     if (b) b.addEventListener("click", function () { ogIntro(); });
     autoGo("ogBreakGo", "ogbreak:" + nextRound, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!OG && OG.phase === "intermission"; });
-  }
-  /* Pass 8: the online era call, Sterling's own — when every
-     connected phone has balloted he calls it after a breath;
-     the break's dwell (30s from the panel's first paint) calls
-     it with whatever is in, exactly as the table's does */
-  var ogEraTimer = null, ogEraDwellFor = null;
-  function ogEraAutoCheck() {
-    if (!OG || !OG.eraOpen || OG.eraCalled) return;
-    var conn = OG.players.filter(function (p) { return p && p.connected; });
-    if (!conn.length) return;
-    var votes = OG.eraVotes || {};
-    var allIn = conn.every(function (p) { return votes[p.seat] != null; });
-    if (!allIn || ogEraTimer) return;
-    ogEraTimer = setTimeout(function () {
-      ogEraTimer = null;
-      if (OG && OG.eraOpen && !OG.eraCalled) ogCallEra();
-    }, 2500);
-  }
-  function ogEraDwellArm() {
-    if (!OG || !OG.eraOpen || OG.eraCalled) return;
-    if (ogEraDwellFor === OG.code) return;
-    ogEraDwellFor = OG.code;
-    setTimeout(function () {
-      if (OG && OG.eraOpen && !OG.eraCalled && OG.phase === "intermission") ogCallEra();
-    }, 30000);
-  }
-  /* Designer pass 6: the room's count, called from the host
-     screen — the verdict is written here and published to the
-     referee (era_call), the script's tail is dealt under the
-     era it names, and the break repaints with its BEGIN back */
-  function ogCallEra() {
-    if (!OG || OG.eraCalled || !OG.eraOpen) return;
-    var v = eraVerdict(ogEraPadCounts());
-    OG.era = v.era; OG.eraCalled = true; OG.eraOpen = false;
-    OG.eraLine = authoredLine(v.pool, v.era ? { era: eraById(v.era).spoken } : {});
-    ogSend({ t: "era_call", era: v.era });
-    ogBuildTail();
-    Snd.play("chime");
-    ogSaveHostShow();
-    ogPaintIntermission(2);
   }
   /* Design pass 4: an online show's id for the record guard — the
      room code plus the script's first qid. A new room is a new code;
@@ -10693,32 +10211,6 @@
           db.textContent = "×2 YOUR DOUBLE IS RIDING…";
         });
       };
-      /* AGAINST THE ROOM (designer pass 4): the pad's gauntlet —
-         offered only while this seat sits last in a table that has
-         a leader, unused this round, and not underneath its own
-         riding Double. The referee validates everything; the pad
-         only offers, and a thrown gauntlet stays thrown (there is
-         no undeclare — the button becomes the standing fact). */
-      var vsBtn = "";
-      if (!d.q.betted && !d.q.decider && d.q.kind !== "bluff" && me) {
-        if ((d.q.vsArmed || []).indexOf(s.seat) >= 0) vsBtn = '<div class="jp-vsnote">VS · YOUR GAUNTLET IS DOWN — BANK ALONE AND IT PAYS DOUBLE</div>';
-        else if ((me.vsRound || 0) !== d.q.round && (d.q.dblArmed || []).indexOf(s.seat) < 0) {
-          var pscores = s.players.filter(Boolean).map(function (x) { return x.score; });
-          if (pscores.length && Math.min.apply(null, pscores) < Math.max.apply(null, pscores) && me.score === Math.min.apply(null, pscores)) {
-            vsBtn = '<button class="jp-vs" id="jpVs">VS · DECLARE AGAINST THE ROOM — BANK ALONE, PAY DOUBLE</button>';
-          }
-        }
-      }
-      var wireVs = function () {
-        var vb = $("jpVs");
-        if (!vb) return;
-        vb.addEventListener("click", function () {
-          Snd.ensure();
-          jpSend({ t: "vs", qid: d.q.qid });
-          vb.disabled = true;
-          vb.textContent = "VS · YOUR GAUNTLET IS DOWN…";
-        });
-      };
       if (d.q.kind === "num" && d.q.decider && (d.q.eligible || []).indexOf(JP.seat) < 0) {
         /* the spectator's pad: a watch screen, not a dead one — the
            pairing, the stakes, and the count as the numbers land.
@@ -10737,10 +10229,9 @@
           '<div class="jp-numpad">' +
           '<input id="jpNum" class="jp-num" type="number" inputmode="decimal" placeholder="Your number" value="' + (numKeep != null ? esc(numKeep) : (effNum != null ? effNum : "")) + '">' +
           '<div class="jp-numstate" id="jpNumState">' + (effNum != null ? "SENT · <b>" + effNum + "</b> — send a new one to change it" : "CLOSEST NUMBER TAKES IT · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
-          '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button>' + dblBtn + vsBtn + "</div></div>";
+          '<button class="btn-gold jp-sendbig" id="jpNumSend">SEND NUMBER</button>' + dblBtn + "</div></div>";
         entPadApply(main, padEnt);
         wireDbl();
-        wireVs();
         $("jpNumSend").addEventListener("click", function () {
           var v = parseFloat($("jpNum").value);
           if (!isFinite(v)) { jpToast("Give a number first."); return; }
@@ -10770,7 +10261,7 @@
         main.innerHTML = '<div class="jp-pad">' + padTop +
           '<div class="jp-answers">' + btns + "</div>" +
           '<div class="jp-pickstate" id="jpPickState">' + (s.yourPick != null ? "✓ <b>PICK " + (s.yourPick + 1) + " IS IN</b> — TAP ANOTHER TO CHANGE IT" : "TAP YOUR ANSWER · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
-          cutBtn + dblBtn + vsBtn + "</div>";
+          cutBtn + dblBtn + "</div>";
         entPadApply(main, padEnt);
         main.querySelectorAll(".jp-ans").forEach(function (b) {
           b.addEventListener("click", function () {
@@ -10788,7 +10279,6 @@
         var cb = $("jpCut");
         if (cb) jpWirePadCut(cb, d.q.qid);
         wireDbl();
-        wireVs();
         /* Design pass 6: the spender's pad plays the moment when its
            own cut lands — the two slabs shear under the fresh-cut
            animation and the snip sounds. It is keyed to THIS pad's
@@ -10815,36 +10305,12 @@
       var placeWord = ["", "1ST", "2ND", "3RD", "4TH"][myPlace] || (myPlace + "TH");
       var windSeatsP = (s.intermission && Array.isArray(s.intermission.wind)) ? s.intermission.wind : [];
       var windMine = windSeatsP.indexOf(JP.seat) >= 0;
-      /* Designer pass 6 — the Decade Vote, pad side: at the
-         first break the pad IS the ballot — three decade
-         buttons, its own pick lit, changeable until the host
-         calls it. After the call (and at the second break) the
-         card carries the verdict in one line. The standing and
-         blade lines stay, exactly as they were. */
-      var evP = s.eraVote || null;
-      var eraOpenPad = !!(evP && !evP.called && s.intermission && s.intermission.nextRound === 2);
-      var myEra = evP && evP.votes ? evP.votes[JP.seat] : null;
-      var eraHTML = "";
-      if (eraOpenPad) {
-        eraHTML = '<div class="jp-era"><div class="jp-era-k">THE ROOM DECIDES — PICK YOUR DECADE</div>' +
-          ERAS.map(function (e) {
-            return '<button class="jp-era-btn' + (myEra === e.id ? " sel" : "") + '" data-era="' + e.id + '">' + e.plaque + "</button>";
-          }).join("") +
-          '<p class="jp-sub">' + (myEra ? "Your vote is in — tap another decade to change it, until Sterling calls it." : "Sterling deals from the winning years for the rest of the night.") + "</p></div>";
-      } else if (evP && evP.called) {
-        var calledEra = s.era ? eraById(s.era) : null;
-        eraHTML = '<p class="jp-sub jp-era-done">' + (calledEra ? "THE ROOM CHOSE " + calledEra.plaque + " — STERLING DEALS FROM THOSE YEARS" : "NO VERDICT — THE ROOM ABSTAINED") + "</p>";
-      }
       main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">THE INTERMISSION</div>' +
         '<div class="jp-hi">YOU\'RE ' + placeWord + " · " + money(myScore) + "</div>" +
         '<p class="jp-sub">' + (windMine
           ? "SECOND WIND — YOUR CUT TWO IS BACK"
           : "CUT TWO — " + (snapCutN(me) >= 2 ? "TWO IN HAND" : snapCutN(me) === 1 ? "IN HAND" : "SPENT")) + "</p>" +
-        eraHTML +
         '<p class="jp-sub">The show resumes from the big screen.</p></div>';
-      main.querySelectorAll(".jp-era-btn").forEach(function (b) {
-        b.addEventListener("click", function () { jpSend({ t: "era_vote", era: b.getAttribute("data-era") }); Snd.play("tick"); });
-      });
     } else if (s.phase === "reveal") {
       /* The minimal pad: the reveal on the phone is ONE line — what
          your own input earned — over your own score. The answer,
@@ -11055,10 +10521,6 @@
        drive-golden asserts the pick against the very list the
        dealer draws from — never a copy of it */
     golden: { slots: function () { return GOLDEN_SLOTS.slice(); }, valid: validGoldenSlot },
-    /* Designer pass 6: the Decade Vote's own tables, exposed so
-       drive-era asserts the lean with the very era list the
-       dealer reads — never a copy of it */
-    eras: { list: function () { return ERAS.slice(); }, byId: eraById },
     /* The Ten, pass 5: the house itself, exposed so drive-house
        asserts the cast and the brain with the very tables and
        functions the show deals by — never a copy of them */
