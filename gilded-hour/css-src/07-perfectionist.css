@@ -140,7 +140,11 @@
      wraps less — headroom insurance for the column, kept after
      the fit probe showed the stage's tall side is the left
      column (see the fit note at the finale-btns rule below) */
-  .finale-wrap.has-report .award-row{padding-top:5px;padding-bottom:5px}
+  /* .finale-wrap.has-report .award-row{padding 5px/5px} lived here
+     too until the geology-2 merge (2026-11-16): stratum 11 repeats
+     the identical rule in the identical media query, later in the
+     cascade (its Audit #11 copy), so this copy could never win —
+     removed, computed style unchanged. */
   .finale-wrap.has-report .award-who{font-size:14px;line-height:1.25}
   .finale-wrap.has-report .award-k{flex-basis:100px}
   /* #5 — the pad answers two-up in landscape; portrait untouched.

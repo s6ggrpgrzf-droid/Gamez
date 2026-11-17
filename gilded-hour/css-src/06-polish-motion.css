@@ -282,7 +282,10 @@
    question screen's fit is the fit it always was. */
 @media (max-height:500px){
   .q-text{padding:5px 12px;border-radius:12px;margin-top:0}
-  .q-cardwrap{margin-top:0}
+  /* .q-cardwrap{margin-top:0} lived here too until the geology-2
+     merge (2026-11-16): stratum 07 repeats the identical rule in
+     the identical media query, later in the cascade, so this copy
+     could never win — removed, computed style unchanged. */
   .answers{margin-top:2px}
   .tools{margin-top:1px}
   .why{padding:5px 10px;border-radius:10px}
