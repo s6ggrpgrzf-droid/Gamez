@@ -67,6 +67,43 @@
   #stage:has(.bluff-rows) .pot-vessel{display:none}
 }
 
+/* ================================================================
+   AUDIT PASS (2026-11-16) — FINDING #11: the short-screen fits.
+   The number stage was the worst overflow in the game (probe,
+   844x390: stage scroll 431 against a 233 frame — the shared
+   pad's lower rows off the bottom of the stage). No squeeze
+   closes 198px, so in short landscape the stage changes shape:
+   the question stack runs down the left, the entry stack down
+   the right, and the pad itself turns 4-wide by 3-tall so its
+   keys keep their size. The bluff's invent and reveal stages
+   take one notch more than the 2026-11-13 fit block gave them
+   (audit at 844x342: invent +12, reveal +14). All scoped by
+   :has, so no other stage moves; proof is probe-numfit and the
+   bluff drives in the test campaign.
+   ================================================================ */
+@media (max-height:500px){
+  .stage-inner:has(#numEntry){display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:20px;row-gap:4px;align-content:start}
+  .stage-inner:has(#numEntry) .q-headrow{grid-column:1/-1;grid-row:1}
+  .stage-inner:has(#numEntry) .stake-ribbon{grid-column:1/-1;grid-row:2}
+  .stage-inner:has(#numEntry) .q-cardwrap{grid-column:1;grid-row:3}
+  .stage-inner:has(#numEntry) .q-meta{grid-column:1;grid-row:4}
+  .stage-inner:has(#numEntry) .q-for{grid-column:1;grid-row:5}
+  .stage-inner:has(#numEntry) #numEntry{grid-column:2;grid-row:3/6}
+  .stage-inner:has(#numEntry) .num-entry{margin-top:0}
+  .stage-inner:has(#numEntry) .num-buf{font-size:18px;padding:3px 12px;margin:4px auto 6px}
+  .stage-inner:has(#numEntry) .num-pad{grid-template-columns:repeat(4,52px);gap:5px;margin-bottom:8px}
+  .stage-inner:has(#numEntry) .num-key{height:33px;font-size:15px}
+  .stage-inner:has(#numEntry) .num-lock{min-width:180px}
+  .stage-inner:has(.bluff-rows) .bluff-rows{gap:4px;margin-top:5px}
+  .stage-inner:has(.bluff-rows) .bluff-row{padding:2px 10px}
+  .stage-inner:has(.bluff-rows) .bluff-in{padding:4px 8px}
+  .stage-inner:has(.bluff-rows) .q-text{font-size:14px}
+  .stage-inner:has(.bluff-credits) .bluff-credits{gap:3px;margin-top:3px}
+  .stage-inner:has(.bluff-credits) .bluff-credit{padding:2px 7px}
+  .stage-inner:has(.bluff-credits) .why-slip{padding-top:1px;padding-bottom:1px}
+  .stage-inner:has(.bluff-credits) .answers .ans-btn{padding-top:5px;padding-bottom:5px}
+}
+
 /* Designer pass 5 (2026-11-13): the records shelf's honours
    line — the honours a guest has held across every recorded
    night, counted in Sterling's book, with the reigning crown
@@ -77,39 +114,10 @@
 .record-row{flex-wrap:wrap}
 .record-honours{flex:0 0 100%;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:var(--brass-deep);margin-top:1px}
 
-/* Designer pass 6 (2026-11-13): THE DECADE VOTE — the panel
-   that stands under the break card at the first intermission.
-   Cream like the card it follows, ruled like the ledger: three
-   plaques in a row (the eras the bank can honestly deal), each
-   wearing its tally as brass pips over a seated count; the
-   verdict strip centres the room's era in the serif. On a
-   narrow stage the plaques keep their row and let the names
-   shrink — three decades side by side is the whole picture. */
-.era-panel{max-width:560px;margin:10px auto 0;background:linear-gradient(180deg,#FBF4E2,#F3E7CB);border:1px solid #D8C491;border-radius:18px;padding:14px 16px 16px;box-shadow:0 14px 30px rgba(0,0,0,.38),inset 0 1px 0 #FFFDF4;color:#2A2118}
-/* the panel runs the stage's full width at the break, and the
-   pot's corner is the first plaque's edge — the pot sits the
-   vote out, as it already does behind CALL IT */
-#stage:has(.era-panel) .pot-vessel{display:none}
-.era-kicker{font-size:10px;font-weight:700;letter-spacing:.34em;color:var(--brass-deep);text-align:center}
-.era-q{font-family:GHSerif,Georgia,serif;font-size:16.5px;line-height:1.3;text-align:center;margin:5px 0 11px}
-.era-plaques{display:flex;gap:9px}
-.era-plaque{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:13px;border:1.5px solid #B9974F;background:linear-gradient(180deg,#FFFDF6,#F6ECD2);box-shadow:inset 0 2px 0 #FFFFFF,0 3px 0 #C9AB63;color:#2A2118;font:inherit}
-button.era-plaque{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
-button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFFFFF,0 1px 0 #C9AB63}
-.era-name{font-family:GHSerif,Georgia,serif;font-weight:700;font-size:clamp(14px,4.4vw,18px);letter-spacing:.04em;white-space:nowrap}
-.era-pips{font-size:9px;letter-spacing:.22em;color:var(--brass-deep);min-height:11px;line-height:11px}
-.era-count{font-size:10px;font-weight:700;letter-spacing:.18em;color:#8A6D2F}
-.era-note{font-size:12px;line-height:1.45;text-align:center;margin:10px 2px 0;color:#5A4A2E}
-.era-actions{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
-.era-done{text-align:center}
-.era-result{font-family:GHSerif,Georgia,serif;font-weight:700;font-size:clamp(24px,7vw,32px);letter-spacing:.05em;color:#2A2118;margin-top:3px}
-/* the pad's ballot: three stacked decade buttons in the join
-   screen's own dress, its pick lit gold */
-.jp-era{margin-top:10px}
-.jp-era-k{font-size:10px;font-weight:700;letter-spacing:.26em;color:#EAD9A4;text-align:center;margin-bottom:8px}
-.jp-era-btn{display:block;width:100%;margin:7px 0;padding:13px 10px;border-radius:14px;border:1.5px solid #B9974F;background:linear-gradient(180deg,#FFFDF6,#F1E5C6);box-shadow:0 3px 0 #C9AB63;color:#2A2118;font-family:GHSerif,Georgia,serif;font-weight:700;font-size:17px;letter-spacing:.05em;cursor:pointer}
-.jp-era-btn.sel{background:linear-gradient(180deg,#F6E3AC,#E4C878);border-color:#8A6D2F;box-shadow:0 3px 0 #8A6D2F,inset 0 0 0 2px rgba(138,109,47,.35)}
-.jp-era-done{font-weight:700;letter-spacing:.08em;color:#EAD9A4}
+/* THE DECADE VOTE (Designer pass 6, 2026-11-13) was CUT in the
+   Subtraction Pass (2026-11-15); its panel, plaques and pad
+   ballot styles were removed in the geology pass (finding #8,
+   2026-11-16) — the classes are painted nowhere. */
 
 /* ================================================================
    REVIEW PASS 6 (2026-11-14): air for Sterling in portrait. The
@@ -352,6 +360,30 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
   .break-card .fact-row{break-inside:avoid;padding:2px 2px}
   .break-card .fact-k{flex-basis:86px;font-size:10px}
   .break-card .fact-v{font-size:12.5px;line-height:1.3}
+  /* Perfectionist fix pass 2 (2026-11-15): on the round intros the
+     multicol split above fragmented the flex rows — ruled lines
+     painted through the row labels — and the Round 2 ledger still
+     stood past the short stage (measured: scroll 420 against a
+     330 stage, the standings below the fold with the GO button
+     sticky-parked on top of them). A CSS-grid split was tried
+     and measured worse: paired rows share a height, so the long
+     values taxed every row they touched (Round 3 went from
+     fitting to +19). The intro ledger is now built as two real
+     columns in the markup (roundIntro deals the rows into two
+     .fact-col stacks) laid side by side with flex — no
+     fragmentation, no shared row heights, every rule welded to
+     its row. And on a short stage the intro's standings step
+     aside: the break card one tap back is the standings' home,
+     podiums and all; here they only pushed the ledger's own
+     button out of its frame. Portrait intros keep them. The
+     intermission card keeps the multicol above — it fits, and
+     it is a different card. */
+  #scr-game[data-phase="intro"] .fact-list{display:flex;gap:26px;max-width:600px;margin-top:0}
+  #scr-game[data-phase="intro"] .fact-col{flex:1;min-width:0}
+  #scr-game[data-phase="intro"] .fact-row{padding-top:0;padding-bottom:0}
+  #scr-game[data-phase="intro"] .fact-v{font-size:12px;line-height:1.1}
+  #scr-game[data-phase="intro"] #btnRoundGo{margin-top:2px}
+  #scr-game[data-phase="intro"] .race-wrap{display:none}
   #stage:has(.fact-list) .pot-vessel{display:none}
   #stage:has(.fact-list) #btnRoundGo{position:sticky;bottom:8px;z-index:3}
   .desk-head .proj-wrap{width:100%;max-width:100%;flex-wrap:wrap}
@@ -427,8 +459,7 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
    One global piece: report rows align from the top — baseline
    alignment let a wrapping row's name ride ~12px low.
    ================================================================ */
-#scr-game[data-phase="over"] .report-row{align-items:flex-start}
-#scr-game[data-phase="over"] .report-name{line-height:1.3}
+
 /* Portrait addendum to A2's squeeze (same scope, tighter by a
    step): the pinned card still stood ~41px proud of the stage.
    The marquee's padding and the name's lead-in, Sterling's
@@ -444,7 +475,6 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
   #scr-game[data-phase="over"] .finale-wrap.has-report .champ-tag{padding-top:2px;padding-bottom:2px}
   #scr-game[data-phase="over"] .finale-wrap.has-report .report-card{margin-top:2px;padding-bottom:0}
   #scr-game[data-phase="over"] .finale-wrap.has-report .report-head{line-height:1.1}
-  #scr-game[data-phase="over"] .finale-wrap.has-report .report-name{flex-basis:88px}
 }
 /* Landscape addendum, same pass: the online finale still stood
    ~58px proud. In the grid the report column is ~300px wide and
@@ -457,12 +487,7 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
    give back a step. Portrait rows keep their columns (stacking
    there was measured net-negative). */
 @media (max-height:500px){
-  /* the name runs in at the head of its facts, statement-style —
-     a separate name line per row cost the column ~15px a row */
-  #scr-game[data-phase="over"] .finale-wrap.has-report .report-row{display:block;padding-top:1px;padding-bottom:1px}
-  #scr-game[data-phase="over"] .finale-wrap.has-report .report-facts{line-height:1.12}
-  #scr-game[data-phase="over"] .finale-wrap.has-report .report-name{display:inline;margin-right:8px;line-height:1.1}
-  #scr-game[data-phase="over"] .finale-wrap.has-report .report-facts{display:inline;font-size:10.5px}
+
   /* the card's say line steps out in short landscape: the host
      rail's bubble already carries Sterling's winner line there,
      and the card keeps its head and every row */
@@ -484,11 +509,127 @@ button.era-plaque:active{transform:translateY(2px);box-shadow:inset 0 2px 0 #FFF
   #scr-game[data-phase="over"] .finale-wrap.has-series .sterling-zone{display:none}
 }
   #scr-game[data-phase="over"] .finale-wrap.has-report .report-say{line-height:1.2}
-  #scr-game[data-phase="over"] .finale-wrap.has-report .report-facts{font-size:11px}
   #stage #scr-game[data-phase="over"] .finale-wrap.has-report .finale-row{padding-top:6px;margin-top:0}
   #stage #scr-game[data-phase="over"] .finale-wrap.has-report .finale-row .podium .avatar{width:26px}
   #stage #scr-game[data-phase="over"] .finale-wrap.has-report .finale-row .desk{padding-top:4px}
   #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns{margin-top:6px}
   #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-gold,
   #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-ghost{padding-top:4px;padding-bottom:4px}
+
+/* ================================================================
+   PERFECTIONIST FIX PASS 3 (2026-11-15) — THE TV COMPOSITION.
+   The audit at 1920x1080: every screen was the phone layout
+   floating in a big navy frame — the stage column capped at
+   900px of a 1920 frame, the question text capped at 40px,
+   the bet phase using half the frame's height, the title
+   leaving the right ~40% empty and running off the bottom.
+   The cause is systemic: nearly every size in the game is a
+   viewport-relative value wearing a phone-era cap, so past a
+   certain screen the composition simply stops growing. This
+   block is the TV layer: above 1500x850 the caps lift, the
+   stage widens, and each screen composes for the frame the
+   room is actually watching. Below that line nothing here
+   exists — the phone keeps its own composition untouched.
+   ================================================================ */
+@media (min-width:1500px) and (min-height:850px){
+  #stage{padding:12px 28px}
+  .stage-inner{width:min(1460px,94vw)}
+  .stage-inner:has(.race-wrap),.stage-inner:has(.finale-wrap){width:min(1700px,96vw)}
+  #topbar{font-size:15px;padding:14px 24px}
+  .q-text{font-size:clamp(44px,4.8vmin,62px);padding:24px 38px 28px;max-width:25em}
+  .cat-pill{font-size:clamp(17px,2.2vmin,24px);padding:9px 24px}
+  .q-value span{font-size:clamp(54px,7.5vmin,88px)}
+  .q-value small{font-size:13.5px}
+  .answers{width:min(1460px,96%);gap:18px;margin-top:14px}
+  .ans-btn{font-size:clamp(27px,3.4vmin,40px);padding:20px 30px;border-radius:26px}
+  .host-face{width:64px;height:64px}
+  .host-bubble{max-width:min(1180px,90vw);padding:9px 20px 11px}
+  .host-name{font-size:11px}
+  .host-line{font-size:clamp(19px,1.9vw,26px);min-height:2.75em}
+  .seat{width:clamp(250px,19vw,350px)}
+  .seat .avatar{width:clamp(76px,9vmin,92px)}
+  .seat .desk{padding:14px 12px 10px}
+  .seat-name{font-size:clamp(15px,1.9vmin,22px)}
+  .seat-score{font-size:clamp(28px,3.6vmin,46px)}
+  .round-kicker{font-size:15px}
+  .round-title{font-size:clamp(44px,5.5vw,72px)}
+  .fact-list{max-width:920px}
+  #scr-game[data-phase="intro"] .fact-list{display:flex;gap:44px;max-width:100%}
+  #scr-game[data-phase="intro"] .fact-col{flex:1;min-width:0}
+  .fact-k{flex-basis:170px;font-size:13.5px}
+  .fact-v{font-size:clamp(16px,2.1vmin,22px)}
+  .btn-gold{font-size:19px;padding:16px 34px}
+  .round-text{font-size:21px}
+  .podium.big .avatar{width:clamp(110px,13vmin,140px)}
+  .rank1 .desk{min-height:100px}
+  .rank2 .desk{min-height:86px}
+  .rank3 .desk{min-height:70px}
+  .rank4 .desk{min-height:58px}
+  .winner-word{font-size:clamp(84px,10vmin,108px)}
+  .report-card{max-width:900px;margin-top:8px}
+  .bubble{font-size:18.5px}
+  .proj-seat{font-size:17.5px;padding:8px 18px 8px 13px}
+  .proj-move{font-size:14px}
+  .title-scroll{padding-left:clamp(58px,4vw,96px);padding-right:clamp(58px,4vw,96px);padding-top:10px}
+  .marquee{padding-top:16px;padding-bottom:16px}
+  .logo{font-size:72px}
+  .chips{margin-top:8px}
+  .title-bottom .setup-card{flex:2.4}
+  .setup-card{padding:14px 24px 10px;border-radius:26px}
+  .setup-label{font-size:13px;margin-top:5px}
+  .mode-tab{font-size:17px;padding:11px 10px}
+  .rule-toggle{font-size:16.5px;padding:10px 12px}
+  .rule-toggle small{font-size:12.5px}
+  .count-btn{width:88px;height:52px;font-size:29px}
+  .name-row{padding:7px 14px}
+  .how-link{font-size:14px}
+}
+
+/* ================================================================
+   PERFECTIONIST FIX PASS 4 (2026-11-16) — ONE REGISTER.
+   The audit's fourth finding: the title and setup screens speak
+   the palette picked 2026-11-12 (midnight navy, champagne gold,
+   matte and restrained) while the question screens — the ones the
+   room watches for an hour — still speak the older candy register:
+   the category colour flooding the pill and every answer slab,
+   glossy stacked sheens on the desks, player colours at neon
+   saturation, the stage wash at flood strength. This block brings
+   the question screens into the house register. The category keeps
+   its identity where identity belongs — the emblem in the pill,
+   the tint in the stage light, Sterling's rim — and the surfaces
+   go navy glass and brass. The seat colours stay themselves, a
+   register deeper and matte. Surfaces only: no layout, no sizes,
+   no words, no states (the correct answer's gold ring, the dim,
+   the cut are information and keep their grammar).
+   ================================================================ */
+:root{
+  --p0:#2BA84C; --p0d:#146636;
+  --p1:#2B87C9; --p1d:#124F80;
+  --p2:#D84A3E; --p2d:#9E2A21;
+  --p3:#8E63C9; --p3d:#5F3A9E;
+}
+.cat-pill{
+  background:linear-gradient(180deg,#182A47,#0B1728);
+  color:#FFF6E8;
+  box-shadow:inset 0 0 0 1.5px rgba(201,169,98,.62),inset 0 1px 0 rgba(255,246,232,.16),0 5px 12px rgba(0,0,0,.38);
+}
+.ans-btn{
+  color:#FFF6E8;
+  background:linear-gradient(180deg,rgba(30,48,78,.94),rgba(13,24,43,.96));
+  box-shadow:inset 0 0 0 2px rgba(201,169,98,.5),inset 0 1px 0 rgba(255,246,232,.13),inset 0 -6px 0 rgba(0,0,0,.28),0 7px 16px rgba(0,0,0,.42);
+}
+.ans-btn .letter{background:var(--cream);color:#22314E}
+.ans-btn.correct{
+  box-shadow:inset 0 0 0 2px rgba(201,169,98,.5),inset 0 1px 0 rgba(255,246,232,.13),inset 0 -6px 0 rgba(0,0,0,.28),0 0 0 4px #F0DCA3,0 10px 22px rgba(0,0,0,.5);
+}
+.desk{
+  background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 42%),linear-gradient(90deg,rgba(0,0,0,.20),rgba(0,0,0,0) 18%,rgba(0,0,0,0) 82%,rgba(0,0,0,.27)),linear-gradient(0deg,rgba(0,0,0,.30),rgba(0,0,0,0) 13px),linear-gradient(180deg,var(--c),var(--cd));
+}
+.seat .desk{
+  background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 42%),linear-gradient(90deg,rgba(0,0,0,.20),rgba(0,0,0,0) 18%,rgba(0,0,0,0) 82%,rgba(0,0,0,.27)),linear-gradient(0deg,rgba(0,0,0,.30),rgba(0,0,0,0) 13px),linear-gradient(180deg,var(--c),var(--cd));
+}
+.set-mid{background:radial-gradient(52% 46% at 50% 40%,rgba(var(--cat-rgb),.13),rgba(var(--cat-rgb),0) 70%),radial-gradient(60% 20% at 50% 97%,rgba(var(--cat-rgb),.10),rgba(var(--cat-rgb),0) 70%)}
+.set-cat-glow{background:radial-gradient(58% 50% at 50% 30%,rgba(var(--cat-rgb),.17),rgba(var(--cat-rgb),.05) 52%,rgba(var(--cat-rgb),0) 72%)}
+.set-cat-emb{filter:saturate(.5)}
+.set-cat-emb.on{opacity:.09}
 

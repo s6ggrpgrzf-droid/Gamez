@@ -69,6 +69,11 @@
 .fact-list{ max-width:540px; margin:12px auto 2px; text-align:left }
 .fact-row{ display:flex; gap:14px; align-items:baseline; padding:5px 2px; border-bottom:1px solid rgba(201,169,98,.18) }
 .fact-row:last-child{ border-bottom:none }
+/* the round intro deals its rows into two .fact-col stacks
+   (Perfectionist fix pass 2): a stack's last row keeps its rule
+   unless it is the ledger's own last row */
+.fact-col .fact-row:last-child{ border-bottom:1px solid rgba(201,169,98,.18) }
+.fact-col:last-child .fact-row:last-child{ border-bottom:none }
 .fact-k{ flex:0 0 104px; font-size:10.5px; font-weight:700; letter-spacing:.22em; color:var(--gold); padding-top:2px }
 .fact-v{ font-size:clamp(13px,1.9vw,15.5px); font-weight:600; color:rgba(255,246,232,.94); line-height:1.35 }
 .break-tease{ margin-top:10px }

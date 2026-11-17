@@ -147,11 +147,7 @@
    near-white gold flash) so speed reads at a glance across the room;
    same geometry, so the seat's tag space and fit guards are unmoved. */
 .closest-tag.qdtag{background:linear-gradient(180deg,#FBF3DA,#F0DCA3 70%,#FFC53D);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,213,106,.55)}
-.jp-qdtag{display:inline-block;margin:2px auto 4px;padding:3px 10px 4px;border-radius:999px;background:linear-gradient(180deg,#FBF3DA,#F0DCA3 70%,#FFC53D);color:#431A04;font-size:10px;font-weight:800;letter-spacing:.12em;box-shadow:0 2px 0 rgba(0,0,0,.3)}
-/* Gameplay-visuals pass G5: the pad's photo-finish line — a quiet
-   gold caps line above the score line, lettered in the race's own
-   grammar (FIRST IN / 2ND IN / the margin in tabular figures). */
-.jp-pfline{text-align:center;margin:2px auto 4px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#F0DCA3;text-shadow:0 1px 2px rgba(0,0,0,.55);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
 /* Hot Streaks (New programme pass 3): the warm family. The desk
    tag's streak segment is amber in the tag's own caps grammar,
    deepening to a lit ember at 5+; the reveal tags are the qdtag
@@ -161,8 +157,6 @@
 .tag .streakseg{color:#FFC53D}
 .tag .streakseg.hot{color:#FF9A3C;text-shadow:0 0 8px rgba(255,154,60,.55)}
 .closest-tag.streaktag{background:linear-gradient(180deg,#FFE3B3,#E2B76B 70%,#DFAF63);box-shadow:0 2px 0 rgba(0,0,0,.3),0 0 10px rgba(255,154,60,.5)}
-.jp-qdtag.streak{background:linear-gradient(180deg,#FFE3B3,#E2B76B 70%,#DFAF63)}
-.jp-streakline{margin:8px auto 0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.14em;color:#E2B76B;text-shadow:0 0 10px rgba(255,154,60,.35)}
 /* Gameplay-visuals pass G8 — THREAT DISPLAYS: the streak made
    ambient. The tag prints the run from 3; the seat itself carries
    the temperature from 2, in the same warm family — kindling is a
@@ -182,16 +176,7 @@
 .seat.gotit.ember .desk{filter:drop-shadow(0 0 8px rgba(255,140,50,.5)) drop-shadow(0 0 14px rgba(62,207,110,.9))}
 .seat.emberfull .desk{animation:emberPulse 2.6s ease-in-out infinite}
 @keyframes emberPulse{0%,100%{filter:drop-shadow(0 0 8px rgba(255,140,50,.5));box-shadow:inset 0 2px 0 rgba(255,186,84,.9),inset 0 0 18px rgba(255,132,46,.3)}50%{filter:drop-shadow(0 0 15px rgba(255,118,38,.8));box-shadow:inset 0 2px 0 rgba(255,205,105,1),inset 0 0 26px rgba(255,118,38,.45)}}
-/* the pad's standings rows warm by the same thresholds — an inset
-   ember bar at the row's leading edge and a wash of the warm
-   family; the me-row keeps its gold border (identity outranks
-   heat), and the full-ember row pulses its bar, never its text */
-.jp-standrow.kindling{box-shadow:inset 3px 0 0 rgba(255,197,61,.55),inset 0 0 12px rgba(255,166,58,.08)}
-.jp-standrow.ember{border-color:rgba(255,154,60,.5);background-image:linear-gradient(90deg,rgba(255,140,50,.12),rgba(255,140,50,0) 55%);box-shadow:inset 3px 0 0 rgba(255,160,60,.95),inset 0 0 14px rgba(255,140,50,.12)}
-.jp-standrow.me.ember{border-color:var(--gold)}
-.jp-standrow.emberfull{animation:emberRowPulse 2.6s ease-in-out infinite}
-@keyframes emberRowPulse{0%,100%{box-shadow:inset 3px 0 0 rgba(255,160,60,.95),inset 0 0 14px rgba(255,140,50,.12)}50%{box-shadow:inset 3px 0 0 rgba(255,186,84,1),inset 0 0 22px rgba(255,132,46,.24)}}
-.jp-toyou{margin:9px auto 0;text-align:center;font-size:14px;font-weight:900;letter-spacing:.08em;color:#F6EBCB;font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(226,183,107,.4)}
+
 @keyframes tagIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
 #laurel{position:absolute;z-index:3;width:42px;height:42px;pointer-events:none;transform:translate(-50%,-88%);transition:left .65s cubic-bezier(.3,1.25,.4,1),top .65s cubic-bezier(.3,1.25,.4,1),opacity .3s ease;filter:drop-shadow(0 3px 5px rgba(0,0,0,.4))}
 #laurel.snap{transition:none}
@@ -272,8 +257,8 @@
    element's own letter-tracking (sizes untouched). Sterling's
    speech, question/answer text and player names are NOT labels and
    are deliberately absent from both lists. */
-.tnum,.pmoney,.seat-score,.seat-delta,.gain-chip,.podium .delta,.winner-total,.wager-amt,.q-value span,.timer-num,.bet-amt,.og-count,.og-code,.code-box,.count-btn,.rank-badge,.jp-id-score,.jp-id-secs,.jp-id-place,.jp-gain,.jp-standrow .sc,.jp-vscore,.jp-betamt,.jp-chipdisc,.jp-num,.jp-pickstate,.jp-numstate,.jp-betstate,#qCounter,.proj-amt,.jp-proj,.award-who,.award-v{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-kerning:none}
-.lbl,.kicker,.setup-label,.name-seat,.microline,.how-kicker,.how-skip,.how-close,.round-kicker,.co-kicker,.q-cat,.q-kind,.cat-pill,.q-value small,.host-name,#topbar,.tb-btn,.mute-btn,.mode-tab,.chip,.cat-chip,.og-pill,.og-qr-cap,.og-count,.jp-head,.jp-room,.jp-conn,.jp-phaseword,.jp-betlabel,.jp-herotag,.jp-ans-tag,.jp-cutnote,.jp-pickstate,.jp-numstate,.jp-betstate,.seat .tag,.closest-tag{text-transform:uppercase}
+.pmoney,.seat-score,.seat-delta,.gain-chip,.podium .delta,.winner-total,.wager-amt,.q-value span,.timer-num,.bet-amt,.og-count,.og-code,.code-box,.count-btn,.rank-badge,.jp-id-score,.jp-id-secs,.jp-id-place,.jp-gain,.jp-vscore,.jp-betamt,.jp-chipdisc,.jp-num,.jp-pickstate,.jp-numstate,.jp-betstate,#qCounter,.proj-amt,.award-who,.award-v{font-family:'GHTab',var(--font);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;font-kerning:none}
+.kicker,.setup-label,.name-seat,.microline,.how-kicker,.how-skip,.how-close,.round-kicker,.co-kicker,.q-cat,.q-kind,.cat-pill,.q-value small,.host-name,#topbar,.tb-btn,.mute-btn,.mode-tab,.chip,.og-pill,.og-qr-cap,.og-count,.jp-head,.jp-room,.jp-conn,.jp-phaseword,.jp-betlabel,.jp-herotag,.jp-ans-tag,.jp-cutnote,.jp-pickstate,.jp-numstate,.jp-betstate,.seat .tag,.closest-tag{text-transform:uppercase}
 
 /* ================= Design pass item 6 — emblems + portraits =================
    The seven category emblems ride the pill, the cycler chips and the
@@ -282,18 +267,12 @@
 .emb{display:inline-block;vertical-align:middle}
 .cat-pill{display:inline-flex;align-items:center;gap:8px}
 .cat-pill .emb{width:20px;height:20px;flex:none}
-.cat-chip{display:inline-flex;align-items:center;gap:7px}
-.cat-chip .emb{width:18px;height:18px;flex:none}
-.jp-qline{display:flex;align-items:flex-start;gap:9px}
-.jp-catemb{flex:none;line-height:0;margin-top:2px}
-.jp-catemb .emb{width:22px;height:22px;display:block}
 /* table setup: the medallion in each name row wears the initial
    of the name being typed (THE FACE PASS — no longer a picker) */
 .ava-pick{width:36px;height:36px;flex:none;padding:0;border-radius:50%;background:rgba(255,246,232,.06)}
 @media (max-height:500px){
   .ava-pick{width:20px;height:20px;border-radius:50%}
   .cat-pill .emb{width:15px;height:15px}
-  .cat-chip .emb{width:16px;height:16px}
 }
 .ava-pick .avatar{width:100%;height:auto;display:block;margin:0;filter:none}
 
@@ -307,7 +286,6 @@
   .answers{margin-top:2px}
   .tools{margin-top:1px}
   .why{padding:5px 10px;border-radius:10px}
-  .jp-qline{padding:8px 12px}
 }
 
 /* ---- item 8 responsive sizing (kept last so it wins the cascade

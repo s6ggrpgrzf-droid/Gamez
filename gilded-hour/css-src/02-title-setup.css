@@ -57,7 +57,6 @@
 .record-row .avatar{width:46px;height:48px;flex:0 0 auto}
 .record-who{flex:1;min-width:0}
 .record-name{font-weight:700;font-size:17px;color:var(--paper-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.record-crown{color:var(--brass-deep);font-size:10.5px;font-weight:700;letter-spacing:.14em;vertical-align:2px}
 .record-sub{font-size:11px;font-weight:600;letter-spacing:.18em;color:var(--paper-ink-soft);margin-top:2px}
 .record-nums{text-align:right;flex:0 0 auto}
 .record-wins{font-weight:700;font-size:16px;color:var(--paper-ink);font-variant-numeric:tabular-nums}
@@ -102,7 +101,7 @@
 .mark-chips .cm{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#F6EBCB,#E2B76B 70%);color:#431A04;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 0 var(--gold-sh),inset 0 0 0 3px rgba(255,255,255,.55),inset 0 0 0 7px rgba(185,106,18,.45)}
 .mark-cut{gap:8px}
 .mark-cut .km{width:62px;height:16px;border-radius:8px;position:relative}
-.mark-cut .km.lit{background:linear-gradient(180deg,#F0568C,#C2255C);box-shadow:inset 0 2px 0 rgba(255,255,255,.45),0 4px 0 rgba(0,0,0,.3)}
+.mark-cut .km.lit{background:linear-gradient(180deg,#F6EBCB,#E2B76B 70%,#DFAF63);box-shadow:inset 0 2px 0 rgba(255,255,255,.45),0 4px 0 var(--gold-sh)}
 .mark-cut .km.cut{background:rgba(14,28,51,.14)}
 .mark-cut .km.cut::after{content:"";position:absolute;left:3px;right:3px;top:50%;height:3px;margin-top:-1.5px;border-radius:2px;background:var(--red);transform:rotate(-7deg)}
 .how-dots{display:flex;gap:8px;justify-content:center;margin:16px 0 2px}

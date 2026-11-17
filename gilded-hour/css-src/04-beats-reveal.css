@@ -20,9 +20,6 @@
 
 /* spin */
 .q-cat{letter-spacing:.3em;font-size:12px;font-weight:600;color:var(--gold);text-indent:.3em}
-.cat-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0 8px}
-.cat-chip{border-radius:999px;padding:10px 18px;font-weight:700;letter-spacing:.05em;font-size:clamp(12px,1.8vmin,15.5px);background:var(--chip);box-shadow:0 5px 0 var(--chipd),inset 0 2px 0 rgba(255,255,255,.35);opacity:.5;transform:scale(.96);transition:all .08s ease;white-space:nowrap}
-.cat-chip.sel{opacity:1;transform:scale(1.13) rotate(-1.5deg);box-shadow:0 7px 0 var(--chipd),0 0 24px var(--chip),inset 0 2px 0 rgba(255,255,255,.4)}
 
 /* question */
 .q-headrow{display:flex;align-items:center;gap:14px;width:min(900px,96%);margin:0 auto}
@@ -174,16 +171,7 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
 .report-card{max-width:660px;margin:16px auto 0;text-align:left;border-top:2px solid rgba(201,169,98,.55);border-bottom:1px solid rgba(201,169,98,.3);padding:9px 6px 5px}
 .report-head{font-size:10.5px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-align:center}
 .report-say{font-size:12.5px;font-style:italic;color:rgba(255,246,232,.78);text-align:center;margin-top:3px;line-height:1.35}
-.report-row{display:flex;gap:12px;align-items:baseline;padding:4px 2px;border-bottom:1px solid rgba(201,169,98,.16)}
-.report-row:last-child{border-bottom:none}
-.report-name{flex:0 0 108px;font-weight:700;color:var(--cream);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.report-facts{font-size:12.5px;color:rgba(255,246,232,.92);line-height:1.5;min-width:0}
-/* Audit A2: a fact is one thought — it wraps as a unit or not at
-   all. Before this, a fact could split across lines (FASTEST HAND
-   ending one line, its seconds opening the next) */
-.report-fact{display:inline-block;white-space:nowrap}
 .report-quiet{font-style:italic;color:rgba(255,246,232,.78);white-space:normal}
-.report-fk{font-size:9.5px;font-weight:700;letter-spacing:.16em;color:var(--gold);white-space:nowrap}
 .report-dot{margin:0 7px;color:rgba(201,169,98,.6)}
 
 /* fx layers */
@@ -238,8 +226,6 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .co-title{font-size:30px;margin-top:5px}
   .co-kicker{font-size:9px}
   .co-sub{margin-top:5px;font-size:12px}
-  .cat-row{margin:8px 0 4px;gap:7px}
-  .cat-chip{height:32px;padding:0 13px;font-size:12.5px}
   .q-cat{font-size:10.5px}
   .cat-pill{padding:2px 10px}
   .q-text{font-size:15px !important;margin-top:4px;line-height:1.2}

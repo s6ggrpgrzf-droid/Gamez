@@ -8,8 +8,6 @@
 .panel-status{margin-top:11px;text-align:center;font-size:13px;font-weight:600;color:rgba(255,246,232,.6);line-height:1.45;min-height:19px}
 .panel-status.err{color:#FFB3AB}
 .join-row{display:flex;gap:10px;margin-bottom:12px}
-.code-input{flex:0 0 42%;background:var(--glass-field);border:2px solid rgba(255,246,232,.16);border-radius:14px;padding:11px 12px;color:var(--cream);font-family:inherit;font-weight:700;font-size:21px;letter-spacing:.32em;text-transform:uppercase;text-align:center;outline:none;min-width:0}
-.code-input:focus{border-color:var(--gold)}
 .join-name{flex:1;background:var(--glass-field);border:2px solid rgba(255,246,232,.16);border-radius:14px;padding:11px 14px;font-size:17px;box-shadow:inset 0 2px 0 rgba(255,255,255,.1)}
 .join-name:focus{border-color:var(--gold)}
 .code-boxes{display:flex;gap:8px;flex:none}
@@ -34,7 +32,6 @@
 .og-count{display:inline-block;margin-top:14px;font-weight:700;letter-spacing:.14em;font-size:clamp(14px,2.2vmin,19px);color:var(--cream);background:var(--ink-chip);border:2px solid rgba(255,246,232,.2);border-radius:999px;padding:9px 20px}
 .og-count b{color:var(--gold)}
 .seat.away{opacity:.45;filter:saturate(.4)}
-.seat .tag .awaytag{color:#FFB3AB}
 .og-statusline{margin-top:12px;font-weight:600;color:rgba(255,246,232,.65);font-size:14px;min-height:20px}
 .og-statusline.err{color:#FFB3AB}
 @media (max-height:500px){
@@ -64,11 +61,6 @@
 .jp-card{text-align:center;animation:fadeUp .38s ease both;margin:auto 0}
 .jp-hi{font-size:clamp(24px,6.4vw,32px);font-weight:700;margin-top:6px;text-shadow:0 3px 0 rgba(6,11,24,.45)}
 .jp-sub{color:rgba(255,246,232,.72);font-weight:500;font-size:15.5px;line-height:1.5;margin-top:8px}
-.jp-players{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
-.jp-pchip{display:flex;align-items:center;gap:8px;background:var(--ink-row);border:2px solid rgba(255,246,232,.12);border-radius:999px;padding:7px 14px 7px 8px;font-weight:700;font-size:14px}
-.jp-pchip .name-dot{width:13px;height:13px}
-.jp-pchip.me{border-color:var(--gold)}
-.jp-pchip.away{opacity:.45}
 .jp-gain{font-size:clamp(38px,11vw,56px);font-weight:700;background:var(--brass-grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 3px 0 #27436E);margin-top:4px}
 /* Pass N1 — the pad's own report card, under its final standings:
    the break card's fact rows, one per recorded fact */
@@ -100,9 +92,6 @@
   #stage .finale-wrap.has-report .finale-row .desk{min-height:32px;padding-top:6px}
   .finale-wrap.has-report .report-card{margin-top:6px;padding:6px 8px 4px}
   .finale-wrap.has-report .report-say{font-size:10.5px;line-height:1.25;margin-top:2px}
-  .finale-wrap.has-report .report-row{padding:1px 2px}
-  .finale-wrap.has-report .report-name{flex-basis:100px}
-  .finale-wrap.has-report .report-facts{font-size:12px;line-height:1.2}
   .finale-wrap.has-report .btn{padding-top:7px;padding-bottom:7px}
   /* Pass N3: three finale buttons in portrait wrap to two rows —
      the row and its buttons run a step tighter so the finale
@@ -110,9 +99,6 @@
   .finale-wrap .finale-btns{gap:8px;margin-top:10px}
   .finale-wrap .finale-btns .btn-gold,.finale-wrap .finale-btns .btn-ghost{padding:7px 16px;font-size:15px}
 }
-.jp-standrow{display:flex;align-items:center;gap:10px;background:var(--ink-row);border:2px solid rgba(255,246,232,.1);border-radius:14px;padding:10px 14px;margin-top:8px;font-weight:700;text-align:left}
-.jp-standrow.me{border-color:var(--gold);background:rgba(233,205,138,.1)}
-.jp-standrow .sc{margin-left:auto;font-size:18px}
 .jp-toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:6;background:#5E1710;color:#FFD9D4;font-weight:700;font-size:14px;border-radius:999px;padding:10px 18px;box-shadow:0 8px 18px rgba(0,0,0,.4);white-space:nowrap;max-width:92vw}
 .jp-leave{margin-top:22px}
 
@@ -142,8 +128,7 @@
 .jp-hero .jp-phaseword,.jp-verdict .jp-phaseword,.jp-card .jp-phaseword{display:block;text-align:center}
 .jp-verdict .jp-phaseword{margin-bottom:12px}
 .jp-card .jp-phaseword{margin-bottom:10px}
-.jp-qline{margin:12px 2px 0;font-size:clamp(18px,5vw,22px);font-weight:700;line-height:1.3;background:var(--paper-bg);color:var(--paper-ink);border-radius:16px;padding:12px 14px;box-shadow:0 10px 20px rgba(0,0,0,.3),inset 0 0 0 1px var(--paper-edge)}
-.jp-catdot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--cat,#E2B76B);margin-right:9px;box-shadow:0 0 0 3px rgba(255,246,232,.15);vertical-align:2px}
+
 /* the four answer buttons ARE the screen */
 .jp-answers{flex:1;display:flex;flex-direction:column;gap:12px;margin-top:14px;min-height:0}
 .jp-ans{flex:1 1 0;min-height:78px;display:flex;align-items:center;gap:14px;text-align:left;color:var(--cat-tx);font-weight:700;font-size:clamp(19px,5.4vw,23px);line-height:1.22;padding:12px 16px;border-radius:22px;background:linear-gradient(180deg,var(--cat-shi,var(--cat-hi)),var(--cat-smid,var(--cat)) 58%,var(--cat-lo));box-shadow:inset 0 3px 0 var(--glass-hl),inset 0 -6px 0 var(--glass-depth),0 8px 0 var(--cat-sh),0 14px 22px rgba(0,0,0,.4);transition:transform .1s ease,box-shadow .1s ease,opacity .3s,filter .3s;position:relative}
@@ -178,7 +163,7 @@
 .jp-chipstack{display:flex;gap:12px;min-height:76px;align-items:center}
 .jp-chipdisc{width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 50% 36%,#F6EBCB,#E2B76B 62%,#DFAF63);border:5px dashed rgba(67,26,4,.35);box-shadow:0 6px 0 var(--gold-sh),inset 0 3px 0 rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-weight:700;color:#431A04;font-size:19px}
 .jp-betamt{font-size:clamp(24px,7vw,32px);font-weight:700;text-shadow:0 3px 0 rgba(6,11,24,.45)}
-.jp-proj{min-height:22px;font-size:15.5px;font-weight:800;letter-spacing:.06em;color:#F0DCA3;text-shadow:0 2px 0 rgba(6,11,24,.45);text-align:center}
+
 .jp-betrow{display:flex;gap:28px}
 .jp-step{width:86px;height:86px;border-radius:50%;font-size:38px;font-weight:700;color:var(--cream);background:var(--glass-ink);box-shadow:0 6px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14)}
 .jp-step:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
@@ -197,11 +182,9 @@
 .jp-vdisc{width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:62px;font-weight:700;color:#0B3D1C;background:linear-gradient(180deg,#8BF0AB,#3ECF6E);box-shadow:0 8px 0 #1E7A38,0 18px 30px rgba(0,0,0,.4)}
 .jp-verdict.miss .jp-vdisc{background:linear-gradient(180deg,#FFB3AB,#FF6B5E);color:#5E1710;box-shadow:0 8px 0 #A12B20,0 18px 30px rgba(0,0,0,.4)}
 .jp-vword{font-size:clamp(34px,10vw,48px);font-weight:700;margin-top:18px;text-shadow:0 3px 0 rgba(6,11,24,.45)}
-.jp-vans{margin-top:12px;font-size:17px;color:rgba(255,246,232,.88);line-height:1.5;max-width:34ch}
 .jp-vscore{margin-top:16px;font-weight:700;letter-spacing:.05em;font-size:17px}
 .jp-vscore b{color:var(--gold-hi)}
 @media (max-width:560px){
-  .code-input{letter-spacing:.18em;font-size:18px}
   .code-boxes{gap:6px}
   .code-box{width:44px;height:50px;font-size:21px;border-radius:12px}
   /* on a phone the letter boxes keep their row and the name field
@@ -216,7 +199,6 @@
 @media (max-height:500px){
   .jp-id-ava{width:34px}
   .jp-id{padding:5px 10px 5px 8px}
-  .jp-qline{font-size:16px;margin-top:8px}
   .jp-ans{min-height:54px;font-size:17px}
   .jp-ans .jp-numb{width:40px;height:40px;font-size:20px;border-radius:12px}
   .jp-cut{min-height:46px}

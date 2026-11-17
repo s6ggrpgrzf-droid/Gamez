@@ -69,7 +69,7 @@
 .set-fore{background:radial-gradient(115% 88% at 50% 34%,transparent 58%,rgba(3,6,12,.42)),linear-gradient(0deg,rgba(4,8,16,.5),transparent 34%)}
 .set-aud{filter:blur(.6px) brightness(.93)}
 .set-walls{filter:saturate(.92) brightness(.97)}
-.mode-tab,.rule-toggle,.pace-opt{box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14),inset 0 12px 14px -8px rgba(255,255,255,.13)}
+.mode-tab,.rule-toggle{box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14),inset 0 12px 14px -8px rgba(255,255,255,.13)}
 .pot-body{background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 2px,rgba(255,255,255,0) 2px 4px),linear-gradient(100deg,#6E5626 0%,#BE9A4E 30%,#E3C078 48%,#A98A44 72%,#5E4A22 100%)}
 .marquee::after{content:"";position:absolute;top:0;right:9%;width:34px;height:34px;border-radius:50%;pointer-events:none;opacity:.55;background:linear-gradient(90deg,transparent 46%,rgba(255,240,200,.75) 50%,transparent 54%),linear-gradient(0deg,transparent 46%,rgba(255,240,200,.75) 50%,transparent 54%),radial-gradient(circle at 50% 50%,rgba(255,246,220,.95),rgba(255,240,200,.28) 34%,transparent 68%)}
 
@@ -89,8 +89,8 @@
 .btn-gold:active{transform:translateY(4px) scale(.985);box-shadow:0 2px 0 var(--gold-sh),0 6px 12px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.7)}
 .btn-ghost{transition:transform .38s var(--spring),box-shadow .38s var(--spring)}
 .btn-ghost:active{transform:translateY(2px) scale(.98)}
-.mode-tab,.rule-toggle,.pace-opt{transition:transform .38s var(--spring),box-shadow .38s var(--spring),background-color .25s ease,color .25s ease}
-.mode-tab:active,.rule-toggle:active,.pace-opt:active{transform:translateY(2px) scale(.98)}
+.mode-tab,.rule-toggle{transition:transform .38s var(--spring),box-shadow .38s var(--spring),background-color .25s ease,color .25s ease}
+.mode-tab:active,.rule-toggle:active{transform:translateY(2px) scale(.98)}
 .count-btn,.tool-btn{transition:transform .35s var(--spring-soft),box-shadow .35s var(--spring-soft)}
 .count-btn:active,.tool-btn:active{transform:scale(.93)}
 .ans-btn{transition:transform .35s var(--spring),box-shadow .35s var(--spring),opacity .3s ease,filter .3s ease}
@@ -98,7 +98,7 @@
 @media (hover:hover){
 .btn-gold:hover{transform:translateY(-1px) scale(1.02);box-shadow:0 7px 0 var(--gold-sh),0 18px 26px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.7),0 0 14px rgba(233,205,138,.35)}
 .btn-ghost:hover{transform:translateY(-1px)}
-.mode-tab:hover,.rule-toggle:hover,.pace-opt:hover{transform:translateY(-1px)}
+.mode-tab:hover,.rule-toggle:hover{transform:translateY(-1px)}
 .ans-btn:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -3px 0 rgba(0,0,0,.30),inset 2px 0 0 rgba(255,255,255,.13),inset -2px 0 0 rgba(0,0,0,.13),0 0 18px rgba(233,205,138,.45),0 9px 0 var(--cat-sh),0 18px 28px rgba(0,0,0,.42)}
 }
 .timer-ring circle{stroke-width:5}
@@ -324,50 +324,10 @@ button.dbl-token:active{transform:scale(.92)}
 .jp-dbl[disabled]{opacity:.75;cursor:default}
 .jp-dblnote{margin-top:10px;text-align:center;font:700 13px GHSans,system-ui,sans-serif;letter-spacing:.14em;color:var(--gold);border:1px solid rgba(216,183,106,.45);border-radius:14px;padding:12px 10px;background:rgba(216,183,106,.08)}
 
-/* ===== AGAINST THE ROOM PASS (2026-11-13) ===== */
-/* The VS disc: the desk's top-right corner (the Double keeps the
-   left). Oxblood where the Double is gold — the gauntlet should
-   never be mistaken for the token. Armed is lit crimson; a house
-   seat's disc is display dress in the same colours. */
-.vs-token{
-  position:absolute; top:1px; right:1px; z-index:5;
-  width:23px; height:23px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  font-family:GHTab, ui-monospace, monospace;
-  font-size:9.5px; font-weight:700; letter-spacing:.02em;
-  color:#E8D9C8; background:radial-gradient(circle at 35% 30%, #4A1B28, #2A0E18 75%);
-  border:1.5px solid #8C4A56; padding:0; cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
-  transition:transform .18s cubic-bezier(.34,1.56,.64,1), background .18s ease, box-shadow .18s ease;
-}
-.vs-token:not(:disabled):active{ transform:scale(.92); }
-.vs-token.armed{
-  background:linear-gradient(160deg, #C22E3C, #7E1620);
-  color:#FFF3E4; border-color:#E8A0A8; transform:scale(1.14);
-  box-shadow:0 0 0 2px rgba(194,46,60,.45), 0 2px 8px rgba(0,0,0,.5);
-}
-.vs-token.house{ cursor:default; opacity:.92; }
-.vs-token:disabled{ cursor:default; }
-/* the reveal tag: a lone bank that paid Against the Room */
-.closest-tag.vstag{
-  color:#F0B7BC; border-color:rgba(194,46,60,.6);
-  background:rgba(60,12,20,.55);
-}
-/* the pad's gauntlet: crimson where the Double's button is gold */
-.jp-vs{
-  display:block; width:100%; margin-top:10px; padding:13px 10px;
-  border-radius:12px; border:1.5px solid #B3505C;
-  background:linear-gradient(160deg, #5A1E2A, #33101A);
-  color:#F5D9CE; font-family:GHSans, sans-serif; font-weight:700;
-  font-size:12.5px; letter-spacing:.05em; cursor:pointer;
-}
-.jp-vs:disabled{ opacity:.75; }
-.jp-vsnote{
-  margin-top:10px; padding:10px; text-align:center;
-  border-radius:10px; border:1px solid rgba(194,46,60,.55);
-  background:rgba(60,12,20,.4); color:#F0B7BC;
-  font-family:GHSans, sans-serif; font-weight:700; font-size:12px; letter-spacing:.05em;
-}
+/* AGAINST THE ROOM (2026-11-13) was CUT in the Subtraction Pass
+   (2026-11-15); its VS disc, reveal tag and pad gauntlet styles
+   were removed in the geology pass (finding #8, 2026-11-16) —
+   the classes are painted nowhere. */
 
 /* ===== SURFACING PASS (2026-11-13) — the machinery, named =====
    Three fine lines, each stating a truth the game already keeps:
@@ -433,6 +393,10 @@ button.dbl-token:active{transform:scale(.92)}
 }
 @media (max-height:500px){
   .finale-wrap.has-report .report-say{font-size:12px}
+  /* Audit finding #11 (2026-11-16): the finale standings ran 4px
+     over the short landscape stage; one point off each award
+     row's padding repays it across the four honours. */
+  .finale-wrap.has-report .award-row{padding-top:5px;padding-bottom:5px}
 }
 /* 7. Short-landscape finale: the place badge is hung at top:48px
    for portrait-height podiums; on the compressed landscape desk

@@ -93,7 +93,6 @@
   .finale-wrap.has-report .marquee{padding-top:2px;padding-bottom:2px}
   .finale-wrap.has-report .finale-main{grid-column:1}
   .finale-wrap.has-report .finale-row{grid-column:1}
-  .finale-wrap.has-report .btn-row{grid-column:1/-1}
   .finale-wrap.has-report .marquee .kicker{display:none}
   #stage .finale-wrap.has-report .winner-word{font-size:19px;line-height:1}
   .finale-wrap.has-report .winner-name{font-size:14px;margin-top:1px;line-height:1.1}
@@ -104,7 +103,6 @@
      ("A NEW CHAMPIONON THE NIGHT") — the series line takes a
      breath of space when it follows the champion's own sub */
   .finale-wrap.has-report .winner-sub:not(.pot-line) + .winner-sub.series-line{margin-left:12px}
-  .finale-wrap.has-report .winner-streak{display:inline-block;font-size:10px;margin:0 0 0 8px;vertical-align:2px}
   .finale-wrap.has-report .sterling-lg{width:54px}
   #stage .finale-wrap.has-report .finale-row .podium.big .avatar{width:24px}
   #stage .finale-wrap.has-report .finale-row .desk{min-height:34px}
@@ -117,7 +115,6 @@
   .finale-wrap.has-report .finale-row{padding-top:0}
   #stage .finale-wrap.has-report .finale-row .pname{font-size:10.5px;line-height:1.1}
   #stage .finale-wrap.has-report .finale-row .pmoney{font-size:13px;line-height:1.1}
-  #stage .finale-wrap.has-report .desk-tag{display:none}
   .finale-wrap.has-report .btn{padding-top:4px;padding-bottom:4px}
   /* Pass N3: with a third button aboard (SHARE THE NIGHT), the
      buttons leave their auto-placed cell and take the full width
@@ -136,9 +133,7 @@
   .finale-wrap.has-report .report-card{grid-column:2;grid-row:1/3;margin-top:0;padding:4px 10px 3px}
   .finale-wrap.has-report .report-head{font-size:10px;line-height:1.1}
   .finale-wrap.has-report .report-say{font-size:10.5px;margin-top:1px;line-height:1.2}
-  .finale-wrap.has-report .report-row{padding:1px 2px}
-  .finale-wrap.has-report .report-name{flex-basis:98px;font-size:12.5px}
-  .finale-wrap.has-report .report-facts{font-size:11.5px;line-height:1.2}
+
   /* Awards Board (2026-11-13): in the narrow landscape report
      column the board's lines take a one-step squeeze (14px,
      tighter leading, 5px row padding) so a long winner line
@@ -155,7 +150,6 @@
   .jp-pad>*{flex:none}
   .jp-answers{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
   .jp-ans{flex:none;min-height:46px;padding:8px 14px}
-  .jp-qline{margin-top:6px;font-size:13.5px;line-height:1.25}
   .jp-pickstate{margin-top:4px}
   .jp-cut{margin-top:6px;padding:9px 12px;min-height:44px}
   .jp-barwrap{margin-top:4px}
@@ -284,10 +278,6 @@
    follow it to whichever dock the phase uses. */
 @media (max-height:500px){
   #stage:has(.q-cardwrap) .pot-vessel{top:40px;bottom:auto}
-  #stage:has(.bet-row) .pot-vessel{left:10px;bottom:2px}
-  #stage:has(.bet-row) .pot-vessel .pot-label{display:none}
-  #stage:has(.bet-row) .pot-vessel .pot-body{height:20px}
-  #stage:has(.bet-row) .pot-vessel .pot-total{font-size:12px}
 }
 @media (max-width:560px){
   /* Portrait's question stage has no free corner at any player
