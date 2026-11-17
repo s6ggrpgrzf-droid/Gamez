@@ -225,13 +225,13 @@ T += 10000; // half the 20s window elapses -> drain factor 0.75
 await host.send({ t: 'reveal', qid: 'q1' });
 {
   const rev = P[1].last('reveal');
-  ok(rev && rev.value === 75, 'reveal banks the as-stopped drained value ($75 at half-window)', rev && rev.value);
+  ok(rev && rev.value === 80, 'reveal banks the as-stopped drained value ($80 at half-window — 75 drained, settled to the nearest $10; finding #9 re-pin, 2026-11-16)', rev && rev.value);
   const bySeat = Object.fromEntries(rev.results.map((r) => [r.seat, r]));
-  ok(bySeat[0].correct && bySeat[0].banked === 125 && bySeat[0].pick === 2,
-    'correct player banks $75 + the $50 quick-draw (theirs was the first correct receipt); picks are public at reveal');
+  ok(bySeat[0].correct && bySeat[0].banked === 130 && bySeat[0].pick === 2,
+    'correct player banks $80 + the $50 quick-draw (theirs was the first correct receipt); picks are public at reveal');
   ok(!bySeat[1].correct && bySeat[1].banked === 0 && !bySeat[2].correct && bySeat[2].banked === 0,
     'wrong players bank $0');
-  ok(rev.scores[0] === 125 && rev.scores[1] === 0 && rev.scores[2] === 0, 'scores updated server-side');
+  ok(rev.scores[0] === 130 && rev.scores[1] === 0 && rev.scores[2] === 0, 'scores updated server-side');
 }
 await P[1].send({ t: 'answer', qid: 'q1', pick: 2 });
 ok(/open question/i.test((P[1].lastError() || {}).msg || ''), 'answer after reveal rejected');
@@ -254,7 +254,7 @@ await host.send({ t: 'reveal', qid: 'q2' });
     'closest number (240 vs 236) banks');
   ok(!bySeat[0].correct && bySeat[0].banked === 0 && !bySeat[2].correct,
     'further numbers bank nothing');
-  ok(rev.scores[1] === 100, 'scores: [125, 100, 0] (num questions never quick-draw)');
+  ok(rev.scores[1] === 100, 'scores: [130, 100, 0] (num questions never quick-draw)');
 }
 
 // ---- Q3: Cut Two spends the token; one cut per question ----
@@ -280,8 +280,8 @@ await host.send({ t: 'reveal', qid: 'q3' });
   const bySeat = Object.fromEntries(rev.results.map((r) => [r.seat, r]));
   ok(rev.value === 200, 'round 2 multiplier doubles the value ($200)');
   ok(bySeat[0].banked === 300 && bySeat[2].banked === 200 && bySeat[1].banked === 0,
-    'both correct players bank; the first correct receipt (seat 0) adds the round-2 $100 quick-draw; scores [425, 100, 200]');
-  ok(rev.scores[0] === 425 && rev.scores[1] === 100 && rev.scores[2] === 200, 'scores confirmed');
+    'both correct players bank; the first correct receipt (seat 0) adds the round-2 $100 quick-draw; scores [430, 100, 200]');
+  ok(rev.scores[0] === 430 && rev.scores[1] === 100 && rev.scores[2] === 200, 'scores confirmed');
 }
 
 // ---- Q4: a spent token stays spent on later questions ----
@@ -299,10 +299,10 @@ await host.send({ t: 'reveal', qid: 'q4' });
   const rev = P[0].last('reveal');
   /* Hot Streaks adjustment: this is seat 0's third straight MCQ bank
    * (q1, q3, q4 — the num q2 in between is neutral), so the round-2
-   * $50 streak bonus rides their bank: 425 + 100 + 100 quick-draw
-   * + 50 = 675. Seats 1 and 2 are at streaks 1 and 2 — no bonus yet. */
-  ok(rev.scores[0] === 675 && rev.scores[1] === 200 && rev.scores[2] === 300,
-    'clean sweep banks $100 each, plus the round-2 $100 quick-draw and a $50 streak bonus (seat 0 third straight) to the first receipt; scores [675, 200, 300]');
+   * $50 streak bonus rides their bank: 430 + 100 + 100 quick-draw
+   * + 50 = 680. Seats 1 and 2 are at streaks 1 and 2 — no bonus yet. */
+  ok(rev.scores[0] === 680 && rev.scores[1] === 200 && rev.scores[2] === 300,
+    'clean sweep banks $100 each, plus the round-2 $100 quick-draw and a $50 streak bonus (seat 0 third straight) to the first receipt; scores [680, 200, 300]');
 }
 
 // ---- Q5: finale bet phase — secret bets, bet x $100, no losses ----
@@ -336,12 +336,12 @@ await host.send({ t: 'reveal', qid: 'q5' });
   /* Hot Streaks: seat 0's bank is their fourth straight (q1, q3, q4,
    * q5) — the round-3 $75, never bet-multiplied: 300 + 150 quick-
    * draw + 75 = 525. Seat 2's bank is their third straight (q3,
-   * q4, q5): 100 + 75 = 175. Totals: seat 0 675 + 525 = 1200;
+   * q4, q5): 100 + 75 = 175. Totals: seat 0 680 + 525 = 1205;
    * seat 2 300 + 175 = 475. */
   ok(bySeat[0].banked === 525, 'correct 3-chip bet banks bet x $100 = $300, plus the round-3 $150 quick-draw and a $75 streak bonus (fourth straight — the streak bonus is never bet-multiplied)');
   ok(bySeat[1].banked === 0 && rev.scores[1] === 200, 'wrong bet loses $0 — score untouched');
   ok(bySeat[2].banked === 175, 'missing bet defaults to 1 chip ($100), plus a $75 streak bonus (third straight)');
-  ok(rev.scores[0] === 1200 && rev.scores[2] === 475, 'scores [1200, 200, 475]');
+  ok(rev.scores[0] === 1205 && rev.scores[2] === 475, 'scores [1205, 200, 475]');
 }
 
 // ---- Q6: the window auto-closes at the deadline ----
@@ -355,7 +355,7 @@ await P[2].send({ t: 'ping' });
   const rev = P[0].last('reveal');
   ok(rev && rev.qid === 'q6' && rev.value === 50,
     'expired window auto-closes: reveal broadcast at the 50% floor');
-  ok(rev.scores[0] === 1200 && rev.scores[1] === 200 && rev.scores[2] === 475,
+  ok(rev.scores[0] === 1205 && rev.scores[1] === 200 && rev.scores[2] === 475,
     'auto-close banks nothing (no answers), scores unchanged');
   ok((P[2].last('pong') || {}).t === 'pong', 'the triggering message still gets its reply');
 }
@@ -403,8 +403,8 @@ ok((P[0].last('pong') || {}).t === 'pong', 'malformed message ignored; room stil
 await host.send({ t: 'end_show' });
 {
   const ended = P[0].last('ended');
-  ok(ended && ended.scores[0] === 1200 && ended.scores[1] === 200 && ended.scores[2] === 475,
-    'end_show broadcasts final scores [1200, 200, 475]');
+  ok(ended && ended.scores[0] === 1205 && ended.scores[1] === 200 && ended.scores[2] === 475,
+    'end_show broadcasts final scores [1205, 200, 475]');
   ok(P[0].lastState().phase === 'ended', 'room lands in the ended phase');
 }
 

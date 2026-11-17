@@ -1,7 +1,7 @@
 /* THE GILDED HOUR — Pass 2 bank + Pass B guess questions.
-   114 hand-authored, fact-checked ordinary questions (84 original +
+   124 hand-authored, fact-checked ordinary questions (84 original +
    18 from the 2026-11-13 bank growth + 12 from the 2026-11-14
-   2000s bench) plus 48 guess questions (24 closest-number +
+   2000s bench + 10 from the 2026-11-16 Deep Cut bench) plus 48 guess questions (24 closest-number +
    24 most-people, the pools doubled 2026-11-15) and 12 bluff questions,
    written for players aged 30-50: the pop culture of a childhood in the
    1980s-90s and teens in the 1990s-2000s. Nothing post-2015; pre-1975 only
@@ -14,7 +14,7 @@
    The room votes an era at the first intermission and the dealer
    leans toward it (drawBand in game.js). Guess and bluff entries
    carry no era: the lean governs the multiple-choice deal only.
-   Tallies: 80s 35 · 90s 53 · 00s 3 · any 11 — the '10s are not
+   Tallies: 80s 37 · 90s 56 · 00s 19 · any 12 — the '10s are not
    offered, because the bank holds none of them.
    Design pass 5 adds d (1|2|3): the difficulty BAND the dealer ramps by —
    1 Warm (most households know it cold), 2 Middle (a fan knows it),
@@ -237,4 +237,20 @@ window.GH_BANK = [
 {cat:"The Dial-Up Years",diff:"medium",d:2,era:"00s",q:"Which 2001 Apple gadget promised '1,000 songs in your pocket'?",a:"The iPod",w:["The Discman","The Zune","The Rio"],why:"October 2001: a 5GB hard drive the size of a deck of cards, and the headphone era begins."},
 {cat:"Music",diff:"hard",d:3,era:"00s",q:"Which Outkast song asks you to shake it like a Polaroid picture?",a:"Hey Ya!",w:["The Way You Move","Ms. Jackson","Roses"],why:"André 3000's Hey Ya! (2003) — Polaroid politely noted that shaking the prints can actually damage them."},
 {cat:"Movies",diff:"hard",d:3,era:"00s",q:"In The Dark Knight (2008), which character keeps asking 'Why so serious?'",a:"The Joker",w:["The Scarecrow","Ra's al Ghul","Harvey Dent"],why:"Heath Ledger's Joker — the line made the poster before it made the trailer."},
+/* ---------------- AUDIT PASS (2026-11-16) — THE DEEP CUT BENCH (finding #10) ----------------
+   Ten hand-authored band-3 questions for the bank's thin shelves:
+   Ads & Jingles and Toys & Games held only two Deep Cuts apiece,
+   Saturday Morning three. Every category now holds at least five.
+   Tell discipline kept: the correct answer is the longest option
+   in none of the ten, tied-longest in one. */
+{cat:"Ads & Jingles",diff:"hard",d:3,era:"00s",q:"GEICO's 2004 ads insisted their website was 'so easy' that who could do it?",a:"A caveman",w:["A toddler","A goldfish","A sleepwalker"],why:"The offended cavemen got so famous they were given their own sitcom in 2007. It lasted one season."},
+{cat:"Ads & Jingles",diff:"hard",d:3,era:"90s",q:"From 1997, Taco Bell's ads starred a talking Chihuahua whose Spanish catchphrase was what?",a:"¡Yo quiero Taco Bell!",w:["¡Yo quiero más queso!","¡Corre por la frontera!","¡Viva la siesta!"],why:"The dog was a Chihuahua named Gidget; the phrase means 'I want Taco Bell' — and 'run for the border' was the chain's older slogan."},
+{cat:"Ads & Jingles",diff:"medium",d:3,era:"80s",q:"In the 1981 ad, one Rolls-Royce pulls alongside another so its passenger can ask for what condiment?",a:"Grey Poupon",w:["Heinz Ketchup","French's Mustard","Hellmann's Mayonnaise"],why:"'Pardon me — would you have any Grey Poupon?' One borrowed jar made a supermarket mustard feel like a luxury good."},
+{cat:"Toys & Games",diff:"hard",d:3,era:"00s",q:"Which spinning-top toy line reached North America in 2002 behind the battle cry 'Let it rip!'?",a:"Beyblade",w:["Battle B-Daman","Bakugan","Crush Gear"],why:"Beyblade's tops fought in plastic Beystadiums; the line began as a Japanese manga and anime in 1999."},
+{cat:"Toys & Games",diff:"hard",d:3,era:"any",q:"In Trivial Pursuit, the pink wedge is earned by answering a question in which category?",a:"Entertainment",w:["Arts & Literature","Science & Nature","Sports & Leisure"],why:"Blue is Geography, yellow History, green Science & Nature, orange Sports & Leisure — pink belongs to Entertainment."},
+{cat:"Toys & Games",diff:"hard",d:3,era:"80s",q:"The Sega Genesis was sold under which name in Japan and Europe?",a:"The Mega Drive",w:["The Master System","The Saturn","The Wondermega"],why:"Sega couldn't secure the Genesis name overseas, so most of the world knew the 1988 machine as the Mega Drive."},
+{cat:"Saturday Morning",diff:"medium",d:3,era:"90s",q:"Which blue-suited animated hero of 1994 yelled 'Spoooon!' as his battle cry?",a:"The Tick",w:["The Maxx","Freakazoid","Earthworm Jim"],why:"The Tick started as a comic shop's mascot before Fox Kids gave him a series — and Arthur, his moth-suited sidekick."},
+{cat:"Saturday Morning",diff:"hard",d:3,era:"00s",q:"Kim Possible's sidekick Ron Stoppable carried which pet in his pocket?",a:"A naked mole-rat",w:["A hairless guinea pig","A hairless cat","A baby hedgehog"],why:"Rufus the naked mole-rat rode in Ron's pocket and shared his love of the naco — Ron's own taco-burrito invention."},
+{cat:"Music",diff:"hard",d:3,era:"00s",q:"Which animated band, co-created by Blur's Damon Albarn, performs through cartoon members including the singer 2-D?",a:"Gorillaz",w:["Arcade Fire","Daft Punk","The Good, the Bad & the Queen"],why:"Gorillaz debuted in 2001; Albarn voices 2-D, and The Good, the Bad & the Queen is another of his bands — with real people in it."},
+{cat:"The Dial-Up Years",diff:"hard",d:3,era:"90s",q:"In 1995, the auction website that became eBay launched under which name?",a:"AuctionWeb",w:["BidNet","WebAuction","The Auction Site"],why:"Pierre Omidyar launched AuctionWeb in September 1995 as part of his personal site; the company took the eBay name in 1997."},
 ];

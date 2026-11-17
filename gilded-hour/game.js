@@ -37,7 +37,6 @@
     for (var i = arr.length - 1; i > 0; i--) { var j = ri(i + 1); var t = arr[i]; arr[i] = arr[j]; arr[j] = t; }
     return arr;
   }
-  function round10(n) { return Math.max(0, Math.round(n / 10) * 10); }
   function money(n) { return (n < 0 ? "-$" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US"); }
   function mplus(n) { return "+" + money(n); }
 
@@ -3114,7 +3113,11 @@
     $("qCounter").textContent = "QUESTION " + Math.min(n, 15) + " OF 15";
   }
   function speedFrac(elapsed, total) { return Math.max(0, Math.min(1, 1 - elapsed / total)); }
-  function earned(value, elapsed, total) { return round10(value * (0.5 + 0.5 * speedFrac(elapsed, total))); }
+  /* earned() is the shared melt (rules-core.js) at multiplier 1 —
+     one melt, one rounding ($10), local and online alike since
+     the finding #9 unification (2026-11-16). speedFrac is the
+     un-elapsed fraction, so the melt's frac is its complement. */
+  function earned(value, elapsed, total) { return GH_RULES.melt(value, 1, 1 - speedFrac(elapsed, total)); }
 
   /* ---------- screen wake lock (improvement 1) ----------
      A show must never be interrupted by the device deciding to
@@ -4782,7 +4785,7 @@
            ["Cut Two", "Two tokens each — yours for the whole show"],
            ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
            ["The spend", "Spend them like they matter — because they do"],
-           ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
+           ["The Double", "New this round: one ×2 token each — spend it on a question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
            ["The Bluff", "One question this round has no written wrong answers — the table invents them. $200 for the truth, $25 for every player your lie fools"],
            ["The Headline", "The round closes with it — double money again, half the clock"]]
@@ -4790,7 +4793,7 @@
            ["Cut Two", "One token each — yours for the whole show"],
            ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
            ["The spend", "Spend it like it's the last one — it is"],
-           ["The Double", "New this round: one ×2 token each — spend it on any question and a right answer pays you twice"],
+           ["The Double", "New this round: one ×2 token each — spend it on a question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
            ["The Bluff", "One question this round has no written wrong answers — the table invents them. $200 for the truth, $25 for every player your lie fools"],
            ["The Headline", "The round closes with it — double money again, half the clock"]],
@@ -4801,12 +4804,21 @@
           ["The risk", "Get it wrong and you lose nothing but face"],
           ["The promise", "Nobody leaves this show poorer than they arrived"]]
     };
-    var factRows = rows[G.round].map(function (r) {
-      return '<div class="fact-row"><span class="fact-k">' + r[0] + '</span><span class="fact-v">' + r[1] + "</span></div>";
+    /* Perfectionist fix pass 2 (2026-11-15): the rows are dealt
+       into two .fact-col stacks in the markup, so a short stage
+       can stand them side by side as real columns (see the fit
+       block in the stylesheet) — CSS multicol fragmented the
+       flex rows and painted their rules through the labels.
+       Taller stages stack the columns back into one ledger. */
+    var half = Math.ceil(rows[G.round].length / 2);
+    var factCols = [0, 1].map(function (c) {
+      return '<div class="fact-col">' + rows[G.round].slice(c * half, c * half + half).map(function (r) {
+        return '<div class="fact-row"><span class="fact-k">' + r[0] + '</span><span class="fact-v">' + r[1] + "</span></div>";
+      }).join("") + "</div>";
     }).join("");
     stage('<div class="bumper break-card"><div class="round-kicker">ROUND ' + G.round + "</div>" +
       '<div class="round-title">' + titles[G.round] + "</div>" +
-      '<div class="fact-list">' + factRows + "</div>" +
+      '<div class="fact-list">' + factCols + "</div>" +
       (G.round > 1 ? standingsHTML() : "") +
       '<button class="btn-gold" id="btnRoundGo">' + (G.round === 1 ? "START THE WARM-UP" : G.round === 2 ? "DOUBLE IT" : "TO THE BIG FINISH") + "</button></div>");
     /* Rematch Night: on a series show, Sterling's framing of the
@@ -7263,7 +7275,7 @@
   });
   paintMute();
   /* ---------- how tonight works (teaching cards) ----------
-     A manual overlay off the title screen: three beats, no game
+     A manual overlay off the title screen: four beats, no game
      state touched. gh_taught only records that a player checked
      "Don't show this again" — the entry point stays either way,
      and picks up a quiet tick when the table has been taught. */
@@ -7274,7 +7286,7 @@
     howBeat = n;
     document.querySelectorAll(".how-beat").forEach(function (p) { p.classList.toggle("hidden", +p.getAttribute("data-beat") !== n); });
     document.querySelectorAll(".how-dot").forEach(function (d, i) { d.classList.toggle("sel", i === n); });
-    var last = n === 2;
+    var last = n === document.querySelectorAll(".how-beat").length - 1;
     $("howNext").classList.toggle("hidden", last);
     $("howClose").classList.toggle("hidden", !last);
     $("howStart").classList.toggle("hidden", !last);
@@ -7290,7 +7302,7 @@
   $("btnHow").addEventListener("click", function () { Snd.ensure(); openHow(); });
   $("howSkip").addEventListener("click", closeHow);
   $("howClose").addEventListener("click", closeHow);
-  $("howNext").addEventListener("click", function () { showBeat(Math.min(2, howBeat + 1)); });
+  $("howNext").addEventListener("click", function () { showBeat(Math.min(document.querySelectorAll(".how-beat").length - 1, howBeat + 1)); });
   $("howStart").addEventListener("click", function () {
     closeHow();
     if (ghMode === "table") $("btnStart").click();
@@ -9822,14 +9834,6 @@
     var best = null;
     JP.snap.players.forEach(function (p) { if (p && (!best || p.score > best.score)) best = p; });
     return best;
-  }
-  function jpStandRows() {
-    var rows = JP.snap.players.map(function (p, i) { return p ? { p: p, seat: i } : null; }).filter(Boolean)
-      .sort(function (a, b) { return b.p.score - a.p.score; });
-    return rows.map(function (r, pos) {
-      return '<div class="jp-standrow' + (r.seat === JP.seat ? " me" : "") + threatClass(r.p.streak || 0) + '"><span class="name-dot" style="background:' + PCOLORS[r.seat] + '"></span>' +
-        "<span>" + (pos + 1) + ". " + esc(r.p.name) + (r.p.connected ? "" : " (away)") + '</span><span class="sc">' + money(r.p.score) + "</span></div>";
-    }).join("");
   }
   /* Pass N1 — the pad's own report card: this seat's four facts
      from the referee's card (the ended snapshot carries it), in

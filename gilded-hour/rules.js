@@ -16,11 +16,15 @@
  * What lives here: only the rules BOTH runtimes must agree on,
  * to the cent — the bonuses, the bet caps, the bluff's fool
  * fee, and the melt. What does not: anything one side owns
- * alone (the client's base values and its local round-to-$10
- * earned() path; the server's room limits and clocks). The
- * melt here is the $1-rounded form the room and the online
- * host settle by; the local game's earned() keeps its own
- * rounding, as it always has. */
+ * alone (the client's base values; the server's room limits
+ * and clocks).
+ *
+ * THE ROUNDING (audit finding #9, unified 2026-11-16): every
+ * settled figure rounds to the nearest $10, inside the melt
+ * itself, so the local game and the online room can never
+ * drift apart again — the local earned() path routes through
+ * this same melt. Before this, the local game settled to $10
+ * while the room settled the melt's raw $1 figure. */
 const GH_QUICK_DRAW_BONUS = 50;  // first correct lock-in, on an ordinary question — paid x the round ($50/$100/$150)
 const GH_STREAK_BONUS = 25;      // per bank once a streak reaches GH_STREAK_MIN — paid x the round ($25/$50/$75)
 const GH_STREAK_MIN = 3;         // banks in a row before the streak bonus starts paying
@@ -35,10 +39,12 @@ function ghQdAmount(round) { return GH_QUICK_DRAW_BONUS * (round || 1); }
 function ghStreakAmount(round) { return GH_STREAK_BONUS * (round || 1); }
 
 /* The melt: a question's value drains linearly from full to
-   half across its window. frac is the elapsed fraction; the
-   callers clamp it the way they always have. */
+   half across its window, then rounds to the nearest $10 —
+   the one rounding every settle in the game uses. frac is
+   the elapsed fraction; the callers clamp it the way they
+   always have. */
 function ghMelt(baseValue, multiplier, frac) {
-  return Math.round(baseValue * multiplier * (1 - 0.5 * frac));
+  return Math.max(0, Math.round(baseValue * multiplier * (1 - 0.5 * frac) / 10) * 10);
 }
 
 /* The Long Shot cap: base chips plus one per full step a seat
