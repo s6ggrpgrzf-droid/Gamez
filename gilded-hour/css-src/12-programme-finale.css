@@ -535,6 +535,7 @@
   #stage{padding:12px 28px}
   .stage-inner{width:min(1460px,94vw)}
   .stage-inner:has(.race-wrap),.stage-inner:has(.finale-wrap){width:min(1700px,96vw)}
+  .co-marquee{max-width:940px}
   #topbar{font-size:15px;padding:14px 24px}
   .q-text{font-size:clamp(44px,4.8vmin,62px);padding:24px 38px 28px;max-width:25em}
   .cat-pill{font-size:clamp(17px,2.2vmin,24px);padding:9px 24px}

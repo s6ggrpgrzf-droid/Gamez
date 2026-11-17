@@ -9,11 +9,18 @@
 
 /* cold open */
 .coldopen{position:relative;padding:10px 0}
-.co-marquee{max-width:660px;margin:0 auto;text-align:center;overflow:visible}
+.co-marquee{max-width:660px;margin:0 auto;text-align:center;overflow:visible;container-type:inline-size}
 .co-sweep{position:absolute;inset:-20% -30%;pointer-events:none;background:linear-gradient(105deg,transparent 42%,rgba(255,226,154,.14) 50%,transparent 58%);transform:translateX(-70%);animation:coSweep 1.6s ease .1s both}
 @keyframes coSweep{to{transform:translateX(70%)}}
 .co-kicker{letter-spacing:.42em;font-size:11px;font-weight:600;color:var(--gold);text-indent:.42em}
-.co-title{font-size:clamp(36px,7.6vw,66px);line-height:1.04;font-weight:700;margin-top:12px;color:#F0DCA3;text-shadow:0 4px 0 #27436E,0 12px 28px rgba(0,0,0,.5)}
+/* the title is sized to its marquee, never the viewport (perfectionist
+   pass, 2026-11-16): at 7.6vw the clamp's 66px cap outgrew the 660px
+   card on desktop and the name wrapped mid-word — "THE GILDED HO / UR".
+   8.2cqw keeps the whole name on one line at every width, whichever
+   serif is on screen; the clamp stays as the fallback where container
+   units are unknown, and nowrap makes the failure mode a breath of
+   overflow rather than a broken word. */
+.co-title{font-size:clamp(36px,7.6vw,66px);font-size:8.2cqw;white-space:nowrap;line-height:1.04;font-weight:700;margin-top:12px;color:#F0DCA3;text-shadow:0 4px 0 #27436E,0 12px 28px rgba(0,0,0,.5)}
 .co-l{display:inline-block;opacity:0;transform:translateY(16px) scale(.96);animation:coIn .6s cubic-bezier(.2,.7,.3,1) both}
 @keyframes coIn{to{opacity:1;transform:none}}
 .co-sub{color:rgba(255,246,232,.75);font-weight:600;margin-top:12px;opacity:0;animation:coIn .6s ease .85s both}

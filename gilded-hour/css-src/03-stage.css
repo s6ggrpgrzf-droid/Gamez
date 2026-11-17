@@ -292,6 +292,6 @@
 .host-face svg{width:100%;height:100%;display:block;border-radius:50%;background:var(--glass-ink)}
 .host-bubble{position:relative;background:var(--paper-bg);border-radius:18px;padding:8px 16px 10px;box-shadow:0 8px 18px rgba(0,0,0,.3);max-width:min(860px,88vw)}
 .host-bubble::before{content:"";position:absolute;left:-11px;top:50%;margin-top:-13px;width:12px;height:26px;background:var(--paper-flat);clip-path:polygon(100% 0,100% 100%,0 50%)}
-.host-name{font-size:9px;font-weight:700;letter-spacing:.3em;color:#A11E50}
+.host-name{font-size:9px;font-weight:700;letter-spacing:.3em;color:var(--brass-deep)} /* perfectionist pass, 2026-11-16: was #A11E50, a magenta left over from an older palette, on every screen Sterling speaks — the name now wears the show's brass */
 .host-line{font-size:clamp(14.5px,2.2vw,18px);font-weight:600;line-height:1.35;color:var(--ink);min-height:4.05em}
 
