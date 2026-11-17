@@ -148,7 +148,12 @@
      publish with a hidden field the room keeps off every snapshot
      until the reveal, exactly like the answer. */
   var GOLDEN_SLOTS = ["1:0", "1:1", "1:2", "1:3", "1:4", "1:5", "2:0", "2:1", "2:2", "2:3", "2:4"];
-  function drawGoldenSlot() { return GOLDEN_SLOTS[ri(GOLDEN_SLOTS.length)]; }
+  /* the draw excludes the Bluff's seat, exactly as the online
+     script's draw does (ogBuildScript): the Bluff unprices every
+     fold, so a pick landing there would silently void the show's
+     one golden question — the tease promises one, so the draw
+     must always land on a seat that can pay it */
+  function drawGoldenSlot() { var pos = GOLDEN_SLOTS.filter(function (s) { return s !== BLUFF_ROUND + ":" + BLUFF_Q; }); return pos[ri(pos.length)]; }
   function isGoldenSlot(round, qInRound) { return !!G && G.goldenSlot === (round + ":" + qInRound); }
   function validGoldenSlot(s) { return typeof s === "string" && GOLDEN_SLOTS.indexOf(s) >= 0; }
 
@@ -1574,11 +1579,6 @@
     if (!stake) return "";
     return '<div class="stake-ribbon ' + stake.kind + '"><span>' + stakeLabel(stake, players) + "</span></div>";
   }
-  /* the pads: an in-flow line in the pad's own grammar */
-  function stakePadHTML(stake, players) {
-    if (!stake) return "";
-    return '<div class="jp-stakeribbon ' + stake.kind + '">' + stakeLabel(stake, players) + "</div>";
-  }
   /* the table's context: scores as they stand, the award exactly
      as the card prints it (a golden question at its masked,
      un-doubled figure), the Big Finish's remaining money counted
@@ -2291,59 +2291,11 @@
   (function () {
     for (var i = 0; i < JP_COINS; i++) jpCoins.parts.push({ on: false, t: 0, dur: 0, delay: 0, linger: 0, x0: 0, y0: 0, cx: 0, cy: 0, x1: 0, y1: 0, spin: 0, flight: null });
   })();
-  function jpCoinCanvas() {
-    var cv = $("jpCoinCanvas");
-    if (!cv) {
-      var g = $("scr-join"); if (!g) return null;
-      cv = document.createElement("canvas"); cv.id = "jpCoinCanvas"; cv.setAttribute("aria-hidden", "true");
-      g.appendChild(cv);
-    }
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var w = Math.floor(window.innerWidth * dpr), h = Math.floor(window.innerHeight * dpr);
-    if (jpCoins.cv !== cv || cv.width !== w || cv.height !== h) {
-      cv.width = w; cv.height = h; jpCoins.cv = cv; jpCoins.cx = cv.getContext("2d"); jpCoins.dpr = dpr;
-    }
-    return cv;
-  }
   function jpClearCoins() {
     for (var i = 0; i < jpCoins.parts.length; i++) { jpCoins.parts[i].on = false; jpCoins.parts[i].flight = null; }
     jpCoins.busy = false;
     if (jpCoins.cv) jpCoins.cv.classList.remove("on");
     if (jpCoins.cx && jpCoins.cv) jpCoins.cx.clearRect(0, 0, jpCoins.cv.width, jpCoins.cv.height);
-  }
-  function jpCoinHop(award) {
-    var n = Math.min(coinsForAward(award), 5);
-    if (!n) return;
-    var to = document.querySelector("#jpMain .jp-vscore");
-    if (!to) return;
-    var cv = jpCoinCanvas(); if (!cv) return;
-    var from = document.querySelector("#jpMain .jp-gain") || document.querySelector("#jpMain .jp-vdisc");
-    var tr = to.getBoundingClientRect();
-    var tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
-    var fx = tx, fy = ty - 120;
-    if (from) { var fr = from.getBoundingClientRect(); fx = fr.left + fr.width / 2; fy = fr.top + fr.height / 2; }
-    cv.classList.add("on"); jpCoins.busy = true;
-    var spawned = 0;
-    for (var i = 0; i < jpCoins.parts.length && spawned < n; i++) {
-      var p = jpCoins.parts[i];
-      if (p.on) continue;
-      p.on = true; p.t = 0; p.linger = 0.12; p.flight = null;
-      p.dur = 0.5 + Math.random() * 0.1;
-      p.delay = spawned * 0.05;
-      p.x0 = fx + (Math.random() - 0.5) * 18; p.y0 = fy + (Math.random() - 0.5) * 8;
-      p.x1 = tx; p.y1 = ty;
-      p.cx = (p.x0 + tx) / 2 + (Math.random() - 0.5) * 16;
-      p.cy = Math.min(p.y0, ty) - 44 - Math.random() * 22;
-      p.spin = Math.random() * 6.28;
-      spawned++;
-    }
-    if (!spawned) { jpCoins.busy = false; cv.classList.remove("on"); }
-  }
-  function jpCoinHopOnce(lr, mine) {
-    var key = (lr.qid || "") + "|" + (mine.banked || 0);
-    if (JP._hopKey === key) return;
-    JP._hopKey = key;
-    jpCoinHop(mine.banked || 0);
   }
   function stepJpCoins(dt) { stepCoinPool(jpCoins, 6.5, dt); }
 
@@ -2445,8 +2397,8 @@
       seen[id] = 1;
       return BANK[id];
     }
-    /* every band pool empty — unreachable in a 10-draw show from an
-       84-question bank; rebuild and deal on, as the old deck did */
+    /* every band pool empty — unreachable in a 10-draw show from a
+       124-question ordinary bank; rebuild and deal on, as the old deck did */
     resetDeck();
     return drawBand(target);
   }
@@ -3494,7 +3446,7 @@
        question either — it is re-derived from the restored pick and
        the position, so a resumed golden question (even mid-reveal)
        wears its gilt, and no other question can borrow it */
-    if (G.cur) G.cur.golden = !G.cur.decider && isGoldenSlot(G.round, G.qInRound);
+    if (G.cur) G.cur.golden = !G.cur.decider && G.cur.kind !== "bluff" && isGoldenSlot(G.round, G.qInRound);
     tableFx = null;
     dispScore = G.players.map(function (p) { return p.score; });
     fortuneDisp = G.players.map(function (p) { return p.score; });
@@ -4173,27 +4125,6 @@
     if (d.biggest > 0) out.push({ k: "BIGGEST BANK", full: "BIGGEST BANK", v: money(d.biggest) });
     if (d.peak >= 2) out.push({ k: "HOTTEST STREAK", full: "HOTTEST STREAK", v: String(d.peak) });
     return out;
-  }
-  /* A seat with nothing recorded still gets a sentence — Sterling
-     does not leave a guest's line blank on the closing card
-     (designer's pass, 2026-11-11). The line is voice, never a
-     fact: it invents no numbers, only notes the quiet. The pad's
-     own card keeps its stricter rule — an empty card is omitted
-     there, because a player's own phone need not announce it. */
-  var REPORT_QUIET = [
-    "a quiet one — the chair was comfy",
-    "unhurried, unbothered, unbanked",
-    "all dignity, no dollars",
-    "a spectator's masterclass",
-    "saving it for the rematch, presumably"
-  ];
-  function quietLineFor(name, seat, taken) {
-    var h = 0, s = String(name || "");
-    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-    var idx = (h + seat) % REPORT_QUIET.length;
-    if (taken[idx]) idx = (idx + 1) % REPORT_QUIET.length;
-    taken[idx] = true;
-    return REPORT_QUIET[idx];
   }
   /* The Awards Board (2026-11-13, Jimmy's call — "the report card
      is all crammed in there. Fix it all"): the per-seat fact rows
@@ -6001,38 +5932,6 @@
     var w = bandWord(d);
     return w ? '<span class="band-tag b' + d + '">' + w + "</span>" : "";
   }
-  function jpBandLine(d) {
-    var w = bandWord(d);
-    return w ? '<div class="jp-bandline b' + d + '">· ' + w + " ·</div>" : "";
-  }
-  /* Dynamics pass D1: the pot rides the pad's question and result
-     cards as one small line — read off the snapshot the pad
-     already holds (the room's pot is public from the first
-     question), so a refreshed pad tells the same figure. A
-     snapshot from a room that predates the pot carries no field
-     and the line simply doesn't appear. */
-  function jpPotLine() {
-    var pot = JP && JP.snap ? JP.snap.pot : null;
-    return (typeof pot === "number") ? '<div class="jp-potline">THE POT · ' + money(pot) + "</div>" : "";
-  }
-  /* Gameplay-visuals pass G5: the pad's own line of the photo-
-     finish truth — where THIS player came in the race, computed
-     from the reveal's lockMs alone. Silence when the pad wasn't a
-     correct finisher, when the question wasn't a 'normal' one, or
-     when the room is too old to carry lockMs at all. */
-  function jpPhotoLine(lr) {
-    if (!lr || lr.decider || lr.kind !== "normal") return "";
-    var fin = (lr.results || []).filter(function (r) { return r.correct && r.lockMs != null; })
-      .sort(function (a, b) { return a.lockMs - b.lockMs; });
-    var rank = -1;
-    fin.forEach(function (r, i) { if (r.seat === JP.seat) rank = i; });
-    if (rank < 0) return "";
-    var myQd = ((lr.results || []).find(function (r) { return r.seat === JP.seat; }) || {}).quickDrawBonus || QUICK_DRAW_BONUS;
-    if (fin.length === 1) return "ONLY FINISHER — QUICK DRAW +$" + myQd;
-    if (rank === 0) return "FIRST IN — QUICK DRAW +$" + myQd;
-    var ord = ["", "1ST", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH"][rank + 1] || (rank + 1) + "TH";
-    return "YOU WERE " + ord + " IN — " + pfMargin(fin[rank].lockMs - fin[0].lockMs);
-  }
   /* online, the band of the question on screen: the snapshot's
      public view first (the room's dealt fact), the host's own
      dealt entry behind it */
@@ -6695,9 +6594,9 @@
       seen[id] = 1;
       return BANK[id];
     }
-    /* the unused pool is dry — six num in the bank, at most three
-       spent by the show's pinned slots, so this needs three prior
-       deciders all dead level; rather than stall a live show,
+    /* the unused pool is dry — 24 num in the bank, at most three
+       spent by the show's pinned slots, so this needs a long run
+       of dead-level deciders; rather than stall a live show,
        re-deal a num the show itself used but the decider hasn't */
     var again = BANK.filter(function (q) { return q.kind === "num" && (G.decider.usedIds || []).indexOf(q.id) < 0; });
     return again.length ? pick(again) : null;
@@ -8798,7 +8697,7 @@
       var fresh = cand.filter(function (q) { return !seen[q.id]; });
       return ogDeciderEntryFor(pick(fresh.length ? fresh : cand));
     }
-    /* the unused pool is dry (six num in the bank, at most three
+    /* the unused pool is dry (24 num in the bank, at most three
        spent by the script's pinned slots) — re-deal a num the show
        used but the decider hasn't, rather than stall the room */
     var again = BANK.filter(function (q) { return q.kind === "num" && (OG.decider.used || []).indexOf(q.id) < 0; });
@@ -9749,20 +9648,6 @@
     g.style.setProperty("--cat-tx", known ? (CATTX[cat] || "#FFF6E8") : JP_GOLD.tx);
     g.classList.add("cat-on");
   }
-  /* the bank pulse: gold rises up the pad when THIS player's answer
-     banks — once per reveal, keyed to the new score so snapshot
-     re-renders never re-fire it */
-  function jpBankPulse(score, banked) {
-    var key = score + "|" + banked;
-    if (JP._pulseKey === key) return;
-    JP._pulseKey = key;
-    var g = $("scr-join"); if (!g) return;
-    var d = document.createElement("div");
-    d.className = "jp-pulse";
-    g.appendChild(d);
-    d.addEventListener("animationend", function () { d.remove(); });
-    setTimeout(function () { if (d.isConnected) d.remove(); }, 1600);
-  }
   /* Design pass item 2 — the pad clock. The drain line and the phase
      word are DERIVED from the snapshot and the server's timestamps on
      every paint, never accumulated, so a reconnect or a resync lands
@@ -9829,24 +9714,6 @@
     if (w) { var t = jpPhaseWord(); if (t && w.textContent !== t) w.textContent = t; }
   }
   function jpMe() { return JP && JP.snap && JP.seat != null ? JP.snap.players[JP.seat] : null; }
-  function jpLeader() {
-    if (!JP || !JP.snap) return null;
-    var best = null;
-    JP.snap.players.forEach(function (p) { if (p && (!best || p.score > best.score)) best = p; });
-    return best;
-  }
-  /* Pass N1 — the pad's own report card: this seat's four facts
-     from the referee's card (the ended snapshot carries it), in
-     the break card's fact-row grammar. A seat with nothing
-     recorded gets no card at all — omission, never invention. */
-  function jpReportHTML(entry) {
-    var facts = reportFactsOf(reportView(entry));
-    if (!facts.length) return "";
-    return '<div class="jp-report"><div class="jp-report-head">YOUR REPORT CARD</div>' +
-      facts.map(function (f) {
-        return '<div class="fact-row"><span class="fact-k">' + f.full + '</span><span class="fact-v">' + esc(f.v) + "</span></div>";
-      }).join("") + "</div>";
-  }
   /* tonight's special is not in the bank: for a "nightly." qid the pad
      fetches the same served question from the nightly worker (its
      answer order is date-seeded, identical on every phone). Until the

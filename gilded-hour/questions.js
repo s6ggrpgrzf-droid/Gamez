@@ -11,9 +11,11 @@
    ordinary questions: the decade the subject belongs to for this
    cohort — release, debut or campaign origin — or "any" for the
    evergreen and the pre-1980 pieces that belong to no one decade.
-   The room votes an era at the first intermission and the dealer
-   leans toward it (drawBand in game.js). Guess and bluff entries
-   carry no era: the lean governs the multiple-choice deal only.
+   The Decade Vote that once read this field was cut in the
+   2026-11-15 subtraction pass: era is retained as bank data but
+   no code reads it — the deal is governed by the difficulty
+   band (drawBand in game.js) alone. Guess and bluff entries
+   carry no era.
    Tallies: 80s 37 · 90s 56 · 00s 19 · any 12 — the '10s are not
    offered, because the bank holds none of them.
    Design pass 5 adds d (1|2|3): the difficulty BAND the dealer ramps by —

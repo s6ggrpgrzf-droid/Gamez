@@ -137,7 +137,14 @@ export class GildedRoom {
   scheduleAlarm() {
     if (!this.room) return;
     let next = this.room.lastActivity + ROOM_TTL_MS;
-    if (this.room.phase === 'answer' && this.room.question) {
+    /* The bluff's invent window is a deadline too: during 'invent'
+     * the question's deadline IS its invent deadline (publish sets
+     * it, closeInvent replaces it with the vote deadline), and
+     * expireIfNeeded already settles that phase — the alarm must
+     * be scheduled on it, or a room whose table goes quiet while
+     * collecting lies would not deal until the next message or
+     * the 2h TTL. */
+    if ((this.room.phase === 'answer' || this.room.phase === 'invent') && this.room.question) {
       next = Math.min(next, this.room.question.deadline);
     }
     const at = Math.max(next, nowMs() + 50);
