@@ -34,6 +34,9 @@ const GH_BASE_BET_CAP = 3;       // chips any seat may ride in the Big Finish
 const GH_MAX_BET_CAP = 5;        // the Long Shot ceiling
 const GH_LONG_SHOT_STEP = 1000;  // one extra chip per full $1,000 a seat trails the leader
 const GH_BLUFF_FOOL = 25;        // THE BLUFF: per player a lie fools, paid by the house
+const GH_BET_LOSS_EARLY = 0.5;   // Jeopardy pass (2026-11-17): fraction of the stake a missed bet costs on Big Finish questions 1-2
+const GH_FINAL_WRONG_PENALTY = 300; // Jeopardy pass: the last Big Finish question's wrong-answer penalty, on top of the full stake
+const GH_DECLARE_MULT = 2;       // The Declaration (Pass 3, 2026-11-17): the multiplier a declared All or Nothing seat's Q15 bet pays — and its Q15 loss costs
 
 function ghQdAmount(round) { return GH_QUICK_DRAW_BONUS * (round || 1); }
 function ghStreakAmount(round) { return GH_STREAK_BONUS * (round || 1); }
@@ -50,6 +53,35 @@ function ghMelt(baseValue, multiplier, frac) {
 /* The Long Shot cap: base chips plus one per full step a seat
    trails the leader, never above the ceiling. scores is a
    plain array of numbers; seat indexes into it. */
+/* Jeopardy (improvement Pass 2, 2026-11-17, Jimmy's pick —
+   "both, graduated"): what a FAILED Big Finish bet costs the
+   bettor, before the $0 floor the callers apply. Questions 1-2
+   take half the stake; the last question takes the whole stake
+   plus the face-value penalty. A bet fails when the seat does
+   not bank the question — wrong pick, wrong number, or no
+   answer at all: the bet was on yourself, and silence is not
+   a loophole. qInRound is 0-based within Round 3. The pot's
+   feed is a separate, older rule and does not read this. */
+function ghBetLoss(chips, qInRound, declared) {
+  var stake = (chips || 0) * GH_BET_PAYOUT;
+  var base = qInRound >= 2 ? stake + GH_FINAL_WRONG_PENALTY : Math.round(stake * GH_BET_LOSS_EARLY);
+  /* The Declaration (Pass 3): a seat that called All or Nothing
+     at the break loses DOUBLE on the last question — the whole
+     graduated figure, penalty included, twice over. The flag
+     means nothing before the last question: the declaration
+     names Q15 and only Q15. */
+  return (declared && qInRound >= 2) ? base * GH_DECLARE_MULT : base;
+}
+
+/* What a BANKED Big Finish bet pays: the stake, doubled for a
+   seat whose Declaration is riding on the last question. The
+   house's bonuses (Quick Draw, streaks) are never multiplied —
+   they land flat on top, exactly as they treat the Double. The
+   callers gate `declared` to the last question, as above. */
+function ghBetPayout(chips, declared) {
+  return (chips || 0) * GH_BET_PAYOUT * (declared ? GH_DECLARE_MULT : 1);
+}
+
 function ghBetCap(scores, seat) {
   if (!scores || scores[seat] == null) return GH_BASE_BET_CAP;
   let lead = scores[seat];
@@ -68,8 +100,13 @@ window.GH_RULES = {
   MAX_BET_CAP: GH_MAX_BET_CAP,
   LONG_SHOT_STEP: GH_LONG_SHOT_STEP,
   BLUFF_FOOL: GH_BLUFF_FOOL,
+  BET_LOSS_EARLY: GH_BET_LOSS_EARLY,
+  FINAL_WRONG_PENALTY: GH_FINAL_WRONG_PENALTY,
+  DECLARE_MULT: GH_DECLARE_MULT,
   qdAmount: ghQdAmount,
   streakAmount: ghStreakAmount,
   melt: ghMelt,
-  betCap: ghBetCap
+  betCap: ghBetCap,
+  betLoss: ghBetLoss,
+  betPayout: ghBetPayout
 };

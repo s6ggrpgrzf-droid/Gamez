@@ -400,9 +400,33 @@ button.chip{min-height:44px;display:inline-flex;align-items:center;justify-conte
   .finale-wrap .sterling-zone{flex-direction:row;align-items:flex-end}
   .finale-wrap .sterling-lg{width:118px}
   .bubble-finale{margin:0 0 18px 6px;max-width:230px}
+  /* Pass 8 (2026-11-17): the portrait finale ran long —
+     measured +13 on a light night and +26..30 with the full
+     honours set and the series line (window run, 390x844):
+     the buttons kissed the stage's bottom edge and Sterling's
+     rail bubble clipped at the screen's foot. Thirty pixels
+     of air, taken from the stack's padding and margins only —
+     no type moves, nothing is hidden */
+  .finale-marquee{padding:6px 14px}
+  .finale-wrap .bubble-finale{margin-bottom:10px}
+  .finale-row{margin-top:6px;padding-top:6px}
+  .report-card{margin-top:10px;padding-top:6px}
+  .finale-btns{margin-top:10px;gap:10px}
+  .winner-word{font-size:13.5vw}
+  .finale-marquee{padding-top:4px;padding-bottom:4px}
   .winner-word{font-size:14.5vw}
   .finale-row{gap:8px}
   .finale-row .podium.big .avatar{width:60px}
   .co-title{font-size:32px}
+  /* Pass 8, the last of the finale's air (measured from the
+     finale's own children at 390x844: report card 183 of the
+     wrap's 620 — four award rows at 33px each — and a second
+     button row the narrow stage forces): the marquee's
+     sub-lines tighten their leading here; the award rows and
+     the BACK TO LOBBY button are tightened in stratum 12,
+     where the #stage-scoped overrides live — the class-level
+     rules written here first lost the cascade to stratum
+     11's .finale-wrap.has-report rules and were removed */
+  .finale-marquee .winner-sub{line-height:1.25}
 }
 

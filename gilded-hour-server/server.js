@@ -231,16 +231,31 @@ export class GildedRoom {
         this.sendRaw(ws, { t: 'error', msg: 'Already joined.' });
         return;
       }
-      if (msg.role === 'host' && this.liveSocket('host') && this.liveSocket('host') !== ws) {
-        this.sendRaw(ws, { t: 'error', msg: 'Host already connected.' });
-        return;
-      }
+      /* Pass 7 (2026-11-17): a hello that PROVES the identity
+         rebinds it. The old rule refused a player hello whose
+         seat still held a live socket ('Seat is taken.') — but
+         the socket it protected was usually the same phone's
+         own earlier connection, lingering after a reload, so a
+         real rejoin dead-ended on 'Finding your podium' until
+         the zombie timed out. The reclaim token IS the seat's
+         credential: its newest presenter takes the seat, and
+         the old socket is told and retired. The host token
+         earns the same rebind; an UNPROVEN hello (a token that
+         matches nothing) evicts nothing and is refused by
+         handleHello below, exactly as before. */
+      const evict = (dest) => {
+        const old = this.liveSocket(dest);
+        if (!old || old === ws) return;
+        this.sendRaw(old, { t: 'error', msg: 'This screen was replaced by a rejoin.' });
+        this.dead.add(old);
+        if (dest === 'host') { if (this.host === old) this.host = null; }
+        else if (this.players[dest] === old) this.players[dest] = null;
+        try { old.close(4001, 'Replaced by a rejoin'); } catch (e) { /* already gone */ }
+      };
+      if (msg.role === 'host' && msg.hostToken && msg.hostToken === this.room.hostToken) evict('host');
       if (msg.role === 'player' && msg.reclaimToken) {
         const seat = this.room.players.findIndex((p) => p && p.token === msg.reclaimToken);
-        if (seat >= 0 && this.liveSocket(seat) && this.liveSocket(seat) !== ws) {
-          this.sendRaw(ws, { t: 'error', msg: 'Seat is taken.' });
-          return;
-        }
+        if (seat >= 0) evict(seat);
       }
       const { identity, res } = handleHello(this.room, msg);
       if (!identity) {
@@ -286,9 +301,14 @@ export class GildedRoom {
     // The seat itself stays reserved (name, score, reclaim token); only
     // the live flag drops, and the room sees the disconnect.
     if (this.room && dest != null && dest !== 'host' && this.room.players[dest]) {
-      this.room.players[dest].connected = false;
-      this.sendSnapshots();
-      await this.save();
+      /* Pass 7: if a rejoin already rebound this seat to a newer
+         socket, this close is the OLD socket leaving — the seat
+         never went dark, so no disconnect is painted */
+      if (!this.liveSocket(dest)) {
+        this.room.players[dest].connected = false;
+        this.sendSnapshots();
+        await this.save();
+      }
     }
   }
 

@@ -21,11 +21,15 @@
  * What lives here: only the rules BOTH runtimes must agree on,
  * to the cent — the bonuses, the bet caps, the bluff's fool
  * fee, and the melt. What does not: anything one side owns
- * alone (the client's base values and its local round-to-$10
- * earned() path; the server's room limits and clocks). The
- * melt here is the $1-rounded form the room and the online
- * host settle by; the local game's earned() keeps its own
- * rounding, as it always has. */
+ * alone (the client's base values; the server's room limits
+ * and clocks).
+ *
+ * THE ROUNDING (audit finding #9, unified 2026-11-16): every
+ * settled figure rounds to the nearest $10, inside the melt
+ * itself, so the local game and the online room can never
+ * drift apart again — the local earned() path routes through
+ * this same melt. Before this, the local game settled to $10
+ * while the room settled the melt's raw $1 figure. */
 const GH_QUICK_DRAW_BONUS = 50;  // first correct lock-in, on an ordinary question — paid x the round ($50/$100/$150)
 const GH_STREAK_BONUS = 25;      // per bank once a streak reaches GH_STREAK_MIN — paid x the round ($25/$50/$75)
 const GH_STREAK_MIN = 3;         // banks in a row before the streak bonus starts paying
@@ -35,20 +39,54 @@ const GH_BASE_BET_CAP = 3;       // chips any seat may ride in the Big Finish
 const GH_MAX_BET_CAP = 5;        // the Long Shot ceiling
 const GH_LONG_SHOT_STEP = 1000;  // one extra chip per full $1,000 a seat trails the leader
 const GH_BLUFF_FOOL = 25;        // THE BLUFF: per player a lie fools, paid by the house
+const GH_BET_LOSS_EARLY = 0.5;   // Jeopardy pass (2026-11-17): fraction of the stake a missed bet costs on Big Finish questions 1-2
+const GH_FINAL_WRONG_PENALTY = 300; // Jeopardy pass: the last Big Finish question's wrong-answer penalty, on top of the full stake
+const GH_DECLARE_MULT = 2;       // The Declaration (Pass 3, 2026-11-17): the multiplier a declared All or Nothing seat's Q15 bet pays — and its Q15 loss costs
 
 function ghQdAmount(round) { return GH_QUICK_DRAW_BONUS * (round || 1); }
 function ghStreakAmount(round) { return GH_STREAK_BONUS * (round || 1); }
 
 /* The melt: a question's value drains linearly from full to
-   half across its window. frac is the elapsed fraction; the
-   callers clamp it the way they always have. */
+   half across its window, then rounds to the nearest $10 —
+   the one rounding every settle in the game uses. frac is
+   the elapsed fraction; the callers clamp it the way they
+   always have. */
 function ghMelt(baseValue, multiplier, frac) {
-  return Math.round(baseValue * multiplier * (1 - 0.5 * frac));
+  return Math.max(0, Math.round(baseValue * multiplier * (1 - 0.5 * frac) / 10) * 10);
 }
 
 /* The Long Shot cap: base chips plus one per full step a seat
    trails the leader, never above the ceiling. scores is a
    plain array of numbers; seat indexes into it. */
+/* Jeopardy (improvement Pass 2, 2026-11-17, Jimmy's pick —
+   "both, graduated"): what a FAILED Big Finish bet costs the
+   bettor, before the $0 floor the callers apply. Questions 1-2
+   take half the stake; the last question takes the whole stake
+   plus the face-value penalty. A bet fails when the seat does
+   not bank the question — wrong pick, wrong number, or no
+   answer at all: the bet was on yourself, and silence is not
+   a loophole. qInRound is 0-based within Round 3. The pot's
+   feed is a separate, older rule and does not read this. */
+function ghBetLoss(chips, qInRound, declared) {
+  var stake = (chips || 0) * GH_BET_PAYOUT;
+  var base = qInRound >= 2 ? stake + GH_FINAL_WRONG_PENALTY : Math.round(stake * GH_BET_LOSS_EARLY);
+  /* The Declaration (Pass 3): a seat that called All or Nothing
+     at the break loses DOUBLE on the last question — the whole
+     graduated figure, penalty included, twice over. The flag
+     means nothing before the last question: the declaration
+     names Q15 and only Q15. */
+  return (declared && qInRound >= 2) ? base * GH_DECLARE_MULT : base;
+}
+
+/* What a BANKED Big Finish bet pays: the stake, doubled for a
+   seat whose Declaration is riding on the last question. The
+   house's bonuses (Quick Draw, streaks) are never multiplied —
+   they land flat on top, exactly as they treat the Double. The
+   callers gate `declared` to the last question, as above. */
+function ghBetPayout(chips, declared) {
+  return (chips || 0) * GH_BET_PAYOUT * (declared ? GH_DECLARE_MULT : 1);
+}
+
 function ghBetCap(scores, seat) {
   if (!scores || scores[seat] == null) return GH_BASE_BET_CAP;
   let lead = scores[seat];
@@ -66,10 +104,15 @@ const BASE_BET_CAP = GH_BASE_BET_CAP;
 const MAX_BET_CAP = GH_MAX_BET_CAP;
 const LONG_SHOT_STEP = GH_LONG_SHOT_STEP;
 const BLUFF_FOOL = GH_BLUFF_FOOL;
+const BET_LOSS_EARLY = GH_BET_LOSS_EARLY;
+const FINAL_WRONG_PENALTY = GH_FINAL_WRONG_PENALTY;
+const DECLARE_MULT = GH_DECLARE_MULT;
 function qdAmount(round) { return ghQdAmount(round); }
 function streakAmount(round) { return ghStreakAmount(round); }
 function melt(baseValue, multiplier, frac) { return ghMelt(baseValue, multiplier, frac); }
 function betCap(scores, seat) { return ghBetCap(scores, seat); }
+function betLoss(chips, qInRound, declared) { return ghBetLoss(chips, qInRound, declared); }
+function betPayout(chips, declared) { return ghBetPayout(chips, declared); }
 
 /* The Gilded Hour — online room logic. Pure, JSON-serializable, no
  * Cloudflare APIs. server.js (the Durable Object) is a thin wrapper
@@ -89,12 +132,26 @@ function betCap(scores, seat) { return ghBetCap(scores, seat); }
  *   per player per show; the host supplies the two wrong indices when
  *   publishing, the server enforces token + one-cut-per-question and
  *   broadcasts the cut. Round 3 bet phase: each player secretly sets
- *   1..cap chips before the question; a correct answer banks bet x $100,
- *   a wrong answer loses $0. A missing bet defaults to 1 chip. The
- *   Long Shot cap is 3 plus one per full $1,000 the player trails the
- *   current leader, never more than 5, computed from the scores when
- *   the bet is placed and enforced here — clients are never trusted.
- *   Nobody can lose money anywhere. Scores live here, server-side.
+ *   1..cap chips before the question; a correct answer banks bet x $100.
+ *   A missing bet defaults to 1 chip. The Long Shot cap is 3 plus one
+ *   per full $1,000 the player trails the current leader, never more
+ *   than 5, computed from the scores when the bet is placed and
+ *   enforced here — clients are never trusted. Scores live here,
+ *   server-side.
+ *
+ *   Jeopardy (improvement Pass 2, 2026-11-17): the Big Finish is now
+ *   the one place at the table where money can be LOST. A failed bet
+ *   costs half the stake on the round's first two questions, and the
+ *   whole stake plus a $300 penalty on the last (betLoss in
+ *   the shared core). Improvement Pass 3 adds THE DECLARATION:
+ *   at the break before the Big Finish a pad may call All or
+ *   Nothing on the last question ({t:'declare'}, intermission
+ *   with nextRound 3 only, once, irrevocable, public in every
+ *   snapshot as `declared`) — banking Q15 then pays the bet
+ *   double and failing it costs the graduated figure double
+ *   (betPayout / betLoss's declared flag, both single-sourced).
+ *   rules-core; floored at the seat's score — nobody goes below $0).
+ *   Rounds 1-2 still lose nothing, ever.
  *
  *   The Headline Question (Design pass 2): the SIXTH question
  *   published in Round 2 — position counted here, from the room's own
@@ -452,6 +509,7 @@ function createRoom(code, hostToken, rules) {
     deciderWinner: null,      // seat that won a resolved decider, once one resolves
     goldenUsed: false,        // the Golden Question: this show's one double is spent
     pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
+    declared: {},             // The Declaration (Pass 3): seats that called All or Nothing on Q15 at the last break
     stats: [null, null, null, null], // The Report Card (N1): per-seat raw tallies {cats, fastestMs, biggest, peak}
     statsSeq: 0,              // questions settled this show — the "earliest in the night" clock for best-category ties
     showSeq: 1,               // which show of the night this room is on (Rematch Night)
@@ -484,7 +542,7 @@ function reportFor(room) {
   return room.players.map((p, seat) => {
     if (!p) return null;
     const st = stats[seat];
-    if (!st || typeof st !== 'object') return { best: null, fastestMs: null, biggest: 0, peak: 0 };
+    if (!st || typeof st !== 'object') return { best: null, fastestMs: null, biggest: 0, peak: 0, lost: 0 };
     let best = null;
     const cats = (st.cats && typeof st.cats === 'object') ? st.cats : {};
     for (const cat of Object.keys(cats)) {
@@ -500,6 +558,7 @@ function reportFor(room) {
       fastestMs: typeof st.fastestMs === 'number' ? st.fastestMs : null,
       biggest: st.biggest || 0,
       peak: st.peak || 0,
+      lost: st.lost || 0,
     };
   });
 }
@@ -613,6 +672,10 @@ function snapshotFor(room, view) {
       ...(view.role === 'player' ? { yourCap: betCapFor(room, view.seat) } : {}),
     } : null,
     lastReveal: room.lastReveal,
+    /* The Declaration (Pass 3): who has called All or Nothing is
+     * public the moment it is called — the map rides every
+     * snapshot so the host screen and every pad can show it */
+    declared: room.declared || {},
     /* The Report Card (N1): the derived card rides a snapshot only
      * once the show is over — it is a finale artifact, and a screen
      * that resyncs onto the ended room (a pad refreshing at the
@@ -696,6 +759,13 @@ function closeQuestion(room) {
    * the spectators' numbers (had any existed, which the answer
    * handler forbids) would not count toward the crown */
   const judgedSeats = isDecider ? (q.eligible || []) : joinedSeats(room);
+  /* The Big Finish position of this question (0, 1, 2), counted
+   * from the referee's own publish record for round 3 — the
+   * jeopardy schedule and the Declaration both read it. The
+   * Decider publishes only after Q15 has closed, so its count
+   * can never disturb this index. */
+  const qInRound = q.betted ? Math.max(0, ((room.published && room.published['3']) || 1) - 1) : 0;
+  const declaredSeat = (seat) => !!(room.declared && room.declared[seat]);
   let winDiff = null;
   if (q.kind === 'num') {
     for (const seat of judgedSeats) {
@@ -727,8 +797,11 @@ function closeQuestion(room) {
     entry.lockMs = (q.kind !== 'num' && q.pickTimes && q.pickTimes[seat] != null)
       ? Math.max(0, q.pickTimes[seat] - q.openedAt) : null;
     if (entry.correct && !isDecider) {
+      /* The Declaration (Pass 3): a declared seat banking the
+       * LAST question is paid the bet double (betPayout in the
+       * shared core); the bonuses below still land flat */
       entry.banked = q.betted
-        ? (q.bets[seat] != null ? q.bets[seat] : 1) * BET_PAYOUT
+        ? betPayout(q.bets[seat] != null ? q.bets[seat] : 1, declaredSeat(seat) && qInRound >= 2)
         : value;
       /* THE DOUBLE: a riding token doubles the question's own
        * value for its seat — the bet never doubles (it was never
@@ -833,6 +906,30 @@ function closeQuestion(room) {
     }
   }
   room.pot = (room.pot || 0) + potFed;
+  /* Jeopardy (improvement Pass 2, 2026-11-17): a failed Big Finish
+   * bet costs real money — half the stake on the round's first two
+   * questions, the whole stake plus the $300 penalty on the last
+   * (betLoss, single-sourced in rules-core). The deduction is
+   * floored at the seat's score and rides the result entry (lost),
+   * so the reveal, the host's fx and the Report Card tally below
+   * all read the settled figure. The within-round index comes from
+   * the room's own publish count for Round 3 — re-publishes never
+   * advanced it, and the Decider publishes only after Q15 has
+   * closed. The pot feed above is the older, separate rule and is
+   * unchanged. */
+  if (q.betted) {
+    for (const entry of results) {
+      entry.lost = 0;
+      if (entry.correct) continue;
+      const p = room.players[entry.seat];
+      if (!p) continue;
+      /* a declared seat's last-question failure costs double —
+       * betLoss applies the multiplier itself, gated to Q15 */
+      const due = betLoss(q.bets[entry.seat] != null ? q.bets[entry.seat] : 1, qInRound, declaredSeat(entry.seat));
+      const taken = Math.min(due, Math.max(0, p.score));
+      if (taken > 0) { p.score -= taken; entry.lost = taken; }
+    }
+  }
   /* THE BLUFF settles its second purse here — after the pot has
    * read the results (the table's order: the pot hears about
    * banks, never about fool money), before the Report Card reads
@@ -873,9 +970,10 @@ function closeQuestion(room) {
     for (const entry of results) {
       let st = room.stats[entry.seat];
       if (!st || typeof st !== 'object') {
-        st = room.stats[entry.seat] = { cats: {}, fastestMs: null, biggest: 0, peak: 0 };
+        st = room.stats[entry.seat] = { cats: {}, fastestMs: null, biggest: 0, peak: 0, lost: 0 };
       }
       if (typeof entry.streak === 'number' && entry.streak > st.peak) st.peak = entry.streak;
+      if (entry.lost > 0) st.lost = (st.lost || 0) + entry.lost;
       if (entry.banked > 0) {
         if (entry.banked > st.biggest) st.biggest = entry.banked;
         if (q.category) {
@@ -1299,6 +1397,8 @@ function handleHostMessage(room, msg) {
       room.goldenUsed = false;
       /* The Table Pot (D1): a fresh show starts with an empty pot, always */
       room.pot = 0;
+      /* The Declaration (Pass 3): a fresh show starts with nobody declared */
+      room.declared = {};
       /* The Report Card (N1): the tallies are per-show memory like
        * everything on this list — a rematch starts a blank card */
       room.stats = [null, null, null, null];
@@ -1366,6 +1466,20 @@ function handlePlayerMessage(room, seat, msg) {
         state: true,
         changed: true,
       });
+    }
+    case 'declare': {
+      /* The Declaration (Pass 3): a pad calls All or Nothing on
+       * the last question during the ONE break that precedes the
+       * Big Finish. Public and irrevocable — the map is written
+       * once and rides every snapshot from that moment; a second
+       * call, a call at the wrong break, or a call mid-question
+       * is refused in words. */
+      if (room.phase !== 'intermission' || !room.interm || room.interm.nextRound !== 3)
+        return fail('Declarations open only at the break before the Big Finish.');
+      if (room.declared && room.declared[seat]) return fail('Already declared — there is no taking it back.');
+      room.declared = room.declared || {};
+      room.declared[seat] = true;
+      return ok({ state: true, changed: true });
     }
     case 'answer': {
       if (room.phase !== 'answer' || !room.question) return fail('No open question.');
@@ -1623,7 +1737,14 @@ export class GildedRoom {
   scheduleAlarm() {
     if (!this.room) return;
     let next = this.room.lastActivity + ROOM_TTL_MS;
-    if (this.room.phase === 'answer' && this.room.question) {
+    /* The bluff's invent window is a deadline too: during 'invent'
+     * the question's deadline IS its invent deadline (publish sets
+     * it, closeInvent replaces it with the vote deadline), and
+     * expireIfNeeded already settles that phase — the alarm must
+     * be scheduled on it, or a room whose table goes quiet while
+     * collecting lies would not deal until the next message or
+     * the 2h TTL. */
+    if ((this.room.phase === 'answer' || this.room.phase === 'invent') && this.room.question) {
       next = Math.min(next, this.room.question.deadline);
     }
     const at = Math.max(next, nowMs() + 50);
@@ -1710,16 +1831,31 @@ export class GildedRoom {
         this.sendRaw(ws, { t: 'error', msg: 'Already joined.' });
         return;
       }
-      if (msg.role === 'host' && this.liveSocket('host') && this.liveSocket('host') !== ws) {
-        this.sendRaw(ws, { t: 'error', msg: 'Host already connected.' });
-        return;
-      }
+      /* Pass 7 (2026-11-17): a hello that PROVES the identity
+         rebinds it. The old rule refused a player hello whose
+         seat still held a live socket ('Seat is taken.') — but
+         the socket it protected was usually the same phone's
+         own earlier connection, lingering after a reload, so a
+         real rejoin dead-ended on 'Finding your podium' until
+         the zombie timed out. The reclaim token IS the seat's
+         credential: its newest presenter takes the seat, and
+         the old socket is told and retired. The host token
+         earns the same rebind; an UNPROVEN hello (a token that
+         matches nothing) evicts nothing and is refused by
+         handleHello below, exactly as before. */
+      const evict = (dest) => {
+        const old = this.liveSocket(dest);
+        if (!old || old === ws) return;
+        this.sendRaw(old, { t: 'error', msg: 'This screen was replaced by a rejoin.' });
+        this.dead.add(old);
+        if (dest === 'host') { if (this.host === old) this.host = null; }
+        else if (this.players[dest] === old) this.players[dest] = null;
+        try { old.close(4001, 'Replaced by a rejoin'); } catch (e) { /* already gone */ }
+      };
+      if (msg.role === 'host' && msg.hostToken && msg.hostToken === this.room.hostToken) evict('host');
       if (msg.role === 'player' && msg.reclaimToken) {
         const seat = this.room.players.findIndex((p) => p && p.token === msg.reclaimToken);
-        if (seat >= 0 && this.liveSocket(seat) && this.liveSocket(seat) !== ws) {
-          this.sendRaw(ws, { t: 'error', msg: 'Seat is taken.' });
-          return;
-        }
+        if (seat >= 0) evict(seat);
       }
       const { identity, res } = handleHello(this.room, msg);
       if (!identity) {
@@ -1765,9 +1901,14 @@ export class GildedRoom {
     // The seat itself stays reserved (name, score, reclaim token); only
     // the live flag drops, and the room sees the disconnect.
     if (this.room && dest != null && dest !== 'host' && this.room.players[dest]) {
-      this.room.players[dest].connected = false;
-      this.sendSnapshots();
-      await this.save();
+      /* Pass 7: if a rejoin already rebound this seat to a newer
+         socket, this close is the OLD socket leaving — the seat
+         never went dark, so no disconnect is painted */
+      if (!this.liveSocket(dest)) {
+        this.room.players[dest].connected = false;
+        this.sendSnapshots();
+        await this.save();
+      }
     }
   }
 

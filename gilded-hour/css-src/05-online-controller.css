@@ -177,6 +177,12 @@
 .jp-herotag{letter-spacing:.26em;font-size:12px;font-weight:700;color:var(--gold);margin-top:14px}
 .jp-heroname{font-size:clamp(30px,8.6vw,38px);font-weight:700;margin-top:4px;text-shadow:0 3px 0 rgba(6,11,24,.45)}
 .jp-colorband{height:10px;border-radius:999px;width:132px;margin-top:14px;background:var(--me,#E9CD8A);box-shadow:0 3px 0 rgba(0,0,0,.35)}
+/* Pass 7: the lobby roster line — one quiet row under the hero */
+.jp-roster{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;align-items:center;margin-top:14px;max-width:340px;font-size:13.5px;font-weight:600;color:rgba(255,246,232,.85)}
+.jp-roster-p{display:inline-flex;align-items:center;gap:6px}
+.jp-roster-p.away{opacity:.45}
+.jp-roster-dot{width:19px;height:19px;border-radius:50%;background:var(--c,#E9CD8A);color:#10182E;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.jp-roster-wait{font-weight:500;color:rgba(255,246,232,.6);letter-spacing:.02em}
 /* reveal verdict: one disc, one word, one number */
 .jp-verdict{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;animation:fadeUp .35s ease both}
 .jp-vdisc{width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:62px;font-weight:700;color:#0B3D1C;background:linear-gradient(180deg,#8BF0AB,#3ECF6E);box-shadow:0 8px 0 #1E7A38,0 18px 30px rgba(0,0,0,.4)}

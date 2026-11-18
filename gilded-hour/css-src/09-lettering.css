@@ -372,6 +372,28 @@
   #scr-game[data-phase="lobby"] #stage{grid-column:1}
   #scr-game[data-phase="lobby"] .stage-inner{max-width:100%}
   #scr-game[data-phase="lobby"] .og-code{font-size:56px}
+  /* Pass 8 (2026-11-17): the lobby did not in fact fit short
+     landscape — measured 423px of stage content in a 330px
+     stage at 844x390 (+93; +141 at 844x342), START THE SHOW
+     half-cut, the status line off the fold. The bulk was the
+     coderow WRAPPING inside this block's stage column: at
+     844 wide the column is only 298px, and code + QR plate +
+     COPY stacked into a 294px row of three lines. The row now
+     wraps ONCE, by design: the code steps down to 40px (still
+     the biggest thing on the stage) and pairs with the QR
+     plate (72px — the code is the join path, the QR the
+     convenience) on the first line, COPY takes the second,
+     and the room note stands down in short landscape only —
+     the same treatment the cat line and the waiting text
+     already take here; it stays printed at every taller size,
+     and the rejoin it describes is now the room's own
+     behaviour (Pass 7). The status line takes one line */
+  #scr-game[data-phase="lobby"] .og-coderow{gap:10px}
+  #scr-game[data-phase="lobby"] .og-code{font-size:40px;letter-spacing:.18em;text-indent:.18em}
+  #scr-game[data-phase="lobby"] .og-qr canvas{width:72px;height:72px;padding:6px}
+  #scr-game[data-phase="lobby"] .og-copy{font-size:13px;padding:9px 12px}
+  #scr-game[data-phase="lobby"] .og-room-note{display:none}
+  #scr-game[data-phase="lobby"] .og-statusline{font-size:12.5px}
   #scr-game[data-phase="lobby"] #seatsBottom{grid-column:2;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:min-content;gap:8px;align-content:center;padding:4px}
 }
 

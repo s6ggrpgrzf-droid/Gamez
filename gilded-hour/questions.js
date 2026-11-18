@@ -1,8 +1,10 @@
 /* THE GILDED HOUR — Pass 2 bank + Pass B guess questions.
-   124 hand-authored, fact-checked ordinary questions (84 original +
+   131 hand-authored, fact-checked ordinary questions (84 original +
    18 from the 2026-11-13 bank growth + 12 from the 2026-11-14
-   2000s bench + 10 from the 2026-11-16 Deep Cut bench) plus 48 guess questions (24 closest-number +
-   24 most-people, the pools doubled 2026-11-15) and 12 bluff questions,
+   2000s bench + 10 from the 2026-11-16 Deep Cut bench + 7 from the
+   2026-11-17 Pass 6 depth bench) plus 66 guess questions (34 closest-number +
+   32 most-people; the pools were doubled 2026-11-15 and deepened
+   again by Pass 6, aimed at the empty band cells) and 12 bluff questions,
    written for players aged 30-50: the pop culture of a childhood in the
    1980s-90s and teens in the 1990s-2000s. Nothing post-2015; pre-1975 only
    where it is evergreen the cohort grew up on.
@@ -16,7 +18,7 @@
    no code reads it — the deal is governed by the difficulty
    band (drawBand in game.js) alone. Guess and bluff entries
    carry no era.
-   Tallies: 80s 37 · 90s 56 · 00s 19 · any 12 — the '10s are not
+   Tallies: 80s 39 · 90s 59 · 00s 21 · any 12 — the '10s are not
    offered, because the bank holds none of them.
    Design pass 5 adds d (1|2|3): the difficulty BAND the dealer ramps by —
    1 Warm (most households know it cold), 2 Middle (a fan knows it),
@@ -255,4 +257,37 @@ window.GH_BANK = [
 {cat:"Saturday Morning",diff:"hard",d:3,era:"00s",q:"Kim Possible's sidekick Ron Stoppable carried which pet in his pocket?",a:"A naked mole-rat",w:["A hairless guinea pig","A hairless cat","A baby hedgehog"],why:"Rufus the naked mole-rat rode in Ron's pocket and shared his love of the naco — Ron's own taco-burrito invention."},
 {cat:"Music",diff:"hard",d:3,era:"00s",q:"Which animated band, co-created by Blur's Damon Albarn, performs through cartoon members including the singer 2-D?",a:"Gorillaz",w:["Arcade Fire","Daft Punk","The Good, the Bad & the Queen"],why:"Gorillaz debuted in 2001; Albarn voices 2-D, and The Good, the Bad & the Queen is another of his bands — with real people in it."},
 {cat:"The Dial-Up Years",diff:"hard",d:3,era:"90s",q:"In 1995, the auction website that became eBay launched under which name?",a:"AuctionWeb",w:["BidNet","WebAuction","The Auction Site"],why:"Pierre Omidyar launched AuctionWeb in September 1995 as part of his personal site; the company took the eBay name in 1997."},
+/* ---------------- PASS 6 — BANK DEPTH (2026-11-17) ----------------
+   24 hand-authored additions aimed at the live census's thin
+   cells: the guess pools' empty band cells first (Ads and
+   Saturday Morning held no deep number questions; Ads, Movies
+   and Toys held no deep surveys; Toys held no survey above the
+   warm band at all), then one ordinary question per category.
+   Every fact checked against settled knowledge; the longest-
+   answer tell re-measured after the append. */
+{cat:"Movies",diff:"medium",d:2,era:"00s",q:"In Finding Nemo, what is the address Dory reads off the diver's mask?",a:"P. Sherman, 42 Wallaby Way, Sydney",w:["P. Sherman, 42 Wallaby Way, Melbourne","P. Sherman, 24 Wallaby Way, Sydney","P. Sherman, 42 Kangaroo Way, Sydney"],why:"P. Sherman, 42 Wallaby Way, Sydney — the address Dory repeats like a prayer so she won't forget it. She forgets it."},
+{cat:"TV",diff:"medium",d:2,era:"00s",q:"Before The Office made him famous, Steve Carell filed reports as a correspondent on which satirical news show?",a:"The Daily Show",w:["The Colbert Report","Saturday Night Live","Mad TV"],why:"Carell was a Daily Show correspondent from 1999 to 2005 — Stephen Colbert was his desk-mate there before either man had a show of his own."},
+{cat:"Music",diff:"hard",d:3,era:"80s",q:"The 1986 hit 'Walk Like an Egyptian' was performed by which band?",a:"The Bangles",w:["The Go-Go's","Bananarama","Wilson Phillips"],why:"The Bangles took it to number one in 1986 — Liam Sternberg wrote it after watching ferry passengers shuffle to keep their balance."},
+{cat:"Ads & Jingles",diff:"medium",d:2,era:"90s",q:"The Taco Bell chihuahua's famous catchphrase, first heard in 1997, was what?",a:"¡Yo quiero Taco Bell!",w:["Drop the chalupa!","Think outside the bun","Where's the beef?"],why:"Gidget the chihuahua delivered '¡Yo quiero Taco Bell!' from 1997 — 'Think outside the bun' was the chain's later slogan, no dog involved."},
+{cat:"Toys & Games",diff:"hard",d:3,era:"80s",q:"Before the world called it the Rubik's Cube, the puzzle was first sold in Hungary under which name?",a:"The Magic Cube",w:["The Hungarian Cube","The Puzzle Cube","Ernő's Cube"],why:"Ernő Rubik's Magic Cube sold in Hungary from 1977; Ideal Toy renamed it for the world in 1980."},
+{cat:"Saturday Morning",diff:"hard",d:3,era:"90s",q:"The Goodfeathers, the pigeon mobsters of Animaniacs, are a parody of which Martin Scorsese film?",a:"Goodfellas",w:["Casino","Mean Streets","Taxi Driver"],why:"Bobby, Pesto and Squit are pigeon send-ups of De Niro, Pesci and Liotta — Goodfellas with feathers and shorter tempers."},
+{cat:"The Dial-Up Years",diff:"hard",d:3,era:"90s",q:"Elwood Edwards, the voice of AOL's 'You've Got Mail', recorded those famous words in 1989 on what, in his own living room?",a:"A cassette recorder",w:["A reel-to-reel tape deck","His home computer","A studio microphone"],why:"Edwards recorded 'Welcome', 'You've Got Mail', 'File's Done' and 'Goodbye' on a cassette deck at home — his wife worked at the company that became AOL. He was paid $200."},
+{cat:"TV",diff:"hard",d:3,kind:"num",q:"How many MILLION people in America watched the final episode of M*A*S*H in 1983?",num:106,why:"About 106 million — still the most-watched series finale in American television history, forty years on."},
+{cat:"Ads & Jingles",diff:"medium",d:2,kind:"num",q:"McDonald's signs used to keep count out loud. How many BILLION served did they reach before the signs gave up in 1994 and just said 'Billions and Billions Served'?",num:99,why:"The signs hit 99 billion in 1994 and retired the counter — the hamburgers kept going without it."},
+{cat:"Ads & Jingles",diff:"hard",d:3,kind:"num",q:"How many SECONDS long was the first television commercial ever aired — a 1941 spot for Bulova watches?",num:10,why:"Ten seconds, on July 1, 1941, before a Dodgers–Phillies game. It cost Bulova nine dollars."},
+{cat:"Saturday Morning",diff:"medium",d:2,kind:"num",q:"How many Pokémon were there in the original first generation of the games?",num:151,why:"151 — from Bulbasaur to Mew. Every kid at this table can still name most of them, and will now try."},
+{cat:"Saturday Morning",diff:"hard",d:3,kind:"num",q:"How many seasons did the original Smurfs cartoon run on Saturday mornings?",num:9,why:"Nine seasons, 1981 to 1989 — longer than most of its audience spent in elementary school."},
+{cat:"Toys & Games",diff:"medium",d:2,kind:"num",q:"How many cards are in a standard UNO deck?",num:108,why:"108 cards — 76 numbers, 24 action cards and 8 wilds. The +4 has ended friendships."},
+{cat:"Movies",diff:"medium",d:2,kind:"num",q:"How many Academy Awards did Titanic win at the 1998 Oscars?",num:11,why:"Eleven, including Best Picture and Best Director — tying Ben-Hur's record, which The Return of the King later matched."},
+{cat:"Music",diff:"hard",d:3,kind:"num",q:"How many tracks are on the Beatles' White Album?",num:30,why:"Thirty tracks across two discs in 1968 — the Beatles' only double album, and it still had no room for 'Hey Jude', released as a single instead."},
+{cat:"The Dial-Up Years",diff:"medium",d:2,kind:"num",q:"In what YEAR did the first banner ad appear on the web — AT&T asking 'Have you ever clicked your mouse right here?'?",num:1994,why:"1994, on HotWired.com. Its click rate was a never-repeated 44% — nobody has clicked a banner ad on purpose since."},
+{cat:"Ads & Jingles",diff:"hard",d:3,kind:"survey",q:"Ask a roomful of people to name a fast-food slogan, and the one that comes up most is…",a:"I'm Lovin' It",w:["Have It Your Way","Finger Lickin' Good","Just Do It"],why:"McDonald's has run 'I'm Lovin' It' since 2003 — the chain's longest-running slogan, and the first out of most mouths."},
+{cat:"Movies",diff:"hard",d:3,kind:"survey",q:"Ask a room to name a Steven Spielberg film, and the answer that comes up most is…",a:"E.T.",w:["Jurassic Park","Jaws","Saving Private Ryan"],why:"E.T. the Extra-Terrestrial held the all-time box-office crown for over a decade — for a whole generation it is simply the Spielberg film."},
+{cat:"Toys & Games",diff:"medium",d:2,kind:"survey",q:"Ask a roomful of people to name a board game, and the answer that comes up most is…",a:"Monopoly",w:["Scrabble","Clue","Risk"],why:"Monopoly has been sold in well over a hundred countries — it's the board game the room reaches for first."},
+{cat:"Toys & Games",diff:"hard",d:3,kind:"survey",q:"Ask a room of grown-up 90s kids to name a trading card game, and the answer that comes up most is…",a:"Pokémon",w:["Magic: The Gathering","Yu-Gi-Oh!","Digimon"],why:"Magic came first among collectors, but Pokémon cards were the ones in every schoolyard on earth — that's the room's answer."},
+{cat:"The Dial-Up Years",diff:"easy",d:1,kind:"survey",q:"Ask a room what they remember most about dial-up internet, and the answer that comes up most is…",a:"The modem's screeching handshake",w:["Getting kicked off when the phone rang","Waiting minutes for one photo to load","The 'You've Got Mail' voice"],why:"The screech, the static, the little song of two computers shouting at each other — it's the sound of the whole era."},
+{cat:"Music",diff:"hard",d:3,kind:"survey",q:"Ask a room to name a Beatles song, and the answer that comes up most is…",a:"Hey Jude",w:["Let It Be","Yesterday","Come Together"],why:"'Yesterday' is the most covered, but 'Hey Jude' is the one the room sings — seven minutes, nine weeks at number one, and a chorus built for a crowd."},
+{cat:"Saturday Morning",diff:"easy",d:1,kind:"survey",q:"Ask a roomful of people to name a Saturday-morning cartoon, and the answer that comes up most is…",a:"Scooby-Doo",w:["The Flintstones","Looney Tunes","Tom and Jerry"],why:"Scooby-Doo has been solving mysteries on television, in one form or another, since 1969 — it's the first name out of the room."},
+{cat:"TV",diff:"medium",d:2,kind:"survey",q:"Ask a room to name a sitcom dad, and the answer that comes up most is…",a:"Homer Simpson",w:["Cliff Huxtable","Carl Winslow","Al Bundy"],why:"D'oh. The Simpsons has run since 1989, and Homer is the sitcom dad three generations can all picture at once."},
+{cat:"Ads & Jingles",diff:"easy",d:1,kind:"num",q:"KFC's Original Recipe is famous for its secret blend — how many herbs and spices are in it?",num:11,why:"Eleven herbs and spices, a secret since the 1940s — the two halves of the recipe are still mixed in different buildings."},
 ];

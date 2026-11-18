@@ -16,12 +16,26 @@
  *   per player per show; the host supplies the two wrong indices when
  *   publishing, the server enforces token + one-cut-per-question and
  *   broadcasts the cut. Round 3 bet phase: each player secretly sets
- *   1..cap chips before the question; a correct answer banks bet x $100,
- *   a wrong answer loses $0. A missing bet defaults to 1 chip. The
- *   Long Shot cap is 3 plus one per full $1,000 the player trails the
- *   current leader, never more than 5, computed from the scores when
- *   the bet is placed and enforced here — clients are never trusted.
- *   Nobody can lose money anywhere. Scores live here, server-side.
+ *   1..cap chips before the question; a correct answer banks bet x $100.
+ *   A missing bet defaults to 1 chip. The Long Shot cap is 3 plus one
+ *   per full $1,000 the player trails the current leader, never more
+ *   than 5, computed from the scores when the bet is placed and
+ *   enforced here — clients are never trusted. Scores live here,
+ *   server-side.
+ *
+ *   Jeopardy (improvement Pass 2, 2026-11-17): the Big Finish is now
+ *   the one place at the table where money can be LOST. A failed bet
+ *   costs half the stake on the round's first two questions, and the
+ *   whole stake plus a $300 penalty on the last (betLoss in
+ *   the shared core). Improvement Pass 3 adds THE DECLARATION:
+ *   at the break before the Big Finish a pad may call All or
+ *   Nothing on the last question ({t:'declare'}, intermission
+ *   with nextRound 3 only, once, irrevocable, public in every
+ *   snapshot as `declared`) — banking Q15 then pays the bet
+ *   double and failing it costs the graduated figure double
+ *   (betPayout / betLoss's declared flag, both single-sourced).
+ *   rules-core; floored at the seat's score — nobody goes below $0).
+ *   Rounds 1-2 still lose nothing, ever.
  *
  *   The Headline Question (Design pass 2): the SIXTH question
  *   published in Round 2 — position counted here, from the room's own
@@ -284,7 +298,7 @@ export const MAX_PLAYERS = 4;
  * from the canonical core in the game folder (rules-core.js)
  * so the room and the host's client can never drift apart.
  * Re-exported here so this module's public surface is unchanged. */
-import { QUICK_DRAW_BONUS, STREAK_BONUS, STREAK_MIN, STREAK_DEATH_MIN, BET_PAYOUT, BASE_BET_CAP, MAX_BET_CAP, LONG_SHOT_STEP, BLUFF_FOOL, qdAmount, streakAmount, melt, betCap } from './rules.js';
+import { QUICK_DRAW_BONUS, STREAK_BONUS, STREAK_MIN, STREAK_DEATH_MIN, BET_PAYOUT, BASE_BET_CAP, MAX_BET_CAP, LONG_SHOT_STEP, BLUFF_FOOL, qdAmount, streakAmount, melt, betCap, betLoss, betPayout } from './rules.js';
 export { QUICK_DRAW_BONUS, STREAK_BONUS, STREAK_MIN, STREAK_DEATH_MIN, BET_PAYOUT, BASE_BET_CAP, MAX_BET_CAP, LONG_SHOT_STEP, BLUFF_FOOL };
 export const BLUFF_INVENT_MS = 60000; // the bluff's collecting window before the room deals what it has
 export const CLOCK_STRETCH = 1.5; // House Rules (N2): Longer Clock stretches every window by this
@@ -381,6 +395,7 @@ export function createRoom(code, hostToken, rules) {
     deciderWinner: null,      // seat that won a resolved decider, once one resolves
     goldenUsed: false,        // the Golden Question: this show's one double is spent
     pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
+    declared: {},             // The Declaration (Pass 3): seats that called All or Nothing on Q15 at the last break
     stats: [null, null, null, null], // The Report Card (N1): per-seat raw tallies {cats, fastestMs, biggest, peak}
     statsSeq: 0,              // questions settled this show — the "earliest in the night" clock for best-category ties
     showSeq: 1,               // which show of the night this room is on (Rematch Night)
@@ -413,7 +428,7 @@ export function reportFor(room) {
   return room.players.map((p, seat) => {
     if (!p) return null;
     const st = stats[seat];
-    if (!st || typeof st !== 'object') return { best: null, fastestMs: null, biggest: 0, peak: 0 };
+    if (!st || typeof st !== 'object') return { best: null, fastestMs: null, biggest: 0, peak: 0, lost: 0 };
     let best = null;
     const cats = (st.cats && typeof st.cats === 'object') ? st.cats : {};
     for (const cat of Object.keys(cats)) {
@@ -429,6 +444,7 @@ export function reportFor(room) {
       fastestMs: typeof st.fastestMs === 'number' ? st.fastestMs : null,
       biggest: st.biggest || 0,
       peak: st.peak || 0,
+      lost: st.lost || 0,
     };
   });
 }
@@ -542,6 +558,10 @@ export function snapshotFor(room, view) {
       ...(view.role === 'player' ? { yourCap: betCapFor(room, view.seat) } : {}),
     } : null,
     lastReveal: room.lastReveal,
+    /* The Declaration (Pass 3): who has called All or Nothing is
+     * public the moment it is called — the map rides every
+     * snapshot so the host screen and every pad can show it */
+    declared: room.declared || {},
     /* The Report Card (N1): the derived card rides a snapshot only
      * once the show is over — it is a finale artifact, and a screen
      * that resyncs onto the ended room (a pad refreshing at the
@@ -625,6 +645,13 @@ export function closeQuestion(room) {
    * the spectators' numbers (had any existed, which the answer
    * handler forbids) would not count toward the crown */
   const judgedSeats = isDecider ? (q.eligible || []) : joinedSeats(room);
+  /* The Big Finish position of this question (0, 1, 2), counted
+   * from the referee's own publish record for round 3 — the
+   * jeopardy schedule and the Declaration both read it. The
+   * Decider publishes only after Q15 has closed, so its count
+   * can never disturb this index. */
+  const qInRound = q.betted ? Math.max(0, ((room.published && room.published['3']) || 1) - 1) : 0;
+  const declaredSeat = (seat) => !!(room.declared && room.declared[seat]);
   let winDiff = null;
   if (q.kind === 'num') {
     for (const seat of judgedSeats) {
@@ -656,8 +683,11 @@ export function closeQuestion(room) {
     entry.lockMs = (q.kind !== 'num' && q.pickTimes && q.pickTimes[seat] != null)
       ? Math.max(0, q.pickTimes[seat] - q.openedAt) : null;
     if (entry.correct && !isDecider) {
+      /* The Declaration (Pass 3): a declared seat banking the
+       * LAST question is paid the bet double (betPayout in the
+       * shared core); the bonuses below still land flat */
       entry.banked = q.betted
-        ? (q.bets[seat] != null ? q.bets[seat] : 1) * BET_PAYOUT
+        ? betPayout(q.bets[seat] != null ? q.bets[seat] : 1, declaredSeat(seat) && qInRound >= 2)
         : value;
       /* THE DOUBLE: a riding token doubles the question's own
        * value for its seat — the bet never doubles (it was never
@@ -762,6 +792,30 @@ export function closeQuestion(room) {
     }
   }
   room.pot = (room.pot || 0) + potFed;
+  /* Jeopardy (improvement Pass 2, 2026-11-17): a failed Big Finish
+   * bet costs real money — half the stake on the round's first two
+   * questions, the whole stake plus the $300 penalty on the last
+   * (betLoss, single-sourced in rules-core). The deduction is
+   * floored at the seat's score and rides the result entry (lost),
+   * so the reveal, the host's fx and the Report Card tally below
+   * all read the settled figure. The within-round index comes from
+   * the room's own publish count for Round 3 — re-publishes never
+   * advanced it, and the Decider publishes only after Q15 has
+   * closed. The pot feed above is the older, separate rule and is
+   * unchanged. */
+  if (q.betted) {
+    for (const entry of results) {
+      entry.lost = 0;
+      if (entry.correct) continue;
+      const p = room.players[entry.seat];
+      if (!p) continue;
+      /* a declared seat's last-question failure costs double —
+       * betLoss applies the multiplier itself, gated to Q15 */
+      const due = betLoss(q.bets[entry.seat] != null ? q.bets[entry.seat] : 1, qInRound, declaredSeat(entry.seat));
+      const taken = Math.min(due, Math.max(0, p.score));
+      if (taken > 0) { p.score -= taken; entry.lost = taken; }
+    }
+  }
   /* THE BLUFF settles its second purse here — after the pot has
    * read the results (the table's order: the pot hears about
    * banks, never about fool money), before the Report Card reads
@@ -802,9 +856,10 @@ export function closeQuestion(room) {
     for (const entry of results) {
       let st = room.stats[entry.seat];
       if (!st || typeof st !== 'object') {
-        st = room.stats[entry.seat] = { cats: {}, fastestMs: null, biggest: 0, peak: 0 };
+        st = room.stats[entry.seat] = { cats: {}, fastestMs: null, biggest: 0, peak: 0, lost: 0 };
       }
       if (typeof entry.streak === 'number' && entry.streak > st.peak) st.peak = entry.streak;
+      if (entry.lost > 0) st.lost = (st.lost || 0) + entry.lost;
       if (entry.banked > 0) {
         if (entry.banked > st.biggest) st.biggest = entry.banked;
         if (q.category) {
@@ -1228,6 +1283,8 @@ export function handleHostMessage(room, msg) {
       room.goldenUsed = false;
       /* The Table Pot (D1): a fresh show starts with an empty pot, always */
       room.pot = 0;
+      /* The Declaration (Pass 3): a fresh show starts with nobody declared */
+      room.declared = {};
       /* The Report Card (N1): the tallies are per-show memory like
        * everything on this list — a rematch starts a blank card */
       room.stats = [null, null, null, null];
@@ -1295,6 +1352,20 @@ export function handlePlayerMessage(room, seat, msg) {
         state: true,
         changed: true,
       });
+    }
+    case 'declare': {
+      /* The Declaration (Pass 3): a pad calls All or Nothing on
+       * the last question during the ONE break that precedes the
+       * Big Finish. Public and irrevocable — the map is written
+       * once and rides every snapshot from that moment; a second
+       * call, a call at the wrong break, or a call mid-question
+       * is refused in words. */
+      if (room.phase !== 'intermission' || !room.interm || room.interm.nextRound !== 3)
+        return fail('Declarations open only at the break before the Big Finish.');
+      if (room.declared && room.declared[seat]) return fail('Already declared — there is no taking it back.');
+      room.declared = room.declared || {};
+      room.declared[seat] = true;
+      return ok({ state: true, changed: true });
     }
     case 'answer': {
       if (room.phase !== 'answer' || !room.question) return fail('No open question.');

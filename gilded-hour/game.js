@@ -5,7 +5,8 @@
    Round 1 The Warm-Up x6, Round 2 Double Money x6, Round 3 The Big Finish
    x3 (public 1-3 chip bets). Five of the fifteen are guess questions:
    closest-number entries and most-people-say surveys. One lifeline only:
-   Cut Two, one per player per show. Nobody can ever lose money. Pure
+   Cut Two, one per player per show. Money can only be lost in the Big
+   Finish, where a failed bet costs (Jeopardy pass, 2026-11-17). Pure
    show logic + DOM rendering; the rAF loop feeds dt. */
 (function () {
   "use strict";
@@ -160,7 +161,7 @@
   /* ---------- host lines (original writing — Sterling the playmate) ---------- */
   var HOST = {
     open: [
-      "Good evening, I'm Sterling. Fifteen questions, everybody plays, and nobody goes home poorer. Those are the house rules — I invented them, so they're excellent.",
+      "Good evening, I'm Sterling. Fifteen questions, everybody plays, and the only money you can lose here is a bet you place yourself. Those are the house rules — I invented them, so they're excellent.",
       "Welcome to The Gilded Hour: the questions are older than your first car and twice as reliable. I'm Sterling. Let's make some money.",
       "Evening, table. I'm Sterling — the questions are vintage, the money is pretend, and the company is the real prize. Shall we?",
       "Pull up a memory and settle in. Tonight we find out who actually remembers those years and who just dresses like them. I'm Sterling. We begin."
@@ -178,7 +179,7 @@
       "Round Two. The training wheels come off and the stakes have had a growth spurt. Your Cut Two is live: spend its moment like it matters, because it does."
     ],
     r3: [
-      "The Big Finish. Three questions, three bets, and zero ways to lose money. This show is a terrible casino and a wonderful friend.",
+      "The Big Finish. Three questions, three bets, and the only trapdoor in the show — from here, a wrong bet costs real money.",
       "Three questions left. Bet on yourselves — out loud, so the room can hold you to it.",
       "The Big Finish, where brave hearts bet on themselves. Three questions between this table and the Hour — make them count.",
       "The last three. Bets declared out loud, hearts worn on sleeves. This is the part of the evening you'll be describing at breakfast."
@@ -461,6 +462,57 @@
       "The streak dies at {n}. {name} gave it a beautiful life; the question that killed it should be ashamed.",
       "All good runs end: {name}'s stops at {n}. The table applauds the run, not the ending.",
       "{n} straight, and then the wall. {name}, the room will remember the run."
+    ],
+    /* The Declaration (Pass 3): spoken the moment a seat calls
+       All or Nothing at the last break — hand-authored, like
+       every Sterling line */
+    declare: [
+      "{name} has called it — All or Nothing on the very last question. Bank it, and the bet pays double. Miss it, and the cost doubles too.",
+      "There it is. {name} is all in on the last question — and there is no taking that back.",
+      "{name} declares: All or Nothing. The last question just became the whole evening for one seat."
+    ],
+    declareopen: [
+      "The last question of the night — and {name}'s declaration is riding on it. Double, or double.",
+      "Here it is: the question {name} called at the break. All or Nothing, settled in the next minute."
+    ],
+    /* Sterling made present (improvement Pass 4, 2026-11-17): the
+       night's own story, keyed to what actually happened at this
+       table — hand-authored pools, fired by the arc tracker and
+       the reveal arbitration, never by a generator */
+    comeback: [
+      "Mark the moment: {name} was a thousand down in this room and now leads it. A comeback does not knock — it kicks the door.",
+      "From the back of the room to the front of it — {name}'s comeback is complete. The lead belongs to the seat nobody was watching.",
+      "{name} has climbed out of a four-figure hole and taken the lead. If this comeback holds, breakfast will hear of it."
+    ],
+    collapse: [
+      "And there it goes — {name} held this room by a thousand and the lead has slipped away. A collapse in evening dress is still a collapse.",
+      "{name}'s thousand-dollar cushion is spent, and the lead with it. The room has watched a collapse and said nothing out of respect.",
+      "The fall is complete: {name} once towered over this table, and now trails it. Every collapse needs a witness — you are all witnesses."
+    ],
+    bluffsweep: [
+      "{name}'s lie fooled the whole table — every single picker walked into it. The truth stood in the room and nobody looked at it.",
+      "A clean sweep of deception: {name} fooled the whole table. Sterling has checked — the lie was not even that good. The table simply believed.",
+      "{name} fooled the whole table with a straight face and an invented answer. That is not luck; that is craft."
+    ],
+    bluffbig: [
+      "{name}'s lie fooled {n} of you — the invention outpolled the truth, and it pays like it means it.",
+      "{n} players bought what {name} was selling, and none of it was true. The Bluff bows to its author.",
+      "{name} fooled {n} seats with a made-up answer. Somewhere, the truth is asking for a recount."
+    ],
+    bluffnone: [
+      "Nobody bit. Every lie at this table fooled nobody — the truth was spotted, sniffed, and taken home.",
+      "A table of skeptics: the inventions fooled nobody tonight. The Bluff respects a room it cannot move.",
+      "Not one seat was fooled — the lies fooled nobody, and the truth never looked safer."
+    ],
+    declarepaid: [
+      "The declaration pays! {name} called it at the break, and the last question just doubled the bet.",
+      "{name}'s declaration pays out in full — double money on the question that mattered most. Called, and caught.",
+      "All or Nothing, settled: the declaration pays {name} double. The break will remember that call."
+    ],
+    declarecollect: [
+      "The declaration collects. {name} called All or Nothing, and the last question has presented the doubled bill: {amt}.",
+      "All or Nothing cuts the other way — the declaration collects {amt} from {name}. The call was brave. The question was braver.",
+      "{name}'s declaration comes due: {amt}, doubled, no appeals. The room winces in unison."
     ],
     winner: [
       "{name} takes the Gilded Hour! The confetti is real, the money is imaginary, and the glory is legally binding.",
@@ -2201,7 +2253,7 @@
      the screen: the table's G, or the online host's OG with its
      room-mirrored total. At the finale it stands down — the award
      line in the marquee carries the pot from there. */
-  var potDisp = 0, potDispTimer = null, potFeedPending = 0;
+  var potDisp = 0, potDispTimer = null, potFeedPending = 0, potTagTimer = null;
   function potState() {
     if (typeof OG !== "undefined" && OG) {
       if (!OG.started) return null;
@@ -2253,6 +2305,16 @@
     var v = ensurePotVessel(); if (!v) return;
     var vr = v.getBoundingClientRect();
     if (!vr.width) { potDisp = (potState() || { pot: potDisp }).pot; paintPot(); return; }
+    /* Teach the pot (improvement Pass 5, 2026-11-17): the feed
+       gets words, not just motion — a small tag at the vessel
+       names the deposit as the coins fly, so a first-time
+       viewer learns what the vessel is by watching it fed */
+    var tag = v.querySelector(".pot-feed-tag");
+    if (!tag) { tag = document.createElement("div"); tag.className = "pot-feed-tag"; v.appendChild(tag); }
+    tag.textContent = "+" + money(fed) + " TO THE POT";
+    tag.classList.remove("show"); void tag.offsetWidth; tag.classList.add("show");
+    if (potTagTimer) clearTimeout(potTagTimer);
+    potTagTimer = setTimeout(function () { tag.classList.remove("show"); }, 2500);
     var from = document.querySelector(".ans-btn.correct") || document.querySelector(".wager-amt") || document.querySelector(".dial") || document.querySelector("#stage .delta");
     var tx = vr.left + vr.width / 2, ty = vr.top + vr.height * 0.28;
     var fx = tx, fy = ty - 140;
@@ -2521,6 +2583,8 @@
       report: names.map(function () { return freshReportSeat(); }), // Pass N1: the report card's raw tallies, per seat
       reportSeq: 0,             // Pass N1: questions settled this show — the earliest-bank clock for best-category ties
       pot: 0,                   // Dynamics pass D1: the table pot — unbanked money the champion takes
+      declared: {},             // Pass 3: seats that called All or Nothing on Q15 at the last break
+      arc: null,                // Pass 4: the night's arc record {worst, best, queue, spoken} — Sterling's story memory
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
       goldTease: null,          // the tease line drawn with it, spoken once at the Round 1 intro
       showId: null,             // per-show key for the live Sterling lines
@@ -2548,7 +2612,7 @@
      renderers paint it whenever the phase is "reveal", so a mid-reveal
      re-render (an online snapshot, a seat going AWAY) repaints the
      same grammar instead of wiping it. */
-  var tableFx = null, ogFx = null, ogQdSeat = -1, ogQdBonus = 0, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null;
+  var tableFx = null, ogFx = null, ogQdSeat = -1, ogQdBonus = 0, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null, ogBluffMoment = null, ogDeclareMoment = null;
   function decorateSeat(s, fx) {
     if (!fx) return;
     if (fx.closest) {
@@ -2613,7 +2677,7 @@
       var desk = s.querySelector(".desk");
       var d = document.createElement("span");
       d.className = "seat-delta " + fx.delta;
-      d.textContent = fx.delta === "bank" ? mplus(fx.amt) : "$0";
+      d.textContent = fx.delta === "bank" ? mplus(fx.amt) : (fx.delta === "lost" ? money(-fx.amt) : "$0");
       d.style.animationDelay = (fx.delay || 0) + "s";
       /* The span rides the SEAT, not the desk: the desk's clip-path
          trapezoid clips any child painted above its top edge. Its
@@ -2635,7 +2699,7 @@
       var shown = money(Math.round(dispScore[i] != null ? dispScore[i] : p.score));
       writtenScore[i] = shown;
       var s = el('<div class="seat pod' + i + (p.house != null ? " house" : "") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
-        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + dblTokenHTML(p, i) +
+        '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + dblTokenHTML(p, i) + declaredTagHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskPicksHTML(p, i) + fortuneHTML() + "</div></div>");
@@ -2818,6 +2882,13 @@
   function dblInPlay(p, i) {
     if (!G || !G.cur || G.round < 2 || G.cur.betRound || G.cur.decider || G.cur.kind === "bluff") return false;
     return (p.dbl > 0) || !!(G.cur.dbl && G.cur.dbl[i]);
+  }
+  /* The Declaration (Pass 3): a declared seat wears the call on
+     its desk through the whole Big Finish — the table should not
+     have to remember who is riding double */
+  function declaredTagHTML(p, i) {
+    if (!G || G.round !== 3 || !G.declared || !G.declared[i]) return "";
+    return '<span class="declared-tag" aria-hidden="true">★ ALL OR NOTHING</span>';
   }
   function dblTokenHTML(p, i) {
     if (!dblInPlay(p, i)) return "";
@@ -3303,6 +3374,12 @@
            resumed reveal (whose feed is already inside this
            figure) can never feed it a second time */
         pot: G.pot || 0,
+        /* Pass 3: the declarations ride the save — a refresh at
+           the break or during the Big Finish keeps every call */
+        declared: G.declared || {},
+        /* Pass 4: the arc rides the save — a resumed show keeps
+           its story (depths, heights, and beats already spoken) */
+        arc: G.arc || null,
         /* Dynamics pass D2: the break's Second Wind record rides
            the save — the restored token is already in the seats
            above; this record is what lets a resumed break retell
@@ -3398,6 +3475,29 @@
       /* Dynamics pass D1: the pot is restored exactly; a save
          written before the pot existed resumes an empty one */
       pot: (typeof sv.pot === "number" && sv.pot > 0) ? Math.floor(sv.pot) : 0,
+      /* Pass 3: declarations restored seat by seat; a save
+         written before the Declaration existed resumes clean */
+      declared: (function () {
+        var out = {};
+        if (sv.declared && typeof sv.declared === "object") Object.keys(sv.declared).forEach(function (k) {
+          var n = Number(k);
+          if (Number.isInteger(n) && n >= 0 && n < sv.players.length && sv.declared[k]) out[n] = true;
+        });
+        return out;
+      })(),
+      /* Pass 4: the arc restored as recorded; a save written
+         before Sterling kept a story resumes with none */
+      arc: (function () {
+        var a = sv.arc;
+        if (!a || typeof a !== "object") return null;
+        var nums = function (v) { return Array.isArray(v) ? v.map(function (x) { return (typeof x === "number" && x > 0) ? Math.floor(x) : 0; }) : []; };
+        var beats = function (v) {
+          return Array.isArray(v) ? v.filter(function (q) {
+            return q && (q.kind === "comeback" || q.kind === "collapse") && Number.isInteger(q.seat) && q.seat >= 0 && q.seat < sv.players.length;
+          }).map(function (q) { return { kind: q.kind, seat: q.seat }; }) : [];
+        };
+        return { worst: nums(a.worst), best: nums(a.best), queue: beats(a.queue), spoken: beats(a.spoken) };
+      })(),
       /* Dynamics pass D2: the break's Second Wind record is
          restored as recorded — the token itself already rides
          in the seats; a save written before Second Wind (or a
@@ -4077,7 +4177,8 @@
       best: best ? { cat: best.cat, amt: best.amt } : null,
       fastest: (typeof st.fastest === "number") ? st.fastest : null,
       biggest: st.biggest || 0,
-      peak: st.peak || 0
+      peak: st.peak || 0,
+      lost: st.lost || 0
     };
   }
   function noteReport(c, gains, so) {
@@ -4101,6 +4202,11 @@
         if (c.lockTimes && typeof c.lockTimes[i] === "number" && c.lockTimes[i] >= 0
           && (st.fastest == null || c.lockTimes[i] < st.fastest)) st.fastest = c.lockTimes[i];
       }
+      /* Jeopardy (Pass 2): the night's debit column — what this
+         seat's failed Big Finish bets cost, floored deductions
+         as settled, read off the question's own record */
+      var loss = c.betLoss ? (c.betLoss[i] || 0) : 0;
+      if (loss > 0) st.lost = (st.lost || 0) + loss;
     });
   }
   /* the server's derived entry, in the renderer's own units
@@ -4111,7 +4217,8 @@
       best: entry.best || null,
       fastest: (typeof entry.fastestMs === "number") ? entry.fastestMs / 1000 : null,
       biggest: entry.biggest || 0,
-      peak: entry.peak || 0
+      peak: entry.peak || 0,
+      lost: entry.lost || 0
     };
   }
   /* the facts a derived card actually holds, in reading order —
@@ -4123,6 +4230,7 @@
     if (d.best) out.push({ k: "BEST", full: "BEST CATEGORY", v: d.best.cat + " " + money(d.best.amt) });
     if (d.fastest != null) out.push({ k: "FASTEST HAND", full: "FASTEST HAND", v: (Math.round(d.fastest * 10) / 10).toFixed(1) + "s" });
     if (d.biggest > 0) out.push({ k: "BIGGEST BANK", full: "BIGGEST BANK", v: money(d.biggest) });
+    if (d.lost > 0) out.push({ k: "LOST IN THE FINISH", full: "LOST IN THE BIG FINISH", v: money(d.lost) });
     if (d.peak >= 2) out.push({ k: "HOTTEST STREAK", full: "HOTTEST STREAK", v: String(d.peak) });
     return out;
   }
@@ -4588,7 +4696,7 @@
     if (doneRound === 1) {
       tease = "Double Money is next — every value doubles, and the round closes with the ★ Headline Question: twice the money, half the clock.";
     } else {
-      tease = "The Big Finish is next — three questions, chips committed in the open, and a miss costs nothing." +
+      tease = "The Big Finish is next — three questions, chips committed in the open, and a miss costs real money: half the stake, and on the last question all of it and more." +
         (tGap === 0 ? " Dead level from first to last — nobody trails, so the Long Shot sleeps: three chips is everyone's cap."
           : cap > 3 ? " " + trailer.name + " trails by " + money(tGap) + " — the Long Shot lets a trailer ride up to " + cap + " chips."
             : " " + trailer.name + " trails by " + money(tGap) + " — not far enough to wake the Long Shot: three chips is the cap.");
@@ -4643,6 +4751,39 @@
   /* the break at the table: G.round has already advanced, so the
      round just played is G.round - 1 — at entry and on a resume
      alike, which is what makes the repaint identical */
+  /* The Declaration (Pass 3): at the break before the Big
+     Finish, each guest seat at the table may call All or Nothing
+     on the last question. The block lives under the break card;
+     a tap is final — the button settles into its declared state,
+     the call rides the save, and Sterling names it. House seats
+     never declare: the call is a guest's gamble. */
+  function declareBlockHTML() {
+    G.declared = G.declared || {};
+    var btns = G.players.map(function (p, i) {
+      if (p.house != null) return "";
+      if (G.declared[i]) return '<button type="button" class="declare-btn declared" disabled>★ ' + esc(p.name) + " — DECLARED</button>";
+      return '<button type="button" class="declare-btn" data-declare="' + i + '">DECLARE — ' + esc(p.name) + "</button>";
+    }).join("");
+    if (!btns) return "";
+    return '<div class="declare-block"><div class="declare-k">THE DECLARATION</div>' +
+      '<p class="declare-line">One call, made now, about the very last question: bank it and the bet pays <b>double</b> — fail it, and the cost doubles too. No taking it back.</p>' +
+      '<div class="declare-btns">' + btns + "</div></div>";
+  }
+  function wireDeclare() {
+    document.querySelectorAll("[data-declare]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = Number(b.getAttribute("data-declare"));
+        if (!G || G.phase !== "intermission" || !G.players[i]) return;
+        G.declared = G.declared || {};
+        if (G.declared[i]) return;
+        G.declared[i] = true;
+        b.classList.add("declared"); b.disabled = true;
+        b.textContent = "★ " + G.players[i].name + " — DECLARED";
+        hostSay("declare", { name: G.players[i].name });
+        saveTableShow();
+      });
+    });
+  }
   function paintIntermission() {
     setPlot("house"); /* Graphics Pass 2: the break rests at house light */
     curtainEnsureClosed(); /* Graphics Pass 1: the break is a front-of-curtain card */
@@ -4659,7 +4800,14 @@
     stage(breakCardHTML(view, "btnBreakGo"));
     $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "");
     $("btnBreakGo").addEventListener("click", function () { roundIntro(); });
-    autoGo("btnBreakGo", "break:" + G.round, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!G && G.phase === "intermission"; });
+    /* The Declaration (Pass 3): the last break carries the call,
+       and rests a beat longer for it — a decision deserves more
+       than the standard breath */
+    if (G.round === 3) {
+      var stEl = $("stage");
+      if (stEl) { stEl.insertAdjacentHTML("beforeend", declareBlockHTML()); wireDeclare(); }
+    }
+    autoGo("btnBreakGo", "break:" + G.round, (paceCfg() ? paceCfg().reveal : 6000) * (G.round === 3 ? 3 : 2), function () { return !!G && G.phase === "intermission"; });
   }
   function beginIntermission() {
     curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
@@ -4732,9 +4880,16 @@
           ["The bet", "Before each one, bet on yourself out loud — a chip is $100"],
           ["The chase", "The further behind you are, the more chips you may ride — up to five"],
           ["The pay", "Get it right and the bet pays in full — no drain, no deductions"],
-          ["The risk", "Get it wrong and you lose nothing but face"],
-          ["The promise", "Nobody leaves this show poorer than they arrived"]]
+          ["The risk", "Get it wrong and the bet takes its cut — half your stake"],
+          ["The last one", "Question 15 takes everything: a miss costs the whole stake, and a wrong answer costs $300 more"]]
     };
+    /* The Declaration (Pass 3): if anyone called All or Nothing
+       at the break, the intro names them — the room should know
+       whose last question is loaded before the first bet is set */
+    if (G.round === 3 && G.declared) {
+      var dNames = Object.keys(G.declared).filter(function (k) { return G.declared[k] && G.players[k]; }).map(function (k) { return G.players[k].name; });
+      if (dNames.length) rows[3].push(["All or Nothing", joinNames(dNames) + " declared at the break — the last question pays them double, or costs them double"]);
+    }
     /* Perfectionist fix pass 2 (2026-11-15): the rows are dealt
        into two .fact-col stacks in the markup, so a short stage
        can stand them side by side as real columns (see the fit
@@ -5162,7 +5317,7 @@
       (c.special ? '<div class="special-note">THE SAME QUESTION AT EVERY TABLE TONIGHT</div>' : "") +
       '<div class="q-meta">' +
       (c.betRound
-        ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
+        ? '<div class="q-for">Bets are in — right pays the bet; wrong, the bet takes its cut.</div>'
         : '<div class="q-value">' + meltHTML(!!c.headline, meltMult(c.elapsed, c.clockTotal)) + '<div class="q-valmain"><small>QUESTION VALUE</small><span id="qValue">' + money(c.golden ? c.value / 2 : c.value) + "</span></div></div>") +
       timerHTML() + "</div>" +
       '<div class="answers pop-in">' + btns + "</div>" + toolsHTML();
@@ -5484,6 +5639,13 @@
     G.cur.stake = stakeCallout(tableStakeCtx());
     seatsVisible(true);
     updateTop(); renderSeats();
+    /* The Declaration (Pass 3): the last question opens under
+       its own line when anyone is riding on it */
+    var declareOpenName = null;
+    if (G.round === 3 && G.qInRound === 2 && G.cur.betRound && G.declared) {
+      var dks = Object.keys(G.declared).filter(function (k) { return G.declared[k] && G.players[k]; });
+      if (dks.length) declareOpenName = G.players[dks[0]].name;
+    }
     if (G.cur.kind === "bluff" && !G.cur.bluffDealt) { bluffInventStage(); return; }
     if (G.cur.kind === "num") {
       stage(numHTML());
@@ -5495,13 +5657,15 @@
         hostSay(G.decider.dealt > 1 ? "decideragain" : "decider",
           { a: names2[0] || "", b: names2.slice(1).join(" and ") || "" });
       }
+      else if (declareOpenName) hostSay("declareopen", { name: declareOpenName });
       else if (!G.cur.headline) hostSay(G.cur.q && G.cur.q.d === 3 ? "deepcut" : "numQ", { cat: G.cur.cat });
     } else if (G.cur.kind === "bluff") {
       stage(bluffQuestionHTML());
       hostSay("bluffVote", { cat: G.cur.cat });
     } else {
       stage(questionHTML());
-      if (!G.cur.headline) hostSay(G.cur.q && G.cur.q.d === 3 ? "deepcut" : "read", { cat: G.cur.cat });
+      if (declareOpenName) hostSay("declareopen", { name: declareOpenName });
+      else if (!G.cur.headline) hostSay(G.cur.q && G.cur.q.d === 3 ? "deepcut" : "read", { cat: G.cur.cat });
     }
     if (entTake(G.cur)) entApply(document.querySelector("#stage .q-cardwrap"), G.cur.cat);
     if (G.cur.headline && !G.cur.headlineSaid) { G.cur.headlineSaid = true; hostSay("headline", { cat: G.cur.cat }); }
@@ -6310,7 +6474,10 @@
      never doubles; Quick Draw and the streak bonus scale by the
      round alone (review Pass 5), never by the bet or the Double. */
   function seatGain(c, p, i, qdSeat, sBonus, sole) {
-    var base = c.betRound ? p.bet * 100 : c.bankValue;
+    /* Pass 3: a declared seat banking the LAST question is paid
+       the bet double (betPayout in the shared core); the Quick
+       Draw and streak bonuses below still land flat on top */
+    var base = c.betRound ? GH_RULES.betPayout(p.bet, !!(G.declared && G.declared[i] && G.qInRound === 2)) : c.bankValue;
     if (!c.betRound && c.dbl && c.dbl[i]) base *= 2;
     return base + (i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0) + (sBonus || 0);
   }
@@ -6379,6 +6546,24 @@
         c.bluffFool[k] = amt;
       });
     }
+    /* Jeopardy (improvement Pass 2, 2026-11-17): a failed Big
+       Finish bet costs real money now — half the stake on the
+       round's first two questions, the whole stake plus the $300
+       penalty on the last (GH_RULES.betLoss, single-sourced).
+       The deduction is floored at the seat's score — nobody goes
+       below $0 — and rides the question (c.betLoss) so the fx,
+       the report tally and any resumed repaint read the same
+       figures the scores moved by. The pot's feed below is the
+       older, separate rule and is unchanged. */
+    c.betLoss = {};
+    if (c.betRound) {
+      G.players.forEach(function (p, i) {
+        if (c.marks[i]) return;
+        var due = GH_RULES.betLoss(p.bet || 1, G.qInRound, !!(G.declared && G.declared[i]));
+        var taken = Math.min(due, Math.max(0, p.score));
+        if (taken > 0) { p.score -= taken; c.betLoss[i] = taken; }
+      });
+    }
     c.streakFx = {}; c.streakMoment = so.moment;
     G.players.forEach(function (p, i) {
       p.streak = so.streakOut[i];
@@ -6400,6 +6585,8 @@
     /* Pass N1: the report card's tallies are written in the same
        commit, from the same gains and the same streak settlement */
     noteReport(c, gains, so);
+    /* Pass 4: the arc reads the settled scores in the same commit */
+    arcTrack();
     buildTableFx();
     /* the last question's reveal settles the final standings — start
        the winner line's generation now, not at the finale screen */
@@ -6429,6 +6616,7 @@
       var foolAmt = (c.kind === "bluff" && c.bluffFool && c.bluffFool[i]) || 0;
       if (c.marks[i]) fxSeats[i] = { delta: "bank", amt: seatGain(c, p, i, qdSeat, sBonus, soleFx) + foolAmt, closest: guessQ, quickdraw: i === qdSeat, qdBonus: i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0, doubled: dblSpent(c, i), streakBonus: sBonus, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
       else if (foolAmt > 0) fxSeats[i] = { delta: "bank", amt: foolAmt, bluffFool: foolAmt, delay: bankSeq++ * 0.12 };
+      else if (c.betLoss && c.betLoss[i] > 0) fxSeats[i] = { delta: "lost", amt: c.betLoss[i], delay: i * 0.05 };
       else fxSeats[i] = { delta: "miss", delay: i * 0.05 };
     });
     tableFx = { seats: fxSeats };
@@ -6765,7 +6953,12 @@
        nothing of the series, may not displace it */
     if (p.house != null) sayWinnerAuthored(authoredLine("housewin", { name: p.name }));
     else if (sNightWon) sayWinnerAuthored(authoredLine("winnernight", { name: p.name }));
-    else sayWinner({ winner: p.name, standings: wStand, topScore: p.score }, authoredLine(deciderWon ? "deciderwin" : "winner", { name: p.name }),
+    /* Pass 4: a crown the Decider chose is spoken authored-only,
+       like a series night — the worker's facts are the frozen
+       tied scores, and it has already once called such a show
+       "joint champions" over the Decider's verdict */
+    else if (deciderWon) sayWinnerAuthored(authoredLine("deciderwin", { name: p.name }));
+    else sayWinner({ winner: p.name, standings: wStand, topScore: p.score }, authoredLine("winner", { name: p.name }),
       function () { return !!G && G.phase === "over"; });
     seatsVisible(false);
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
@@ -7174,8 +7367,8 @@
   });
   paintMute();
   /* ---------- how tonight works (teaching cards) ----------
-     A manual overlay off the title screen: four beats, no game
-     state touched. gh_taught only records that a player checked
+     A manual overlay off the title screen: five beats (the pot
+     took its own card in Pass 5), no game state touched. gh_taught only records that a player checked
      "Don't show this again" — the entry point stays either way,
      and picks up a quiet tick when the table has been taught. */
   var howBeat = 0;
@@ -7421,6 +7614,17 @@
   /* fire the winner request the moment the final standings exist */
   function winnerPrefetchAtReveal(facts) {
     if (!facts) return;
+    /* Pass 4 (Sterling made present): a reveal that leaves the
+       top TIED has not settled a winner at all — the Decider
+       owns that name now, and facts computed from the frozen
+       scores would name whichever tied seat sorts first. The
+       worker once turned exactly those facts into a "joint
+       champions" herald over a show the Decider had settled.
+       Tied standings prefetch nothing; a Decider show's winner
+       line is authored-only at the finale (both finales below),
+       like a series night — the worker knows nothing of the
+       Decider, so it may not speak its result. */
+    if (facts.standings && facts.standings.length > 1 && facts.standings[1].score === facts.topScore) return;
     prefetchLine("winner", facts, 9000);
   }
   function sayWinner(facts, authored, isFinale) {
@@ -7459,6 +7663,105 @@
     winnerSeq++;
     var hl = $("hostLine"); if (hl) hl.textContent = line;
   }
+  /* Sterling made present (improvement Pass 4, 2026-11-17): the
+     arc — how deep each seat has been tonight, how high each has
+     flown, and the two story beats a night can earn: a comeback
+     (a seat $1,000+ down at some settled reveal now leads alone)
+     and a collapse (a seat that has led by $1,000+ now trails by
+     $250+). Shared by both modes: the table feeds it settled
+     scores at the commit; the online host feeds it the reveal's
+     own deltas. A queued beat waits for its rank in the reveal
+     arbitration, speaks once, and is remembered as spoken so it
+     can never queue twice. */
+  function arcUpdate(a, scores) {
+    var live = scores.filter(function (s) { return typeof s === "number"; });
+    if (live.length < 2) return;
+    var top = Math.max.apply(null, live);
+    var leaders = 0, leadSeat = -1;
+    scores.forEach(function (s, i) { if (s === top) { leaders++; leadSeat = i; } });
+    scores.forEach(function (s, i) {
+      if (typeof s !== "number") return;
+      var mo = -Infinity;
+      scores.forEach(function (o, j) { if (j !== i && typeof o === "number" && o > mo) mo = o; });
+      a.worst[i] = Math.max(a.worst[i] || 0, top - s);
+      if (mo > -Infinity) a.best[i] = Math.max(a.best[i] || 0, s - mo);
+    });
+    var has = function (list, kind, seat) { return (list || []).some(function (q) { return q.kind === kind && q.seat === seat; }); };
+    a.queue = a.queue || []; a.spoken = a.spoken || [];
+    if (leaders === 1 && (a.worst[leadSeat] || 0) >= 1000 && !has(a.queue, "comeback", leadSeat) && !has(a.spoken, "comeback", leadSeat))
+      a.queue.push({ kind: "comeback", seat: leadSeat });
+    scores.forEach(function (s, i) {
+      if (typeof s !== "number" || s === top) return;
+      if ((a.best[i] || 0) >= 1000 && (top - s) >= 250 && !has(a.queue, "collapse", i) && !has(a.spoken, "collapse", i))
+        a.queue.push({ kind: "collapse", seat: i });
+    });
+  }
+  function arcSayFor(a, players) {
+    if (!a || !a.queue || !a.queue.length) return false;
+    var q = a.queue.shift();
+    a.spoken = a.spoken || [];
+    a.spoken.push({ kind: q.kind, seat: q.seat });
+    if (players[q.seat]) hostSay(q.kind, { name: players[q.seat].name });
+    return true;
+  }
+  function arcTrack() {
+    if (!G || G.decider) return;
+    if (!G.arc) G.arc = { worst: [], best: [], queue: [], spoken: [] };
+    arcUpdate(G.arc, G.players.map(function (p) { return p.score; }));
+  }
+  function ogArcTrack(r) {
+    if (!OG || r.decider) return;
+    if (!OG.arc) OG.arc = { worst: [], best: [], queue: [], spoken: [] };
+    var post = OG.players.map(function (p) { return p ? p.score : null; });
+    (r.results || []).forEach(function (res) { if (post[res.seat] != null) post[res.seat] += (res.banked || 0) - (res.lost || 0); });
+    arcUpdate(OG.arc, post);
+  }
+  /* The Bluff's outcome at the table, from the question's own
+     settled record: a sweep (one lie fooled at least two seats
+     and nobody found the truth), a big lie (two or more fooled),
+     or a table of skeptics (nobody fooled, truth found) */
+  function bluffSay() {
+    var c = G.cur;
+    if (!c || c.kind !== "bluff") return false;
+    var topSeat = -1, topN = 0, total = 0;
+    Object.keys(c.bluffFool || {}).forEach(function (k) {
+      var n = Math.round((c.bluffFool[k] || 0) / BLUFF_FOOL);
+      total += n;
+      if (n > topN) { topN = n; topSeat = +k; }
+    });
+    var winnersN = c.marks ? Object.keys(c.marks).length : 0;
+    if (topSeat >= 0 && topN >= 2 && winnersN === 0) { hostSay("bluffsweep", { name: G.players[topSeat].name }); return true; }
+    if (topSeat >= 0 && topN >= 2) { hostSay("bluffbig", { name: G.players[topSeat].name, n: topN }); return true; }
+    if (total === 0 && winnersN > 0) { hostSay("bluffnone", {}); return true; }
+    return false;
+  }
+  /* A declaration settling on the last question, at the table:
+     the paid call outranks the collected one */
+  function declareSay() {
+    if (!G || G.round !== 3 || G.qInRound !== 2 || !G.declared || !G.cur) return false;
+    var paid = -1, collect = -1, collectAmt = 0;
+    Object.keys(G.declared).forEach(function (k) {
+      if (!G.declared[k] || !G.players[k]) return;
+      if (G.cur.marks && G.cur.marks[k] != null) { if (paid < 0) paid = +k; }
+      else if (G.cur.betLoss && G.cur.betLoss[k] > 0) { if (collect < 0) { collect = +k; collectAmt = G.cur.betLoss[k]; } }
+    });
+    if (paid >= 0) { hostSay("declarepaid", { name: G.players[paid].name }); return true; }
+    if (collect >= 0) { hostSay("declarecollect", { name: G.players[collect].name, amt: money(collectAmt) }); return true; }
+    return false;
+  }
+  function ogBluffSay() {
+    if (!ogBluffMoment || !OG) return false;
+    if (ogBluffMoment.kind === "bluffnone") { hostSay("bluffnone", {}); return true; }
+    if (!OG.players[ogBluffMoment.seat]) return false;
+    hostSay(ogBluffMoment.kind, { name: OG.players[ogBluffMoment.seat].name, n: ogBluffMoment.n || 0 });
+    return true;
+  }
+  function ogDeclareSay() {
+    if (!ogDeclareMoment || !OG || !OG.players[ogDeclareMoment.seat]) return false;
+    if (ogDeclareMoment.kind === "declarepaid") hostSay("declarepaid", { name: OG.players[ogDeclareMoment.seat].name });
+    else hostSay("declarecollect", { name: OG.players[ogDeclareMoment.seat].name, amt: money(ogDeclareMoment.amt || 0) });
+    return true;
+  }
   /* reveal-time live beats for the table show: a whole-table miss, the
      first bank of the night, a runaway lead (>= $500, once per show).
      Anything else keeps the authored line the reveal already chose. */
@@ -7475,6 +7778,17 @@
        own pass) and, like the quick-draw call-out below, replaces
        the generic beat without consuming the AI beat latches. */
     if (G && G.cur && G.cur.golden) { hostSay("golden", {}); return; }
+    /* Sterling made present (Pass 4): the story beats speak
+       before the quick-draw call-out — the Bluff's outcome (the
+       question's own story), the night's queued arc beat, and a
+       declaration settling on the last question are once-a-night
+       events; the quick draw is a per-question micro-beat and
+       still fires on every reveal that carries no bigger story.
+       Only the streak moment and the Golden Question outrank
+       them. All authored; the AI beat latches stay unconsumed. */
+    if (G && bluffSay()) return;
+    if (G && arcSayFor(G.arc, G.players)) return;
+    if (G && declareSay()) return;
     /* Design pass 3: a quick-draw reveal speaks the call-out and
        nothing else — the authored pool replaces the beat line, and
        the AI beat latches are NOT consumed, so a first_bank/big_lead
@@ -7528,6 +7842,13 @@
        below the streak moment, above the quick-draw and the
        beats, latches untouched. */
     if (OG && ogRevealGolden) { hostSay("golden", {}); return; }
+    /* Sterling made present (Pass 4): the same three story
+       beats as the table, from the payload's own record
+       (computed in ogOnReveal), at the same rank — above the
+       quick-draw call-out, below the streak and the Golden */
+    if (OG && ogBluffSay()) return;
+    if (OG && arcSayFor(OG.arc, OG.players)) return;
+    if (OG && ogDeclareSay()) return;
     /* Design pass 3: same rule as the table — a quick-draw reveal
        speaks the call-out instead of the beat, and the AI beat
        latches stay unconsumed for the next reveal. The winner comes
@@ -7958,6 +8279,8 @@
       players: [null, null, null, null], snap: null, offset: 0,
       started: false, script: null, idx: 0, curRound: 0, cur: null,
       decider: null,           // New programme pass 1: {eligible, winner, used} once a tied finale triggers it
+      declared: {},            // Pass 3: the room's declarations, mirrored from its snapshots
+      arc: null,               // Pass 4: the night's arc record — Sterling's story memory for this room
       facts: freshFacts(),     // New programme pass 2: the round-facts recorder the Intermission is told from
       seriesCtx: null, seriesLine: null, // Programme pass 4: the night's series, captured at the show's start
       goldTease: null,         // The Golden Question (pass 4): the tease line drawn at the show's start
@@ -8151,6 +8474,9 @@
        referee's night (a snapshot that predates the rules
        carries no field and leaves the mirror as it stands) */
     if (s.rules) OG.rules = cleanRulesObj(s.rules);
+    /* The Declaration (Pass 3): the room's calls ride every
+       snapshot — this screen's break card names them as they land */
+    if (s.declared) OG.declared = s.declared;
     if (s.question) OG.offset = s.question.openedAt - Date.now();
     if (s.phase === "lobby") {
       if (!OG.started) {
@@ -8206,7 +8532,7 @@
           if (OG.phase === "intermission") { ogPaintIntermission(s.intermission.nextRound || OG.curRound + 1); return; }
         }
       }
-      if (OG.phase === "intermission") ogRenderSeats();
+      if (OG.phase === "intermission") { ogRenderSeats(); ogPaintDeclared(); }
       else if (OG.phase === "connecting") {
         var nr = (s.intermination && s.intermination.nextRound) || OG.curRound + 1;
         OG.phase = "intermission"; stagePhase("intermission");
@@ -8547,7 +8873,7 @@
     OG.facts = freshFacts();
     OG.lastRevealQid = null;
     OG.bankedOnce = false; OG.bigLeadDone = false;
-    ogFx = null; ogQdSeat = -1; ogQdBonus = 0; ogStreakMoment = null; ogRevealGolden = false;
+    ogFx = null; ogQdSeat = -1; ogQdBonus = 0; ogStreakMoment = null; ogRevealGolden = false; ogBluffMoment = null; ogDeclareMoment = null;
     OG.disp = [null, null, null, null];
     ogFortuneDisp = [];
     OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
@@ -8632,7 +8958,7 @@
       2: (OG.rules && OG.rules.secondCut)
         ? "Same game, double money — $200, $400, $600. Your lifelines are live: each of you holds TWO Cut Two tokens for the whole show. Call one from your phone before the window closes and two wrong answers vanish for everybody. And the round closes with the Headline Question — double money again, half the time on the clock."
         : "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it from your phone before the window closes and two wrong answers vanish for everybody. And the round closes with the Headline Question — double money again, half the time on the clock.",
-      3: "Three questions. Before each one, bet on yourself from your phone — a chip is $100, and the bet stays secret until the reveal. Chasing the leader? The further behind you are, the more chips you may ride — up to five. Get it right and the bet pays in full. Get it wrong and you lose nothing but face."
+      3: "Three questions. Before each one, bet on yourself from your phone — a chip is $100, and the bet stays secret until the reveal. Chasing the leader? The further behind you are, the more chips you may ride — up to five. Get it right and the bet pays in full. Get it wrong and the bet costs you — half your stake, all of it on the last question, and $300 more for a wrong answer there."
     };
     stage('<div class="bumper"><div class="round-kicker">ROUND ' + e.round + "</div>" +
       '<div class="round-title">' + titles[e.round] + "</div>" +
@@ -8738,7 +9064,7 @@
     seatsVisible(true); ogRenderSeats();
     stage('<div class="round-kicker">THE BIG FINISH · QUESTION ' + (e.qInRound + 1) + " OF 3</div>" +
       '<div class="round-title">BET TIME</div>' +
-      '<p class="round-text">Bets are being placed on phones, secret until the reveal — a chip is $100; right pays the bet, wrong costs nothing. Chasing the leader? The further behind you are, the more chips you may ride — up to five.</p>' +
+      '<p class="round-text">Bets are being placed on phones, secret until the reveal — a chip is $100; right pays the bet, and a miss costs half the stake — on the last question, all of it and $300 more. Chasing the leader? The further behind you are, the more chips you may ride — up to five.</p>' +
       '<div><span class="og-count">BETS IN&nbsp;<b id="ogBetsIn">0</b> / ' + ogJoined().length + "</span></div>" +
       '<div style="margin-top:14px"><button class="btn-gold" id="ogBetsGo">BETS ARE IN — SPIN THE CATEGORY</button></div>');
     hostSay("bet");
@@ -8911,7 +9237,7 @@
       : isDec
       ? '<div class="q-for">No money on this one — the crown only.</div>'
       : q.betted
-      ? '<div class="q-for">Bets are in — this one pays the bet, and only the bet.</div>'
+      ? '<div class="q-for">Bets are in — right pays the bet; wrong, the bet takes its cut.</div>'
       /* The Golden Question (pass 4): the snapshot's figures are
          the room's EFFECTIVE ones (already doubled) — but the big
          screen must not price a golden question at double before
@@ -9053,6 +9379,7 @@
     (r.results || []).forEach(function (res) {
       var fx = null;
       if (res.banked > 0) { fx = { delta: "bank", amt: res.banked, delay: bankSeq++ * 0.12 }; anyBank = true; }
+      else if (res.lost > 0) fx = { delta: "lost", amt: res.lost, delay: res.seat * 0.05 };
       else if (!res.correct && (res.pick != null || res.num != null)) fx = { delta: "miss", delay: res.seat * 0.05 };
       if (guessQ && res.correct) { fx = fx || {}; fx.closest = true; }
       /* Design pass 3: the server already decided the quick-draw —
@@ -9074,6 +9401,32 @@
       if (fx) fxSeats[res.seat] = fx;
     });
     ogStreakMoment = r.streakMoment || null;
+    /* Sterling made present (Pass 4): the online twins of the
+       table's story beats, computed from this reveal's payload —
+       the Bluff's outcome (from the fool purses the referee
+       marked), a declaration settling on the last question (from
+       the declared map and the results), and the night's arc
+       (from the reveal's own deltas) */
+    ogBluffMoment = null;
+    if (e.kind === "bluff") {
+      var bTop = -1, bN = 0, bTot = 0;
+      (r.results || []).forEach(function (res) { var n = res.fool ? Math.round(res.fool / BLUFF_FOOL) : 0; bTot += n; if (n > bN) { bN = n; bTop = res.seat; } });
+      if (bTop >= 0 && bN >= 2 && winners.length === 0) ogBluffMoment = { kind: "bluffsweep", seat: bTop };
+      else if (bTop >= 0 && bN >= 2) ogBluffMoment = { kind: "bluffbig", seat: bTop, n: bN };
+      else if (bTot === 0 && winners.length > 0) ogBluffMoment = { kind: "bluffnone", seat: -1 };
+    }
+    ogDeclareMoment = null;
+    if (e.round === 3 && e.qInRound === 2 && OG.declared) {
+      var dPaid = -1, dCol = -1, dAmt = 0;
+      (r.results || []).forEach(function (res) {
+        if (!OG.declared[res.seat]) return;
+        if (res.banked > 0) { if (dPaid < 0) dPaid = res.seat; }
+        else if (res.lost > 0) { if (dCol < 0) { dCol = res.seat; dAmt = res.lost; } }
+      });
+      if (dPaid >= 0) ogDeclareMoment = { kind: "declarepaid", seat: dPaid };
+      else if (dCol >= 0) ogDeclareMoment = { kind: "declarecollect", seat: dCol, amt: dAmt };
+    }
+    ogArcTrack(r);
     setMood((anyBank || winners.length) ? "delight" : "sorry");
     /* The Golden Question (pass 4): the reveal is the first place
        the flag exists outside the room — capture it for the gilt,
@@ -9249,15 +9602,33 @@
     ogPaintIntermission(nextRound);
     ogSaveHostShow();
   }
+  /* The Declaration (Pass 3): the host screen's break card
+     carries the call — open while nobody has called, naming the
+     callers the moment their pads land */
+  function ogPaintDeclared() {
+    var el = $("ogDeclaredLine");
+    if (!el || !OG) return;
+    var names = Object.keys(OG.declared || {}).filter(function (k) { return OG.declared[k] && OG.players[k]; }).map(function (k) { return OG.players[k].name; });
+    el.textContent = names.length
+      ? "★ " + joinNames(names) + " — All or Nothing on the last question. Double, or double."
+      : "Any player may call All or Nothing on the last question, from their phone — bank it and the bet pays double; fail it and the cost doubles.";
+  }
   function ogPaintIntermission(nextRound) {
     setPlot("house"); /* Graphics Pass 2: the break rests at house light */
     curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
     var view = breakView(ogBreakSeats(), OG.facts, nextRound - 1, OG.pot || 0, OG.breakWind ? OG.breakWind.names : null, OG.rules);
     stage(breakCardHTML(view, "ogBreakGo"));
     $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "");
+    /* The Declaration (Pass 3): the last break carries the call
+       and rests a beat longer for it, as at the table */
+    if (nextRound === 3) {
+      var stEl2 = $("stage");
+      if (stEl2) stEl2.insertAdjacentHTML("beforeend", '<div class="declare-block"><div class="declare-k">THE DECLARATION</div><p class="declare-line" id="ogDeclaredLine"></p></div>');
+      ogPaintDeclared();
+    }
     var b = $("ogBreakGo");
     if (b) b.addEventListener("click", function () { ogIntro(); });
-    autoGo("ogBreakGo", "ogbreak:" + nextRound, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!OG && OG.phase === "intermission"; });
+    autoGo("ogBreakGo", "ogbreak:" + nextRound, (paceCfg() ? paceCfg().reveal : 6000) * (nextRound === 3 ? 3 : 2), function () { return !!OG && OG.phase === "intermission"; });
   }
   /* Design pass 4: an online show's id for the record guard — the
      room code plus the script's first qid. A new room is a new code;
@@ -9348,7 +9719,11 @@
     var ogStand = idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score }; })
       .sort(function (a, b) { return b.score - a.score; });
     if (sNightWonO) sayWinnerAuthored(authoredLine("winnernight", { name: p.name }));
-    else sayWinner({ winner: p.name, standings: ogStand, topScore: best }, authoredLine(decWin != null ? "deciderwin" : "winner", { name: p.name }),
+    /* Pass 4: the Decider's crown is authored-only here too —
+       this is the screen whose herald once read "joint
+       champions" over a settled Decider (room GKDC, Pass 1) */
+    else if (decWin != null) sayWinnerAuthored(authoredLine("deciderwin", { name: p.name }));
+    else sayWinner({ winner: p.name, standings: ogStand, topScore: best }, authoredLine("winner", { name: p.name }),
       function () { return !!OG && OG.phase === "over"; });
     var order = idxs.slice().sort(function (a, b) { return OG.players[b].score - OG.players[a].score; });
     var ranks = {}; order.forEach(function (pi, pos) { ranks[pi] = pos; });
@@ -9585,6 +9960,16 @@
       return;
     }
     if (m.t === "error") {
+      if (!JP.welcomed && /Seat is taken/.test(m.msg || "")) {
+        /* Pass 7: the room still holds this seat's earlier
+           connection (an older room build, or the zombie hasn't
+           cleared) — never dead-end on the podium card. Close
+           and let the reconnect loop re-hello until it lands;
+           on a current room the rebind seats the first retry. */
+        jpToast("That seat is still held by your earlier connection — rejoining…");
+        try { JP.ws.close(); } catch (e) {}
+        return;
+      }
       if (!JP.welcomed && /Seat not found|Room is full/.test(m.msg || "")) {
         try { localStorage.removeItem("gh_player"); } catch (e) {}
         jpTeardown();
@@ -9971,6 +10356,17 @@
         '<div class="jp-herotag">THAT\'S YOU</div>' +
         '<div class="jp-heroname">' + esc(myName) + "</div>" +
         '<div class="jp-colorband"></div>' +
+        /* Pass 7: one quiet roster line under the hero — who
+           else is at the table and whether they're ready. The
+           minimal pad keeps its identity hero; the full roster
+           still lives on the big screen. */
+        '<div class="jp-roster">' + (function () {
+          var others = (s.players || []).map(function (p, i) { return p && i !== JP.seat ? { p: p, i: i } : null; }).filter(Boolean);
+          if (!others.length) return '<span class="jp-roster-wait">You\'re the first here — the table fills as phones join.</span>';
+          return others.map(function (o) {
+            return '<span class="jp-roster-p' + (o.p.connected ? "" : " away") + '"><span class="jp-roster-dot" style="--c:' + PCOLORS[o.i] + '">' + esc((o.p.name || "?").charAt(0).toUpperCase()) + '</span>' + esc(o.p.name) + (o.p.ready ? " ✓" : "") + '</span>';
+          }).join("");
+        })() + '</div>' +
         '<div class="jp-phaseword" id="jpPhaseWord">IN THE LOBBY</div>' +
         (s.showSeq >= 2 ? '<div class="jp-rematch">★ REMATCH — SHOW ' + s.showSeq + '<span>THE TABLE STAYS TOGETHER</span></div>' : "") +
         '<p class="jp-sub">Watch the big screen — when a question lands,<br>this pad becomes your answer buttons.</p>' +
@@ -9986,6 +10382,7 @@
       JP.betSel = Math.max(1, Math.min(betCap, cur || 1));
       main.innerHTML = '<div class="jp-pad">' + jpIdBar(false) +
         '<div class="jp-betmid"><div class="jp-betlabel">THE BIG FINISH · YOUR BET</div>' +
+        (s.declared && s.declared[JP.seat] ? '<div class="jp-longshot">★ ALL OR NOTHING DECLARED — IT SETTLES ON THE LAST QUESTION</div>' : "") +
         (betCap > 3 ? '<div class="jp-longshot">LONG SHOT · RIDE UP TO ' + betCap + ' CHIPS</div>' : "") +
         '<div class="jp-chipstack" id="jpChipStack"></div>' +
         '<div class="jp-betamt" id="jpBetAmt"></div>' +
@@ -10176,12 +10573,30 @@
       var placeWord = ["", "1ST", "2ND", "3RD", "4TH"][myPlace] || (myPlace + "TH");
       var windSeatsP = (s.intermission && Array.isArray(s.intermission.wind)) ? s.intermission.wind : [];
       var windMine = windSeatsP.indexOf(JP.seat) >= 0;
+      /* The Declaration (Pass 3): at the break before the Big
+         Finish, this pad carries the call — one tap, public,
+         irrevocable; the settled state repaints from the next
+         snapshot's declared map */
+      var declareHTML = "";
+      if (s.intermission && s.intermission.nextRound === 3) {
+        var iDeclared = !!(s.declared && s.declared[JP.seat]);
+        var othersDeclared = (s.players || []).filter(function (p, ix) { return p && ix !== JP.seat && s.declared && s.declared[ix]; }).map(function (p) { return p.name; });
+        declareHTML = '<div class="jp-declare">' +
+          (iDeclared
+            ? '<p class="jp-sub jp-declared">★ YOU DECLARED — ALL OR NOTHING ON THE LAST QUESTION</p>'
+            : '<p class="jp-sub">THE DECLARATION — THE LAST QUESTION CAN PAY YOUR BET DOUBLE, OR COST YOU DOUBLE.</p><button type="button" class="btn-gold jp-declare-btn" id="jpDeclare">★ DECLARE — ALL OR NOTHING</button>') +
+          (othersDeclared.length ? '<p class="jp-sub">' + esc(joinNames(othersDeclared)) + " declared All or Nothing.</p>" : "") +
+          "</div>";
+      }
       main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">THE INTERMISSION</div>' +
         '<div class="jp-hi">YOU\'RE ' + placeWord + " · " + money(myScore) + "</div>" +
         '<p class="jp-sub">' + (windMine
           ? "SECOND WIND — YOUR CUT TWO IS BACK"
           : "CUT TWO — " + (snapCutN(me) >= 2 ? "TWO IN HAND" : snapCutN(me) === 1 ? "IN HAND" : "SPENT")) + "</p>" +
+        declareHTML +
         '<p class="jp-sub">The show resumes from the big screen.</p></div>';
+      var dBtn = main.querySelector("#jpDeclare");
+      if (dBtn) dBtn.addEventListener("click", function () { jpSend({ t: "declare" }); dBtn.disabled = true; dBtn.textContent = "★ DECLARING…"; });
     } else if (s.phase === "reveal") {
       /* The minimal pad: the reveal on the phone is ONE line — what
          your own input earned — over your own score. The answer,
@@ -10202,6 +10617,11 @@
         else { vWord = "DEAD LEVEL — IT GOES AGAIN"; vMiss = true; }
       } else if (mine && mine.correct) {
         vWord = (lr.kind === "num" ? "CLOSEST · " : "BANKED · ") + mplus(mine.banked);
+      } else if (mine && mine.lost > 0) {
+        /* Jeopardy (Pass 2): the pad names its own loss — the
+           deduction the room settled, in the verdict's grammar */
+        vMiss = true;
+        vWord = "LOST · " + money(-mine.lost);
       } else {
         vMiss = true;
         vWord = (mine && (mine.pick != null || mine.num != null)) ? "NO BANK" : "NO ANSWER";
@@ -10223,6 +10643,18 @@
       shareNight = jpShareData();
       var myScoreE = me ? me.score : 0;
       var myPlaceE = 1 + s.players.filter(Boolean).filter(function (p) { return p.score > myScoreE; }).length;
+      /* Decider verification pass (2026-11-17): the scores alone
+         still show the tie the Decider broke — on a decided
+         decider, a tied non-winner's pad read YOU CAME 1ST while
+         the big screen crowned the other seat. When the night's
+         last reveal was a decided decider, a non-winner level
+         with the winner stands one place lower: the crown had
+         one head. */
+      var lrE = s.lastReveal;
+      if (lrE && lrE.decider && lrE.deciderWinner != null && lrE.deciderWinner !== JP.seat) {
+        var wE = s.players[lrE.deciderWinner];
+        if (wE && myScoreE >= wE.score) myPlaceE += 1;
+      }
       var placeWordE = ["", "1ST", "2ND", "3RD", "4TH"][myPlaceE] || (myPlaceE + "TH");
       main.innerHTML = '<div class="jp-card"><div class="jp-phaseword" id="jpPhaseWord">ENDED</div>' +
         '<div class="jp-hi">YOU CAME ' + placeWordE + " · " + money(myScoreE) + "</div>" +
