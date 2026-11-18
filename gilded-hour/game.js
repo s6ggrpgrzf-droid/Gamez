@@ -1,5 +1,5 @@
 /* THE GILDED HOUR — Pass B format.
-   A 15-question party show for 2-4 players at one table. ONE VERB: ANSWER.
+   A 15-question party show for 1-4 players. ONE VERB: ANSWER.
    Everybody answers every question on their own desk (pick chips at the
    table, their own phone online); Sterling runs the show — nobody hosts.
    Round 1 The Warm-Up x6, Round 2 Double Money x6, Round 3 The Big Finish
@@ -595,7 +595,7 @@
        authored-only (sayWinnerAuthored — the worker's generic
        winner line knows nothing of the series and may not displace
        it). scattered is the online lobby's explanation when a
-       rematch tap finds fewer than two players still seated: the
+       rematch tap finds no player still seated: the
        room stays open, the night pauses, nobody is blamed. */
     winnernight: [
       "{name} takes the show — and with it, the night. Three wins in one evening: the argument is over, and {name} won it.",
@@ -603,8 +603,8 @@
       "Once more, {name} — and that makes three. The night has a name on it now, table, and you are all looking at them."
     ],
     scattered: [
-      "The table has scattered — a rematch needs two players still in their seats. The room stays open: gather your people, and Sterling will deal again.",
-      "Half the table has wandered off, and a rematch deserves a fuller house. This room stays open while you round them up."
+      "The table has scattered — every seat stands empty, and a rematch needs someone still in theirs. The room stays open: gather your people, and Sterling will deal again.",
+      "Every chair stands empty and the room has gone quiet. This room stays open while you round them up — Sterling keeps the lights on."
     ]
   };
   /* Improvement 5 — Sterling's category lines: reveal-moment pools
@@ -8485,7 +8485,7 @@
            show starts itself — the big screen's START remains as
            the room's override, not its duty */
         var rdy = (s.players || []).filter(Boolean);
-        if (rdy.length >= 2 && rdy.every(function (p) { return !p.connected || p.ready; }) && rdy.some(function (p) { return p.connected && p.ready; })) ogStartShow();
+        if (rdy.length >= 1 && rdy.every(function (p) { return !p.connected || p.ready; }) && rdy.some(function (p) { return p.connected && p.ready; })) ogStartShow();
       }
       /* a restored host whose show never left the lobby room-side:
          re-present the round intro it was driving */
@@ -8620,14 +8620,14 @@
          rejoins by code and reclaims its seat. Always printed;
          it is a fact about the room, not a state of it. */
       '<p class="og-room-note">This room is kept on the show\u2019s server, not on this screen \u2014 a phone that drops out rejoins with the code and takes its seat back.</p>' +
-      '<button class="btn-gold" id="ogStart"' + (joined >= 2 ? "" : " disabled") + ">START THE SHOW</button>" +
+      '<button class="btn-gold" id="ogStart"' + (joined >= 1 ? "" : " disabled") + ">START THE SHOW</button>" +
       '<div class="og-statusline" id="ogLobbyStatus"></div>');
     var b = $("ogStart"); if (b) b.addEventListener("click", ogStartShow);
     var lst = $("ogLobbyStatus");
     if (lst) {
       var connP = OG.players.filter(function (p) { return p && p.connected; });
       var rdyN = connP.filter(function (p) { return p.ready; }).length;
-      lst.textContent = joined >= 2
+      lst.textContent = joined >= 1
         ? (connP.length && rdyN === connP.length ? "Every phone is ready — Sterling starts the show." : "READY " + rdyN + " / " + connP.length + " — Sterling starts it when every phone is ready.")
         : "";
     }
@@ -8838,7 +8838,7 @@
     }
   }
   function ogStartShow() {
-    if (!OG || OG.started || ogJoined().length < 2) return;
+    if (!OG || OG.started || ogJoined().length < 1) return;
     ogBeginShow();
   }
   /* the show-start core, shared by the lobby's START THE SHOW and
@@ -9791,7 +9791,7 @@
      the room's show counter), and this screen deals a fresh show
      over the same seats. Nobody rejoins and nobody re-enters a
      code: the pads learn from their snapshots that the room is at
-     a new show and flow on with it. With fewer than two players
+     a new show and flow on with it. With no player
      still CONNECTED there is no table to rematch with — the room
      still resets (its phase must leave 'ended' before the lobby
      can run another show at all), and the host returns to the
@@ -9802,7 +9802,7 @@
     stopLeaves();
     ogSend({ t: "new_show" });
     var connected = OG.players.filter(function (p) { return p && p.connected; });
-    if (connected.length < 2) {
+    if (connected.length < 1) {
       OG.started = false; OG.script = null; OG.decider = null;
       OG.seriesCtx = null; OG.seriesLine = null; OG.goldTease = null;
       ogLobbyNote = authoredLine("scattered");
