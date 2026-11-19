@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Edmond Daily — Thursday, November 19, 2026</title>
+<meta name="description" content="The Edmond Daily — a household newspaper for Edmond, Oklahoma. Openings, events, roadwork and weather, every morning.">
+<style>
+  :root{
+    --paper:#FBF7EE;
+    --paper-deep:#F3ECDC;
+    --ink:#191713;
+    --ink-soft:#3D382E;
+    --ink-faint:#7A7261;
+    --rule:#191713;
+    --hairline:#C9BFA8;
+    --link:#1B3A6B;
+    --red:#A62B1F;
+    --ochre:#B07C1F;
+    --slate:#47617E;
+    --teal:#1F6E64;
+    --plum:#6E3A5E;
+    --sky:#DCE9F2;
+    --sky-deep:#B9D2E4;
+    --base:17px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:var(--base)}
+  body{
+    background:var(--paper-deep);
+    color:var(--ink);
+    font-family:Georgia,'Iowan Old Style','Times New Roman',serif;
+    -webkit-font-smoothing:antialiased;
+    padding:18px 10px 40px;
+  }
+  .sheet{
+    max-width:880px;
+    margin:0 auto;
+    background:var(--paper);
+    border:1px solid var(--hairline);
+    box-shadow:0 2px 18px rgba(25,23,19,.14);
+    padding:30px 40px 36px;
+  }
+  a{color:var(--link);text-decoration:none;border-bottom:1px solid rgba(27,58,107,.35)}
+  a:hover{border-bottom-color:var(--link)}
+
+  /* ---------- masthead ---------- */
+  .masthead{text-align:center}
+  .masthead .over{font-family:Helvetica,Arial,sans-serif;font-size:.62rem;letter-spacing:.34em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px}
+  .masthead h1{
+    font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
+    font-weight:900;
+    font-size:3.4rem;
+    letter-spacing:.01em;
+    line-height:1;
+  }
+  .masthead .under{font-style:italic;color:var(--ink-soft);font-size:.92rem;margin-top:8px}
+  .rule-double{border-top:3px solid var(--rule);border-bottom:1px solid var(--rule);height:5px;margin:16px 0 0}
+  .folio{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    border-bottom:1px solid var(--hairline);
+    padding:7px 0 8px;
+    font-family:Helvetica,Arial,sans-serif;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+  }
+  .folio .controls{display:flex;gap:6px;align-items:center}
+  .folio button{
+    font-family:Helvetica,Arial,sans-serif;font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;
+    background:none;border:1px solid var(--ink-soft);color:var(--ink);border-radius:2px;
+    padding:4px 9px;cursor:pointer;min-height:28px;
+  }
+  .folio button:active{background:var(--paper-deep)}
+  .folio button.on{background:var(--ink);color:var(--paper)}
+  .since{
+    text-align:center;font-style:italic;color:var(--ink-soft);
+    font-size:.95rem;padding:10px 12px 2px;
+  }
+  .since b{font-style:normal}
+
+  /* ---------- lead ---------- */
+  .kicker{
+    font-family:Helvetica,Arial,sans-serif;font-size:.66rem;font-weight:700;
+    letter-spacing:.26em;text-transform:uppercase;margin-bottom:7px;
+  }
+  .lead{padding:20px 0 4px;border-bottom:1px solid var(--hairline)}
+  .lead .kicker{color:var(--red)}
+  .lead h2{
+    font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
+    font-weight:800;font-size:2.15rem;line-height:1.12;letter-spacing:.005em;
+  }
+  .lead .deck{font-size:1.06rem;line-height:1.5;color:var(--ink-soft);margin-top:9px}
+  .lead .deck b{color:var(--ink)}
+  .src{font-family:Helvetica,Arial,sans-serif;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-top:10px}
+
+  /* ---------- weather band ---------- */
+  .weather{
+    margin:16px 0 4px;
+    background:linear-gradient(180deg,var(--sky),var(--sky-deep));
+    border:1px solid #9FBCD4;
+    padding:12px 16px 13px;
+    display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
+  }
+  .weather .w-now{font-family:'Playfair Display',Georgia,serif;font-size:1.7rem;font-weight:800}
+  .weather .w-item{font-size:.92rem;color:#22303C}
+  .weather .w-item b{font-weight:700}
+  .weather .w-label{font-family:Helvetica,Arial,sans-serif;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:#47617E;width:100%}
+
+  /* ---------- inside today ---------- */
+  .inside{border-bottom:1px solid var(--hairline);padding:12px 0 13px}
+  .inside .kicker{color:var(--ink-faint)}
+  .inside ul{list-style:none;font-size:.94rem;line-height:1.45;color:var(--ink-soft);columns:2;column-gap:34px}
+  .inside li{break-inside:avoid;padding-left:14px;text-indent:-14px}
+  .inside li::before{content:"·  ";color:var(--ink-faint);font-weight:700}
+
+  /* ---------- sections ---------- */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 34px}
+  section{padding:18px 0 6px;border-bottom:1px solid var(--hairline)}
+  section .kicker{border-bottom:2px solid;padding-bottom:5px}
+  .s-today .kicker{color:var(--ochre);border-color:var(--ochre)}
+  .s-around .kicker{color:var(--slate);border-color:var(--slate)}
+  .s-new .kicker{color:var(--teal);border-color:var(--teal)}
+  .s-tonight .kicker{color:var(--ochre);border-color:var(--ochre)}
+  article{padding:9px 0 11px}
+  article + article{border-top:1px dotted var(--hairline)}
+  article h3{
+    font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
+    font-size:1.22rem;font-weight:700;line-height:1.22;
+  }
+  article p{font-size:.97rem;line-height:1.52;color:var(--ink-soft);margin-top:5px}
+  article p b{color:var(--ink)}
+  article .src{margin-top:7px}
+
+  /* ---------- looking ahead ---------- */
+  .ahead{
+    margin-top:20px;border:1.5px solid var(--plum);padding:15px 18px 8px;background:#FDFAF4;
+  }
+  .ahead .kicker{color:var(--plum)}
+  .ahead article{padding:6px 0 9px}
+  .ahead h3{font-size:1.08rem}
+  .ahead p{font-size:.93rem}
+
+  /* ---------- colophon ---------- */
+  .colophon{
+    margin-top:24px;border-top:3px solid var(--rule);padding-top:10px;
+    display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    font-family:Helvetica,Arial,sans-serif;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
+  }
+
+  @media (max-width:640px){
+    body{padding:8px 4px 26px}
+    .sheet{padding:20px 18px 26px}
+    .masthead h1{font-size:2.35rem}
+    .lead h2{font-size:1.62rem}
+    .cols{grid-template-columns:1fr}
+    .inside ul{columns:1}
+    .folio{justify-content:center;text-align:center}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <div class="over">Edmond · Oklahoma</div>
+    <h1>The Edmond Daily</h1>
+    <div class="under">A household paper — openings, evenings, roadwork and weather, every morning.</div>
+  </header>
+  <div class="rule-double"></div>
+  <div class="folio">
+    <span class="rl">Thursday, November 19, 2026 &nbsp;·&nbsp; Vol. I, No. 13</span>
+    <span class="controls">
+      <button id="btnRead" type="button">Read it to me</button>
+      <button id="btnSmall" type="button" aria-label="Smaller type">Type A</button>
+      <button id="btnBig" type="button" aria-label="Larger type">A+</button>
+    </span>
+  </div>
+
+  <p class="since rl"><b>Since yesterday —</b> the Snowflake Social arrives tonight and Gateway First Bank cuts the ribbon at 2 PM, under a warmer 70° sun.</p>
+
+  <div class="lead">
+    <div class="kicker">Heads Up</div>
+    <h2 class="rl">Snowflake Social tonight at First United Bank</h2>
+    <p class="deck rl">The fourth annual holiday evening with the Edmond community runs <b>4:30–7:30 PM</b> at <b>First United Bank, 3932 S Blvd</b>. No fee listed — just show up and be festive.</p>
+    <div class="src"><a href="https://allevents.in/edmond/holiday">Event details</a></div>
+  </div>
+
+  <div class="weather" aria-label="Today's weather for Edmond, Oklahoma">
+    <div class="w-label">Edmond weather — Thursday</div>
+    <div class="w-now rl">48° Clear</div>
+    <div class="w-item"><b>High 70°</b> · Low 52°</div>
+    <div class="w-item">Afternoon <b>67–69°</b>, sunny</div>
+    <div class="w-item">Evening <b>62°</b> at 6 PM, <b>59°</b> by 8 PM</div>
+    <div class="w-item">Wind S 7 mph · <b>No alerts</b></div>
+  </div>
+
+  <div class="inside">
+    <div class="kicker">Inside Today</div>
+    <ul>
+      <li>Snowflake Social tonight, First United Bank</li>
+      <li>Baby Storytime at the Edmond Library</li>
+      <li>Gateway First Bank cuts the ribbon at 2 PM</li>
+      <li>Danforth lane closure, day four</li>
+      <li>A new banking center on Covell Road</li>
+      <li>Ice rink open tonight at Mitch Park</li>
+    </ul>
+  </div>
+
+  <div class="cols">
+    <section class="s-today">
+      <div class="kicker">Today</div>
+      <article>
+        <h3 class="rl">Baby Storytime at the library</h3>
+        <p class="rl"><b>9:30–10:15 AM, Edmond Library, 10 S Boulevard.</b> For ages 0–24 months — register each child; older siblings welcome. No fee listed.</p>
+        <div class="src"><a href="https://littlesweekly.com/oklahoma-city/events/baby-storytime-0-24-months-edmond-library/">Storytime details</a></div>
+      </article>
+      <article>
+        <h3 class="rl">Gateway First Bank grand opening</h3>
+        <p class="rl"><b>Ribbon-cutting 2:00–5:00 PM, 725 W Covell Rd.</b> The community celebration for the new banking center, which opened its doors Oct 28.</p>
+        <div class="src"><a href="https://www.gatewayfirst.com/newsroom/gateway-first-bank-opens-new-edmond-banking-center-expanding-commitment-to-oklahoma-communities">Gateway First Bank</a></div>
+      </article>
+    </section>
+
+    <section class="s-around">
+      <div class="kicker">Getting Around</div>
+      <article>
+        <h3 class="rl">Danforth lane closure, day four</h3>
+        <p class="rl">The daytime <b>eastbound right lane stays closed, Chowning Ave. to Blackwelder Ave.</b>, for about two weeks in all; the lane reopens at the end of each workday.</p>
+        <p class="rl"><b>Edmond Road</b> westbound (Broadway–Fretz) was due to end about now — the city has posted no reopening notice yet.</p>
+        <div class="src"><a href="https://www.edmondok.gov/m/newsflash?cat=1">City of Edmond notices</a></div>
+      </article>
+    </section>
+
+    <section class="s-new">
+      <div class="kicker">New Around Town</div>
+      <article>
+        <h3 class="rl">A new banking center on Covell Road</h3>
+        <p class="rl"><b>Gateway First Bank, 725 W Covell Rd</b> — full-service with a drive-thru, open since Oct 28. Today's grand opening runs <b>2:00–5:00 PM</b>.</p>
+        <div class="src"><a href="https://www.gatewayfirst.com/newsroom/gateway-first-bank-opens-new-edmond-banking-center-expanding-commitment-to-oklahoma-communities">Gateway First Bank</a></div>
+      </article>
+    </section>
+
+    <section class="s-tonight">
+      <div class="kicker">Tonight</div>
+      <article>
+        <h3 class="rl">Ice rink open tonight</h3>
+        <p class="rl"><b>3:00–9:00 PM, Mitch Park, 1501 W Covell Rd.</b> $15 general admission, $13 military, $10 for kids 5 and under.</p>
+        <div class="src"><a href="http://www.edmondicerink.com/">Edmond Ice Rink</a></div>
+      </article>
+    </section>
+  </div>
+
+  <div class="ahead">
+    <div class="kicker">Looking Ahead</div>
+    <article>
+      <h3 class="rl">Tomorrow — Luminance opens at Mitch Park</h3>
+      <p class="rl"><b>Friday, Nov 20:</b> kickoff from <b>4 PM</b> — Merry Marketplace 4–8 PM, drone show 6:45 PM — and the lights shine <b>5–10 PM nightly through Jan 1</b>. Free.</p>
+    </article>
+    <article>
+      <h3>Saturday — Fall Heritage Crafts Workshop</h3>
+      <p><b>Sat, Nov 21, 10 AM, Edmond History Museum.</b> Free.</p>
+    </article>
+    <article>
+      <h3>Sunday — Glamour, Glitz and Radio Skits</h3>
+      <p><b>Sun, Nov 22, 4:00–5:30 PM, Edmond History Museum.</b> From $15.</p>
+    </article>
+  </div>
+
+  <footer class="colophon">
+    <span>The Edmond Daily · Edmond, Oklahoma</span>
+    <span>Vol. I, No. 13 · Thursday, November 19, 2026</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  /* ---- type size controls (persisted) ---- */
+  var SIZES=[15,17,19,21], idx=1;
+  try{ var saved=parseInt(localStorage.getItem('edmond-daily-type'),10); if(saved>=0&&saved<SIZES.length) idx=saved; }catch(e){}
+  function applyType(){ document.documentElement.style.setProperty('--base', SIZES[idx]+'px');
+    try{ localStorage.setItem('edmond-daily-type', String(idx)); }catch(e){} }
+  applyType();
+  document.getElementById('btnSmall').addEventListener('click', function(){ if(idx>0){ idx--; applyType(); } });
+  document.getElementById('btnBig').addEventListener('click', function(){ if(idx<SIZES.length-1){ idx++; applyType(); } });
+
+  /* ---- read it to me: headlines and gist lines only, in page order ---- */
+  var btn=document.getElementById('btnRead'), speaking=false;
+  function readingText(){
+    var lines=['The Edmond Daily, Thursday, November 19, 2026.'];
+    var nodes=document.querySelectorAll('.rl');
+    for(var i=0;i<nodes.length;i++){
+      if(nodes[i].closest('.folio')) continue; /* the folio line itself is the date, already read */
+      var t=nodes[i].textContent.replace(/\s+/g,' ').trim();
+      if(t) lines.push(t);
+    }
+    lines.push('Weather: 48 degrees and clear now, high 70, no alerts.');
+    lines.push('Tomorrow: Luminance opens at Mitch Park, kickoff at 4 PM, lights 5 to 10 nightly through January 1, free.');
+    return lines.join(' ');
+  }
+  function stop(){ try{ speechSynthesis.cancel(); }catch(e){} speaking=false; btn.textContent='Read it to me'; btn.classList.remove('on'); }
+  btn.addEventListener('click', function(){
+    if(speaking){ stop(); return; }
+    if(!('speechSynthesis' in window)){ btn.textContent='Reading not supported here'; return; }
+    var u=new SpeechSynthesisUtterance(readingText());
+    u.rate=1; u.onend=stop; u.onerror=stop;
+    speaking=true; btn.textContent='Stop reading'; btn.classList.add('on');
+    speechSynthesis.speak(u);
+  });
+})();
+</script>
+</body>
+</html>
