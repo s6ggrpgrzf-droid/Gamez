@@ -67,6 +67,37 @@
   #stage:has(.bluff-rows) .pot-vessel{display:none}
 }
 
+/* Pass 4 (visual fix programme) — the pot's remaining sit-outs,
+   the audit's strike list (#19 + W3 strikes) in the house dock
+   grammar. The vessel's bottom-left home is scenery only where
+   the stage's bottom-left is empty; the Nov 17 audit measured
+   it painting over content on every stage below. A sit-out
+   costs a feed its flight on that stage only — potFeedFx's own
+   guard settles the total silently when the vessel is hidden,
+   and the vessel returns at the next stage. The bluff credits
+   keep their short-landscape dodge (the margin-left grid
+   above); everywhere taller, the credits are full-width
+   reading rows and the pot sits them out (#22). Reveals sit
+   out where the audit struck them — portrait, and the
+   342-class short landscapes; the 844x390 and desktop reveals
+   measured 182.7px clear and keep the vessel and its feed
+   (#19). The Declaration line (#27) and the standings bubble
+   line (#30) are portrait strikes; both stages measured
+   flawless with the vessel at 1919. The number dial's rail
+   (#24) is a 342-class strike. */
+@media (min-height:501px){
+  #stage:has(.bluff-credits) .pot-vessel{display:none}
+}
+@media (max-width:560px){
+  #scr-game[data-phase="reveal"] .pot-vessel{display:none}
+  #stage:has(.declare-block) .pot-vessel{display:none}
+  #stage:has(.race-wrap) .pot-vessel{display:none}
+}
+@media (max-height:370px){
+  #scr-game[data-phase="reveal"] .pot-vessel{display:none}
+  #stage:has(.dial) .pot-vessel{display:none}
+}
+
 /* ================================================================
    AUDIT PASS (2026-11-16) — FINDING #11: the short-screen fits.
    The number stage was the worst overflow in the game (probe,
@@ -667,4 +698,136 @@
 .set-cat-glow{background:radial-gradient(58% 50% at 50% 30%,rgba(var(--cat-rgb),.17),rgba(var(--cat-rgb),.05) 52%,rgba(var(--cat-rgb),0) 72%)}
 .set-cat-emb{filter:saturate(.5)}
 .set-cat-emb.on{opacity:.09}
+
+/* ============ Pass 5 (visual-fix programme) — THE DESKS ============
+   The seats-row & desk overflow family (audit #17, #18, #23, #28,
+   #31). The reveal tags leave the name line for a dedicated status
+   line under the name — one clear line that wraps centred when a
+   stack is wide, its pills sized in em so fitDeskText can step the
+   whole line down until the widest pill fits the desk. In short
+   landscape the seats flex to the stage, so the row can never leave
+   it, and the bet row takes its stacked grid form there too, so the
+   pill and steppers fit the narrower desks. */
+.seat-status{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:3px 4px;margin-top:3px;font-size:9.5px;line-height:1.3}
+.seat-status:empty{display:none}
+.seat-status .closest-tag{margin-left:0;font-size:1em;padding:.22em .7em;vertical-align:baseline}
+@media (max-width:560px) and (min-height:501px){
+  .seat .seat-status{order:2}
+  .seat-status{font-size:8.5px}
+  /* portrait: the score is the desk's bottom line, on the coin pile's
+     own line — reserve the pile's zone at the right so the figures
+     centre in the open field beside the pile, never under it */
+  .seat .seat-score{padding-right:36px}
+}
+@media (max-height:500px){
+  .seats .seat{flex:1 1 0;min-width:0;width:auto}
+  .seat-status{font-size:8.5px}
+  .desk-bets{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+  .desk-bets .bet-amt{grid-column:1/-1;min-width:0;width:100%;font-size:12.5px;padding:5px 6px}
+  .desk-bets .bet-step{min-height:34px}
+}
+
+/* ============ Pass 6 (visual-fix programme) — LONG CONTENT ============
+   The stage's fit steps (audit #13/#16/#32/#14). fitStage in game.js
+   measures the resting composition after every stage() paint and
+   steps #scr-game's fit classes to the shallowest step that fits;
+   the classes are CUMULATIVE (fit3 wears fit1 + fit2). Ordinary
+   content never earns a class — the approved spacing is the design
+   for the whole bank bar its longest tail. The steps are TIERED:
+   the short-landscape tier already carries its own tight spacing
+   (strata 04/09/10/12), so its steps are cut tighter than that
+   tier's values, never looser — a step that grows anything is a
+   bug, and the first cut of this block had three. The card runs
+   the stage's width from step 1 (the 24em portrait measure is
+   what stacks long questions into extra lines on wide stages);
+   type steps never use !important except against the short
+   tier's own !important card, so inline-sized cards are exempt
+   by construction everywhere else. */
+/* — tall tiers: portrait phones and the desktop stage — */
+@media (min-height:501px){
+  #scr-game.fit1 .q-cardwrap{margin-top:5px;margin-bottom:5px}
+  #scr-game.fit1 .q-text{max-width:100%;padding-top:9px;padding-bottom:9px}
+  #scr-game.fit1 .answers{margin-top:8px;gap:8px}
+  #scr-game.fit1 .tools{margin-top:4px}
+  #scr-game.fit1 .why-wrap{margin-top:6px}
+  #scr-game.fit1 .why{padding-top:7px;padding-bottom:7px;line-height:1.4}
+  #scr-game.fit1 .delta{margin-top:6px}
+  #scr-game.fit1 .host-line{min-height:3.3em}
+  #scr-game.fit1 .pf-strip{margin-top:4px}
+  #scr-game.fit1 .num-entry{margin-top:7px}
+  #scr-game.fit1 .num-buf{font-size:20px;padding:5px 14px;margin:5px auto 7px}
+  #scr-game.fit1 .num-pad{gap:5px;margin-bottom:7px}
+  #scr-game.fit1 .num-key{height:38px}
+  #scr-game.fit2 .q-text{padding-top:7px;padding-bottom:7px}
+  #scr-game.fit2 .answers .ans-btn{padding-top:8px;padding-bottom:8px}
+  #scr-game.fit2 .why{font-size:14px;line-height:1.34}
+  #scr-game.fit2 #btnNext{padding-top:9px;padding-bottom:9px}
+  #scr-game.fit2 .num-key{height:35px;font-size:16px}
+  #scr-game.fit2 .num-buf{font-size:18px}
+  #scr-game.fit3 #stage{padding-top:4px;padding-bottom:4px}
+  #scr-game.fit3 .q-text{padding-top:6px;padding-bottom:6px}
+  #scr-game.fit3 .answers{gap:6px}
+  #scr-game.fit3 .answers .ans-btn{padding-top:6px;padding-bottom:6px}
+  #scr-game.fit3 .why{font-size:13px;line-height:1.3;padding-top:6px;padding-bottom:6px}
+  #scr-game.fit3 .host-line{min-height:2.6em}
+  #scr-game.fit3 .num-key{height:32px;font-size:15px}
+  #scr-game.fit3 .num-buf{font-size:17px;padding:4px 12px}
+}
+@media (min-height:501px) and (min-width:561px){
+  #scr-game.fit2[data-phase="question"] .q-text{font-size:30px}
+  #scr-game.fit3[data-phase="question"] .q-text{font-size:26px}
+  #scr-game.fit3 .answers .ans-btn{font-size:20px}
+}
+@media (max-width:560px) and (min-height:501px){
+  #scr-game.fit2[data-phase="question"] .q-text{font-size:19.5px}
+  #scr-game.fit3[data-phase="question"] .q-text{font-size:18px}
+}
+/* — short landscape: cut against the tier's own tight values — */
+@media (max-height:500px){
+  #scr-game.fit1 .q-cardwrap{margin-top:2px;margin-bottom:2px}
+  #scr-game.fit1 .q-text{max-width:100%}
+  #scr-game.fit1 .answers{margin-top:3px}
+  #scr-game.fit1 .tools{margin-top:2px}
+  #scr-game.fit1 .why-wrap{margin-top:3px}
+  #scr-game.fit1 .delta{margin-top:2px}
+  #scr-game.fit1 .pf-strip{margin-top:1px}
+  #scr-game.fit1 .num-pad{gap:4px;margin-bottom:5px}
+  #scr-game.fit1 .num-buf{margin-top:2px;margin-bottom:5px}
+  #scr-game.fit2 .q-meta .melt{height:22px}
+  #scr-game.fit2 .q-meta .q-value span{font-size:20px}
+  #scr-game.fit2 .answers .ans-btn{font-size:12px}
+  #scr-game.fit2 .why{font-size:10.5px;line-height:1.28;padding-top:5px;padding-bottom:5px}
+  #scr-game.fit2[data-phase="reveal"] .stage-inner > div:last-child{margin-top:4px}
+  #scr-game.fit2 .num-key{height:30px}
+  #scr-game.fit2 .num-buf{font-size:16px;padding:3px 10px}
+  #scr-game.fit3 #stage{padding-top:0;padding-bottom:0}
+  #scr-game.fit3 .q-text{font-size:14px !important;padding-top:3px;padding-bottom:2px;margin-top:1px}
+  #scr-game.fit3 .q-headrow .cat-pill{padding-top:1px;padding-bottom:1px}
+  #scr-game.fit3 .answers{margin-top:2px}
+  #scr-game.fit3 .why{line-height:1.2}
+  #scr-game.fit3[data-phase="question"] .answers{grid-template-columns:repeat(4,1fr)}
+  #scr-game.fit3[data-phase="question"] .answers .ans-btn{font-size:11.5px}
+  #scr-game.fit3 .ans-btn:has(.vote-chip){padding-right:58px}
+  #scr-game.fit3 .vote-chip{width:21px;height:21px}
+  #scr-game.fit3 .why{font-size:10px;line-height:1.24;padding-top:4px;padding-bottom:3px}
+  #scr-game.fit3 .pf-strip{margin-top:0}
+  #scr-game.fit3 #btnNext{padding-top:2px;padding-bottom:2px}
+  #scr-game.fit3[data-phase="reveal"] .stage-inner > div:last-child{margin-top:2px}
+  #scr-game.fit3 .tools{margin-top:0}
+  #scr-game.fit3 .tool-btn{padding-top:2px;padding-bottom:2px;font-size:11px}
+  #scr-game.fit3 .num-key{height:25px;font-size:14px}
+  #scr-game.fit3 .num-pad{margin-bottom:3px}
+  #scr-game.fit3 .num-turn{font-size:10px}
+  /* the deepest step pairs the why-slip with its button: at the
+     shortest landscape the longest reveal cannot stack both, so
+     CONTINUE docks at the slip's right, centred on its height —
+     the slip keeps every word, the button keeps its whole face */
+  #scr-game.fit3[data-phase="reveal"] .stage-inner{display:flex;flex-wrap:wrap}
+  #scr-game.fit3[data-phase="reveal"] .stage-inner > *{flex:0 0 100%;min-width:0}
+  #scr-game.fit3[data-phase="reveal"] .stage-inner > .why-wrap{flex:1 1 58%;max-width:none;margin-left:0;margin-right:8px}
+  #scr-game.fit3[data-phase="reveal"] .stage-inner > div:last-child{flex:0 0 auto;margin-top:0 !important;align-self:center}
+  #scr-game.fit3 .q-headrow .q-kind{font-size:10px}
+  #scr-game.fit3 .q-headrow .cat-pill{font-size:9.5px}
+  #scr-game.fit3[data-phase="reveal"] .answers .ans-btn{font-size:11px}
+}
 

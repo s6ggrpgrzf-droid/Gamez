@@ -308,7 +308,7 @@
    shoulder, in tap order, ringed in the seat's own colour. */
 .answers.marking{opacity:.66;filter:saturate(.6);pointer-events:none;margin-top:10px}
 .answers.marking .ans-btn{position:relative;overflow:visible;animation:none}
-.vote-chips{position:absolute;top:-10px;right:12px;display:flex;z-index:3}
+.vote-chips{position:absolute;top:5px;right:8px;display:flex;z-index:3}
 .vote-chip{width:25px;height:25px;border-radius:50%;border:2px solid var(--c);background:#0E1C33;overflow:hidden;margin-left:-8px;box-shadow:0 2px 6px rgba(0,0,0,.5)}
 .vote-chip:first-child{margin-left:0}
 .vote-chip svg{width:100%;height:100%;display:block}

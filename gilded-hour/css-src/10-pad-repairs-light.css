@@ -134,10 +134,44 @@
    chips on a 138px landscape slab, 33px of air above.
    ================================================================ */
 .vote-chip{width:30px;height:30px;box-shadow:0 2px 6px rgba(0,0,0,.5),0 0 0 2px rgba(255,190,80,.25)}
-.vote-chips{top:-15px}
+.vote-chips{top:5px}
+/* ================================================================
+   VISUAL FIX PROGRAMME PASS 2 — CHIP PLACEMENT (2026-11-18):
+   the medallions move off the shoulder (the W0 audit measured
+   the shoulder cluster 5.5–19.7px onto the wrong neighbour at
+   every viewport). The chips box now lives INSIDE the answer's
+   text span and floats to its top-right: the text wraps around
+   the seals line by line, so no slab is ever too narrow for
+   them — a fixed clearance starved the portrait slabs and the
+   text spilled under the seals. The flex item contains the
+   float, so a chipped slab grows a little when it needs the
+   room. Short landscape's pills are only ~29px tall: there the
+   box stays absolute, the seals shrink to 24px and ride the
+   pill's centreline (a centred 24px seal renders 25.6px under
+   the jump scale, ~1.7px of air top and bottom), and the slab
+   narrows its content box by the cluster's width instead.
+   ================================================================ */
+.vote-chips{position:static;float:right;margin:2px 0 4px 10px}
 @media (max-height:500px){
-  .vote-chip{width:34px;height:34px;margin-left:-9px}
-  .vote-chips{top:-17px}
+  /* Short landscape's pills are only ~29px tall — a 34px seal
+     cannot live inside them at any anchor. There the seals
+     shrink to 24px and ride the pill's centreline as one row,
+     and the slab narrows its content box by the cluster's
+     width (a centred 24px seal renders 25.6px under the jump
+     scale, ~1.7px of air top and bottom). On the reveal the
+     chipped pill's number badge also steps aside — in the
+     online stage's ~143px pills that is the difference between
+     the answer fitting beside the seals and not fitting at
+     all (the vote phase keeps its numbers; seats call picks
+     by them there). Known residue, measured and accepted: in
+     an online short-landscape pill, a single word longer than
+     ~9 characters can still graze the first seal's edge — the
+     pill is simply too small for badge, seals and a long word
+     to share, and every stronger contortion measured worse. */
+  .vote-chip{width:24px;height:24px;margin-left:-7px}
+  .vote-chips{position:absolute;top:50%;right:8px;transform:translateY(-50%);float:none;margin:0}
+  .ans-btn:has(.vote-chip){padding-right:88px}
+  #scr-game[data-phase="reveal"] .ans-btn:has(.vote-chip) .letter{display:none}
 }
 
 /* ================================================================

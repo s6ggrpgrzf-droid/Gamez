@@ -766,6 +766,12 @@
   }
   function hostSay(kind, vars) {
     $("hostLine").textContent = authoredLine(kind, vars);
+    /* Pass 6: Sterling's line sets the hostbar's height, and the
+       seats' reveal growth does the same below — both land AFTER
+       the stage() paint that first measures the fit, so the fit
+       is re-measured whenever either choke point runs (hostSay
+       here; renderSeats calls fitStage at its own end). */
+    fitStage();
   }
   /* a fully composed line (the Intermission's recap, the Rematch
      series framing) spoken verbatim — no pool draw, no fetch: the
@@ -1532,7 +1538,7 @@
   /* the seal: golden reveals only; `settled` repaints wear it
      already landed, in the house rule for repaint theatre */
   function sealHTML(golden, settled) {
-    return golden ? '<i class="wax-seal' + (settled ? " set" : "") + '" aria-hidden="true"></i>' : "";
+    return golden ? '<i class="wax-seal' + (settled ? " seal-set" : "") + '" aria-hidden="true"></i>' : "";
   }
   var giltCache = { el: null, f: -1 };
   function giltPaint(mult) {
@@ -2052,7 +2058,13 @@
      is the secrecy the mechanic runs on. */
   function goldenCardHTML(qTextDiv, golden) {
     if (!golden) return qTextDiv;
-    return '<div class="q-cardwrap"><div class="headline-banner golden-banner">★ GOLDEN QUESTION — DOUBLE</div>' + qTextDiv + "</div>";
+    /* Pass 3 (visual fix programme): the banner rides IN FLOW in
+       its own slot above the card — the Headline banner's hl-slot
+       grammar. As an absolute ribbon straddling the card's top
+       edge it painted over the headrow (audit #12: "THE ANSWER"
+       lost its T, the band tag hid behind it at two sizes). In
+       flow it can cover nothing, at any size. */
+    return '<div class="q-cardwrap"><div class="hl-slot"><span class="headline-banner golden-banner inflow">★ GOLDEN QUESTION — DOUBLE</span></div>' + qTextDiv + "</div>";
   }
   /* the why-slip tag for a doubled reveal: the Headline's name,
      or the Golden's — the two never share a question (the golden
@@ -2615,8 +2627,12 @@
   var tableFx = null, ogFx = null, ogQdSeat = -1, ogQdBonus = 0, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null, ogBluffMoment = null, ogDeclareMoment = null;
   function decorateSeat(s, fx) {
     if (!fx) return;
+    /* Pass 5 (visual-fix programme): the reveal tags live on the
+       desk's status line now, not in the name — the name line is the
+       player's name alone, whole at every width (audit #17/#23). */
+    var home = s.querySelector(".seat-status") || s.querySelector(".seat-name");
     if (fx.closest) {
-      var nm = s.querySelector(".seat-name");
+      var nm = home;
       if (nm) {
         var tg = document.createElement("span");
         tg.className = "closest-tag";
@@ -2628,7 +2644,7 @@
        tag space as CLOSEST (the two never co-occur — guess kinds
        have no quick-draw, and only guess bankers wear CLOSEST). */
     if (fx.quickdraw) {
-      var nm2 = s.querySelector(".seat-name");
+      var nm2 = home;
       if (nm2) {
         var tg2 = document.createElement("span");
         tg2.className = "closest-tag qdtag";
@@ -2640,7 +2656,7 @@
        in the same tag space — the room should see why the number
        is twice the size of the question */
     if (fx.doubled) {
-      var nm3 = s.querySelector(".seat-name");
+      var nm3 = home;
       if (nm3) {
         var tg3 = document.createElement("span");
         tg3.className = "closest-tag dbltag";
@@ -2651,7 +2667,7 @@
     /* THE BLUFF: a lie that earned wears its take — counted in
        players fooled, at the tag width the name line can carry */
     if (fx.bluffFool) {
-      var nm5 = s.querySelector(".seat-name");
+      var nm5 = home;
       if (nm5) {
         var tg5 = document.createElement("span");
         tg5.className = "closest-tag blufftag";
@@ -2665,7 +2681,7 @@
        it. MCQ banks only, so it never collides with CLOSEST; it can
        share the line with QUICK DRAW when both fired on one bank. */
     if (fx.streakBonus > 0) {
-      var nm3 = s.querySelector(".seat-name");
+      var nm3 = home;
       if (nm3) {
         var tg3 = document.createElement("span");
         tg3.className = "closest-tag streaktag";
@@ -2688,6 +2704,132 @@
     }
   }
 
+  /* ---------- Pass 5 (visual-fix programme): the desks' fit pass ----
+     Runs at the end of every seat render and guarantees the audit's
+     desk family mechanically, at every width: names shrink (uniformly
+     across the row) until the longest name fits its desk whole; scores
+     shrink (uniformly) until their ink clears the coin pile — the pile
+     stands beside the digits, never over them; bet figures shrink
+     until the whole figure fits its pill; a status line's pills shrink
+     until the widest pill fits the desk. Floors keep every line
+     legible; the CSS ellipsis stays as the last resort for a name
+     longer than the floor can carry. */
+  function fitUniform(els, floor) {
+    var target = null;
+    els.forEach(function (elm) {
+      elm.style.fontSize = "";
+      elm.style.letterSpacing = "";
+      var sw = elm.scrollWidth, cw = elm.clientWidth;
+      if (!sw || !cw || sw <= cw + 1) return;
+      var cur = parseFloat(getComputedStyle(elm).fontSize) || 0;
+      if (!cur) return;
+      var need = Math.floor(cur * (cw / sw) * 2) / 2;
+      if (target == null || need < target) target = need;
+    });
+    if (target != null) els.forEach(function (elm) {
+      var cur = parseFloat(getComputedStyle(elm).fontSize) || 0;
+      var size = Math.max(floor, Math.min(cur, target));
+      if (size < cur - 0.24) elm.style.fontSize = size + "px";
+    });
+    /* rescue: an element still overflowing at the floor (the widest
+       name in the row) gives up its letter-spacing, then steps to
+       the hard floor — whole at a whisper beats clipped at a shout */
+    els.forEach(function (elm) {
+      if (elm.scrollWidth <= elm.clientWidth + 1) return;
+      elm.style.letterSpacing = "0px";
+      if (elm.scrollWidth <= elm.clientWidth + 1) return;
+      var size = parseFloat(getComputedStyle(elm).fontSize) || floor, guard = 0;
+      while (size > 7 && elm.scrollWidth > elm.clientWidth + 1 && guard++ < 6) { size -= 0.5; elm.style.fontSize = size + "px"; }
+    });
+  }
+  function fitScores(seats) {
+    var target = null;
+    seats.forEach(function (s) {
+      var sc = s.querySelector(".seat-score"), pile = s.querySelector(".fortune");
+      if (!sc || !pile) return;
+      sc.style.fontSize = "";
+      var size = parseFloat(getComputedStyle(sc).fontSize) || 0;
+      var floor = 10, guard = 0, trial = size;
+      var clear = function () {
+        var node = null, w = document.createTreeWalker(sc, NodeFilter.SHOW_TEXT);
+        while (w.nextNode()) { if (w.currentNode.textContent.trim()) { node = w.currentNode; break; } }
+        if (!node) return true;
+        var rg = document.createRange(); rg.selectNodeContents(node);
+        var ir = rg.getBoundingClientRect(), pr = pile.getBoundingClientRect();
+        var ox = Math.min(ir.right, pr.right) - Math.max(ir.left, pr.left);
+        var oy = Math.min(ir.bottom, pr.bottom) - Math.max(ir.top, pr.top);
+        return !(ox > 1 && oy > 1);
+      };
+      sc.style.fontSize = trial + "px";
+      while (trial > floor && !clear() && guard++ < 24) { trial -= 0.5; sc.style.fontSize = trial + "px"; }
+      sc.style.fontSize = "";
+      if (trial < size && (target == null || trial < target)) target = trial;
+    });
+    if (target != null) seats.forEach(function (s) {
+      var sc = s.querySelector(".seat-score");
+      if (sc) sc.style.fontSize = target + "px";
+    });
+  }
+  function fitStatusLines(seats) {
+    seats.forEach(function (s) {
+      var line = s.querySelector(".seat-status");
+      if (!line || !line.children.length) return;
+      line.style.fontSize = "";
+      var size = parseFloat(getComputedStyle(line).fontSize) || 0;
+      if (!size) return;
+      var start = size, floor = 6.5, guard = 0;
+      var widest = function () {
+        var wmax = 0;
+        for (var k = 0; k < line.children.length; k++) wmax = Math.max(wmax, line.children[k].getBoundingClientRect().width);
+        return wmax;
+      };
+      while (size > floor && widest() > line.clientWidth + 1 && guard++ < 12) { size -= 0.5; line.style.fontSize = size + "px"; }
+      if (size >= start - 0.24) line.style.fontSize = "";
+    });
+  }
+  function fitDeskText(bot) {
+    if (!bot) return;
+    var seats = Array.prototype.slice.call(bot.querySelectorAll(".seat"));
+    if (!seats.length) return;
+    var names = [], amts = [];
+    seats.forEach(function (s) {
+      var nm = s.querySelector(".seat-name"); if (nm) names.push(nm);
+      var am = s.querySelector(".bet-amt"); if (am) amts.push(am);
+    });
+    fitUniform(names, 8);
+    fitUniform(amts, 9);
+    fitScores(seats);
+    fitStatusLines(seats);
+  }
+
+  /* ---------- Pass 6 (visual-fix programme): the stage's fit pass ----
+     stage() composes every question and reveal, and the resting
+     composition of the bank's longest questions stands taller than
+     the stage — answers and the committing controls below the fold
+     at rest (audit #13/#16/#32/#14). fitStage measures the real
+     overflow and steps the fit classes (stratum 12's Pass 6 block)
+     to the SHALLOWEST step that brings the whole composition into
+     the stage. Ordinary content never overflows, so the approved
+     spacing stands untouched for the whole bank bar its longest
+     tail. The classes are cumulative: fit2 wears fit1's trims too. */
+  function fitStage() {
+    var scr = $("scr-game"), st = $("stage");
+    if (!scr || !st) return;
+    scr.classList.remove("fit1", "fit2", "fit3");
+    if (!st.clientHeight || st.scrollHeight <= st.clientHeight + 1) return;
+    var steps = ["fit1", "fit2", "fit3"];
+    for (var i = 0; i < steps.length; i++) {
+      scr.classList.add(steps[i]);
+      if (st.scrollHeight <= st.clientHeight + 1) return;
+    }
+  }
+  /* The fit is measured at paint time, but the self-hosted faces
+     land a beat later and reflow the text taller — the first
+     measurement can swear a long composition fits when it only
+     fits in the fallback face. When the faces arrive, measure
+     again and step to where the settled type actually lives. */
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { fitStage(); });
+
   /* ---------- seats (the podium row) ---------- */
   function seatsVisible(v) { var g = $("scr-game"); if (g) g.classList.toggle("noseats", !v); }
   function renderSeats() {
@@ -2701,6 +2843,7 @@
       var s = el('<div class="seat pod' + i + (p.house != null ? " house" : "") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
         '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + dblTokenHTML(p, i) + declaredTagHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
+        '<span class="seat-status"></span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskPicksHTML(p, i) + fortuneHTML() + "</div></div>");
       /* New programme pass 1: during the Decider, a seat that is not
@@ -2731,7 +2874,9 @@
         p.score === bestScore && bestScore > 0);
     });
     paintDeskHead();
+    fitDeskText(bot);
     updateLaurel("table");
+    fitStage();
   }
   /* Design pass 1 — the Long Shot: in the Big Finish a player's
      chip cap is 3 plus one per full $1,000 they trail the leader,
@@ -3056,7 +3201,7 @@
   /* every stage repaint is a curtain: coins still in the air from
      the last card come down with it (pass 7) — flights start only
      after their own reveal has painted, so this never eats one */
-  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); flapSweep(); }
+  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); flapSweep(); fitStage(); }
   /* Graphics Pass 1 — THE CURTAIN: one element, three postures.
      Closed BEHIND the front-of-curtain cards (round intros, the
      breaks, the finale); raised over the stage for one beat while
@@ -5393,6 +5538,7 @@
     });
     var lock = $("btnNumLock");
     if (lock) lock.addEventListener("click", numLock);
+    fitStage();
   }
   function numKey(k) {
     var c = G.cur;
@@ -5559,7 +5705,7 @@
   function bluffMarkHTML() {
     var c = G.cur;
     var btns = c.opts.map(function (o, i) {
-      return '<button class="ans-btn bluff-pick" data-opt="' + i + '"><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span><span class="vote-chips" data-chips="' + i + '"></span></button>';
+      return '<button class="ans-btn bluff-pick" data-opt="' + i + '"><span class="letter">' + (i + 1) + '</span><span class="ans-tx"><span class="vote-chips" data-chips="' + i + '"></span>' + esc(o.t) + '</span></button>';
     }).join("");
     return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span><span class="q-kind">WHO PICKED WHAT?</span></div>' +
       '<div class="q-text' + wearCls(G.round, false) + '" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + cardDressHTML(1) + '</div>' +
@@ -6002,7 +6148,7 @@
     if (!c || !c.opts || c.decider) return "";
     var btns = c.opts.map(function (o, i) {
       return '<button class="ans-btn' + (o.gone ? " cut" : "") + '" disabled>' +
-        '<span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span><span class="vote-chips"></span></button>';
+        '<span class="letter">' + (i + 1) + '</span><span class="ans-tx"><span class="vote-chips"></span>' + esc(o.t) + '</span></button>';
     }).join("");
     return '<div class="answers marking">' + btns + "</div>";
   }
@@ -6655,7 +6801,7 @@
         dNum = '<div class="delta"><span class="down">Nobody got close. The number keeps its dignity.</span></div>';
       }
       stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind">THE NUMBER WAS</span></div>' +
-        goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + cardDressHTML(1) + sealHTML(c.golden, settled) + "</div>", c.golden) +
+        goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + sealHTML(c.golden, settled) + esc(c.q.q) + cardDressHTML(1) + "</div>", c.golden) +
         countDialHTML(Number(c.q.num), settled) +
         dNum +
         whySlip(c.q.why, settled, doubleTag(c.headline, c.golden)) + nextBtn);
@@ -6671,7 +6817,7 @@
       var correctIdx = c.opts.findIndex(function (o) { return o.ok; });
       var btns = c.opts.map(function (o, i) {
         var cls = "ans-btn" + (c.kind === "bluff" ? " bluff-pick" : "") + (i === correctIdx ? " correct" : (o.gone ? " dim wrong" : " dim"));
-        return '<button class="' + cls + '" disabled data-opt="' + i + '"><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span><span class="vote-chips" data-chips="' + i + '"></span></button>';
+        return '<button class="' + cls + '" disabled data-opt="' + i + '"><span class="letter">' + (i + 1) + '</span><span class="ans-tx"><span class="vote-chips" data-chips="' + i + '"></span>' + esc(o.t) + '</span></button>';
       }).join("");
       var dMcq = winners.length ? ""
         : '<div class="delta"><span class="down">No fingers on it. The money stays in Sterling\'s pocket — this time.</span></div>';
@@ -6688,7 +6834,7 @@
         pfStrip = photoFinishHTML(pfFin, G.players, QUICK_DRAW_BONUS * (G.round || 1));
       }
       stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind">THE ANSWER</span></div>' +
-        goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + esc(c.q.q) + cardDressHTML(1) + sealHTML(c.golden, settled) + "</div>", c.golden) +
+        goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + sealHTML(c.golden, settled) + esc(c.q.q) + cardDressHTML(1) + "</div>", c.golden) +
         '<div class="answers">' + btns + "</div>" +
         pfStrip +
         (c.kind === "bluff" ? bluffCreditHTML(c) : "") +
@@ -7416,7 +7562,7 @@
     pageHidden = document.hidden;
     if (Snd.ctx) { try { if (document.hidden) Snd.ctx.suspend(); else Snd.ctx.resume(); } catch (e) {} }
   });
-  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); });
+  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); fitStage(); });
   requestAnimationFrame(loop);
 
   /* ================= Pass 4: online rooms =================
@@ -8724,6 +8870,7 @@
       var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
         '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" + ogDblTokenHTML(p, i) +
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
+        '<span class="seat-status"></span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tags.join(" · ") + "</span>" + fortuneHTML() + "</div></div>");
       if (p.score === best && best > 0) s.classList.add("lead");
@@ -8755,7 +8902,9 @@
           '<span class="tag">WAITING FOR A PLAYER</span></div></div>'));
       }
     }
+    fitDeskText(bot);
     updateLaurel("og");
+    fitStage();
   }
   function ogTick() {
     if (!OG) return;
@@ -9317,6 +9466,37 @@
     Snd.play("snip");
     stPoint(m.bySeat);
   }
+  /* Visual fix programme Pass 1: the online reveal wears the
+     same chooser medallions as the table's — paintRevealChips'
+     grammar, read from the reveal payload itself: on a Bluff
+     every slab wears the chips of the seats who picked it (in
+     seat order, as the table's bluffPicks reads); on anything
+     else only the correct slab wears them, its correct seats in
+     lock order (lockMs — the photo-finish order). Reads only
+     the payload's settled results, so a resynced reveal hangs
+     the identical chips. */
+  function ogPaintRevealChips(r, ci, isBluff) {
+    var byPick = {};
+    (r.results || []).forEach(function (res) {
+      if (res.pick == null) return;
+      (byPick[res.pick] = byPick[res.pick] || []).push(res);
+    });
+    document.querySelectorAll("#stage .answers [data-chips]").forEach(function (box) {
+      var oi = +box.getAttribute("data-chips"), list = [];
+      if (isBluff) {
+        list = (byPick[oi] || []).slice().sort(function (a, b) { return a.seat - b.seat; });
+      } else if (oi === ci) {
+        list = (byPick[oi] || []).filter(function (res) { return res.correct; })
+          .sort(function (a, b) { return (a.lockMs == null ? 1e12 : a.lockMs) - (b.lockMs == null ? 1e12 : b.lockMs); });
+      }
+      var h = "";
+      list.forEach(function (res) {
+        var p = OG.players[res.seat]; if (!p) return;
+        h += '<span class="vote-chip pod' + res.seat + '" title="' + esc(p.name) + '">' + medallionSVG(p.name, res.seat) + "</span>";
+      });
+      box.innerHTML = h;
+    });
+  }
   function ogOnReveal(r, fromSnap) {
     if (!OG || !OG.cur) return;
     setPlot("reveal", (r.winners && r.winners.length) ? r.winners[0] : null); /* Graphics Pass 2: the wash takes the first banker's colour */
@@ -9443,7 +9623,7 @@
     var nextBtn = '<div style="margin-top:12px"><button class="btn-gold" id="ogNext">CONTINUE</button></div>';
     var headline = r.headline != null ? !!r.headline : isHeadline(e.round, e.qInRound);
     var head = '<div class="q-headrow"><span class="cat-pill">' + catEmblem(e.cat) + esc(e.cat.toUpperCase()) + '</span>' + bandTagHTML(ogBandOf(OG.snap && OG.snap.question, e)) + '<span class="q-kind">' + (e.kind === "num" ? "THE NUMBER WAS" : "THE ANSWER") + "</span></div>" +
-      goldenCardHTML('<div class="q-text' + (headline ? " headline-card" : "") + (ogRevealGolden ? " golden-card" : "") + wearCls(e.round, !!r.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + esc(e.bank.q) + cardDressHTML(1) + sealHTML(ogRevealGolden, fromSnap) + "</div>", ogRevealGolden);
+      goldenCardHTML('<div class="q-text' + (headline ? " headline-card" : "") + (ogRevealGolden ? " golden-card" : "") + wearCls(e.round, !!r.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + sealHTML(ogRevealGolden, fromSnap) + esc(e.bank.q) + cardDressHTML(1) + "</div>", ogRevealGolden);
     if (e.kind === "num") {
       var tn = r.trueNum != null ? r.trueNum : e.trueNum;
       if (r.decider) {
@@ -9467,7 +9647,7 @@
     } else {
       var ci = r.correctIdx != null ? r.correctIdx : e.correctIdx;
       var btns = e.answers.map(function (t, i) {
-        return '<button class="ans-btn' + (i === ci ? " correct" : " dim") + '" disabled><span class="letter">' + (i + 1) + "</span><span>" + esc(t) + "</span></button>";
+        return '<button class="ans-btn' + (i === ci ? " correct" : " dim") + '" disabled><span class="letter">' + (i + 1) + '</span><span class="ans-tx"><span class="vote-chips" data-chips="' + i + '"></span>' + esc(t) + '</span></button>';
       }).join("");
       /* Gameplay-visuals pass G5: the photo-finish strip joins a
          'normal' reveal — the correct results ordered by their
@@ -9487,6 +9667,7 @@
         (r.bluff ? ogBluffCreditHTML(r) : "") +
         (anyBank ? "" : '<div class="delta"><span class="down">No one had it. The money stays in Sterling\'s pocket — this time.</span></div>') +
         whySlip(e.bank.why, fromSnap, doubleTag(headline, ogRevealGolden)) + nextBtn);
+      ogPaintRevealChips(r, ci, e.kind === "bluff");
       var joined = ogJoined().length;
       var hk = winners.length === 0 ? "allMiss" : (winners.length === joined ? "allHit" : "someHit");
       ogRevealSay(hk, { name: winners.length && OG.players[winners[0]] ? OG.players[winners[0]].name : "" }, winners);
