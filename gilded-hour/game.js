@@ -2802,6 +2802,60 @@
     fitStatusLines(seats);
   }
 
+  /* ---------- Finding F1 (2026-11-20): the finale's fit pass -------
+     The standings desks got fitDeskText in Pass 5; the finale
+     podiums never did, so at phone sizes a long name's pill — an
+     inline-block sized by its own ink — spilled sideways over the
+     neighbouring desks, and the money line clipped inside its desk
+     (W5: overlaps 11 at 390×844 and 12 at the 844 sizes, .pmoney
+     carrying 83px of ink in a 73px desk, 0 at desktop). Names are
+     fitted by INK against the DESK, the pill's own box being the
+     thing that overflows, so scrollWidth cannot judge it: one
+     uniform size for the row, letter-spacing surrendered next, and
+     a name still too wide at the floor is marked .wrapped —
+     stratum 12 breaks a wrapped pill to two lines inside its own
+     desk rather than letting it run over the next. Money is plain
+     text in a bounded box, so fitUniform judges it. The pill wears
+     9px of padding a side (stratum 02); the ink must fit the desk
+     less that padding or the pill still spills. */
+  function finaleInkWidth(el) {
+    var node = null, w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    while (w.nextNode()) { if (w.currentNode.textContent.trim()) { node = w.currentNode; break; } }
+    if (!node) return el.scrollWidth;
+    var rg = document.createRange(); rg.selectNodeContents(node);
+    return rg.getBoundingClientRect().width;
+  }
+  function fitFinaleText() {
+    var wrap = document.querySelector(".finale-wrap");
+    if (!wrap) return;
+    var moneys = Array.prototype.slice.call(wrap.querySelectorAll(".podium .pmoney"));
+    if (moneys.length) fitUniform(moneys, 9);
+    var names = Array.prototype.slice.call(wrap.querySelectorAll(".podium .pname"));
+    if (!names.length) return;
+    var rows = names.map(function (nm) {
+      nm.style.fontSize = ""; nm.style.letterSpacing = ""; nm.classList.remove("wrapped");
+      var desk = nm.closest(".desk");
+      return { nm: nm, avail: (desk ? desk.clientWidth : nm.clientWidth) - 18, cur: parseFloat(getComputedStyle(nm).fontSize) || 0, ink: 0 };
+    });
+    var target = null;
+    rows.forEach(function (r) {
+      r.ink = finaleInkWidth(r.nm);
+      if (r.ink > r.avail && r.cur) { var need = Math.floor(r.cur * (r.avail / r.ink) * 2) / 2; if (target == null || need < target) target = need; }
+    });
+    if (target != null) rows.forEach(function (r) {
+      var size = Math.max(9, Math.min(r.cur, target));
+      if (size < r.cur - 0.24) r.nm.style.fontSize = size + "px";
+    });
+    rows.forEach(function (r) {
+      if (finaleInkWidth(r.nm) <= r.avail + 1) return;
+      r.nm.style.letterSpacing = "0px";
+      if (finaleInkWidth(r.nm) <= r.avail + 1) return;
+      var size = parseFloat(getComputedStyle(r.nm).fontSize) || 9, guard = 0;
+      while (size > 7.5 && finaleInkWidth(r.nm) > r.avail + 1 && guard++ < 4) { size -= 0.5; r.nm.style.fontSize = size + "px"; }
+      if (finaleInkWidth(r.nm) > r.avail + 1) r.nm.classList.add("wrapped");
+    });
+  }
+
   /* ---------- Pass 6 (visual-fix programme): the stage's fit pass ----
      stage() composes every question and reveal, and the resting
      composition of the bank's longest questions stands taller than
@@ -3201,7 +3255,7 @@
   /* every stage repaint is a curtain: coins still in the air from
      the last card come down with it (pass 7) — flights start only
      after their own reveal has painted, so this never eats one */
-  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); flapSweep(); fitStage(); }
+  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); flapSweep(); fitStage(); fitFinaleText(); }
   /* Graphics Pass 1 — THE CURTAIN: one element, three postures.
      Closed BEHIND the front-of-curtain cards (round intros, the
      breaks, the finale); raised over the stage for one beat while
@@ -7613,7 +7667,7 @@
     pageHidden = document.hidden;
     if (Snd.ctx) { try { if (document.hidden) Snd.ctx.suspend(); else Snd.ctx.resume(); } catch (e) {} }
   });
-  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); fitStage(); paintChampion(); });
+  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); fitStage(); fitFinaleText(); fitPadName(); paintChampion(); });
   requestAnimationFrame(loop);
 
   /* ================= Pass 4: online rooms =================
@@ -10554,7 +10608,27 @@
       '<span class="jp-id-score">' + money(me ? me.score : 0) + "</span>" +
       (secs ? '<span class="jp-id-secs" id="jpSecs"></span>' : "") + "</div>";
   }
-  function jpRender() {
+  /* ---------- Finding F2 (2026-11-20): the pad's name fit ----------
+     The identity bar rides every pad phase, but only the answering
+     phases carry the countdown pill — and the pill's ~86px comes
+     straight out of the name's column, so on the answer and bet
+     screens a long name ellipsized in its own bar (drive-padscreens:
+     a 14-char name cut on exactly those two screens, whole on the
+     lobby, reveal and ended screens). fitPadName steps the name
+     down until its ink fits the column; a name still too wide at
+     the floor is marked .wrapped and stratum 12 breaks it to two
+     lines inside the column. jpRender is wrapped so the fit runs
+     after EVERY render, whichever phase branch painted the bar. */
+  function fitPadName() {
+    var nm = document.querySelector("#scr-join .jp-id-name");
+    if (!nm) return;
+    nm.style.fontSize = ""; nm.classList.remove("wrapped");
+    var size = parseFloat(getComputedStyle(nm).fontSize) || 0, guard = 0;
+    while (nm.scrollWidth > nm.clientWidth + 1 && size > 12 && guard++ < 24) { size -= 0.5; nm.style.fontSize = size + "px"; }
+    if (nm.scrollWidth > nm.clientWidth + 1) nm.classList.add("wrapped");
+  }
+  function jpRender() { jpRenderInner(); fitPadName(); }
+  function jpRenderInner() {
     if (!JP) return;
     /* pass 7: a render that leaves the reveal lands the hop's
        coins with the card they belonged to */

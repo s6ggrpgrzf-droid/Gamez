@@ -1062,3 +1062,34 @@
   .round-title{margin-top:4px;margin-bottom:3px}
 }
 
+
+/* ============ FINDING F1 — WRAPPED FINALE NAMES (2026-11-20) ====
+   fitFinaleText (game.js) marks a finale name .wrapped when it
+   cannot fit its desk on one line at the fit floor; the pill then
+   breaks to two lines INSIDE its own desk instead of spilling
+   sideways over the neighbouring podium. */
+.finale-wrap .pname.wrapped{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.18;max-width:100%}
+/* The place badge's scoped homes (strata 04/11) hang it at the
+   desk's top-left corner — where a fitted name pill and the money
+   line now legitimately reach, so the disc ate the $ of second
+   and third place (W5's pairs, re-measured by drive-finalefit).
+   In the phone scopes it pins to the podium's top corner instead,
+   on the medallion's shoulder, clear of the desk entirely.
+   Desktop's placement measured clean and is untouched. */
+@media (max-width:560px){
+  .finale-row .rank-badge{top:0;left:0}
+}
+/* Short landscape's podium is ~62px all-in — even the top corner
+   grazes the wrapped pill by 6px at 26px, so there the badge
+   also steps down to a 20px pin. */
+@media (max-height:500px){
+  .finale-row .rank-badge{top:0;left:0;width:20px;height:20px;font-size:10.5px}
+}
+
+/* ============ FINDING F2 — WRAPPED PAD NAME (2026-11-20) ========
+   fitPadName (game.js) marks the pad's identity-bar name .wrapped
+   when it cannot fit its column on one line at the fit floor (the
+   countdown pill's width comes out of the name's column on the
+   answer and bet screens); the name then breaks to two lines
+   inside its own column instead of ellipsizing. */
+.jp-id-name.wrapped{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.15}
