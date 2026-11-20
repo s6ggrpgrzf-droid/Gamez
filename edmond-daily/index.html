@@ -4,152 +4,251 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Edmond Daily — Friday, November 20, 2026</title>
-<meta name="description" content="The Edmond Daily — a household newspaper for Edmond, Oklahoma. Openings, events, roadwork and weather, every morning.">
+<meta name="description" content="The Edmond Daily — a household magazine for Edmond, Oklahoma. Openings, evenings, roadwork and weather, every morning.">
 <style>
   :root{
-    --paper:#FBF7EE;
-    --paper-deep:#F3ECDC;
-    --ink:#191713;
-    --ink-soft:#3D382E;
-    --ink-faint:#7A7261;
-    --rule:#191713;
-    --hairline:#C9BFA8;
-    --link:#1B3A6B;
-    --red:#A62B1F;
-    --ochre:#B07C1F;
-    --slate:#47617E;
-    --teal:#1F6E64;
-    --plum:#6E3A5E;
-    --sky:#DCE9F2;
-    --sky-deep:#B9D2E4;
+    --paper:#FBF5E7;
+    --paper-deep:#EFE3C2;
+    --ink:#201C13;
+    --ink-soft:#4A4433;
+    --ink-faint:#6E6350;
+    --hairline:#DCD0AC;
+    --link:#274A7C;
+    --red:#9C3A30;
+    --ochre:#A87C22;
+    --slate:#54687E;
+    --teal:#2C6E5F;
+    --plum:#71405F;
+    --gold:#C6A45E;
+    --gold-bright:#EBD08A;
+    --gold-pale:#F3E3B3;
+    --night:#1C2444;
+    --night-2:#2A3460;
+    --cream:#FBF3DC;
     --base:17px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{font-size:var(--base)}
   body{
-    background:var(--paper-deep);
+    background:#241B10;
+    background-image:radial-gradient(120% 90% at 50% 0%,#3A2C1A 0%,#241B10 62%);
     color:var(--ink);
     font-family:Georgia,'Iowan Old Style','Times New Roman',serif;
     -webkit-font-smoothing:antialiased;
-    padding:18px 10px 40px;
+    padding:30px 12px 52px;
   }
   .sheet{
-    max-width:880px;
+    max-width:900px;
     margin:0 auto;
     background:var(--paper);
-    border:1px solid var(--hairline);
-    box-shadow:0 2px 18px rgba(25,23,19,.14);
-    padding:30px 40px 36px;
+    background-image:radial-gradient(130% 60% at 50% 0%,#FFFDF6 0%,rgba(255,253,246,0) 55%);
+    border:1px solid #B4A377;
+    box-shadow:0 24px 60px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.35);
+    padding:0 48px 42px;
+    overflow:hidden;
   }
-  a{color:var(--link);text-decoration:none;border-bottom:1px solid rgba(27,58,107,.35)}
+  a{color:var(--link);text-decoration:none;border-bottom:1px solid rgba(39,74,124,.35)}
   a:hover{border-bottom-color:var(--link)}
 
-  /* ---------- masthead ---------- */
-  .masthead{text-align:center}
-  .masthead .over{font-family:Helvetica,Arial,sans-serif;font-size:.62rem;letter-spacing:.34em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px}
-  .masthead h1{
-    font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
-    font-weight:900;
-    font-size:3.4rem;
-    letter-spacing:.01em;
-    line-height:1;
+  /* ---------- the dawn masthead ---------- */
+  .dawn{
+    margin:0 -48px;
+    padding:36px 48px 28px;
+    background:linear-gradient(180deg,#221737 0%,#3E2440 30%,#6E3547 55%,#A05C41 76%,#CD9C58 92%,#E3C078 100%);
+    color:var(--cream);
+    text-align:center;
+    box-shadow:inset 0 -1px 0 rgba(243,227,179,.55), inset 0 -14px 28px rgba(34,23,55,.28);
   }
-  .masthead .under{font-style:italic;color:var(--ink-soft);font-size:.92rem;margin-top:8px}
-  .rule-double{border-top:3px solid var(--rule);border-bottom:1px solid var(--rule);height:5px;margin:16px 0 0}
+  .dawn .over{
+    font-family:Helvetica,Arial,sans-serif;font-size:.63rem;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold-pale);
+  }
+  .dawn h1{
+    font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
+    font-weight:900;font-size:clamp(2.35rem,11.5vw,4.5rem);line-height:.98;letter-spacing:.004em;white-space:nowrap;
+    color:#FFFBEC;margin-top:14px;
+    text-shadow:0 1px 0 rgba(34,23,55,.5), 0 14px 34px rgba(34,23,55,.4);
+  }
+  .dawn .under{font-style:italic;font-size:1rem;margin-top:14px;color:#F8EBC6}
+  .dawn .under::before,.dawn .under::after{content:" — ";color:var(--gold-bright)}
+  .dawn .dawn-rule{
+    width:120px;height:0;margin:18px auto 0;
+    border-top:1px solid var(--gold-bright);
+    box-shadow:0 3px 0 -1px rgba(235,208,138,.55);
+  }
   .folio{
     display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
-    border-bottom:1px solid var(--hairline);
-    padding:7px 0 8px;
-    font-family:Helvetica,Arial,sans-serif;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+    border-bottom:2.5px solid var(--ink);
+    padding:13px 0 14px;
+    font-family:Helvetica,Arial,sans-serif;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);
   }
   .folio .controls{display:flex;gap:6px;align-items:center}
   .folio button{
-    font-family:Helvetica,Arial,sans-serif;font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;
-    background:none;border:1px solid var(--ink-soft);color:var(--ink);border-radius:2px;
-    padding:4px 9px;cursor:pointer;min-height:28px;
+    font-family:Helvetica,Arial,sans-serif;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;
+    background:none;border:none;border-bottom:1.5px solid var(--ink-soft);color:var(--ink);
+    padding:5px 3px;cursor:pointer;min-height:30px;
   }
-  .folio button:active{background:var(--paper-deep)}
-  .folio button.on{background:var(--ink);color:var(--paper)}
-  .since{
-    text-align:center;font-style:italic;color:var(--ink-soft);
-    font-size:.95rem;padding:10px 12px 2px;
-  }
-  .since b{font-style:normal}
+  .folio button:active{box-shadow:inset 0 -9px 0 rgba(198,164,94,.28)}
+  .folio button.on{border-bottom-color:var(--ink);box-shadow:inset 0 -9px 0 rgba(198,164,94,.45)}
 
-  /* ---------- lead ---------- */
-  .kicker{
-    font-family:Helvetica,Arial,sans-serif;font-size:.66rem;font-weight:700;
-    letter-spacing:.26em;text-transform:uppercase;margin-bottom:7px;
+  /* ---------- editor's note (Since Yesterday) ---------- */
+  .since{
+    margin-top:20px;
+    border-left:3px solid var(--gold);
+    background:linear-gradient(90deg,rgba(198,164,94,.13),rgba(198,164,94,.03));
+    padding:12px 18px 13px;
+    font-style:italic;color:var(--ink-soft);font-size:.96rem;line-height:1.55;
   }
-  .lead{padding:20px 0 4px;border-bottom:1px solid var(--hairline)}
-  .lead .kicker{color:var(--red)}
+  .since b{
+    font-style:normal;font-family:Helvetica,Arial,sans-serif;font-size:.64rem;font-weight:700;
+    letter-spacing:.26em;text-transform:uppercase;color:#7D5F24;display:block;margin-bottom:5px;
+  }
+
+  /* ---------- the cover story (lead) ---------- */
+  .kicker{
+    font-family:Helvetica,Arial,sans-serif;font-size:.68rem;font-weight:700;
+    letter-spacing:.3em;text-transform:uppercase;margin-bottom:9px;
+  }
+  .lead{
+    margin:26px -48px 0;
+    padding:30px 48px 28px;
+    background:
+      radial-gradient(90% 120% at 18% 0%,rgba(233,201,121,.16) 0%,rgba(233,201,121,0) 55%),
+      linear-gradient(163deg,var(--night) 0%,var(--night-2) 80%,#39436E 100%);
+    color:var(--cream);
+    box-shadow:inset 0 0 0 1px rgba(235,208,138,.4), inset 0 0 0 9px var(--night), inset 0 0 0 10px rgba(235,208,138,.22), 0 14px 30px rgba(23,21,15,.28);
+  }
+  .lights{
+    height:9px;margin:2px 0 22px;
+    background-image:radial-gradient(circle at 4px 4px, rgba(255,224,150,.95) 2.6px, rgba(255,224,150,.28) 4.6px, rgba(255,224,150,0) 6px),
+                     radial-gradient(circle at 4px 4px, rgba(246,183,200,.9) 2.6px, rgba(246,183,200,.24) 4.6px, rgba(246,183,200,0) 6px),
+                     radial-gradient(circle at 4px 4px, rgba(178,216,246,.9) 2.6px, rgba(178,216,246,.24) 4.6px, rgba(178,216,246,0) 6px);
+    background-size:132px 9px, 132px 9px, 132px 9px;
+    background-position:0 0, 44px 0, 88px 0;
+    background-repeat:repeat-x;
+  }
+  .lead .kicker{color:var(--gold-bright);display:flex;align-items:center;gap:16px}
+  .lead .kicker::after{content:"";flex:1;border-top:1px solid rgba(235,208,138,.45)}
   .lead h2{
     font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
-    font-weight:800;font-size:2.15rem;line-height:1.12;letter-spacing:.005em;
+    font-weight:800;font-size:3.2rem;line-height:1.03;letter-spacing:.002em;color:#FFFBEC;
+    text-shadow:0 10px 30px rgba(10,12,30,.45);
   }
-  .lead .deck{font-size:1.06rem;line-height:1.5;color:var(--ink-soft);margin-top:9px}
-  .lead .deck b{color:var(--ink)}
-  .src{font-family:Helvetica,Arial,sans-serif;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;margin-top:10px}
+  .lead .deck{font-size:1.13rem;line-height:1.64;color:#EFE5CB;margin-top:17px;max-width:36em}
+  .lead .deck b{color:#fff}
+  .lead .deck::first-letter{
+    font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
+    font-weight:900;font-size:3.3em;float:left;line-height:.82;
+    padding:6px 11px 0 0;color:var(--gold-bright);
+  }
+  .src{font-family:Helvetica,Arial,sans-serif;font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;margin-top:15px;color:var(--ink-faint)}
+  .lead .src{color:#AEB6D6}
+  .lead .src a{color:var(--gold-bright);border-bottom-color:rgba(235,208,138,.45)}
 
-  /* ---------- weather band ---------- */
+  /* ---------- the conditions (weather) ---------- */
   .weather{
-    margin:16px 0 4px;
-    background:linear-gradient(180deg,var(--sky),var(--sky-deep));
-    border:1px solid #9FBCD4;
-    padding:12px 16px 13px;
-    display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
+    margin:28px 0 6px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,#8FB6DC 0%,#BCD6EC 42%,#F0DCA6 80%,#F5CE84 100%);
+    color:#22303C;
+    padding:22px 26px 19px;
+    display:flex;flex-wrap:wrap;gap:9px 32px;align-items:baseline;
+    box-shadow:inset 0 0 0 1px rgba(49,81,122,.28), 0 10px 24px rgba(23,21,15,.16);
   }
-  .weather .w-now{font-family:'Playfair Display',Georgia,serif;font-size:1.7rem;font-weight:800}
-  .weather .w-item{font-size:.92rem;color:#22303C}
-  .weather .w-item b{font-weight:700}
-  .weather .w-label{font-family:Helvetica,Arial,sans-serif;font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:#47617E;width:100%}
+  .weather::after{
+    content:"";position:absolute;right:30px;top:18px;width:54px;height:54px;border-radius:50%;
+    background:radial-gradient(circle,#FFFBDC 0%,#FFE08A 52%,rgba(255,224,138,0) 70%);
+  }
+  .weather .w-label{
+    font-family:Helvetica,Arial,sans-serif;font-size:.62rem;letter-spacing:.32em;
+    text-transform:uppercase;color:#31517A;width:100%;margin-bottom:3px;font-weight:700;
+  }
+  .weather .w-now{
+    font-family:'Playfair Display',Didot,Georgia,serif;font-size:2.65rem;font-weight:800;line-height:1;color:#1C2C42;
+  }
+  .weather .w-item{font-size:.95rem;color:#2E4359}
+  .weather .w-item b{font-weight:700;color:#132539}
 
-  /* ---------- inside today ---------- */
-  .inside{border-bottom:1px solid var(--hairline);padding:12px 0 13px}
-  .inside .kicker{color:var(--ink-faint)}
-  .inside ul{list-style:none;font-size:.94rem;line-height:1.45;color:var(--ink-soft);columns:2;column-gap:34px}
-  .inside li{break-inside:avoid;padding-left:14px;text-indent:-14px}
-  .inside li::before{content:"·  ";color:var(--ink-faint);font-weight:700}
+  /* ---------- in this issue (Inside Today) ---------- */
+  .inside{padding:24px 0 8px;border-bottom:1px solid var(--hairline)}
+  .inside .kicker{color:var(--ink)}
+  .inside ul{list-style:none;counter-reset:inside;columns:2;column-gap:44px}
+  .inside li{
+    counter-increment:inside;break-inside:avoid;
+    font-size:.97rem;line-height:1.4;color:var(--ink-soft);
+    padding:9px 0 9px 44px;position:relative;
+    border-top:1px solid var(--hairline);
+  }
+  .inside li::before{
+    content:counter(inside,decimal-leading-zero);
+    position:absolute;left:0;top:8px;
+    font-family:'Playfair Display',Didot,Georgia,serif;font-weight:800;font-size:1.12rem;color:var(--gold);
+  }
 
-  /* ---------- sections ---------- */
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 34px}
-  section{padding:18px 0 6px;border-bottom:1px solid var(--hairline)}
-  section .kicker{border-bottom:2px solid;padding-bottom:5px}
-  .s-today .kicker{color:var(--ochre);border-color:var(--ochre)}
-  .s-around .kicker{color:var(--slate);border-color:var(--slate)}
-  .s-new .kicker{color:var(--teal);border-color:var(--teal)}
-  .s-tonight .kicker{color:var(--ochre);border-color:var(--ochre)}
-  article{padding:9px 0 11px}
+  /* ---------- departments (sections) ---------- */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 44px}
+  section{padding:26px 0 12px;border-bottom:1px solid var(--hairline)}
+  section .kicker{
+    padding:9px 14px 8px;font-size:.7rem;color:#FFF9E8;letter-spacing:.3em;
+    margin:0 -14px 6px;border-radius:2px;
+    box-shadow:inset 0 -2px 0 rgba(198,164,94,.65), 0 6px 14px rgba(23,21,15,.14);
+  }
+  .s-today .kicker{background:#75571C}
+  .s-around .kicker{background:#54687E}
+  .s-new .kicker{background:#2C6E5F}
+  .s-tonight .kicker{background:#9C3A30}
+  .s-sat .kicker{background:#75571C}
+  .s-sun .kicker{background:#75571C}
+  article{padding:13px 0 14px}
   article + article{border-top:1px dotted var(--hairline)}
   article h3{
     font-family:'Playfair Display',Didot,'Bodoni MT',Georgia,serif;
-    font-size:1.22rem;font-weight:700;line-height:1.22;
+    font-size:1.36rem;font-weight:700;line-height:1.2;
   }
-  article p{font-size:.97rem;line-height:1.52;color:var(--ink-soft);margin-top:5px}
+  article p{font-size:.99rem;line-height:1.58;color:var(--ink-soft);margin-top:6px}
   article p b{color:var(--ink)}
-  article .src{margin-top:7px}
+  article .src{margin-top:9px}
 
-  /* ---------- looking ahead ---------- */
+  /* ---------- the week ahead (Looking Ahead) ---------- */
   .ahead{
-    margin-top:20px;border:1.5px solid var(--plum);padding:15px 18px 8px;background:#FDFAF4;
+    margin-top:28px;background:linear-gradient(155deg,#7E4668,#5F3350);
+    padding:22px 24px 13px;color:#F7EAF2;
+    box-shadow:inset 0 0 0 1px rgba(235,208,138,.35), 0 12px 26px rgba(23,21,15,.2);
   }
-  .ahead .kicker{color:var(--plum)}
-  .ahead article{padding:6px 0 9px}
-  .ahead h3{font-size:1.08rem}
-  .ahead p{font-size:.93rem}
+  .ahead .kicker{color:var(--gold-bright)}
+  .ahead article{padding:8px 0 11px}
+  .ahead article + article{border-top:1px solid rgba(247,234,242,.22)}
+  .ahead h3{font-size:1.15rem;color:#FFF7FB}
+  .ahead p{font-size:.95rem;color:#EFDAE7}
+  .ahead p b{color:#fff}
 
   /* ---------- colophon ---------- */
   .colophon{
-    margin-top:24px;border-top:3px solid var(--rule);padding-top:10px;
-    display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
-    font-family:Helvetica,Arial,sans-serif;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
+    margin-top:32px;border-top:1px solid var(--hairline);padding-top:18px;
+    text-align:center;
+    font-family:Helvetica,Arial,sans-serif;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);
+    line-height:2;
+  }
+  .colophon .c-name{
+    font-family:'Playfair Display',Didot,Georgia,serif;font-size:1.08rem;font-weight:800;
+    letter-spacing:.06em;text-transform:none;color:var(--ink);display:block;
+  }
+  .colophon .c-name::after{
+    content:"";display:block;width:64px;margin:7px auto 2px;
+    border-top:1px solid var(--gold);
   }
 
   @media (max-width:640px){
-    body{padding:8px 4px 26px}
-    .sheet{padding:20px 18px 26px}
-    .masthead h1{font-size:2.35rem}
-    .lead h2{font-size:1.62rem}
+    body{padding:10px 5px 30px}
+    .sheet{padding:0 19px 28px}
+    .dawn{margin:0 -19px;padding:24px 19px 20px}
+    .dawn h1{font-size:clamp(2rem,11.5vw,2.8rem)}
+    .lead{margin:20px -19px 0;padding:22px 19px 20px;
+      box-shadow:inset 0 0 0 1px rgba(235,208,138,.4), inset 0 0 0 6px var(--night), inset 0 0 0 7px rgba(235,208,138,.22), 0 10px 22px rgba(23,21,15,.28)}
+    .lead h2{font-size:2.05rem;line-height:1.1}
+    .lead .deck{font-size:1.05rem}
+    .weather{padding:17px 18px 15px}
+    .weather .w-now{font-size:2.15rem}
+    .weather::after{width:42px;height:42px;right:16px;top:13px}
     .cols{grid-template-columns:1fr}
     .inside ul{columns:1}
     .folio{justify-content:center;text-align:center}
@@ -159,12 +258,12 @@
 <body>
 <div class="sheet">
 
-  <header class="masthead">
-    <div class="over">Edmond · Oklahoma</div>
+  <div class="dawn">
+    <div class="over">Edmond · Oklahoma · Est. November 2026</div>
     <h1>The Edmond Daily</h1>
-    <div class="under">A household paper — openings, evenings, roadwork and weather, every morning.</div>
-  </header>
-  <div class="rule-double"></div>
+    <div class="under">A household magazine — openings, evenings, roadwork and weather, every morning</div>
+    <div class="dawn-rule" aria-hidden="true"></div>
+  </div>
   <div class="folio">
     <span class="rl">Friday, November 20, 2026 &nbsp;·&nbsp; Vol. I, No. 14</span>
     <span class="controls">
@@ -174,9 +273,10 @@
     </span>
   </div>
 
-  <p class="since rl"><b>Since yesterday —</b> Luminance opens tonight as flagged yesterday, kickoff at 4 PM at Mitch Park — and the ice rink across the lot stays open till 10 PM on Fridays, not 9 as printed yesterday.</p>
+  <p class="since rl"><b>Since yesterday</b> Luminance opens tonight as flagged yesterday, kickoff at 4 PM at Mitch Park — and the ice rink across the lot stays open till 10 PM on Fridays, not 9 as printed yesterday.</p>
 
   <div class="lead">
+    <div class="lights" aria-hidden="true"></div>
     <div class="kicker">Heads Up</div>
     <h2 class="rl">Luminance opens tonight at Mitch Park</h2>
     <p class="deck rl">Edmond Electric's free walk-through light display opens with a kickoff celebration from <b>4 PM</b> near the baseball fields east of the YMCA — Merry Marketplace and food trucks <b>4–8 PM</b>, a drone show at <b>6:45 PM</b>, and the lights on <b>5–10 PM nightly through Jan 1</b>. Free.</p>
@@ -184,7 +284,7 @@
   </div>
 
   <div class="weather" aria-label="Today's weather for Edmond, Oklahoma">
-    <div class="w-label">Edmond weather — Friday</div>
+    <div class="w-label">The Conditions — Edmond, Friday</div>
     <div class="w-now rl">52° Fair</div>
     <div class="w-item"><b>High 71°</b> · Low 56°</div>
     <div class="w-item">Afternoon <b>69–70°</b>, mostly sunny</div>
@@ -193,7 +293,7 @@
   </div>
 
   <div class="inside">
-    <div class="kicker">Inside Today</div>
+    <div class="kicker">In This Issue</div>
     <ul>
       <li>Luminance opens tonight at Mitch Park</li>
       <li>UCO Piano Day, noon to 7:30 PM</li>
@@ -254,23 +354,24 @@
   </div>
 
   <div class="ahead">
-    <div class="kicker">Looking Ahead</div>
+    <div class="kicker">The Week Ahead</div>
     <article>
       <h3 class="rl">Tomorrow — STEM Circuits for Kids</h3>
       <p class="rl"><b>Saturday, Nov 21, 2:00 PM, Edmond Library, Meeting Room AB.</b> Hands-on circuits for ages 5–12.</p>
     </article>
     <article>
-      <h3>Saturday — Eric Moore live at Frenzy Brewing</h3>
-      <p><b>Sat, Nov 21, 7:00 PM, 15 S Broadway.</b> No cover listed.</p>
+      <h3 class="rl">Saturday — Eric Moore live at Frenzy Brewing</h3>
+      <p class="rl"><b>Sat, Nov 21, 7:00 PM, 15 S Broadway.</b> No cover listed.</p>
     </article>
     <article>
-      <h3>Sunday — Mitch Bell at Round Midnight</h3>
-      <p><b>Sun, Nov 22, 7:00 PM, Round Midnight.</b> Mitch Bell with the Kendrik McKinney Trio.</p>
+      <h3 class="rl">Sunday — Mitch Bell at Round Midnight</h3>
+      <p class="rl"><b>Sun, Nov 22, 7:00 PM, Round Midnight.</b> Mitch Bell with the Kendrik McKinney Trio.</p>
     </article>
   </div>
 
   <footer class="colophon">
-    <span>The Edmond Daily · Edmond, Oklahoma</span>
+    <span class="c-name">The Edmond Daily</span>
+    <span>Published each morning · Edmond, Oklahoma</span><br>
     <span>Vol. I, No. 14 · Friday, November 20, 2026</span>
   </footer>
 </div>
