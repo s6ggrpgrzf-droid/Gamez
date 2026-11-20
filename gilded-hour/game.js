@@ -3408,7 +3408,21 @@
          repaints from these, never by re-running the feed, so the
          pot can't be fed twice for one question */
       potFed: c.potFed || 0,
-      potMoment: c.potMoment || null
+      potMoment: c.potMoment || null,
+      /* Pass 12 (visual fix programme): THE BLUFF's dealt and
+         settled records ride the save with the rest. They were
+         the serializer's blind spot: a refresh after the deal
+         resumed at the invent stage with the dealt answers
+         orphaned, and a refresh at the reveal lost bluffFool —
+         the credits (recomputed from bluffPicks) said "fooled
+         2 players" while Sterling, reading the settled map,
+         said "fooled nobody". The dealt fakes and the settled
+         fool purse are records of fact like streakFx and potFed:
+         a resumed stage repaints from them, never by re-dealing
+         or re-settling. */
+      bluffDealt: !!c.bluffDealt,
+      bluffFakes: c.bluffFakes ? Object.assign({}, c.bluffFakes) : null,
+      bluffFool: c.bluffFool ? Object.assign({}, c.bluffFool) : null
     };
     /* bank questions rebuild from their id; the nightly special is a
        synthetic question and travels whole */
@@ -3462,7 +3476,15 @@
       streakFx: o.streakFx || null, streakMoment: o.streakMoment || null,
       /* saves written before the Table Pot carry neither field;
          the reveal repaints without a feed record */
-      potFed: o.potFed || 0, potMoment: o.potMoment || null
+      potFed: o.potFed || 0, potMoment: o.potMoment || null,
+      /* Pass 12: saves written before the bluff records rode
+         carry none of the three — an undealt bluff resumes at
+         its invent stage exactly as it always did, and a reveal
+         from such a save repaints without the fool purse (the
+         one legacy case the audit caught contradicting itself) */
+      bluffDealt: !!o.bluffDealt,
+      bluffFakes: (o.bluffFakes && typeof o.bluffFakes === "object") ? Object.assign({}, o.bluffFakes) : null,
+      bluffFool: (o.bluffFool && typeof o.bluffFool === "object") ? Object.assign({}, o.bluffFool) : null
     };
   }
   function saveTableShow() {
@@ -3884,6 +3906,12 @@
       " · " + wins + (wins === 1 ? " WIN" : " WINS") +
       " · " + money(purse) + " BANKED";
     pl.classList.remove("hidden");
+    /* Pass 9 (audit #4): the line is nowrap by design and a long
+       reign used to ellipsize the champion's own name — step the
+       type down until the whole line fits the plaque */
+    pl.style.fontSize = "";
+    var pfs = 12.5;
+    while (pl.scrollWidth > pl.clientWidth + 1 && pfs > 8) { pfs -= 0.5; pl.style.fontSize = pfs.toFixed(1) + "px"; }
   }
   function renderRecordsSheet() {
     var list = $("recordsList"); if (!list) return;
@@ -5637,7 +5665,7 @@
       '<div class="q-cardwrap"><div class="q-text' + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(1) + '</div></div>' +
       '<p class="round-text">One answer to this one is true. The rest, this table invents. Each player types their own lie — an empty line gets a house lie dealt to it instead. When every lie is in, anyone deals.</p>' +
       '<div class="bluff-rows">' + rows + '</div>' +
-      '<div style="margin-top:14px"><button class="btn-gold" id="btnDealBluff">DEAL THE ANSWERS</button></div>';
+      '<div style="margin-top:8px"><button class="btn-gold" id="btnDealBluff">DEAL THE ANSWERS</button></div>';
   }
   function dealBluff() {
     var c = G.cur; if (!c || c.kind !== "bluff" || c.bluffDealt) return;
@@ -7359,6 +7387,10 @@
   /* ---------- setup screen ---------- */
   var playerCount = 3;
   var soloMode = false;
+  /* Pass 9: names typed at setup live here, not only in the DOM —
+     buildNameRows rebuilds the rows on every count/solo change,
+     and a rebuild used to throw the typed names away */
+  var setupNames = ["", "", "", ""];
   function renderPodiumPreview() {
     var wrap = $("podiumPreview");
     if (!wrap) return;
@@ -7383,14 +7415,27 @@
     wrap.innerHTML = html;
   }
   function buildNameRows() {
-    var wrap = $("nameRows"); wrap.innerHTML = "";
+    var wrap = $("nameRows");
+    /* Pass 9: harvest whatever is typed before the rebuild, so a
+       count change or the solo toggle never discards a name */
+    wrap.querySelectorAll(".name-input").forEach(function (inp, j) {
+      if (inp.value.trim()) setupNames[j] = inp.value;
+    });
+    wrap.innerHTML = "";
     var rowCount = soloMode ? 1 : playerCount;
     for (var i = 0; i < rowCount; i++) {
       var row = el('<div class="name-row"><span class="ava-pick" data-avaseat="' + i + '" aria-hidden="true">' +
         medallionSVG(PNAMES[i], i) + "</span>" +
-        '<input class="name-input" maxlength="14" value="' + PNAMES[i] + '">' +
+        '<input class="name-input" maxlength="14" data-seat="' + i + '">' +
         '<span class="name-seat">SEAT ' + (i + 1) + "</span></div>");
-      row.querySelector(".name-input").addEventListener("input", function () { paintAvaPicks(); renderPodiumPreview(); });
+      var inpEl = row.querySelector(".name-input");
+      /* the value is set as a property, never interpolated into
+         markup — a typed quote cannot break the attribute */
+      inpEl.value = setupNames[i] || PNAMES[i];
+      inpEl.addEventListener("input", function () {
+        setupNames[parseInt(this.getAttribute("data-seat"), 10)] = this.value;
+        paintAvaPicks(); renderPodiumPreview();
+      });
       wrap.appendChild(row);
     }
     if (soloMode) {
@@ -7424,6 +7469,12 @@
   function paintSolo() {
     var b = $("btnSolo");
     if (b) b.classList.toggle("sel", soloMode);
+    /* Pass 9: the count row answers to the same state — SOLO lit
+       and a headcount lit at once read as two answers to one
+       question, so the count stands down while solo stands */
+    document.querySelectorAll(".count-btn").forEach(function (x) {
+      x.classList.toggle("sel", !soloMode && parseInt(x.getAttribute("data-n"), 10) === playerCount);
+    });
   }
   var btnSoloEl = $("btnSolo");
   if (btnSoloEl) btnSoloEl.addEventListener("click", function () {
@@ -7562,7 +7613,7 @@
     pageHidden = document.hidden;
     if (Snd.ctx) { try { if (document.hidden) Snd.ctx.suspend(); else Snd.ctx.resume(); } catch (e) {} }
   });
-  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); fitStage(); });
+  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); fitStage(); paintChampion(); });
   requestAnimationFrame(loop);
 
   /* ================= Pass 4: online rooms =================

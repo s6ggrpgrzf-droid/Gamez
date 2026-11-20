@@ -86,7 +86,14 @@
 /* ---------- how tonight works (teaching cards) ---------- */
 .how-link{display:block;margin:4px auto 0;padding:10px 16px;color:var(--gold);font-weight:600;letter-spacing:.24em;font-size:clamp(11px,1.6vmin,13px);opacity:.85;border-bottom:1px solid rgba(233,205,138,.35);border-radius:6px;transition:opacity .12s ease}
 .how-link:hover,.how-link:active{opacity:1}
-.how-overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(15,5,22,.8);padding:18px;overflow-y:auto}
+.how-overlay{position:fixed;inset:0;z-index:60;display:flex;background:rgba(15,5,22,.8);padding:18px;overflow-y:auto}
+/* Pass 9 (audit #6): the card centres by its own auto margins, not
+   the overlay's align/justify — a centred flex child taller than
+   the overlay clips its top beyond the scroll origin (the HOW
+   kicker sat at -20px at 844x342, unreachable); auto margins
+   collapse to 0 on overflow, so the card starts at the top and
+   scrolls whole */
+.how-overlay>*{margin:auto}
 .how-card{width:100%;max-width:520px;text-align:center;border:3px solid var(--brass-line);border-radius:26px;padding:22px 24px 18px;background:var(--paper-bg);color:var(--paper-ink);box-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 0 0 2px rgba(146,104,32,.3);animation:howIn .28s ease}
 @keyframes howIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 .how-kicker{letter-spacing:.3em;font-weight:600;font-size:12px;color:var(--brass-deep)}
@@ -168,4 +175,23 @@
 .mute-btn{position:absolute;top:14px;right:16px;z-index:6;font-weight:700;letter-spacing:.14em;font-size:11px;color:rgba(255,246,232,.7);background:var(--glass-ink);border-radius:999px;padding:9px 15px;box-shadow:0 4px 0 rgba(0,0,0,.4);min-height:44px;display:inline-flex;align-items:center}
 .mute-btn.on{color:#431A04;background:var(--brass-pill);box-shadow:0 4px 0 var(--gold-sh)}
 .mute-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+
+/* ============ PASS 9 — TITLE & SETUP FIT (2026-11-19) ============
+   The audit's title findings that live in this stratum; the START
+   bar and the short-landscape name rows ride in stratum 12's Pass 9
+   block, which loads after the strata that own those rules. */
+
+/* #7 — the trophy shelf: .record-honours already takes a 100%
+   flex basis (stratum 12), but the row never wrapped, so the
+   honours line crushed the name column to ~84px on a phone and
+   14-char names ellipsised. Let the row wrap and the honours
+   line drops to its own full-width row, as its author intended. */
+.record-row{flex-wrap:wrap}
+
+/* #10 — the solo house pods: a real score wears .pmoney at full
+   size, but the house pod's line is a promise, not a score —
+   "DEALT AT SHOWTIME" at score size overflowed its desk by
+   +18px at 1919 ("DEALT AT SHOWTIMI"). It steps down and stays
+   on one line; real money lines are untouched. */
+.podium.house-pod .pmoney{font-size:clamp(11px,1.4vmin,13px);letter-spacing:.03em;white-space:nowrap}
 
