@@ -534,6 +534,10 @@
 @keyframes entDial{from{clip-path:inset(-3% -3% 103% -3%)}to{clip-path:inset(-3% -3% -3% -3%)}}
 .q-cardwrap.ent-dialup .q-text::before,.jp-pad.ent-dialup::before,.jp-card.ent-dialup::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(24,20,34,.20) 0 1px,rgba(0,0,0,0) 1px 3px);animation:entScan .7s linear both}
 @keyframes entScan{from{opacity:1}to{opacity:0}}
+/* The Bookshelf (2026-11-20, the eighth category): the card swings
+   open from its spine — a cover lifting, then settling flat */
+.q-cardwrap.ent-books .q-text,.jp-pad.ent-books,.jp-card.ent-books{animation:entBooks .62s cubic-bezier(.3,.7,.3,1) both;transform-origin:0% 50%}
+@keyframes entBooks{0%{transform:perspective(620px) rotateY(-14deg);opacity:0}55%{opacity:1}100%{transform:none;opacity:1}}
 
 /* ================= The Broadcast Finish (Visual pass V5) =================
    One pre-rendered finishing overlay (.bc-grade) standing in the two

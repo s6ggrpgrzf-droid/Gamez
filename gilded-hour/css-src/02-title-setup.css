@@ -132,7 +132,7 @@
 .chip{padding:8px 14px;border-radius:999px;font-weight:700;letter-spacing:.05em;font-size:clamp(10px,1.55vmin,14px);color:var(--cream);box-shadow:0 5px 0 rgba(0,0,0,.28),inset 0 2px 0 rgba(255,255,255,.35)}
 .c-movies{background:#E8437C}.c-tv{background:#1563B2}.c-music{background:#9B5DE5}
 .c-ads{background:#FF8C42;color:#431A04}.c-toys{background:#3ECF6E;color:#0B3D1C}
-.c-sat{background:#E9CD8A;color:#4A3200}.c-dial{background:#17BEBB;color:#063A3B}
+.c-sat{background:#E9CD8A;color:#4A3200}.c-dial{background:#17BEBB;color:#063A3B}.c-books{background:#B44A41;color:#FFF6E8}
 .setup-card{margin-top:16px;align-self:stretch;background:var(--ink-panel-soft);border:2px solid rgba(255,246,232,.16);border-radius:22px;padding:13px 16px 11px;box-shadow:0 10px 0 rgba(0,0,0,.25),0 20px 34px rgba(0,0,0,.35)}
 .setup-label{font-size:11px;font-weight:600;letter-spacing:.28em;color:var(--gold);margin:5px 0 8px;text-align:center}
 .count-row{display:flex;gap:10px;justify-content:center}

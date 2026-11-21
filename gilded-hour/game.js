@@ -52,7 +52,8 @@
     "Ads & Jingles":    { hi: "#FFA25E", mid: "#FF8C42", lo: "#E56F1D", sh: "#A34D0E", rgb: "255,140,66", shi: "#FF9750", smid: "#F37F31" },
     "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#34B35E", sh: "#177A38", rgb: "62,207,110", shi: "#48D678", smid: "#30B15B" },
     "Saturday Morning": { hi: "#F0DCA3", mid: "#E9CD8A", lo: "#D6AC4E", sh: "#9A7B38", rgb: "255,201,60" },
-    "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#27ACAA", sh: "#076B6E", rgb: "23,190,187", shi: "#27C8C5", smid: "#13ACAA" }
+    "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#27ACAA", sh: "#076B6E", rgb: "23,190,187", shi: "#27C8C5", smid: "#13ACAA" },
+    "The Bookshelf":    { hi: "#CE6B5E", mid: "#B44A41", lo: "#93362F", sh: "#5F211C", rgb: "180,74,65", shi: "#A03E36", smid: "#93362F" }
   };
   /* shi/smid are the answer-slab gradient stops (perfectionist fix #3):
      the identity hi/mid stay untouched for chips, pills and emblems,
@@ -82,12 +83,13 @@
     g.style.setProperty("--cat-smid", cs.smid || cs.mid);
     g.style.setProperty("--cat-tx", CATTX[cat] || "#FFF6E8");
   }
-  /* category emblems (item 6): the seven symbols live in index.html;
+  /* category emblems (item 6): the eight symbols live in index.html;
      this stamps one beside a category name anywhere, at any size */
   var CATEMBLEM = {
     "Movies": "emb-movies", "TV": "emb-tv", "Music": "emb-music",
     "Ads & Jingles": "emb-ads", "Toys & Games": "emb-toys",
-    "Saturday Morning": "emb-sat", "The Dial-Up Years": "emb-dial"
+    "Saturday Morning": "emb-sat", "The Dial-Up Years": "emb-dial",
+    "The Bookshelf": "emb-books"
   };
   function catEmblem(cat) {
     var id = CATEMBLEM[cat];
@@ -696,6 +698,18 @@
         "A busy signal. The answer was engaged elsewhere.",
         "The download stalled at ninety-nine percent. So near, and yet so dial-up."
       ]
+    },
+    "The Bookshelf": {
+      bank: [
+        "From the top shelf, and it pays in hardcover. The table reads beautifully tonight.",
+        "Well-read and well-paid. The library fines are forgiven.",
+        "A first-edition answer — signed, sealed, and worth every penny."
+      ],
+      miss: [
+        "The table has reached the chapter where nobody knows. We turn the page together.",
+        "Dog-eared, underlined, and still missed. The book closes on that one.",
+        "Some stories withhold their endings. That question was one of them."
+      ]
     }
   };
   /* Host lines are drawn from a shuffle-bag per pool: every variant
@@ -833,18 +847,36 @@
     '<defs><radialGradient id="stShadGrad" cx="50%" cy="50%" r="50%">' +
     '<stop offset="0" stop-color="#000" stop-opacity=".5"/>' +
     '<stop offset=".55" stop-color="#000" stop-opacity=".26"/>' +
-    '<stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>';
+    '<stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>' +
+    /* THE ARTISTIC PASS (2026-11-20, Jimmy's word — "more artistic, not
+       engraved"): the study's painted kit, shared by every Sterling.
+       Modelled skin, gradient hair and silk, soft-shadow filters. */
+    '<radialGradient id="artSkin" cx=".38" cy=".3" r=".95">' +
+    '<stop offset="0" stop-color="#FAD3A6"/><stop offset=".55" stop-color="#F4B183"/>' +
+    '<stop offset="1" stop-color="#DE8F5C"/></radialGradient>' +
+    '<radialGradient id="artBlush" cx=".5" cy=".5" r=".5">' +
+    '<stop offset="0" stop-color="#EE785C" stop-opacity=".5"/>' +
+    '<stop offset="1" stop-color="#EE785C" stop-opacity="0"/></radialGradient>' +
+    '<linearGradient id="artHair" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#22385E"/><stop offset=".6" stop-color="#14263F"/>' +
+    '<stop offset="1" stop-color="#0B1728"/></linearGradient>' +
+    '<linearGradient id="artSuit" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#16283F"/><stop offset="1" stop-color="#0A1526"/></linearGradient>' +
+    '<linearGradient id="artTie" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#F0568C"/><stop offset="1" stop-color="#B92A5C"/></linearGradient>' +
+    '<filter id="artSoft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>' +
+    '<filter id="artSoft2" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.4"/></filter></defs>';
   var STERLING_SHADOW =
     '<g class="st-shadow"><ellipse cx="150" cy="372" rx="122" ry="11" fill="url(#stShadGrad)"/></g>';
   var STERLING_TORSO =
     '<g class="st-rim" transform="translate(-2.5,-2)"><path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z"/></g>' +
-    '<path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z" fill="#0D1B33"/>' +
+    '<path d="M52,380 L64,258 Q68,206 128,196 L192,196 Q252,206 256,258 L268,380 Z" fill="url(#artSuit)"/>' +
     '<path d="M196,197 Q250,208 254,258 L266,380 L200,380 C206,320 206,250 196,197 Z" fill="#0A1526"/>' +
     '<path d="M134,196 L186,196 L160,292 Z" fill="#FFF6E8"/>' +
     '<path d="M126,196 L160,242 L138,310 L110,216 L119,207 L105,199 Q114,193 126,196 Z" fill="#1C3258"/>' +
     '<path d="M194,196 L160,242 L182,310 L210,216 L201,207 L215,199 Q206,193 194,196 Z" fill="#142847"/>' +
     '<path d="M150,199 L170,199 L166,221 L154,221 Z" fill="#C93A68"/>' +
-    '<path d="M154,221 L166,221 L171,261 L160,283 L149,261 Z" fill="#E8437C"/>' +
+    '<path d="M154,221 L166,221 L171,261 L160,283 L149,261 Z" fill="url(#artTie)"/>' +
     '<path d="M160,221 L166,221 L171,261 L160,283 Z" fill="#D1356B"/>' +
     '<path d="M134,196 L152,196 L146,210 L133,205 Z" fill="#FFF6E8"/>' +
     '<path d="M186,196 L168,196 L174,210 L187,205 Z" fill="#F3E4CE"/>' +
@@ -852,20 +884,21 @@
     '<path d="M211,252 L223,249 L221,257 Z" fill="#E9CD8A"/>' +
     '<svg x="111" y="222" width="19" height="19" viewBox="0 0 120 120" aria-hidden="true"><use href="#emblem"></use></svg>' +
     '<path d="M194,196 L215,199 L210,216 L182,310 L160,310 L160,242 Z" fill="#000" opacity=".12"/>' +
-    '<rect x="146" y="158" width="28" height="42" rx="9" fill="#E89A63"/>' +
-    '<rect x="146" y="184" width="28" height="13" fill="#D97F4A"/>';
+    '<rect x="146" y="158" width="28" height="42" rx="9" fill="url(#artSkin)"/>' +
+    '<rect x="146" y="184" width="28" height="13" fill="#D97F4A" opacity=".55"/>';
   var STERLING_HEADART =
     '<g class="st-rim" transform="translate(-2.5,-2)"><ellipse cx="160" cy="118" rx="64" ry="70"/><path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z"/></g>' +
-    '<circle cx="94" cy="124" r="13" fill="#F6B183"/><circle cx="93" cy="122" r="5" fill="#E89A63"/>' +
-    '<circle cx="226" cy="124" r="13" fill="#F6B183"/><circle cx="227" cy="122" r="5" fill="#E89A63"/>' +
-    '<ellipse cx="160" cy="118" rx="64" ry="70" fill="#F6B183"/>' +
-    '<path d="M210,80 A64 70 0 0 1 154,188 C180,170 201,138 204,112 C205,98 208,88 210,80 Z" fill="#E89A63"/>' +
+    '<circle cx="94" cy="124" r="13" fill="url(#artSkin)"/><circle cx="93" cy="122" r="5" fill="#E89A63" opacity=".7"/>' +
+    '<circle cx="226" cy="124" r="13" fill="url(#artSkin)"/><circle cx="227" cy="122" r="5" fill="#E89A63" opacity=".7"/>' +
+    '<ellipse cx="160" cy="118" rx="64" ry="70" fill="url(#artSkin)"/>' +
+    '<path d="M210,80 A64 70 0 0 1 154,188 C180,170 201,138 204,112 C205,98 208,88 210,80 Z" fill="rgba(146,72,32,.34)" filter="url(#artSoft)"/>' +
     '<path d="M163,113 L157,136 Q156,143 163,144 Q168,144 170,141" stroke="#D97F4A" stroke-width="4" stroke-linecap="round" fill="none"/>' +
-    '<ellipse cx="110" cy="142" rx="11" ry="6.5" fill="#FF9D8A" opacity=".5"/>' +
-    '<ellipse cx="206" cy="140" rx="10" ry="6" fill="#FF9D8A" opacity=".42"/>' +
+    '<ellipse cx="110" cy="142" rx="11" ry="6.5" fill="url(#artBlush)"/>' +
+    '<ellipse cx="206" cy="140" rx="10" ry="6" fill="url(#artBlush)"/>' +
     '<path d="M210,80 A64 70 0 0 1 154,188 C180,170 201,138 204,112 C205,98 208,88 210,80 Z" fill="#000" opacity=".05"/>' +
     '<ellipse cx="126" cy="94" rx="30" ry="36" transform="rotate(-10 126 94)" fill="#FFF" opacity=".07"/>' +
-    '<path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z" fill="#0E1C33"/>' +
+    '<path d="M97,128 C90,84 96,40 128,26 C150,17 186,18 208,34 C226,48 232,84 223,128 C220,104 212,86 200,78 C192,84 184,84 176,72 C168,60 150,58 136,64 C118,70 104,92 97,128 Z" fill="url(#artHair)"/>' +
+    '<path d="M224,122 C229,88 224,54 209,37" stroke="rgba(233,205,138,.45)" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
     '<ellipse cx="207" cy="64" rx="21" ry="27" transform="rotate(8 207 64)" fill="#000" opacity=".15"/>' +
     '<path d="M148,31 C132,35 119,46 111,60 C121,44 134,35 148,31 Z" fill="#C2CEDF" opacity=".65"/>' +
     '<path d="M101,100 C104,84 110,72 120,65 C112,76 108,90 108,108 C104,105 102,102 101,100 Z" fill="#A9B8D2" opacity=".55"/>' +
@@ -891,8 +924,9 @@
     '<path d="M106,91 Q128,78 151,85 L149,91 Q128,84 108,96 Z" fill="#0E1C33"/>' +
     '<path d="M169,85 Q192,78 214,91 L212,96 Q192,84 171,91 Z" fill="#0E1C33"/>' +
     STERLING_EYE(131) + STERLING_EYE(189) +
-    '<path d="M121,143 Q160,188 199,143 Q160,162 121,143 Z" fill="#7C2D3E"/>' +
-    '<path d="M129,146 Q160,158 191,146 Q160,151.5 129,146 Z" fill="#FFFFFF"/>';
+    '<path d="M121,143 Q160,188 199,143 Q160,162 121,143 Z" fill="#9C4250"/>' +
+    '<path d="M129,146 Q160,158 191,146 Q160,151.5 129,146 Z" fill="#FFFFFF"/>' +
+    '<path d="M136,159 Q160,167 184,159" stroke="rgba(255,190,170,.5)" stroke-width="2" fill="none" stroke-linecap="round"/>';
   /* Visual stage 2 — the podium + arms. The podium is drawn INSIDE
      Sterling's SVG, in front of the torso's lower half, so it scales
      with him in every layout for free: an ink lectern with a brass
@@ -919,8 +953,8 @@
     '<rect x="56" y="311" width="208" height="4" fill="#000" opacity=".35"/>' +
     "</g>";
   var STERLING_ARMS =
-    '<g class="st-plane st-plane-arm-l"><g class="st-arm st-arm-l"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke-width="29"/><path d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke="#22385E" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="104" cy="293" r="10" fill="#FFF6E8"/><circle cx="122" cy="290" r="13" fill="#F6B183"/></g></g>' +
-    '<g class="st-plane st-plane-arm-r"><g class="st-arm st-arm-r"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke-width="29"/><path d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke="#22385E" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="216" cy="293" r="10" fill="#FFF6E8"/><circle cx="198" cy="290" r="13" fill="#F6B183"/></g></g>';
+    '<g class="st-plane st-plane-arm-l"><g class="st-arm st-arm-l"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke-width="29"/><path d="M84,218 C60,238 54,262 70,282 C82,296 100,296 120,291" stroke="#22385E" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="104" cy="293" r="10" fill="#FFF6E8"/><circle cx="122" cy="290" r="13" fill="url(#artSkin)"/></g></g>' +
+    '<g class="st-plane st-plane-arm-r"><g class="st-arm st-arm-r"><path class="st-rim-stroke" transform="translate(-2,-2)" d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke-width="29"/><path d="M236,218 C260,238 266,262 250,282 C238,296 220,296 200,291" stroke="#22385E" stroke-width="29" stroke-linecap="round" fill="none"/><circle cx="216" cy="293" r="10" fill="#FFF6E8"/><circle cx="198" cy="290" r="13" fill="url(#artSkin)"/></g></g>';
   function sterlingSVG(variant, cls) {
     var face = variant === "present" ? STERLING_FACE_PRESENT : STERLING_FACE_SMIRK;
     var inner = STERLING_DEFS + STERLING_SHADOW +
@@ -1076,6 +1110,11 @@
         this.tone(1250, .26, "sine", .065, .3, 1750);
         this.tone(1750, .2, "sine", .05, .36, 1200);
         this.tone(1046.5, .09, "sine", .07, .64);
+      },
+      "The Bookshelf": function () { // page turns: two soft paper swishes, then the cover settles shut
+        this.burst(.16, .09, 1100, 0, .7);
+        this.burst(.2, .11, 850, .2, .7);
+        this.tone(164.81, .22, "sine", .05, .48);
       }
     },
     playSignature: function (cat) {
@@ -5301,7 +5340,7 @@
      phase flow downstream of the spin is untouched. Total beat:
      WHEEL_MS + 350 = 2000ms, against the chip plan's measured
      1675 / 2016 / 2356 (min / mean / max over its own rng). */
-  var WHEEL_SEG = 360 / 7; /* the bank's seven categories are a locked format fact */
+  var WHEEL_SEG = 360 / CATS.length; /* segments follow the bank's categories — eight since The Bookshelf joined (2026-11-20) */
   var WHEEL_MS = 1650;
   var wheelRest = 0; /* where the wheel last stopped — a real wheel starts there */
   function wheelMod(a, n) { return ((a % n) + n) % n; }
@@ -5510,7 +5549,8 @@
   var ENTSLUG = {
     "Movies": "movies", "TV": "tv", "Music": "music",
     "Ads & Jingles": "ads", "Toys & Games": "toys",
-    "Saturday Morning": "sat", "The Dial-Up Years": "dialup"
+    "Saturday Morning": "sat", "The Dial-Up Years": "dialup",
+    "The Bookshelf": "books"
   };
   function entSlug(cat) { return ENTSLUG[cat] || null; }
   function entRun(host, animEl, slug) {
@@ -7312,13 +7352,13 @@
      the night's SERIES counts them like any seat. */
   var HOUSE_PROFILES = [
     /* Marlowe: sharp on the screen categories, lost online */
-    { name: "Marlowe", skill: 0.05, strong: ["Movies", "TV"], weak: ["The Dial-Up Years"] },
+    { name: "Marlowe", skill: 0.05, strong: ["Movies", "TV", "The Bookshelf"], weak: ["The Dial-Up Years"] },
     /* Vivian: raised on Saturday mornings and the jingles between them */
     { name: "Vivian", skill: 0.02, strong: ["Saturday Morning", "Ads & Jingles"], weak: ["Toys & Games"] },
     /* Caspar: a toys-and-games hand, no ear for music at all */
     { name: "Caspar", skill: -0.02, strong: ["Toys & Games", "The Dial-Up Years"], weak: ["Music"] },
     /* Odette: the strongest seat in the house — music and movies are hers */
-    { name: "Odette", skill: 0.08, strong: ["Music", "Movies"], weak: ["Saturday Morning"] }
+    { name: "Odette", skill: 0.08, strong: ["Music", "Movies"], weak: ["Saturday Morning", "The Bookshelf"] }
   ];
   /* correctness by the question's band (Design pass 5's ladder),
      before skill and leans; the clamp keeps every seat beatable
