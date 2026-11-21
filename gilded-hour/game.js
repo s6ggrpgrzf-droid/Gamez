@@ -2970,6 +2970,92 @@
     });
   }
 
+  /* ---------- Finding F11 (2026-11-21): the race podiums fitted ---
+     The standings race is the third podium family, and it never got
+     a fit: fitFinaleText sweeps only the finale wrap, fitDeskText
+     the seat desks. In portrait the four race desks stand ~92px
+     wide and a cap-length name carries ~130px of ink — the pill,
+     sized by its own ink, spills sideways under the neighbouring
+     desks ("Bartholo…", "Christoph…") and the flap money, ~106px
+     of ink at its 20px floor size, is cut mid-glyph ("$84,5…").
+     The fit mirrors F1's shape — names by Range ink, one uniform
+     size for the row, letter-spacing surrendered next, a .wrapped
+     two-line pill past the floor (stratum 12 carries the race
+     scope of the wrapped rule); money fitted uniformly by flap
+     ink. One difference from F1: the race desk is a trapezoid
+     (clip-path 6%/94% at the top edge, full width at the foot),
+     so the room at a line's height is the desk's width
+     interpolated to that height, less the paddings the line
+     wears. Floors: names 8.5 (the podium-preview size), rescue
+     to 7.5 as F1; money 10.5, and its room is the desk's content
+     box rather than the taper (the block-child rule, measured
+     below where it is applied). At desktop sizes nothing
+     overflows and the fit never fires. */
+  function raceAvail(desk, el, extra) {
+    var dr = desk.getBoundingClientRect(), er = el.getBoundingClientRect();
+    if (!dr.height) return 0;
+    var t = Math.min(1, Math.max(0, ((er.top + er.height / 2) - dr.top) / dr.height));
+    return dr.width * (0.88 + 0.12 * t) - extra;
+  }
+  function raceMoneyInk(pm) {
+    var flap = pm.querySelector(".flap-val");
+    if (flap) return flap.getBoundingClientRect().width;
+    return finaleInkWidth(pm);
+  }
+  function fitRaceText() {
+    var wrap = document.querySelector(".race-wrap");
+    if (!wrap) return;
+    var names = Array.prototype.slice.call(wrap.querySelectorAll(".podium .pname"));
+    var rows = names.map(function (nm) {
+      nm.style.fontSize = ""; nm.style.letterSpacing = ""; nm.classList.remove("wrapped");
+      var desk = nm.closest(".desk");
+      return { nm: nm, avail: desk ? raceAvail(desk, nm, 34) : 0, cur: parseFloat(getComputedStyle(nm).fontSize) || 0, ink: 0 };
+    });
+    var target = null;
+    rows.forEach(function (r) {
+      r.ink = finaleInkWidth(r.nm);
+      if (r.avail && r.ink > r.avail && r.cur) { var need = Math.floor(r.cur * (r.avail / r.ink) * 2) / 2; if (target == null || need < target) target = need; }
+    });
+    if (target != null) rows.forEach(function (r) {
+      var size = Math.max(8.5, Math.min(r.cur, target));
+      if (size < r.cur - 0.24) r.nm.style.fontSize = size + "px";
+    });
+    rows.forEach(function (r) {
+      if (!r.avail || finaleInkWidth(r.nm) <= r.avail + 1) return;
+      r.nm.style.letterSpacing = "0px";
+      if (finaleInkWidth(r.nm) <= r.avail + 1) return;
+      var size = parseFloat(getComputedStyle(r.nm).fontSize) || 8.5, guard = 0;
+      while (size > 7.5 && finaleInkWidth(r.nm) > r.avail + 1 && guard++ < 4) { size -= 0.5; r.nm.style.fontSize = size + "px"; }
+      if (finaleInkWidth(r.nm) > r.avail + 1) r.nm.classList.add("wrapped");
+    });
+    /* the money's room is ruled differently from the name's: the
+       name pill is an inline block that may spill into the desk's
+       padding and is bounded only by the trapezoid clip, but the
+       money is a block child — its plaque fills the desk's content
+       box, so the flap must fit that box less the plaque's own
+       12px of padding: clientWidth - 16 - 12, no taper. */
+    var moneys = Array.prototype.slice.call(wrap.querySelectorAll(".podium .pmoney"));
+    var mrows = moneys.map(function (pm) {
+      pm.style.fontSize = "";
+      var desk = pm.closest(".desk");
+      return { pm: pm, avail: desk ? desk.clientWidth - 28 : 0, cur: parseFloat(getComputedStyle(pm).fontSize) || 0, ink: 0 };
+    });
+    var mtarget = null;
+    mrows.forEach(function (r) {
+      r.ink = raceMoneyInk(r.pm);
+      if (r.avail && r.ink > r.avail && r.cur) { var need = Math.floor(r.cur * (r.avail / r.ink) * 2) / 2; if (mtarget == null || need < mtarget) mtarget = need; }
+    });
+    if (mtarget != null) mrows.forEach(function (r) {
+      var size = Math.max(10.5, Math.min(r.cur, mtarget));
+      if (size < r.cur - 0.24) r.pm.style.fontSize = size + "px";
+    });
+    mrows.forEach(function (r) {
+      if (!r.avail) return;
+      var size = parseFloat(getComputedStyle(r.pm).fontSize) || 10.5, guard = 0;
+      while (size > 10.5 && raceMoneyInk(r.pm) > r.avail + 1 && guard++ < 6) { size -= 0.5; r.pm.style.fontSize = size + "px"; }
+    });
+  }
+
   /* ---------- Pass 6 (visual-fix programme): the stage's fit pass ----
      stage() composes every question and reveal, and the resting
      composition of the bank's longest questions stands taller than
@@ -3369,7 +3455,19 @@
   /* every stage repaint is a curtain: coins still in the air from
      the last card come down with it (pass 7) — flights start only
      after their own reveal has painted, so this never eats one */
-  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); flapSweep(); fitStage(); fitFinaleText(); }
+  function stage(html) { clearCoins(); var st = $("stage"); st.innerHTML = '<div class="stage-inner enter">' + html + "</div>"; st.scrollTop = 0; paintPot(); flapSweep(); fitStage(); fitFinaleText(); fitRaceText(); raceRefitLater(); }
+  /* F11: the race's entrance grows into its geometry — over the
+     first ~2s the desks and the flap ink widen by a few percent
+     as the composition settles, so a fit measured at compose
+     time lands a step short (the money read 57px on its way to
+     65). One deferred re-fit, guarded to the wrap that was
+     composed, closes the gap; if the show has moved on, the
+     guard lets it go. */
+  function raceRefitLater() {
+    var rw = document.querySelector(".race-wrap");
+    if (!rw) return;
+    setTimeout(function () { if (rw.isConnected) fitRaceText(); }, 2000);
+  }
   /* Graphics Pass 1 — THE CURTAIN: one element, three postures.
      Closed BEHIND the front-of-curtain cards (round intros, the
      breaks, the finale); raised over the stage for one beat while
@@ -7782,7 +7880,7 @@
     pageHidden = document.hidden;
     if (Snd.ctx) { try { if (document.hidden) Snd.ctx.suspend(); else Snd.ctx.resume(); } catch (e) {} }
   });
-  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); fitStage(); fitFinaleText(); fitPadName(); paintChampion(); });
+  window.addEventListener("resize", function () { sizeMotes(); updateLaurel(); fitStage(); fitFinaleText(); fitRaceText(); fitPadName(); paintChampion(); });
   requestAnimationFrame(loop);
 
   /* ================= Pass 4: online rooms =================

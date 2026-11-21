@@ -1074,6 +1074,12 @@
    breaks to two lines INSIDE its own desk instead of spilling
    sideways over the neighbouring podium. */
 .finale-wrap .pname.wrapped{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.18;max-width:100%}
+/* ============ FINDING F11 — WRAPPED RACE NAMES (2026-11-21) ====
+   The race scope of the same rule: fitRaceText marks a race
+   name .wrapped when even the rescue floor leaves its ink wider
+   than its desk, and the pill breaks to two lines inside its
+   own desk rather than running under the neighbouring podium. */
+.race-wrap .pname.wrapped{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.18;max-width:100%}
 /* The place badge's scoped homes (strata 04/11) hang it at the
    desk's top-left corner — where a fitted name pill and the money
    line now legitimately reach, so the disc ate the $ of second
