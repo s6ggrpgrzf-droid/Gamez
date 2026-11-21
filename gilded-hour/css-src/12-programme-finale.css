@@ -820,8 +820,13 @@
   #scr-game.fit3 .why{line-height:1.2}
   #scr-game.fit3[data-phase="question"] .answers{grid-template-columns:repeat(4,1fr)}
   #scr-game.fit3[data-phase="question"] .answers .ans-btn{font-size:11.5px}
-  #scr-game.fit3 .ans-btn:has(.vote-chip){padding-right:58px}
-  #scr-game.fit3 .vote-chip{width:21px;height:21px}
+  /* F7 (2026-11-20): the fit3 reserve must cover the tier's own
+     cluster — at 58px the answer's glyphs ran under the seals
+     (the cluster zone is chip 19 + 3 x 11 stack + 8 right =
+     60px), and the 21px seals' tops grazed the card's glyph
+     line on the raised correct slab. Reserve 72, seals 19. */
+  #scr-game.fit3 .ans-btn:has(.vote-chip){padding-right:72px}
+  #scr-game.fit3 .vote-chip{width:19px;height:19px;margin-left:-8px}
   #scr-game.fit3 .why{font-size:10px;line-height:1.24;padding-top:4px;padding-bottom:3px}
   #scr-game.fit3 .pf-strip{margin-top:0}
   #scr-game.fit3 #btnNext{padding-top:2px;padding-bottom:2px}
