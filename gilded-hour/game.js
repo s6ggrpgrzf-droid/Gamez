@@ -2787,6 +2787,43 @@
       if (size >= start - 0.24) line.style.fontSize = "";
     });
   }
+  /* ---------- Finding F4 (2026-11-20): desk names fitted by ink ----
+     fitUniform judges by scrollWidth, and scrollWidth under-measures
+     a letter-spaced, centred name. At 390 portrait the online desks'
+     name boxes are 74px; the audit's longest names measured 75/74 by
+     scrollWidth — a pass under fitUniform's +1 tolerance — while
+     their true ink ran 75.5/74.5, so the browser ellipsized them
+     anyway (audit #28, still live after Pass 5 shrank the names to
+     borderline). Names are therefore fitted the way the finale's
+     pills are (F1): by Range ink against the name box, with no
+     tolerance fudge — the ink must fit, full stop. The floors are
+     Pass 5's: uniform 8, letter-spacing surrendered next, hard
+     floor 7; the CSS ellipsis stays the last resort past the
+     floor, exactly as Pass 5 designed it. */
+  function fitNames(names) {
+    var rows = names.map(function (nm) {
+      nm.style.fontSize = ""; nm.style.letterSpacing = "";
+      return { nm: nm, avail: nm.clientWidth, cur: parseFloat(getComputedStyle(nm).fontSize) || 0, ink: 0 };
+    });
+    var target = null;
+    rows.forEach(function (r) {
+      if (!r.avail || !r.cur) return;
+      r.ink = finaleInkWidth(r.nm);
+      if (r.ink > r.avail) { var need = Math.floor(r.cur * (r.avail / r.ink) * 2) / 2; if (target == null || need < target) target = need; }
+    });
+    if (target != null) rows.forEach(function (r) {
+      if (!r.avail || !r.cur) return;
+      var size = Math.max(8, Math.min(r.cur, target));
+      if (size < r.cur - 0.24) r.nm.style.fontSize = size + "px";
+    });
+    rows.forEach(function (r) {
+      if (!r.avail || finaleInkWidth(r.nm) <= r.avail) return;
+      r.nm.style.letterSpacing = "0px";
+      if (finaleInkWidth(r.nm) <= r.avail) return;
+      var size = parseFloat(getComputedStyle(r.nm).fontSize) || 8, guard = 0;
+      while (size > 7 && finaleInkWidth(r.nm) > r.avail && guard++ < 4) { size -= 0.5; r.nm.style.fontSize = size + "px"; }
+    });
+  }
   function fitDeskText(bot) {
     if (!bot) return;
     var seats = Array.prototype.slice.call(bot.querySelectorAll(".seat"));
@@ -2796,7 +2833,7 @@
       var nm = s.querySelector(".seat-name"); if (nm) names.push(nm);
       var am = s.querySelector(".bet-amt"); if (am) amts.push(am);
     });
-    fitUniform(names, 8);
+    fitNames(names);
     fitUniform(amts, 9);
     fitScores(seats);
     fitStatusLines(seats);

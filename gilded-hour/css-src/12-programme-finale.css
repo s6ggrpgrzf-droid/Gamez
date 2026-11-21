@@ -1093,3 +1093,56 @@
    answer and bet screens); the name then breaks to two lines
    inside its own column instead of ellipsizing. */
 .jp-id-name.wrapped{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.15}
+
+/* ============ FINDING F5 — BANNER CLEARANCE (2026-11-20) =======
+   The headline ribbon (.headline-banner) reaches ~27px above the
+   question card (top:-14px, centred on the card's edge), but the
+   card wrapper's margin gave the headrow almost no air — the
+   phase scopes pin it to 4px and the fit tiers to 5px/2px — so on
+   Decider, Headline and Golden questions the banner lay across
+   the category pill's tail. Measured on the BANK[192] decider:
+   overlaps 52x19 at 844x390, 26x17 at 844x342, 52x22 at 390x844;
+   desktop cleared by 2.5px. A card that wears a banner now buys
+   the ribbon its clearance in the wrapper's margin — the ribbon
+   still straddles the card's edge, and cards without a banner
+   keep the margin they always had. The selector carries the
+   #scr-game ID so it holds against the phase scopes (stratum 09)
+   and the fit tiers above; the short tier takes 24px, all the
+   clearance its overlap needs, to spare the starved stage. */
+#scr-game .q-cardwrap:has(> .headline-banner){margin-top:clamp(30px,4.2vmin,42px)}
+@media (max-height:500px){
+  #scr-game .q-cardwrap:has(> .headline-banner){margin-top:24px}
+}
+/* The portrait number stage already sits at the last fit tier —
+   the stack is accounted to the pixel (headrow 38, card 120,
+   meta 44, for-line 40, entry 258) — so the ribbon's clearance
+   is repaid inside that stage family only: on a bannered number
+   stage at phone width the entry keys give back 5px a row, the
+   buffer's margins 5, and the card's bottom margin 3, which
+   returns LOCK IT IN to the frame with the pre-F5 slack. The
+   bannered choice stages swap the entry stack for a shorter
+   answers grid and keep their slack; short landscape's grid
+   absorbs its 24px unaided (deccam, both 844 sizes). */
+@media (max-width:560px){
+  #scr-game .stage-inner:has(.headline-banner):has(#numEntry) .num-key{height:27px}
+  #scr-game .stage-inner:has(.headline-banner):has(#numEntry) .num-buf{margin-top:3px;margin-bottom:4px}
+  #scr-game .stage-inner:has(.headline-banner):has(#numEntry) .q-cardwrap{margin-bottom:2px}
+}
+
+/* ============ FINDING F6 — RACE PODIUMS INSIDE THE FRAME (2026-11-20)
+   Pass 10's portrait residue: on the round intro at 390x844 the
+   standings podiums rested 10px below the stage's frame (the
+   third trim: 179 -> 43 -> 10 across the earlier rounds). The
+   portrait stack is accounted to the pixel — kicker 18, title
+   29, fact-list 341, race 230 (Sterling 93 over podiums 136),
+   and every fit tier is already on — so the last 10px come out
+   of margins and the podium desks' bottom padding, inside the
+   race's own scope at phone width: the fact-list's top margin
+   12 -> 6, the standings bubble's bottom margin 10 -> 7, the
+   race desks' bottom padding 12 -> 6. Nothing above phone width
+   moves; the desktop race is verified clean and untouched. */
+@media (max-width:560px){
+  #scr-game .bumper:has(.race-wrap) .fact-list{margin-top:6px}
+  #scr-game .race-wrap .bubble-stand{margin-bottom:7px}
+  #scr-game .race-podiums .podium .desk{padding-bottom:6px}
+}
