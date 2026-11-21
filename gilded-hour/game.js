@@ -2876,6 +2876,44 @@
     fitUniform(amts, 9);
     fitScores(seats);
     fitStatusLines(seats);
+    fitTags(seats);
+  }
+
+  /* ---------- Finding F9 (2026-11-21): desk tags fitted by lines --
+     The longest tag a desk prints (a house seat's LONG SHOT line in
+     the Big Finish bet phase) wrapped 4 lines in short landscape
+     even after stratum 12 stepped its type down — the string simply
+     cannot pack its four segments into the 74px column at 7px.
+     Measured at the tier: 6.5px packs it to exactly 3. So the tags
+     are fitted the way the status lines are, but by LINE COUNT and
+     as a row: every tag steps down together by the same delta (the
+     house seat's half-step offset under its neighbours is
+     preserved) until the longest tag in the row reads 3 lines,
+     floor 6.5px. Rows already at 3 lines or fewer — portrait,
+     desktop, most phases — are never touched. */
+  function fitTags(seats) {
+    var tags = [];
+    seats.forEach(function (s) { var t = s.querySelector(".tag"); if (t) tags.push(t); });
+    if (!tags.length) return;
+    var lines = function (el) {
+      var rg = document.createRange(); rg.selectNodeContents(el);
+      var tops = {}, n = 0, rects = rg.getClientRects();
+      for (var k = 0; k < rects.length; k++) { if (rects[k].width > 0) { var key = Math.round(rects[k].top); if (!tops[key]) { tops[key] = 1; n++; } } }
+      return n;
+    };
+    var bases = tags.map(function (t) { t.style.fontSize = ""; return parseFloat(getComputedStyle(t).fontSize) || 0; });
+    var base = Math.max.apply(null, bases);
+    if (!base) return;
+    var worst = 0;
+    tags.forEach(function (t) { worst = Math.max(worst, lines(t)); });
+    if (worst <= 3) return;
+    var floor = 6.5, delta = 0, guard = 0;
+    while (worst > 3 && base - delta > floor && guard++ < 8) {
+      delta += 0.5;
+      tags.forEach(function (t, i) { t.style.fontSize = Math.max(floor, bases[i] - delta) + "px"; });
+      worst = 0;
+      tags.forEach(function (t) { worst = Math.max(worst, lines(t)); });
+    }
   }
 
   /* ---------- Finding F1 (2026-11-20): the finale's fit pass -------

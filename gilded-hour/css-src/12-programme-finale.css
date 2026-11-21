@@ -1151,3 +1151,22 @@
   #scr-game .race-wrap .bubble-stand{margin-bottom:7px}
   #scr-game .race-podiums .podium .desk{padding-bottom:6px}
 }
+
+/* ============ FINDING F9 — HOUSE TAG LINE COUNT (2026-11-21)
+   The longest tag the desks print ("HOUSE · LONG SHOT · BET 3
+   CHIPS · STREAK ×9") wrapped ~5 lines in short landscape. The
+   paper prep (2026-11-20) proved it a type problem, not a
+   clearance problem: the fortune pile's true footprint at this
+   tier is 45px against 47px of clearance, and the wrap came from
+   the cascade — stratum 03's house rule (.seat.house .tag, fs 8 /
+   ls .1em, specificity 0,3,0) outranks the short-tier step in 04,
+   so house tags never took the tier's smaller size. The fix is
+   type only, inside the short-landscape scope: the house tag
+   steps to 7px / .05em and plain tags tighten to .06em, which
+   packs the long string into 3 lines in its 74px column. Portrait
+   (already ≤2 lines everywhere) is outside the scope and
+   untouched. */
+@media (max-height:500px){
+  .seat.house .tag{font-size:7px;letter-spacing:.05em}
+  .seat .tag{letter-spacing:.06em}
+}
