@@ -2463,10 +2463,44 @@
   var BANK = (window.GH_BANK || []).map(function (q, i) { q.id = i; return q; });
   var CATS = []; BANK.forEach(function (q) { if (CATS.indexOf(q.cat) < 0) CATS.push(q.cat); });
   var seen = {};
-  try { (JSON.parse(localStorage.getItem("gh_seen_v1") || "[]")).forEach(function (id) { seen[id] = 1; }); } catch (e) {}
+  /* Pass 10 — freshness memory: the seen ledger gains a clock.
+     seenWhen[id] is the number of the show that last dealt the
+     question and seenSeq counts the shows this device has dealt,
+     so "fresh" stops being a yes/no and becomes a distance:
+     draws order by staleness — never dealt first, then the
+     longest ago — shuffled within a stamp. A device that has
+     met the whole bank rotates it evenly instead of trusting a
+     shuffle to forget. The v1 list still loads (its ids migrate
+     at stamp 0 — seen, at some unknown when) and is still
+     written beside v2, so the record survives a step back. */
+  var seenWhen = {}, seenSeq = 0;
+  try {
+    var seenV2 = JSON.parse(localStorage.getItem("gh_seen_v2") || "null");
+    if (seenV2 && seenV2.when) {
+      seenWhen = seenV2.when; seenSeq = seenV2.seq | 0;
+      Object.keys(seenWhen).forEach(function (id) { seen[id] = 1; });
+    } else {
+      (JSON.parse(localStorage.getItem("gh_seen_v1") || "[]")).forEach(function (id) { seen[id] = 1; seenWhen[id] = 0; });
+    }
+  } catch (e) {}
   function saveSeen() {
+    try { localStorage.setItem("gh_seen_v2", JSON.stringify({ seq: seenSeq, when: seenWhen })); } catch (e) {}
     try { localStorage.setItem("gh_seen_v1", JSON.stringify(Object.keys(seen).map(Number))); } catch (e) {}
   }
+  function stampOf(id) { return seenWhen[id] == null ? -1 : seenWhen[id]; }
+  function byStaleness(ids) {
+    var groups = {};
+    ids.forEach(function (id) { var s = stampOf(id); (groups[s] = groups[s] || []).push(id); });
+    var out = [];
+    Object.keys(groups).map(Number).sort(function (a, b) { return a - b; }).forEach(function (s) { out = out.concat(shuffle(groups[s])); });
+    return out;
+  }
+  function stalestOf(ids) {
+    var best = [], bs = Infinity;
+    ids.forEach(function (id) { var s = stampOf(id); if (s < bs) { bs = s; best = [id]; } else if (s === bs) best.push(id); });
+    return best;
+  }
+  function markSeen(id) { seen[id] = 1; seenWhen[id] = seenSeq; }
   /* Design pass 5 — the deck. `pools` is the show's dealing state and
      is persisted verbatim in the table save: { b1, b2, b3 } are the
      band pools for multiple-choice questions (shuffled id lists,
@@ -2479,12 +2513,11 @@
   var pools = {};
   function bandPoolIds(band) {
     var ids = BANK.filter(function (q) { return !q.kind && q.d === band; }).map(function (q) { return q.id; });
-    var fresh = ids.filter(function (id) { return !seen[id]; });
-    var rest = ids.filter(function (id) { return seen[id]; });
-    return shuffle(fresh).concat(shuffle(rest));
+    return byStaleness(ids);
   }
   function resetDeck() {
-    pools = { b1: bandPoolIds(1), b2: bandPoolIds(2), b3: bandPoolIds(3), catUse: {} };
+    seenSeq++; /* a new show: the freshness clock ticks before it deals */
+    pools = { b1: bandPoolIds(1), b2: bandPoolIds(2), b3: bandPoolIds(3), catUse: {}, eraTail: [] };
   }
   /* draw one multiple-choice question for a slot whose target band is
      `target`: the exact band while its pool lasts, else the nearest
@@ -2505,9 +2538,30 @@
         var u = pools.catUse[q.cat] || 0;
         if (u < bestUse) { bestUse = u; best = i; }
       }
+      /* Pass 9 — the composition spread, era axis: if the last
+         two ordinary questions dealt this show share an era, and
+         a card from an equally least-used category in this pool
+         carries a different era, deal that one instead — a show
+         never serves three of an era in a row while the deck
+         offers a way out. The ramp outranks it (the band pool is
+         chosen first, as before) and category spread ties it
+         (the candidate set is the same least-used cards; only
+         the pick within them moves). "any" is era-less: it
+         neither builds a run nor needs avoiding. The tail rides
+         `pools`, so a resumed show keeps spreading from the
+         same place; a save from before this pass has no tail
+         and simply starts one. */
+      var tail = pools.eraTail || [];
+      if (tail.length === 2 && tail[0] === tail[1] && tail[1] !== "any") {
+        for (var j = 0; j < p.length; j++) {
+          var qj = BANK[p[j]];
+          if ((pools.catUse[qj.cat] || 0) === bestUse && qj.era !== tail[1]) { best = j; break; }
+        }
+      }
       var id = p.splice(best, 1)[0];
       pools.catUse[BANK[id].cat] = (pools.catUse[BANK[id].cat] || 0) + 1;
-      seen[id] = 1;
+      pools.eraTail = tail.concat(BANK[id].era || "any").slice(-2);
+      markSeen(id);
       return BANK[id];
     }
     /* every band pool empty — unreachable in a 10-draw show from a
@@ -2535,9 +2589,8 @@
       for (var oi = 0; oi < order.length; oi++) {
         var cand = BANK.filter(function (q) { return q.kind === kind && q.d === order[oi] && !used[q.id]; }).map(function (q) { return q.id; });
         if (!cand.length) continue;
-        var fresh = cand.filter(function (id) { return !seen[id]; });
-        var id = pick(fresh.length ? fresh : cand);
-        used[id] = 1; seen[id] = 1;
+        var id = pick(stalestOf(cand));
+        used[id] = 1; markSeen(id);
         return id;
       }
       return null;
@@ -3823,6 +3876,7 @@
         cur: saveCurForSave(G.cur),
         pools: pools, rngState: rngBox.a,
         seen: Object.keys(seen).map(Number),
+        seenWhen: seenWhen, seenSeq: seenSeq,
         nightly: (nightlyState && nightlyState.key === G.showId) ? nightlyState.data : null
       }));
     } catch (e) {}
@@ -3871,6 +3925,10 @@
     pools = sv.pools || {};
     rngBox.a = sv.rngState | 0;
     seen = {}; (sv.seen || []).forEach(function (id) { seen[id] = 1; });
+    /* the freshness clock rides the same snapshot (Pass 10); a
+       save from before it derives stamps from the seen list */
+    seenWhen = sv.seenWhen || {}; (sv.seen || []).forEach(function (id) { if (seenWhen[id] == null) seenWhen[id] = 0; });
+    if (typeof sv.seenSeq === "number" && sv.seenSeq > seenSeq) seenSeq = sv.seenSeq;
     nightlyState = { key: sv.showId, data: sv.nightly || null };
     G = {
       players: sv.players.map(function (p, i) {
@@ -4808,7 +4866,23 @@
   function shareFileName() {
     var dt = new Date();
     function p2(n) { return (n < 10 ? "0" : "") + n; }
-    return "the-gilded-hour-" + dt.getFullYear() + "-" + p2(dt.getMonth() + 1) + "-" + p2(dt.getDate()) + ".png";
+    return "the-gilded-hour-" + dt.getFullYear() + "-" + p2(dt.getMonth() + 1) + "-" + p2(dt.getDate()) + (shareVariant === "winner" ? "-winner" : "") + ".png";
+  }
+  /* Pass 8 (the winner's share card): the champion's OWN honours,
+     from their report row in the Report Card's own terms — the
+     category they owned, their biggest bank, their hottest
+     streak (the card's threshold: a streak of one is no streak),
+     their fastest hand. Null when they hold none of them: a
+     champion without an honour has no winner's card to send. */
+  function championHonours(d) {
+    if (!d) return null;
+    var h = {
+      best: d.best ? { cat: d.best.cat, amt: d.best.amt } : null,
+      biggest: d.biggest > 0 ? d.biggest : 0,
+      peak: d.peak >= 2 ? d.peak : 0,
+      fastest: (typeof d.fastest === "number") ? d.fastest : null
+    };
+    return (h.best || h.biggest || h.peak || h.fastest != null) ? h : null;
   }
   /* the night's biggest bank across a set of {name, d} report rows
      (either engine's derivation) — null when nobody banked at all */
@@ -4833,7 +4907,7 @@
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
     var rows = order.map(function (ii) { return { name: G.players[ii].name, d: deriveReport(G.report ? G.report[ii] : null) }; });
     return finishShareData({
-      champion: { name: p.name, seat: i, total: p.score + (potAmt || 0), house: p.house != null },
+      champion: { name: p.name, seat: i, total: p.score + (potAmt || 0), house: p.house != null, honours: championHonours(deriveReport(G.report ? G.report[i] : null)) },
       pot: potAmt || 0,
       standings: order.map(function (ii) { return { name: G.players[ii].name, score: G.players[ii].score, seat: ii }; }),
       seriesLine: seriesLine || null,
@@ -4850,7 +4924,7 @@
     var p = OG.players[winSeat];
     var rows = OG.report ? order.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; }) : [];
     return finishShareData({
-      champion: hasWinner ? { name: p.name, seat: winSeat, total: p.score + (potAmt || 0), house: false } : null,
+      champion: hasWinner ? { name: p.name, seat: winSeat, total: p.score + (potAmt || 0), house: false, honours: championHonours(OG.report ? reportView(OG.report[winSeat]) : null) } : null,
       pot: hasWinner ? (potAmt || 0) : 0,
       standings: order.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score, seat: ii }; }),
       seriesLine: seriesLine || null,
@@ -4880,7 +4954,7 @@
     var rows = s.report ? order.map(function (ii) { return { name: s.players[ii].name, d: reportView(s.report[ii]) }; }) : [];
     var cp = champSeat != null ? s.players[champSeat] : null;
     return finishShareData({
-      champion: cp ? { name: cp.name, seat: champSeat, total: cp.score + (s.pot || 0), house: false } : null,
+      champion: cp ? { name: cp.name, seat: champSeat, total: cp.score + (s.pot || 0), house: false, honours: championHonours(s.report ? reportView(s.report[champSeat]) : null) } : null,
       pot: cp ? (s.pot || 0) : 0,
       standings: order.map(function (ii) { return { name: s.players[ii].name, score: s.players[ii].score, seat: ii }; }),
       seriesLine: null,
@@ -5056,10 +5130,149 @@
       });
     });
   }
+  /* Pass 8: the WINNER'S card — the same room, frame and
+     masthead as the night's card, composed around the champion
+     alone: a larger medallion, their total and pot, then their
+     own honours one to a line in the Report Card's vocabulary,
+     and the series line when the night has one. No standings —
+     this is the card the winner sends. It fits by construction:
+     the honours are at most four lines, and the last of them
+     lands well clear of the footer the night's card crowds. */
+  function drawWinnerCard(d) {
+    var cv = $("shareCanvas");
+    if (!cv) return;
+    var ctx = cv.getContext("2d");
+    var W = SHARE_W, CX = W / 2;
+    var F = "Fredoka, 'Arial Rounded MT Bold', sans-serif";
+    var FM = "'GHTab', " + F;
+    function centered(txt, y, font, fill, ls) {
+      ctx.font = font; ctx.fillStyle = fill; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
+      try { ctx.letterSpacing = ls || "0px"; } catch (e) {}
+      ctx.fillText(txt, CX, y);
+      try { ctx.letterSpacing = "0px"; } catch (e) {}
+    }
+    function fitPx(txt, base, maxW, weight, fam) {
+      var px = base;
+      ctx.font = weight + " " + px + "px " + fam;
+      while (px > 20 && ctx.measureText(txt).width > maxW) { px -= 4; ctx.font = weight + " " + px + "px " + fam; }
+      return px;
+    }
+    function goldGrad(y0, y1) {
+      var g = ctx.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, "#F6EBCB"); g.addColorStop(0.55, "#E2B76B"); g.addColorStop(1, "#DFAF63");
+      return g;
+    }
+    var bg = ctx.createLinearGradient(0, 0, 0, SHARE_H);
+    bg.addColorStop(0, "#0A1730"); bg.addColorStop(0.45, "#0C1930"); bg.addColorStop(1, "#060E1D");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, SHARE_H);
+    var glow = ctx.createRadialGradient(CX, 430, 60, CX, 430, 660);
+    glow.addColorStop(0, "rgba(226,183,107,.20)"); glow.addColorStop(1, "rgba(226,183,107,0)");
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, SHARE_H);
+    ctx.strokeStyle = "#C9A962"; ctx.lineWidth = 4; ctx.strokeRect(36, 36, W - 72, SHARE_H - 72);
+    ctx.strokeStyle = "rgba(255,183,58,.45)"; ctx.lineWidth = 2; ctx.strokeRect(54, 54, W - 108, SHARE_H - 108);
+    centered("THE", 148, "600 30px " + F, "#FFF6E8", "14px");
+    ctx.shadowColor = "#27436E"; ctx.shadowOffsetY = 5;
+    centered("GILDED HOUR", 244, "700 96px " + F, goldGrad(160, 248));
+    ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = "rgba(201,169,98,.85)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(228, 294); ctx.lineTo(474, 294); ctx.moveTo(606, 294); ctx.lineTo(852, 294); ctx.stroke();
+    centered("★", 310, "38px " + F, "#E9CD8A");
+    centered("THE WINNER", 356, "700 30px " + F, "#F6EBCB", "7px");
+    centered(d.date, 400, "500 29px " + F, "rgba(255,246,232,.78)", "2px");
+    var ch = d.champion;
+    return shareMedallionImage(ch.name, ch.seat).then(function (got) {
+      if (got) {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(CX, 548, 110, 0, Math.PI * 2); ctx.clip();
+        ctx.drawImage(got.img, CX - 110, 548 - 110, 220, 220);
+        ctx.restore();
+        ctx.beginPath(); ctx.arc(CX, 548, 110, 0, Math.PI * 2);
+        ctx.strokeStyle = "#E9CD8A"; ctx.lineWidth = 5; ctx.stroke();
+        URL.revokeObjectURL(got.url);
+      }
+      centered(ch.house ? "★ HOUSE WIN ★" : "★ CHAMPION ★", 716, "700 30px " + F, "#E9CD8A", "6px");
+      var nameUp = ch.name.toUpperCase();
+      var npx = fitPx(nameUp, 66, 872, "700", F);
+      centered(nameUp, 782, "700 " + npx + "px " + F, "#FFF6E8");
+      var tot = money(ch.total);
+      var tpx = fitPx(tot, 96, 820, "700", FM);
+      ctx.shadowColor = "#27436E"; ctx.shadowOffsetY = 4;
+      centered(tot, 872, "700 " + tpx + "px " + FM, goldGrad(796, 876));
+      ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
+      var cursor = 916;
+      if (d.pot > 0) {
+        var potTxt = ch.house
+          ? "THE HOUSE KEEPS THE POT TOO — " + money(d.pot)
+          : "★ AND TOOK THE " + money(d.pot) + " POT ★";
+        var ppx = fitPx(potTxt, 36, 872, "700", F);
+        centered(potTxt, cursor + 20, "700 " + ppx + "px " + F, "#F6EBCB");
+        cursor += 76;
+      }
+      var h = ch.honours || {};
+      var lines = [];
+      if (h.best) lines.push("★ BEST CATEGORY — " + String(h.best.cat).toUpperCase() + " " + money(h.best.amt));
+      if (h.biggest) lines.push("★ BIGGEST BANK — " + money(h.biggest));
+      if (h.peak) lines.push("★ HOTTEST STREAK — " + h.peak);
+      if (h.fastest != null) lines.push("★ FASTEST HAND — " + (Math.round(h.fastest * 10) / 10).toFixed(1) + "s");
+      lines.forEach(function (ln) {
+        var lpx = fitPx(ln, 33, 880, "700", F);
+        centered(ln, cursor + 44, "700 " + lpx + "px " + F, "#E9CD8A");
+        cursor += 54;
+      });
+      if (d.seriesLine) {
+        var sx = fitPx(d.seriesLine, 31, 880, "700", F);
+        centered(d.seriesLine, cursor + 52, "700 " + sx + "px " + F, "#C9A962");
+      }
+      centered("s6ggrpgrzf-droid.github.io/Gamez/gilded-hour", 1282, "500 23px " + F, "rgba(201,169,98,.8)", "1px");
+    });
+  }
+  function composeWinnerCard(d) {
+    var loads = Promise.resolve();
+    if (document.fonts && document.fonts.load) {
+      loads = Promise.all([
+        document.fonts.load("700 90px Fredoka"), document.fonts.load("600 30px Fredoka"),
+        document.fonts.load("500 30px Fredoka"), document.fonts.load("700 90px GHTab", "$0")
+      ]).catch(function () {});
+    }
+    var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+    return Promise.all([ready, loads]).then(function () {
+      return drawWinnerCard(d);
+    }).then(function () {
+      return new Promise(function (resolve) {
+        var cv = $("shareCanvas");
+        if (cv && cv.toBlob) cv.toBlob(function (b) { resolve(b); }, "image/png");
+        else resolve(null);
+      });
+    });
+  }
+  /* which card the sheet currently shows — the night's, or the
+     winner's. The winner's is offered only when the night
+     crowned a champion who holds an honour. */
+  var shareVariant = "night";
+  function winnerCardOffered() {
+    return !!(shareNight && shareNight.champion && shareNight.champion.honours);
+  }
+  function paintShareTabs() {
+    var tabs = $("shareTabs");
+    if (tabs) tabs.classList.toggle("hidden", !winnerCardOffered());
+    var tn = $("shareTabNight"), tw = $("shareTabWinner");
+    if (tn) tn.classList.toggle("on", shareVariant === "night");
+    if (tw) tw.classList.toggle("on", shareVariant === "winner");
+  }
+  function setShareVariant(v) {
+    if (!shareNight || v === shareVariant) return;
+    if (v === "winner" && !winnerCardOffered()) return;
+    shareVariant = v;
+    shareReady = v === "winner" ? composeWinnerCard(shareNight) : composeShareCard(shareNight);
+    paintShareTabs();
+  }
   function openShareNight() {
     if (!shareNight) return;
     Snd.ensure();
+    shareVariant = "night";
     shareReady = composeShareCard(shareNight);
+    paintShareTabs();
     var go = $("shareGo");
     if (go) go.classList.toggle("hidden", !(navigator.share || navigator.canShare));
     $("shareOverlay").classList.remove("hidden");
@@ -5094,6 +5307,9 @@
   $("shareGo").addEventListener("click", shareGoNow);
   $("shareSave").addEventListener("click", saveShareImage);
   $("shareClose").addEventListener("click", closeShareNight);
+  var stN = $("shareTabNight"), stW = $("shareTabWinner");
+  if (stN) stN.addEventListener("click", function () { setShareVariant("night"); });
+  if (stW) stW.addEventListener("click", function () { setShareVariant("winner"); });
   function joinNames(names) {
     if (names.length <= 1) return names.join("");
     if (names.length === 2) return names[0] + " and " + names[1];
@@ -5448,9 +5664,8 @@
     var ids = [];
     BANK.forEach(function (q, i) { if (q.kind === "bluff") ids.push(i); });
     if (!ids.length) return null;
-    var fresh = ids.filter(function (id) { return !seen[id]; });
-    var id = pick(fresh.length ? fresh : ids);
-    seen[id] = 1;
+    var id = pick(stalestOf(ids));
+    markSeen(id);
     return id;
   }
   function makeCur(q, kind) {
@@ -7268,9 +7483,8 @@
     for (var oi = 0; oi < order.length; oi++) {
       var cand = BANK.filter(function (q) { return q.kind === "num" && q.d === order[oi] && !used[q.id]; }).map(function (q) { return q.id; });
       if (!cand.length) continue;
-      var fresh = cand.filter(function (id) { return !seen[id]; });
-      var id = pick(fresh.length ? fresh : cand);
-      seen[id] = 1;
+      var id = pick(stalestOf(cand));
+      markSeen(id);
       return BANK[id];
     }
     /* the unused pool is dry — 24 num in the bank, at most three
@@ -9544,8 +9758,7 @@
     for (var oi = 0; oi < order.length; oi++) {
       var cand = BANK.filter(function (q) { return q.kind === "num" && q.d === order[oi] && !used[q.id]; });
       if (!cand.length) continue;
-      var fresh = cand.filter(function (q) { return !seen[q.id]; });
-      return ogDeciderEntryFor(pick(fresh.length ? fresh : cand));
+      return ogDeciderEntryFor(pick(stalestOf(cand.map(function (q) { return q.id; })).map(function (id) { return BANK[id]; })));
     }
     /* the unused pool is dry (24 num in the bank, at most three
        spent by the script's pinned slots) — re-deal a num the show
@@ -11467,7 +11680,7 @@
        drive-share asserts the composed card against the very
        object the finales built and the canvas drew from — never
        a copy of it */
-    share: { get data() { return shareNight; }, open: openShareNight, close: closeShareNight }
+    share: { get data() { return shareNight; }, open: openShareNight, close: closeShareNight, variant: function () { return shareVariant; }, setVariant: setShareVariant }
   };
   /* Pass P verification hooks: particle censuses for the polish fx */
   window.__fx = { leaves: leaves, coins: coins, jpCoins: jpCoins, motes: motes, laurelState: laurelState };

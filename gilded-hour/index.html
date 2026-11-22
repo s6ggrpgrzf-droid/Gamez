@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="css-src/06-polish-motion.css?v=118">
 <link rel="stylesheet" href="css-src/07-perfectionist.css?v=119">
 <link rel="stylesheet" href="css-src/08-features.css?v=124">
-<link rel="stylesheet" href="css-src/09-lettering.css?v=120">
+<link rel="stylesheet" href="css-src/09-lettering.css?v=121">
 <link rel="stylesheet" href="css-src/10-pad-repairs-light.css?v=124">
 <link rel="stylesheet" href="css-src/11-finish.css?v=119">
 <link rel="stylesheet" href="css-src/12-programme-finale.css?v=148">
@@ -579,6 +579,10 @@
   <div id="shareOverlay" class="how-overlay share-overlay hidden" role="dialog" aria-modal="true" aria-label="Share the night">
     <div class="share-sheet">
       <div class="share-kicker">SHARE THE NIGHT</div>
+      <div class="share-tabs hidden" id="shareTabs">
+        <button id="shareTabNight" class="share-tab on" type="button">THE NIGHT</button>
+        <button id="shareTabWinner" class="share-tab" type="button">THE WINNER</button>
+      </div>
       <canvas id="shareCanvas" width="1080" height="1350"></canvas>
       <div class="share-btns">
         <button id="shareGo" class="btn-gold" type="button">SHARE…</button>
@@ -592,7 +596,7 @@
 <script src="questions.js?v=19"></script>
 <script src="qr.js?v=1"></script>
 <script src="rules.js?v=4"></script>
-<script src="game.js?v=130"></script>
+<script src="game.js?v=133"></script>
 <script>
 /* Review Pass 7 (2026-11-14): the Party-Proof Shell is retired —
    the show plays online only, and nothing registers a worker any

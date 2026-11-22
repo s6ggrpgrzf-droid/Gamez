@@ -58,6 +58,13 @@
 .share-kicker{letter-spacing:.3em;font-weight:700;font-size:12px;color:var(--gold)}
 #shareCanvas{width:min(86vw,58dvh);height:auto;display:block;border-radius:8px;background:#060E1D;box-shadow:0 18px 44px rgba(0,0,0,.6),0 0 0 2px rgba(201,169,98,.55)}
 .share-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+/* Pass 8: the sheet's card switch — the night's card or the
+   winner's, a pill pair in the sheet's gold-on-navy; the lit
+   pill is the card on the canvas. Shown only when the night
+   crowned a champion holding an honour. */
+.share-tabs{display:flex;gap:8px;justify-content:center}
+.share-tab{appearance:none;-webkit-appearance:none;border:1.5px solid rgba(201,169,98,.65);background:rgba(10,23,48,.85);color:var(--gold);font-weight:700;font-size:11.5px;letter-spacing:.18em;padding:9px 16px 9px 19px;border-radius:999px;cursor:pointer}
+.share-tab.on{background:linear-gradient(180deg,#F6EBCB,#DFAF63);color:#0A1730;border-color:#E9CD8A}
 .jp-share{display:block;width:100%;margin-top:18px}
 
 /* A3 review, proposal 1 (Jimmy's pick, 2026-11-11): the portrait
