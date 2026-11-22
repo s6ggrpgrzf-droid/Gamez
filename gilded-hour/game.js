@@ -5055,9 +5055,31 @@
       centered("NO CROWN TONIGHT — THE TABLE STANDS MATCHED AT " + money(d.standings.length ? d.standings[0].score : 0), 606, "500 30px " + F, "rgba(255,246,232,.85)");
       cursor = 668;
     }
+    /* Queue Pass 16 (2026-11-22): the stack used to run on fixed
+       pitches, so the fullest night (pot, four standings, a
+       flourish and a series line) dealt its series line at 1324 —
+       below the inner frame's bottom rule (1296) and past the
+       footer line fixed at 1282. The stack now measures itself
+       before it paints: when the projected last baseline would
+       pass 1244, the standings pitch tightens (58 toward a 44
+       floor), then the flourish advance and the standings tail
+       give, until the whole stack stands inside the frame.
+       Ordinary nights keep the original geometry exactly. */
+    var pitch = 58, tail = 18, flAdv = 66;
+    (function fitStack() {
+      function lastBase() {
+        var c = cursor + d.standings.length * pitch + tail;
+        if (d.flourish) return d.seriesLine ? c + flAdv + 16 : c + 16;
+        if (d.seriesLine) return c + 16;
+        return cursor + (d.standings.length - 1) * pitch;
+      }
+      while (lastBase() > 1244 && pitch > 44) pitch -= 2;
+      while (lastBase() > 1244 && flAdv > 50) flAdv -= 4;
+      while (lastBase() > 1244 && tail > 8) tail -= 2;
+    })();
     /* the standings, in the order the night left them */
     d.standings.forEach(function (r, k) {
-      var base = cursor + k * 58;
+      var base = cursor + k * pitch;
       var isChamp = !!d.champion && r.seat === d.champion.seat;
       var img = av.rows[k];
       if (img) {
@@ -5080,14 +5102,14 @@
       ctx.font = "700 40px " + FM; ctx.textAlign = "right";
       ctx.fillText(money(r.score), 936, base);
     });
-    cursor += d.standings.length * 58 + 18;
+    cursor += d.standings.length * pitch + tail;
     /* the flourish: the night's biggest bank, from the same
        tallies the Report Card reads */
     if (d.flourish) {
       var fl = "★ BIGGEST BANK OF THE NIGHT — " + money(d.flourish.amt) + " BY " + d.flourish.name.toUpperCase();
       var fpx = fitPx(fl, 34, 880, "700", F);
       centered(fl, cursor + 16, "700 " + fpx + "px " + F, "#E9CD8A");
-      cursor += 66;
+      cursor += flAdv;
     }
     if (d.seriesLine) {
       var sx = fitPx(d.seriesLine, 31, 880, "700", F);
