@@ -4442,6 +4442,42 @@
     });
     return "ON THE NIGHT — " + parts.join(" · ");
   }
+  /* Pass 7 (Sterling series memory): the opening framing is
+     spoken once, at the show's start, and the finale reports the
+     result — between them Sterling forgot the night entirely.
+     At the last break, with the Big Finish still to play, he
+     renews the stakes when the night has come to a point: a
+     leader one win from the target takes the night with this
+     finish; a dead-level top makes the finish the decider; a
+     night already taken turns the finish into a lap of honour.
+     Anything younger keeps the ordinary break line — memory
+     that speaks only when it matters. Composed from the stored
+     series (which advances only at a finale, so at the break it
+     still reads as it did at the opening), in the opening
+     composer's gravity order and clipped register. */
+  function composeSeriesStakes(state, ctx) {
+    if (!state || !ctx || !ctx.roster.length || state.shows < 1) return null;
+    var wins = state.wins || {};
+    var scored = ctx.roster.map(function (r, i) {
+      return { name: r.name, key: r.key, w: wins[r.key] || 0, seat: i };
+    });
+    var top = 0;
+    scored.forEach(function (r) { if (r.w > top) top = r.w; });
+    var leaders = scored.filter(function (r) { return r.w === top; });
+    if (top >= SERIES_TARGET) {
+      return "The night is already " + leaders[0].name + "'s at " + top + ". The Big Finish is the lap of honour — run it properly.";
+    }
+    if (leaders.length > 1 && top >= 1 && state.shows >= 2) {
+      return "Dead level at the top. The Big Finish decides the night — whoever takes it, takes the evening.";
+    }
+    if (leaders.length === 1 && top === SERIES_TARGET - 1) {
+      var byScore = scored.slice().sort(function (a, b) { return (b.w - a.w) || (a.seat - b.seat); });
+      return leaders[0].name + " takes the night with this finish — the score stands " +
+        byScore.map(function (r) { return r.name + " " + r.w; }).join(", ") +
+        ". Everyone else plays to keep the night alive.";
+    }
+    return null;
+  }
 
   /* ---------- show flow ---------- */
   function showScreen(id) {
@@ -5243,6 +5279,15 @@
       wb ? wb.seats.map(function (si) { return G.players[si].name; }) : null, G.rules);
     stage(breakCardHTML(view, "btnBreakGo"));
     $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "");
+    /* Pass 7 (Sterling series memory): at the last break, with
+       the Big Finish still to play, Sterling renews the night's
+       stakes when the series has come to a point. Composed from
+       the stored series, so a repaint or a resume reads the
+       identical words. */
+    if (G.round === 3 && G.seriesCtx) {
+      var stakesT = composeSeriesStakes(liveSeriesFor(G.seriesCtx), G.seriesCtx);
+      if (stakesT) $("hostLine").textContent += " " + stakesT;
+    }
     $("btnBreakGo").addEventListener("click", function () { roundIntro(); });
     /* The Declaration (Pass 3): the last break carries the call,
        and rests a beat longer for it — a decision deserves more
@@ -10130,6 +10175,13 @@
     var view = breakView(ogBreakSeats(), OG.facts, nextRound - 1, OG.pot || 0, OG.breakWind ? OG.breakWind.names : null, OG.rules);
     stage(breakCardHTML(view, "ogBreakGo"));
     $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "");
+    /* Pass 7 (Sterling series memory): the same renewal at the
+       online last break — the series book is the host's, and the
+       composer reads it exactly as the table's break does. */
+    if (nextRound === 3 && OG.seriesCtx) {
+      var stakesO = composeSeriesStakes(liveSeriesFor(OG.seriesCtx), OG.seriesCtx);
+      if (stakesO) $("hostLine").textContent += " " + stakesO;
+    }
     /* The Declaration (Pass 3): the last break carries the call
        and rests a beat longer for it, as at the table */
     if (nextRound === 3) {

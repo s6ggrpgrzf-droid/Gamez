@@ -381,7 +381,18 @@ button.dbl-token:active{transform:scale(.92)}
    tied honour mid-holder — "Cy" on one line, his "10" orphaned
    on the next. A holder now wraps as a unit: lines break between
    holders, never inside one. */
-.finale-wrap.has-report .award-win{white-space:nowrap}
+/* 8b (Pass 6, 2026-11-21): the nowrap above kept a holder whole
+   but glued the holders together — with no space around the
+   joining dot there was no break opportunity the browser would
+   take, so a tied row at 390 portrait ran as one unbreakable
+   line and pushed the whole card off the stage (Bo's $5,000
+   ended 54px past the screen's edge; a long-name tie stretched
+   the stage to 815px). A holder is now an atomic box instead:
+   lines break between holders exactly as note 8 intended, a
+   holder stays whole while it fits, and one wider than the
+   whole line wraps inside itself at its own spaces rather
+   than off the screen. */
+.finale-wrap.has-report .award-win{display:inline-block;vertical-align:top}
 /* 9. Sterling's line over the board was the smallest text on the
    closing screen (10.5px italic over a 15.5px board). It rises
    to 12px in both finale scopes; portrait repays the height from
