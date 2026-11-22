@@ -4301,11 +4301,16 @@
      (gh_records_v1) is never read or written by this code; a
      rematch show records there exactly as every show does.
      The cast is captured when a show STARTS: at the table, the
-     names at the seats; online, the players CONNECTED at that
-     moment — so a rematch tapped after a player has wandered off
-     deals a genuinely different cast, and the key, seeing to it,
-     starts that table a fresh series. First to SERIES_TARGET wins
-     takes the night. */
+     names at the seats; online, the seats the show was dealt to
+     (the room's roster) — with one narrower door: a rematch is
+     dealt to the players still present, so a rematch tapped
+     after a player has wandered off deals a genuinely different
+     cast, and the key, seeing to it, starts that table a fresh
+     series. (The ONE LEFT settlement, 2026-11-21: a series is a
+     contest between the people playing it — a departed player's
+     seat may be house-played, but it does not hold the night
+     open for a table that has moved on.) First to
+     SERIES_TARGET wins takes the night. */
   var SERIES_KEY = "gh_series_v1";
   var SERIES_TARGET = 3;
   function loadSeries() {
@@ -9308,11 +9313,17 @@
     if (!OG || OG.started || ogJoined().length < 1) return;
     ogBeginShow();
   }
+  /* a rematch's cast override: ogRematch deals its show to the
+     players still present, so it names that cast here and
+     ogBeginShow's capture honours it for that one show (the
+     ONE LEFT settlement — see the series header) */
+  var ogCastOverride = null;
   /* the show-start core, shared by the lobby's START THE SHOW and
      the finale's REMATCH (Programme pass 4): a fresh script under
      the ramp, every per-show field reset, and the night's series
-     context captured from the players CONNECTED at this moment —
-     the cast the show will count for. On a series show the
+     context captured from the seats the show is dealt to — the
+     cast the show will count for (a rematch narrows its cast to
+     the players still present, via ogCastOverride). On a series show the
      standard greeting stands down: Sterling's framing of the
      night is spoken at the Round 1 intro instead (ogIntro), where
      the room reads before the first question */
@@ -9345,7 +9356,8 @@
     ogFortuneDisp = [];
     OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
     ogLobbyNote = null;
-    OG.seriesCtx = seriesCtxFor(OG.players.filter(function (p) { return p && p.connected; }).map(function (p) { return p.name; }));
+    OG.seriesCtx = seriesCtxFor(ogCastOverride || OG.players.filter(function (p) { return !!p; }).map(function (p) { return p.name; }));
+    ogCastOverride = null;
     OG.seriesLine = composeSeriesOpening(liveSeriesFor(OG.seriesCtx), OG.seriesCtx);
     Snd.ensure(); Snd.play("theme");
     if (!OG.seriesLine) sayLive("greeting", { names: ogJoined().map(function (p) { return p.name; }) }, authoredLine("open"),
@@ -10309,6 +10321,7 @@
       ogSaveHostShow(); /* the save now describes a lobby, not a finale */
       return;
     }
+    ogCastOverride = connected.map(function (p) { return p.name; });
     ogBeginShow();
   }
   $("btnCreateRoom").addEventListener("click", function () { Snd.ensure(); ogCreate(); });
