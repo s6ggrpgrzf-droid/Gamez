@@ -466,10 +466,21 @@
   #stage:has(.fact-list) #btnRoundGo{position:sticky;bottom:8px;z-index:3}
   .desk-head .proj-wrap{width:100%;max-width:100%;flex-wrap:wrap}
   .desk-head .proj-strip{flex-wrap:wrap}
-  .env-wrap{padding-top:2px}
-  .env-scene{padding-top:8px}
-  .env{width:min(300px,80vw);height:140px}
-  .env-cap{font-size:11.5px;line-height:1.3;margin:5px auto 7px;max-width:430px}
+  .env-wrap{padding-top:0}
+  .env-scene{padding-top:2px}
+  .env{width:min(300px,80vw);height:118px}
+  .env.open .env-card{transform:translateY(-40px)}
+  .env-card-name{font-size:24px}
+  .env-seal{width:40px;height:40px;font-size:13px}
+  .env-cap{font-size:11.5px;line-height:1.3;margin:5px auto 7px;max-width:560px}
+  /* Queue Pass 15 (2026-11-22): the fit pass above got the button
+     painted inside the frame, but on the short stage it settled
+     at y 255-282 with the seats band starting at 253 — the first
+     seat's avatar sat on its centre and the centre never hit-
+     tested to the button (probe-fitenv). The scene compresses
+     further here (envelope 140->118, scene pad 8->2, caption
+     widened to one line at 560) so the button's whole body
+     clears the seats band at rest, entrance included. */
   #scr-game #hostbar .host-line{font-size:12px;line-height:1.3;min-height:0}
 }
 
