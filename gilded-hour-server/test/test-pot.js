@@ -210,6 +210,8 @@ await R.host.send({
 await R.P[0].send({ t: 'answer', qid: 'bf1', pick: 0 }); // correct — banks 300
 await R.P[1].send({ t: 'answer', qid: 'bf1', pick: 1 }); // wrong — feeds 2 x 100
 await R.host.send({ t: 'reveal', qid: 'bf1' });
+T += 3100; /* Pass 14: the finale reveal holds its breath — run it out */
+await R.P[0].send({ t: 'ping' });
 {
   const rev = R.P[0].last('reveal');
   const bs = bySeat(rev);
@@ -226,6 +228,8 @@ await R.host.send({
 await R.P[0].send({ t: 'answer', qid: 'bf2', pick: 2 }); // wrong
 await R.P[1].send({ t: 'answer', qid: 'bf2', pick: 3 }); // wrong
 await R.host.send({ t: 'reveal', qid: 'bf2' });
+T += 3100; /* Pass 14: the held breath runs out */
+await R.P[0].send({ t: 'ping' });
 {
   const rev = R.P[0].last('reveal');
   ok(rev.potFed === 200 && rev.pot === 930,

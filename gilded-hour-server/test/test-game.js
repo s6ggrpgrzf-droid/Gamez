@@ -305,7 +305,7 @@ await host.send({ t: 'reveal', qid: 'q4' });
     'clean sweep banks $100 each, plus the round-2 $100 quick-draw and a $50 streak bonus (seat 0 third straight) to the first receipt; scores [680, 200, 300]');
 }
 
-// ---- Q5: finale bet phase — secret bets, bet x $100, no losses ----
+// ---- Q5: finale bet phase — secret bets, bet x $100, jeopardy on a miss ----
 const betMark1 = P[1].mark();
 const betMark0 = P[0].mark();
 await host.send({ t: 'bet_phase', qid: 'q5' });
@@ -329,6 +329,12 @@ await P[0].send({ t: 'answer', qid: 'q5', pick: 2 }); // correct, 3 chips
 await P[1].send({ t: 'answer', qid: 'q5', pick: 0 }); // wrong, 1 chip
 await P[2].send({ t: 'answer', qid: 'q5', pick: 2 }); // correct, no bet -> default 1
 await host.send({ t: 'reveal', qid: 'q5' });
+/* Pass 14: the finale reveal holds its breath — 5 chips riding
+ * (3 + 1 + the default 1) is 1150ms of fake time; the room
+ * speaks the reveal when the breath runs out, on the next
+ * traffic through the room */
+T += 3100;
+await P[2].send({ t: 'ping' });
 {
   const rev = P[1].last('reveal');
   const bySeat = Object.fromEntries(rev.results.map((r) => [r.seat, r]));
@@ -339,7 +345,7 @@ await host.send({ t: 'reveal', qid: 'q5' });
    * q4, q5): 100 + 75 = 175. Totals: seat 0 680 + 525 = 1205;
    * seat 2 300 + 175 = 475. */
   ok(bySeat[0].banked === 525, 'correct 3-chip bet banks bet x $100 = $300, plus the round-3 $150 quick-draw and a $75 streak bonus (fourth straight — the streak bonus is never bet-multiplied)');
-  ok(bySeat[1].banked === 0 && rev.scores[1] === 200, 'wrong bet loses $0 — score untouched');
+  ok(bySeat[1].banked === 0 && bySeat[1].lost === 50 && rev.scores[1] === 150, 'jeopardy: a wrong 1-chip bet on the first Big Finish question loses half the stake — $50, floored deductions ride the result');
   ok(bySeat[2].banked === 175, 'missing bet defaults to 1 chip ($100), plus a $75 streak bonus (third straight)');
   ok(rev.scores[0] === 1205 && rev.scores[2] === 475, 'scores [1205, 200, 475]');
 }
@@ -355,7 +361,7 @@ await P[2].send({ t: 'ping' });
   const rev = P[0].last('reveal');
   ok(rev && rev.qid === 'q6' && rev.value === 50,
     'expired window auto-closes: reveal broadcast at the 50% floor');
-  ok(rev.scores[0] === 1205 && rev.scores[1] === 200 && rev.scores[2] === 475,
+  ok(rev.scores[0] === 1205 && rev.scores[1] === 150 && rev.scores[2] === 475,
     'auto-close banks nothing (no answers), scores unchanged');
   ok((P[2].last('pong') || {}).t === 'pong', 'the triggering message still gets its reply');
 }
@@ -377,7 +383,7 @@ ok((P[0].last('pong') || {}).t === 'pong', 'malformed message ignored; room stil
   await back.send({ t: 'hello', role: 'player', reclaimToken: tokens[1] });
   ok((back.last('welcome') || {}).seat === 1, 'reclaim token restores seat 1');
   const st = back.lastState();
-  ok(st.players[1].score === 200 && st.players[1].connected === true,
+  ok(st.players[1].score === 150 && st.players[1].connected === true,
     'reclaimed seat keeps its score');
   ok(st.players[1].avatar === 1, 'reclaim without an avatar field preserves the stored avatar');
   P[1] = back;
@@ -403,8 +409,8 @@ ok((P[0].last('pong') || {}).t === 'pong', 'malformed message ignored; room stil
 await host.send({ t: 'end_show' });
 {
   const ended = P[0].last('ended');
-  ok(ended && ended.scores[0] === 1205 && ended.scores[1] === 200 && ended.scores[2] === 475,
-    'end_show broadcasts final scores [1205, 200, 475]');
+  ok(ended && ended.scores[0] === 1205 && ended.scores[1] === 150 && ended.scores[2] === 475,
+    'end_show broadcasts final scores [1205, 150, 475]');
   ok(P[0].lastState().phase === 'ended', 'room lands in the ended phase');
 }
 

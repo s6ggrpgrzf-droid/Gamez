@@ -10,7 +10,7 @@
  * (stake + $300) x 2, floored at the seat's score; an undeclared
  * seat settles plainly throughout; a fresh show clears the calls.
  * Run: node test/test-declaration.js */
-import { createRoom, handleHello, handleHostMessage, handlePlayerMessage, reportFor, setNowProvider } from '../room.js';
+import { createRoom, handleHello, handleHostMessage, handlePlayerMessage, reportFor, expireIfNeeded, setNowProvider } from '../room.js';
 
 let T = 1_700_001_200_000;
 setNowProvider(() => T);
@@ -30,6 +30,9 @@ const host = (m) => handleHostMessage(room, m);
 const play = (seat, m) => handlePlayerMessage(room, seat, m);
 const scores = () => room.players.map((p) => (p ? p.score : null));
 const bySeat = () => Object.fromEntries(room.lastReveal.results.map((r) => [r.seat, r]));
+/* Pass 14: a finale reveal holds its breath — run the clock
+ * past the longest breath and let the room's expiry speak it */
+const breathe = () => { T += 3100; expireIfNeeded(room); };
 
 // ---- cushion: Ana banks $2,000 on a Round 1 number question ----
 host({ t: 'publish_question', qid: 'qC', round: 1, kind: 'num', category: 'Movies', deadlineMs: 20000, baseValue: 2000, trueNum: 40 });
@@ -67,6 +70,7 @@ play(1, { t: 'answer', qid: 'q13', pick: 2 }); // Bo correct first (quick-draw h
 play(0, { t: 'answer', qid: 'q13', pick: 2 }); // Ana correct, 2 chips
 play(2, { t: 'answer', qid: 'q13', pick: 0 }); // Cy wrong, score $0
 host({ t: 'reveal', qid: 'q13' });
+breathe();
 ok(bySeat()[0].banked === 200, 'Q13: a declared seat banking early is paid PLAIN — 2 chips = $200, not $400', JSON.stringify(bySeat()[0]));
 ok(scores()[1] === 250, 'Q13: Bo banks $100 + $150 quick-draw', JSON.stringify(scores()));
 
@@ -80,6 +84,7 @@ play(0, { t: 'answer', qid: 'q14', pick: 0 }); // Ana wrong, 3 chips
 play(1, { t: 'answer', qid: 'q14', pick: 0 }); // Bo wrong, 1 chip
 play(2, { t: 'answer', qid: 'q14', pick: 0 }); // Cy wrong, score $0
 host({ t: 'reveal', qid: 'q14' });
+breathe();
 ok(bySeat()[0].lost === 150 && scores()[0] === 2050, 'Q14: a declared failure still costs the plain half — $150', JSON.stringify(bySeat()[0]));
 ok(bySeat()[1].lost === 50 && scores()[1] === 200, 'Q14: Bo loses the plain $50', JSON.stringify(bySeat()[1]));
 
@@ -93,6 +98,7 @@ play(2, { t: 'answer', qid: 'q15', pick: 3 }); // Cy correct first (quick-draw h
 play(0, { t: 'answer', qid: 'q15', pick: 3 }); // Ana correct, 3 chips, declared
 play(1, { t: 'answer', qid: 'q15', pick: 0 }); // Bo wrong, 2 chips, declared, score $200
 host({ t: 'reveal', qid: 'q15' });
+breathe();
 ok(bySeat()[0].banked === 600, 'Q15: a declared bank pays the bet DOUBLE — 3 chips = $600', JSON.stringify(bySeat()[0]));
 ok(bySeat()[2].banked === 250, 'Q15: the undeclared seat settles plainly — $100 bet + $150 quick-draw', JSON.stringify(bySeat()[2]));
 ok(bySeat()[1].lost === 200 && scores()[1] === 0, 'Q15: a declared failure owes ($200 + $300) x 2 = $1,000, floored at the $200 held', JSON.stringify(bySeat()[1]));

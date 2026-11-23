@@ -396,6 +396,7 @@ export function createRoom(code, hostToken, rules) {
     goldenUsed: false,        // the Golden Question: this show's one double is spent
     pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
     declared: {},             // The Declaration (Pass 3): seats that called All or Nothing on Q15 at the last break
+    facts: {},                // About This Room online (Pass 13): lobby submissions {seat: {text, subject}} — the host's to plant, cleared per show
     stats: [null, null, null, null], // The Report Card (N1): per-seat raw tallies {cats, fastestMs, biggest, peak}
     statsSeq: 0,              // questions settled this show — the "earliest in the night" clock for best-category ties
     showSeq: 1,               // which show of the night this room is on (Rematch Night)
@@ -506,6 +507,11 @@ export function snapshotFor(room, view) {
         fakesIn: q.fakes ? Object.keys(q.fakes).length : 0,
         options: q.options ? q.options.map((o) => o.t) : null,
       } : {}),
+      /* About This Room online (Pass 13): a planted question's
+       * face rides the snapshot so every pad can read it — the
+       * texts are public; only the correctIdx stays the room's
+       * secret, as with any question */
+      ...(q.roomText ? { roomText: q.roomText, roomAnswers: q.roomAnswers } : {}),
       answersIn: Object.keys(q.kind === 'num' ? q.nums : q.picks).length,
     };
     if (view.role === 'host') { // the host authored the secrets; resync may echo them to it alone
@@ -569,10 +575,18 @@ export function snapshotFor(room, view) {
      * broadcast dealt. Mid-show it is null, never a peek. */
     report: room.phase === 'ended' ? reportFor(room) : null,
   };
+  if (view.role === 'host') {
+    /* About This Room online (Pass 13): the collected facts go
+     * to the host alone — the plant is its surprise to keep */
+    snap.facts = room.facts && typeof room.facts === 'object' ? room.facts : {};
+  }
   if (view.role === 'player') {
     const seat = view.seat;
     if (room.bet) snap.yourBet = room.bet.bySeat[seat] != null ? room.bet.bySeat[seat] : null;
     else if (q && q.betted) snap.yourBet = q.bets[seat] != null ? q.bets[seat] : null;
+    /* a pad sees its own fact, so a rejoined phone finds its
+     * words waiting — never anybody else's */
+    snap.yourFact = room.facts && room.facts[seat] ? room.facts[seat] : null;
     if (q) {
       snap.yourPick = q.picks[seat] != null ? q.picks[seat] : null;
       snap.yourNum = q.nums[seat] != null ? q.nums[seat] : null;
@@ -625,6 +639,26 @@ export function closeInvent(room) {
 /* Settle the open question at the current server time: compute the
  * as-stopped drained value, find the winners, bank, and produce the
  * reveal broadcast. Returns null when no question is open. */
+/* Pass 14 — the held breath, online: a Big Finish reveal waits
+ * on the money, exactly as at the table (finaleBreathMs there):
+ * 600ms + 110ms per chip riding on the question, the last
+ * question breathing 1.4x longer, the whole held between 850ms
+ * and 3s. Only a betted, non-decider finale question holds its
+ * breath — everything else reveals the moment it is called.
+ * The chips are counted the way settlement counts them: a seat
+ * that never placed its bet rides the default one chip. The
+ * last-question test reads the referee's own publish count,
+ * the same derivation closeQuestion judges position by. */
+export function finaleBreathMs(room, q) {
+  if (!q || q.round !== 3 || !q.betted || q.decider) return 0;
+  let chips = 0;
+  for (const seat of joinedSeats(room)) chips += (q.bets && q.bets[seat]) || 1;
+  let ms = 600 + 110 * chips;
+  const pub3 = (room.published && room.published['3']) || 0;
+  if (pub3 >= 3) ms = Math.round(ms * 1.4);
+  return Math.max(850, Math.min(3000, ms));
+}
+
 export function closeQuestion(room) {
   const q = room.question;
   if (!q || room.phase !== 'answer') return null;
@@ -931,8 +965,27 @@ export function expireIfNeeded(room) {
   if (room.phase === 'invent' && room.question && nowMs() >= room.question.inventDeadline) {
     return closeInvent(room);
   }
-  if (room.phase === 'answer' && room.question && nowMs() >= room.question.deadline) {
-    return closeQuestion(room);
+  if (room.phase === 'answer' && room.question) {
+    const q = room.question;
+    /* Pass 14: a held breath owns this question's close — the
+       reveal lands when the breath runs out, never at the bare
+       deadline underneath it */
+    if (q.breathUntil) {
+      if (nowMs() >= q.breathUntil) return closeQuestion(room);
+      return null;
+    }
+    if (nowMs() >= q.deadline) {
+      /* the backstop path breathes too: a finale question whose
+         window lapses unrevealed holds the same breath the
+         host's own reveal would have started */
+      const breath = finaleBreathMs(room, q);
+      if (breath > 0) {
+        q.breathUntil = nowMs() + breath;
+        q.deadline = nowMs();
+        return ok({ state: true, changed: true });
+      }
+      return closeQuestion(room);
+    }
   }
   return null;
 }
@@ -1116,6 +1169,28 @@ export function handleHostMessage(room, msg) {
        * the band is public presentation, not a claim the room
        * referees. */
       const band = Number.isInteger(msg.band) && msg.band >= 1 && msg.band <= 3 ? msg.band : null;
+      /* About This Room online (Pass 13): a planted question is
+       * an ordinary 'normal' question in every way the room
+       * referees — the one difference is that its face (the
+       * question text and the answer texts, which are the
+       * players' own names) is not in any bank, so the host
+       * publishes it with the question and the room carries it
+       * on the record, public in every snapshot. Only the
+       * correctIdx stays secret, exactly as always. A publish
+       * without these fields is an ordinary bank question,
+       * exactly as before; a malformed pair is simply not
+       * carried (the question still plays — the pads fall back
+       * to the big screen, as they do for any unrebuildable
+       * question). */
+      let roomText = null;
+      let roomAnswers = null;
+      if (kind === 'normal' && typeof msg.roomText === 'string' && Array.isArray(msg.roomAnswers)) {
+        const rt = msg.roomText.replace(/\s+/g, ' ').trim().slice(0, 140);
+        const ra = msg.roomAnswers
+          .filter((a) => typeof a === 'string' && a.replace(/\s+/g, ' ').trim())
+          .map((a) => a.replace(/\s+/g, ' ').trim().slice(0, 24));
+        if (rt && ra.length === answersCount) { roomText = rt; roomAnswers = ra; }
+      }
       const betted = room.phase === 'bet';
       const bets = betted ? Object.assign({}, room.bet.bySeat) : {};
       room.bet = null;
@@ -1168,6 +1243,8 @@ export function handleHostMessage(room, msg) {
         bets,
         decider,
         eligible,
+        roomText,
+        roomAnswers,
         picks: {},
         pickOrder: [],
         pickTimes: {},
@@ -1208,6 +1285,21 @@ export function handleHostMessage(room, msg) {
       }
       if (room.phase !== 'answer' || !room.question) return fail('Nothing to reveal.');
       if (msg.qid != null && msg.qid !== room.question.qid) return fail('Wrong question.');
+      /* Pass 14: a Big Finish reveal first holds its breath —
+         the window seals at once (the deadline moves to now, so
+         no late answer can slip into the held moment), the
+         settlement waits, and the room's alarm speaks the
+         reveal when the breath runs out. A second reveal while
+         the breath is held is a polite no-op, in the spirit of
+         the spent reveal above */
+      const q = room.question;
+      if (q.breathUntil) return ok({});
+      const breath = finaleBreathMs(room, q);
+      if (breath > 0) {
+        q.breathUntil = nowMs() + breath;
+        q.deadline = nowMs();
+        return ok({ state: true, changed: true });
+      }
       const res = closeQuestion(room);
       return res || fail('Nothing to reveal.');
     }
@@ -1285,6 +1377,8 @@ export function handleHostMessage(room, msg) {
       room.pot = 0;
       /* The Declaration (Pass 3): a fresh show starts with nobody declared */
       room.declared = {};
+      /* About This Room online (Pass 13): a fresh show collects fresh facts */
+      room.facts = {};
       /* The Report Card (N1): the tallies are per-show memory like
        * everything on this list — a rematch starts a blank card */
       room.stats = [null, null, null, null];
@@ -1325,6 +1419,30 @@ export function handlePlayerMessage(room, seat, msg) {
       if (room.phase !== 'lobby') return ok({});
       p.ready = !!msg.ready;
       return ok({ state: true, changed: true });
+    }
+    case 'room_fact': {
+      /* About This Room online (Pass 13): a phone writes one
+       * true thing about somebody at the table, in the lobby,
+       * for the host to plant as a Round 2 question. One fact
+       * per seat, replaceable while the lobby stands. The
+       * subject is a SEAT, never a name — names repeat, seats
+       * don't. The facts are the host's alone (snapshots carry
+       * them to the host only; a pad sees just its own, like a
+       * bluff lie) — the plant must stay a surprise. */
+      if (room.phase !== 'lobby') return fail('Facts are collected in the lobby.');
+      const text = typeof msg.text === 'string' ? msg.text.replace(/\s+/g, ' ').trim().slice(0, 90) : '';
+      if (!text) return fail('An empty fact plants nothing.');
+      const subject = msg.subject;
+      if (!Number.isInteger(subject) || subject < 0 || subject >= MAX_PLAYERS || !room.players[subject]) {
+        return fail('A fact needs somebody seated to be about.');
+      }
+      if (!room.facts || typeof room.facts !== 'object') room.facts = {};
+      room.facts[seat] = { text, subject };
+      return ok({
+        to: [{ dest: seat, msg: { t: 'accepted', fact: true } }],
+        state: true,
+        changed: true,
+      });
     }
     case 'bluff': {
       /* THE BLUFF: a pad submits its seat's lie during the
@@ -1375,6 +1493,10 @@ export function handlePlayerMessage(room, seat, msg) {
         return fail('Only the tied leaders play the decider.');
       }
       if (nowMs() > q.deadline) return fail('Window closed.');
+      /* Pass 14: a held breath seals the window outright — the
+       * deadline moved to the reveal call, and no answer lands
+       * inside the held moment, not even in the same instant */
+      if (q.breathUntil) return fail('Window closed.');
       if (q.kind === 'num') {
         const n = Number(msg.num);
         if (!Number.isFinite(n)) return fail('Give a number.');

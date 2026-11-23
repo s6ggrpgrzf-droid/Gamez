@@ -146,6 +146,9 @@ export class GildedRoom {
      * the 2h TTL. */
     if ((this.room.phase === 'answer' || this.room.phase === 'invent') && this.room.question) {
       next = Math.min(next, this.room.question.deadline);
+      /* Pass 14: a held breath is a deadline too — the reveal
+       * must land when it runs out, even in a room gone quiet */
+      if (this.room.question.breathUntil) next = Math.min(next, this.room.question.breathUntil);
     }
     const at = Math.max(next, nowMs() + 50);
     this.ctx.storage.setAlarm(at).catch(() => {});

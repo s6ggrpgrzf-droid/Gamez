@@ -10,7 +10,7 @@
  * rule runs unchanged alongside; reportFor carries the night's lost
  * total per seat.
  * Run: node test/test-jeopardy.js */
-import { createRoom, handleHello, handleHostMessage, handlePlayerMessage, reportFor, setNowProvider } from '../room.js';
+import { createRoom, handleHello, handleHostMessage, handlePlayerMessage, reportFor, expireIfNeeded, setNowProvider } from '../room.js';
 
 let T = 1_700_000_900_000;
 setNowProvider(() => T);
@@ -28,6 +28,9 @@ handleHello(room, { role: 'player', name: 'Bo' });  // seat 1
 const host = (m) => handleHostMessage(room, m);
 const play = (seat, m) => handlePlayerMessage(room, seat, m);
 const scores = () => room.players.map((p) => (p ? p.score : null));
+/* Pass 14: a finale reveal holds its breath — run the clock
+ * past the longest breath and let the room's expiry speak it */
+const breathe = () => { T += 3100; expireIfNeeded(room); };
 const bySeat = () => Object.fromEntries(room.lastReveal.results.map((r) => [r.seat, r]));
 
 // ---- cushion: seat 0 banks $2,000 on a Round 1 number question ----
@@ -46,6 +49,7 @@ host({ t: 'publish_question', qid: 'q13', round: 3, kind: 'normal', category: 'M
 play(0, { t: 'answer', qid: 'q13', pick: 0 }); // wrong, 3 chips
 play(1, { t: 'answer', qid: 'q13', pick: 0 }); // wrong, 2 chips, score $0
 host({ t: 'reveal', qid: 'q13' });
+breathe();
 ok(bySeat()[0].lost === 150 && scores()[0] === 1850, 'Q13: a failed 3-chip bet loses half the stake — $150', JSON.stringify(bySeat()[0]));
 ok(bySeat()[1].lost === 0 && scores()[1] === 0, 'Q13: a $100 loss due at a $0 score floors to $0 taken — nobody goes below zero', JSON.stringify(bySeat()[1]));
 ok(room.pot === 500, 'Q13: the pot feed is unchanged — missed stakes feed $300 + $200', 'pot=' + room.pot);
@@ -58,6 +62,7 @@ host({ t: 'publish_question', qid: 'q14', round: 3, kind: 'normal', category: 'M
 play(0, { t: 'answer', qid: 'q14', pick: 0 }); // wrong, 3 chips
 play(1, { t: 'answer', qid: 'q14', pick: 1 }); // correct, 1 chip, first correct receipt
 host({ t: 'reveal', qid: 'q14' });
+breathe();
 ok(bySeat()[0].lost === 150 && scores()[0] === 1700, 'Q14: the second question takes half again — $150', JSON.stringify(bySeat()[0]));
 ok(bySeat()[1].banked === 250 && scores()[1] === 250, 'Q14: seat 1 banks the $100 bet plus the round-3 $150 quick-draw', JSON.stringify(bySeat()[1]));
 ok(room.pot === 800, 'Q14: the one missed stake feeds $300 more', 'pot=' + room.pot);
@@ -70,6 +75,7 @@ host({ t: 'publish_question', qid: 'q15', round: 3, kind: 'normal', category: 'M
 play(0, { t: 'answer', qid: 'q15', pick: 0 }); // wrong, 3 chips
 play(1, { t: 'answer', qid: 'q15', pick: 0 }); // wrong, 3 chips, score $250
 host({ t: 'reveal', qid: 'q15' });
+breathe();
 ok(bySeat()[0].lost === 600 && scores()[0] === 1100, 'Q15: a failed 3-chip bet loses the whole $300 stake plus the $300 penalty', JSON.stringify(bySeat()[0]));
 ok(bySeat()[1].lost === 250 && scores()[1] === 0, 'Q15: a $600 loss due at a $250 score takes the $250 and stops at zero', JSON.stringify(bySeat()[1]));
 ok(room.pot === 1400, 'Q15: both missed stakes feed $300 each — the pot rule never read the jeopardy figures', 'pot=' + room.pot);

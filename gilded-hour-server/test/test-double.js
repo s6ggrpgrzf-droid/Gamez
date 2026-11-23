@@ -179,6 +179,8 @@ await A.P[2].send({ t: 'double', qid: 'r3a' });
 ok(/own stake/.test((A.P[2].lastError() || {}).msg || ''), 'bet: a bet question refuses the Double', JSON.stringify(A.P[2].lastError()));
 await A.P[2].send({ t: 'answer', qid: 'r3a', pick: 1 });
 await A.host.send({ t: 'reveal', qid: 'r3a' });
+T += 3100; /* Pass 14: a bet question's reveal holds its breath — run it out before the next publish */
+await A.P[0].send({ t: 'ping' });
 
 /* ---- a closest-number bank doubles too ---- */
 await pub(A.host, 'r2n', { kind: 'num', trueNum: 100, correctIdx: undefined, answersCount: undefined });
