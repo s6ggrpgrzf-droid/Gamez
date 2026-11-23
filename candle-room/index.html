@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#a8a195">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>The Candle Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#33302a;
+    --ink-soft:rgba(51,48,42,.62);
+    --ink-faint:rgba(51,48,42,.42);
+    --paper:#f5f2ec;
+    --seal:#bc4527;
+    --bloom-o:.9; --bloom-x:0px; --bloom-y:0px; --bloom-s:1;
+    --shaft-o:.5;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+    overflow:hidden; touch-action:manipulation; user-select:none; -webkit-user-select:none;
+    background:#a39c90;
+    color:var(--ink);
+  }
+
+  /* ---------- the room ---------- */
+  .wall{
+    position:fixed; inset:0;
+    background:
+      radial-gradient(120% 90% at 50% 30%, rgba(255,250,238,.20), rgba(255,250,238,0) 55%),
+      radial-gradient(140% 120% at 50% 45%, #bcb5a9 0%, #aaa294 52%, #8d867b 100%);
+  }
+  .wall::after{ /* plaster grain */
+    content:""; position:absolute; inset:0; opacity:.05; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .desk{
+    position:fixed; left:0; right:0; bottom:0; height:31%;
+    background:
+      linear-gradient(180deg, rgba(70,62,50,.28), rgba(70,62,50,0) 14%),
+      repeating-linear-gradient(93deg, rgba(120,108,90,.05) 0 2px, rgba(120,108,90,0) 2px 9px),
+      repeating-linear-gradient(89deg, rgba(255,255,255,.045) 0 1px, rgba(255,255,255,0) 1px 14px),
+      linear-gradient(180deg, #d3ccbf 0%, #c6bfb1 34%, #b3ab9c 100%);
+    box-shadow:0 -1px 0 rgba(255,252,244,.35), 0 -18px 34px rgba(74,66,54,.16);
+  }
+
+  /* ---------- the shoji screen & its candle ---------- */
+  .screen{
+    position:fixed; left:50%; top:6.5%; transform:translateX(-50%);
+    width:min(58vw, 300px); height:47%;
+    border-radius:6px;
+    background:linear-gradient(180deg,#e9e2d2,#ded5c2);
+    box-shadow:
+      0 0 0 7px #cfc7b6, 0 0 0 9px rgba(96,86,70,.35),
+      0 24px 44px rgba(60,52,40,.35),
+      0 0 90px 26px rgba(255,196,110,.16);
+    overflow:hidden;
+  }
+  .bloom{
+    position:absolute; left:50%; top:56%; width:150%; padding-top:150%;
+    transform:translate(calc(-50% + var(--bloom-x)), calc(-50% + var(--bloom-y))) scale(var(--bloom-s));
+    opacity:var(--bloom-o);
+    background:radial-gradient(circle at 50% 50%,
+      rgba(255,240,205,.98) 0%, rgba(255,214,140,.88) 22%,
+      rgba(255,178,92,.5) 46%, rgba(255,160,80,.16) 68%, rgba(255,150,70,0) 78%);
+    border-radius:50%;
+    will-change:transform,opacity;
+  }
+  .candle-sil{ /* the candle itself, seen only as a soft shadow through paper */
+    position:absolute; left:50%; bottom:11%; transform:translateX(-50%);
+    width:15%; height:34%;
+    background:linear-gradient(180deg, rgba(84,66,44,0) 0%, rgba(84,66,44,.20) 26%, rgba(74,57,38,.34) 30%, rgba(74,57,38,.30) 100%);
+    border-radius:44% 44% 6px 6px / 12% 12% 6px 6px;
+    filter:blur(2.5px);
+  }
+  .candle-sil::before{ /* wick + flame heart */
+    content:""; position:absolute; left:50%; top:-13%; transform:translateX(-50%);
+    width:34%; height:20%; border-radius:50%;
+    background:radial-gradient(circle at 50% 62%, rgba(120,72,26,.5), rgba(120,72,26,0) 70%);
+    filter:blur(1.5px);
+  }
+  .lattice{ position:absolute; inset:0; }
+  .lattice i{ position:absolute; background:rgba(96,84,66,.34); box-shadow:0 0 1px rgba(96,84,66,.25); }
+  .lattice i:nth-child(1){ left:33.3%; top:0; bottom:0; width:5px; transform:translateX(-2px); }
+  .lattice i:nth-child(2){ left:66.6%; top:0; bottom:0; width:5px; transform:translateX(-2px); }
+  .lattice i:nth-child(3){ top:25%; left:0; right:0; height:5px; transform:translateY(-2px); }
+  .lattice i:nth-child(4){ top:50%; left:0; right:0; height:5px; transform:translateY(-2px); }
+  .lattice i:nth-child(5){ top:75%; left:0; right:0; height:5px; transform:translateY(-2px); }
+  .screen-shade{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(88,76,58,.13), rgba(88,76,58,0) 22%, rgba(88,76,58,0) 78%, rgba(88,76,58,.16)); }
+
+  /* light falling from the screen onto the desk */
+  .shaft{
+    position:fixed; left:50%; top:47%; transform:translateX(-50%);
+    width:min(88vw, 460px); height:29%;
+    clip-path:polygon(31% 0, 69% 0, 100% 100%, 0 100%);
+    background:linear-gradient(180deg, rgba(255,226,168,.34), rgba(255,226,168,.05) 78%, rgba(255,226,168,0));
+    opacity:var(--shaft-o); filter:blur(7px); mix-blend-mode:screen; pointer-events:none;
+  }
+
+  /* ---------- the card ---------- */
+  .card{
+    position:fixed; left:50%; bottom:calc(6.5% + env(safe-area-inset-bottom)); transform:translateX(-50%) rotate(-.55deg);
+    width:min(87vw, 452px);
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.40 0 0 0 0 0.33 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23p)'/%3E%3C/svg%3E"),
+      linear-gradient(168deg, #f8f5ef 0%, #f3efe6 55%, #ece7db 100%);
+    clip-path:polygon(.6% 2.1%, 3.5% .5%, 22% 1.1%, 46% .3%, 71% .9%, 97.5% .4%, 99.4% 3.2%, 99% 31%, 99.6% 58%, 98.9% 96.5%, 96.8% 99.4%, 74% 98.8%, 48% 99.6%, 24% 98.9%, 2.8% 99.5%, .4% 96.9%, 1% 66%, .3% 34%);
+    box-shadow:0 30px 48px rgba(56,48,36,.34), 0 4px 12px rgba(56,48,36,.22);
+    padding:clamp(22px, 5.4vw, 34px) clamp(24px, 6vw, 38px) clamp(24px, 6vw, 32px);
+    cursor:pointer;
+  }
+  .card-inner{ transition:opacity .5s ease, transform .5s ease; }
+  .card.fading .card-inner{ opacity:0; transform:translateY(7px); }
+  .kicker{
+    font-family:ui-sans-system, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size:10.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--ink-faint);
+    margin-bottom:14px;
+  }
+  .quote{
+    font-size:clamp(23px, 5.9vw, 31px); line-height:1.34; font-weight:500; color:var(--ink);
+    text-wrap:balance;
+  }
+  .quote.long{ font-size:clamp(20px, 5vw, 26px); line-height:1.38; }
+  .attrib{
+    margin-top:17px; padding-top:13px; border-top:1px solid rgba(51,48,42,.16);
+    font-family:ui-sans-system, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size:10.5px; letter-spacing:.26em; text-transform:uppercase; color:var(--ink-soft);
+    padding-right:56px;
+  }
+  .seal{
+    position:absolute; right:19px; bottom:17px; width:45px; height:45px;
+    background:linear-gradient(160deg, #c5502f, #b0401f);
+    border-radius:5px; transform:rotate(3.2deg);
+    box-shadow:0 2px 6px rgba(120,40,18,.35), inset 0 0 0 2px rgba(255,235,220,.28);
+    color:#fdf3e7; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-weight:600; line-height:1;
+  }
+  .seal b{ font-size:19px; font-weight:600; }
+  .seal span{ font-size:7.5px; letter-spacing:.24em; margin-top:2.5px; font-family:ui-sans-system, -apple-system, Arial, sans-serif; }
+
+  /* ---------- chrome ---------- */
+  .chrome{ transition:opacity 1.4s ease; }
+  body.idle .chrome{ opacity:0; }
+  .brand{
+    position:fixed; top:calc(14px + env(safe-area-inset-top)); left:0; right:0; text-align:center;
+    font-family:ui-sans-system, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size:10px; letter-spacing:.44em; text-transform:uppercase; color:rgba(46,42,36,.5);
+    text-indent:.44em;
+  }
+  .hint{
+    position:fixed; left:0; right:0; bottom:calc(12px + env(safe-area-inset-bottom)); text-align:center;
+    font-family:ui-sans-system, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:rgba(46,42,36,.44);
+    text-indent:.3em;
+  }
+  #specks{ position:fixed; inset:0; pointer-events:none; }
+
+  /* ---------- entrance ---------- */
+  .rise{ animation:rise 1.6s cubic-bezier(.22,.8,.3,1) both; }
+  .card.rise{ animation:cardRise 1.7s cubic-bezier(.22,.8,.3,1) .25s both; }
+  @keyframes rise{ from{ opacity:0 } to{ opacity:1 } }
+  @keyframes cardRise{
+    from{ opacity:0; transform:translateX(-50%) rotate(-.55deg) translateY(16px) }
+    to{ opacity:1; transform:translateX(-50%) rotate(-.55deg) translateY(0) }
+  }
+
+  /* ---------- landscape: screen left, card right ---------- */
+  @media (orientation:landscape) and (min-width:640px){
+    .screen{ left:7%; top:50%; transform:translateY(-50%); width:min(30vw, 272px); height:76%; }
+    .shaft{ left:7%; top:50%; transform:translateY(-8%) rotate(90deg); transform-origin:top center; width:300px; height:34vw; opacity:calc(var(--shaft-o) * .7); }
+    .card{ left:auto; right:6.5%; bottom:auto; top:50%; transform:translateY(-50%) rotate(-.55deg); width:min(46vw, 470px); }
+    .card.rise{ animation:cardRiseL 1.7s cubic-bezier(.22,.8,.3,1) .25s both; }
+    @keyframes cardRiseL{
+      from{ opacity:0; transform:translateY(calc(-50% + 16px)) rotate(-.55deg) }
+      to{ opacity:1; transform:translateY(-50%) rotate(-.55deg) }
+    }
+    .desk{ height:22%; }
+  }
+</style>
+</head>
+<body>
+  <div class="wall"></div>
+
+  <div class="screen rise" id="screen" aria-hidden="true">
+    <div class="bloom"></div>
+    <div class="candle-sil"></div>
+    <div class="lattice"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="screen-shade"></div>
+  </div>
+  <div class="shaft"></div>
+  <div class="desk"></div>
+  <canvas id="specks"></canvas>
+
+  <div class="brand chrome">The Candle Room</div>
+
+  <main class="card rise" id="card" role="button" aria-label="Another quote">
+    <div class="card-inner" id="cardInner">
+      <div class="kicker" id="kicker">Today</div>
+      <p class="quote" id="quote"></p>
+      <div class="attrib" id="attrib"></div>
+      <div class="seal" aria-hidden="true"><b id="sealDay">22</b><span id="sealMon">NOV</span></div>
+    </div>
+  </main>
+
+  <div class="hint chrome">Tap the card for another</div>
+
+<script>
+"use strict";
+/* ============ the quotes — each checked against its book ============ */
+var QUOTES = [
+  { q:"Courage starts with showing up and letting ourselves be seen.", a:"Brené Brown — Daring Greatly" },
+  { q:"Vulnerability is the birthplace of love, belonging, joy, courage, empathy, and creativity.", a:"Brené Brown — Daring Greatly" },
+  { q:"Vulnerability sounds like truth and feels like courage. Truth and courage aren’t always comfortable, but they’re never weakness.", a:"Brené Brown — Daring Greatly" },
+  { q:"If we can share our story with someone who responds with empathy and understanding, shame can’t survive.", a:"Brené Brown — Daring Greatly" },
+  { q:"Owning our story and loving ourselves through that process is the bravest thing we’ll ever do.", a:"Brené Brown — The Gifts of Imperfection" },
+  { q:"You are imperfect, you are wired for struggle, but you are worthy of love and belonging.", a:"Brené Brown — The Gifts of Imperfection" },
+  { q:"Perfectionism is a twenty-ton shield that we lug around thinking it will protect us when, in fact, it’s the thing that’s really preventing us from taking flight.", a:"Brené Brown — The Gifts of Imperfection" },
+  { q:"The middle is messy, but it’s also where the magic happens.", a:"Brené Brown — Rising Strong" },
+  { q:"Stay awkward, brave, and kind.", a:"Brené Brown — Braving the Wilderness" },
+  { q:"True belonging doesn’t require you to change who you are; it requires you to be who you are.", a:"Brené Brown — Braving the Wilderness" },
+  { q:"Don’t walk through the world looking for evidence that you don’t belong, because you will always find it.", a:"Brené Brown — Braving the Wilderness" },
+  { q:"Clear is kind. Unclear is unkind.", a:"Brené Brown — Dare to Lead" },
+  { q:"Courage is contagious. Every time we choose courage, we make everyone around us a little better and the world a little braver.", a:"Brené Brown — Dare to Lead" },
+  { q:"You can’t get to courage without rumbling with vulnerability.", a:"Brené Brown — Dare to Lead" },
+  { q:"Boundaries are the distance at which I can love you and me simultaneously.", a:"Prentis Hemphill — in Atlas of the Heart" },
+  { q:"We are the mapmakers and the travelers.", a:"Brené Brown — Atlas of the Heart" }
+];
+
+/* ============ the day's quote, and the evening's order ============ */
+function mulberry32(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+var now = new Date();
+var dayStamp = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+var dayIndex = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
+var todayIdx = ((dayIndex % QUOTES.length) + QUOTES.length) % QUOTES.length;
+var order = QUOTES.map(function(_, i){ return i; });
+var rnd = mulberry32(dayStamp);
+for (var i = order.length - 1; i > 0; i--){ var j = Math.floor(rnd() * (i + 1)); var tmp = order[i]; order[i] = order[j]; order[j] = tmp; }
+order = [todayIdx].concat(order.filter(function(x){ return x !== todayIdx; }));
+var pos = 0;
+
+var DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var MON3 = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+var card = document.getElementById("card");
+var quoteEl = document.getElementById("quote");
+var attribEl = document.getElementById("attrib");
+document.getElementById("kicker").textContent = DAYS[now.getDay()] + " · " + MONTHS[now.getMonth()] + " " + now.getDate();
+document.getElementById("sealDay").textContent = now.getDate();
+document.getElementById("sealMon").textContent = MON3[now.getMonth()];
+
+function paint(idx){
+  var item = QUOTES[idx];
+  quoteEl.textContent = item.q;
+  quoteEl.classList.toggle("long", item.q.length > 120);
+  attribEl.textContent = item.a;
+}
+paint(todayIdx);
+
+/* ============ the candle: kindle, breath, lean ============ */
+var root = document.documentElement.style;
+var born = performance.now();
+var lean = 0, leanV = 0, walk = 0.4;
+function kindle(t){ /* light catching: two sputters, then it holds */
+  if (t >= 1) return 1;
+  var base = t * t * (3 - 2 * t);
+  var sputter = 1 - 0.55 * Math.exp(-Math.pow((t - 0.3) * 9, 2)) - 0.4 * Math.exp(-Math.pow((t - 0.58) * 11, 2));
+  return Math.max(0.04, base * sputter);
+}
+
+/* ============ ash specks in the light ============ */
+var cv = document.getElementById("specks"), cx = cv.getContext("2d");
+var W = 0, H = 0, DPR = 1, specks = [];
+function sizeCanvas(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W + "px"; cv.style.height = H + "px";
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+function newSpeck(anywhere){
+  var cxp = W * 0.5 + (Math.random() - 0.5) * W * 0.55;
+  return { x: cxp, y: anywhere ? Math.random() * H : -6,
+    r: 0.7 + Math.random() * 1.7, vy: 2.2 + Math.random() * 4.5,
+    ph: Math.random() * 6.28, sw: 4 + Math.random() * 9,
+    a: 0.05 + Math.random() * 0.17, glint: 0 };
+}
+sizeCanvas();
+for (var s = 0; s < 34; s++) specks.push(newSpeck(true));
+window.addEventListener("resize", sizeCanvas);
+
+var last = performance.now();
+function frame(tms){
+  var dt = Math.min((tms - last) / 1000, 0.1); last = tms;
+  var t = tms / 1000;
+
+  /* flame noise: layered sines + a slow random walk — never the same twice */
+  walk += (Math.random() - 0.5) * 0.05; walk = Math.max(0, Math.min(1, walk));
+  var n = Math.sin(t * 1.7) * 0.5 + Math.sin(t * 2.9 + 1.3) * 0.3 + Math.sin(t * 7.3 + 0.5) * 0.12 + (walk - 0.5) * 0.5;
+  var k = kindle(Math.min((tms - born) / 2600, 1));
+
+  /* the lean: a spring that shivers as it settles */
+  leanV += (-lean * 26 - leanV * 5.2) * dt; lean += leanV * dt;
+  var shiver = Math.sin(t * 34) * Math.min(Math.abs(lean) * 0.1, 1.6);
+
+  root.setProperty("--bloom-o", (k * (0.86 + n * 0.1)).toFixed(3));
+  root.setProperty("--bloom-s", (1 + n * 0.028).toFixed(4));
+  root.setProperty("--bloom-x", (n * 4 + lean + shiver).toFixed(2) + "px");
+  root.setProperty("--bloom-y", (Math.sin(t * 2.2) * 2.4 - Math.abs(n) * 2).toFixed(2) + "px");
+  root.setProperty("--shaft-o", (k * (0.42 + n * 0.09)).toFixed(3));
+
+  /* specks */
+  cx.clearRect(0, 0, W, H);
+  for (var i2 = 0; i2 < specks.length; i2++){
+    var p = specks[i2];
+    p.y += p.vy * dt; p.ph += dt * 0.5;
+    if (Math.random() < 0.0016) p.glint = 1;
+    p.glint = Math.max(0, p.glint - dt * 0.7);
+    var alpha = p.a * k * (1 + p.glint * 2.4);
+    cx.beginPath();
+    cx.arc(p.x + Math.sin(p.ph) * p.sw * 0.4, p.y, p.r, 0, 6.2832);
+    cx.fillStyle = "rgba(255,251,240," + alpha.toFixed(3) + ")";
+    cx.fill();
+    if (p.y > H + 8) specks[i2] = newSpeck(false);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ============ touch: another quote, and the room stays awake ============ */
+var idleTimer = null;
+function wake(){
+  document.body.classList.remove("idle");
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(function(){ document.body.classList.add("idle"); }, 30000);
+}
+var busy = false;
+card.addEventListener("pointerdown", function(){
+  wake();
+  leanV += (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 60); /* the flame leans as the air moves */
+  if (busy) return; busy = true;
+  card.classList.add("fading");
+  setTimeout(function(){
+    pos = (pos + 1) % order.length;
+    paint(order[pos]);
+    card.classList.remove("fading");
+    setTimeout(function(){ busy = false; }, 120);
+  }, 480);
+});
+document.addEventListener("pointerdown", wake);
+document.addEventListener("visibilitychange", function(){ if (!document.hidden){ last = performance.now(); wake(); } });
+wake();
+</script>
+</body>
+</html>
