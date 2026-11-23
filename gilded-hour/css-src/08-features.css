@@ -199,6 +199,12 @@
 .ans-btn.cutghost::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:1px;background:linear-gradient(90deg,transparent,rgba(240,220,163,.5) 16%,rgba(240,220,163,.5) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
 .jp-ans.cutghost{opacity:.68;filter:saturate(.5) brightness(.94)}
 .jp-ans.cutghost::before{content:"";position:absolute;left:-6%;top:50%;width:112%;height:1px;background:linear-gradient(90deg,transparent,rgba(240,220,163,.5) 16%,rgba(240,220,163,.5) 84%,transparent);transform:rotate(-7deg);pointer-events:none}
+/* The Private Cut at the table (2026-11-23): the spender's own
+   pick chips wear the cut — settled, ghost and fresh — while the
+   shared slabs stay clean for the rest of the table */
+.pick-chip.cut{opacity:.42;filter:saturate(.26) brightness(.82)}
+.pick-chip.cutghost{opacity:.68;filter:saturate(.5) brightness(.94)}
+.pick-chip.cutfresh{animation:cutShear .6s cubic-bezier(.3,1.4,.4,1) both}
 .tool-btn.holding,.jp-cut.holding{box-shadow:inset 0 0 0 2px rgba(240,220,163,.85),inset 0 2px 10px rgba(0,0,0,.35);transform:translateY(1px)}
 [data-cut],.jp-cut{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 

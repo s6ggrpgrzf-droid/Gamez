@@ -3845,6 +3845,7 @@
          question previews and spends the pair it was dealt, and a
          holding finger after a refresh sees the truth */
       cutPair: c.cutPair ? c.cutPair.slice() : null,
+      cutBy: c.cutBy ? Object.assign({}, c.cutBy) : {},
       /* THE DOUBLE (designer pass 3): the armed seats ride the save
          — a refresh mid-question must not un-spend a declaration */
       dbl: c.dbl ? Object.assign({}, c.dbl) : null,
@@ -3916,7 +3917,7 @@
     return {
       q: q, kind: o.kind, cat: o.cat, diff: o.diff, value: o.value,
       elapsed: 0, clockTotal: o.clockTotal,
-      opts: o.opts || null, marks: o.marks || {}, resolved: !!o.resolved, cutUsed: !!o.cutUsed,
+      opts: o.opts ? o.opts.map(function (oo) { var n = Object.assign({}, oo); delete n.gone; delete n.cut; return n; }) : null, marks: o.marks || {}, resolved: !!o.resolved, cutUsed: !!o.cutUsed, cutBy: (o.cutBy && typeof o.cutBy === "object") ? Object.assign({}, o.cutBy) : {},
       /* G6: saves written before the commitment existed carry no
          pair — null here, and the first preview or spend commits
          one from the untouched wrong answers (commitCutPair) */
@@ -6221,7 +6222,7 @@
          question runs on half of the LONGER window; rules-off
          the scale is 1 and the figure is the one it always was */
       elapsed: 0, clockTotal: (kind === "num" ? NUM_TIME : QTIME) * winScale() / ((headline || golden) ? 2 : 1),
-      opts: null, marks: {}, resolved: false, cutUsed: false, lockOrder: [],
+      opts: null, marks: {}, resolved: false, cutUsed: false, cutBy: {}, lockOrder: [],
       betRound: betRound, bankValue: 0, headline: headline, golden: golden,
       dealtBand: null
     };
@@ -6722,7 +6723,7 @@
       if (p.house != null) {
         h += '<button class="tool-btn" disabled>CUT TWO<small>' + esc(p.name) + '<span class="ct-rest"> plays their own</span></small></button>';
       } else {
-        h += '<button class="tool-btn" data-cut="' + i + '"' + (p.cut > 0 && !G.cur.cutUsed ? "" : " disabled") + ">CUT TWO<small>" + esc(p.name) + '<span class="ct-rest">' + (p.cut >= 2 ? "'s lifeline · two in hand" : "'s one lifeline") + "</span></small></button>";
+        h += '<button class="tool-btn" data-cut="' + i + '"' + (p.cut > 0 && !(G.cur.cutBy && G.cur.cutBy[i]) ? "" : " disabled") + ">CUT TWO<small>" + esc(p.name) + '<span class="ct-rest">' + (p.cut >= 2 ? "'s lifeline · two in hand" : "'s one lifeline") + "</span></small></button>";
       }
     });
     /* Pass 8: no CALL IT — Sterling's clock closes the window,
@@ -6957,8 +6958,9 @@
      are untouched) folded with a hash of the question's text. The
      distribution is the old spend-time roll's own — uniform over
      the three wrong answers, two kept — and nothing before a spend
-     can remove an answer (answers go `gone` only BY a cut, and a
-     question allows one), so the committed pair is always exactly
+     can remove an answer (the pair is a property of the deal —
+     every seat that cuts this question cuts the same two), so
+     the committed pair is always exactly
      the pair the old roll could have landed on. useCut consumes
      the committed pair and nothing else; the pair rides the table
      save, so a resume keeps the very commitment it was dealt. A
@@ -6966,7 +6968,7 @@
      touch (a preview or the spend itself) commits it then, from
      the same untouched wrong answers, by the same rule. */
   function commitCutPair(c) {
-    if (!c || c.cutPair || c.cutUsed || c.kind === "num" || !c.opts) return;
+    if (!c || c.cutPair || c.kind === "num" || !c.opts) return;
     var wrong = [];
     c.opts.forEach(function (o, ix) { if (!o.ok && !o.gone) wrong.push(ix); });
     if (wrong.length < 2) return;
@@ -6982,18 +6984,25 @@
      the classes come off and the slabs are the slabs again. */
   var CUT_HOLD_MS = 350;
   var cutGhostPair = null;
-  function cutGhostShow(c0) {
+  var cutGhostSeat = null;
+  /* The Private Cut: the ghost haunts the HOLDER's desk alone —
+     their two pick chips wear the seam at ghost strength while
+     the shared slabs stay clean for the rest of the table */
+  function cutGhostShow(c0, seat) {
     if (!G || G.cur !== c0 || G.phase !== "question") return;
     commitCutPair(c0);
     if (!c0.cutPair) return;
     cutGhostPair = c0.cutPair.slice();
-    document.querySelectorAll(".answers .ans-btn").forEach(function (b, ix) {
-      if (cutGhostPair.indexOf(ix) >= 0) b.classList.add("cutghost");
+    cutGhostSeat = seat;
+    document.querySelectorAll("[data-pick]").forEach(function (b) {
+      var parts = b.getAttribute("data-pick").split("|");
+      if (parseInt(parts[0], 10) === seat && cutGhostPair.indexOf(parseInt(parts[1], 10)) >= 0) b.classList.add("cutghost");
     });
   }
   function cutGhostHide() {
     cutGhostPair = null;
-    document.querySelectorAll(".ans-btn.cutghost").forEach(function (b) { b.classList.remove("cutghost"); });
+    cutGhostSeat = null;
+    document.querySelectorAll(".pick-chip.cutghost").forEach(function (b) { b.classList.remove("cutghost"); });
   }
   /* if the stage is rebuilt mid-hold (the clock calls it, a spend
      lands), the held button may never see its own release — the
@@ -7066,7 +7075,7 @@
       var seat = parseInt(b.getAttribute("data-cut"), 10);
       var c0 = G.cur;
       wireCutHold(b, {
-        show: function () { cutGhostShow(c0); },
+        show: function () { cutGhostShow(c0, seat); },
         hide: cutGhostHide,
         spend: function () { useCut(seat); }
       });
@@ -7076,30 +7085,36 @@
   }
   function useCut(i) {
     var c = G.cur, p = G.players[i];
-    if (!c || G.phase !== "question" || c.kind === "num" || c.kind === "bluff" || c.cutUsed || p.cut <= 0) return;
+    if (!c || G.phase !== "question" || c.kind === "num" || c.kind === "bluff" || (c.cutBy && c.cutBy[i]) || p.cut <= 0) return;
     p.cut--; c.cutUsed = true;
+    c.cutBy = c.cutBy || {}; c.cutBy[i] = true;
     /* G6: the spend consumes the pair committed at the deal (a
        pre-pass save commits its pair here, at first touch, by the
        same rule) — what a hold previewed is what falls */
     commitCutPair(c);
-    (c.cutPair || []).forEach(function (ix) {
-      var o = c.opts[ix];
-      if (o && !o.ok) { o.gone = true; o.cut = true; }
-    });
-    /* Design pass 6 — the moment. The rules are untouched (one cut
-       per question, two wrong answers, the clock never stops); what
-       changes is that the spend is STAGED: Sterling names it from
-       the local cutmoment pool (drawn through hostSay so it lands
-       with the slash, not on a fetch's schedule), the snip sounds,
-       the two slabs shear under the fresh-cut animation, a banner
-       names the play over the stage, the spender's tag flashes as
-       it flips to CUT SPENT, and Sterling turns toward the seat.
+    /* The Private Cut (2026-11-23, Jimmy's call): the pair falls
+       on the SPENDER's desk alone. The shared question keeps all
+       four answers — a lifeline one player paid for must not
+       narrow the field for the whole table — and the lock is per
+       player, not per question: another seat with a token in hand
+       may still cut the same question for itself, and gets the
+       same committed pair. The moment is still staged (Design
+       pass 6), but on the spender's desk: Sterling names the play
+       from the cutmoment pool (never the answers), the snip
+       sounds, a banner names the player over the stage, the
+       spender's two pick chips shear fresh-cut on their own desk,
+       their control disables, and every other desk is untouched.
        A repaint or resume renders the same state settled — the
        cut class without cutfresh, and no banner, line or sound. */
     hostSay("cutmoment", { name: p.name });
     Snd.play("snip");
-    stage(questionHTML()); wireQuestion(); drawClock(); renderSeats();
-    document.querySelectorAll(".answers .ans-btn.cut").forEach(function (b) { b.classList.add("cutfresh"); });
+    renderSeats();
+    (c.cutPair || []).forEach(function (ix) {
+      var chip = document.querySelector('[data-pick="' + i + "|" + ix + '"]');
+      if (chip) chip.classList.add("cutfresh");
+    });
+    var cb = document.querySelector('[data-cut="' + i + '"]');
+    if (cb) cb.disabled = true;
     cutBanner(p.name);
     seatCutFlash(i);
     stPoint(i);
@@ -7130,7 +7145,8 @@
     if (c.kind !== "mcq" && c.kind !== "survey") return "";
     var pk = (c.picks && c.picks[i]) ? c.picks[i].opt : -1;
     return '<span class="pick-chips">' + c.opts.map(function (o, oi) {
-      return '<button class="pick-chip' + (pk === oi ? " locked" : "") + '" data-pick="' + i + "|" + oi + '"' + (o.gone ? " disabled" : "") + ">" + (oi + 1) + "</button>";
+      var myCut = !!(c.cutBy && c.cutBy[i] && c.cutPair && c.cutPair.indexOf(oi) >= 0);
+      return '<button class="pick-chip' + (pk === oi ? " locked" : "") + (myCut ? " cut" : "") + '" data-pick="' + i + "|" + oi + '"' + (o.gone || myCut ? " disabled" : "") + ">" + (oi + 1) + "</button>";
     }).join("") + "</span>";
   }
   function deskPick(i, oi) {
@@ -7142,6 +7158,7 @@
       if (c.bluffPicks[i] === oi) delete c.bluffPicks[i]; else c.bluffPicks[i] = oi;
     } else if (c.kind === "mcq" || c.kind === "survey") {
       if (!c.opts || !c.opts[oi] || c.opts[oi].gone) return;
+      if (c.cutBy && c.cutBy[i] && c.cutPair && c.cutPair.indexOf(oi) >= 0) return;
       c.picks = c.picks || {};
       /* a fresh lock restamps the seat: changing your mind trades
          your place in the quick-draw race for the new certainty */
@@ -8157,7 +8174,7 @@
     return {
       q: q, kind: "num", cat: q.cat, diff: q.diff || "medium",
       value: 0, elapsed: 0, clockTotal: NUM_TIME * winScale(), /* Pass N2: the Decider's window stretches like any other */
-      opts: null, marks: {}, resolved: false, cutUsed: false, lockOrder: [],
+      opts: null, marks: {}, resolved: false, cutUsed: false, cutBy: {}, lockOrder: [],
       betRound: false, bankValue: 0, headline: false, golden: false, decider: true
     };
   }
@@ -8541,7 +8558,7 @@
         var i = +k, e = cur0.house[i];
         if (!e || e.cut !== "pending") return;
         e.cut = "passed";
-        if (cur0.cutUsed) return;
+        if (cur0.cutBy && cur0.cutBy[i]) return;
         var before = G.players[i].cut;
         useCut(i);
         if (G.players[i].cut < before) {
@@ -12189,23 +12206,33 @@
         });
         if (numFocus && $("jpNum")) $("jpNum").focus();
       } else {
-        var cutIdx = d.q.cut ? d.q.cut.indices : [];
+        /* The Private Cut (2026-11-23): my snapshot carries the
+           fallen pair only when the cut is MINE — another seat's
+           cut arrives as seats alone, and strikes nothing here */
+        var cutIdx = (d.q.cut && d.q.cut.indices) ? d.q.cut.indices : [];
+        var myCut = cutIdx.length > 0;
+        var cutSeats = (d.q.cut && d.q.cut.seats) ? d.q.cut.seats : [];
         /* G6: a live hold's ghost repaints with the render — but
-           only while no cut has landed: once one has, the settled
-           cut above is the whole truth and the ghost stands down */
-        var ghostIdx = (!d.q.cut && JP._cutHold && JP._cutPreview && JP._cutPreview.qid === d.q.qid) ? JP._cutPreview.indices : [];
+           only while my own cut has not landed: once it has, the
+           settled cut above is the whole truth and the ghost
+           stands down */
+        var ghostIdx = (!myCut && JP._cutHold && JP._cutPreview && JP._cutPreview.qid === d.q.qid) ? JP._cutPreview.indices : [];
         var btns = d.opts.answers.map(function (t, i) {
           return '<button class="jp-ans' + (s.yourPick === i ? " sel" : "") + (cutIdx.indexOf(i) >= 0 ? " cut" : "") + (ghostIdx.indexOf(i) >= 0 ? " cutghost" : "") + '" data-pick="' + i + '"><span class="jp-numb">' + (i + 1) + '</span><span class="jp-ans-tx">' + esc(t) + '</span><span class="jp-ans-tag">✓ YOUR PICK</span></button>';
         }).join("");
         var cutBtn = "";
         /* Pass N2: the button offers while a blade remains, and
            says how many when the pocket holds two */
-        if (me && snapCutN(me) > 0 && !d.q.cut && d.q.kind !== "bluff") cutBtn = '<button class="jp-cut" id="jpCut">✂ CUT TWO — KILL TWO WRONG ANSWERS' + (snapCutN(me) > 1 ? " · " + snapCutN(me) + " IN HAND" : "") + "</button>";
-        else if (d.q.cut) cutBtn = '<div class="jp-cutnote">CUT TWO PLAYED — TWO ANSWERS ARE GONE</div>';
+        if (me && snapCutN(me) > 0 && !myCut && d.q.kind !== "bluff") cutBtn = '<button class="jp-cut" id="jpCut">✂ CUT TWO — KILL TWO WRONG ANSWERS' + (snapCutN(me) > 1 ? " · " + snapCutN(me) + " IN HAND" : "") + "</button>";
+        else if (myCut) cutBtn = '<div class="jp-cutnote">YOUR CUT IS IN — TWO ANSWERS ARE GONE FROM YOUR SCREEN</div>';
+        /* another seat's cut is announced on its own line, beside
+           whatever this pad still holds — it never costs the
+           bystander their own button */
+        var cutNote = (!myCut && cutSeats.length) ? '<div class="jp-cutnote">✂ ' + cutSeats.map(function (sn) { var pl = s.players[sn]; return pl ? esc(pl.name).toUpperCase() : "A PLAYER"; }).join(" AND ") + " CUT TWO</div>" : "";
         main.innerHTML = '<div class="jp-pad">' + padTop +
           '<div class="jp-answers">' + btns + "</div>" +
           '<div class="jp-pickstate" id="jpPickState">' + (s.yourPick != null ? "✓ <b>PICK " + (s.yourPick + 1) + " IS IN</b> — TAP ANOTHER TO CHANGE IT" : "TAP YOUR ANSWER · <span id=\"jpCount\">" + (d.q.answersIn || 0) + " / " + s.players.filter(Boolean).length + " IN</span>") + "</div>" +
-          cutBtn + dblBtn + "</div>";
+          cutNote + cutBtn + dblBtn + "</div>";
         entPadApply(main, padEnt);
         main.querySelectorAll(".jp-ans").forEach(function (b) {
           b.addEventListener("click", function () {
@@ -12228,9 +12255,9 @@
            animation and the snip sounds. It is keyed to THIS pad's
            tap this session (_cutSentQid), so a repaint, a later
            snapshot or a rejoined pad paints the cut settled and
-           never replays the slash. Other pads wear the settled cut
-           class from the same render, without the animation. */
-        if (d.q.cut && d.q.cut.bySeat === JP.seat && JP._cutSentQid === d.q.qid && JP._cutMomentQid !== d.q.qid) {
+           never replays the slash. Other pads never see the pair
+           at all — their snapshots carry only the seats that cut. */
+        if (myCut && JP._cutSentQid === d.q.qid && JP._cutMomentQid !== d.q.qid) {
           JP._cutMomentQid = d.q.qid;
           main.querySelectorAll(".jp-ans.cut").forEach(function (b) { b.classList.add("cutfresh"); });
           Snd.play("snip");
