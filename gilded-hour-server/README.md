@@ -19,11 +19,16 @@ The server referees the Pass B format authoritatively:
   each bank the full value).
 - **Cut Two** — one token per player per show. The host supplies the
   two wrong answer indices when publishing; the server enforces the
-  token and one-cut-per-question, then broadcasts the cut.
+  token and one cut per player per question, and broadcasts only
+  WHO cut — the pair itself reaches the spender alone, through
+  their own snapshot (the Private Cut, 2026-11-23).
 - **Finale bets** — before a Round 3 question the host opens a bet
-  phase; each player secretly sets 1–3 chips. A correct answer banks
-  bet × $100; a wrong answer loses $0. A player who never bets defaults
-  to 1 chip. Nobody can lose money anywhere in the format.
+  phase; each player secretly sets 1 chip up to their Long Shot cap:
+  3, plus one per full $1,000 they trail the current leader, max 5.
+  The server computes and enforces the cap from its own scores. A
+  correct answer banks bet × $100; a wrong answer loses $0. A player
+  who never bets defaults to 1 chip. Nobody can lose money anywhere
+  in the format.
 - Scores live server-side and survive disconnects: a dropped player
   rejoins with a per-seat **reclaim token** and gets their seat and
   score back (the Dominoes pattern).
@@ -87,8 +92,8 @@ snapshots; nothing about a seat is ever deleted mid-show.
 | --- | --- |
 | `{t:'answer', qid, pick}` | `normal`/`survey`: answer index (0-based). Accepted only during the window for the current `qid`; may be re-sent to change the pick before the window closes (last one counts). |
 | `{t:'answer', qid, num}` | `num`: the player's number (any finite number). Same window rules. |
-| `{t:'bet', qid, chips}` | During a bet phase: secret bet, integer 1–3. Re-sending changes it. |
-| `{t:'cuttwo', qid}` | During the window of a `normal`/`survey` question that has `cutIndices`: spend this player's Cut Two token. Fails if the token is spent, the question was already cut, or the timing/kind is wrong. |
+| `{t:'bet', qid, chips}` | During a bet phase: secret bet, integer 1 up to the sender's server-computed Long Shot cap (3–5). Re-sending changes it. |
+| `{t:'cuttwo', qid}` | During the window of a `normal`/`survey` question that has `cutIndices`: spend this player's Cut Two token. Fails if the token is spent, this player already cut this question, or the timing/kind is wrong. Another player's cut never blocks yours. |
 | `{t:'ping'}` | → `{t:'pong'}`. |
 
 ### Server → clients
@@ -96,10 +101,10 @@ snapshots; nothing about a seat is ever deleted mid-show.
 | Message | Who | Meaning |
 | --- | --- | --- |
 | `{t:'welcome', ...}` | the joiner only | See Joining. The only message that ever carries a reclaim token, and only to its owner. |
-| `{t:'state', state}` | everyone (per-viewer) | Snapshot after joins, publishes, cuts, reveals, disconnects. Fields: `code`, `phase` (`lobby`/`bet`/`answer`/`reveal`/`ended`), `role`, `seat` (null for host), `players` (array of 4: null or `{seat, name, score, cutTwo, connected}`), `question` (null or `{qid, round, kind, category, answersCount, baseValue, multiplier, windowMs, openedAt, deadline, betted, cut, answersIn}`), `bet` (null or `{qid, betsIn}`), `lastReveal`, and for players only `yourPick` / `yourNum` / `yourBet`. Player snapshots **never** contain `correctIdx`, `trueNum`, other players' picks/nums/bets, or tokens. Host snapshots additionally carry the current question's `correctIdx`/`trueNum` — the host authored them and needs them back to resync after a reconnect. |
+| `{t:'state', state}` | everyone (per-viewer) | Snapshot after joins, publishes, cuts, reveals, disconnects. Fields: `code`, `phase` (`lobby`/`bet`/`answer`/`reveal`/`ended`), `role`, `seat` (null for host), `players` (array of 4: null or `{seat, name, score, cutTwo, connected}`), `question` (null or `{qid, round, kind, category, answersCount, baseValue, multiplier, windowMs, openedAt, deadline, betted, cut, answersIn}`), `bet` (null or `{qid, betsIn}` — a player's own snapshot also carries `yourCap`, that player's Long Shot cap for the open bet phase), `lastReveal`, and for players only `yourPick` / `yourNum` / `yourBet`. Player snapshots **never** contain `correctIdx`, `trueNum`, other players' picks/nums/bets, or tokens. Host snapshots additionally carry the current question's `correctIdx`/`trueNum` — the host authored them and needs them back to resync after a reconnect. |
 | `{t:'counts', qid, answersIn, players}` / `{t:'counts', qid, betsIn, players}` | everyone | Progress during a window or bet phase — **counts only, never contents**. |
 | `{t:'accepted', qid}` | the sender only | Your answer/bet was recorded. |
-| `{t:'cut', qid, bySeat, indices}` | everyone | A Cut Two landed: the two answer indices in `indices` are removed for everyone. (This reveals two *wrong* answers — by design; the correct one stays hidden.) |
+| `{t:'cut', qid, bySeat}` | everyone | A Cut Two landed — the broadcast names the spender only. The pair is never broadcast: it reaches the spender alone in their own snapshot (`question.cut.indices`); every other snapshot carries `question.cut.seats` (who has cut) with no indices. |
 | `{t:'reveal', qid, kind, value, results, scores}` | everyone | Settlement. `value` is the as-stopped drained value, or `null` for a betted (finale) question. `results` is per joined player: `{seat, pick, correct, banked}` or `{seat, num, correct, banked}` (pick/num `null` if they never answered). Also carries `correctIdx` (normal/survey) or `trueNum` (num) — public now. Scores are final server-side totals; `scores` is an array by seat with `null` for empty seats. |
 | `{t:'ended', scores}` | everyone | The host ended the show. |
 | `{t:'error', msg}` | the sender only | The message was refused; nothing changed. |
@@ -164,5 +169,3 @@ snapshots; nothing about a seat is ever deleted mid-show.
 The game client (Pass 4b, not part of this pass) will point at the
 deployed `wss://` URL; keep the URL configurable client-side, the way
 the Dominoes client allows an override.
-
-Deploys: Workers Builds from the Gamez repo (this folder). `npx wrangler deploy` applies the wrangler.toml config, including the ROOMS Durable Object binding and its v1 migration.

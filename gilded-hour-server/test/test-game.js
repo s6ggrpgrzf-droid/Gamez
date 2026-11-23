@@ -257,7 +257,7 @@ await host.send({ t: 'reveal', qid: 'q2' });
   ok(rev.scores[1] === 100, 'scores: [130, 100, 0] (num questions never quick-draw)');
 }
 
-// ---- Q3: Cut Two spends the token; one cut per question ----
+// ---- Q3: Cut Two spends the token; the cut is private (the pair reaches the spender alone) ----
 await host.send({
   t: 'publish_question', qid: 'q3', round: 2, kind: 'normal', category: 'Music',
   deadlineMs: 20000, baseValue: 100, multiplier: 2, correctIdx: 1, cutIndices: [0, 2], answersCount: 4,
@@ -265,12 +265,24 @@ await host.send({
 await P[0].send({ t: 'cuttwo', qid: 'q3' });
 {
   const cut = P[2].last('cut');
-  ok(cut && cut.bySeat === 0 && JSON.stringify(cut.indices) === '[0,2]',
-    'Cut Two broadcast with the two removed indices');
+  ok(cut && cut.bySeat === 0 && cut.indices === undefined,
+    'Cut Two broadcast names the spender only — the pair is never broadcast');
   ok(P[0].lastState().players[0].cutTwo === false, 'the caller\u2019s token is spent');
+  const mine = P[0].lastState().question.cut;
+  ok(mine && JSON.stringify(mine.indices) === '[0,2]' && JSON.stringify(mine.seats) === '[0]',
+    'the spender\u2019s own snapshot carries the pair it cut');
+  const other = P[2].lastState().question.cut;
+  ok(other && JSON.stringify(other.seats) === '[0]' && other.indices === undefined,
+    'a bystander\u2019s snapshot shows who cut and never what fell');
+  const hostCut = host.lastState().question.cut;
+  ok(hostCut && JSON.stringify(hostCut.seats) === '[0]' && hostCut.indices === undefined,
+    'the host\u2019s snapshot likewise names the seat, never the pair');
 }
 await P[1].send({ t: 'cuttwo', qid: 'q3' });
-ok(/already cut/i.test((P[1].lastError() || {}).msg || ''), 'second cut on the same question rejected');
+ok((P[0].last('cut') || {}).bySeat === 1 && JSON.stringify((P[1].lastState().question.cut || {}).indices) === '[0,2]',
+  'a second seat may cut the same question — the lock is per player, and their snapshot carries the same pair');
+await P[0].send({ t: 'cuttwo', qid: 'q3' });
+ok(/already cut/i.test((P[0].lastError() || {}).msg || ''), 'the same seat cutting twice on one question is rejected');
 await P[0].send({ t: 'answer', qid: 'q3', pick: 1 });
 await P[1].send({ t: 'answer', qid: 'q3', pick: 3 });
 await P[2].send({ t: 'answer', qid: 'q3', pick: 1 });
@@ -292,7 +304,9 @@ await host.send({
 await P[0].send({ t: 'cuttwo', qid: 'q4' });
 ok(/spent/i.test((P[0].lastError() || {}).msg || ''), 'Cut Two from a spent token rejected on a new question');
 await P[1].send({ t: 'cuttwo', qid: 'q4' });
-ok((P[2].last('cut') || {}).bySeat === 1, 'another player\u2019s fresh token still cuts');
+ok(/spent/i.test((P[1].lastError() || {}).msg || ''), 'the second Q3 spender is likewise spent on a new question');
+await P[2].send({ t: 'cuttwo', qid: 'q4' });
+ok((P[0].last('cut') || {}).bySeat === 2, 'another player\u2019s fresh token still cuts');
 for (let i = 0; i < 3; i++) await P[i].send({ t: 'answer', qid: 'q4', pick: 0 });
 await host.send({ t: 'reveal', qid: 'q4' });
 {

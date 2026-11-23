@@ -14,8 +14,9 @@
  *   1..N) and 'num' (submit a number; closest to the true number banks,
  *   ties each bank the full value). One lifeline: Cut Two — one token
  *   per player per show; the host supplies the two wrong indices when
- *   publishing, the server enforces token + one-cut-per-question and
- *   broadcasts the cut. Round 3 bet phase: each player secretly sets
+ *   publishing, the server enforces token + one-cut-per-player-per-
+ *   question, and broadcasts only WHO cut — the pair itself reaches
+ *   the spender alone, through their own snapshot. Round 3 bet phase: each player secretly sets
  *   1..cap chips before the question; a correct answer banks bet x $100.
  *   A missing bet defaults to 1 chip. The Long Shot cap is 3 plus one
  *   per full $1,000 the player trails the current leader, never more
@@ -336,6 +337,18 @@ export function cutCountOf(p) {
   return v === true ? 1 : 0;
 }
 
+/* The Private Cut (2026-11-23): who has cut THIS question, as a
+ * seat map. New question records carry cutsBy; a record persisted
+ * by the old public-cut build carries the single cutBy seat — it
+ * folds in as that seat's cut (their pair was broadcast in its
+ * day; nothing is un-leaked, and nobody else's field changes). */
+export function cutsByOf(q) {
+  if (!q) return {};
+  if (q.cutsBy && typeof q.cutsBy === 'object') return q.cutsBy;
+  if (q.cutBy != null) return { [q.cutBy]: true };
+  return {};
+}
+
 /* The Long Shot, server-authoritative: 3 chips at (or near) the
  * lead, +1 per full $1,000 of deficit, capped at 5. Purely a
  * function of the scores in the room at bet time. */
@@ -494,7 +507,15 @@ export function snapshotFor(room, view) {
       betted: q.betted,
       decider: q.decider === true,
       eligible: q.decider ? (q.eligible || []).slice() : null,
-      cut: q.cutBy != null ? { bySeat: q.cutBy, indices: q.cutIndices.slice() } : null,
+      /* The Private Cut: a snapshot names the seats that have cut;
+       * the fallen pair rides ONLY the spender's own view of it */
+      cut: (() => {
+        const cb = cutsByOf(q);
+        const seats = Object.keys(cb).map(Number);
+        if (!seats.length) return null;
+        const mine = view.role === 'player' && cb[view.seat] ? { indices: q.cutIndices.slice() } : {};
+        return Object.assign({ seats }, mine);
+      })(),
       /* THE DOUBLE: the seats whose token is riding on this
        * question — public the moment it is declared, like every
        * other stake at this table */
@@ -1250,7 +1271,7 @@ export function handleHostMessage(room, msg) {
         pickTimes: {},
         nums: {},
         dbl: {},
-        cutBy: null,
+        cutsBy: {},
         closedAt: null,
         stoppedValue: null,
       };
@@ -1574,12 +1595,17 @@ export function handlePlayerMessage(room, seat, msg) {
       if (q.kind === 'num') return fail('Nothing to cut on a number question.');
       if (q.kind === 'bluff') return fail('Nothing to cut on a bluff — the answers are the players’ own.');
       if (!q.cutIndices) return fail('No cut available on this question.');
-      if (q.cutBy != null) return fail('Already cut on this question.');
+      if (cutsByOf(q)[seat]) return fail('Already cut on this question.');
       if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');
       p.cutTwo = cutCountOf(p) - 1; // House Rules (N2): a spend decrements the count — under Second Cut one blade remains
-      q.cutBy = seat;
+      if (!q.cutsBy || typeof q.cutsBy !== 'object') q.cutsBy = cutsByOf(q);
+      q.cutsBy[seat] = true;
+      /* The Private Cut: the broadcast names the spender and
+       * nothing else — the pair reaches the spender alone through
+       * their own snapshot (state: true below), the same private
+       * channel that carries their pick and their number */
       return ok({
-        all: { t: 'cut', qid: q.qid, bySeat: seat, indices: q.cutIndices.slice() },
+        all: { t: 'cut', qid: q.qid, bySeat: seat },
         state: true,
         changed: true,
       });
@@ -1596,7 +1622,7 @@ export function handlePlayerMessage(room, seat, msg) {
       if (q.kind === 'num') return fail('Nothing to cut on a number question.');
       if (q.kind === 'bluff') return fail('Nothing to cut on a bluff — the answers are the players’ own.');
       if (!q.cutIndices) return fail('No cut available on this question.');
-      if (q.cutBy != null) return fail('Already cut on this question.');
+      if (cutsByOf(q)[seat]) return fail('Already cut on this question.');
       if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');
       return ok({
         to: [{ dest: seat, msg: { t: 'cut_preview', qid: q.qid, indices: q.cutIndices.slice() } }],
