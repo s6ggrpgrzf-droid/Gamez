@@ -351,6 +351,14 @@
 .desk-bets .bet-step{min-height:36px;padding:4px 6px;font-size:13px;min-width:0}
 .desk-bets.house{display:flex;align-items:center;justify-content:center;gap:6px}
 .desk-bets.house .bet-amt{width:auto}
+/* Research pass 5: the physical pile — one gold disc per chip
+   ridden, riding the desk from the bet beat to the reveal */
+.chip-stack{display:flex;gap:3px;justify-content:center;margin-top:5px;min-height:14px}
+.chip-stack .stk{width:14px;height:14px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,#F4E3B2,#DFAF63 55%,#A87F35);border:1.5px dashed rgba(20,18,16,.55);box-shadow:0 2px 4px rgba(0,0,0,.4),inset 0 0 0 2px rgba(252,250,245,.25)}
+.chip-stack.growing .stk:last-child{animation:stkIn .28s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stkIn{from{transform:translateY(-9px) scale(.5);opacity:0}to{transform:none;opacity:1}}
+.chip-stack.stack-gone{visibility:hidden}
+.stack-fly{position:fixed;z-index:60;margin:0;pointer-events:none;transition:transform .8s cubic-bezier(.3,.7,.3,1),opacity .8s ease}
 #scr-game[data-phase="bet"] .stage-inner:has(#btnBetsDone) #btnBetsDone{margin-top:auto;align-self:center}
 @media (max-height:500px){
   .desk-head{margin-bottom:15px}

@@ -12,6 +12,15 @@
 #bloom.on{animation:bloomPulse 1s ease-out both}
 @keyframes bloomPulse{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
 
+/* Research pass 8 — the reveal's punctuation: the room's lights
+   flash for a bank that earns it, and a banking seat's medallion
+   hops as its coins land (the .banking class is dealt by the
+   coin flight's arrival, so the hop lands WITH the money) */
+#scr-game.fx-flash .set-lights{animation:flashLightsA .78s ease-out}
+@keyframes flashLightsA{0%{filter:brightness(1)}16%{filter:brightness(2.2)}42%{filter:brightness(1.3)}100%{filter:brightness(1)}}
+.seat.banking .seat-ava{animation:avaHop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes avaHop{0%{transform:translateY(0)}35%{transform:translateY(-6px) scale(1.07)}100%{transform:translateY(0)}}
+
 /* ---- 2. Sterling, alive: blink, glance, lean, nod, tip ---- */
 .host-face{transition:transform .35s ease}
 #scr-game.st-glance .host-face{transform:rotate(3deg) translateY(-1px)}

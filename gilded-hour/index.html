@@ -13,16 +13,16 @@
      build works again, this block collapses back to the single
      style.css link. -->
 <link rel="stylesheet" href="css-src/01-foundation.css?v=118">
-<link rel="stylesheet" href="css-src/02-title-setup.css?v=122">
-<link rel="stylesheet" href="css-src/03-stage.css?v=118">
-<link rel="stylesheet" href="css-src/04-beats-reveal.css?v=123">
-<link rel="stylesheet" href="css-src/05-online-controller.css?v=119">
-<link rel="stylesheet" href="css-src/06-polish-motion.css?v=118">
-<link rel="stylesheet" href="css-src/07-perfectionist.css?v=119">
-<link rel="stylesheet" href="css-src/08-features.css?v=124">
-<link rel="stylesheet" href="css-src/09-lettering.css?v=121">
+<link rel="stylesheet" href="css-src/02-title-setup.css?v=125">
+<link rel="stylesheet" href="css-src/03-stage.css?v=119">
+<link rel="stylesheet" href="css-src/04-beats-reveal.css?v=125">
+<link rel="stylesheet" href="css-src/05-online-controller.css?v=120">
+<link rel="stylesheet" href="css-src/06-polish-motion.css?v=119">
+<link rel="stylesheet" href="css-src/07-perfectionist.css?v=120">
+<link rel="stylesheet" href="css-src/08-features.css?v=125">
+<link rel="stylesheet" href="css-src/09-lettering.css?v=122">
 <link rel="stylesheet" href="css-src/10-pad-repairs-light.css?v=124">
-<link rel="stylesheet" href="css-src/11-finish.css?v=119">
+<link rel="stylesheet" href="css-src/11-finish.css?v=120">
 <link rel="stylesheet" href="css-src/12-programme-finale.css?v=149">
 </head>
 <body>
@@ -245,6 +245,7 @@
             </div>
           </div>
           <button id="champPlaque" class="champ-plaque hidden" type="button" aria-label="Defending champion — tap to see the trophy shelf"></button>
+          <div id="seasonPlaque" class="champ-plaque season-plaque hidden" aria-label="The season standings for the Gilded Cup"></div>
           <div class="chips" aria-label="Categories">
             <span class="chip c-movies">MOVIES</span>
             <span class="chip c-tv">TV</span>
@@ -342,6 +343,7 @@
               <span class="resume-txt"><span class="resume-kicker">A SHOW IS IN PROGRESS</span><span class="resume-detail" id="resumeDetail">ROUND 1 OF 3 · QUESTION 1 OF 15</span></span>
               <span class="resume-btns"><button class="btn-gold resume-btn" id="btnResumeShow" type="button">RESUME</button><button class="btn-ghost resume-btn" id="btnDiscardShow" type="button">DISCARD</button></span>
             </div>
+            <button class="usual-btn hidden" id="btnUsual" type="button">THE USUAL COMPANY<small id="usualSub"></small></button>
             <div class="setup-label">HOW MANY AT THE TABLE?</div>
             <div class="count-row" id="countRow">
               <button class="count-btn" data-n="2">2</button>
@@ -355,6 +357,12 @@
             <div id="nameRows"></div>
             <p class="fineprint">One phone, one TV. Sterling runs the show — everybody answers on their own desk, 1, 2, 3 or 4.
             Every question written for this table — the pop culture of the eighties, nineties and two-thousands.</p>
+            <div id="roomQBlock">
+              <div class="setup-label">ABOUT THIS ROOM — ONE QUESTION FROM YOU (OPTIONAL)</div>
+              <p class="panel-text">Write one true thing about somebody at this table. In Round 2, Sterling deals it as a question — <em>Who in this room…?</em> — and the room guesses who it&rsquo;s about. Needs two or more at the table.</p>
+              <input id="roomQFact" class="roomq-fact" maxlength="90" placeholder="once got fired from a job they hadn't started yet" autocomplete="off">
+              <div class="roomq-row"><span class="roomq-who">IT&rsquo;S ABOUT</span><span id="roomQWho"></span></div>
+            </div>
           </div>
           <div id="panelHost" class="hidden">
             <div class="setup-label">STERLING RUNS THE SHOW — FRIENDS JOIN ON THEIR PHONES</div>
@@ -596,7 +604,7 @@
 <script src="questions.js?v=19"></script>
 <script src="qr.js?v=1"></script>
 <script src="rules.js?v=4"></script>
-<script src="game.js?v=134"></script>
+<script src="game.js?v=149"></script>
 <script>
 /* Review Pass 7 (2026-11-14): the Party-Proof Shell is retired —
    the show plays online only, and nothing registers a worker any

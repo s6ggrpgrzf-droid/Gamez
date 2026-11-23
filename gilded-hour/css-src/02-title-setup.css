@@ -43,6 +43,8 @@
    title marquee, in the breathing room above the category chips —
    a button, because tapping it opens the trophy shelf */
 .champ-plaque{align-self:center;display:block;margin:9px auto 0;max-width:100%;background:linear-gradient(180deg,rgba(255,210,106,.16),rgba(185,106,18,.10));border:1.5px solid var(--brass-line);color:var(--gold);border-radius:999px;padding:5px 12px;font-family:inherit;font-weight:700;letter-spacing:.08em;line-height:1.15;font-size:clamp(10px,1.5vmin,12.5px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 4px 0 rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.25);cursor:pointer}
+/* Research pass 12: the season plaque — the same brass, a quieter fill; it is a standing, not a reign */
+.season-plaque{cursor:default;margin-top:6px;background:linear-gradient(180deg,rgba(255,210,106,.08),rgba(185,106,18,.05));color:rgba(240,220,163,.85)}
 .champ-plaque:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
 .champ-plaque:not(.hidden) + .chips{margin-top:7px}
 /* the finale marquee's crown line: defended, taken, or first-ever */
@@ -144,6 +146,10 @@
 .solo-row{margin-top:10px}
 .solo-btn{width:100%;padding:10px 14px;border-radius:16px;background:var(--glass-ink);color:rgba(255,246,232,.85);font-weight:700;letter-spacing:.06em;font-size:15px;box-shadow:0 5px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .1s ease,box-shadow .1s ease}
 .solo-btn small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.04em;opacity:.75;margin-top:2px}
+/* Research pass 11: the usual company — the ritual button wears brass, not glass */
+.usual-btn{width:100%;padding:10px 14px;border-radius:16px;background:var(--brass-grad-btn);color:#431A04;font-weight:800;letter-spacing:.07em;font-size:15px;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.6);transition:transform .1s ease,box-shadow .1s ease;margin-bottom:12px;cursor:pointer}
+.usual-btn small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.05em;opacity:.8;margin-top:2px}
+.usual-btn:active{transform:translateY(2px);box-shadow:0 3px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.6)}
 .solo-btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
 .solo-btn.sel{background:var(--brass-pill);color:#431A04;box-shadow:0 5px 0 var(--gold-sh),inset 0 2px 0 rgba(255,255,255,.7)}
 /* Pass N2 — HOUSE RULES: the setup's three toggles wear the
@@ -166,6 +172,14 @@
 .name-row:focus-within{border-color:var(--gold);box-shadow:0 0 0 2px rgba(233,205,138,.35)}
 .name-seat{font-size:10px;font-weight:600;letter-spacing:.2em;color:rgba(255,246,232,.5)}
 .fineprint{margin-top:9px;font-size:12.5px;font-weight:500;color:rgba(255,246,232,.55);line-height:1.5;text-align:center}
+/* Research pass 10: the room question card on the setup screen */
+#roomQBlock{margin-top:14px;border-top:1px solid rgba(255,246,232,.12);padding-top:10px}
+#roomQFact{width:100%;box-sizing:border-box;background:var(--ink-row);border:2px solid rgba(255,246,232,.10);border-radius:14px;padding:9px 12px;margin-top:6px;color:var(--cream);font-family:inherit;font-weight:600;font-size:16px;outline:none}
+#roomQFact:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(233,205,138,.35)}
+.roomq-row{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+.roomq-who{font-size:10px;font-weight:700;letter-spacing:.2em;color:rgba(255,246,232,.5)}
+.roomq-chip{background:var(--ink-row);border:2px solid rgba(255,246,232,.14);color:var(--cream);border-radius:999px;padding:6px 13px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.roomq-chip.sel{border-color:var(--gold);background:rgba(233,205,138,.16);color:#F0DCA3}
 .start-btn{font-weight:700;letter-spacing:.04em;color:#431A04;background:var(--brass-grad-btn);border-radius:24px;cursor:pointer;box-shadow:0 9px 0 var(--gold-sh),0 22px 34px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.7);transition:transform .12s ease,box-shadow .12s ease;margin-top:18px;font-size:clamp(19px,3.2vmin,30px);padding:clamp(12px,2vmin,18px) clamp(28px,5vmin,52px);transform:rotate(-1.2deg)}
 .start-btn:hover{transform:rotate(-1.2deg) translateY(-2px) scale(1.02)}
 .start-btn:active{transform:rotate(-1.2deg) translateY(6px);box-shadow:0 3px 0 var(--gold-sh),0 10px 18px rgba(0,0,0,.5)}

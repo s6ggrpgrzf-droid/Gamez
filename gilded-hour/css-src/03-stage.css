@@ -203,6 +203,19 @@
 #scr-game[data-light="vault"] .set-mid{opacity:.45}
 #scr-game[data-light="vault"] .set-deep{background:radial-gradient(46% 40% at 50% 30%,rgba(226,183,107,.10),rgba(226,183,107,0) 70%)}
 
+/* Research pass 6: the redress now MOVES. The set already wore
+   three lights; what it never did was change between them in
+   view — the room snapped. Now the layers cross-fade over a
+   held second when the round turns, and the Big Finish's vault
+   draws the room physically tighter: an inset shadow closes
+   the walls around the set and the desks themselves sit a
+   breath dimmer, so the last three questions are played in a
+   smaller, darker room than the first six. */
+#scr-game .set,#scr-game .set-mid,#scr-game .set-deep,#scr-game .set-lights{transition:filter .95s ease,opacity .95s ease,box-shadow .95s ease}
+#scr-game[data-light="vault"] .set{box-shadow:inset 0 0 17vmax rgba(2,4,10,.62)}
+#seatsTop,#seatsBottom{transition:filter .95s ease}
+#scr-game[data-light="vault"] #seatsTop,#scr-game[data-light="vault"] #seatsBottom{filter:brightness(.93)}
+
 /* ================= Visual stage 3 — category backdrops =================
    While a question is live, the room itself announces the category:
    the back wall blooms in the category's colour and the category's

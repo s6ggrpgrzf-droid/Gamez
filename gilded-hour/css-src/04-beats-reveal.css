@@ -70,11 +70,18 @@
 .answers{display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,2vmin,18px);width:min(900px,94%);margin:clamp(12px,2.4vmin,20px) auto 0}
 .ans-btn{display:flex;align-items:center;gap:14px;text-align:left;color:var(--cat-tx);font-weight:700;font-size:clamp(17px,3vmin,27px);line-height:1.2;padding:clamp(12px,2.2vmin,19px) clamp(14px,2.6vmin,24px);border-radius:22px;background:linear-gradient(180deg,var(--cat-shi,var(--cat-hi)),var(--cat-smid,var(--cat)) 60%,var(--cat-lo));box-shadow:inset 0 3px 0 var(--glass-hl),inset 0 -7px 0 var(--glass-depth),0 9px 0 var(--cat-sh),0 18px 28px rgba(0,0,0,.42);transition:transform .1s ease,box-shadow .1s ease,opacity .3s ease,filter .3s ease}
 .ans-btn .letter{flex:none;width:clamp(32px,5.2vmin,44px);height:clamp(32px,5.2vmin,44px);border-radius:50%;background:var(--cream);color:var(--cat-sh);display:flex;align-items:center;justify-content:center;font-size:.85em;box-shadow:inset 0 -3px 0 rgba(0,0,0,.14),0 3px 0 rgba(0,0,0,.18)}
-.answers.pop-in .ans-btn{animation:pop .55s cubic-bezier(.2,1.6,.4,1) both;animation-delay:var(--d,0s)}
-@keyframes pop{0%{transform:scale(.5) translateY(26px);opacity:0}60%{transform:scale(1.05) translateY(-3px);opacity:1}100%{transform:scale(1) translateY(0)}}
+/* Pass 15 (2026-11-22): this layer agrees with stratum 11 —
+   the entrance is the card deal there, not the old flat pop. */
+.answers.pop-in .ans-btn{animation:dealIn .6s cubic-bezier(.3,.9,.3,1) backwards;animation-delay:var(--d,0s);transform-origin:50% 50%}
+@keyframes dealIn{0%{transform:perspective(720px) rotateX(-68deg) translateY(-118px) scale(.94);opacity:0}45%{opacity:1}100%{transform:perspective(720px) rotateX(0deg) translateY(0) scale(1);opacity:1}}
 .ans-btn:disabled{cursor:default}
 .ans-btn.dim{opacity:.42;filter:saturate(.35) brightness(.85)}
 .ans-btn.correct{box-shadow:inset 0 3px 0 var(--glass-hl),inset 0 -7px 0 var(--glass-depth),0 0 0 4px #F0DCA3,0 9px 0 var(--cat-sh),0 22px 34px rgba(0,0,0,.5);animation:jumpIn .55s cubic-bezier(.2,1.8,.4,1) both}
+/* Research pass 8: a slab the room backed and got wrong shakes
+   it off before it dims — dealt by paintReveal from the settled
+   picks, live reveals only */
+.ans-btn.missed{animation:slabShake .45s ease}
+@keyframes slabShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-6px)}38%{transform:translateX(5px)}58%{transform:translateX(-4px)}78%{transform:translateX(2px)}}
 .ans-btn.correct .letter{background:var(--brass-pill);color:#431A04}
 @keyframes jumpIn{0%{transform:scale(.7) translateY(16px) rotate(1.5deg)}55%{transform:scale(1.07) translateY(-12px) rotate(-2deg)}100%{transform:scale(1.04) translateY(-7px) rotate(-1.4deg)}}
 .tools{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:clamp(12px,2.2vmin,18px)}

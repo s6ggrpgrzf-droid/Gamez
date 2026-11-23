@@ -53,7 +53,11 @@
     "Toys & Games":     { hi: "#5CE38A", mid: "#3ECF6E", lo: "#34B35E", sh: "#177A38", rgb: "62,207,110", shi: "#48D678", smid: "#30B15B" },
     "Saturday Morning": { hi: "#F0DCA3", mid: "#E9CD8A", lo: "#D6AC4E", sh: "#9A7B38", rgb: "255,201,60" },
     "The Dial-Up Years": { hi: "#3FD8D4", mid: "#17BEBB", lo: "#27ACAA", sh: "#076B6E", rgb: "23,190,187", shi: "#27C8C5", smid: "#13ACAA" },
-    "The Bookshelf":    { hi: "#CE6B5E", mid: "#B44A41", lo: "#93362F", sh: "#5F211C", rgb: "180,74,65", shi: "#A03E36", smid: "#93362F" }
+    "The Bookshelf":    { hi: "#CE6B5E", mid: "#B44A41", lo: "#93362F", sh: "#5F211C", rgb: "180,74,65", shi: "#A03E36", smid: "#93362F" },
+    /* Research pass 10: the room's own category — rose-gold,
+       in the family but nobody else's, for the one question a
+       show did not get from the bank */
+    "About This Room":  { hi: "#F2C4A0", mid: "#E0A878", lo: "#C08552", sh: "#7C4F26", rgb: "224,168,120" }
   };
   /* shi/smid are the answer-slab gradient stops (perfectionist fix #3):
      the identity hi/mid stay untouched for chips, pills and emblems,
@@ -1815,6 +1819,10 @@
     g.classList.add(cls);
     setTimeout(function () { g.classList.remove(cls); }, ms);
   }
+  /* Research pass 8: the room's lights flash — one gold burst
+     across the set's light layer, dealt by the reveal paths
+     when a bank earns it (a fat bank, a full house) */
+  function flashLights() { stClass("fx-flash", 780); }
   /* Visual stage 2 — gestures. The presenting sweep: a question has
      just opened and the card sits centre-stage, which from Sterling's
      place (stage-left in the standings frame, the host bar in play)
@@ -2270,6 +2278,45 @@
     });
   }
 
+  /* Research pass 7 — THE POT, PAID OUT: the night's last
+     motion. The vessel stood at the front of the stage all
+     show, filling a little at a time; the finale screen takes
+     it away in its repaint, so its ghost is re-raised where it
+     stood, the coins fly from the brass to the champion's
+     podium, and the vessel visibly EMPTIES — the fill falling,
+     the total ticking down to nothing — as the money lands.
+     A ceremony overlay only: no score moves here (the printed
+     totals already carry the pot) and nothing is saved. */
+  function potPayoutFx(ghost) {
+    var pod = document.querySelector(".finale-row .winner-podium") || document.querySelector(".winner-total");
+    if (!pod) return;
+    var pr = pod.getBoundingClientRect();
+    if (!pr.width) return;
+    var v = document.createElement("div");
+    v.className = "pot-vessel pot-ghost";
+    v.setAttribute("aria-hidden", "true");
+    v.innerHTML = '<div class="pot-rim"></div><div class="pot-body"><div class="pot-fill"></div><span class="pot-shine"></span></div>' +
+      '<div class="pot-label">THE POT</div><div class="pot-total">' + money(ghost.amt) + "</div>";
+    v.style.left = ghost.x + "px"; v.style.top = ghost.y + "px";
+    v.style.width = ghost.w + "px"; v.style.height = ghost.h + "px";
+    document.body.appendChild(v);
+    var fill = v.querySelector(".pot-fill"), tot = v.querySelector(".pot-total");
+    if (fill) fill.style.height = Math.min(100, Math.max(0, ghost.amt / 3000 * 100)) + "%";
+    coinFlight(ghost.x + ghost.w / 2, ghost.y + ghost.h * 0.3, pr.left + pr.width / 2, pr.top + pr.height / 2, coinsForAward(ghost.amt), 0.25, null);
+    var t0 = Date.now(), dur = 1250;
+    var iv = setInterval(function () {
+      var t = Math.min(1, (Date.now() - t0) / dur);
+      var left = Math.round(ghost.amt * (1 - t));
+      if (tot) tot.textContent = money(left);
+      if (fill) fill.style.height = Math.min(100, Math.max(0, left / 3000 * 100)) + "%";
+      if (t >= 1) {
+        clearInterval(iv);
+        v.classList.add("pot-ghost-out");
+        setTimeout(function () { if (v.isConnected) v.remove(); }, 650);
+      }
+    }, 50);
+  }
+
   /* a bank lands: coins arc from the answer to the seat, then the
      seat's score shimmers as the count-up runs. Pass 7 sizes the
      flight by the award (coinsForAward) — a caller with no figure
@@ -2501,6 +2548,57 @@
     return best;
   }
   function markSeen(id) { seen[id] = 1; seenWhen[id] = seenSeq; }
+  /* Research pass 1 (2026-11-22) — THE CALIBRATION LEDGER.
+     The bank's bands were assigned by judgement when each
+     question was written, and never corrected by play. This
+     ledger is the correction: every live reveal of an ordinary
+     question records how the room actually fared — answers
+     given, answers right — from human seats only (a house
+     seat's roll is a policy, not a measurement). Once a
+     question has ten answers on the books, its EFFECTIVE band
+     steps one band toward the evidence: a question rooms
+     answer right 88% of the time or better plays easier than
+     its tag; one answered right 30% of the time or worse plays
+     harder. One step, never more — the authored tag stays the
+     anchor and the ledger only nudges. The pools below bucket
+     by the effective band, and the dealt tag, the house's read
+     of a question and the published band all follow the same
+     figure, so the ramp, the card and the room never disagree
+     about what was dealt. Guess questions keep their authored
+     bands: "closest" is a contest, not a difficulty. The
+     record itself is { id: [answers, correct] } in gh_cal_v1. */
+  var cal = {};
+  var calBankIds = null;
+  try { cal = JSON.parse(localStorage.getItem("gh_cal_v1") || "{}") || {}; } catch (e) { cal = {}; }
+  function saveCal() { try { localStorage.setItem("gh_cal_v1", JSON.stringify(cal)); } catch (e) {} }
+  function calRecord(id, n, c) {
+    if (id == null || !(n > 0)) return;
+    /* only bank questions calibrate — a synthetic question
+       (the room's own, dealt under the id "roomq") has no
+       authored band to correct and must never enter the
+       ledger; a bank id passes, from whichever path dealt it */
+    if (!calBankIds) { calBankIds = {}; BANK.forEach(function (q) { calBankIds[q.id] = 1; }); }
+    if (!calBankIds[id]) return;
+    var r = cal[id] || (cal[id] = [0, 0]);
+    r[0] += n; r[1] += c;
+    saveCal();
+  }
+  var CAL_MIN = 10;
+  function effBand(q) {
+    var d = q && q.d;
+    if (d !== 1 && d !== 2 && d !== 3) return d;
+    var r = cal[q.id];
+    if (!r || r[0] < CAL_MIN) return d;
+    var rate = r[1] / r[0];
+    if (rate >= 0.88) return Math.max(1, d - 1);
+    if (rate <= 0.30) return Math.min(3, d + 1);
+    return d;
+  }
+  /* the band the most recent drawBand dealt its question AS —
+     consumed by makeCur (table) and ogScriptEntries (online)
+     the moment the question is wrapped, so a dealt question
+     carries the band it was actually dealt under */
+  var dealtBandNow = null;
   /* Design pass 5 — the deck. `pools` is the show's dealing state and
      is persisted verbatim in the table save: { b1, b2, b3 } are the
      band pools for multiple-choice questions (shuffled id lists,
@@ -2512,7 +2610,7 @@
      for question. */
   var pools = {};
   function bandPoolIds(band) {
-    var ids = BANK.filter(function (q) { return !q.kind && q.d === band; }).map(function (q) { return q.id; });
+    var ids = BANK.filter(function (q) { return !q.kind && effBand(q) === band; }).map(function (q) { return q.id; });
     return byStaleness(ids);
   }
   function resetDeck() {
@@ -2562,6 +2660,7 @@
       pools.catUse[BANK[id].cat] = (pools.catUse[BANK[id].cat] || 0) + 1;
       pools.eraTail = tail.concat(BANK[id].era || "any").slice(-2);
       markSeen(id);
+      dealtBandNow = order[oi]; /* Research pass 1: the pool this card was dealt from is the band it wears */
       return BANK[id];
     }
     /* every band pool empty — unreachable in a 10-draw show from a
@@ -2691,6 +2790,7 @@
       arc: null,                // Pass 4: the night's arc record {worst, best, queue, spoken} — Sterling's story memory
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
       goldTease: null,          // the tease line drawn with it, spoken once at the Round 1 intro
+      roomQ: null,              // Research pass 10: the room's own question {fact, subject, used}, planted at 2:1
       showId: null,             // per-show key for the live Sterling lines
       decider: null,            // New programme pass 1: {eligible, usedIds, dealt, winner} once a tied finale triggers it
       facts: freshFacts(),      // New programme pass 2: the round-facts recorder the Intermission is told from
@@ -3152,7 +3252,7 @@
         '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
         '<span class="seat-status"></span>' +
         '<span class="seat-score">' + shown + '</span>' +
-        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskPicksHTML(p, i) + fortuneHTML() + "</div></div>");
+        '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskStackHTML(p, i) + deskPicksHTML(p, i) + fortuneHTML() + "</div></div>");
       /* New programme pass 1: during the Decider, a seat that is not
          playing steps back — dimmed out of the light while the tied
          leaders settle it (the winner is crowned, the class lifts) */
@@ -3320,6 +3420,63 @@
     return '<div class="desk-bets"><button class="chip bet-step" data-bet="' + i + '|-1">− 1</button>' +
       '<span class="bet-amt" id="betAmt' + i + '">' + betLabel(p.bet) + "</span>" +
       '<button class="chip bet-step" data-bet="' + i + '|1">+ 1</button></div>';
+  }
+  /* Research pass 5 (Jimmy's word — more animation, a show that
+     is FUN to look at): in the Big Finish the stake stops being
+     a number and becomes a pile. Each desk carries a stack of
+     gold chips, one disc per chip ridden, from the bet beat
+     through the reveal — so the held breath is spent looking at
+     what is actually on the table, and a raise is a chip landing
+     on the pile (the pop rides the bet phase only, so a lock-in
+     repaint mid-question cannot make the pile twitch). Table
+     only: the desks are the table game's furniture. */
+  function deskStackHTML(p, i) {
+    if (!G || typeof ghMode === "undefined" || ghMode !== "table") return "";
+    if (G.round !== 3 || G.decider) return "";
+    if (G.phase !== "bet" && G.phase !== "spin" && G.phase !== "question" && G.phase !== "reveal") return "";
+    var n = Math.max(0, Math.min(5, p.bet || 0));
+    if (!n) return "";
+    var chips = "";
+    for (var k = 0; k < n; k++) chips += '<span class="stk"></span>';
+    return '<div class="chip-stack' + (G.phase === "bet" ? " growing" : "") + '" data-stack="' + i + '" aria-hidden="true">' + chips + "</div>";
+  }
+  /* The reveal's settlement, played: a losing seat's stack
+     leaves its desk and lands on the first banker's pile — or
+     flies to the pot vessel when nobody banked. A transient
+     fixed clone in the cut banner's idiom (measured geometry,
+     like Sterling's point): no layout box moves, the real
+     stack simply steps aside while its double travels. */
+  function flyBetStacks(winners) {
+    var stage = $("stage"); if (!stage) return;
+    var target = null;
+    if (winners && winners.length) {
+      target = document.querySelector('.seat[data-seat="' + winners[0] + '"] .chip-stack') ||
+        document.querySelector('.seat[data-seat="' + winners[0] + '"]');
+    }
+    if (!target) target = stage.querySelector(".pot-vessel");
+    if (!target) return;
+    var tr = target.getBoundingClientRect();
+    if (!tr.width) return;
+    document.querySelectorAll(".chip-stack").forEach(function (st) {
+      var seat = +st.getAttribute("data-stack");
+      if (winners && winners.indexOf(seat) >= 0) return;
+      var r = st.getBoundingClientRect();
+      if (!r.width) return;
+      var fly = st.cloneNode(true);
+      fly.className = "chip-stack stack-fly";
+      fly.removeAttribute("data-stack");
+      fly.style.left = r.left + "px"; fly.style.top = r.top + "px";
+      fly.style.width = r.width + "px"; fly.style.height = r.height + "px";
+      document.body.appendChild(fly);
+      st.classList.add("stack-gone");
+      var dx = (tr.left + tr.width / 2) - (r.left + r.width / 2);
+      var dy = (tr.top + tr.height / 2) - (r.top + r.height / 2);
+      requestAnimationFrame(function () {
+        fly.style.transform = "translate(" + dx + "px," + dy + "px) scale(.55) rotate(" + (dx > 0 ? 7 : -7) + "deg)";
+        fly.style.opacity = "0.12";
+      });
+      setTimeout(function () { if (fly.isConnected) fly.remove(); }, 950);
+    });
   }
   /* THE DOUBLE (designer pass 3, 2026-11-13 — Jimmy's pick): the
      token disc on a desk. It exists only while the Double is in
@@ -3712,6 +3869,10 @@
       picksLive: !!c.picksLive,
       guesses: c.guesses ? Object.assign({}, c.guesses) : null,
       betRound: !!c.betRound, bankValue: c.bankValue || 0,
+      /* Research pass 1: the dealt band rides the save — a
+         resumed question reprints the band it was dealt as,
+         which calibration may have moved from the authored tag */
+      dealtBand: (c.dealtBand === 1 || c.dealtBand === 2 || c.dealtBand === 3) ? c.dealtBand : null,
       special: !!c.special, intro: c.intro || null,
       /* New programme pass 1: a decider question must repaint as a
          decider after a refresh (fx, stage, continue-routing) */
@@ -3789,6 +3950,10 @@
       guesses: (o.guesses && typeof o.guesses === "object") ? o.guesses : null,
       voteAt: null,
       betRound: !!o.betRound, bankValue: o.bankValue || 0, headline: false, golden: false,
+      /* Research pass 1: the dealt band, restored — a save from
+         before the ledger carries none and the tag falls back
+         to the authored band, as it always did */
+      dealtBand: (o.dealtBand === 1 || o.dealtBand === 2 || o.dealtBand === 3) ? o.dealtBand : null,
       special: !!o.special, intro: o.intro || null, decider: !!o.decider,
       /* saves written before Hot Streaks carry neither field; the
          reveal simply repaints without streak grammar */
@@ -3844,6 +4009,7 @@
            the saved words are re-presented verbatim at the intro */
         golden: G.goldenSlot || null,
         goldTease: G.goldTease || null,
+        roomQ: G.roomQ || null,
         /* Pass N2: the show's House Rules ride the save beside
            the tease — a resumed show keeps the night it started
            (its questions were born under these rules, its seats
@@ -4003,6 +4169,7 @@
          than inventing a double mid-show */
       goldenSlot: validGoldenSlot(sv.golden) ? sv.golden : null,
       goldTease: typeof sv.goldTease === "string" ? sv.goldTease : null,
+      roomQ: (sv.roomQ && typeof sv.roomQ.fact === "string" && typeof sv.roomQ.subject === "string") ? { fact: sv.roomQ.fact, subject: sv.roomQ.subject, used: !!sv.roomQ.used } : null,
       /* Pass N2: the rules are restored as recorded; a save
          written before they existed resumes the plain game,
          which is the game that save was playing */
@@ -4025,6 +4192,8 @@
     };
     G.seriesLine = composeSeriesOpening(liveSeriesFor(G.seriesCtx), G.seriesCtx);
     G.memoryLine = memoryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }), G.showId);
+    G.rivalryLine = rivalryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
+    G.seasonLine = seasonLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
     /* House Players (pass 5): the cast list rides out of the
        restored seats (seat order is cast order), so a resumed solo
        show's rematch keeps the same two house players */
@@ -4087,9 +4256,12 @@
   function loadRecords() {
     var rec = null;
     try { rec = JSON.parse(localStorage.getItem(RECORDS_KEY) || "null"); } catch (e) { rec = null; }
-    if (!rec || rec.v !== 1 || !rec.players || typeof rec.players !== "object") return { v: 1, players: {}, champion: null, lastShowId: null };
+    if (!rec || rec.v !== 1 || !rec.players || typeof rec.players !== "object") return { v: 1, players: {}, champion: null, lastShowId: null, h2h: {} };
     if (!("champion" in rec)) rec.champion = null;
     if (!("lastShowId" in rec)) rec.lastShowId = null;
+    if (!rec.h2h || typeof rec.h2h !== "object") rec.h2h = {};
+    if (!rec.seasons || typeof rec.seasons !== "object") rec.seasons = {};
+    if (!Array.isArray(rec.cups)) rec.cups = [];
     return rec;
   }
   function saveRecords(rec) { try { localStorage.setItem(RECORDS_KEY, JSON.stringify(rec)); } catch (e) {} }
@@ -4168,6 +4340,66 @@
         margin: (hasWin && sortedScores.length > 1) ? Math.max(0, sortedScores[0] - sortedScores[1]) : 0,
         honours: flatHonours
       };
+      /* Research pass 9 — the mythology: every pair of guests
+         who finish a show together leaves a mark in the book —
+         who finished ahead, and how often. A level finish is a
+         shared honour (a draw). The pairs ride the same
+         show-id guard as everything above: a night writes its
+         pairs exactly once. */
+      if (!rec.h2h) rec.h2h = {};
+      var pairFin = finishers.filter(function (f) { return !!recNameKey(f && f.name); });
+      for (var pi = 0; pi < pairFin.length; pi++) {
+        for (var pj = pi + 1; pj < pairFin.length; pj++) {
+          var ka = recNameKey(pairFin[pi].name), kb = recNameKey(pairFin[pj].name);
+          if (ka === kb) continue;
+          var lo = ka < kb ? ka : kb, hi = ka < kb ? kb : ka;
+          var cell = rec.h2h[lo + "|" + hi];
+          if (!cell) { cell = { a: 0, b: 0, d: 0, n: 0 }; rec.h2h[lo + "|" + hi] = cell; }
+          var sa = Math.round(pairFin[ka === lo ? pi : pj].score || 0);
+          var sb = Math.round(pairFin[ka === lo ? pj : pi].score || 0);
+          if (sa > sb) cell.a += 1; else if (sb > sa) cell.b += 1; else cell.d += 1;
+          cell.n += 1;
+        }
+      }
+      /* Research pass 12 — the season takes the show: the
+         company's table gains the night (wins, purses, a
+         holder by wins then purse), and a winner reaching
+         SEASON_TARGET closes the season — a cup in the list,
+         a flag for the finale that earned it, and the table
+         wiped for the next season's first night */
+      seasonJustWon = null;
+      var seasonKey = castKeyFor(finishers.map(function (f) { return f.name; }));
+      if (seasonKey && finishers.length >= 2) {
+        if (!rec.seasons) rec.seasons = {};
+        if (!Array.isArray(rec.cups)) rec.cups = [];
+        var season = rec.seasons[seasonKey];
+        if (!season) {
+          var pastCups = rec.cups.filter(function (c) { return c.key === seasonKey; }).length;
+          season = { n: pastCups + 1, shows: 0, table: {}, holder: null };
+          rec.seasons[seasonKey] = season;
+        }
+        season.shows += 1;
+        finishers.forEach(function (f) {
+          var k = recNameKey(f.name); if (!k) return;
+          var row = season.table[k] || (season.table[k] = { name: "", wins: 0, purse: 0 });
+          row.name = String(f.name).trim();
+          row.purse += Math.round(f.score || 0);
+        });
+        var winKeyS = hasWin ? recNameKey(finishers[winnerIdx].name) : null;
+        if (winKeyS && season.table[winKeyS]) season.table[winKeyS].wins += 1;
+        var holderKey = null;
+        Object.keys(season.table).forEach(function (k) {
+          if (!holderKey) { holderKey = k; return; }
+          var r = season.table[k], h = season.table[holderKey];
+          if (r.wins > h.wins || (r.wins === h.wins && r.purse > h.purse)) holderKey = k;
+        });
+        season.holder = holderKey;
+        if (winKeyS && season.table[winKeyS] && season.table[winKeyS].wins >= SEASON_TARGET) {
+          rec.cups.push({ n: season.n, name: seasonName(season.n), champion: String(finishers[winnerIdx].name).trim(), key: seasonKey, date: recToday(), shows: season.shows });
+          seasonJustWon = { n: season.n, name: seasonName(season.n), champion: String(finishers[winnerIdx].name).trim() };
+          delete rec.seasons[seasonKey];
+        }
+      }
       rec.lastShowId = showId;
       saveRecords(rec);
       return true;
@@ -4217,6 +4449,116 @@
     if (castKeyFor(guestNames) !== rec.lastShow.key) return null;
     return composeMemoryLine(rec.lastShow);
   }
+  /* Research pass 9 — the mythology, read back. A pair's cell
+     from one name's side of the table: {a: that name's
+     ahead-count, b: the other's, d: draws, n: shows together} */
+  function h2hCell(rec, nameA, nameB) {
+    var ka = recNameKey(nameA), kb = recNameKey(nameB);
+    if (!ka || !kb || ka === kb || !rec || !rec.h2h) return null;
+    var lo = ka < kb ? ka : kb, hi = ka < kb ? kb : ka;
+    var cell = rec.h2h[lo + "|" + hi];
+    if (!cell) return null;
+    return ka === lo ? { a: cell.a, b: cell.b, d: cell.d, n: cell.n } : { a: cell.b, b: cell.a, d: cell.d, n: cell.n };
+  }
+  /* Sterling reads the room's history at the top of the night:
+     of every pair seated, the sharpest account — a whitewash
+     first (three or more shows, never once ahead), then a lead
+     with a history, then a level account old enough to settle.
+     Anything thinner is small talk, and he keeps it (the house
+     rule since the stakes lines: memory speaks only when it
+     matters). Display names are tonight's sightings. */
+  function composeRivalryLine(rec, names) {
+    if (!rec || !names || names.length < 2) return null;
+    var best = null;
+    for (var i = 0; i < names.length; i++) {
+      for (var j = i + 1; j < names.length; j++) {
+        var cell = h2hCell(rec, names[i], names[j]);
+        if (!cell || cell.n < 2) continue;
+        var score = Math.abs(cell.a - cell.b) * 10 + cell.n;
+        if (!best || score > best.score) best = { score: score, cell: cell, aName: names[i], bName: names[j] };
+      }
+    }
+    if (!best) return null;
+    var c = best.cell;
+    var wWins = Math.max(c.a, c.b), lWins = Math.min(c.a, c.b);
+    var wName = c.a >= c.b ? best.aName : best.bName;
+    var lName = c.a >= c.b ? best.bName : best.aName;
+    if (lWins === 0 && c.n >= 3) {
+      return c.n + " shows together, and " + lName + " has never once finished ahead of " + wName + ". Some habits are just facts with good tailoring.";
+    }
+    if (wWins - lWins >= 2) {
+      return wName + " leads " + lName + ", " + wWins + " shows to " + lWins + " — a gap with a history. Tonight it narrows, or it becomes a story.";
+    }
+    if (wWins === lWins && c.n >= 3) {
+      return best.aName + " and " + best.bName + " are level — " + wWins + " shows apiece across " + c.n + " meetings. Somebody's account settles tonight.";
+    }
+    return null;
+  }
+  function rivalryLineFor(guestNames) {
+    return composeRivalryLine(loadRecords(), guestNames);
+  }
+  /* Research pass 11 — the usual cast: the table's company,
+     remembered. One small store beside the records book —
+     the names of the last full table this device hosted — so
+     the setup screen can seat them again without a word of
+     typing, and the night can begin the way nights begin:
+     with the usual company already at the table */
+  var CAST_KEY = "gh_cast_v1";
+  function loadCast() {
+    try {
+      var c = JSON.parse(localStorage.getItem(CAST_KEY) || "null");
+      if (c && Array.isArray(c.names)) {
+        var names = c.names.map(function (n) { return String(n == null ? "" : n).trim(); }).filter(Boolean);
+        if (names.length >= 1 && names.length <= 4) return names;
+      }
+    } catch (e) {}
+    return null;
+  }
+  function saveCast(names) {
+    try { localStorage.setItem(CAST_KEY, JSON.stringify({ v: 1, names: names })); } catch (e) {}
+  }
+  /* Research pass 12 — the season. The series owns a night;
+     the season owns the months. For each company (a cast key,
+     like everything else in the book) a season runs until one
+     guest has won SEASON_TARGET shows: a running table of
+     wins and purses, a holder, and at the end a name in the
+     cups list and a new season begun. The name is Sterling's
+     grammar — a number and an epithet, cycling */
+  var SEASON_TARGET = 5;
+  var SEASON_EPITHETS = ["THE LONG NIGHTS", "THE BRASS HOURS", "THE VELVET LEDGER", "THE WINTER TABLES", "THE GILDED WAGER", "THE QUIET FORTUNES", "THE LAMPLIGHT HOURS", "THE LAST WALTZ", "THE OPEN VAULT", "THE CLOSING BELL"];
+  function toRoman(n) {
+    var T = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]], out = "";
+    for (var i = 0; i < T.length; i++) { while (n >= T[i][0]) { out += T[i][1]; n -= T[i][0]; } }
+    return out || "I";
+  }
+  function seasonName(n) { return "SEASON " + toRoman(n) + " · " + SEASON_EPITHETS[(n - 1) % SEASON_EPITHETS.length]; }
+  /* set by recordShow when a show takes a season; read and
+     cleared by the finale that earned it */
+  var seasonJustWon = null;
+  function takeSeasonResult() { var r = seasonJustWon; seasonJustWon = null; return r; }
+  function seasonLineFor(guestNames) {
+    var rec = loadRecords();
+    if (!guestNames || guestNames.length < 2 || !rec.seasons) return null;
+    var season = rec.seasons[castKeyFor(guestNames)];
+    if (!season || !season.holder || !season.table) return null;
+    var lead = season.table[season.holder];
+    if (!lead || lead.wins !== SEASON_TARGET - 1) return null;
+    var tied = Object.keys(season.table).some(function (k) { return k !== season.holder && season.table[k].wins === lead.wins; });
+    if (tied) return null;
+    return lead.name + " stands one show from the Cup — win tonight, and " + seasonName(season.n) + " is theirs. The rest of the room knows what to do about that.";
+  }
+  function seasonPlaqueText(rec, castNames) {
+    if (!rec || !rec.seasons || !castNames || castNames.length < 2) return null;
+    var season = rec.seasons[castKeyFor(castNames)];
+    if (!season || !season.table) return null;
+    var holder = season.holder && season.table[season.holder];
+    if (!holder) return null;
+    var tiedTop = Object.keys(season.table).filter(function (k) { return season.table[k].wins === holder.wins; }).length > 1;
+    return "★ THE GILDED CUP — " + seasonName(season.n) + " · " +
+      (tiedTop ? "LEVEL AT THE TOP, " + holder.wins + (holder.wins === 1 ? " WIN" : " WINS") + " APIECE"
+               : holder.name.toUpperCase() + " LEADS WITH " + holder.wins + (holder.wins === 1 ? " WIN" : " WINS")) +
+      " · " + season.shows + (season.shows === 1 ? " SHOW" : " SHOWS") + " IN";
+  }
   /* ---------- the title plaque + the trophy shelf ---------- */
   function paintChampion() {
     var pl = $("champPlaque"); if (!pl) return;
@@ -4233,6 +4575,19 @@
     /* Pass 9 (audit #4): the line is nowrap by design and a long
        reign used to ellipsize the champion's own name — step the
        type down until the whole line fits the plaque */
+    pl.style.fontSize = "";
+    var pfs = 12.5;
+    while (pl.scrollWidth > pl.clientWidth + 1 && pfs > 8) { pfs -= 0.5; pl.style.fontSize = pfs.toFixed(1) + "px"; }
+  }
+  /* Research pass 12: the season plaque under the champion's —
+     the usual company's running account with the Cup, painted
+     wherever the title is painted */
+  function paintSeason() {
+    var pl = $("seasonPlaque"); if (!pl) return;
+    var text = seasonPlaqueText(loadRecords(), loadCast());
+    if (!text) { pl.classList.add("hidden"); pl.textContent = ""; return; }
+    pl.textContent = text;
+    pl.classList.remove("hidden");
     pl.style.fontSize = "";
     var pfs = 12.5;
     while (pl.scrollWidth > pl.clientWidth + 1 && pfs > 8) { pfs -= 0.5; pl.style.fontSize = pfs.toFixed(1) + "px"; }
@@ -4537,6 +4892,75 @@
     return null;
   }
 
+  /* Research pass 3 (2026-11-22) — STERLING READS THE TABLE.
+     Pass 7 taught him the series at the last break; this pass
+     teaches him the Big Finish itself. At the bet beat, with
+     the chips as they stand, he names what the question in
+     front of the table actually decides — in the same clipped
+     register and the same gravity order as composeSeriesStakes
+     above, and only when the figures give him something true
+     to say; a quiet table keeps the generic bet line. The
+     projections are the projector strip's own (projStandings:
+     every seat banks its bet); the last question's arithmetic
+     is exact, from the shared rules — a bank pays the stake
+     (doubled for a declared seat), a miss on the last question
+     loses the stake whole, plus the penalty. Table only, by
+     design: online, the bets are secret until the reveal, and
+     a host who read them aloud at the bet beat would break
+     the room's own rule. */
+  function composeFinaleStakes(players, qInRound, declared) {
+    var ex = composeFinaleStakesEx(players, qInRound, declared);
+    return ex ? ex.line : null;
+  }
+  /* Research pass 4: the same reading with its subject — the
+     seat the line is about, so the bet beat can aim Sterling's
+     gesture at the player his words name (a level table has
+     no single subject and takes the sweep instead) */
+  function composeFinaleStakesEx(players, qInRound, declared) {
+    if (!players || players.length < 2) return null;
+    var top = -Infinity;
+    players.forEach(function (p) { if (p.score > top) top = p.score; });
+    var leaderIdx = [];
+    players.forEach(function (p, i) { if (p.score === top) leaderIdx.push(i); });
+    var rows = projStandings(players);
+    var projLeader = rows.length ? rows[0].seat : null;
+    if (qInRound === R3_COUNT - 1) {
+      if (leaderIdx.length > 1) {
+        return { line: "Level at the top, one question left. Whoever banks takes the night — whoever misses pays for the privilege of trying.", seat: null };
+      }
+      var li = leaderIdx[0], L = players[li];
+      var lWorst = Math.max(0, L.score - GH_RULES.betLoss(L.bet || 1, qInRound, !!(declared && declared[li])));
+      var chaser = null, chaserIdx = null, chaserBest = -1;
+      players.forEach(function (p, i) {
+        if (i === li) return;
+        var best = p.score + GH_RULES.betPayout(p.bet || 1, !!(declared && declared[i]));
+        if (best > chaserBest) { chaserBest = best; chaser = p; chaserIdx = i; }
+      });
+      if (!chaser) return null;
+      if (chaserBest <= lWorst) {
+        return { line: "The crown is beyond reach — " + L.name + " cannot be caught. The last question plays for the pot, and for pride.", seat: li };
+      }
+      if (projLeader != null && projLeader !== li) {
+        return { line: "As the chips stand, " + players[projLeader].name + " takes the crown if they bank. " + L.name + " must answer to hold the night.", seat: projLeader };
+      }
+      return { line: L.name + " leads by " + money(top - chaser.score) + " — and a miss on the last question costs the whole stake. " + chaser.name + " is one card from the crown.", seat: chaserIdx };
+    }
+    /* questions one and two: the projections speak first */
+    if (projLeader != null && players[projLeader].score !== top) {
+      var holder = players[leaderIdx[0]];
+      var hb = holder.bet || 1;
+      return { line: "As the bets stand, " + players[projLeader].name + "'s chips take the lead if they land — " + holder.name + " is betting " + hb + (hb === 1 ? " chip" : " chips") + " to hold it.", seat: projLeader };
+    }
+    var longShot = null, longShotIdx = null;
+    players.forEach(function (p, i) {
+      if ((p.bet || 1) >= 4 && p.score < top && (!longShot || p.score < longShot.score)) { longShot = p; longShotIdx = i; }
+    });
+    if (longShot) {
+      return { line: longShot.name + " rides " + (longShot.bet || 1) + " chips from behind — the Long Shot, played out loud. Land it, and the table turns.", seat: longShotIdx };
+    }
+    return null;
+  }
+
   /* ---------- show flow ---------- */
   function showScreen(id) {
     /* pass 7: leaving a screen lands its coins — no flight
@@ -4545,8 +4969,13 @@
     if (id !== "scr-join") jpClearCoins();
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $(id).classList.add("active");
-    if (id === "scr-title") { var g = $("scr-game"); if (g) g.classList.remove("sealed"); if (g) g.removeAttribute("data-phase"); paintTableResume(); paintChampion(); }
+    if (id === "scr-title") { var g = $("scr-game"); if (g) g.classList.remove("sealed"); if (g) g.removeAttribute("data-phase"); paintTableResume(); paintChampion(); paintUsualCast(); paintSeason(); }
   }
+  /* Research pass 10: the setup card's room question, carried
+     from the START tap to the one startShow it belongs to —
+     consumed there, so a rematch (which never passes the card)
+     starts without one */
+  var pendingRoomQ = null;
   function startShow(names, soloCast, rulesOverride) {
     G = newGame(names);
     G.showId = "table-" + Date.now().toString(36) + "-" + ri(1000000);
@@ -4564,6 +4993,32 @@
        The series line (same cast, same night) is the more
        specific frame and keeps precedence at the intro. */
     G.memoryLine = memoryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }), G.showId);
+    G.rivalryLine = rivalryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
+    G.seasonLine = seasonLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
+    /* Research pass 10: plant the room's question, if the card
+       offered one and the table can carry it — two or more
+       humans, and the subject seated among them (the answers
+       are the cast's own names, borrowed where a small table
+       runs short) */
+    G.roomQ = null;
+    /* Research pass 11: the table is remembered as the usual
+       company. A full table (two or more humans) always
+       rewrites the memory; a solo night only fills an empty
+       or solo memory — one quiet evening against the house
+       never erases the company (Jimmy's correction, 2026-11-22:
+       the table is not always four — it can be one or two) */
+    var castNames = G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; });
+    var existingCast = loadCast();
+    if (castNames.length >= 1 && (castNames.length >= 2 || !existingCast || existingCast.length === 1)) {
+      saveCast(castNames);
+    }
+    if (pendingRoomQ) {
+      var rqHumans = G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; });
+      if (rqHumans.length >= 2 && pendingRoomQ.fact && rqHumans.indexOf(pendingRoomQ.subject) >= 0) {
+        G.roomQ = { fact: pendingRoomQ.fact, subject: pendingRoomQ.subject, used: false };
+      }
+      pendingRoomQ = null;
+    }
     resetDeck();
     resetLineBags();
     /* The Golden Question (pass 4): the pick is drawn from the
@@ -5642,6 +6097,8 @@
        night was — spoken the same way, in the same slot */
     if (G.round === 1 && G.seriesLine) hostSayText(G.seriesLine);
     else if (G.round === 1 && G.memoryLine) hostSayText(G.memoryLine);
+    else if (G.round === 1 && G.seasonLine) hostSayText(G.seasonLine);
+    else if (G.round === 1 && G.rivalryLine) hostSayText(G.rivalryLine);
     else hostSay("r" + G.round);
     /* The Golden Question (pass 4): the tease rides the Round 1
        intro — spoken once per show, appended to whichever line
@@ -5673,12 +6130,52 @@
     }
     else if (gid != null) G.cur = makeCur(BANK[gid], BANK[gid].kind);
     else if (G.round === 1 && G.qInRound === 2 && nightlyState.data && nightlyState.key === G.showId) G.cur = makeCurServed(nightlyState.data);
+    else if (G.round === 2 && G.qInRound === 0 && G.roomQ && !G.roomQ.used) {
+      /* Research pass 10: the planted question takes Round 2's
+         first ordinary slot — never a guess slot, so the
+         night's five guess questions stand untouched */
+      G.roomQ.used = true;
+      dealtBandNow = null;
+      G.cur = makeCur(roomQuestionOf(G.roomQ), "mcq");
+    }
     else G.cur = makeCur(drawNormal(), "mcq");
     if (G.round === 3) betBeat(); else spinBeat();
   }
   function drawNormal() {
     var pat = G.round === 1 ? R1_BANDS : G.round === 2 ? R2_BANDS : R3_BANDS;
     return drawBand(pat[G.qInRound] || 2);
+  }
+  /* Research pass 10: the room's question, built in the bank's
+     own shape so every downstream path — the melt, Cut Two,
+     the Double, the quick-draw — treats it as what it is, an
+     ordinary medium question. Its answers are the cast's own
+     names; a three-handed table borrows Sterling himself as
+     the fourth name, which he bears with dignity */
+  function roomQuestionOf(rq) {
+    var humans = G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; });
+    var wrongs = humans.filter(function (n) { return n !== rq.subject; });
+    if (wrongs.length < 3 && wrongs.indexOf("Sterling") < 0) wrongs.push("Sterling");
+    if (wrongs.length < 3) {
+      /* a two-handed table borrows its remaining names from
+         the book — guests this device has hosted before, who
+         are fairly wrong answers: they are not in this room.
+         An empty book falls back to the honest joke */
+      var rec = loadRecords();
+      var guests = Object.keys(rec.players || {}).map(function (k) { return rec.players[k]; })
+        .sort(function (a, b) { return (b.shows || 0) - (a.shows || 0); });
+      for (var gi = 0; gi < guests.length && wrongs.length < 3; gi++) {
+        var gn = guests[gi].name;
+        if (gn && wrongs.indexOf(gn) < 0 && humans.indexOf(gn) < 0 && gn !== rq.subject) wrongs.push(gn);
+      }
+    }
+    if (wrongs.length < 3) wrongs.push("Nobody — Sterling made it up");
+    var fact = String(rq.fact || "").trim().replace(/[.?!]+$/, "");
+    return {
+      id: "roomq", cat: "About This Room", d: 2, diff: "medium",
+      q: "Who in this room " + fact + "?",
+      why: "No archive on this one — it was written in this room, about this room.",
+      a: rq.subject, w: wrongs.slice(0, 3)
+    };
   }
   /* THE BLUFF's draw: a bluff prompt the table has not seen this
      show where one exists, marked seen like every other deal */
@@ -5725,8 +6222,17 @@
          the scale is 1 and the figure is the one it always was */
       elapsed: 0, clockTotal: (kind === "num" ? NUM_TIME : QTIME) * winScale() / ((headline || golden) ? 2 : 1),
       opts: null, marks: {}, resolved: false, cutUsed: false, lockOrder: [],
-      betRound: betRound, bankValue: 0, headline: headline, golden: golden
+      betRound: betRound, bankValue: 0, headline: headline, golden: golden,
+      dealtBand: null
     };
+    /* Research pass 1: an ordinary question dealt by drawBand
+       wears the band it was dealt AS — the pool it came from,
+       which the calibration ledger may have moved from the
+       authored tag. The stamp is consumed here, so no later
+       deal can leak its band into this question's card. It
+       rides G.cur, so the table save carries it and a resumed
+       question reprints the band it was dealt under. */
+    if (kind === "mcq") { cur.dealtBand = dealtBandNow; dealtBandNow = null; }
     if (kind !== "num" && kind !== "bluff") {
       cur.opts = shuffle([{ t: q.a, ok: true }].concat(q.w.map(function (w) { return { t: w, ok: false }; })));
     }
@@ -5849,6 +6355,9 @@
 
   /* ---------- the spin (Sterling chooses the category — pure theatre) ---------- */
   function spinBeat() {
+    /* Research pass 10: the room's question never pretends to
+       come off the wheel — it gets its own beat, dealt by hand */
+    if (G.cur && G.cur.q && G.cur.q.id === "roomq") { roomQBeat(); return; }
     G.phase = "spin"; stagePhase("spin");
     seatsVisible(true);
     updateTop(); renderSeats();
@@ -5866,6 +6375,22 @@
       function () { return !!G && G.phase === "spin"; },
       function (id) { spinTimer = id; },
       function () { entArm(G.cur); askCurrent(); });
+    saveTableShow();
+  }
+
+  /* Research pass 10: the planted question's own beat — a
+     card, a framing from Sterling, and a hand on the deal.
+     It wears the spin phase, so a resume mid-beat re-deals
+     the same moment through spinBeat's door */
+  function roomQBeat() {
+    G.phase = "spin"; stagePhase("spin");
+    seatsVisible(true);
+    updateTop(); renderSeats();
+    stage('<div class="q-cat">A QUESTION FROM THIS ROOM</div>' +
+      '<p class="round-text">This one is not in the bank. Somebody at this table wrote it, about somebody at this table — and the answers are your own names.</p>' +
+      '<button class="btn-gold" id="btnRoomQGo">DEAL IT</button>');
+    hostSayText("One question tonight was written in this room, about this room. I shall deal it now — and I shall enjoy it.");
+    $("btnRoomQGo").addEventListener("click", function () { entArm(G.cur); askCurrent(); });
     saveTableShow();
   }
 
@@ -5915,7 +6440,23 @@
     stage('<div class="round-kicker">THE BIG FINISH · QUESTION ' + (G.qInRound + 1) + " OF 3</div>" +
       '<p class="round-text">Bet on yourself, out loud — a chip is $100; right pays, wrong costs only pride. Chasing the leader? The further behind you are, the more chips you may ride — up to five.</p>' +
       '<button class="btn-gold" id="btnBetsDone">BETS ARE IN — SPIN THE CATEGORY</button>');
-    hostSay("bet");
+    /* Research pass 3: Sterling reads the table before the
+       cards — when the race has come to a point, he says what
+       the bets mean in plain figures instead of the generic
+       invitation (the series stakes at the break set the
+       precedent: memory that speaks only when it matters).
+       hostSayText does not re-measure the stage, so the fit
+       the generic path takes inside hostSay is taken here */
+    var finaleEx = composeFinaleStakesEx(G.players, G.qInRound, G.declared);
+    if (finaleEx) {
+      hostSayText(finaleEx.line); fitStage();
+      /* Research pass 4: the words name a player, so the
+         gesture does too — he points at the seat the line is
+         about (the geometry aims it, as at a reveal); a level
+         table has no single subject and takes the sweep */
+      if (finaleEx.seat != null) stPoint(finaleEx.seat); else stSweep();
+    }
+    else hostSay("bet");
     betLongShotCalled = {};
     $("btnBetsDone").addEventListener("click", spinBeat);
     autoGo("btnBetsDone", "bet:" + G.round + ":" + G.qInRound, 12000, function () { return !!G && G.phase === "bet"; });
@@ -6034,7 +6575,7 @@
        A plain MCQ now wears no right-hand word at all. */
     var head = c.kind === "survey" ? "MOST PEOPLE SAY…" : "";
     var pill = c.special ? "TONIGHT'S GILDED QUESTION" : esc(c.cat.toUpperCase()) + (c.headline ? " · HEADLINE" : "");
-    return '<div class="q-headrow"><span class="cat-pill' + (c.special ? " gilded" : "") + (c.headline ? " headline" : "") + '">' + catEmblem(c.cat) + pill + '</span>' + bandTagHTML(c.q && c.q.d) + (head ? '<span class="q-kind">' + head + "</span>" : "") + "</div>" +
+    return '<div class="q-headrow"><span class="cat-pill' + (c.special ? " gilded" : "") + (c.headline ? " headline" : "") + '">' + catEmblem(c.cat) + pill + '</span>' + bandTagHTML(curBand(c)) + (head ? '<span class="q-kind">' + head + "</span>" : "") + "</div>" +
       stakeRibbonHTML(c.stake, G.players) +
       '<div class="q-cardwrap">' + (c.headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "") +
       '<div class="q-text' + (c.headline ? " headline-card" : "") + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(c.betRound ? 1 : meltMult(c.elapsed, c.clockTotal)) + "</div></div>" +
@@ -6059,7 +6600,7 @@
       var vsNames = G.decider.eligible.map(function (i) { return esc(G.players[i].name); });
       vsLine = vsNames.join(" vs ") + " — closest number takes the crown. Everybody else: witness.";
     }
-    return '<div class="q-headrow"><span class="cat-pill' + (c.headline ? " headline" : "") + '">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + (c.headline ? " · HEADLINE" : "") + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind">CLOSEST NUMBER</span></div>' +
+    return '<div class="q-headrow"><span class="cat-pill' + (c.headline ? " headline" : "") + '">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + (c.headline ? " · HEADLINE" : "") + '</span>' + bandTagHTML(curBand(c)) + '<span class="q-kind">CLOSEST NUMBER</span></div>' +
       stakeRibbonHTML(c.stake, G.players) +
       '<div class="q-cardwrap">' + (c.decider ? '<div class="headline-banner decider-banner">★ THE DECIDER ★</div>' : (c.headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "")) +
       '<div class="q-text' + (c.headline ? " headline-card" : "") + wearCls(G.round, !!c.decider) + '">' + esc(c.q.q) + cardDressHTML((c.decider || c.betRound) ? 1 : meltMult(c.elapsed, c.clockTotal)) + "</div></div>" +
@@ -6215,7 +6756,7 @@
       if (p.house != null) return '<div class="bluff-row house"><span class="bluff-seat">' + esc(p.name) + '</span><span class="bluff-note">the house is inventing its own…</span></div>';
       return '<div class="bluff-row"><label class="bluff-seat" for="bluffIn' + i + '">' + esc(p.name) + '</label><input class="bluff-in" id="bluffIn' + i + '" data-seat="' + i + '" type="text" maxlength="42" autocomplete="off" placeholder="their lie, in their words"></div>';
     }).join("");
-    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
+    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(curBand(c)) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
       '<div class="q-cardwrap"><div class="q-text' + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(1) + '</div></div>' +
       '<p class="round-text">One answer to this one is true. The rest, this table invents. Each player types their own lie — an empty line gets a house lie dealt to it instead. When every lie is in, anyone deals.</p>' +
       '<div class="bluff-rows">' + rows + '</div>' +
@@ -6250,7 +6791,7 @@
     var btns = c.opts.map(function (o, i) {
       return '<button class="ans-btn" style="--d:' + (i * 0.09).toFixed(2) + 's" disabled><span class="letter">' + (i + 1) + '</span><span>' + esc(o.t) + '</span></button>';
     }).join("");
-    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
+    return '<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(curBand(c)) + '<span class="q-kind bluff-kind">★ THE BLUFF ★</span></div>' +
       stakeRibbonHTML(c.stake, G.players) +
       '<div class="q-cardwrap"><div class="q-text' + wearCls(G.round, false) + '">' + esc(c.q.q) + cardDressHTML(1) + '</div></div>' +
       '<div class="q-meta"><div class="q-for">One of these is true — the rest were invented at this table. $200 for the truth, and $25 for every player your lie fools. Pick on your own desk.</div>' + timerHTML() + '</div>' +
@@ -6820,6 +7361,11 @@
      by the room: WARM · MIDDLE · DEEP CUT. */
   var BAND_WORDS = { 1: "WARM", 2: "MIDDLE", 3: "DEEP CUT" };
   function bandWord(d) { return (d === 1 || d === 2 || d === 3) ? BAND_WORDS[d] : null; }
+  /* Research pass 1: the band a dealt question wears — the
+     band it was dealt as where a deal stamped one (the
+     calibration ledger may have moved it), else the authored
+     tag, else nothing (the nightly special wears no band) */
+  function curBand(c) { return (c && c.dealtBand != null) ? c.dealtBand : (c && c.q ? c.q.d : null); }
   function bandTagHTML(d) {
     var w = bandWord(d);
     return w ? '<span class="band-tag b' + d + '">' + w + "</span>" : "";
@@ -6829,6 +7375,7 @@
      dealt entry behind it */
   function ogBandOf(q, e) {
     if (q && q.band != null) return q.band;
+    if (e && e.dealtBand != null) return e.dealtBand; /* Research pass 1: the host's own dealt band, behind the room's word */
     return e && e.bank ? e.bank.d : null;
   }
 
@@ -7210,6 +7757,21 @@
     return base + (i === qdSeat ? QUICK_DRAW_BONUS * (G.round || 1) : 0) + (sBonus || 0);
   }
   function dblSpent(c, i) { return !!(c.dbl && c.dbl[i] && !c.betRound); }
+  /* Research pass 2 (2026-11-22) — THE HELD BREATH: the length
+     of the pause the Big Finish takes between the marks settling
+     and the reveal landing, counted from the chips riding on the
+     question. Every seat's bet counts, house seats included — it
+     is the table's money, not one player's. Nothing outside the
+     Big Finish holds its breath, and the Decider never does: its
+     verdict is a different theatre and keeps its own timing. */
+  function finaleBreathMs(c) {
+    if (!c || !c.betRound || c.decider || !G) return 0;
+    var chips = 0;
+    G.players.forEach(function (p) { chips += p.bet || 1; });
+    var ms = 600 + 110 * chips;
+    if (G.qInRound === R3_COUNT - 1) ms *= 1.4; /* the last question of the night holds the longest breath */
+    return Math.max(850, Math.min(3000, Math.round(ms)));
+  }
   function revealAnswer() {
     if (!G || !G.cur || G.phase !== "vote") return;
     var c = G.cur;
@@ -7313,6 +7875,17 @@
     /* Pass N1: the report card's tallies are written in the same
        commit, from the same gains and the same streak settlement */
     noteReport(c, gains, so);
+    /* Research pass 1: the calibration ledger takes this
+       question's measure in the same commit — human seats only
+       (a house seat's answer is a policy roll, not evidence),
+       ordinary questions only. revealAnswer runs exactly once
+       per question (a resumed show repaints, never re-settles),
+       so the record can never double-count. */
+    if (c.kind === "mcq" && c.q && c.q.id != null) {
+      var calN = 0, calC = 0;
+      G.players.forEach(function (p, i) { if (p.house != null) return; calN++; if (c.marks[i]) calC++; });
+      calRecord(c.q.id, calN, calC);
+    }
     /* Pass 4: the arc reads the settled scores in the same commit */
     arcTrack();
     buildTableFx();
@@ -7320,6 +7893,36 @@
        the winner line's generation now, not at the finale screen */
     if (G.round === 3 && G.qInRound === R3_COUNT - 1) winnerPrefetchAtReveal(winnerFactsFrom(G.players));
     potFeedPending = potFed; /* the vessel paints pre-feed; its coins are owed */
+    /* Research pass 2 — THE HELD BREATH: in the Big Finish the
+       reveal does not land the instant the marks settle. The
+       room holds its breath for a span that grows with the
+       chips riding on the question, and Sterling makes them
+       wait it out on the vote-count frame. The settlement
+       above is already committed and stays invisible until
+       the paint (the desks do not repaint until paintReveal),
+       so what waits is only the landing: the light, the
+       house's reaction, the reveal itself. The breath is a
+       moment, never a state — it is not saved, and a refresh
+       inside it resumes onto the settled reveal painted
+       whole, exactly as a refresh after it does. */
+    var breathMs = finaleBreathMs(c);
+    if (breathMs > 0) {
+      var holdG = G, holdC = c;
+      setPlot("breath");
+      /* Research pass 4: Sterling holds the breath with the
+         room — he leans in for exactly as long as the money
+         makes them wait, and straightens only when it lands */
+      stClass("st-lean", breathMs);
+      saveTableShow();
+      setTimeout(function () {
+        if (!holdG || G !== holdG || G.cur !== holdC || G.phase !== "reveal") return;
+        setPlot("reveal", washSeat);
+        audDecider(false); audReact(winners.length > 0); /* V4: the house ripples a bank, dips an all-miss */
+        paintReveal();
+        saveTableShow();
+      }, breathMs);
+      return;
+    }
     audDecider(false); audReact(winners.length > 0); /* V4: the house ripples a bank, dips an all-miss */
     paintReveal();
     saveTableShow();
@@ -7382,7 +7985,7 @@
       } else if (!winners.length) {
         dNum = '<div class="delta"><span class="down">Nobody got close. The number keeps its dignity.</span></div>';
       }
-      stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind">THE NUMBER WAS</span></div>' +
+      stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(curBand(c)) + '<span class="q-kind">THE NUMBER WAS</span></div>' +
         goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + sealHTML(c.golden, settled) + esc(c.q.q) + cardDressHTML(1) + "</div>", c.golden) +
         countDialHTML(Number(c.q.num), settled) +
         dNum +
@@ -7415,7 +8018,7 @@
         });
         pfStrip = photoFinishHTML(pfFin, G.players, QUICK_DRAW_BONUS * (G.round || 1));
       }
-      stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(c.q && c.q.d) + '<span class="q-kind">THE ANSWER</span></div>' +
+      stage('<div class="q-headrow"><span class="cat-pill">' + catEmblem(c.cat) + esc(c.cat.toUpperCase()) + '</span>' + bandTagHTML(curBand(c)) + '<span class="q-kind">THE ANSWER</span></div>' +
         goldenCardHTML('<div class="q-text' + (c.headline ? " headline-card" : "") + (c.golden ? " golden-card" : "") + wearCls(G.round, !!c.decider) + '" style="font-size:clamp(18px,3vw,25px)">' + sealHTML(c.golden, settled) + esc(c.q.q) + cardDressHTML(1) + "</div>", c.golden) +
         '<div class="answers">' + btns + "</div>" +
         pfStrip +
@@ -7446,6 +8049,35 @@
     var maxGain = 0;
     winners.forEach(function (wi) { var gn = c.betRound ? G.players[wi].bet * 100 : c.bankValue; if (gn > maxGain) maxGain = gn; });
     if (maxGain >= 300) stClass("st-nod", 600);
+    /* Research pass 4: the Bluff's author gets the hat-tip
+       when their invention fooled the room in earnest — two
+       or more players bought the lie. The purse map is the
+       settled record, so the tip reads the same figures the
+       credits print; a settled repaint tips nothing (it is a
+       picture of the moment, not the moment) */
+    if (!settled && c.kind === "bluff" && c.bluffFool) {
+      var bigFool = Object.keys(c.bluffFool).some(function (k) { return c.bluffFool[k] >= 2 * BLUFF_FOOL; });
+      if (bigFool) stClass("st-tip", 1700);
+    }
+    /* Research pass 8 (Jimmy's word — answers should pop and
+       lights should flash): the reveal's punctuation. A fat
+       bank or a full house flashes the room's lights; a slab
+       the room backed and got wrong shakes it off before it
+       dims. Read from the settled picks, not the painted
+       chips, so the marks are the record's, and live reveals
+       only — a settled repaint is a picture, not a moment */
+    if (!settled && !c.decider) {
+      var humansN = G.players.filter(function (p) { return p.house == null; }).length;
+      if (maxGain >= 300 || (winners.length > 1 && winners.length >= humansN)) flashLights();
+      if (c.kind === "mcq" && c.picks && c.opts) {
+        var correctOi = -1;
+        c.opts.forEach(function (o, oi) { if (o.ok) correctOi = oi; });
+        var backedWrong = {};
+        Object.keys(c.picks).forEach(function (k) { var pk = c.picks[k]; var pko = pk && typeof pk === "object" ? pk.opt : pk; if (pko != null && pko !== correctOi) backedWrong[pko] = 1; });
+        var slabs = document.querySelectorAll("#stage .answers .ans-btn");
+        Object.keys(backedWrong).forEach(function (oi) { if (slabs[+oi]) slabs[+oi].classList.add("missed"); });
+      }
+    }
     /* a decider banks nothing, so no coins fly for it — the point
        and the CLOSEST tag carry its reveal. Pass 7: the flights
        ride the LIVE reveal only (a settled repaint lands as
@@ -7474,6 +8106,10 @@
          other way — from the card into the pot — in the same beat */
       if (c.potFed > 0) potFeedFx(c.potFed);
     });
+    /* Research pass 5: the losers' piles travel — to the first
+       banker's desk, or to the pot when the room missed whole.
+       Live reveals only, like the flights above */
+    if (!c.decider && !settled && c.betRound) flyBetStacks(winners);
     $("btnNext").addEventListener("click", function () {
       if (c.decider && G.decider && G.decider.winner == null) { deciderContinue(); return; }
       G.qInRound++; nextQuestion();
@@ -7646,6 +8282,7 @@
        about to print, computed here from the reveal tallies */
     var awardsT = reportAwardsOf(G.players.map(function (pp, ii) { return { name: pp.name, d: deriveReport(G.report ? G.report[ii] : null) }; }));
     if (guestFinishers.length) recordShow(G.showId, guestFinishers, guestWin, awardsT);
+    var seasonWonT = takeSeasonResult();
     /* Programme pass 4 — Rematch Night: the night advances at the
        same guarded moment, under the same show id, on the finale's
        own verdict. What it earns — the night's score, or the
@@ -7718,6 +8355,14 @@
     /* Pass N3: the share card's data model, built from this same
        verdict — champion, pot and series line exactly as printed */
     shareNight = shareDataTable(i, potAmt, sFinaleLine);
+    /* Research pass 7: the stage repaint below takes the vessel
+       with it — remember where it stood and what it held, so
+       the ceremony can pay the pot out in view of the room */
+    var potGhost = null;
+    if (potAmt > 0) {
+      var pvEl = document.querySelector("#stage .pot-vessel");
+      if (pvEl) { var pvr = pvEl.getBoundingClientRect(); if (pvr.width) potGhost = { x: pvr.left, y: pvr.top, w: pvr.width, h: pvr.height, amt: potAmt }; }
+    }
     stage('<div class="finale-wrap has-report' + (sFinaleLine ? " has-series" : "") + '"><div class="spot-cone" aria-hidden="true"></div><div class="finale-main">' +
       '<div class="marquee finale-marquee"><div class="kicker">THE GILDED HOUR · FINAL RESULT</div>' +
       '<div class="winner-word">WINNER</div>' +
@@ -7725,6 +8370,7 @@
       '<div class="winner-total">' + money(p.score + potAmt) + "</div>" +
       potLineHtml +
       (titleSub ? '<div class="winner-sub">' + titleSub + "</div>" : "") +
+      (seasonWonT ? '<div class="winner-sub season-line">AND WITH IT, THE SEASON — ' + esc(seasonWonT.champion.toUpperCase()) + " TAKES THE GILDED CUP · " + esc(seasonWonT.name) + "</div>" : "") +
       (sFinaleLine ? '<div class="winner-sub series-line' + (sNightWon ? " night-won" : "") + '">' + esc(sFinaleLine) + "</div>" : "") +
       '<span class="gold-seal" aria-hidden="true"><svg class="wheel-emblem emblem-seal" viewBox="0 0 120 120"><use href="#emblem"></use></svg></span></div>' +
       '<div class="sterling-zone"><div class="bubble bubble-finale">Sealed with a kiss of confetti — the hour is yours, ' + esc(p.name) + ".</div>" +
@@ -7741,6 +8387,7 @@
     renderSeats();
     buildBulbs(document.querySelector(".finale-marquee"));
     finaleCeremony();
+    if (potGhost) potPayoutFx(potGhost);
     $("btnShareNight").addEventListener("click", function () { openShareNight(); });
     $("btnAgain").addEventListener("click", function () {
       stopLeaves();
@@ -7795,7 +8442,11 @@
      the nightly special carries none, so its diff speaks instead */
   function houseBandOf(cur) {
     if (!cur) return 2;
-    var d = cur.q && cur.q.d;
+    /* Research pass 1: the house reads the band the question
+       was dealt as, like the card prints — calibration moves
+       its read (and so its wagers and its odds) with the room's
+       evidence; the nightly special still speaks by diff */
+    var d = cur.dealtBand != null ? cur.dealtBand : (cur.q && cur.q.d);
     if (d === 1 || d === 2 || d === 3) return d;
     return cur.diff === "easy" ? 1 : cur.diff === "hard" ? 3 : 2;
   }
@@ -7967,6 +8618,52 @@
     }
     wrap.innerHTML = html;
   }
+  /* Research pass 10: the room question's subject picker —
+     one chip per name at the table, rebuilt whenever the rows
+     are (a count change, a name edit), the selection kept by
+     name so an edit never silently moves the question onto
+     somebody else */
+  var roomQSubject = null;
+  function paintRoomQWho() {
+    var blk = $("roomQBlock"); if (blk) blk.classList.toggle("hidden", !!soloMode);
+    var wrap = $("roomQWho"); if (!wrap) return;
+    var names = [];
+    for (var i = 0; i < (soloMode ? 1 : playerCount); i++) names.push((setupNames[i] || "").trim() || PNAMES[i]);
+    if (roomQSubject && names.indexOf(roomQSubject) < 0) roomQSubject = null;
+    wrap.innerHTML = "";
+    names.forEach(function (nm) {
+      var b = el('<button type="button" class="roomq-chip' + (roomQSubject === nm ? " sel" : "") + '">' + esc(nm) + "</button>");
+      b.addEventListener("click", function () { roomQSubject = (roomQSubject === nm) ? null : nm; paintRoomQWho(); });
+      wrap.appendChild(b);
+    });
+  }
+  /* Research pass 11: the usual-company button — painted
+     whenever the title is, from the remembered cast and the
+     records book: who they are, and (when the last recorded
+     show was this same company) how the last night ended.
+     One tap seats them and starts the show — the ritual is
+     that there is no setup to do */
+  function paintUsualCast() {
+    var btn = $("btnUsual"); if (!btn) return;
+    var cast = soloMode ? null : loadCast();
+    if (!cast || cast.length < 2) { btn.classList.add("hidden"); return; }
+    var sub = cast.join(" · ");
+    var rec = loadRecords();
+    if (rec.lastShow && rec.lastShow.key === castKeyFor(cast)) {
+      if (rec.lastShow.winner) sub += " — LAST TIME, " + rec.lastShow.winner.toUpperCase() + " TOOK IT" + (rec.lastShow.margin > 0 ? " BY " + money(rec.lastShow.margin) : "");
+      else sub += " — LAST TIME, NOBODY TOOK IT";
+    }
+    var subEl = $("usualSub"); if (subEl) subEl.textContent = sub;
+    btn.classList.remove("hidden");
+  }
+  function applyCastToSetup(names) {
+    playerCount = names.length;
+    setupNames = [names[0] || "", names[1] || "", names[2] || "", names[3] || ""];
+    document.querySelectorAll(".count-btn").forEach(function (x) {
+      x.classList.toggle("sel", parseInt(x.getAttribute("data-n"), 10) === names.length);
+    });
+    buildNameRows();
+  }
   function buildNameRows() {
     var wrap = $("nameRows");
     /* Pass 9: harvest whatever is typed before the rebuild, so a
@@ -7987,7 +8684,7 @@
       inpEl.value = setupNames[i] || PNAMES[i];
       inpEl.addEventListener("input", function () {
         setupNames[parseInt(this.getAttribute("data-seat"), 10)] = this.value;
-        paintAvaPicks(); renderPodiumPreview();
+        paintAvaPicks(); renderPodiumPreview(); paintRoomQWho();
       });
       wrap.appendChild(row);
     }
@@ -7995,6 +8692,7 @@
       wrap.appendChild(el('<div class="house-note">SEATS 2 &amp; 3 — THE HOUSE PLAYS ITS OWN<span>Two house players, dealt when the show starts. They answer, bet and spend like anyone at the table.</span></div>'));
     }
     renderPodiumPreview();
+    paintRoomQWho();
   }
   /* repaint just the medallions (typing a name must not rebuild
      the rows — that would throw away the name being typed); the
@@ -8078,6 +8776,7 @@
   $("btnStart").addEventListener("click", function () {
     Snd.ensure();
     if (soloMode) {
+      pendingRoomQ = null;
       var inp = $("panelTable").querySelector(".name-input");
       startSoloShow((inp && inp.value.trim()) || PNAMES[0]);
       return;
@@ -8085,7 +8784,25 @@
     var names = Array.prototype.map.call($("panelTable").querySelectorAll(".name-input"), function (inp, i) {
       return inp.value.trim() || PNAMES[i];
     });
+    /* Research pass 10: harvest the room question card — a
+       fact and a subject, or nothing (the card is optional
+       and an empty one plants nothing) */
+    var rqFactEl = $("roomQFact");
+    var rqFact = rqFactEl ? rqFactEl.value.trim() : "";
+    pendingRoomQ = (rqFact && roomQSubject && names.indexOf(roomQSubject) >= 0) ? { fact: rqFact, subject: roomQSubject } : null;
     startShow(names);
+  });
+  /* Research pass 11: one tap — the usual company, seated
+     and started. The names land in the rows first (so the
+     room question card and everything downstream of the
+     setup state sees the same table), then the ordinary
+     START hand does the rest */
+  $("btnUsual").addEventListener("click", function () {
+    var cast = loadCast();
+    if (!cast) return;
+    Snd.ensure();
+    applyCastToSetup(cast);
+    $("btnStart").click();
   });
   /* improvement 4: the title's resume chip */
   $("btnResumeShow").addEventListener("click", function () { Snd.ensure(); resumeTableShow(); });
@@ -8098,7 +8815,23 @@
     G = null; showScreen("scr-title");
     WakeLock.sync(); /* back at the title: the screen may sleep again */
   });
+  /* Research pass 11: the setup opens already seated — the
+     remembered company is in the rows before a finger moves */
+  var bootCast = loadCast();
+  if (bootCast) {
+    setupNames = [bootCast[0] || "", bootCast[1] || "", bootCast[2] || "", bootCast[3] || ""];
+    /* a remembered company seats the count too; a remembered
+       solo name fills its row and leaves the count alone —
+       there is no one-handed count button to press */
+    if (bootCast.length >= 2) {
+      playerCount = bootCast.length;
+      document.querySelectorAll(".count-btn").forEach(function (x) {
+        x.classList.toggle("sel", parseInt(x.getAttribute("data-n"), 10) === bootCast.length);
+      });
+    }
+  }
   buildNameRows();
+  paintUsualCast();
   buildBulbs($("marqueeTitle"));
   /* mute toggles — one on the title screen, one in the show topbar —
      same gh_mute persistence and wording; the show reads fully silent */
@@ -8740,6 +9473,7 @@
       G.round = rr[0];
       for (var qi = 0; qi < rr[1]; qi++) {
         G.qInRound = qi;
+        dealtBandNow = null; /* Research pass 1: a guess slot draws no band; an ordinary draw below stamps its own */
         var gid = guess[rr[0] + ":" + qi];
         var q, kind;
         if (gid != null) { q = BANK[gid]; kind = q.kind; }
@@ -8760,7 +9494,8 @@
           cat: q.cat, diff: q.diff || "medium",
           baseValue: BASE_VALUES[q.diff || "medium"],
           multiplier: rr[0] === 2 ? 2 : 1,
-          windowMs: kind === "num" ? NUM_TIME * 1000 : QTIME * 1000
+          windowMs: kind === "num" ? NUM_TIME * 1000 : QTIME * 1000,
+          dealtBand: dealtBandNow /* Research pass 1: the band this entry was dealt as (null for guess slots) */
         };
         if (kind === "num") e.trueNum = Number(q.num);
         else if (kind !== "bluff") { var o = ogOptsFor(q, seed); e.answers = o.answers; e.correctIdx = o.correctIdx; e.cutIndices = o.cutIndices; }
@@ -8774,6 +9509,7 @@
         if (OG && OG.goldenSlot === rr[0] + ":" + qi && kind !== "bluff") e.golden = true;
         e.qid = "q" + e.seq + "." + q.id + "." + seed.toString(36);
         out.push(e);
+        dealtBandNow = null; /* the stamp is on the entry now — it must not leak into the next deal */
       }
     });
     return out;
@@ -8804,6 +9540,47 @@
      already on the script are struck from them first and can
      never be dealt twice. Runs once; the completed script rides
      the host save like the old single-sitting one. */
+  /* Pass 13: the planted entry, built in the script's own
+     shape from one collected fact — the bank is synthetic
+     (id "roomq", the room's own category), the answers are
+     the seated players' names, padded by the table version's
+     ladder where a small room runs short. A golden seat, if
+     the draw had put one here, keeps its gold */
+  function ogRoomEntry(old, fact) {
+    var names = OG.players.map(function (p) { return p ? p.name : null; });
+    var subjectName = names[fact.subject];
+    var wrongs = names.filter(function (n, i) { return n && i !== fact.subject; });
+    if (wrongs.length < 3 && wrongs.indexOf("Sterling") < 0) wrongs.push("Sterling");
+    if (wrongs.length < 3) {
+      var rec = loadRecords();
+      var guests = Object.keys(rec.players || {}).map(function (k) { return rec.players[k]; })
+        .sort(function (a, b) { return (b.shows || 0) - (a.shows || 0); });
+      for (var gi = 0; gi < guests.length && wrongs.length < 3; gi++) {
+        var gn = guests[gi].name;
+        if (gn && wrongs.indexOf(gn) < 0 && names.indexOf(gn) < 0 && gn !== subjectName) wrongs.push(gn);
+      }
+    }
+    if (wrongs.length < 3) wrongs.push("Nobody — Sterling made it up");
+    var factText = String(fact.text || "").trim().replace(/[.?!]+$/, "");
+    var bank = {
+      id: "roomq", cat: "About This Room", d: 2, diff: "medium",
+      q: "Who in this room " + factText + "?",
+      why: "No archive on this one — it was written in this room, about this room.",
+      a: subjectName, w: wrongs.slice(0, 3)
+    };
+    var seed = (Math.random() * 2147483646 + 1) | 0;
+    var o = ogOptsFor(bank, seed);
+    var e = {
+      seq: old.seq, round: 2, qInRound: 0, bank: bank, kind: "normal",
+      cat: bank.cat, diff: "medium",
+      baseValue: BASE_VALUES.medium, multiplier: 2,
+      windowMs: QTIME * 1000, dealtBand: null,
+      answers: o.answers, correctIdx: o.correctIdx, cutIndices: o.cutIndices,
+      qid: "roomq." + seed.toString(36), roomq: true
+    };
+    if (old.golden) e.golden = true;
+    return e;
+  }
   function ogBuildTail() {
     if (!OG || OG.tailBuilt) return;
     if (OG.script && OG.script.length >= R1_COUNT + R2_COUNT + R3_COUNT) { OG.tailBuilt = true; return; } // a plan from before the vote: already whole
@@ -8817,6 +9594,26 @@
     });
     var tail = ogScriptEntries([[2, R2_COUNT, R2_BANDS], [3, R3_COUNT, R3_BANDS]], OG.guess || {}, (OG.script || []).length);
     OG.script = (OG.script || []).concat(tail);
+    /* Pass 13 — About This Room, online: if the lobby left
+       facts in Sterling's pocket, one is planted over Round
+       2's first ordinary entry — the same slot the table
+       plants, the same protections (never a guess slot: the
+       kind check is the guard). The draw is the host's, made
+       once, here, where the tail is born; the entry then
+       rides the plan like any other, whole-bank save and all */
+    var factSeats = Object.keys(OG.roomFacts || {});
+    var seatedN = OG.players.filter(Boolean).length;
+    if (factSeats.length && seatedN >= 2) {
+      var fSeat = factSeats[ri(factSeats.length)];
+      var fact = OG.roomFacts[fSeat];
+      var plantIdx = -1;
+      for (var pi2 = 0; pi2 < OG.script.length; pi2++) {
+        if (OG.script[pi2].round === 2 && OG.script[pi2].qInRound === 0 && OG.script[pi2].kind === "normal") { plantIdx = pi2; break; }
+      }
+      if (plantIdx >= 0 && fact && OG.players[fact.subject]) {
+        OG.script[plantIdx] = ogRoomEntry(OG.script[plantIdx], fact);
+      }
+    }
     OG.tailBuilt = true;
     G = saved;
     saveSeen();
@@ -8893,7 +9690,9 @@
     if (e.golden) o.golden = true;
     /* the nightly special's synthetic bank travels whole; bank
        questions rebuild from their id */
+    if (e.dealtBand != null) o.dealtBand = e.dealtBand; /* Research pass 1: the dealt band rides the plan, so a restored host publishes the band the question was dealt as */
     if (e.special) { o.special = true; o.intro = e.intro || null; o.bank = e.bank; }
+    else if (e.roomq) { o.roomq = true; o.bank = e.bank; } /* Pass 13: the planted question's synthetic bank travels whole, like the nightly's */
     else o.bankId = (e.bank && e.bank.id != null) ? e.bank.id : null;
     return o;
   }
@@ -8907,7 +9706,9 @@
     if (o.answers) { e.answers = o.answers; e.correctIdx = o.correctIdx; e.cutIndices = o.cutIndices; }
     if (o.decider) { e.decider = true; e.eligible = Array.isArray(o.eligible) ? o.eligible.slice() : []; }
     if (o.golden) e.golden = true; // The Golden Question (pass 4): the restored plan keeps its pick
+    if (o.dealtBand != null) e.dealtBand = o.dealtBand; // Research pass 1: the restored plan keeps its dealt band
     if (o.special) { e.special = true; e.intro = o.intro || null; e.bank = o.bank; if (!e.bank) return null; }
+    else if (o.roomq) { e.roomq = true; e.bank = o.bank; if (!e.bank) return null; }
     else { if (o.bankId == null || !BANK[o.bankId]) return null; e.bank = BANK[o.bankId]; }
     return e;
   }
@@ -9030,6 +9831,7 @@
       started: false, script: null, idx: 0, curRound: 0, cur: null,
       decider: null,           // New programme pass 1: {eligible, winner, used} once a tied finale triggers it
       declared: {},            // Pass 3: the room's declarations, mirrored from its snapshots
+      roomFacts: {},           // Pass 13: the lobby's collected facts {seat: {text, subject}}, mirrored from the host snapshot — one is planted in Round 2
       arc: null,               // Pass 4: the night's arc record — Sterling's story memory for this room
       facts: freshFacts(),     // New programme pass 2: the round-facts recorder the Intermission is told from
       seriesCtx: null, seriesLine: null, // Programme pass 4: the night's series, captured at the show's start
@@ -9227,6 +10029,7 @@
     /* The Declaration (Pass 3): the room's calls ride every
        snapshot — this screen's break card names them as they land */
     if (s.declared) OG.declared = s.declared;
+    if (s.facts && typeof s.facts === "object") OG.roomFacts = s.facts; /* Pass 13: the host's snapshot carries the collected facts (host-only on the wire) */
     if (s.question) OG.offset = s.question.openedAt - Date.now();
     if (s.phase === "lobby") {
       if (!OG.started) {
@@ -9364,6 +10167,11 @@
          at all under the plain game */
       (rulesActive(OG.rules) ? '<p class="round-text og-rules-line">HOUSE RULES — ' + esc(rulesCapsText(OG.rules)) + "</p>" : "") +
       (ogLobbyNote ? '<p class="round-text og-lobby-note" id="ogLobbyNote">' + esc(ogLobbyNote) + "</p>" : "") +
+      /* Pass 13: the pocket fills in the lobby — the host sees
+         how many facts Sterling holds, never whose or what
+         (the plant is a surprise on this screen too, until
+         Round 2 deals it) */
+      (Object.keys(OG.roomFacts || {}).length ? '<p class="round-text og-lobby-note">FACTS IN STERLING&rsquo;S POCKET — ' + Object.keys(OG.roomFacts).length + " · ONE WILL BE DEALT IN ROUND 2</p>" : "") +
       /* Surfacing pass (2026-11-13): the room's one piece of
          machinery worth naming, said plainly where the room
          gathers — the room is server-held, so a dropped phone
@@ -9873,10 +10681,16 @@
     if (e.kind === "num") msg.trueNum = e.trueNum;
     else if (e.kind === "bluff") { msg.bluffTruth = e.bank.a; msg.decoys = (e.bank.decoys || []).slice(); }
     else { msg.correctIdx = e.correctIdx; msg.answersCount = 4; msg.cutIndices = e.cutIndices; }
+    /* Pass 13: a planted question publishes its face with it —
+       the texts are in no bank, so the room carries them on
+       the record for the pads (public; the secret stays the
+       correctIdx alone, as always) */
+    if (e.roomq) { msg.roomText = e.bank.q; msg.roomAnswers = e.answers.slice(); }
     /* Show the Band (pass 3): the dealt entry's difficulty band
        rides the publish — public information by design; the room
        validates it to 1|2|3 and deals it back in the snapshot */
-    if (e.bank && e.bank.d) msg.band = e.bank.d;
+    if (e.dealtBand != null) msg.band = e.dealtBand; /* Research pass 1: the band it was dealt as, calibration and all */
+    else if (e.bank && e.bank.d) msg.band = e.bank.d;
     /* The Golden Question (pass 4): the secret pick rides THIS
        publish as a hidden field — the room folds the double into
        the record, keeps the flag off every snapshot (the host's
@@ -9990,7 +10804,8 @@
       stakeRibbonHTML(stakeCallout(ogStakeCtx(e, q)), OG.players) +
       '<div class="q-cardwrap">' + (isDec ? '<div class="headline-banner decider-banner">★ THE DECIDER ★</div>' : (headline ? '<div class="headline-banner">★ THE HEADLINE QUESTION ★</div>' : "")) +
       '<div class="q-text' + (headline ? " headline-card" : "") + wearCls(e.round, isDec) + '">' + esc(e.bank.q) + cardDressHTML(isDec ? 1 : ogMeltMult(q)) + "</div></div>" +
-      (e.special ? '<div class="special-note">THE SAME QUESTION AT EVERY TABLE TONIGHT</div>' : "");
+      (e.special ? '<div class="special-note">THE SAME QUESTION AT EVERY TABLE TONIGHT</div>' : "") +
+      (e.roomq ? '<div class="special-note">WRITTEN IN THIS ROOM, ABOUT THIS ROOM</div>' : "");
     var meta = '<div class="q-meta">' + (e.kind === "bluff"
       ? '<div class="q-for">One of these is true — the rest were invented on the phones around this room. $200 for the truth, $25 for every player a lie fools.</div>'
       : isDec
@@ -10153,6 +10968,16 @@
       (r.results || []).forEach(function (res) { if (res.banked > 0) ogGains[res.seat] = res.banked; });
       noteFacts(OG.facts, e.round, ogGains, r.quickDrawSeat != null ? r.quickDrawSeat : -1, e.cat);
     }
+    /* Research pass 1: the calibration ledger's online twin —
+       live reveals only (a resynced reveal was counted when it
+       landed, or the moment passed; never twice), ordinary
+       questions only, measured on the seats that actually
+       answered (a silent pad is not a wrong answer) */
+    if (!fromSnap && !r.decider && e.kind === "normal" && e.bank && e.bank.id != null) {
+      var ogCalN = 0, ogCalC = 0;
+      (r.results || []).forEach(function (res) { if (res.pick != null) { ogCalN++; if (res.correct) ogCalC++; } });
+      calRecord(e.bank.id, ogCalN, ogCalC);
+    }
     var winners = [];
     (r.results || []).forEach(function (res) {
       if (res.correct) winners.push(res.seat);
@@ -10297,7 +11122,7 @@
     if (r.decider && r.deciderWinner != null) stPoint(r.deciderWinner);
     var ogMax = 0;
     (r.results || []).forEach(function (res) { if (res.banked > ogMax) ogMax = res.banked; });
-    if (ogMax >= 300) stClass("st-nod", 600);
+    if (ogMax >= 300) { stClass("st-nod", 600); flashLights(); }
     /* Pass 7: live reveals only — a snapshot resync (fromSnap)
        repaints the desks as they stand, coinless; each banker's
        flight is sized by what the room says they banked */
@@ -10506,6 +11331,7 @@
        too — from the referee's card when one was dealt */
     var awardsO = OG.report ? reportAwardsOf(idxs.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; })) : null;
     recordShow(ogShowId(), idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score + (hasWinner && ii === winSeat ? potAmtO : 0) }; }), hasWinner ? winSeat : -1, awardsO);
+    var seasonWonO = takeSeasonResult();
     /* Programme pass 4 — Rematch Night: the night advances at the
        same guarded moment, on the finale's own verdict — a crown
        the Decider chose is the series point, exactly as at the
@@ -10559,6 +11385,7 @@
       '<div class="winner-total">' + money(p.score + (hasWinner ? potAmtO : 0)) + "</div>" +
       (hasWinner && potAmtO > 0 ? '<div class="winner-sub pot-line">' + esc(authoredLine("potfinale", { amount: money(potAmtO) })) + "</div>" : "") +
       (titleSubO ? '<div class="winner-sub">' + titleSubO + "</div>" : "") +
+      (seasonWonO ? '<div class="winner-sub season-line">AND WITH IT, THE SEASON — ' + esc(seasonWonO.champion.toUpperCase()) + " TAKES THE GILDED CUP · " + esc(seasonWonO.name) + "</div>" : "") +
       (sFinaleLineO ? '<div class="winner-sub series-line' + (sNightWonO ? " night-won" : "") + '">' + esc(sFinaleLineO) + "</div>" : "") +
       '<span class="gold-seal" aria-hidden="true"><svg class="wheel-emblem emblem-seal" viewBox="0 0 120 120"><use href="#emblem"></use></svg></span></div>' +
       '<div class="sterling-zone"><div class="bubble bubble-finale">Sealed with a kiss of confetti — the hour is yours, ' + esc(p.name) + ".</div>" +
@@ -10656,7 +11483,8 @@
     JP = {
       code: code, name: name || "", seat: null, reclaimToken: reclaimToken || null,
       ws: null, snap: null, offset: 0, dead: false, welcomed: false,
-      backoff: 1000, tickInt: null, betSel: 1, sentNum: null, sentBet: null
+      backoff: 1000, tickInt: null, betSel: 1, sentNum: null, sentBet: null,
+      factAbout: null // Pass 13: the fact card's chosen subject seat (null until tapped; the snapshot's yourFact is the fallback)
     };
     showScreen("scr-join");
     $("jpRoom").textContent = "ROOM " + code;
@@ -10932,6 +11760,20 @@
           nightlyPad: true
         };
       }
+      if (/^roomq\./.test(String(q.qid || ""))) {
+        /* Pass 13: a planted question's face rides the snapshot
+           — the room carries it on the record because no bank
+           holds it. The correctIdx is never among it */
+        if (q.roomText && Array.isArray(q.roomAnswers) && q.roomAnswers.length) {
+          return { q: q, bank: { q: q.roomText, why: "", cat: q.category, diff: "medium" }, opts: { answers: q.roomAnswers.slice(), correctIdx: -1, cutIndices: [] } };
+        }
+        return {
+          q: q,
+          bank: { q: "A question from this room — eyes on the show screen", why: "", cat: q.category },
+          opts: { answers: ["Answer 1", "Answer 2", "Answer 3", "Answer 4"], correctIdx: -1, cutIndices: [] },
+          nightlyPad: true
+        };
+      }
       return null;
     }
     if (!BANK[p.bankId]) return null;
@@ -11193,6 +12035,21 @@
            room is ready, Sterling starts the show himself */
         '<button class="btn-gold jp-ready" id="jpReady">' + (me && me.ready ? "READY ✓ — TAP TO TAKE IT BACK" : "I'M READY") + "</button>" +
         '<p class="jp-sub">' + (me && me.ready ? "You're in. The show starts when every phone is ready." : "Tap when you're set — the show starts when every phone is ready.") + "</p>" +
+        /* Pass 13: the fact card — one true thing about somebody
+           here, written on this phone, for Sterling to plant in
+           Round 2. Optional; one per player, replaceable while
+           the lobby stands; the chips name the seated players */
+        '<div class="jp-factcard">' +
+        '<div class="jp-factlabel">ABOUT THIS ROOM</div>' +
+        '<p class="jp-sub">One true thing about somebody here. Sterling may deal it in Round 2 — and the room guesses who it&rsquo;s about.</p>' +
+        '<input id="jpFactIn" class="jp-num" type="text" maxlength="90" autocomplete="off" placeholder="Finish the sentence: has&hellip; once&hellip; can&hellip;" value="' + (s.yourFact ? esc(s.yourFact.text) : "") + '">' +
+        '<div class="jp-factwho" id="jpFactWho">' + (s.players || []).map(function (pp, ii) {
+          if (!pp) return "";
+          var selF = JP.factAbout != null ? JP.factAbout === ii : !!(s.yourFact && s.yourFact.subject === ii);
+          return '<button class="jp-factchip' + (selF ? " sel" : "") + '" data-seat="' + ii + '">' + esc(pp.name) + (ii === JP.seat ? " (you)" : "") + "</button>";
+        }).join("") + "</div>" +
+        '<div class="jp-numstate" id="jpFactState">' + (s.yourFact ? "STERLING HAS IT · <b>" + esc(s.yourFact.text) + "</b> — send again to change it" : "NOTHING FROM YOU YET — IT&rsquo;S OPTIONAL") + "</div>" +
+        '<button class="btn-gold jp-sendbig" id="jpFactSend">' + (s.yourFact ? "UPDATE YOUR FACT" : "GIVE IT TO STERLING") + "</button></div>" +
         '<button class="btn-ghost jp-leave" id="jpLeave">LEAVE ROOM</button></div>';
     } else if (s.phase === "bet") {
       var effBet = s.yourBet != null ? s.yourBet : (JP.sentBet && s.bet && JP.sentBet.qid === s.bet.qid ? JP.sentBet.chips : null);
@@ -11489,6 +12346,28 @@
       var meNow = jpMe();
       jpSend({ t: "ready", ready: !(meNow && meNow.ready) });
     });
+    /* Pass 13: the fact card's wiring — chips choose in place
+       (a re-render would eat the half-typed fact); the send
+       guards name their own missing piece */
+    var fsend = $("jpFactSend");
+    if (fsend) {
+      document.querySelectorAll(".jp-factchip").forEach(function (ch) {
+        ch.addEventListener("click", function () {
+          JP.factAbout = parseInt(ch.getAttribute("data-seat"), 10);
+          document.querySelectorAll(".jp-factchip").forEach(function (c2) { c2.classList.toggle("sel", c2 === ch); });
+        });
+      });
+      fsend.addEventListener("click", function () {
+        Snd.ensure();
+        var inp = $("jpFactIn"), st = $("jpFactState");
+        var subj = JP.factAbout != null ? JP.factAbout : (JP.snap && JP.snap.yourFact ? JP.snap.yourFact.subject : null);
+        if (subj == null) { if (st) st.textContent = "PICK WHO IT'S ABOUT FIRST — TAP A NAME ABOVE"; return; }
+        var text = inp ? inp.value.replace(/\s+/g, " ").trim() : "";
+        if (!text) { if (st) st.textContent = "WRITE THE FACT FIRST — ONE TRUE THING"; return; }
+        jpSend({ t: "room_fact", text: text, subject: subj });
+        if (st) st.textContent = "SENT — STERLING HAS IT IN HIS POCKET";
+      });
+    }
     var shb = $("jpShareNight");
     if (shb) shb.addEventListener("click", function () { openShareNight(); });
     jpPaintClock();
@@ -11619,6 +12498,7 @@
   paintJoinPanel();
   paintTableResume(); /* improvement 4: offer an unfinished show, if one is saved */
   paintChampion(); /* Design pass 4: the defending champion's plaque, if this device has crowned one */
+  paintSeason();
 
   /* ---------- test hooks ---------- */
   window.__game = {
@@ -11639,6 +12519,22 @@
        asserts the printed word with the very functions the
        painters fly by — never a copy of them */
     band: { word: bandWord, tag: bandTagHTML },
+    /* Research pass 1: the calibration ledger itself, exposed
+       so drive-calibration asserts effective bands and the
+       recorded samples with the very functions the dealer and
+       the reveals fly by — never a copy of them */
+    cal: { eff: effBand, record: calRecord, get: function () { return cal; }, min: CAL_MIN },
+    /* Research passes 2+3: the Big Finish's own instruments,
+       exposed so drive-breath and drive-finalestakes measure
+       with the very functions the show flies by — never copies */
+    finale: { breathMs: finaleBreathMs, stakes: composeFinaleStakes, stakesEx: composeFinaleStakesEx },
+    myth: { record: recordShow, line: composeRivalryLine, cell: h2hCell, load: loadRecords },
+    roomq: { of: roomQuestionOf },
+    season: { line: seasonLineFor, plaque: seasonPlaqueText, take: takeSeasonResult, target: SEASON_TARGET, name: seasonName },
+    /* Research pass 1: the deck itself, exposed so
+       drive-calibration asserts the pools' bucketing against
+       the very lists the dealer draws from — never a copy */
+    deck: { pools: function () { return pools; } },
     /* The Ten, pass 4: the golden slot list itself, exposed so
        drive-golden asserts the pick against the very list the
        dealer draws from — never a copy of it */

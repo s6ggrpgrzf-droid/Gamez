@@ -223,8 +223,14 @@
    motes gained their three depth planes in game.js. */
 .q-cardwrap{animation:cardFlip .6s cubic-bezier(.3,1.3,.4,1) both}
 @keyframes cardFlip{0%{transform:perspective(900px) rotateX(-36deg) translateY(16px);opacity:0}55%{opacity:1}100%{transform:perspective(900px) rotateX(0deg) translateY(0);opacity:1}}
-.answers.pop-in .ans-btn{animation:plaqueIn .55s cubic-bezier(.34,1.45,.5,1) backwards;animation-delay:var(--d,0s);transform-origin:50% 100%}
-@keyframes plaqueIn{0%{transform:perspective(720px) rotateX(54deg) translateY(14px);opacity:0}100%{transform:perspective(720px) rotateX(0deg) translateY(0);opacity:1}}
+/* Pass 15 (2026-11-22): the tip-in becomes a true card DEAL.
+   Each slab flies down from the question card with its back
+   turned and flips face-up as it lands in its slot — staggered
+   by the same --d as ever. The origin moves to the centre: a
+   dealt card turns in the air, not off its base. Fill stays
+   backwards, so hover and press are free the moment it lands. */
+.answers.pop-in .ans-btn{animation:dealIn .6s cubic-bezier(.3,.9,.3,1) backwards;animation-delay:var(--d,0s);transform-origin:50% 50%}
+@keyframes dealIn{0%{transform:perspective(720px) rotateX(-68deg) translateY(-118px) scale(.94);opacity:0}45%{opacity:1}100%{transform:perspective(720px) rotateX(0deg) translateY(0) scale(1);opacity:1}}
 #scr-game .set{transition:filter 1.2s ease,transform 2.8s cubic-bezier(.3,.7,.25,1)}
 #scr-game .set-deep,#scr-game .set-walls,#scr-game .set-floor,#scr-game .set-aud{transition:transform 1.4s cubic-bezier(.3,.7,.25,1)}
 #scr-game[data-phase="reveal"] .set-deep{transform:translateY(-2px) scale(1.012)}

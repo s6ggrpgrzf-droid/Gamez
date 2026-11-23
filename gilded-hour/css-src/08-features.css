@@ -222,6 +222,8 @@
    that tells the player the table stayed together. */
 .winner-sub.series-line{color:var(--cream);opacity:.92;letter-spacing:.18em}
 .winner-sub.series-line.night-won{color:var(--gold);opacity:1;font-size:clamp(12px,2.2vmin,17px);text-shadow:0 0 14px rgba(233,205,138,.45),0 2px 0 rgba(6,11,24,.4)}
+/* Research pass 12: a season taken outranks every other sub-line on the marquee */
+.winner-sub.season-line{color:var(--gold);opacity:1;font-size:clamp(12px,2.2vmin,17px);letter-spacing:.18em;text-shadow:0 0 14px rgba(233,205,138,.45),0 2px 0 rgba(6,11,24,.4)}
 .jp-rematch{text-align:center;margin:10px auto 0;padding:8px 14px 7px;max-width:300px;border:1px solid rgba(240,220,163,.55);border-radius:12px;color:var(--brass-hi);font-weight:800;letter-spacing:.13em;font-size:13px;background:linear-gradient(180deg,rgba(240,220,163,.12),rgba(240,220,163,.03))}
 .jp-rematch span{display:block;margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.22em;color:var(--cream);opacity:.75}
 .og-lobby-note{max-width:520px;margin-left:auto;margin-right:auto}
