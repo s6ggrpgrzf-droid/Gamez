@@ -4262,6 +4262,71 @@
     saveTableShow();
   }
 
+  /* ================= Road-to-9/10 Pass 8 — the pulse =================
+     The show's long waits (the breaks, the Big Finish bet
+     beats, the Bluff invent) already speak once, at their
+     opening — and then sit in stillness until they advance.
+     The pulse is the second breath: partway through a wait,
+     if the room is still holding, Sterling speaks once more,
+     and what he says is composed at that moment from the
+     night as it stands — the race, the money on the felt,
+     the bets still out. One pulse per wait (a new wait's arm
+     replaces any pending one, exactly as the waits never
+     overlap), fired on its own timer so it never touches the
+     wait's own auto-advance, and silent if the room moved
+     first. The finale envelope is deliberately NOT a pulse
+     wait: it opens itself at 2.8 seconds — there is no dead
+     air in it to fill. */
+  var pulseTimer = null;
+  function pulseArm(ms, when, fire) {
+    if (pulseTimer) { clearTimeout(pulseTimer); pulseTimer = null; }
+    pulseTimer = setTimeout(function () {
+      pulseTimer = null;
+      if (!when()) return;
+      var line = fire();
+      if (!line) return;
+      var h = $("hostLine");
+      if (h) h.textContent += " " + line;
+    }, ms);
+  }
+  /* The race as it stands, read at the break's midpoint */
+  function pulseStandings(players, questionsLeft) {
+    var ps = (players || []).filter(function (p) { return p && typeof p.score === "number"; }).slice().sort(function (a, b) { return b.score - a.score; });
+    if (ps.length < 2) return null;
+    var lead = ps[0], second = ps[1], margin = lead.score - second.score;
+    if (margin === 0) return lead.name + " and " + second.name + ", level at " + money(lead.score) + " — the break finds no daylight at the top of the table.";
+    if (margin <= 300) return lead.name + " by " + money(margin) + " over " + second.name + " — one good question erases it, and " + questionsLeft + " remain.";
+    if (margin < 900) return "As it stands: " + lead.name + ", " + money(margin) + " clear of " + second.name + ". The room can see the gap from here.";
+    return lead.name + " by " + money(margin) + ", with " + questionsLeft + " questions left to catch them in. Somebody's evening needs to change.";
+  }
+  /* The felt as it stands, read at the bet beat's midpoint —
+     the table's chips, every seat carrying at least the floor */
+  function pulseBets(bets) {
+    if (!bets || !bets.length) return null;
+    var total = 0, max = bets[0], atFloor = 0;
+    bets.forEach(function (b) { var n = b.bet || 0; total += n; if (n > (max.bet || 0)) max = b; if (n <= 1) atFloor++; });
+    if (atFloor === bets.length) return "A chip apiece, and no more — so far the table is betting like it apologises. The question will collect more than that in pride.";
+    if ((max.bet || 0) >= 3) return money(total * 100) + " on the table, and " + max.name + " is riding " + max.bet + " chips of it. The Big Finish believes in somebody.";
+    return money(total * 100) + " riding on this one so far — the boldest hand is " + max.name + "'s, at " + max.bet + " chips.";
+  }
+  /* The online felt: amounts are secret until the reveal, so
+     the pulse reads the count — the only fact the host holds */
+  function pulseBetsIn(inCount, seats) {
+    if (!seats || seats < 1) return null;
+    if (!inCount) return "No bets in yet. The phones are quiet, which in the Big Finish usually means arithmetic.";
+    if (inCount >= seats) return "Every bet is in. The felt is full and the question hasn't even been asked — that's the Big Finish working as designed.";
+    return inCount + " of " + seats + " bets are in. The rest are doing the arithmetic every trailer does: how much of the gap dares ride on one question.";
+  }
+  /* The invent, while the room writes — the stakes, restated
+     once, in the quiet */
+  function pulseBluff(cat) {
+    var lines = [
+      "The truth is already on the table — it's the one answer nobody in this room had to invent. What you're hearing is the sound of its competition being written.",
+      "Two hundred dollars for the truth, twenty-five a head for a lie that lands. Somewhere in this room, a straight face is being rehearsed."
+    ];
+    return lines[(cat ? String(cat).length : 0) % 2];
+  }
+
   /* ================= Design pass 4 — Sterling remembers =================
      The between-show layer. Every show this device HOSTS (table or
      online host screen — pads are guests and record nothing) writes
@@ -6074,6 +6139,12 @@
        longer for the Declaration's decision; the call is cut,
        so both breaks rest the same standard breath again) */
     autoGo("btnBreakGo", "break:" + G.round, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!G && G.phase === "intermission"; });
+    /* Pass 8: the break's second breath, at the midpoint of
+       its rest — the race as it stands when it fires */
+    var pulseBreakRound = G.round;
+    pulseArm(Math.round(((paceCfg() ? paceCfg().reveal : 6000) * 2) * 0.55),
+      function () { return !!G && G.phase === "intermission" && G.round === pulseBreakRound; },
+      function () { return pulseStandings(G.players, pulseBreakRound === 2 ? 9 : 3); });
   }
   function beginIntermission() {
     curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
@@ -6654,6 +6725,12 @@
     betLongShotCalled = {};
     $("btnBetsDone").addEventListener("click", spinBeat);
     autoGo("btnBetsDone", "bet:" + G.round + ":" + G.qInRound, 12000, function () { return !!G && G.phase === "bet"; });
+    /* Pass 8: the felt's second breath, midway through the
+       beat — the money as it stands when it fires */
+    var pulseBetQi = G.qInRound;
+    pulseArm(6500,
+      function () { return !!G && G.phase === "bet" && G.qInRound === pulseBetQi; },
+      function () { return pulseBets(G.players.map(function (p) { return { name: p.name, bet: p.bet || 0 }; })); });
     saveTableShow();
   }
   /* P11: the steppers' one delegated listener — registered once,
@@ -6943,6 +7020,12 @@
     var btn = $("btnDealBluff");
     if (btn) btn.addEventListener("click", dealBluff);
     saveTableShow();
+    /* Pass 8: the invent's second breath — the room writes in
+       quiet for nine seconds, then Sterling keeps it company */
+    var pulseBluffCur = c;
+    pulseArm(9000,
+      function () { return !!G && G.cur === pulseBluffCur && !pulseBluffCur.bluffDealt && !!$("btnDealBluff"); },
+      function () { return pulseBluff(pulseBluffCur.cat); });
   }
   function bluffInventHTML() {
     var c = G.cur;
@@ -11113,6 +11196,13 @@
     if (OG.snap && OG.snap.bet) ogPaintBets(OG.snap.bet.betsIn);
     OG._betsIn = (OG.snap && OG.snap.bet) ? (OG.snap.bet.betsIn || 0) : 0;
     paceCheckAllIn(); /* Pass #3: a bet window painted already-full starts its grace */
+    /* Pass 8: the online felt's second breath — the count is
+       the only fact the host holds, so the count is what it
+       reads, as it stands when it fires */
+    var pulseOgBet = e;
+    pulseArm(6500,
+      function () { return !!OG && OG.phase === "bet" && OG.cur === pulseOgBet; },
+      function () { return pulseBetsIn(OG._betsIn || 0, ogJoined().length); });
   }
   function ogPaintBets(n) { var b = $("ogBetsIn"); if (b) b.textContent = String(n || 0); }
   function ogSpinThenPublish(e) {
@@ -11224,6 +11314,16 @@
       '<div><span class="og-count">LIES IN&nbsp;<b>' + fakesIn + "</b> / " + ogJoined().length + "</span></div>");
     hostSay("bluffInvent", { cat: e.cat });
     Snd.playSignature(e.cat);
+    /* Road-to-9/10 Pass 8 (the pulse): the invent's second
+       breath, armed once per question — the room writes in
+       quiet for nine seconds, then Sterling keeps it company */
+    if (OG._pulseBluffFor !== e.qid) {
+      OG._pulseBluffFor = e.qid;
+      var pulseOgBluffQid = e.qid;
+      pulseArm(9000,
+        function () { return !!OG && OG._bluffDealtFor !== pulseOgBluffQid && !!document.querySelector("#stage .og-count"); },
+        function () { return pulseBluff(e.cat); });
+    }
     /* Pass 8: no dealer — when every connected phone's lie is in,
        this screen deals the answers itself (the room also deals
        on its invent deadline for a phone that never lands) */
@@ -11738,6 +11838,11 @@
        longer for the Declaration; both breaks rest the same
        standard breath again, as at the table) */
     autoGo("ogBreakGo", "ogbreak:" + nextRound, (paceCfg() ? paceCfg().reveal : 6000) * 2, function () { return !!OG && OG.phase === "intermission"; });
+    /* Pass 8: the online break's second breath, same midpoint */
+    var pulseOgBreak = nextRound;
+    pulseArm(Math.round(((paceCfg() ? paceCfg().reveal : 6000) * 2) * 0.55),
+      function () { return !!OG && OG.phase === "intermission"; },
+      function () { return pulseStandings(OG.players, pulseOgBreak === 2 ? 9 : 3); });
   }
   /* Design pass 4: an online show's id for the record guard — the
      room code plus the script's first qid. A new room is a new code;
@@ -12989,6 +13094,7 @@
     finale: { breathMs: finaleBreathMs, stakes: composeFinaleStakes, stakesEx: composeFinaleStakesEx },
     myth: { record: recordShow, line: composeRivalryLine, cell: h2hCell, load: loadRecords },
     guest: { of: guestNameFor, duel: guestDuelFrag, state: function () { return G ? { guest: G.guest, line: G.guestLine } : null; } },
+    pulse: { standings: pulseStandings, bets: pulseBets, betsIn: pulseBetsIn, bluff: pulseBluff },
     roomq: { of: roomQuestionOf, assign: roomAssignRounds, shapeFor: roomShapeFor, whichWrongs: roomWhichWrongs, fromSave: roomQsFromSave, state: function () { return G ? G.roomQs : null; } },
     season: { line: seasonLineFor, plaque: seasonPlaqueText, take: takeSeasonResult, target: SEASON_TARGET, name: seasonName },
     /* Research pass 1: the deck itself, exposed so
