@@ -1,13 +1,14 @@
 /* Hot Streaks (New programme pass 3) — the server referees the run:
  * consecutive banked 'normal' questions build it, a miss ends it,
- * guess kinds are neutral, and from the bank that reaches 3 onward
- * each bank adds a flat $25 that no multiplier, headline or bet can
- * scale. Same simulated Durable Object harness as the sibling
- * suites, in its own file so their check counts stay exactly as
- * they were. Proves: the exact economy (banks 1-2 pay no bonus,
- * bank 3+ pays $25); guess banks AND guess misses leave the run
- * untouched; silence on a 'normal' question breaks it; the bonus is
- * flat against a x2 question, the true Headline, and a 3-chip bet;
+ * guess kinds are neutral. SUBTRACTION PASS I (2026-11-23): the run
+ * no longer PAYS — the flat $25 is retired; the count, its moments
+ * and its snapshot are narration only. Same simulated Durable
+ * Object harness as the sibling suites, in its own file so their
+ * check counts stay exactly as they were. Proves: the exact economy
+ * (every bank pays its value + quick-draw only, streakBonus always
+ * 0); guess banks AND guess misses leave the run
+ * untouched; silence on a 'normal' question breaks it; the count is
+ * untouched by a x2 question, the true Headline, and a 3-chip bet;
  * the moment arbitration (reach5 > reach3 > death, higher count,
  * earlier seat); a sub-4 death is never named; forged streak fields
  * are never read; the counts ride the snapshot, so a reclaimed pad
@@ -25,8 +26,8 @@ function ok(cond, name, detail) {
   if (cond) { pass++; console.log('PASS:', name); }
   else { fail++; console.log('FAIL:', name, detail || ''); }
 }
-ok(STREAK_BONUS === 25 && STREAK_MIN === 3 && STREAK_DEATH_MIN === 4,
-  'unit: the streak pays a flat $25 from the 3rd straight bank; deaths are named from 4');
+ok(STREAK_MIN === 3 && STREAK_DEATH_MIN === 4,
+  'unit: the streak is named from the 3rd straight bank; deaths are named from 4 (the pay figure is retired — Subtraction I)');
 
 // ---- fakes (mirrors test-quickdraw.js) ----
 class FakeSocket {
@@ -134,7 +135,7 @@ async function soloBank(A, qid, seat) {
 
 const A = await setupRoom(3);
 
-// ---- A1-A4: the economy — banks 1-2 pay no bonus, bank 3+ pays $25
+// ---- A1-A4: the economy — no bank ever pays a streak bonus (Subtraction I)
 {
   const rev = await soloBank(A, 'a1', 0);
   const b = bySeat(rev);
@@ -146,16 +147,16 @@ const A = await setupRoom(3);
   const rev = await soloBank(A, 'a2', 0);
   const b = bySeat(rev);
   ok(b[0].banked === 250 && b[0].streak === 2 && b[0].streakBonus === 0 && rev.streakMoment === null,
-    'A2: second bank — streak 2, still no bonus (the pay starts at 3)', JSON.stringify(rev.results));
+    'A2: second bank — streak 2, no bonus, no moment yet', JSON.stringify(rev.results));
 }
 {
   const rev = await soloBank(A, 'a3', 0);
   const b = bySeat(rev);
-  ok(b[0].banked === 275 && b[0].streak === 3 && b[0].streakBonus === 25 &&
+  ok(b[0].banked === 250 && b[0].streak === 3 && b[0].streakBonus === 0 &&
      rev.streakMoment && rev.streakMoment.type === 'reach3' && rev.streakMoment.seat === 0 && rev.streakMoment.n === 3,
-    'A3: third bank — 200 + 50 quick-draw + 25 streak = 275, and the reach-3 moment is named',
+    'A3: third bank — 200 + 50 quick-draw = 250, the streak pays nothing, and the reach-3 moment is named',
     JSON.stringify({ results: rev.results, moment: rev.streakMoment }));
-  ok(rev.scores[0] === 775, 'A3: server score carries the bonus (250 + 250 + 275)');
+  ok(rev.scores[0] === 750, 'A3: server score is the banks alone (250 + 250 + 250)');
   ok(A.P[0].lastState().players[0].streak === 3,
     'A3: the snapshot carries the live streak count');
   ok(A.P[0].lastState().lastReveal.streakMoment && A.P[0].lastState().lastReveal.streakMoment.type === 'reach3',
@@ -164,8 +165,8 @@ const A = await setupRoom(3);
 {
   const rev = await soloBank(A, 'a4', 0);
   const b = bySeat(rev);
-  ok(b[0].banked === 275 && b[0].streak === 4 && b[0].streakBonus === 25 && rev.streakMoment === null,
-    'A4: fourth bank — the bonus keeps paying, and crossing 4 names no moment',
+  ok(b[0].banked === 250 && b[0].streak === 4 && b[0].streakBonus === 0 && rev.streakMoment === null,
+    'A4: fourth bank — still no streak money, and crossing 4 names no moment',
     JSON.stringify(rev.results));
 }
 
@@ -237,9 +238,9 @@ await A.host.send({ t: 'reveal', qid: 'd3' });
 for (let k = 1; k <= 5; k++) {
   const rev = await soloBank(A, 'e' + k, 0);
   const b = bySeat(rev);
-  if (k === 3) ok(rev.streakMoment && rev.streakMoment.type === 'reach3' && b[0].streakBonus === 25,
-    'E3: the rebuild crosses 3 with its moment and its bonus');
-  if (k === 5) ok(b[0].streak === 5 && b[0].streakBonus === 25 && rev.streakMoment &&
+  if (k === 3) ok(rev.streakMoment && rev.streakMoment.type === 'reach3' && b[0].streakBonus === 0,
+    'E3: the rebuild crosses 3 with its moment and no money');
+  if (k === 5) ok(b[0].streak === 5 && b[0].streakBonus === 0 && rev.streakMoment &&
     rev.streakMoment.type === 'reach5' && rev.streakMoment.seat === 0 && rev.streakMoment.n === 5,
     'E5: the fifth straight bank names the reach-5 moment', JSON.stringify(rev.streakMoment));
 }
@@ -250,7 +251,7 @@ for (let k = 1; k <= 5; k++) {
  * reason. Nothing about the streak state carries between rooms. */
 const A2 = await setupRoom(3);
 
-// ---- F: the bonus is flat against a bet — bet x $100 + $25, never scaled
+// ---- F: a bet bank at streak 3 — the bet pays alone, the streak is narration
 for (let k = 1; k <= 2; k++) await soloBank(A2, 'f' + k, 2); // seat 2 builds to streak 2
 await A2.host.send({ t: 'bet_phase', qid: 'fB' });
 await A2.P[2].send({ t: 'bet', qid: 'fB', chips: 3 });
@@ -267,14 +268,14 @@ await A2.P[0].send({ t: 'ping' });
 {
   const rev = A2.P[0].last('reveal');
   const b = bySeat(rev);
-  ok(b[2].banked === 375 && b[2].streak === 3 && b[2].streakBonus === 75,
-    'F: a 3-chip Big Finish bank at streak 3 pays bet x $100 + the round-3 $75 = 375 (never bet-multiplied)',
+  ok(b[2].banked === 300 && b[2].streak === 3 && b[2].streakBonus === 0,
+    'F: a 3-chip Big Finish bank at streak 3 pays bet x $100 = 300 alone — the streak adds nothing (Subtraction I)',
     JSON.stringify(b[2]));
   ok(rev.streakMoment && rev.streakMoment.type === 'reach3' && rev.streakMoment.seat === 2,
     'F: the bet bank that reaches 3 names its moment like any other');
 }
 
-// ---- G: the bonus is flat against the Headline — doubled value + $25
+// ---- G: the Headline at a long streak — doubled value + quick-draw, no streak money
 for (let k = 1; k <= 5; k++) {
   await pubN(A2.host, 'g' + k, { round: 2, multiplier: 2 }); // five plain R2 questions
   await A2.P[0].send({ t: 'answer', qid: 'g' + k, pick: 1 });
@@ -289,8 +290,8 @@ await A2.host.send({ t: 'reveal', qid: 'g6' });
   ok(rev.headline === true && rev.value === 800,
     'G: the sixth Round 2 question is the Headline — value 200 x 2 (round) x 2 (headline) = 800 at elapsed 0',
     JSON.stringify({ headline: rev.headline, value: rev.value }));
-  ok(b[0].streakBonus === 50 && b[0].banked === 950,
-    'G: the Headline bank pays its doubled 800 + quick-draw 100 + a round-2 $50 streak bonus = 950 (neither bonus doubled)',
+  ok(b[0].streakBonus === 0 && b[0].banked === 900,
+    'G: the Headline bank pays its doubled 800 + quick-draw 100 = 900 — the long streak adds nothing (Subtraction I)',
     JSON.stringify(b[0]));
 }
 
@@ -334,9 +335,9 @@ await bothBank('m2', 0, 1);
 {
   const rev = await bothBank('m3', 1, 0); // seat 1 locks first this time
   const b = bySeat(rev);
-  ok(b[0].streak === 3 && b[1].streak === 3 && b[0].streakBonus === 25 && b[1].streakBonus === 25 &&
+  ok(b[0].streak === 3 && b[1].streak === 3 && b[0].streakBonus === 0 && b[1].streakBonus === 0 &&
      rev.streakMoment && rev.streakMoment.type === 'reach3' && rev.streakMoment.seat === 0,
-    'M3: two players reach 3 on one question — both are paid; the moment goes to the earlier seat',
+    'M3: two players reach 3 on one question — neither is paid (Subtraction I); the moment goes to the earlier seat',
     JSON.stringify(rev.streakMoment));
 }
 await pubN(B.host, 'm4');

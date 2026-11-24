@@ -1,11 +1,13 @@
-/* THE DOUBLE (designer pass 3, 2026-11-13) — the referee's side.
- * One ×2 token per player per show, spendable from Round 2 on an
- * ordinary question: a right answer banks twice the question's
- * value; a miss banks nothing and still spends the token. Proves:
- * the doubled bank and its flag; Quick Draw staying flat on top;
- * the spend landing win or lose; refusals (Round 1, bet question,
- * spent token, double-arm, wrong qid); a doubled closest-number
- * bank; the snapshot carrying dbl + dblArmed; new_show restocking.
+/* THE DOUBLE IS CUT (Subtraction Pass I, 2026-11-23) — the
+ * referee's side of the removal. The token was a third money-
+ * multiplier doing a job the round doubling and the finale bet
+ * already do. Proves the absence is total: no seat carries a dbl
+ * field, no question snapshot carries dblArmed, the 'double'
+ * message is an unknown verb and disturbs nothing, and banks pay
+ * the drained value exactly once — an ordinary bank and a
+ * closest-number bank alike, Quick Draw still flat on top.
+ * (This file keeps its name so the suite's file count is stable;
+ * it tested the Double's life, it now tests its grave.)
  * Same simulated Durable Object harness as the sibling suites.
  * Run: node test/test-double.js */
 import * as worker from '../server.js';
@@ -116,30 +118,21 @@ async function pub(host, qid, extra) {
 
 const A = await setupRoom(3);
 
-/* players join holding the token */
+/* no seat carries the token, in any snapshot */
 {
   const st = A.P[0].lastState();
-  ok(st.players.filter(Boolean).every((p) => p.dbl === true), 'join: every seat holds the Double', JSON.stringify(st.players));
+  ok(st.players.filter(Boolean).every((p) => !('dbl' in p)), 'join: no seat carries a dbl field — the token does not exist', JSON.stringify(st.players));
 }
 
-/* ---- Round 1: the Double has not arrived ---- */
-await pub(A.host, 'r1', { round: 1 });
-await A.P[0].send({ t: 'double', qid: 'r1' });
-ok(/Double Money/.test((A.P[0].lastError() || {}).msg || ''), 'R1: a Round 1 double is refused', JSON.stringify(A.P[0].lastError()));
-await A.P[0].send({ t: 'answer', qid: 'r1', pick: 1 });
-await A.host.send({ t: 'reveal', qid: 'r1' });
-
-/* ---- Round 2: arm, ride, double ---- */
+/* ---- the verb is gone, and asking for it disturbs nothing ---- */
 await pub(A.host, 'r2a');
-await A.P[1].send({ t: 'answer', qid: 'r2a', pick: 1 });   // Bo correct FIRST (quick draw)
-await A.P[0].send({ t: 'double', qid: 'r2a' });            // Ana arms
 {
   const st = A.host.lastState();
-  ok(st.question && JSON.stringify(st.question.dblArmed) === '[0]', 'R2: the snapshot names the riding seat', JSON.stringify(st.question && st.question.dblArmed));
-  ok(st.players[0].dbl === true, 'R2: the token is still in hand until the question settles');
+  ok(st.question && !('dblArmed' in st.question), 'R2: the question snapshot carries no dblArmed', JSON.stringify(st.question && Object.keys(st.question)));
 }
-await A.P[0].send({ t: 'double', qid: 'r2a' });            // again -> refused
-ok(/already riding/.test((A.P[0].lastError() || {}).msg || ''), 'R2: a second arm on the same question is refused', JSON.stringify(A.P[0].lastError()));
+await A.P[1].send({ t: 'answer', qid: 'r2a', pick: 1 });   // Bo correct FIRST (quick draw)
+await A.P[0].send({ t: 'double', qid: 'r2a' });            // the old spend, attempted
+ok(/Unknown/.test((A.P[0].lastError() || {}).msg || ''), 'R2: a double message is an unknown verb now', JSON.stringify(A.P[0].lastError()));
 await A.P[0].send({ t: 'answer', qid: 'r2a', pick: 1 });   // Ana correct, second
 await A.P[2].send({ t: 'answer', qid: 'r2a', pick: 0 });   // Cy wrong
 T += 2000;                                                  // 10% elapsed -> value 190
@@ -148,43 +141,13 @@ await A.host.send({ t: 'reveal', qid: 'r2a' });
   const rev = A.P[0].last('reveal');
   const b = bySeat(rev);
   ok(rev.value === 190, 'R2: the drained value is 190', 'value=' + rev.value);
-  ok(b[0].banked === 380 && b[0].doubled === true, 'R2: the riding seat banks exactly twice (380) and wears the flag', JSON.stringify(b[0]));
-  ok(b[1].banked === 290 && !b[1].doubled, 'R2: Quick Draw pays the round\u2019s $100 on the undoubled seat, unmagnified by any Double (190 + 100)', JSON.stringify(b[1]));
+  ok(b[0].banked === 190 && !b[0].doubled, 'R2: a correct bank pays the value exactly once (190), no doubled flag', JSON.stringify(b[0]));
+  ok(b[1].banked === 290 && !b[1].doubled, 'R2: Quick Draw still pays the round\u2019s flat $100 on top (190 + 100)', JSON.stringify(b[1]));
   ok(b[2].banked === 0, 'R2: the wrong seat banks nothing');
-  const st = A.P[0].lastState();
-  ok(st.players[0].dbl === false && st.players[1].dbl === true && st.players[2].dbl === true,
-    'R2: only the riding token is spent at the settle', JSON.stringify(st.players.map((p) => p && p.dbl)));
 }
 
-/* ---- spent is spent; a miss spends it too ---- */
-await pub(A.host, 'r2b');
-await A.P[0].send({ t: 'double', qid: 'r2b' });
-ok(/spent/.test((A.P[0].lastError() || {}).msg || ''), 'spend: a spent token cannot ride again', JSON.stringify(A.P[0].lastError()));
-await A.P[1].send({ t: 'double', qid: 'r2b' });            // Bo rides...
-await A.P[1].send({ t: 'answer', qid: 'r2b', pick: 0 });   // ...and misses
-await A.P[2].send({ t: 'answer', qid: 'r2b', pick: 1 });
-await A.host.send({ t: 'reveal', qid: 'r2b' });
-{
-  const rev = A.P[0].last('reveal');
-  const b = bySeat(rev);
-  ok(b[1].banked === 0 && !b[1].doubled, 'miss: an armed miss banks nothing and wears no flag', JSON.stringify(b[1]));
-  const st = A.P[0].lastState();
-  ok(st.players[1].dbl === false, 'miss: the missed Double is spent all the same');
-}
-
-/* ---- a bet question carries its own stake ---- */
-await A.host.send({ t: 'bet_phase', qid: 'r3a' });
-await pub(A.host, 'r3a', { round: 3 });
-await A.P[2].send({ t: 'double', qid: 'r3a' });
-ok(/own stake/.test((A.P[2].lastError() || {}).msg || ''), 'bet: a bet question refuses the Double', JSON.stringify(A.P[2].lastError()));
-await A.P[2].send({ t: 'answer', qid: 'r3a', pick: 1 });
-await A.host.send({ t: 'reveal', qid: 'r3a' });
-T += 3100; /* Pass 14: a bet question's reveal holds its breath — run it out before the next publish */
-await A.P[0].send({ t: 'ping' });
-
-/* ---- a closest-number bank doubles too ---- */
+/* ---- a closest-number bank pays once too ---- */
 await pub(A.host, 'r2n', { kind: 'num', trueNum: 100, correctIdx: undefined, answersCount: undefined });
-await A.P[2].send({ t: 'double', qid: 'r2n' });            // Cy still holds hers
 await A.P[2].send({ t: 'answer', qid: 'r2n', num: 99 });   // closest
 await A.P[0].send({ t: 'answer', qid: 'r2n', num: 40 });
 T += 2000;
@@ -192,11 +155,8 @@ await A.host.send({ t: 'reveal', qid: 'r2n' });
 {
   const rev = A.P[0].last('reveal');
   const b = bySeat(rev);
-  ok(b[2].correct && b[2].doubled === true && b[2].banked === rev.value * 2,
-    'num: the closest seat\'s bank doubles', JSON.stringify({ banked: b[2].banked, value: rev.value }));
-  const st = A.P[0].lastState();
-  ok(st.players[2].dbl === false, 'num: the token is spent');
+  ok(b[2].correct && !b[2].doubled && b[2].banked === rev.value,
+    'num: the closest seat banks the value exactly once', JSON.stringify({ banked: b[2].banked, value: rev.value }));
 }
-
 console.log('TEST-DOUBLE: ' + pass + '/' + (pass + fail) + ' passed');
 process.exit(fail ? 1 : 0);

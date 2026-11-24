@@ -28,13 +28,9 @@
  *   the one place at the table where money can be LOST. A failed bet
  *   costs half the stake on the round's first two questions, and the
  *   whole stake plus a $300 penalty on the last (betLoss in
- *   the shared core). Improvement Pass 3 adds THE DECLARATION:
- *   at the break before the Big Finish a pad may call All or
- *   Nothing on the last question ({t:'declare'}, intermission
- *   with nextRound 3 only, once, irrevocable, public in every
- *   snapshot as `declared`) — banking Q15 then pays the bet
- *   double and failing it costs the graduated figure double
- *   (betPayout / betLoss's declared flag, both single-sourced).
+ *   the shared core). The bet stands alone as the show's one
+ *   wager: the Declaration that once doubled it on the last
+ *   question was cut in Subtraction Pass II (2026-11-24).
  *   rules-core; floored at the seat's score — nobody goes below $0).
  *   Rounds 1-2 still lose nothing, ever.
  *
@@ -134,15 +130,13 @@
  *   once, alongside the other money. Banking extends the run by
  *   one; missing resets it to zero. Guess kinds ('survey', 'num')
  *   are NEUTRAL — they neither build nor break a run — and a
- *   decider never touches one. From the bank that REACHES 3 onward,
- *   every consecutive bank adds the STREAK_BONUS to that result's
- *   banked figure: the base $25 scaled by the ROUND (review
- *   Pass 5: $25/$50/$75), never by the value multiplier, the
- *   Headline x2, or a Big Finish bet (a bet question banks
- *   bet x $100 + the round's bonus, not a multiplied bonus).
- *   Each result entry carries
+ *   decider never touches one. SUBTRACTION PASS I (2026-11-23):
+ *   the run no longer PAYS — the streak bonus was a third money
+ *   source doing quiet work nobody read aloud; the count, its
+ *   thresholds and its moments are narration only now, and every
+ *   result's streakBonus is 0. Each result entry carries
  *   the run's outcome — streak (the count after this question) and
- *   streakBonus (0 or the round's figure) — so host and pads paint from the payload
+ *   streakBonus (always 0 since the cut) — so host and pads paint from the payload
  *   and never recompute money; the reveal also names at most one
  *   streakMoment ({type:'reach3'|'reach5'|'death', seat, n}): the
  *   single threshold event Sterling speaks for this reveal, chosen
@@ -408,7 +402,7 @@ export function createRoom(code, hostToken, rules) {
     deciderWinner: null,      // seat that won a resolved decider, once one resolves
     goldenUsed: false,        // the Golden Question: this show's one double is spent
     pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
-    declared: {},             // The Declaration (Pass 3): seats that called All or Nothing on Q15 at the last break
+    declared: {},             // LEGACY (Subtraction Pass II): the Declaration is cut — nothing reads or writes this; the field stays so rooms persisted before the cut still load
     facts: {},                // About This Room online (Pass 13): lobby submissions {seat: {text, subject}} — the host's to plant, cleared per show
     stats: [null, null, null, null], // The Report Card (N1): per-seat raw tallies {cats, fastestMs, biggest, peak}
     statsSeq: 0,              // questions settled this show — the "earliest in the night" clock for best-category ties
@@ -516,10 +510,6 @@ export function snapshotFor(room, view) {
         const mine = view.role === 'player' && cb[view.seat] ? { indices: q.cutIndices.slice() } : {};
         return Object.assign({ seats }, mine);
       })(),
-      /* THE DOUBLE: the seats whose token is riding on this
-       * question — public the moment it is declared, like every
-       * other stake at this table */
-      dblArmed: q.dbl ? Object.keys(q.dbl).map(Number) : [],
       /* THE BLUFF: which of its two lives the question is in and
        * how many lies are in; once dealt, the answer texts are
        * public — their authors stay secret until the reveal */
@@ -561,7 +551,7 @@ export function snapshotFor(room, view) {
        * through cutCountOf), and cutCount rides beside it as the
        * number, so a screen that knows the count reads the count
        * and a screen that doesn't reads exactly what it always did */
-      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, connected: p.connected, ready: !!p.ready, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), connected: p.connected, ready: !!p.ready, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
     /* The Table Pot (D1): the running total, public from the
@@ -585,10 +575,6 @@ export function snapshotFor(room, view) {
       ...(view.role === 'player' ? { yourCap: betCapFor(room, view.seat) } : {}),
     } : null,
     lastReveal: room.lastReveal,
-    /* The Declaration (Pass 3): who has called All or Nothing is
-     * public the moment it is called — the map rides every
-     * snapshot so the host screen and every pad can show it */
-    declared: room.declared || {},
     /* The Report Card (N1): the derived card rides a snapshot only
      * once the show is over — it is a finale artifact, and a screen
      * that resyncs onto the ended room (a pad refreshing at the
@@ -702,11 +688,10 @@ export function closeQuestion(room) {
   const judgedSeats = isDecider ? (q.eligible || []) : joinedSeats(room);
   /* The Big Finish position of this question (0, 1, 2), counted
    * from the referee's own publish record for round 3 — the
-   * jeopardy schedule and the Declaration both read it. The
-   * Decider publishes only after Q15 has closed, so its count
-   * can never disturb this index. */
+   * jeopardy schedule reads it. The Decider publishes only
+   * after Q15 has closed, so its count can never disturb this
+   * index. */
   const qInRound = q.betted ? Math.max(0, ((room.published && room.published['3']) || 1) - 1) : 0;
-  const declaredSeat = (seat) => !!(room.declared && room.declared[seat]);
   let winDiff = null;
   if (q.kind === 'num') {
     for (const seat of judgedSeats) {
@@ -738,28 +723,14 @@ export function closeQuestion(room) {
     entry.lockMs = (q.kind !== 'num' && q.pickTimes && q.pickTimes[seat] != null)
       ? Math.max(0, q.pickTimes[seat] - q.openedAt) : null;
     if (entry.correct && !isDecider) {
-      /* The Declaration (Pass 3): a declared seat banking the
-       * LAST question is paid the bet double (betPayout in the
-       * shared core); the bonuses below still land flat */
+      /* a banked Big Finish bet pays the stake plain (betPayout
+       * in the shared core); the bonuses below still land flat */
       entry.banked = q.betted
-        ? betPayout(q.bets[seat] != null ? q.bets[seat] : 1, declaredSeat(seat) && qInRound >= 2)
+        ? betPayout(q.bets[seat] != null ? q.bets[seat] : 1)
         : value;
-      /* THE DOUBLE: a riding token doubles the question's own
-       * value for its seat — the bet never doubles (it was never
-       * armable), and Quick Draw / streak bonuses land flat on
-       * top below, exactly as they treat every other figure */
-      if (!q.betted && q.dbl && q.dbl[seat]) { entry.banked = value * 2; entry.doubled = true; }
     }
     room.players[seat].score += entry.banked;
     results.push(entry);
-  }
-  /* THE DOUBLE settles with the question: every riding token is
-   * spent here, win or lose — the declaration was the spend. */
-  if (q.dbl) {
-    for (const k of Object.keys(q.dbl)) {
-      const sp = room.players[+k];
-      if (sp) sp.dbl = false;
-    }
   }
   /* The Quick-Draw (Design pass 3): 'normal' questions only. The
    * winner is the first seat in q.pickOrder — the receipt order of
@@ -805,11 +776,9 @@ export function closeQuestion(room) {
         const nowStreak = before + 1;
         p.streak = nowStreak;
         entry.streak = nowStreak;
-        if (nowStreak >= STREAK_MIN) {
-          entry.streakBonus = streakAmount(q.round);
-          entry.banked += entry.streakBonus;
-          p.score += entry.streakBonus;
-        }
+        /* SUBTRACTION PASS I (2026-11-23): streaks no longer pay —
+         * the count and its moments are narration only (see the
+         * header note); entry.streakBonus stays 0. */
         if (before < 5 && nowStreak >= 5) cands.push({ type: 'reach5', seat: entry.seat, n: nowStreak });
         else if (before < STREAK_MIN && nowStreak >= STREAK_MIN) cands.push({ type: 'reach3', seat: entry.seat, n: nowStreak });
       } else {
@@ -864,9 +833,9 @@ export function closeQuestion(room) {
       if (entry.correct) continue;
       const p = room.players[entry.seat];
       if (!p) continue;
-      /* a declared seat's last-question failure costs double —
-       * betLoss applies the multiplier itself, gated to Q15 */
-      const due = betLoss(q.bets[entry.seat] != null ? q.bets[entry.seat] : 1, qInRound, declaredSeat(entry.seat));
+      /* a failed bet costs the graduated figure — betLoss in
+       * the shared core carries the schedule */
+      const due = betLoss(q.bets[entry.seat] != null ? q.bets[entry.seat] : 1, qInRound);
       const taken = Math.min(due, Math.max(0, p.score));
       if (taken > 0) { p.score -= taken; entry.lost = taken; }
     }
@@ -1056,7 +1025,7 @@ export function handleHello(room, msg) {
       token: makeToken(),
       score: 0,
       cutTwo: cutStartFor(room), // House Rules (N2): the starting COUNT — two under Second Cut, else one
-      dbl: true, // THE DOUBLE (designer pass 3): one token per player per show, in hand from the start, spendable from Round 2
+      dbl: true, // LEGACY FIELD (Subtraction Pass I, 2026-11-23): THE DOUBLE is cut; the field stays in the record shape so rooms persisted before the cut still load — nothing reads it
       connected: true,
       ready: false, // Review Pass 8 (2026-11-14): the lobby's word — when every connected phone is ready, the show starts itself
       avatar: cleanAvatar(msg.avatar, seat),
@@ -1270,7 +1239,6 @@ export function handleHostMessage(room, msg) {
         pickOrder: [],
         pickTimes: {},
         nums: {},
-        dbl: {},
         cutsBy: {},
         closedAt: null,
         stoppedValue: null,
@@ -1381,7 +1349,6 @@ export function handleHostMessage(room, msg) {
         if (!p) continue;
         p.score = 0;
         p.cutTwo = cutStartFor(room); // House Rules (N2): a fresh show restocks to the room's starting count — the rules themselves are the room's and stay
-        p.dbl = true; // THE DOUBLE restocks with the show, like every other token
         p.streak = 0;
       }
       room.bet = null;
@@ -1396,8 +1363,6 @@ export function handleHostMessage(room, msg) {
       room.goldenUsed = false;
       /* The Table Pot (D1): a fresh show starts with an empty pot, always */
       room.pot = 0;
-      /* The Declaration (Pass 3): a fresh show starts with nobody declared */
-      room.declared = {};
       /* About This Room online (Pass 13): a fresh show collects fresh facts */
       room.facts = {};
       /* The Report Card (N1): the tallies are per-show memory like
@@ -1492,20 +1457,6 @@ export function handlePlayerMessage(room, seat, msg) {
         changed: true,
       });
     }
-    case 'declare': {
-      /* The Declaration (Pass 3): a pad calls All or Nothing on
-       * the last question during the ONE break that precedes the
-       * Big Finish. Public and irrevocable — the map is written
-       * once and rides every snapshot from that moment; a second
-       * call, a call at the wrong break, or a call mid-question
-       * is refused in words. */
-      if (room.phase !== 'intermission' || !room.interm || room.interm.nextRound !== 3)
-        return fail('Declarations open only at the break before the Big Finish.');
-      if (room.declared && room.declared[seat]) return fail('Already declared — there is no taking it back.');
-      room.declared = room.declared || {};
-      room.declared[seat] = true;
-      return ok({ state: true, changed: true });
-    }
     case 'answer': {
       if (room.phase !== 'answer' || !room.question) return fail('No open question.');
       const q = room.question;
@@ -1561,30 +1512,6 @@ export function handlePlayerMessage(room, seat, msg) {
       return ok({
         to: [{ dest: seat, msg: { t: 'accepted', qid: room.bet.qid } }],
         all: { t: 'counts', qid: room.bet.qid, betsIn: Object.keys(room.bet.bySeat).length, players: joinedSeats(room).length },
-        changed: true,
-      });
-    }
-    case 'double': {
-      /* THE DOUBLE (designer pass 3): a pad declares its seat's
-       * token on the open question. The referee's rules are the
-       * table's: from Round 2, never on a bet question (it carries
-       * its own stake), never on the Decider, only while the
-       * window is open, only a token still in hand, only once. */
-      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
-      const q = room.question;
-      if (msg.qid !== q.qid) return fail('Wrong question.');
-      if (q.decider) return fail('The Decider carries no Double.');
-      if (q.kind === 'bluff') return fail('The Bluff is its own stake — no Double rides it.');
-      if (q.betted) return fail('A bet question carries its own stake.');
-      if (!(q.round >= 2)) return fail('The Double arrives with Double Money.');
-      if (nowMs() > q.deadline) return fail('Window closed.');
-      if (p.dbl === false) return fail('Your Double is spent.');
-      if (!q.dbl || typeof q.dbl !== 'object') q.dbl = {};
-      if (q.dbl[seat]) return fail('Your Double is already riding.');
-      q.dbl[seat] = true;
-      return ok({
-        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
-        state: true,
         changed: true,
       });
     }

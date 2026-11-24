@@ -153,7 +153,7 @@ ok(dealt.options[correctIdx] === TRUTH, 'the host snapshot’s correctIdx points
 
 /* ---- the stakes refuse the bluff ---- */
 await A.P[0].send({ t: 'double', qid: 'b1' });
-ok(/Bluff/.test((A.P[0].lastError() || {}).msg || ''), 'no Double rides a bluff', JSON.stringify(A.P[0].lastError()));
+ok(!!A.P[0].lastError(), 'no Double rides a bluff — the verb itself is gone (Subtraction I: the referee answers Unknown message)', JSON.stringify(A.P[0].lastError()));
 await A.P[0].send({ t: 'cuttwo', qid: 'b1' });
 ok(/bluff/i.test((A.P[0].lastError() || {}).msg || ''), 'no Cut Two on a bluff', JSON.stringify(A.P[0].lastError()));
 

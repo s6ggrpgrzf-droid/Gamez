@@ -31,8 +31,8 @@
  * this same melt. Before this, the local game settled to $10
  * while the room settled the melt's raw $1 figure. */
 const GH_QUICK_DRAW_BONUS = 50;  // first correct lock-in, on an ordinary question — paid x the round ($50/$100/$150)
-const GH_STREAK_BONUS = 25;      // per bank once a streak reaches GH_STREAK_MIN — paid x the round ($25/$50/$75)
-const GH_STREAK_MIN = 3;         // banks in a row before the streak bonus starts paying
+const GH_STREAK_BONUS = 25;      // RETIRED (Subtraction Pass I, 2026-11-23): streaks no longer pay — the figure stays only so the generated twins keep their shape; nothing awards it
+const GH_STREAK_MIN = 3;         // banks in a row before Sterling names the streak (narration only)
 const GH_STREAK_DEATH_MIN = 4;   // a dying run of this length or more earns a named moment
 const GH_BET_PAYOUT = 100;       // one Big Finish chip is worth $100
 const GH_BASE_BET_CAP = 3;       // chips any seat may ride in the Big Finish
@@ -41,7 +41,7 @@ const GH_LONG_SHOT_STEP = 1000;  // one extra chip per full $1,000 a seat trails
 const GH_BLUFF_FOOL = 25;        // THE BLUFF: per player a lie fools, paid by the house
 const GH_BET_LOSS_EARLY = 0.5;   // Jeopardy pass (2026-11-17): fraction of the stake a missed bet costs on Big Finish questions 1-2
 const GH_FINAL_WRONG_PENALTY = 300; // Jeopardy pass: the last Big Finish question's wrong-answer penalty, on top of the full stake
-const GH_DECLARE_MULT = 2;       // The Declaration (Pass 3, 2026-11-17): the multiplier a declared All or Nothing seat's Q15 bet pays — and its Q15 loss costs
+const GH_DECLARE_MULT = 2;       // RETIRED (Subtraction Pass II, 2026-11-24): the Declaration is cut — the figure stays only so the generated twins keep their shape; nothing reads it
 
 function ghQdAmount(round) { return GH_QUICK_DRAW_BONUS * (round || 1); }
 function ghStreakAmount(round) { return GH_STREAK_BONUS * (round || 1); }
@@ -67,24 +67,18 @@ function ghMelt(baseValue, multiplier, frac) {
    answer at all: the bet was on yourself, and silence is not
    a loophole. qInRound is 0-based within Round 3. The pot's
    feed is a separate, older rule and does not read this. */
-function ghBetLoss(chips, qInRound, declared) {
+function ghBetLoss(chips, qInRound) {
   var stake = (chips || 0) * GH_BET_PAYOUT;
-  var base = qInRound >= 2 ? stake + GH_FINAL_WRONG_PENALTY : Math.round(stake * GH_BET_LOSS_EARLY);
-  /* The Declaration (Pass 3): a seat that called All or Nothing
-     at the break loses DOUBLE on the last question — the whole
-     graduated figure, penalty included, twice over. The flag
-     means nothing before the last question: the declaration
-     names Q15 and only Q15. */
-  return (declared && qInRound >= 2) ? base * GH_DECLARE_MULT : base;
+  return qInRound >= 2 ? stake + GH_FINAL_WRONG_PENALTY : Math.round(stake * GH_BET_LOSS_EARLY);
 }
 
-/* What a BANKED Big Finish bet pays: the stake, doubled for a
-   seat whose Declaration is riding on the last question. The
-   house's bonuses (Quick Draw, streaks) are never multiplied —
-   they land flat on top, exactly as they treat the Double. The
-   callers gate `declared` to the last question, as above. */
-function ghBetPayout(chips, declared) {
-  return (chips || 0) * GH_BET_PAYOUT * (declared ? GH_DECLARE_MULT : 1);
+/* What a BANKED Big Finish bet pays: the stake, plain. The
+   house's bonuses (Quick Draw) are never multiplied — they
+   land flat on top. (The Declaration once doubled this figure
+   on the last question; Subtraction Pass II cut it, and the
+   finale bet now stands alone as the show's one wager.) */
+function ghBetPayout(chips) {
+  return (chips || 0) * GH_BET_PAYOUT;
 }
 
 function ghBetCap(scores, seat) {
@@ -111,8 +105,8 @@ function qdAmount(round) { return ghQdAmount(round); }
 function streakAmount(round) { return ghStreakAmount(round); }
 function melt(baseValue, multiplier, frac) { return ghMelt(baseValue, multiplier, frac); }
 function betCap(scores, seat) { return ghBetCap(scores, seat); }
-function betLoss(chips, qInRound, declared) { return ghBetLoss(chips, qInRound, declared); }
-function betPayout(chips, declared) { return ghBetPayout(chips, declared); }
+function betLoss(chips, qInRound) { return ghBetLoss(chips, qInRound); }
+function betPayout(chips) { return ghBetPayout(chips); }
 
 /* The Gilded Hour — online room logic. Pure, JSON-serializable, no
  * Cloudflare APIs. server.js (the Durable Object) is a thin wrapper
@@ -130,8 +124,9 @@ function betPayout(chips, declared) { return ghBetPayout(chips, declared); }
  *   1..N) and 'num' (submit a number; closest to the true number banks,
  *   ties each bank the full value). One lifeline: Cut Two — one token
  *   per player per show; the host supplies the two wrong indices when
- *   publishing, the server enforces token + one-cut-per-question and
- *   broadcasts the cut. Round 3 bet phase: each player secretly sets
+ *   publishing, the server enforces token + one-cut-per-player-per-
+ *   question, and broadcasts only WHO cut — the pair itself reaches
+ *   the spender alone, through their own snapshot. Round 3 bet phase: each player secretly sets
  *   1..cap chips before the question; a correct answer banks bet x $100.
  *   A missing bet defaults to 1 chip. The Long Shot cap is 3 plus one
  *   per full $1,000 the player trails the current leader, never more
@@ -143,13 +138,9 @@ function betPayout(chips, declared) { return ghBetPayout(chips, declared); }
  *   the one place at the table where money can be LOST. A failed bet
  *   costs half the stake on the round's first two questions, and the
  *   whole stake plus a $300 penalty on the last (betLoss in
- *   the shared core). Improvement Pass 3 adds THE DECLARATION:
- *   at the break before the Big Finish a pad may call All or
- *   Nothing on the last question ({t:'declare'}, intermission
- *   with nextRound 3 only, once, irrevocable, public in every
- *   snapshot as `declared`) — banking Q15 then pays the bet
- *   double and failing it costs the graduated figure double
- *   (betPayout / betLoss's declared flag, both single-sourced).
+ *   the shared core). The bet stands alone as the show's one
+ *   wager: the Declaration that once doubled it on the last
+ *   question was cut in Subtraction Pass II (2026-11-24).
  *   rules-core; floored at the seat's score — nobody goes below $0).
  *   Rounds 1-2 still lose nothing, ever.
  *
@@ -249,15 +240,13 @@ function betPayout(chips, declared) { return ghBetPayout(chips, declared); }
  *   once, alongside the other money. Banking extends the run by
  *   one; missing resets it to zero. Guess kinds ('survey', 'num')
  *   are NEUTRAL — they neither build nor break a run — and a
- *   decider never touches one. From the bank that REACHES 3 onward,
- *   every consecutive bank adds the STREAK_BONUS to that result's
- *   banked figure: the base $25 scaled by the ROUND (review
- *   Pass 5: $25/$50/$75), never by the value multiplier, the
- *   Headline x2, or a Big Finish bet (a bet question banks
- *   bet x $100 + the round's bonus, not a multiplied bonus).
- *   Each result entry carries
+ *   decider never touches one. SUBTRACTION PASS I (2026-11-23):
+ *   the run no longer PAYS — the streak bonus was a third money
+ *   source doing quiet work nobody read aloud; the count, its
+ *   thresholds and its moments are narration only now, and every
+ *   result's streakBonus is 0. Each result entry carries
  *   the run's outcome — streak (the count after this question) and
- *   streakBonus (0 or the round's figure) — so host and pads paint from the payload
+ *   streakBonus (always 0 since the cut) — so host and pads paint from the payload
  *   and never recompute money; the reveal also names at most one
  *   streakMoment ({type:'reach3'|'reach5'|'death', seat, n}): the
  *   single threshold event Sterling speaks for this reveal, chosen
@@ -450,6 +439,18 @@ function cutCountOf(p) {
   return v === true ? 1 : 0;
 }
 
+/* The Private Cut (2026-11-23): who has cut THIS question, as a
+ * seat map. New question records carry cutsBy; a record persisted
+ * by the old public-cut build carries the single cutBy seat — it
+ * folds in as that seat's cut (their pair was broadcast in its
+ * day; nothing is un-leaked, and nobody else's field changes). */
+function cutsByOf(q) {
+  if (!q) return {};
+  if (q.cutsBy && typeof q.cutsBy === 'object') return q.cutsBy;
+  if (q.cutBy != null) return { [q.cutBy]: true };
+  return {};
+}
+
 /* The Long Shot, server-authoritative: 3 chips at (or near) the
  * lead, +1 per full $1,000 of deficit, capped at 5. Purely a
  * function of the scores in the room at bet time. */
@@ -509,7 +510,8 @@ function createRoom(code, hostToken, rules) {
     deciderWinner: null,      // seat that won a resolved decider, once one resolves
     goldenUsed: false,        // the Golden Question: this show's one double is spent
     pot: 0,                   // The Table Pot (D1): unbanked money the champion takes
-    declared: {},             // The Declaration (Pass 3): seats that called All or Nothing on Q15 at the last break
+    declared: {},             // LEGACY (Subtraction Pass II): the Declaration is cut — nothing reads or writes this; the field stays so rooms persisted before the cut still load
+    facts: {},                // About This Room online (Pass 13): lobby submissions {seat: {text, subject}} — the host's to plant, cleared per show
     stats: [null, null, null, null], // The Report Card (N1): per-seat raw tallies {cats, fastestMs, biggest, peak}
     statsSeq: 0,              // questions settled this show — the "earliest in the night" clock for best-category ties
     showSeq: 1,               // which show of the night this room is on (Rematch Night)
@@ -607,11 +609,15 @@ function snapshotFor(room, view) {
       betted: q.betted,
       decider: q.decider === true,
       eligible: q.decider ? (q.eligible || []).slice() : null,
-      cut: q.cutBy != null ? { bySeat: q.cutBy, indices: q.cutIndices.slice() } : null,
-      /* THE DOUBLE: the seats whose token is riding on this
-       * question — public the moment it is declared, like every
-       * other stake at this table */
-      dblArmed: q.dbl ? Object.keys(q.dbl).map(Number) : [],
+      /* The Private Cut: a snapshot names the seats that have cut;
+       * the fallen pair rides ONLY the spender's own view of it */
+      cut: (() => {
+        const cb = cutsByOf(q);
+        const seats = Object.keys(cb).map(Number);
+        if (!seats.length) return null;
+        const mine = view.role === 'player' && cb[view.seat] ? { indices: q.cutIndices.slice() } : {};
+        return Object.assign({ seats }, mine);
+      })(),
       /* THE BLUFF: which of its two lives the question is in and
        * how many lies are in; once dealt, the answer texts are
        * public — their authors stay secret until the reveal */
@@ -620,6 +626,11 @@ function snapshotFor(room, view) {
         fakesIn: q.fakes ? Object.keys(q.fakes).length : 0,
         options: q.options ? q.options.map((o) => o.t) : null,
       } : {}),
+      /* About This Room online (Pass 13): a planted question's
+       * face rides the snapshot so every pad can read it — the
+       * texts are public; only the correctIdx stays the room's
+       * secret, as with any question */
+      ...(q.roomText ? { roomText: q.roomText, roomAnswers: q.roomAnswers } : {}),
       answersIn: Object.keys(q.kind === 'num' ? q.nums : q.picks).length,
     };
     if (view.role === 'host') { // the host authored the secrets; resync may echo them to it alone
@@ -648,7 +659,7 @@ function snapshotFor(room, view) {
        * through cutCountOf), and cutCount rides beside it as the
        * number, so a screen that knows the count reads the count
        * and a screen that doesn't reads exactly what it always did */
-      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), dbl: p.dbl !== false, connected: p.connected, ready: !!p.ready, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
+      ? { seat: i, name: p.name, score: p.score, cutTwo: cutCountOf(p) > 0, cutCount: cutCountOf(p), connected: p.connected, ready: !!p.ready, avatar: cleanAvatar(p.avatar, i), streak: p.streak || 0 }
       : null)),
     question: pubQ,
     /* The Table Pot (D1): the running total, public from the
@@ -672,10 +683,6 @@ function snapshotFor(room, view) {
       ...(view.role === 'player' ? { yourCap: betCapFor(room, view.seat) } : {}),
     } : null,
     lastReveal: room.lastReveal,
-    /* The Declaration (Pass 3): who has called All or Nothing is
-     * public the moment it is called — the map rides every
-     * snapshot so the host screen and every pad can show it */
-    declared: room.declared || {},
     /* The Report Card (N1): the derived card rides a snapshot only
      * once the show is over — it is a finale artifact, and a screen
      * that resyncs onto the ended room (a pad refreshing at the
@@ -683,10 +690,18 @@ function snapshotFor(room, view) {
      * broadcast dealt. Mid-show it is null, never a peek. */
     report: room.phase === 'ended' ? reportFor(room) : null,
   };
+  if (view.role === 'host') {
+    /* About This Room online (Pass 13): the collected facts go
+     * to the host alone — the plant is its surprise to keep */
+    snap.facts = room.facts && typeof room.facts === 'object' ? room.facts : {};
+  }
   if (view.role === 'player') {
     const seat = view.seat;
     if (room.bet) snap.yourBet = room.bet.bySeat[seat] != null ? room.bet.bySeat[seat] : null;
     else if (q && q.betted) snap.yourBet = q.bets[seat] != null ? q.bets[seat] : null;
+    /* a pad sees its own fact, so a rejoined phone finds its
+     * words waiting — never anybody else's */
+    snap.yourFact = room.facts && room.facts[seat] ? room.facts[seat] : null;
     if (q) {
       snap.yourPick = q.picks[seat] != null ? q.picks[seat] : null;
       snap.yourNum = q.nums[seat] != null ? q.nums[seat] : null;
@@ -739,6 +754,26 @@ function closeInvent(room) {
 /* Settle the open question at the current server time: compute the
  * as-stopped drained value, find the winners, bank, and produce the
  * reveal broadcast. Returns null when no question is open. */
+/* Pass 14 — the held breath, online: a Big Finish reveal waits
+ * on the money, exactly as at the table (finaleBreathMs there):
+ * 600ms + 110ms per chip riding on the question, the last
+ * question breathing 1.4x longer, the whole held between 850ms
+ * and 3s. Only a betted, non-decider finale question holds its
+ * breath — everything else reveals the moment it is called.
+ * The chips are counted the way settlement counts them: a seat
+ * that never placed its bet rides the default one chip. The
+ * last-question test reads the referee's own publish count,
+ * the same derivation closeQuestion judges position by. */
+function finaleBreathMs(room, q) {
+  if (!q || q.round !== 3 || !q.betted || q.decider) return 0;
+  let chips = 0;
+  for (const seat of joinedSeats(room)) chips += (q.bets && q.bets[seat]) || 1;
+  let ms = 600 + 110 * chips;
+  const pub3 = (room.published && room.published['3']) || 0;
+  if (pub3 >= 3) ms = Math.round(ms * 1.4);
+  return Math.max(850, Math.min(3000, ms));
+}
+
 function closeQuestion(room) {
   const q = room.question;
   if (!q || room.phase !== 'answer') return null;
@@ -761,11 +796,10 @@ function closeQuestion(room) {
   const judgedSeats = isDecider ? (q.eligible || []) : joinedSeats(room);
   /* The Big Finish position of this question (0, 1, 2), counted
    * from the referee's own publish record for round 3 — the
-   * jeopardy schedule and the Declaration both read it. The
-   * Decider publishes only after Q15 has closed, so its count
-   * can never disturb this index. */
+   * jeopardy schedule reads it. The Decider publishes only
+   * after Q15 has closed, so its count can never disturb this
+   * index. */
   const qInRound = q.betted ? Math.max(0, ((room.published && room.published['3']) || 1) - 1) : 0;
-  const declaredSeat = (seat) => !!(room.declared && room.declared[seat]);
   let winDiff = null;
   if (q.kind === 'num') {
     for (const seat of judgedSeats) {
@@ -797,28 +831,14 @@ function closeQuestion(room) {
     entry.lockMs = (q.kind !== 'num' && q.pickTimes && q.pickTimes[seat] != null)
       ? Math.max(0, q.pickTimes[seat] - q.openedAt) : null;
     if (entry.correct && !isDecider) {
-      /* The Declaration (Pass 3): a declared seat banking the
-       * LAST question is paid the bet double (betPayout in the
-       * shared core); the bonuses below still land flat */
+      /* a banked Big Finish bet pays the stake plain (betPayout
+       * in the shared core); the bonuses below still land flat */
       entry.banked = q.betted
-        ? betPayout(q.bets[seat] != null ? q.bets[seat] : 1, declaredSeat(seat) && qInRound >= 2)
+        ? betPayout(q.bets[seat] != null ? q.bets[seat] : 1)
         : value;
-      /* THE DOUBLE: a riding token doubles the question's own
-       * value for its seat — the bet never doubles (it was never
-       * armable), and Quick Draw / streak bonuses land flat on
-       * top below, exactly as they treat every other figure */
-      if (!q.betted && q.dbl && q.dbl[seat]) { entry.banked = value * 2; entry.doubled = true; }
     }
     room.players[seat].score += entry.banked;
     results.push(entry);
-  }
-  /* THE DOUBLE settles with the question: every riding token is
-   * spent here, win or lose — the declaration was the spend. */
-  if (q.dbl) {
-    for (const k of Object.keys(q.dbl)) {
-      const sp = room.players[+k];
-      if (sp) sp.dbl = false;
-    }
   }
   /* The Quick-Draw (Design pass 3): 'normal' questions only. The
    * winner is the first seat in q.pickOrder — the receipt order of
@@ -864,11 +884,9 @@ function closeQuestion(room) {
         const nowStreak = before + 1;
         p.streak = nowStreak;
         entry.streak = nowStreak;
-        if (nowStreak >= STREAK_MIN) {
-          entry.streakBonus = streakAmount(q.round);
-          entry.banked += entry.streakBonus;
-          p.score += entry.streakBonus;
-        }
+        /* SUBTRACTION PASS I (2026-11-23): streaks no longer pay —
+         * the count and its moments are narration only (see the
+         * header note); entry.streakBonus stays 0. */
         if (before < 5 && nowStreak >= 5) cands.push({ type: 'reach5', seat: entry.seat, n: nowStreak });
         else if (before < STREAK_MIN && nowStreak >= STREAK_MIN) cands.push({ type: 'reach3', seat: entry.seat, n: nowStreak });
       } else {
@@ -923,9 +941,9 @@ function closeQuestion(room) {
       if (entry.correct) continue;
       const p = room.players[entry.seat];
       if (!p) continue;
-      /* a declared seat's last-question failure costs double —
-       * betLoss applies the multiplier itself, gated to Q15 */
-      const due = betLoss(q.bets[entry.seat] != null ? q.bets[entry.seat] : 1, qInRound, declaredSeat(entry.seat));
+      /* a failed bet costs the graduated figure — betLoss in
+       * the shared core carries the schedule */
+      const due = betLoss(q.bets[entry.seat] != null ? q.bets[entry.seat] : 1, qInRound);
       const taken = Math.min(due, Math.max(0, p.score));
       if (taken > 0) { p.score -= taken; entry.lost = taken; }
     }
@@ -1045,8 +1063,27 @@ function expireIfNeeded(room) {
   if (room.phase === 'invent' && room.question && nowMs() >= room.question.inventDeadline) {
     return closeInvent(room);
   }
-  if (room.phase === 'answer' && room.question && nowMs() >= room.question.deadline) {
-    return closeQuestion(room);
+  if (room.phase === 'answer' && room.question) {
+    const q = room.question;
+    /* Pass 14: a held breath owns this question's close — the
+       reveal lands when the breath runs out, never at the bare
+       deadline underneath it */
+    if (q.breathUntil) {
+      if (nowMs() >= q.breathUntil) return closeQuestion(room);
+      return null;
+    }
+    if (nowMs() >= q.deadline) {
+      /* the backstop path breathes too: a finale question whose
+         window lapses unrevealed holds the same breath the
+         host's own reveal would have started */
+      const breath = finaleBreathMs(room, q);
+      if (breath > 0) {
+        q.breathUntil = nowMs() + breath;
+        q.deadline = nowMs();
+        return ok({ state: true, changed: true });
+      }
+      return closeQuestion(room);
+    }
   }
   return null;
 }
@@ -1096,7 +1133,7 @@ function handleHello(room, msg) {
       token: makeToken(),
       score: 0,
       cutTwo: cutStartFor(room), // House Rules (N2): the starting COUNT — two under Second Cut, else one
-      dbl: true, // THE DOUBLE (designer pass 3): one token per player per show, in hand from the start, spendable from Round 2
+      dbl: true, // LEGACY FIELD (Subtraction Pass I, 2026-11-23): THE DOUBLE is cut; the field stays in the record shape so rooms persisted before the cut still load — nothing reads it
       connected: true,
       ready: false, // Review Pass 8 (2026-11-14): the lobby's word — when every connected phone is ready, the show starts itself
       avatar: cleanAvatar(msg.avatar, seat),
@@ -1230,6 +1267,28 @@ function handleHostMessage(room, msg) {
        * the band is public presentation, not a claim the room
        * referees. */
       const band = Number.isInteger(msg.band) && msg.band >= 1 && msg.band <= 3 ? msg.band : null;
+      /* About This Room online (Pass 13): a planted question is
+       * an ordinary 'normal' question in every way the room
+       * referees — the one difference is that its face (the
+       * question text and the answer texts, which are the
+       * players' own names) is not in any bank, so the host
+       * publishes it with the question and the room carries it
+       * on the record, public in every snapshot. Only the
+       * correctIdx stays secret, exactly as always. A publish
+       * without these fields is an ordinary bank question,
+       * exactly as before; a malformed pair is simply not
+       * carried (the question still plays — the pads fall back
+       * to the big screen, as they do for any unrebuildable
+       * question). */
+      let roomText = null;
+      let roomAnswers = null;
+      if (kind === 'normal' && typeof msg.roomText === 'string' && Array.isArray(msg.roomAnswers)) {
+        const rt = msg.roomText.replace(/\s+/g, ' ').trim().slice(0, 140);
+        const ra = msg.roomAnswers
+          .filter((a) => typeof a === 'string' && a.replace(/\s+/g, ' ').trim())
+          .map((a) => a.replace(/\s+/g, ' ').trim().slice(0, 24));
+        if (rt && ra.length === answersCount) { roomText = rt; roomAnswers = ra; }
+      }
       const betted = room.phase === 'bet';
       const bets = betted ? Object.assign({}, room.bet.bySeat) : {};
       room.bet = null;
@@ -1282,12 +1341,13 @@ function handleHostMessage(room, msg) {
         bets,
         decider,
         eligible,
+        roomText,
+        roomAnswers,
         picks: {},
         pickOrder: [],
         pickTimes: {},
         nums: {},
-        dbl: {},
-        cutBy: null,
+        cutsBy: {},
         closedAt: null,
         stoppedValue: null,
       };
@@ -1322,6 +1382,21 @@ function handleHostMessage(room, msg) {
       }
       if (room.phase !== 'answer' || !room.question) return fail('Nothing to reveal.');
       if (msg.qid != null && msg.qid !== room.question.qid) return fail('Wrong question.');
+      /* Pass 14: a Big Finish reveal first holds its breath —
+         the window seals at once (the deadline moves to now, so
+         no late answer can slip into the held moment), the
+         settlement waits, and the room's alarm speaks the
+         reveal when the breath runs out. A second reveal while
+         the breath is held is a polite no-op, in the spirit of
+         the spent reveal above */
+      const q = room.question;
+      if (q.breathUntil) return ok({});
+      const breath = finaleBreathMs(room, q);
+      if (breath > 0) {
+        q.breathUntil = nowMs() + breath;
+        q.deadline = nowMs();
+        return ok({ state: true, changed: true });
+      }
       const res = closeQuestion(room);
       return res || fail('Nothing to reveal.');
     }
@@ -1382,7 +1457,6 @@ function handleHostMessage(room, msg) {
         if (!p) continue;
         p.score = 0;
         p.cutTwo = cutStartFor(room); // House Rules (N2): a fresh show restocks to the room's starting count — the rules themselves are the room's and stay
-        p.dbl = true; // THE DOUBLE restocks with the show, like every other token
         p.streak = 0;
       }
       room.bet = null;
@@ -1397,8 +1471,8 @@ function handleHostMessage(room, msg) {
       room.goldenUsed = false;
       /* The Table Pot (D1): a fresh show starts with an empty pot, always */
       room.pot = 0;
-      /* The Declaration (Pass 3): a fresh show starts with nobody declared */
-      room.declared = {};
+      /* About This Room online (Pass 13): a fresh show collects fresh facts */
+      room.facts = {};
       /* The Report Card (N1): the tallies are per-show memory like
        * everything on this list — a rematch starts a blank card */
       room.stats = [null, null, null, null];
@@ -1440,6 +1514,30 @@ function handlePlayerMessage(room, seat, msg) {
       p.ready = !!msg.ready;
       return ok({ state: true, changed: true });
     }
+    case 'room_fact': {
+      /* About This Room online (Pass 13): a phone writes one
+       * true thing about somebody at the table, in the lobby,
+       * for the host to plant as a Round 2 question. One fact
+       * per seat, replaceable while the lobby stands. The
+       * subject is a SEAT, never a name — names repeat, seats
+       * don't. The facts are the host's alone (snapshots carry
+       * them to the host only; a pad sees just its own, like a
+       * bluff lie) — the plant must stay a surprise. */
+      if (room.phase !== 'lobby') return fail('Facts are collected in the lobby.');
+      const text = typeof msg.text === 'string' ? msg.text.replace(/\s+/g, ' ').trim().slice(0, 90) : '';
+      if (!text) return fail('An empty fact plants nothing.');
+      const subject = msg.subject;
+      if (!Number.isInteger(subject) || subject < 0 || subject >= MAX_PLAYERS || !room.players[subject]) {
+        return fail('A fact needs somebody seated to be about.');
+      }
+      if (!room.facts || typeof room.facts !== 'object') room.facts = {};
+      room.facts[seat] = { text, subject };
+      return ok({
+        to: [{ dest: seat, msg: { t: 'accepted', fact: true } }],
+        state: true,
+        changed: true,
+      });
+    }
     case 'bluff': {
       /* THE BLUFF: a pad submits its seat's lie during the
        * collecting window. One lie per seat, replaceable until
@@ -1467,20 +1565,6 @@ function handlePlayerMessage(room, seat, msg) {
         changed: true,
       });
     }
-    case 'declare': {
-      /* The Declaration (Pass 3): a pad calls All or Nothing on
-       * the last question during the ONE break that precedes the
-       * Big Finish. Public and irrevocable — the map is written
-       * once and rides every snapshot from that moment; a second
-       * call, a call at the wrong break, or a call mid-question
-       * is refused in words. */
-      if (room.phase !== 'intermission' || !room.interm || room.interm.nextRound !== 3)
-        return fail('Declarations open only at the break before the Big Finish.');
-      if (room.declared && room.declared[seat]) return fail('Already declared — there is no taking it back.');
-      room.declared = room.declared || {};
-      room.declared[seat] = true;
-      return ok({ state: true, changed: true });
-    }
     case 'answer': {
       if (room.phase !== 'answer' || !room.question) return fail('No open question.');
       const q = room.question;
@@ -1489,6 +1573,10 @@ function handlePlayerMessage(room, seat, msg) {
         return fail('Only the tied leaders play the decider.');
       }
       if (nowMs() > q.deadline) return fail('Window closed.');
+      /* Pass 14: a held breath seals the window outright — the
+       * deadline moved to the reveal call, and no answer lands
+       * inside the held moment, not even in the same instant */
+      if (q.breathUntil) return fail('Window closed.');
       if (q.kind === 'num') {
         const n = Number(msg.num);
         if (!Number.isFinite(n)) return fail('Give a number.');
@@ -1535,30 +1623,6 @@ function handlePlayerMessage(room, seat, msg) {
         changed: true,
       });
     }
-    case 'double': {
-      /* THE DOUBLE (designer pass 3): a pad declares its seat's
-       * token on the open question. The referee's rules are the
-       * table's: from Round 2, never on a bet question (it carries
-       * its own stake), never on the Decider, only while the
-       * window is open, only a token still in hand, only once. */
-      if (room.phase !== 'answer' || !room.question) return fail('No open question.');
-      const q = room.question;
-      if (msg.qid !== q.qid) return fail('Wrong question.');
-      if (q.decider) return fail('The Decider carries no Double.');
-      if (q.kind === 'bluff') return fail('The Bluff is its own stake — no Double rides it.');
-      if (q.betted) return fail('A bet question carries its own stake.');
-      if (!(q.round >= 2)) return fail('The Double arrives with Double Money.');
-      if (nowMs() > q.deadline) return fail('Window closed.');
-      if (p.dbl === false) return fail('Your Double is spent.');
-      if (!q.dbl || typeof q.dbl !== 'object') q.dbl = {};
-      if (q.dbl[seat]) return fail('Your Double is already riding.');
-      q.dbl[seat] = true;
-      return ok({
-        to: [{ dest: seat, msg: { t: 'accepted', qid: q.qid } }],
-        state: true,
-        changed: true,
-      });
-    }
     case 'cuttwo': {
       if (room.phase !== 'answer' || !room.question) return fail('No open question.');
       const q = room.question;
@@ -1566,12 +1630,17 @@ function handlePlayerMessage(room, seat, msg) {
       if (q.kind === 'num') return fail('Nothing to cut on a number question.');
       if (q.kind === 'bluff') return fail('Nothing to cut on a bluff — the answers are the players’ own.');
       if (!q.cutIndices) return fail('No cut available on this question.');
-      if (q.cutBy != null) return fail('Already cut on this question.');
+      if (cutsByOf(q)[seat]) return fail('Already cut on this question.');
       if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');
       p.cutTwo = cutCountOf(p) - 1; // House Rules (N2): a spend decrements the count — under Second Cut one blade remains
-      q.cutBy = seat;
+      if (!q.cutsBy || typeof q.cutsBy !== 'object') q.cutsBy = cutsByOf(q);
+      q.cutsBy[seat] = true;
+      /* The Private Cut: the broadcast names the spender and
+       * nothing else — the pair reaches the spender alone through
+       * their own snapshot (state: true below), the same private
+       * channel that carries their pick and their number */
       return ok({
-        all: { t: 'cut', qid: q.qid, bySeat: seat, indices: q.cutIndices.slice() },
+        all: { t: 'cut', qid: q.qid, bySeat: seat },
         state: true,
         changed: true,
       });
@@ -1588,7 +1657,7 @@ function handlePlayerMessage(room, seat, msg) {
       if (q.kind === 'num') return fail('Nothing to cut on a number question.');
       if (q.kind === 'bluff') return fail('Nothing to cut on a bluff — the answers are the players’ own.');
       if (!q.cutIndices) return fail('No cut available on this question.');
-      if (q.cutBy != null) return fail('Already cut on this question.');
+      if (cutsByOf(q)[seat]) return fail('Already cut on this question.');
       if (cutCountOf(p) <= 0) return fail('Your Cut Two is spent.');
       return ok({
         to: [{ dest: seat, msg: { t: 'cut_preview', qid: q.qid, indices: q.cutIndices.slice() } }],
@@ -1746,6 +1815,9 @@ export class GildedRoom {
      * the 2h TTL. */
     if ((this.room.phase === 'answer' || this.room.phase === 'invent') && this.room.question) {
       next = Math.min(next, this.room.question.deadline);
+      /* Pass 14: a held breath is a deadline too — the reveal
+       * must land when it runs out, even in a room gone quiet */
+      if (this.room.question.breathUntil) next = Math.min(next, this.room.question.breathUntil);
     }
     const at = Math.max(next, nowMs() + 50);
     this.ctx.storage.setAlarm(at).catch(() => {});
