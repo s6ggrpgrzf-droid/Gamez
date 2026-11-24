@@ -199,7 +199,10 @@
  *   has already moved.
  *
  *   The Table Pot (Dynamics pass D1): money the room fails to bank
- *   does not vanish — it feeds a pot the champion takes. The rule
+ *   does not vanish — it feeds a pot. (Since the client's
+ *   road-to-9/10 Pass 4, the last question is played for it:
+ *   its bankers split it on the host screen; the room's part
+ *   of the rule — the feed — never changed.) The rule
  *   runs here, once, at close, beside the rest of the money. In
  *   Rounds 1-2, a question NO seat banks feeds the pot exactly
  *   what a winner would have taken: the as-stopped drained value
@@ -211,8 +214,10 @@
  *   already had its say at bet time; a missing bet is the usual
  *   default 1). The Decider banks $0 by design and feeds nothing.
  *   The pot never touches a score and never changes who wins — it
- *   is added to the champion's total only on the host screen, at
- *   the finale, and written into that screen's record there. It
+ *   is awarded only on the host screen, at the finale, to the
+ *   last question's bankers (or kept by the house when it beat
+ *   the whole table), and written into that screen's record
+ *   there. It
  *   rides every snapshot (pot) and every reveal (pot, plus potFed:
  *   what THIS question fed), so a resync repaints the vessel
  *   settled and never re-feeds. A fresh show via new_show starts
@@ -792,7 +797,7 @@ export function closeQuestion(room) {
     if (cands.length) streakMoment = cands[0];
   }
   /* The Table Pot (Dynamics pass D1): money nobody banked feeds
-   * the pot the champion takes — computed here, once, from the
+   * the pot the last question plays for — computed here, once, from the
    * settled results, never from a client claim. Rounds 1-2 feed
    * only on a FULL miss (a partial bank feeds nothing), and the
    * figure is the question's as-stopped drained value — the
@@ -803,8 +808,8 @@ export function closeQuestion(room) {
    * placed (a missing bet is the usual default 1). The Decider
    * banks $0 by design and feeds nothing. The pot is NOT a score:
    * it never touches room.players[].score and never changes who
-   * wins — the host screen adds it to the champion's total at
-   * the finale, and only there. */
+   * wins — the host screen awards it at the finale to the last
+   * question's bankers, and only there. */
   let potFed = 0;
   if (!isDecider) {
     if (q.betted) {
