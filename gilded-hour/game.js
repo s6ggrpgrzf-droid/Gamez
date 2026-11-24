@@ -2860,7 +2860,7 @@
       arc: null,                // Pass 4: the night's arc record {worst, best, queue, spoken} — Sterling's story memory
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
       goldTease: null,          // the tease line drawn with it, spoken once at the Round 1 intro
-      roomQ: null,              // Research pass 10: the room's own question {fact, subject, used}, planted at 2:1
+      roomQs: [],               // Research pass 10, grown by road-to-9 Pass 6: the room's own questions [{fact, subject, round, shape, used}] — up to one planted per round
       showId: null,             // per-show key for the live Sterling lines
       decider: null,            // New programme pass 1: {eligible, usedIds, dealt, winner} once a tied finale triggers it
       facts: freshFacts(),      // New programme pass 2: the round-facts recorder the Intermission is told from
@@ -4014,7 +4014,7 @@
            the saved words are re-presented verbatim at the intro */
         golden: G.goldenSlot || null,
         goldTease: G.goldTease || null,
-        roomQ: G.roomQ || null,
+        roomQs: (G.roomQs || []).map(function (r) { return { fact: r.fact, subject: r.subject, round: r.round, shape: r.shape, used: !!r.used }; }),
         /* Pass N2: the show's House Rules ride the save beside
            the tease — a resumed show keeps the night it started
            (its questions were born under these rules, its seats
@@ -4172,7 +4172,7 @@
          than inventing a double mid-show */
       goldenSlot: validGoldenSlot(sv.golden) ? sv.golden : null,
       goldTease: typeof sv.goldTease === "string" ? sv.goldTease : null,
-      roomQ: (sv.roomQ && typeof sv.roomQ.fact === "string" && typeof sv.roomQ.subject === "string") ? { fact: sv.roomQ.fact, subject: sv.roomQ.subject, used: !!sv.roomQ.used } : null,
+      roomQs: roomQsFromSave(sv),
       /* Pass N2: the rules are restored as recorded; a save
          written before they existed resumes the plain game,
          which is the game that save was playing */
@@ -4981,7 +4981,7 @@
      from the START tap to the one startShow it belongs to —
      consumed there, so a rematch (which never passes the card)
      starts without one */
-  var pendingRoomQ = null;
+  var pendingRoomFacts = null;
   function startShow(names, soloCast, rulesOverride) {
     G = newGame(names);
     G.showId = "table-" + Date.now().toString(36) + "-" + ri(1000000);
@@ -5006,7 +5006,7 @@
        humans, and the subject seated among them (the answers
        are the cast's own names, borrowed where a small table
        runs short) */
-    G.roomQ = null;
+    G.roomQs = [];
     /* Research pass 11: the table is remembered as the usual
        company. A full table (two or more humans) always
        rewrites the memory; a solo night only fills an empty
@@ -5018,12 +5018,11 @@
     if (castNames.length >= 1 && (castNames.length >= 2 || !existingCast || existingCast.length === 1)) {
       saveCast(castNames);
     }
-    if (pendingRoomQ) {
+    if (pendingRoomFacts) {
       var rqHumans = G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; });
-      if (rqHumans.length >= 2 && pendingRoomQ.fact && rqHumans.indexOf(pendingRoomQ.subject) >= 0) {
-        G.roomQ = { fact: pendingRoomQ.fact, subject: pendingRoomQ.subject, used: false };
-      }
-      pendingRoomQ = null;
+      var rqFacts = pendingRoomFacts.filter(function (f) { return f && f.fact && rqHumans.indexOf(f.subject) >= 0; });
+      if (rqHumans.length >= 2 && rqFacts.length) G.roomQs = roomAssignRounds(rqFacts);
+      pendingRoomFacts = null;
     }
     resetDeck();
     resetLineBags();
@@ -6134,13 +6133,16 @@
     }
     else if (gid != null) G.cur = makeCur(BANK[gid], BANK[gid].kind);
     else if (G.round === 1 && G.qInRound === 2 && nightlyState.data && nightlyState.key === G.showId) G.cur = makeCurServed(nightlyState.data);
-    else if (G.round === 2 && G.qInRound === 0 && G.roomQ && !G.roomQ.used) {
-      /* Research pass 10: the planted question takes Round 2's
-         first ordinary slot — never a guess slot, so the
-         night's five guess questions stand untouched */
-      G.roomQ.used = true;
+    else if (G.qInRound === 0 && roomQForRound(G.round)) {
+      /* Research pass 10, grown by Pass 6: a planted room
+         question takes its round's first ordinary slot —
+         never a guess slot (this branch sits below the guess
+         branch), so the night's five guess questions stand
+         untouched */
+      var plant = roomQForRound(G.round);
+      plant.used = true;
       dealtBandNow = null;
-      G.cur = makeCur(roomQuestionOf(G.roomQ), "mcq");
+      G.cur = makeCur(roomQuestionOf(plant), "mcq");
     }
     else G.cur = makeCur(drawNormal(), "mcq");
     if (G.round === 3) betBeat(); else spinBeat();
@@ -6149,13 +6151,115 @@
     var pat = G.round === 1 ? R1_BANDS : G.round === 2 ? R2_BANDS : R3_BANDS;
     return drawBand(pat[G.qInRound] || 2);
   }
+  /* Pass 6 (road to 9/10): the room writes more of the show.
+     Every seat may offer a fact; up to three are planted, one
+     per round, and the builder gains a second shape. The
+     helpers below are pure and shared by both engines: facts
+     are {fact, subject} with names for subjects. */
+  function roomFactClean(t) { return String(t || "").trim().replace(/[.?!]+$/, ""); }
+  function roomStatement(subject, fact) { return subject + " " + roomFactClean(fact); }
+  /* Sterling's fabrications: specific enough to be safely
+     false of anyone, in the game's own fallback grammar (the
+     'Nobody — Sterling made it up' precedent) — they fill a
+     which-shape's board when the room's real facts run short */
+  var ROOM_FAB = [
+    "once won a regional pie-eating contest",
+    "has a tattoo of a lighthouse",
+    "was once an extra in a car commercial",
+    "keeps a lucky coin from 1974 in a shoe",
+    "once auditioned for a boy band",
+    "has never seen the sea",
+    "won a spelling bee with the word 'chrysanthemum'",
+    "once got locked in a museum overnight"
+  ];
+  function roomHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+  /* The which-shape's wrong answers: the room's OTHER facts
+     (about other subjects, distinctly worded) pinned on this
+     subject, filled to three with fabrications. Null when
+     fewer than two real ones exist — the shape then falls
+     back to the who-question */
+  function roomWhichWrongs(fact, allFacts) {
+    var mine = roomFactClean(fact.fact).toLowerCase();
+    var seen = {}, wrongs = [];
+    (allFacts || []).forEach(function (f) {
+      if (!f || f.subject === fact.subject) return;
+      var t = roomFactClean(f.fact);
+      var k = t.toLowerCase();
+      if (!t || k === mine || seen[k]) return;
+      seen[k] = 1;
+      wrongs.push(roomStatement(fact.subject, t));
+    });
+    if (wrongs.length < 2) return null;
+    var start = roomHash(fact.subject + "|" + mine) % ROOM_FAB.length;
+    for (var i = 0; i < ROOM_FAB.length && wrongs.length < 3; i++) {
+      var cand = roomStatement(fact.subject, ROOM_FAB[(start + i) % ROOM_FAB.length]);
+      if (wrongs.indexOf(cand) < 0) wrongs.push(cand);
+    }
+    return wrongs.slice(0, 3);
+  }
+  /* Round 2 keeps the who-shape it has always had; the outer
+     rounds take the which-shape when the room's facts can
+     stock its board, and the who-shape when they cannot */
+  function roomShapeFor(fact, allFacts, round) {
+    if (round === 2) return "who";
+    return roomWhichWrongs(fact, allFacts) ? "which" : "who";
+  }
+  /* Facts are dealt to rounds in the order 2, 1, 3 — a lone
+     fact lands where it always has (Round 2's first slot), a
+     second joins it in Round 1, a third completes the night
+     in the Big Finish, bets and all */
+  function roomAssignRounds(facts) {
+    var order = [2, 1, 3], out = [];
+    for (var i = 0; i < facts.length && i < order.length; i++) {
+      out.push({ fact: facts[i].fact, subject: facts[i].subject, round: order[i], shape: roomShapeFor(facts[i], facts, order[i]), used: false });
+    }
+    return out;
+  }
+  function roomQForRound(round) {
+    var list = G && G.roomQs ? G.roomQs : [];
+    for (var i = 0; i < list.length; i++) if (list[i].round === round && !list[i].used) return list[i];
+    return null;
+  }
+  function roomQsFromSave(sv) {
+    if (sv && Array.isArray(sv.roomQs)) {
+      var out = [];
+      sv.roomQs.forEach(function (r) {
+        if (r && typeof r.fact === "string" && typeof r.subject === "string" && (r.round === 1 || r.round === 2 || r.round === 3)) {
+          out.push({ fact: r.fact, subject: r.subject, round: r.round, shape: r.shape === "which" ? "which" : "who", used: !!r.used });
+        }
+      });
+      return out;
+    }
+    /* a save from before Pass 6 carries the single roomQ —
+       it resumes as the Round 2 plant it always was */
+    if (sv && sv.roomQ && typeof sv.roomQ.fact === "string" && typeof sv.roomQ.subject === "string") {
+      return [{ fact: sv.roomQ.fact, subject: sv.roomQ.subject, round: 2, shape: "who", used: !!sv.roomQ.used }];
+    }
+    return [];
+  }
+
   /* Research pass 10: the room's question, built in the bank's
      own shape so every downstream path — the melt, Cut Two,
      the quick-draw — treats it as what it is, an
      ordinary medium question. Its answers are the cast's own
      names; a three-handed table borrows Sterling himself as
-     the fourth name, which he bears with dignity */
+     the fourth name, which he bears with dignity. Pass 6 adds
+     the which-shape: the fact itself is the answer, stated of
+     its subject, and the wrong answers are the room's other
+     facts pinned on the same name */
   function roomQuestionOf(rq) {
+    if (rq.shape === "which") {
+      var pool = (G.roomQs || []).map(function (r) { return { fact: r.fact, subject: r.subject }; });
+      var ww = roomWhichWrongs(rq, pool);
+      if (ww) {
+        return {
+          id: "roomq", cat: "About This Room", d: 2, diff: "medium",
+          q: "Which of these is true of " + rq.subject + "?",
+          why: "No archive on this one — it was written in this room, about this room.",
+          a: roomStatement(rq.subject, rq.fact), w: ww
+        };
+      }
+    }
     var humans = G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; });
     var wrongs = humans.filter(function (n) { return n !== rq.subject; });
     if (wrongs.length < 3 && wrongs.indexOf("Sterling") < 0) wrongs.push("Sterling");
@@ -6391,9 +6495,9 @@
     seatsVisible(true);
     updateTop(); renderSeats();
     stage('<div class="q-cat">A QUESTION FROM THIS ROOM</div>' +
-      '<p class="round-text">This one is not in the bank. Somebody at this table wrote it, about somebody at this table — and the answers are your own names.</p>' +
+      '<p class="round-text">This one is not in the bank. Somebody at this table wrote it, about somebody at this table — and the room must answer about itself.</p>' +
       '<button class="btn-gold" id="btnRoomQGo">DEAL IT</button>');
-    hostSayText("One question tonight was written in this room, about this room. I shall deal it now — and I shall enjoy it.");
+    hostSayText("A question from this room, about this room. I shall deal it now — and I shall enjoy it.");
     $("btnRoomQGo").addEventListener("click", function () { entArm(G.cur); askCurrent(); });
     saveTableShow();
   }
@@ -8801,23 +8905,45 @@
     }
     wrap.innerHTML = html;
   }
-  /* Research pass 10: the room question's subject picker —
-     one chip per name at the table, rebuilt whenever the rows
-     are (a count change, a name edit), the selection kept by
-     name so an edit never silently moves the question onto
-     somebody else */
-  var roomQSubject = null;
-  function paintRoomQWho() {
+  /* Research pass 10, grown by Pass 6: one fact row per seat —
+     each player may write a fact and pick its subject. Rows
+     are rebuilt whenever the name rows are (a count change, a
+     name edit); typed facts are harvested into roomQRowsState
+     before every rebuild and subjects are kept by name, so an
+     edit never silently moves a fact onto somebody else */
+  var roomQRowsState = [];
+  function harvestRoomQRows() {
+    var wrap = $("roomQRows"); if (!wrap) return;
+    wrap.querySelectorAll(".roomq-fact").forEach(function (inp, j) {
+      if (!roomQRowsState[j]) roomQRowsState[j] = { fact: "", subject: null };
+      roomQRowsState[j].fact = inp.value;
+    });
+  }
+  function paintRoomQRows() {
     var blk = $("roomQBlock"); if (blk) blk.classList.toggle("hidden", !!soloMode);
-    var wrap = $("roomQWho"); if (!wrap) return;
+    var wrap = $("roomQRows"); if (!wrap) return;
+    harvestRoomQRows();
     var names = [];
     for (var i = 0; i < (soloMode ? 1 : playerCount); i++) names.push((setupNames[i] || "").trim() || PNAMES[i]);
-    if (roomQSubject && names.indexOf(roomQSubject) < 0) roomQSubject = null;
     wrap.innerHTML = "";
-    names.forEach(function (nm) {
-      var b = el('<button type="button" class="roomq-chip' + (roomQSubject === nm ? " sel" : "") + '">' + esc(nm) + "</button>");
-      b.addEventListener("click", function () { roomQSubject = (roomQSubject === nm) ? null : nm; paintRoomQWho(); });
-      wrap.appendChild(b);
+    names.forEach(function (nm, i) {
+      if (!roomQRowsState[i]) roomQRowsState[i] = { fact: "", subject: null };
+      var st = roomQRowsState[i];
+      if (st.subject && names.indexOf(st.subject) < 0) st.subject = null;
+      var seat = el('<div class="roomq-seat"></div>');
+      var r1 = el('<div class="roomq-row"><span class="roomq-who">' + esc(nm.toUpperCase()) + " WRITES</span></div>");
+      var inp = el('<input class="roomq-fact" maxlength="90" placeholder="once got fired from a job they hadn&rsquo;t started yet" autocomplete="off">');
+      inp.value = st.fact || "";
+      inp.addEventListener("input", function () { st.fact = inp.value; });
+      r1.appendChild(inp);
+      var r2 = el('<div class="roomq-row"><span class="roomq-who">IT&rsquo;S ABOUT</span></div>');
+      names.forEach(function (sn) {
+        var b = el('<button type="button" class="roomq-chip' + (st.subject === sn ? " sel" : "") + '">' + esc(sn) + "</button>");
+        b.addEventListener("click", function () { st.subject = (st.subject === sn) ? null : sn; paintRoomQRows(); });
+        r2.appendChild(b);
+      });
+      seat.appendChild(r1); seat.appendChild(r2);
+      wrap.appendChild(seat);
     });
   }
   /* Research pass 11: the usual-company button — painted
@@ -8867,7 +8993,7 @@
       inpEl.value = setupNames[i] || PNAMES[i];
       inpEl.addEventListener("input", function () {
         setupNames[parseInt(this.getAttribute("data-seat"), 10)] = this.value;
-        paintAvaPicks(); renderPodiumPreview(); paintRoomQWho();
+        paintAvaPicks(); renderPodiumPreview(); paintRoomQRows();
       });
       wrap.appendChild(row);
     }
@@ -8875,7 +9001,7 @@
       wrap.appendChild(el('<div class="house-note">SEATS 2 &amp; 3 — THE HOUSE PLAYS ITS OWN<span>Two house players, dealt when the show starts. They answer, bet and spend like anyone at the table.</span></div>'));
     }
     renderPodiumPreview();
-    paintRoomQWho();
+    paintRoomQRows();
   }
   /* repaint just the medallions (typing a name must not rebuild
      the rows — that would throw away the name being typed); the
@@ -8959,7 +9085,7 @@
   $("btnStart").addEventListener("click", function () {
     Snd.ensure();
     if (soloMode) {
-      pendingRoomQ = null;
+      pendingRoomFacts = null;
       var inp = $("panelTable").querySelector(".name-input");
       startSoloShow((inp && inp.value.trim()) || PNAMES[0]);
       return;
@@ -8967,12 +9093,18 @@
     var names = Array.prototype.map.call($("panelTable").querySelectorAll(".name-input"), function (inp, i) {
       return inp.value.trim() || PNAMES[i];
     });
-    /* Research pass 10: harvest the room question card — a
-       fact and a subject, or nothing (the card is optional
-       and an empty one plants nothing) */
-    var rqFactEl = $("roomQFact");
-    var rqFact = rqFactEl ? rqFactEl.value.trim() : "";
-    pendingRoomQ = (rqFact && roomQSubject && names.indexOf(roomQSubject) >= 0) ? { fact: rqFact, subject: roomQSubject } : null;
+    /* Research pass 10, grown by Pass 6: harvest the room
+       question rows — one fact and subject per seat, or
+       nothing from that seat (the rows are optional and an
+       empty one plants nothing) */
+    var factInputs = $("roomQRows") ? $("roomQRows").querySelectorAll(".roomq-fact") : [];
+    var harvested = [];
+    for (var fi = 0; fi < names.length; fi++) {
+      var fst = roomQRowsState[fi];
+      var fv = factInputs[fi] ? factInputs[fi].value.trim() : (fst ? (fst.fact || "").trim() : "");
+      if (fv && fst && fst.subject && names.indexOf(fst.subject) >= 0) harvested.push({ fact: fv, subject: fst.subject });
+    }
+    pendingRoomFacts = harvested.length ? harvested : null;
     startShow(names);
   });
   /* Research pass 11: one tap — the usual company, seated
@@ -9707,6 +9839,13 @@
     var goldPos = GOLDEN_SLOTS.filter(function (s) { return s !== BLUFF_ROUND + ":" + BLUFF_Q; });
     OG.goldenSlot = goldPos[ri(goldPos.length)];
     var script = ogScriptEntries([[1, R1_COUNT, R1_BANDS]], guess, 0);
+    /* Pass 6: Round 1's room plant is made HERE, where the
+       head is born — the tail's plants happen in ogBuildTail,
+       and a tail-time Round 1 plant could never be dealt. It
+       takes a fact only when at least two are in the pocket:
+       a lone fact belongs to Round 2, where it always landed */
+    var fpHead = ogFactPool();
+    if (fpHead.pool.length >= 2) ogPlantInto(script, [1], fpHead);
     G = saved;
     saveSeen();
     return script;
@@ -9726,34 +9865,94 @@
      the seated players' names, padded by the table version's
      ladder where a small room runs short. A golden seat, if
      the draw had put one here, keeps its gold */
-  function ogRoomEntry(old, fact) {
+  /* Pass 6: the pocket, rebuilt on demand — every collected
+     fact whose subject is seated, less any fact already
+     planted on the current script (matched by its dealt
+     face), so a host refresh never plants the same fact
+     twice. `all` keeps every fact, planted or not: unplanted
+     facts still stock the which-shape's board */
+  function ogFactPool() {
+    var names = OG.players.map(function (p) { return p ? p.name : null; });
+    var seatedN = OG.players.filter(Boolean).length;
+    if (seatedN < 2) return { pool: [], all: [] };
+    var all = Object.keys(OG.roomFacts || {}).map(function (s) { return OG.roomFacts[s]; })
+      .filter(function (f) { return f && f.text && OG.players[f.subject]; });
+    var dealtFaces = {};
+    (OG.script || []).forEach(function (e) {
+      if (e && e.roomq && e.bank) { dealtFaces[e.bank.q] = 1; if (e.bank.a) dealtFaces[e.bank.a] = 1; }
+    });
+    var pool = all.filter(function (f) {
+      return !dealtFaces["Who in this room " + roomFactClean(f.text) + "?"] && !dealtFaces[roomStatement(names[f.subject], f.text)];
+    });
+    return { pool: pool, all: all };
+  }
+  /* Plant facts over the first ordinary entry of each wanted
+     round, in the order given — the same protections as ever
+     (never a guess slot: the kind check is the guard), facts
+     drawn at random without replacement */
+  function ogPlantInto(script, roundsWanted, fp) {
+    for (var i = 0; i < roundsWanted.length && fp.pool.length; i++) {
+      var idx = -1;
+      for (var j = 0; j < script.length; j++) {
+        if (script[j].round === roundsWanted[i] && script[j].qInRound === 0 && script[j].kind === "normal" && !script[j].roomq) { idx = j; break; }
+      }
+      if (idx < 0) continue;
+      var fact = fp.pool.splice(ri(fp.pool.length), 1)[0];
+      script[idx] = ogRoomEntry(script[idx], fact, fp.all);
+    }
+  }
+  /* Pass 6: the entry keeps the slot it replaces — its round,
+     its place in the round, its value and multiplier ride
+     from the old entry, so a plant in the Big Finish carries
+     finale weight exactly as the bank question it stands in
+     for would have. The shape follows the shared rule
+     (roomShapeFor): Round 2 asks who; the outer rounds ask
+     which, when the room's facts can stock the board */
+  function ogRoomEntry(old, fact, allFacts) {
     var names = OG.players.map(function (p) { return p ? p.name : null; });
     var subjectName = names[fact.subject];
-    var wrongs = names.filter(function (n, i) { return n && i !== fact.subject; });
-    if (wrongs.length < 3 && wrongs.indexOf("Sterling") < 0) wrongs.push("Sterling");
-    if (wrongs.length < 3) {
-      var rec = loadRecords();
-      var guests = Object.keys(rec.players || {}).map(function (k) { return rec.players[k]; })
-        .sort(function (a, b) { return (b.shows || 0) - (a.shows || 0); });
-      for (var gi = 0; gi < guests.length && wrongs.length < 3; gi++) {
-        var gn = guests[gi].name;
-        if (gn && wrongs.indexOf(gn) < 0 && names.indexOf(gn) < 0 && gn !== subjectName) wrongs.push(gn);
+    var named = (allFacts || []).map(function (f) { return { fact: f.text, subject: names[f.subject] }; });
+    var shape = roomShapeFor({ fact: fact.text, subject: subjectName }, named, old.round);
+    var bank = null;
+    if (shape === "which") {
+      var ww = roomWhichWrongs({ fact: fact.text, subject: subjectName }, named);
+      if (ww) {
+        bank = {
+          id: "roomq", cat: "About This Room", d: 2, diff: "medium",
+          q: "Which of these is true of " + subjectName + "?",
+          why: "No archive on this one — it was written in this room, about this room.",
+          a: roomStatement(subjectName, fact.text), w: ww
+        };
       }
     }
-    if (wrongs.length < 3) wrongs.push("Nobody — Sterling made it up");
-    var factText = String(fact.text || "").trim().replace(/[.?!]+$/, "");
-    var bank = {
-      id: "roomq", cat: "About This Room", d: 2, diff: "medium",
-      q: "Who in this room " + factText + "?",
-      why: "No archive on this one — it was written in this room, about this room.",
-      a: subjectName, w: wrongs.slice(0, 3)
-    };
+    if (!bank) {
+      var wrongs = names.filter(function (n, i) { return n && i !== fact.subject; });
+      if (wrongs.length < 3 && wrongs.indexOf("Sterling") < 0) wrongs.push("Sterling");
+      if (wrongs.length < 3) {
+        var rec = loadRecords();
+        var guests = Object.keys(rec.players || {}).map(function (k) { return rec.players[k]; })
+          .sort(function (a, b) { return (b.shows || 0) - (a.shows || 0); });
+        for (var gi = 0; gi < guests.length && wrongs.length < 3; gi++) {
+          var gn = guests[gi].name;
+          if (gn && wrongs.indexOf(gn) < 0 && names.indexOf(gn) < 0 && gn !== subjectName) wrongs.push(gn);
+        }
+      }
+      if (wrongs.length < 3) wrongs.push("Nobody — Sterling made it up");
+      var factText = roomFactClean(fact.text);
+      bank = {
+        id: "roomq", cat: "About This Room", d: 2, diff: "medium",
+        q: "Who in this room " + factText + "?",
+        why: "No archive on this one — it was written in this room, about this room.",
+        a: subjectName, w: wrongs.slice(0, 3)
+      };
+    }
     var seed = (Math.random() * 2147483646 + 1) | 0;
     var o = ogOptsFor(bank, seed);
     var e = {
-      seq: old.seq, round: 2, qInRound: 0, bank: bank, kind: "normal",
+      seq: old.seq, round: old.round, qInRound: old.qInRound, bank: bank, kind: "normal",
       cat: bank.cat, diff: "medium",
-      baseValue: BASE_VALUES.medium, multiplier: 2,
+      baseValue: old.baseValue != null ? old.baseValue : BASE_VALUES.medium,
+      multiplier: old.multiplier != null ? old.multiplier : 1,
       windowMs: QTIME * 1000, dealtBand: null,
       answers: o.answers, correctIdx: o.correctIdx, cutIndices: o.cutIndices,
       qid: "roomq." + seed.toString(36), roomq: true
@@ -9774,26 +9973,15 @@
     });
     var tail = ogScriptEntries([[2, R2_COUNT, R2_BANDS], [3, R3_COUNT, R3_BANDS]], OG.guess || {}, (OG.script || []).length);
     OG.script = (OG.script || []).concat(tail);
-    /* Pass 13 — About This Room, online: if the lobby left
-       facts in Sterling's pocket, one is planted over Round
-       2's first ordinary entry — the same slot the table
-       plants, the same protections (never a guess slot: the
-       kind check is the guard). The draw is the host's, made
-       once, here, where the tail is born; the entry then
-       rides the plan like any other, whole-bank save and all */
-    var factSeats = Object.keys(OG.roomFacts || {});
-    var seatedN = OG.players.filter(Boolean).length;
-    if (factSeats.length && seatedN >= 2) {
-      var fSeat = factSeats[ri(factSeats.length)];
-      var fact = OG.roomFacts[fSeat];
-      var plantIdx = -1;
-      for (var pi2 = 0; pi2 < OG.script.length; pi2++) {
-        if (OG.script[pi2].round === 2 && OG.script[pi2].qInRound === 0 && OG.script[pi2].kind === "normal") { plantIdx = pi2; break; }
-      }
-      if (plantIdx >= 0 && fact && OG.players[fact.subject]) {
-        OG.script[plantIdx] = ogRoomEntry(OG.script[plantIdx], fact);
-      }
-    }
+    /* Pass 13 — About This Room, online, grown by Pass 6: the
+       tail's plants (Rounds 2 and 3) happen here, where the
+       tail is born; Round 1's plant already happened in
+       ogBuildScript, where the head is born — a tail-time
+       plant could never be dealt, Round 1 being long
+       published by then. ogFactPool rebuilds the pool from
+       the pocket, less any fact already planted on the
+       script, so a host refresh re-plants nothing twice */
+    ogPlantInto(OG.script, [2, 3], ogFactPool());
     OG.tailBuilt = true;
     G = saved;
     saveSeen();
@@ -10353,7 +10541,7 @@
          how many facts Sterling holds, never whose or what
          (the plant is a surprise on this screen too, until
          Round 2 deals it) */
-      (Object.keys(OG.roomFacts || {}).length ? '<p class="round-text og-lobby-note">FACTS IN STERLING&rsquo;S POCKET — ' + Object.keys(OG.roomFacts).length + " · ONE WILL BE DEALT IN ROUND 2</p>" : "") +
+      (Object.keys(OG.roomFacts || {}).length ? '<p class="round-text og-lobby-note">FACTS IN STERLING&rsquo;S POCKET — ' + Object.keys(OG.roomFacts).length + " · DEALT THROUGH THE NIGHT, ONE A ROUND</p>" : "") +
       /* Surfacing pass (2026-11-13): the room's one piece of
          machinery worth naming, said plainly where the room
          gathers — the room is server-held, so a dropped phone
@@ -12686,7 +12874,7 @@
        with the very functions the show flies by — never copies */
     finale: { breathMs: finaleBreathMs, stakes: composeFinaleStakes, stakesEx: composeFinaleStakesEx },
     myth: { record: recordShow, line: composeRivalryLine, cell: h2hCell, load: loadRecords },
-    roomq: { of: roomQuestionOf },
+    roomq: { of: roomQuestionOf, assign: roomAssignRounds, shapeFor: roomShapeFor, whichWrongs: roomWhichWrongs, fromSave: roomQsFromSave, state: function () { return G ? G.roomQs : null; } },
     season: { line: seasonLineFor, plaque: seasonPlaqueText, take: takeSeasonResult, target: SEASON_TARGET, name: seasonName },
     /* Research pass 1: the deck itself, exposed so
        drive-calibration asserts the pools' bucketing against

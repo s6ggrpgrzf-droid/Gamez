@@ -358,10 +358,9 @@
             <p class="fineprint">One phone, one TV. Sterling runs the show — everybody answers on their own desk, 1, 2, 3 or 4.
             Every question written for this table — the pop culture of the eighties, nineties and two-thousands.</p>
             <div id="roomQBlock">
-              <div class="setup-label">ABOUT THIS ROOM — ONE QUESTION FROM YOU (OPTIONAL)</div>
-              <p class="panel-text">Write one true thing about somebody at this table. In Round 2, Sterling deals it as a question — <em>Who in this room…?</em> — and the room guesses who it&rsquo;s about. Needs two or more at the table.</p>
-              <input id="roomQFact" class="roomq-fact" maxlength="90" placeholder="once got fired from a job they hadn't started yet" autocomplete="off">
-              <div class="roomq-row"><span class="roomq-who">IT&rsquo;S ABOUT</span><span id="roomQWho"></span></div>
+              <div class="setup-label">ABOUT THIS ROOM — QUESTIONS FROM YOU (OPTIONAL)</div>
+              <p class="panel-text">Each of you may write one true thing about somebody at this table. Sterling deals them through the night — one a round — and the room answers about itself: sometimes <em>Who in this room…?</em>, sometimes <em>Which of these is true of…?</em> Needs two or more at the table.</p>
+              <div id="roomQRows"></div>
             </div>
           </div>
           <div id="panelHost" class="hidden">
@@ -608,7 +607,7 @@
 <script src="questions.js?v=19"></script>
 <script src="qr.js?v=1"></script>
 <script src="rules.js?v=4"></script>
-<script src="game.js?v=158"></script>
+<script src="game.js?v=159"></script>
 <script>
 /* Review Pass 7 (2026-11-14): the Party-Proof Shell is retired —
    the show plays online only, and nothing registers a worker any
