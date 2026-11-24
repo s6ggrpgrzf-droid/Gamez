@@ -372,27 +372,43 @@
       "Gold, table! Did you feel the clock hurry? That was why. The Golden Question — double, for everyone who had it.",
       "And THAT was the golden one. Hidden in plain sight, paid in double. Sterling keeps his secrets — and his promises."
     ],
-    /* Dynamics pass D1 — the Table Pot. Three beats, all named
-       moments in the reveal arbitration's grammar (an authored
-       pool replaces the generic beat and never consumes the AI
-       beat latches): potfirst is the night's first feed, potgrand
-       is a feed that carries the pot past a thousand, potfinale
-       is the award line printed at the crowning. {amount} is the
-       pot's total after the beat. */
+    /* Dynamics pass D1 — the Table Pot. Beats in the reveal
+       arbitration's grammar (an authored pool replaces the
+       generic beat and never consumes the AI beat latches):
+       potfirst is the night's first feed, potgrand is a feed
+       that carries the pot past a thousand. {amount} is the
+       pot's total after the beat.
+       Road-to-9/10 Pass 4 — THE POT'S SECOND ACT: the pot no
+       longer rides with the crown. The last question is played
+       for it — its bankers split the brass (potaward for one
+       taker, potshare for several), and a last question that
+       beats the whole table leaves it with the house (pothouse).
+       {names} is the takers as a spoken list, {share} one
+       taker's cut. */
     potfirst: [
-      "And that, table, is the pot's first feeding — {amount} sits in the brass, waiting for whoever takes the night.",
-      "Nobody banked it, so the pot keeps it: {amount}. The champion takes every cent of it at the end.",
+      "And that, table, is the pot's first feeding — {amount} sits in the brass, waiting on the last question.",
+      "Nobody banked it, so the pot keeps it: {amount}. The last question of the night will decide whose it is.",
       "Into the pot it goes — {amount}. Unclaimed money doesn't leave this table; it just changes its plans."
     ],
     potgrand: [
       "The pot passes a thousand — {amount} in the brass, and growing teeth. Somebody's evening just got heavier.",
       "A thousand and beyond: the pot stands at {amount}. The misses are building somebody a very good night.",
-      "Look at it grow — {amount} in the pot. Every question this room fails is a deposit in the champion's name."
+      "Look at it grow — {amount} in the pot. Every question this room fails is a deposit toward the last question."
     ],
-    potfinale: [
-      "And the pot — {amount} that this table left behind — goes to the champion with the crown.",
-      "Plus the pot: {amount} in unclaimed money, every dollar of it earned by other people's misses.",
-      "The brass is emptied into the winner's hands — {amount} from the pot, on top of everything."
+    potaward: [
+      "And the pot — {amount} this table left behind — goes to {names} for the last answer, crown or no crown.",
+      "Plus the pot: {amount} in unclaimed money, every dollar of it earned by other people's misses — {names} takes it for landing the last one.",
+      "The brass is emptied into {names}'s hands — {amount} from the pot, won on the final question."
+    ],
+    potshare: [
+      "The last answer was shared, so the brass is too — {share} apiece to {names}, {amount} in all.",
+      "{names} split the pot — {share} each, from {amount} in unclaimed money.",
+      "The pot had more than one claimant: {share} apiece to {names}. The misses built it; the last answer divided it."
+    ],
+    pothouse: [
+      "And the pot — {amount} — stays with the house. The last question beat the whole table, so the brass keeps what the brass collected.",
+      "Nobody banked the last one, so {amount} in unclaimed money stays in the brass tonight. The house thanks you for your contributions.",
+      "The pot goes unclaimed — {amount}. The last question was the pot's question, and the pot won it."
     ],
     /* Pass N1 — The Report Card. report is the plain introduction
        printed over the finale's card; reportbig is drawn instead
@@ -2283,8 +2299,11 @@
      the total ticking down to nothing — as the money lands.
      A ceremony overlay only: no score moves here (the printed
      totals already carry the pot) and nothing is saved. */
-  function potPayoutFx(ghost) {
-    var pod = document.querySelector(".finale-row .winner-podium") || document.querySelector(".winner-total");
+  function potPayoutFx(ghost, seat) {
+    /* Pass 4: the coins fly to the pot taker's podium — the
+       champion's only when the champion is the taker */
+    var pod = (seat != null ? document.querySelector(".finale-row .pod" + seat) : null)
+      || document.querySelector(".finale-row .winner-podium") || document.querySelector(".winner-total");
     if (!pod) return;
     var pr = pod.getBoundingClientRect();
     if (!pr.width) return;
@@ -2794,7 +2813,8 @@
       rulesLine: null,          // Pass N2: Sterling's drawn naming of them, spoken once at the Round 1 intro
       report: names.map(function () { return freshReportSeat(); }), // Pass N1: the report card's raw tallies, per seat
       reportSeq: 0,             // Pass N1: questions settled this show — the earliest-bank clock for best-category ties
-      pot: 0,                   // Dynamics pass D1: the table pot — unbanked money the champion takes
+      pot: 0,                   // Dynamics pass D1: the table pot — unbanked money; Pass 4: the last question's bankers take it
+      potWinners: null,         // Pass 4: seats that banked the last question, captured at its reveal (null until then)
       declared: {},             // LEGACY (Subtraction Pass II): the Declaration is cut — nothing reads or writes this; the field stays so saves written before the cut still load
       arc: null,                // Pass 4: the night's arc record {worst, best, queue, spoken} — Sterling's story memory
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
@@ -3965,6 +3985,10 @@
            resumed reveal (whose feed is already inside this
            figure) can never feed it a second time */
         pot: G.pot || 0,
+        /* Pass 4 (road-to-9/10): the pot's claimants ride the
+           save — a refresh between the last reveal and the
+           crowning keeps the award with its bankers */
+        potWinners: Array.isArray(G.potWinners) ? G.potWinners.slice() : null,
         /* Pass 3: the declarations ride the save — a refresh at
            the break or during the Big Finish keeps every call */
         declared: {},             // LEGACY (Subtraction Pass II): written empty so the save shape never changes; nothing reads it
@@ -4068,6 +4092,7 @@
       /* Dynamics pass D1: the pot is restored exactly; a save
          written before the pot existed resumes an empty one */
       pot: (typeof sv.pot === "number" && sv.pot > 0) ? Math.floor(sv.pot) : 0,
+      potWinners: Array.isArray(sv.potWinners) ? sv.potWinners.filter(function (n) { return Number.isInteger(n) && n >= 0 && n < sv.players.length; }) : null,
       /* Pass 4: the arc restored as recorded; a save written
          before Sterling kept a story resumes with none */
       arc: (function () {
@@ -4216,14 +4241,17 @@
         if (!r) { r = { name: "", wins: 0, shows: 0, purse: 0 }; rec.players[key] = r; }
         r.name = String(f.name).trim();   /* the record wears the most recent sighting's name */
         r.shows += 1;
-        r.purse += Math.round(f.score || 0);
+        /* Pass 4: the purse counts every dollar a guest won —
+           the frozen score, plus their share of the pot when
+           the last question paid them (f.pot, usually absent) */
+        r.purse += Math.round(f.score || 0) + Math.round(f.pot || 0);
       });
       if (winnerIdx != null && winnerIdx >= 0 && finishers[winnerIdx]) {
         var wKey = recNameKey(finishers[winnerIdx].name), wr = rec.players[wKey];
         if (wr) {
           wr.wins += 1;
           var streak = (rec.champion && rec.champion.nameKey === wKey) ? (rec.champion.streak || 1) + 1 : 1;
-          rec.champion = { nameKey: wKey, streak: streak, amount: Math.round(finishers[winnerIdx].score || 0), date: recToday() };
+          rec.champion = { nameKey: wKey, streak: streak, amount: Math.round(finishers[winnerIdx].score || 0) + Math.round(finishers[winnerIdx].pot || 0), date: recToday() };
         }
       }
       /* Designer pass 5 (research programme Pass 3) — the night
@@ -4241,7 +4269,7 @@
          grammar, so a changed cast is a different table and is
          greeted as one. Both writes ride the same show-id
          guard as everything else in this function. */
-      var HONOUR_SLOTS = { "BEST CATEGORY": "best", "FASTEST HAND": "fastest", "BIGGEST BANK": "biggest", "HOTTEST STREAK": "streak" };
+      var HONOUR_SLOTS = { "BEST CATEGORY": "best", "FASTEST HAND": "fastest", "BIGGEST BANK": "biggest", "HOTTEST STREAK": "streak", "THE POT": "pot" };
       var flatHonours = [];
       if (awards) awards.forEach(function (a) {
         var slot = HONOUR_SLOTS[a.k]; if (!slot) return;
@@ -4251,7 +4279,7 @@
           flatHonours.push({ k: a.k, name: String(w.name).trim(), v: w.v });
           var r = rec.players[key];
           if (r) {
-            if (!r.honours) r.honours = { best: 0, fastest: 0, biggest: 0, streak: 0 };
+            if (!r.honours) r.honours = { best: 0, fastest: 0, biggest: 0, streak: 0, pot: 0 };
             r.honours[slot] = (r.honours[slot] || 0) + 1;
           }
         });
@@ -4540,7 +4568,7 @@
          measured, not guessed */
       var honParts = [];
       if (r.honours) {
-        var HONOUR_ORDER = [["best", "BEST CATEGORY"], ["fastest", "FASTEST HAND"], ["biggest", "BIGGEST BANK"], ["streak", "HOTTEST STREAK"]];
+        var HONOUR_ORDER = [["best", "BEST CATEGORY"], ["fastest", "FASTEST HAND"], ["biggest", "BIGGEST BANK"], ["streak", "HOTTEST STREAK"], ["pot", "THE POT"]];
         HONOUR_ORDER.forEach(function (pr) { if (r.honours[pr[0]] > 0) honParts.push(pr[1] + " ×" + r.honours[pr[0]]); });
       }
       var honLine = "";
@@ -5189,8 +5217,11 @@
     if (h) out.push({ k: "HOTTEST STREAK", winners: h.map(function (r) { return { name: r.name, v: String(r.d.peak) }; }) });
     return out;
   }
-  function reportPanelHTML(rows, say) {
+  function reportPanelHTML(rows, say, potEntry) {
     var awards = reportAwardsOf(rows);
+    /* Pass 4: the pot's honour joins the board when it was
+       taken — a fifth line beside the four tally honours */
+    if (potEntry) awards = awards.concat([potEntry]);
     var body;
     if (awards.length) {
       body = awards.map(function (a) {
@@ -5225,7 +5256,9 @@
      The finale becomes a card worth sending: a 1080x1350 portrait
      card composed on a canvas from the facts each screen already
      holds at its finale — the champion and their total exactly as
-     the marquee states them (the pot folded in), the standings as
+     the marquee states them (their score alone since Pass 4 —
+     the pot prints as its own line, naming its takers), the
+     standings as
      the desks show them, the night's biggest bank from the Report
      Card's own tallies, the series line when the night has one.
      Recorded facts only, as always: a drawn online finale crowns
@@ -5274,6 +5307,18 @@
     });
     return best;
   }
+  /* Pass 4: the share card's pot line — the brass belongs to
+     the last question's bankers now, and the card says whose
+     it was; a card rebuilt without the takers (a pad's) prints
+     the amount alone rather than credit the champion */
+  function sharePotText(d) {
+    if (d.potHouse) return "THE HOUSE KEEPS THE POT — " + money(d.pot);
+    if (d.potNames && d.potNames.length === 1 && d.champion && d.potNames[0] === d.champion.name)
+      return "★ AND TOOK THE " + money(d.pot) + " POT ★";
+    if (d.potNames && d.potNames.length)
+      return "★ THE POT — " + money(d.pot) + " TO " + d.potNames.map(function (n) { return String(n).toUpperCase(); }).join(" & ") + " ★";
+    return "★ THE POT — " + money(d.pot) + " ★";
+  }
   function finishShareData(o) {
     o.date = shareDateStr();
     o.text = o.champion
@@ -5283,30 +5328,34 @@
   }
   /* the table's card: built inside winnerScreen, where the pot,
      the series line and the verdict are all in hand */
-  function shareDataTable(i, potAmt, seriesLine) {
+  function shareDataTable(i, potAmt, seriesLine, award) {
     var p = G.players[i];
     var order = G.players.map(function (pp, ii) { return ii; }).sort(function (a, b) { return G.players[b].score - G.players[a].score; });
     var rows = order.map(function (ii) { return { name: G.players[ii].name, d: deriveReport(G.report ? G.report[ii] : null) }; });
     return finishShareData({
-      champion: { name: p.name, seat: i, total: p.score + (potAmt || 0), house: p.house != null, honours: championHonours(deriveReport(G.report ? G.report[i] : null)) },
+      champion: { name: p.name, seat: i, total: p.score, house: p.house != null, honours: championHonours(deriveReport(G.report ? G.report[i] : null)) },
       pot: potAmt || 0,
+      potNames: award && !award.house ? award.seats.map(function (ii) { return G.players[ii].name; }) : null,
+      potHouse: !!(award && award.house),
       standings: order.map(function (ii) { return { name: G.players[ii].name, score: G.players[ii].score, seat: ii }; }),
       seriesLine: seriesLine || null,
       flourish: nightBiggest(rows)
     });
   }
   /* the online host's card: built inside ogWinner — a drawn show
-     (no decided champion) crowns nobody and awards no pot,
-     exactly as its finale states */
-  function shareDataHost(winSeat, hasWinner, potAmt, seriesLine) {
+     crowns nobody, but Pass 4's pot answers to the last question,
+     not the crown, so its line rides the card either way */
+  function shareDataHost(winSeat, hasWinner, potAmt, seriesLine, award) {
     var idxs = [];
     OG.players.forEach(function (p, ii) { if (p) idxs.push(ii); });
     var order = idxs.slice().sort(function (a, b) { return OG.players[b].score - OG.players[a].score; });
     var p = OG.players[winSeat];
     var rows = OG.report ? order.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; }) : [];
     return finishShareData({
-      champion: hasWinner ? { name: p.name, seat: winSeat, total: p.score + (potAmt || 0), house: false, honours: championHonours(OG.report ? reportView(OG.report[winSeat]) : null) } : null,
-      pot: hasWinner ? (potAmt || 0) : 0,
+      champion: hasWinner ? { name: p.name, seat: winSeat, total: p.score, house: false, honours: championHonours(OG.report ? reportView(OG.report[winSeat]) : null) } : null,
+      pot: potAmt || 0,
+      potNames: award && !award.house ? award.seats.map(function (ii) { return OG.players[ii].name; }) : null,
+      potHouse: !!(award && award.house),
       standings: order.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score, seat: ii }; }),
       seriesLine: seriesLine || null,
       flourish: nightBiggest(rows)
@@ -5335,8 +5384,13 @@
     var rows = s.report ? order.map(function (ii) { return { name: s.players[ii].name, d: reportView(s.report[ii]) }; }) : [];
     var cp = champSeat != null ? s.players[champSeat] : null;
     return finishShareData({
-      champion: cp ? { name: cp.name, seat: champSeat, total: cp.score + (s.pot || 0), house: false, honours: championHonours(s.report ? reportView(s.report[champSeat]) : null) } : null,
-      pot: cp ? (s.pot || 0) : 0,
+      champion: cp ? { name: cp.name, seat: champSeat, total: cp.score, house: false, honours: championHonours(s.report ? reportView(s.report[champSeat]) : null) } : null,
+      /* Pass 4: the pad's snapshot carries the pot's size but not
+         its takers — the card prints the brass without a name
+         rather than credit it to the champion by default */
+      pot: s.pot || 0,
+      potNames: null,
+      potHouse: false,
       standings: order.map(function (ii) { return { name: s.players[ii].name, score: s.players[ii].score, seat: ii }; }),
       seriesLine: null,
       flourish: nightBiggest(rows)
@@ -5422,9 +5476,7 @@
       ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
       cursor = 916;
       if (d.pot > 0) {
-        var potTxt = d.champion.house
-          ? "THE HOUSE KEEPS THE POT TOO — " + money(d.pot)
-          : "★ AND TOOK THE " + money(d.pot) + " POT ★";
+        var potTxt = sharePotText(d);
         var ppx = fitPx(potTxt, 36, 872, "700", F);
         centered(potTxt, cursor + 20, "700 " + ppx + "px " + F, "#F6EBCB");
         cursor += 76;
@@ -5435,6 +5487,14 @@
       ctx.shadowColor = "transparent"; ctx.shadowOffsetY = 0;
       centered("NO CROWN TONIGHT — THE TABLE STANDS MATCHED AT " + money(d.standings.length ? d.standings[0].score : 0), 606, "500 30px " + F, "rgba(255,246,232,.85)");
       cursor = 668;
+      /* Pass 4: a drawn show still had a last question — the
+         pot's line stands even when the crown's doesn't */
+      if (d.pot > 0) {
+        var potTxt2 = sharePotText(d);
+        var ppx2 = fitPx(potTxt2, 36, 872, "700", F);
+        centered(potTxt2, cursor + 20, "700 " + ppx2 + "px " + F, "#F6EBCB");
+        cursor += 76;
+      }
     }
     /* Queue Pass 16 (2026-11-22): the stack used to run on fixed
        pitches, so the fullest night (pot, four standings, a
@@ -5808,7 +5868,7 @@
     /* Dynamics pass D1: the pot is a recorded fact of the night,
        told like the rest — and, like an unbanked round, it is
        simply absent while it stands at nothing */
-    var potLine = (typeof pot === "number" && pot > 0) ? "The pot stands at " + money(pot) + " — the champion takes it all." : null;
+    var potLine = (typeof pot === "number" && pot > 0) ? "The pot stands at " + money(pot) + " — the last question plays for it." : null;
     if (potLine) recap += " " + potLine;
     /* Dynamics pass D2: a granted Second Wind is a recorded fact
        of the break, told like the rest — the granted names are
@@ -5950,7 +6010,8 @@
           ["The Long Shot", "Chasing the leader? The further behind you are, the more chips you may ride — up to five"],
           ["The pay", "Get it right and the bet pays in full — no drain, no deductions"],
           ["The risk", "Get it wrong and the bet takes its cut — half your stake"],
-          ["The last one", "Question 15 takes everything: a miss costs the whole stake, and a wrong answer costs $300 more"]]
+          ["The last one", "Question 15 takes everything: a miss costs the whole stake, and a wrong answer costs $300 more"],
+          ["The pot", "Everything the table missed sits in the brass — the last question plays for it: its bankers split it, and a table it beats leaves it with the house"]]
     };
     /* Perfectionist fix pass 2 (2026-11-15): the rows are dealt
        into two .fact-col stacks in the markup, so a short stage
@@ -7575,8 +7636,10 @@
     return true;
   }
   /* Dynamics pass D1 — THE TABLE POT (table settlement half).
-     Money nobody banks feeds a pot the champion takes; the online
-     room server runs the identical rule (closeQuestion in room.js).
+     Money nobody banks feeds the pot; the online room server
+     runs the identical rule (closeQuestion in room.js). Since
+     Pass 4 the brass belongs to the last question's bankers —
+     the feed rule itself never changed, only the award.
      PURE: given the question in its settled state — the marks ARE
      the answer record at the table — and the seats' bets, it
      returns what this question feeds. Rounds 1-2 feed only on a
@@ -7607,6 +7670,38 @@
     if (!(before > 0)) return "first";
     if (before < 1000 && before + fed >= 1000) return "grand";
     return null;
+  }
+  /* Road-to-9/10 Pass 4 — THE POT'S SECOND ACT: the pot's
+     award, computed once at the crowning from the bankers of
+     the last question (captured at its reveal: G.potWinners /
+     OG.potWinners). The crown no longer carries the brass:
+     the last question's bankers split it in equal shares
+     rounded to the game's $10 grammar, and a last question
+     that beat the whole table leaves it with the house. A $0
+     pot has no award and prints nothing, exactly as before. */
+  function potAwardOf(potAmt, seats, players) {
+    if (!(potAmt > 0)) return null;
+    var takers = (seats || []).filter(function (i) { return !!players[i]; });
+    if (!takers.length) return { house: true, amt: potAmt, seats: [], shares: {}, share: 0, names: "" };
+    var share = Math.max(10, Math.round(potAmt / takers.length / 10) * 10);
+    var shares = {};
+    takers.forEach(function (i) { shares[i] = share; });
+    var names = takers.map(function (i) { return players[i].name; });
+    var spoken = names.length === 1 ? names[0]
+      : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+    return { house: false, amt: potAmt, seats: takers, shares: shares, share: share, names: spoken };
+  }
+  function potAwardLine(award) {
+    if (!award) return "";
+    if (award.house) return authoredLine("pothouse", { amount: money(award.amt) });
+    return authoredLine(award.seats.length > 1 ? "potshare" : "potaward",
+      { names: award.names, amount: money(award.amt), share: money(award.share) });
+  }
+  /* the Awards Board's fifth line: the pot's own honour,
+     present only on a night the pot was taken */
+  function potAwardEntry(award, players) {
+    if (!award || award.house) return null;
+    return { k: "THE POT", winners: award.seats.map(function (i) { return { name: players[i].name, v: money(award.shares[i]) }; }) };
   }
   /* Visual pass V4 — THE AUDIENCE: the house answers the reveal.
      A bank ripples the row (a staggered lift, left to right), an
@@ -7763,6 +7858,17 @@
     G.pot = potBefore + potFed;
     c.potFed = potFed;
     c.potMoment = potMomentFor(potBefore, potFed);
+    /* Road-to-9/10 Pass 4: the last question of the night is
+       played for the pot — its bankers, and only they, split
+       the brass at the crowning. The capture rides the same
+       single commit as the feed, so a resumed reveal repaints
+       it identically. House seats bank for the room, never
+       for the pot: a last question only house seats banked
+       is a night the house keeps it. (The Decider returned
+       far above and can never reach this line.) */
+    if (G.round === 3 && G.qInRound === R3_COUNT - 1) {
+      G.potWinners = winners.filter(function (i) { return G.players[i] && G.players[i].house == null; });
+    }
     /* New programme pass 2: the reveal writes the round's facts
        while the numbers are in its hands — biggest bank and the
        quick-draw tally the Intermission will be told from */
@@ -8138,7 +8244,7 @@
     setCam(1); /* Graphics Pass 3: the crowning pulls back wide */
     setPlot("house"); /* Graphics Pass 2: house light for the ritual */
     var p = G.players[i];
-    stage(envelopeHTML(p.name, money(p.score + (G.pot || 0))));
+    stage(envelopeHTML(p.name, money(p.score)));
     envelopeWire(function () { G._envDone = true; winnerScreen(i, tiedIdx); });
     autoGo("btnEnvOpen", "env", 14000, function () { return !!G && !G._envDone; });
   }
@@ -8162,20 +8268,27 @@
        participation records exactly as any show does. The night's
        SERIES, advanced below, is a different book: it counts
        house seats like any seat at the table. */
+    /* Road-to-9/10 Pass 4: the pot's award is settled before
+       anything is written — the last question's bankers split
+       the brass, the crown keeps only its own score */
+    var potAmt = G.pot || 0;
+    var potAward = potAwardOf(potAmt, G.potWinners, G.players);
     var guestFinishers = [], guestWin = -1;
     G.players.forEach(function (pp, ii) {
       if (pp.house != null) return;
       if (ii === i && !tiedIdx) guestWin = guestFinishers.length;
-      /* Dynamics pass D1: the champion's recorded figure carries
-         the pot — it is money they won, so the purse (and the
-         crown's amount) includes it. Nobody else's figure moves:
-         the pot was never part of any score */
-      guestFinishers.push({ name: pp.name, score: pp.score + (ii === i && !tiedIdx ? (G.pot || 0) : 0) });
+      /* Pass 4: a finisher's recorded score is the frozen score
+         alone — the pot was never part of any score. A pot
+         taker's share rides as its own figure (pot), and the
+         record adds it to their purse, as money they won */
+      guestFinishers.push({ name: pp.name, score: pp.score, pot: (potAward && potAward.shares[ii]) || 0 });
     });
     /* Designer pass 5: the night's honours ride into the record
        with the show — the same derivation the Report Card is
        about to print, computed here from the reveal tallies */
     var awardsT = reportAwardsOf(G.players.map(function (pp, ii) { return { name: pp.name, d: deriveReport(G.report ? G.report[ii] : null) }; }));
+    var potEntryT = potAwardEntry(potAward, G.players);
+    if (potEntryT) awardsT.push(potEntryT);
     if (guestFinishers.length) recordShow(G.showId, guestFinishers, guestWin, awardsT);
     var seasonWonT = takeSeasonResult();
     /* Programme pass 4 — Rematch Night: the night advances at the
@@ -8191,19 +8304,12 @@
        differs is only the telling: the deciderwin line and the
        marker on the winner's podium */
     var deciderWon = !!(G.decider && G.decider.winner === i);
-    /* Dynamics pass D1: the pot joins the champion's displayed
-       final total — the score it rides on never moved, so the
-       standings, the series verdict and the winner facts all keep
-       reading the frozen score; only the crowning total (and the
-       record written above) carries it. A $0 pot changes not one
-       word of this screen. A house champion takes it narratively:
-       the note under the total says so, and Records — written
-       from guestFinishers alone — never hears of it. */
-    var potAmt = G.pot || 0;
-    var potLineHtml = potAmt > 0
-      ? '<div class="winner-sub pot-line">' + esc(p.house != null
-          ? "THE HOUSE KEEPS THE POT TOO — " + money(potAmt)
-          : authoredLine("potfinale", { amount: money(potAmt) })) + "</div>"
+    /* Pass 4: the crowning total is the champion's own score —
+       the pot is a separate honour with its own line under it,
+       naming its takers (or the house that kept it). A $0 pot
+       changes not one word of this screen. */
+    var potLineHtml = potAward
+      ? '<div class="winner-sub pot-line">' + esc(potAwardLine(potAward)) + "</div>"
       : "";
     var wStand = G.players.map(function (pp) { return { name: pp.name, score: pp.score }; })
       .sort(function (a, b) { return b.score - a.score; });
@@ -8246,10 +8352,10 @@
        from the tallies the reveals wrote; nothing on it was not
        first settled by a reveal. */
     var reportRowsT = order.map(function (ii) { return { name: G.players[ii].name, d: deriveReport(G.report ? G.report[ii] : null) }; });
-    var reportHTMLT = reportPanelHTML(reportRowsT, reportSayFor(p.name, deriveReport(G.report ? G.report[i] : null), reportRowsT, deciderWon));
+    var reportHTMLT = reportPanelHTML(reportRowsT, reportSayFor(p.name, deriveReport(G.report ? G.report[i] : null), reportRowsT, deciderWon), potEntryT);
     /* Pass N3: the share card's data model, built from this same
        verdict — champion, pot and series line exactly as printed */
-    shareNight = shareDataTable(i, potAmt, sFinaleLine);
+    shareNight = shareDataTable(i, potAmt, sFinaleLine, potAward);
     /* Research pass 7: the stage repaint below takes the vessel
        with it — remember where it stood and what it held, so
        the ceremony can pay the pot out in view of the room */
@@ -8262,7 +8368,7 @@
       '<div class="marquee finale-marquee"><div class="kicker">THE GILDED HOUR · FINAL RESULT</div>' +
       '<div class="winner-word">WINNER</div>' +
       '<div class="winner-name">' + esc(p.name) + (p.house != null ? '<span class="champ-tag">★ HOUSE WIN</span>' : '<span class="champ-tag">★ CHAMPION</span>') + '</div>' +
-      '<div class="winner-total">' + money(p.score + potAmt) + "</div>" +
+      '<div class="winner-total">' + money(p.score) + "</div>" +
       potLineHtml +
       (titleSub ? '<div class="winner-sub">' + titleSub + "</div>" : "") +
       (seasonWonT ? '<div class="winner-sub season-line">AND WITH IT, THE SEASON — ' + esc(seasonWonT.champion.toUpperCase()) + " TAKES THE GILDED CUP · " + esc(seasonWonT.name) + "</div>" : "") +
@@ -8282,7 +8388,9 @@
     renderSeats();
     buildBulbs(document.querySelector(".finale-marquee"));
     finaleCeremony();
-    if (potGhost) potPayoutFx(potGhost);
+    /* Pass 4: the brass pays out only when it was taken — and
+       it flies to a taker's podium now, not the champion's */
+    if (potGhost && potAward && !potAward.house) potPayoutFx(potGhost, potAward.seats[0]);
     $("btnShareNight").addEventListener("click", function () { openShareNight(); });
     $("btnAgain").addEventListener("click", function () {
       stopLeaves();
@@ -9610,6 +9718,10 @@
         /* Dynamics pass D1: the pot rides the plan as a repaint
            bridge — the room remains its only authority */
         pot: OG.pot || 0,
+        /* Pass 4: the pot's claimants ride the plan too — they
+           are the host's own capture from the last reveal, and
+           no snapshot carries them */
+        potWinners: Array.isArray(OG.potWinners) ? OG.potWinners.slice() : null,
         /* Dynamics pass D2: the break's Second Wind telling rides
            the plan like the tease — the granted names and the
            drawn words, so a host restored mid-break retells the
@@ -9708,6 +9820,7 @@
       guess: null, goldenSlot: null, tailBuilt: false, // Designer pass 6: the show's guess map, golden seat, and whether the script's tail (Rounds 2-3) has been dealt
       tailBuilt: false,
       pot: 0,                  // Dynamics pass D1: the room's pot, mirrored from its snapshots and reveals
+      potWinners: null,        // Pass 4: seats that banked the last question, captured at its reveal (null until then)
       report: null,            // Pass N1: the referee's report card, dealt with the ended broadcast / ended snapshot
       breakWind: null,         // Dynamics pass D2: {names, line} — this break's Second Wind grant, as this screen tells it
       phase: "connecting", lastRevealQid: null,
@@ -9769,6 +9882,7 @@
          figure and overwrites this; a plan written before the pot
          existed restarts it empty */
       OG.pot = (typeof plan.pot === "number" && plan.pot > 0) ? Math.floor(plan.pot) : 0;
+      OG.potWinners = Array.isArray(plan.potWinners) ? plan.potWinners.filter(function (n) { return Number.isInteger(n) && n >= 0 && n < 4; }) : null;
       /* Dynamics pass D2: the break's Second Wind telling rides
          the plan beside the tease; a plan written before Second
          Wind has none, and the room's snapshot can still supply
@@ -10283,6 +10397,7 @@
     OG.idx = 0; OG.curRound = 0;
     OG.cur = null; OG.decider = null;
     OG.pot = 0; /* Dynamics pass D1: a fresh show's pot is empty — the room resets its own on new_show; this mirror follows */
+    OG.potWinners = null; /* Pass 4: a fresh show has no claimants yet */
     OG.report = null; /* Pass N1: a fresh show's card is unwritten until its own finale deals it */
     OG.tailBuilt = false; /* the dealt tail belongs to the last show */
     OG.facts = freshFacts();
@@ -10374,7 +10489,7 @@
       2: (OG.rules && OG.rules.secondCut)
         ? "Same game, double money — $200, $400, $600. Your lifelines are live: each of you holds TWO Cut Two tokens for the whole show. Call one from your phone before the window closes and two wrong answers vanish — from your phone only; every other screen still sees four. And the round closes with the Headline Question — double money again, half the time on the clock."
         : "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it from your phone before the window closes and two wrong answers vanish — from your phone only; every other screen still sees four. And the round closes with the Headline Question — double money again, half the time on the clock.",
-      3: "Three questions. Before each one, bet on yourself from your phone — a chip is $100, and the bet stays secret until the reveal. Chasing the leader? That's the Long Shot: the further behind you are, the more chips you may ride — up to five. Get it right and the bet pays in full. Get it wrong and the bet costs you — half your stake, all of it on the last question, and $300 more for a wrong answer there."
+      3: "Three questions. Before each one, bet on yourself from your phone — a chip is $100, and the bet stays secret until the reveal. Chasing the leader? That's the Long Shot: the further behind you are, the more chips you may ride — up to five. Get it right and the bet pays in full. Get it wrong and the bet costs you — half your stake, all of it on the last question, and $300 more for a wrong answer there. And the pot — everything the table has missed all night — rides on that last question: bank it and you split the brass; if it beats the whole table, the house keeps it."
     };
     stage('<div class="bumper"><div class="round-kicker">ROUND ' + e.round + "</div>" +
       '<div class="round-title">' + titles[e.round] + "</div>" +
@@ -10829,6 +10944,14 @@
     (r.results || []).forEach(function (res) {
       if (res.correct) winners.push(res.seat);
     });
+    /* Road-to-9/10 Pass 4: the last question is played for the
+       pot — its bankers, and only they, split the brass at the
+       crowning. The capture reads the referee's own payload,
+       so a resynced reveal restores it identically; the
+       Decider banks nothing and never reaches this line. */
+    if (!r.decider && OG.script && OG.idx === OG.script.length - 1) {
+      OG.potWinners = winners.slice();
+    }
     /* Pass D4: the table's scoring grammar, derived from this very
        payload. banked > 0 banks; a wrong answer that was actually
        given (pick/num present) misses; a seat that never answered
@@ -11108,7 +11231,7 @@
           OG._envDone = "pending";
           setCam(1);
           setPlot("house");
-          stage(envelopeHTML(OG.players[eSeat].name, money(OG.players[eSeat].score + (OG.pot || 0))));
+          stage(envelopeHTML(OG.players[eSeat].name, money(OG.players[eSeat].score)));
           envelopeWire(function () { OG._envDone = true; ogWinner(); });
           return;
         }
@@ -11137,15 +11260,19 @@
        as the table: a drawn show crowns nobody */
     var prevChampO = loadRecords().champion;
     var hasWinner = decWin != null || tied.length === 1;
-    /* Dynamics pass D1: the room's pot (mirrored on OG from the
-       snapshots and reveals) joins the champion's recorded figure
-       and displayed total — the server's scores never carried it,
-       and a drawn show (no decided champion) awards it to nobody */
+    /* Pass 4: the room's pot (mirrored on OG from the snapshots
+       and reveals) answers to the last question, not the crown —
+       its bankers split it as their own figure beside their
+       frozen scores, and a drawn show changes none of that: the
+       pot had a verdict even when the crown didn't */
     var potAmtO = OG.pot || 0;
+    var potAwardO = potAwardOf(potAmtO, OG.potWinners, OG.players);
     /* Designer pass 5: the room's honours ride into the record
        too — from the referee's card when one was dealt */
     var awardsO = OG.report ? reportAwardsOf(idxs.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; })) : null;
-    recordShow(ogShowId(), idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score + (hasWinner && ii === winSeat ? potAmtO : 0) }; }), hasWinner ? winSeat : -1, awardsO);
+    var potEntryO = potAwardEntry(potAwardO, OG.players);
+    if (potEntryO) { if (!awardsO) awardsO = []; awardsO.push(potEntryO); }
+    recordShow(ogShowId(), idxs.map(function (ii) { return { name: OG.players[ii].name, score: OG.players[ii].score, pot: (potAwardO && potAwardO.shares[ii]) || 0 }; }), hasWinner ? winSeat : -1, awardsO);
     var seasonWonO = takeSeasonResult();
     /* Programme pass 4 — Rematch Night: the night advances at the
        same guarded moment, on the finale's own verdict — a crown
@@ -11190,15 +11317,15 @@
        older than the pass) — no panel; the finale stands as it
        always has rather than inventing one. */
     var reportRowsO = OG.report ? order.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; }) : null;
-    var reportHTMLO = reportRowsO ? reportPanelHTML(reportRowsO, reportSayFor(p.name, reportView(OG.report[winSeat]), reportRowsO, decWin === winSeat)) : "";
+    var reportHTMLO = reportRowsO ? reportPanelHTML(reportRowsO, reportSayFor(p.name, reportView(OG.report[winSeat]), reportRowsO, decWin === winSeat), potEntryO) : "";
     /* Pass N3: the share card's data model, from this same verdict */
-    shareNight = shareDataHost(winSeat, hasWinner, potAmtO, sFinaleLineO);
+    shareNight = shareDataHost(winSeat, hasWinner, potAmtO, sFinaleLineO, potAwardO);
     stage('<div class="finale-wrap' + (reportHTMLO ? " has-report" : "") + (sFinaleLineO ? " has-series" : "") + '"><div class="spot-cone" aria-hidden="true"></div><div class="finale-main">' +
       '<div class="marquee finale-marquee"><div class="kicker">THE GILDED HOUR · FINAL RESULT</div>' +
       '<div class="winner-word">WINNER</div>' +
       '<div class="winner-name">' + esc(p.name) + '<span class="champ-tag">★ CHAMPION</span></div>' +
-      '<div class="winner-total">' + money(p.score + (hasWinner ? potAmtO : 0)) + "</div>" +
-      (hasWinner && potAmtO > 0 ? '<div class="winner-sub pot-line">' + esc(authoredLine("potfinale", { amount: money(potAmtO) })) + "</div>" : "") +
+      '<div class="winner-total">' + money(p.score) + "</div>" +
+      (potAwardO ? '<div class="winner-sub pot-line">' + esc(potAwardLine(potAwardO)) + "</div>" : "") +
       (titleSubO ? '<div class="winner-sub">' + titleSubO + "</div>" : "") +
       (seasonWonO ? '<div class="winner-sub season-line">AND WITH IT, THE SEASON — ' + esc(seasonWonO.champion.toUpperCase()) + " TAKES THE GILDED CUP · " + esc(seasonWonO.name) + "</div>" : "") +
       (sFinaleLineO ? '<div class="winner-sub series-line' + (sNightWonO ? " night-won" : "") + '">' + esc(sFinaleLineO) + "</div>" : "") +
@@ -12338,7 +12465,7 @@
     /* Dynamics pass D1: the pot's own arithmetic, exposed so
        drive-pot asserts the feed with the very function the
        settlement runs — never a copy of it */
-    pot: { feed: tablePotFeed, moment: potMomentFor },
+    pot: { feed: tablePotFeed, moment: potMomentFor, award: potAwardOf, awardLine: potAwardLine },
     /* Gameplay-visuals pass G1: the melt's own mapping, exposed so
        drive-melt asserts levels with the very functions the painters
        fly by — never a copy of them */
