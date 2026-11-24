@@ -324,6 +324,29 @@
       "{name} cuts two loose! The blades are out, the net draws tight — now choose well.",
       "The scissors flash for {name} — Cut Two, spent in broad daylight. Two answers fall away."
     ],
+    /* Road-to-9/10 Pass 5 — THE TRAP. When two or more seats fall
+       for the SAME wrong answer, the reveal names the answer and
+       its fellowship ({names} fell for {answer}) instead of the
+       generic beat. The moment is settled at the commit like the
+       pot's, so a resumed reveal re-speaks it; it ranks below the
+       night's arc and above the quick-draw call-out. */
+    trap: [
+      "One wrong answer, taken in chorus: ‘{answer}’. {names} fell together — which at least is company.",
+      "‘{answer}’ — the answer this table wanted to be true. {names} wanted it most. The question disagrees.",
+      "{names} cannot all be wrong the same way by accident — ‘{answer}’ simply looked that true. It wasn’t.",
+      "The trap of the night, so far: ‘{answer}’. {names} all reached for it, and it was painted on the ceiling."
+    ],
+    /* Road-to-9/10 Pass 5 — the second scissors. A Cut Two spent
+       after the night's first names the seat that opened the
+       blades ({first}); the first spender's own later spends
+       keep the plain cutmoment pool — Sterling does not cite a
+       player to themselves. */
+    cutagain: [
+      "The scissors are out again — {name} spends a Cut Two. {first} opened the blades tonight, and the room is getting surgical.",
+      "Another Cut Two falls, this one {name}’s. {first} started the cutting tonight — a habit is forming.",
+      "{name} cuts two more loose. The blades have been busy since {first} first reached for them.",
+      "Cut Two, again — {name} this time. {first} set the scissors loose tonight and they have not rested since."
+    ],
     /* Dynamics pass D2 — Second Wind: spoken at the break, only
        when the break actually granted one ({name} is the granted
        trailer, joined when the cellar is shared). The line is
@@ -342,7 +365,10 @@
       "Your bet, table — stake your pride in hundreds and say it like a headline. The cheap seats are listening."
     ],
     longshot: [
-      "{name} takes the Long Shot — {chips} chips, a {amount} swing on a single answer. The room leans in."
+      "{name} takes the Long Shot — {chips} chips, a {amount} swing on a single answer. The room leans in.",
+      "{name} goes long — {chips} chips, {amount} the swing. The room holds its breath in stereo.",
+      "The Long Shot, taken by {name}: {chips} chips against the night, {amount} riding on being right.",
+      "{name} believes, and proves it with {chips} chips — the Long Shot, {amount} in the balance."
     ],
     headline: [
       "The Headline Question, table — double money again, half the clock, and every eye in the room on one card. Make it a good one.",
@@ -465,7 +491,9 @@
     ],
     housewin: [
       "The house takes it — {name} played a beautiful show, and the table applauds its own. The record books stay with the guests; the glory, tonight, stays in the family.",
-      "{name} for the house! Somewhere, Sterling is smiling into his sleeve. Your crown waits for another night — and it will keep."
+      "{name} for the house! Somewhere, Sterling is smiling into his sleeve. Your crown waits for another night — and it will keep.",
+      "A house win, and a fair one: {name} outplayed the room at its own table. The crown stays home tonight — the chase continues.",
+      "{name} takes it for the house. No disgrace in the losing, table — only in pretending it didn’t happen."
     ],
     /* Design pass 3: the Quick-Draw call-out. When the first correct
      * lock-in is banked, this pool REPLACES the reveal's beat line
@@ -574,7 +602,9 @@
     ],
     rematchdraw: [
       "The last time this table played, nobody took the crown — dead level, unfinished business. We finish it tonight.",
-      "This table owes me a champion: last time out, the night ended level. Sterling has kept the table set ever since."
+      "This table owes me a champion: last time out, the night ended level. Sterling has kept the table set ever since.",
+      "Last time this table played, the night ended level — a champion owed and unpaid. Tonight we collect.",
+      "The last show at this table crowned nobody. The crown has waited patiently. It waits no longer."
     ],
     /* New programme pass 1 — the Decider. All four pools are LOCAL
        (authored, drawn through hostSay / authoredLine — no worker
@@ -592,19 +622,27 @@
     ],
     decideragain: [
       "Still nothing between them — so we go again. A fresh number, a fresh call. The Decider does not blink.",
-      "The Decider deals another. Same two, same crown, new number — somebody be nearer this time."
+      "The Decider deals another. Same two, same crown, new number — somebody be nearer this time.",
+      "Again, then. The Decider has infinite patience and exactly one question at a time.",
+      "Neither would yield, so the Decider asks once more. This is not indecision, table — this is thoroughness."
     ],
     deciderhit: [
       "{name} called it closest — the Decider has spoken, and so has the crown.",
-      "Nearest the truth when everything rode on one number: {name}. The Decider is decisive after all."
+      "Nearest the truth when everything rode on one number: {name}. The Decider is decisive after all.",
+      "Closest when it mattered most: {name}. The Decider has its answer, and so does the crown.",
+      "One number nearer than the other — {name} takes the Decider, and the night with it."
     ],
     deciderlevel: [
       "Identical. The same distance, to the unit. The number refuses to choose — so the Decider goes again.",
-      "Dead level AGAIN. Even the truth can't split them. Another question, then."
+      "Dead level AGAIN. Even the truth can't split them. Another question, then.",
+      "The same distance, again, to the unit. The Decider shrugs and deals once more.",
+      "Level. Perfectly, stubbornly level. The Decider will ask again — it is enjoying this."
     ],
     deciderwin: [
       "{name} takes the Gilded Hour — and took it the hard way, closest to the truth with the whole show on one number.",
-      "The crown goes to {name}, won head-to-head in the Decider. Nobody can say it was given away."
+      "The crown goes to {name}, won head-to-head in the Decider. Nobody can say it was given away.",
+      "Won in the Decider, which is to say won outright: {name} takes the Hour.",
+      "{name}, champion by the narrowest instrument the house owns — one number, nearest the truth. The crown fits."
     ],
     /* Programme pass 4 — Rematch Night. winnernight is the finale's
        authored winner line when this show's win also took the
@@ -622,7 +660,9 @@
     ],
     scattered: [
       "The table has scattered — every seat stands empty, and a rematch needs someone still in theirs. The room stays open: gather your people, and Sterling will deal again.",
-      "Every chair stands empty and the room has gone quiet. This room stays open while you round them up — Sterling keeps the lights on."
+      "Every chair stands empty and the room has gone quiet. This room stays open while you round them up — Sterling keeps the lights on.",
+      "A rematch needs a table, and the table has gone home. The room keeps its code and its patience — bring them back.",
+      "The seats are empty and the hour is late, but the room endures. Gather the table, and we go again."
     ]
   };
   /* Improvement 5 — Sterling's category lines: reveal-moment pools
@@ -2815,6 +2855,7 @@
       reportSeq: 0,             // Pass N1: questions settled this show — the earliest-bank clock for best-category ties
       pot: 0,                   // Dynamics pass D1: the table pot — unbanked money; Pass 4: the last question's bankers take it
       potWinners: null,         // Pass 4: seats that banked the last question, captured at its reveal (null until then)
+      tonight: null,            // Pass 5 (road-to-9/10): Sterling's Tonight Ledger {trap, bluff, firstCut, golden} — this show's facts, for his callbacks
       declared: {},             // LEGACY (Subtraction Pass II): the Declaration is cut — nothing reads or writes this; the field stays so saves written before the cut still load
       arc: null,                // Pass 4: the night's arc record {worst, best, queue, spoken} — Sterling's story memory
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
@@ -2845,7 +2886,7 @@
      renderers paint it whenever the phase is "reveal", so a mid-reveal
      re-render (an online snapshot, a seat going AWAY) repaints the
      same grammar instead of wiping it. */
-  var tableFx = null, ogFx = null, ogQdSeat = -1, ogQdBonus = 0, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null, ogBluffMoment = null;
+  var tableFx = null, ogFx = null, ogQdSeat = -1, ogQdBonus = 0, ogStreakMoment = null, ogRevealGolden = false, ogPotMoment = null, ogBluffMoment = null, ogTrapMoment = null;
   function decorateSeat(s, fx) {
     if (!fx) return;
     /* Pass 5 (visual-fix programme): the reveal tags live on the
@@ -3849,6 +3890,10 @@
          pot can't be fed twice for one question */
       potFed: c.potFed || 0,
       potMoment: c.potMoment || null,
+      /* Pass 5: the question's trap record — the wrong answer
+         two or more seats fell for together, settled at the
+         commit, so a resumed reveal re-speaks the trap line */
+      trapMoment: c.trapMoment || null,
       /* Pass 12 (visual fix programme): THE BLUFF's dealt and
          settled records ride the save with the rest. They were
          the serializer's blind spot: a refresh after the deal
@@ -3920,6 +3965,7 @@
       /* saves written before the Table Pot carry neither field;
          the reveal repaints without a feed record */
       potFed: o.potFed || 0, potMoment: o.potMoment || null,
+      trapMoment: (o.trapMoment && typeof o.trapMoment.answer === "string" && Array.isArray(o.trapMoment.names)) ? o.trapMoment : null, /* Pass 5 */
       /* Pass 12: saves written before the bluff records rode
          carry none of the three — an undealt bluff resumes at
          its invent stage exactly as it always did, and a reveal
@@ -3989,6 +4035,9 @@
            save — a refresh between the last reveal and the
            crowning keeps the award with its bankers */
         potWinners: Array.isArray(G.potWinners) ? G.potWinners.slice() : null,
+        /* Pass 5: the Tonight Ledger rides the save — a resumed
+           show keeps Sterling's memory of the night so far */
+        tonight: G.tonight ? JSON.parse(JSON.stringify(G.tonight)) : null,
         /* Pass 3: the declarations ride the save — a refresh at
            the break or during the Big Finish keeps every call */
         declared: {},             // LEGACY (Subtraction Pass II): written empty so the save shape never changes; nothing reads it
@@ -4093,6 +4142,9 @@
          written before the pot existed resumes an empty one */
       pot: (typeof sv.pot === "number" && sv.pot > 0) ? Math.floor(sv.pot) : 0,
       potWinners: Array.isArray(sv.potWinners) ? sv.potWinners.filter(function (n) { return Number.isInteger(n) && n >= 0 && n < sv.players.length; }) : null,
+      /* Pass 5: the ledger restored as recorded; a save written
+         before Sterling kept one resumes with none */
+      tonight: tonightFromSave(sv.tonight),
       /* Pass 4: the arc restored as recorded; a save written
          before Sterling kept a story resumes with none */
       arc: (function () {
@@ -5242,15 +5294,21 @@
   /* Sterling's one line over the card: when the champion's biggest
      bank is the night's largest, he names that fact and nothing
      else; otherwise the plain introduction */
-  function reportSayFor(champName, champD, rows, viaDecider) {
+  function reportSayFor(champName, champD, rows, viaDecider, tnFrag) {
     /* the decider line leads when the night ended in one: it is
        the rarer fact and the final one (proposal 2, above) */
-    if (viaDecider) return authoredLine("reportdecider", { name: champName });
-    var night = 0;
-    rows.forEach(function (r) { if (r.d && r.d.biggest > night) night = r.d.biggest; });
-    if (champD && champD.biggest > 0 && champD.biggest >= night)
-      return authoredLine("reportbig", { name: champName, amount: money(champD.biggest) });
-    return authoredLine("report", {});
+    var line;
+    if (viaDecider) line = authoredLine("reportdecider", { name: champName });
+    else {
+      var night = 0;
+      rows.forEach(function (r) { if (r.d && r.d.biggest > night) night = r.d.biggest; });
+      if (champD && champD.biggest > 0 && champD.biggest >= night)
+        line = authoredLine("reportbig", { name: champName, amount: money(champD.biggest) });
+      else line = authoredLine("report", {});
+    }
+    /* Road-to-9/10 Pass 5: the Tonight Ledger's flagship fact
+       rides the spoken line — the night quoted back at its close */
+    return tnFrag ? line + " " + tnFrag : line;
   }
   /* ================= Pass N3 — SHARE THE NIGHT =================
      The finale becomes a card worth sending: a 1080x1350 portrait
@@ -5799,7 +5857,7 @@
   /* Compose the break from a normalised table — seats:
      [{seat, name, score, cut}] for everyone in the show. Pure: the
      same seats + facts always compose the same card. */
-  function breakView(seats, facts, doneRound, pot, windNames, rules) {
+  function breakView(seats, facts, doneRound, pot, windNames, rules, cbFrag) {
     var sorted = seats.slice().sort(function (a, b) { return b.score - a.score || a.seat - b.seat; });
     var top = sorted[0], second = sorted.length > 1 ? sorted[1] : null;
     var tiedTop = sorted.filter(function (s) { return s.score === top.score; });
@@ -5879,6 +5937,10 @@
     var windLine = (windNames && windNames.length)
       ? joinNames(windNames) + (windNames.length === 1 ? " gets" : " get") + " their Cut Two back."
       : null;
+    /* Road-to-9/10 Pass 5: Sterling's callback — the Tonight
+       Ledger's freshest story, told in the recap's own grammar,
+       handed in by whichever engine is at the break */
+    if (cbFrag) recap += " " + cbFrag;
     recap += doneRound === 1 ? " Refill something — Double Money does not wait." : " Refill something — the Big Finish does not wait.";
     return {
       leaderLine: leaderLine, bankLine: bankLine, qdLine: qdLine, cutLine: cutLine, potLine: potLine, windLine: windLine,
@@ -5922,7 +5984,8 @@
        first paint and on a resume alike */
     var wb = (G.windBreak && G.windBreak.round === G.round - 1 && G.windBreak.seats.length) ? G.windBreak : null;
     var view = breakView(tableBreakSeats(), G.facts, G.round - 1, G.pot || 0,
-      wb ? wb.seats.map(function (si) { return G.players[si].name; }) : null, G.rules);
+      wb ? wb.seats.map(function (si) { return G.players[si].name; }) : null, G.rules,
+      tonightBreakFrag(G.tonight, G.round - 1));
     stage(breakCardHTML(view, "btnBreakGo"));
     $("hostLine").textContent = view.recap + (wb && wb.line ? " " + wb.line : "");
     /* Pass 7 (Sterling series memory): at the last break, with
@@ -7037,7 +7100,19 @@
        their control disables, and every other desk is untouched.
        A repaint or resume renders the same state settled — the
        cut class without cutfresh, and no banner, line or sound. */
-    hostSay("cutmoment", { name: p.name });
+    /* Road-to-9/10 Pass 5: the night's first scissors are a
+       ledger fact — a later spend by another seat names the seat
+       that opened the blades; the first spender's own later
+       spends keep the plain moment (Sterling does not cite a
+       player to themselves). A house seat's spend is staged like
+       any other but writes nothing: the ledger keeps the guests'
+       stories. */
+    if (p.house == null) {
+      var T5c = tonightOf(G);
+      if (!T5c.firstCut) { T5c.firstCut = { name: p.name, round: G.round }; hostSay("cutmoment", { name: p.name }); }
+      else if (T5c.firstCut.name !== p.name) hostSay("cutagain", { name: p.name, first: T5c.firstCut.name });
+      else hostSay("cutmoment", { name: p.name });
+    } else hostSay("cutmoment", { name: p.name });
     Snd.play("snip");
     renderSeats();
     (c.cutPair || []).forEach(function (ix) {
@@ -7703,6 +7778,90 @@
     if (!award || award.house) return null;
     return { k: "THE POT", winners: award.seats.map(function (i) { return { name: players[i].name, v: money(award.shares[i]) }; }) };
   }
+  /* ============ Road-to-9/10 Pass 5 — THE TONIGHT LEDGER ============
+     Sterling keeps a short memory inside the night: the wrong
+     answer this table fell for together, the Bluff's best lie in
+     its own words, the first scissors spent, the Golden
+     Question's bankers. Facts only — recorded at the same commits
+     that move the money, human seats only (a house seat's fall is
+     a policy roll, not a story) — and spent back at the beats a
+     host would spend them: the trap names itself at its own
+     reveal, a later Cut names the first, the breaks and the
+     Report Card quote the night back at the table. The fragments
+     below are composed prose in the Intermission recap's grammar;
+     every var is guaranteed by its gate, the rematch pools'
+     discipline. */
+  function newTonight() { return { trap: null, bluff: null, firstCut: null, golden: null }; }
+  function tonightOf(holder) { if (!holder.tonight) holder.tonight = newTonight(); return holder.tonight; }
+  function tonightFromSave(v) {
+    if (!v || typeof v !== "object") return null;
+    var names = function (a) { return Array.isArray(a) ? a.filter(function (s) { return typeof s === "string" && s; }) : []; };
+    var T = newTonight();
+    if (v.trap && typeof v.trap.answer === "string" && names(v.trap.names).length >= 2)
+      T.trap = { answer: v.trap.answer, names: names(v.trap.names), n: Math.max(2, Math.floor(v.trap.n) || 2) };
+    if (v.bluff && typeof v.bluff.lie === "string" && v.bluff.lie && typeof v.bluff.name === "string" && v.bluff.name)
+      T.bluff = { lie: v.bluff.lie, name: v.bluff.name, n: Math.max(1, Math.floor(v.bluff.n) || 1) };
+    if (v.firstCut && typeof v.firstCut.name === "string" && v.firstCut.name)
+      T.firstCut = { name: v.firstCut.name, round: Math.floor(v.firstCut.round) || 1 };
+    if (v.golden && names(v.golden.names).length)
+      T.golden = { names: names(v.golden.names) };
+    return (T.trap || T.bluff || T.firstCut || T.golden) ? T : null;
+  }
+  /* the shape of a trap: two or more picks on the SAME wrong
+     answer. picks: [{opt, ok, name, text}] in seat order. Returns
+     {answer, names, n} for the largest fellowship (the earliest
+     dealt wins a tie), or null. */
+  function trapShape(picks) {
+    var byOpt = {}, order = [];
+    (picks || []).forEach(function (pk) {
+      if (!pk || pk.opt == null || pk.ok) return;
+      if (!byOpt[pk.opt]) { byOpt[pk.opt] = []; order.push(pk.opt); }
+      byOpt[pk.opt].push(pk);
+    });
+    var best = null;
+    order.forEach(function (k) {
+      var g = byOpt[k];
+      if (g.length >= 2 && (!best || g.length > best.n))
+        best = { answer: g[0].text, names: g.map(function (x) { return x.name; }), n: g.length };
+    });
+    return best;
+  }
+  function noteTrap(T, cand) { if (cand && (!T.trap || cand.n > T.trap.n)) T.trap = cand; }
+  function bluffFrag(b, v) {
+    return v === 0
+      ? "The Bluff still hangs in the air: " + b.name + "’s ‘" + b.lie + "’ caught " + b.n + " of this table."
+      : "And nobody has forgotten the Bluff — ‘" + b.lie + "’, " + b.name + "’s invention, took " + b.n + (b.n === 1 ? " seat" : " seats") + " with it.";
+  }
+  function trapFrag(t, v) {
+    return v === 0
+      ? "The room is still talking about ‘" + t.answer + "’ — " + joinNames(t.names) + " reached for it together, and it was not there."
+      : "‘" + t.answer + "’ remains the night’s favourite wrong answer — " + joinNames(t.names) + " cannot all have invented the same mistake.";
+  }
+  function goldenFrag(g, v) {
+    return v === 0
+      ? "The Golden Question has had its say tonight — " + joinNames(g.names) + " banked it, at double."
+      : joinNames(g.names) + " found the night’s buried gold: the Golden Question, paid at double.";
+  }
+  /* the break's callback: the freshest story the ledger can tell
+     at this point in the night — after Round 2 the Bluff leads;
+     before it exists, the trap; the gold is the quiet third. */
+  function tonightBreakFrag(T, doneRound) {
+    if (!T) return null;
+    if (doneRound >= 2 && T.bluff) return bluffFrag(T.bluff, (T.bluff.lie.length + T.bluff.n) % 2);
+    if (T.trap) return trapFrag(T.trap, (T.trap.answer.length + T.trap.n) % 2);
+    if (T.golden) return goldenFrag(T.golden, T.golden.names.length % 2);
+    if (T.bluff) return bluffFrag(T.bluff, (T.bluff.lie.length + T.bluff.n) % 2);
+    return null;
+  }
+  /* the finale's callback, appended to the Report Card's spoken
+     line: the night's flagship fact, in the same grammar */
+  function tonightFinaleFrag(T) {
+    if (!T) return null;
+    if (T.bluff) return bluffFrag(T.bluff, (T.bluff.lie.length + T.bluff.n + 1) % 2);
+    if (T.trap) return trapFrag(T.trap, (T.trap.answer.length + T.trap.n + 1) % 2);
+    if (T.golden) return goldenFrag(T.golden, (T.golden.names.length + 1) % 2);
+    return null;
+  }
   /* Visual pass V4 — THE AUDIENCE: the house answers the reveal.
      A bank ripples the row (a staggered lift, left to right), an
      all-miss dips it (a sympathetic slump); the class lives ~1.5s
@@ -7868,6 +8027,38 @@
        far above and can never reach this line.) */
     if (G.round === 3 && G.qInRound === R3_COUNT - 1) {
       G.potWinners = winners.filter(function (i) { return G.players[i] && G.players[i].house == null; });
+    }
+    /* Road-to-9/10 Pass 5: the Tonight Ledger is written in the
+       same commit — the trap this question set (its moment rides
+       the question like the pot's, so a resumed reveal re-speaks
+       it), the Bluff's best lie in its own words, and the Golden
+       Question's bankers. The trap's fallers and the gold's
+       bankers are human seats only (a house seat's fall is a
+       policy roll, not a story); the Bluff's author is whoever
+       wrote the night's best lie, as bluffSay already rules. */
+    var T5 = tonightOf(G);
+    if (c.kind === "mcq" && c.picks && c.opts) {
+      var tPicks = [];
+      G.players.forEach(function (p, i) {
+        if (p.house != null) return;
+        var pk = c.picks[i];
+        if (pk && c.opts[pk.opt]) tPicks.push({ opt: pk.opt, ok: !!c.opts[pk.opt].ok, name: p.name, text: c.opts[pk.opt].t });
+      });
+      var tCand = trapShape(tPicks);
+      if (tCand) { c.trapMoment = tCand; noteTrap(T5, tCand); }
+    }
+    if (c.kind === "bluff" && c.bluffFool && c.opts) {
+      var bTop5 = -1, bN5 = 0;
+      Object.keys(c.bluffFool).forEach(function (k) { var n = Math.round((c.bluffFool[k] || 0) / BLUFF_FOOL); if (n > bN5) { bN5 = n; bTop5 = +k; } });
+      if (bTop5 >= 0 && bN5 >= 1 && G.players[bTop5]) {
+        var lieOpt = null;
+        c.opts.forEach(function (o) { if (o && o.by === bTop5 && !o.ok && !lieOpt) lieOpt = o; });
+        if (lieOpt) T5.bluff = { lie: lieOpt.t, name: G.players[bTop5].name, n: bN5 };
+      }
+    }
+    if (c.golden) {
+      var gNames5 = winners.filter(function (i) { return G.players[i] && G.players[i].house == null; }).map(function (i) { return G.players[i].name; });
+      if (gNames5.length) T5.golden = { names: gNames5 };
     }
     /* New programme pass 2: the reveal writes the round's facts
        while the numbers are in its hands — biggest bank and the
@@ -8352,7 +8543,7 @@
        from the tallies the reveals wrote; nothing on it was not
        first settled by a reveal. */
     var reportRowsT = order.map(function (ii) { return { name: G.players[ii].name, d: deriveReport(G.report ? G.report[ii] : null) }; });
-    var reportHTMLT = reportPanelHTML(reportRowsT, reportSayFor(p.name, deriveReport(G.report ? G.report[i] : null), reportRowsT, deciderWon), potEntryT);
+    var reportHTMLT = reportPanelHTML(reportRowsT, reportSayFor(p.name, deriveReport(G.report ? G.report[i] : null), reportRowsT, deciderWon, tonightFinaleFrag(G.tonight)), potEntryT);
     /* Pass N3: the share card's data model, built from this same
        verdict — champion, pot and series line exactly as printed */
     shareNight = shareDataTable(i, potAmt, sFinaleLine, potAward);
@@ -9251,6 +9442,13 @@
        stay unconsumed. */
     if (G && bluffSay()) return;
     if (G && arcSayFor(G.arc, G.players)) return;
+    /* Road-to-9/10 Pass 5: the trap names itself — two or more
+       seats fell for the same wrong answer, so Sterling says
+       which answer, and who. The moment was settled at the
+       commit (c.trapMoment) like the pot's, so a resumed reveal
+       re-speaks it; it ranks below the night's arc, above the
+       quick-draw micro-beat. */
+    if (G && G.cur && G.cur.trapMoment) { hostSay("trap", { answer: G.cur.trapMoment.answer, names: joinNames(G.cur.trapMoment.names) }); return; }
     /* Design pass 3: a quick-draw reveal speaks the call-out and
        nothing else — the authored pool replaces the beat line, and
        the AI beat latches are NOT consumed, so a first_bank/big_lead
@@ -9310,6 +9508,10 @@
        call-out, below the streak and the Golden */
     if (OG && ogBluffSay()) return;
     if (OG && arcSayFor(OG.arc, OG.players)) return;
+    /* Road-to-9/10 Pass 5: the trap names itself, online — the
+       moment derived from the reveal payload in ogOnReveal, at
+       the same rank as the table's */
+    if (OG && ogTrapMoment) { hostSay("trap", { answer: ogTrapMoment.answer, names: joinNames(ogTrapMoment.names) }); return; }
     /* Design pass 3: same rule as the table — a quick-draw reveal
        speaks the call-out instead of the beat, and the AI beat
        latches stay unconsumed for the next reveal. The winner comes
@@ -9722,6 +9924,10 @@
            are the host's own capture from the last reveal, and
            no snapshot carries them */
         potWinners: Array.isArray(OG.potWinners) ? OG.potWinners.slice() : null,
+        /* Pass 5: the Tonight Ledger rides the plan beside the
+           claimants — the host's own captures, no snapshot
+           carries them */
+        tonight: OG.tonight ? JSON.parse(JSON.stringify(OG.tonight)) : null,
         /* Dynamics pass D2: the break's Second Wind telling rides
            the plan like the tease — the granted names and the
            drawn words, so a host restored mid-break retells the
@@ -9821,6 +10027,7 @@
       tailBuilt: false,
       pot: 0,                  // Dynamics pass D1: the room's pot, mirrored from its snapshots and reveals
       potWinners: null,        // Pass 4: seats that banked the last question, captured at its reveal (null until then)
+      tonight: null,           // Pass 5: Sterling's Tonight Ledger {trap, bluff, firstCut, golden} — this show's facts, for his callbacks
       report: null,            // Pass N1: the referee's report card, dealt with the ended broadcast / ended snapshot
       breakWind: null,         // Dynamics pass D2: {names, line} — this break's Second Wind grant, as this screen tells it
       phase: "connecting", lastRevealQid: null,
@@ -9883,6 +10090,7 @@
          existed restarts it empty */
       OG.pot = (typeof plan.pot === "number" && plan.pot > 0) ? Math.floor(plan.pot) : 0;
       OG.potWinners = Array.isArray(plan.potWinners) ? plan.potWinners.filter(function (n) { return Number.isInteger(n) && n >= 0 && n < 4; }) : null;
+      OG.tonight = tonightFromSave(plan.tonight); /* Pass 5: the ledger restored from the plan; older plans carry none */
       /* Dynamics pass D2: the break's Second Wind telling rides
          the plan beside the tease; a plan written before Second
          Wind has none, and the room's snapshot can still supply
@@ -10398,12 +10606,13 @@
     OG.cur = null; OG.decider = null;
     OG.pot = 0; /* Dynamics pass D1: a fresh show's pot is empty — the room resets its own on new_show; this mirror follows */
     OG.potWinners = null; /* Pass 4: a fresh show has no claimants yet */
+    OG.tonight = null; /* Pass 5: a fresh show's ledger is unwritten */
     OG.report = null; /* Pass N1: a fresh show's card is unwritten until its own finale deals it */
     OG.tailBuilt = false; /* the dealt tail belongs to the last show */
     OG.facts = freshFacts();
     OG.lastRevealQid = null;
     OG.bankedOnce = false; OG.bigLeadDone = false;
-    ogFx = null; ogQdSeat = -1; ogQdBonus = 0; ogStreakMoment = null; ogRevealGolden = false; ogBluffMoment = null;
+    ogFx = null; ogQdSeat = -1; ogQdBonus = 0; ogStreakMoment = null; ogRevealGolden = false; ogBluffMoment = null; ogTrapMoment = null;
     OG.disp = [null, null, null, null];
     ogFortuneDisp = [];
     OG.lastStand = { scores: [0, 0, 0, 0], ranks: {} };
@@ -10849,7 +11058,16 @@
     ogRenderSeats();
     seatCutFlash(m.bySeat);
     cutBanner(p ? p.name : "A player");
-    hostSay("cutmoment", { name: p ? p.name : "A player" });
+    /* Road-to-9/10 Pass 5: the night's first scissors, online —
+       this handler fires on the live broadcast only (snapshots
+       never reach it), so the ledger write happens exactly once
+       per spend; a later spend by another seat names the first */
+    if (p) {
+      var T5d = tonightOf(OG);
+      if (!T5d.firstCut) { T5d.firstCut = { name: p.name, round: OG.curRound || 1 }; hostSay("cutmoment", { name: p.name }); }
+      else if (T5d.firstCut.name !== p.name) hostSay("cutagain", { name: p.name, first: T5d.firstCut.name });
+      else hostSay("cutmoment", { name: p.name });
+    } else hostSay("cutmoment", { name: "A player" });
     Snd.play("snip");
     stPoint(m.bySeat);
   }
@@ -10993,6 +11211,33 @@
       if (bTop >= 0 && bN >= 2 && winners.length === 0) ogBluffMoment = { kind: "bluffsweep", seat: bTop };
       else if (bTop >= 0 && bN >= 2) ogBluffMoment = { kind: "bluffbig", seat: bTop, n: bN };
       else if (bTot === 0 && winners.length > 0) ogBluffMoment = { kind: "bluffnone", seat: -1 };
+    }
+    /* Road-to-9/10 Pass 5: the Tonight Ledger's online entries,
+       derived from this same payload — the trap from the seats'
+       own picks and the dealt answers, the Bluff's best lie from
+       the settled authorship the reveal carries, the Golden
+       Question's bankers from its winners — so a resynced reveal
+       restores every fact identically. ogTrapMoment is this
+       question's own moment, re-derived (or cleared) per reveal. */
+    var T5o = tonightOf(OG);
+    ogTrapMoment = null;
+    if (e.kind === "normal" && e.answers) {
+      var oPicks = [];
+      (r.results || []).forEach(function (res) {
+        if (res.pick != null && OG.players[res.seat] && e.answers[res.pick] != null)
+          oPicks.push({ opt: res.pick, ok: !!res.correct, name: OG.players[res.seat].name, text: e.answers[res.pick] });
+      });
+      var oCand = trapShape(oPicks);
+      if (oCand) { ogTrapMoment = oCand; noteTrap(T5o, oCand); }
+    }
+    if (e.kind === "bluff" && typeof bTop === "number" && bTop >= 0 && bN >= 1 && OG.players[bTop] && r.bluff && r.bluff.options) {
+      var oLie = null;
+      r.bluff.options.forEach(function (o) { if (o && o.by === bTop && !o.truth && !oLie) oLie = o; });
+      if (oLie) T5o.bluff = { lie: oLie.t, name: OG.players[bTop].name, n: bN };
+    }
+    if (r.golden === true) {
+      var ogNames5 = winners.map(function (s) { return OG.players[s] ? OG.players[s].name : null; }).filter(Boolean);
+      if (ogNames5.length) T5o.golden = { names: ogNames5 };
     }
     ogArcTrack(r);
     setMood((anyBank || winners.length) ? "delight" : "sorry");
@@ -11174,7 +11419,8 @@
   function ogPaintIntermission(nextRound) {
     setPlot("house"); /* Graphics Pass 2: the break rests at house light */
     curtainClose(); /* Graphics Pass 1: the curtain falls over the finished round */
-    var view = breakView(ogBreakSeats(), OG.facts, nextRound - 1, OG.pot || 0, OG.breakWind ? OG.breakWind.names : null, OG.rules);
+    var view = breakView(ogBreakSeats(), OG.facts, nextRound - 1, OG.pot || 0, OG.breakWind ? OG.breakWind.names : null, OG.rules,
+      tonightBreakFrag(OG.tonight, nextRound - 1));
     stage(breakCardHTML(view, "ogBreakGo"));
     $("hostLine").textContent = view.recap + (OG.breakWind && OG.breakWind.line ? " " + OG.breakWind.line : "");
     /* Pass 7 (Sterling series memory): the same renewal at the
@@ -11317,7 +11563,7 @@
        older than the pass) — no panel; the finale stands as it
        always has rather than inventing one. */
     var reportRowsO = OG.report ? order.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; }) : null;
-    var reportHTMLO = reportRowsO ? reportPanelHTML(reportRowsO, reportSayFor(p.name, reportView(OG.report[winSeat]), reportRowsO, decWin === winSeat), potEntryO) : "";
+    var reportHTMLO = reportRowsO ? reportPanelHTML(reportRowsO, reportSayFor(p.name, reportView(OG.report[winSeat]), reportRowsO, decWin === winSeat, tonightFinaleFrag(OG.tonight)), potEntryO) : "";
     /* Pass N3: the share card's data model, from this same verdict */
     shareNight = shareDataHost(winSeat, hasWinner, potAmtO, sFinaleLineO, potAwardO);
     stage('<div class="finale-wrap' + (reportHTMLO ? " has-report" : "") + (sFinaleLineO ? " has-series" : "") + '"><div class="spot-cone" aria-hidden="true"></div><div class="finale-main">' +
@@ -12466,6 +12712,11 @@
        drive-pot asserts the feed with the very function the
        settlement runs — never a copy of it */
     pot: { feed: tablePotFeed, moment: potMomentFor, award: potAwardOf, awardLine: potAwardLine },
+    /* Road-to-9/10 Pass 5: the Tonight Ledger's trap shape and
+       the engines' ledgers, exposed so drive-tonight asserts the
+       trap with the very function the commits run — never a
+       copy of it */
+    tonight: { shape: trapShape, table: function () { return G ? G.tonight : null; }, online: function () { return OG ? OG.tonight : null; }, frag: { brk: tonightBreakFrag, finale: tonightFinaleFrag } },
     /* Gameplay-visuals pass G1: the melt's own mapping, exposed so
        drive-melt asserts levels with the very functions the painters
        fly by — never a copy of them */
