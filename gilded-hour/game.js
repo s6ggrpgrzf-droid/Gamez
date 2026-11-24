@@ -336,6 +336,18 @@
       "{names} cannot all be wrong the same way by accident — ‘{answer}’ simply looked that true. It wasn’t.",
       "The trap of the night, so far: ‘{answer}’. {names} all reached for it, and it was painted on the ceiling."
     ],
+    /* Road-to-9/10 Pass 7 — the audition. On a night with a
+       guest (one first-timer among veterans, guestNameFor),
+       Sterling presents them by name at the Round 1 intro,
+       appended to whichever line owns the night — a role in
+       the story inside the first five minutes, per the
+       research's QI/Chase lesson */
+    audition: [
+      "One seat tonight is new to this room: {name}, our guest. The room is kind to guests — for exactly one question.",
+      "Before we begin, a presentation: {name} sits with us for the first time. Everything you are about to hear about the rest of this table is true, and none of it is a warning.",
+      "Tonight the room has a guest — {name}, first time under these lights. Play well, {name}; the book is watching, and it writes in ink.",
+      "A new name for the book: {name}, our guest this evening. The regulars know the steps. {name} gets to invent them."
+    ],
     /* Road-to-9/10 Pass 5 — the second scissors. A Cut Two spent
        after the night's first names the seat that opened the
        blades ({first}); the first spender's own later spends
@@ -2856,6 +2868,8 @@
       pot: 0,                   // Dynamics pass D1: the table pot — unbanked money; Pass 4: the last question's bankers take it
       potWinners: null,         // Pass 4: seats that banked the last question, captured at its reveal (null until then)
       tonight: null,            // Pass 5 (road-to-9/10): Sterling's Tonight Ledger {trap, bluff, firstCut, golden} — this show's facts, for his callbacks
+      guest: null,              // Pass 7: tonight's guest — one first-timer among veterans (guestNameFor), or null
+      guestLine: null,          // Pass 7: the audition line, drawn at show start and re-presented verbatim
       declared: {},             // LEGACY (Subtraction Pass II): the Declaration is cut — nothing reads or writes this; the field stays so saves written before the cut still load
       arc: null,                // Pass 4: the night's arc record {worst, best, queue, spoken} — Sterling's story memory
       goldenSlot: null,         // The Golden Question (pass 4): "round:qInRound" of the secret double, drawn at show start
@@ -3293,7 +3307,7 @@
       writtenScore[i] = shown;
       var s = el('<div class="seat pod' + i + (p.house != null ? " house" : "") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
         '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" +
-        '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
+        '<div class="desk"><span class="seat-name">' + esc(p.name) + (G.guest && p.name === G.guest ? ' <span class="guest-tag">GUEST</span>' : '') + '</span>' +
         '<span class="seat-status"></span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tagsFor(i) + "</span>" + houseGuessHTML(p, i) + humanGuessHTML(p, i) + deskBetsHTML(p, i) + deskStackHTML(p, i) + deskPicksHTML(p, i) + fortuneHTML() + "</div></div>");
@@ -4038,6 +4052,8 @@
         /* Pass 5: the Tonight Ledger rides the save — a resumed
            show keeps Sterling's memory of the night so far */
         tonight: G.tonight ? JSON.parse(JSON.stringify(G.tonight)) : null,
+        guest: G.guest || null,
+        guestLine: G.guestLine || null,
         /* Pass 3: the declarations ride the save — a refresh at
            the break or during the Big Finish keeps every call */
         declared: {},             // LEGACY (Subtraction Pass II): written empty so the save shape never changes; nothing reads it
@@ -4145,6 +4161,8 @@
       /* Pass 5: the ledger restored as recorded; a save written
          before Sterling kept one resumes with none */
       tonight: tonightFromSave(sv.tonight),
+      guest: typeof sv.guest === "string" ? sv.guest : null,
+      guestLine: typeof sv.guestLine === "string" ? sv.guestLine : null,
       /* Pass 4: the arc restored as recorded; a save written
          before Sterling kept a story resumes with none */
       arc: (function () {
@@ -4197,6 +4215,10 @@
     G.memoryLine = memoryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }), G.showId);
     G.rivalryLine = rivalryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
     G.seasonLine = seasonLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
+    /* Pass 7: the guest rides the save; a save that kept the
+       guest but lost their line redraws it from the same pool
+       (the soloLine precedent, just below) */
+    if (G.guest && !G.guestLine) G.guestLine = authoredLine("audition", { name: G.guest });
     /* House Players (pass 5): the cast list rides out of the
        restored seats (seat order is cast order), so a resumed solo
        show's rematch keeps the same two house players */
@@ -4292,6 +4314,11 @@
         var r = rec.players[key];
         if (!r) { r = { name: "", wins: 0, shows: 0, purse: 0 }; rec.players[key] = r; }
         r.name = String(f.name).trim();   /* the record wears the most recent sighting's name */
+        /* Pass 7: a first recorded show is marked as the
+           debut — only ever written from a zero-show record,
+           so the book's old hands (whose debuts predate the
+           field) are never given a false one */
+        if (!r.debut && r.shows === 0) r.debut = showId;
         r.shows += 1;
         /* Pass 4: the purse counts every dollar a guest won —
            the frozen score, plus their share of the pot when
@@ -4502,6 +4529,43 @@
   }
   function rivalryLineFor(guestNames) {
     return composeRivalryLine(loadRecords(), guestNames);
+  }
+  /* Road-to-9/10 Pass 7 — the guest. A guest is a seated
+     player whose name has never finished a show in this
+     room's book (no record, or no shows in it) while at least
+     one other seat has. The arc arms for EXACTLY ONE such
+     name among veterans: two or more first-timers is a new
+     company finding its feet together, not a guest in
+     somebody else's room */
+  function guestNameFor(names) {
+    if (!names || names.length < 2) return null;
+    var rec = loadRecords();
+    var fresh = [], vets = 0;
+    names.forEach(function (nm) {
+      var r = rec.players[recNameKey(nm)];
+      if (r && r.shows >= 1) vets++;
+      else fresh.push(nm);
+    });
+    return (fresh.length === 1 && vets >= 1) ? fresh[0] : null;
+  }
+  /* The fresh rivalry: the crowning's guest thread, composed
+     in the finale fragments' grammar (Pass 5) — the guest
+     measured against the champion, the pairing the book's
+     head-to-head cells have just opened. Variant picked
+     deterministically from the two names */
+  function guestDuelFrag(guest, champName) {
+    if (!guest || !champName) return null;
+    var pick = (guest.length + champName.length) % 2;
+    if (guest === champName) {
+      return [
+        "And the night belongs to the guest: " + guest + ", first time at this table, takes the room. Remember where you were when it started.",
+        "A debut and a coronation in one evening — " + guest + " arrived a guest and leaves the champion. The book opens their page with a win."
+      ][pick];
+    }
+    return [
+      "The guest's first thread is on the book: " + guest + ", measured against " + champName + " — tonight it reads " + champName + ", and the room will want the rematch.",
+      "First nights are auditions; " + guest + "'s ended in a chase — " + champName + " holds the night, and " + guest + " holds a reason to return."
+    ][pick];
   }
   /* Research pass 11 — the usual cast: the table's company,
      remembered. One small store beside the records book —
@@ -5001,6 +5065,11 @@
     G.memoryLine = memoryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }), G.showId);
     G.rivalryLine = rivalryLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
     G.seasonLine = seasonLineFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
+    /* Pass 7: tonight's guest, if the table has one — named
+       now, presented at the Round 1 intro, gifted the Round 2
+       plant below, and measured at the crowning */
+    G.guest = guestNameFor(G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; }));
+    G.guestLine = G.guest ? authoredLine("audition", { name: G.guest }) : null;
     /* Research pass 10: plant the room's question, if the card
        offered one and the table can carry it — two or more
        humans, and the subject seated among them (the answers
@@ -5021,7 +5090,7 @@
     if (pendingRoomFacts) {
       var rqHumans = G.players.filter(function (p) { return p.house == null; }).map(function (p) { return p.name; });
       var rqFacts = pendingRoomFacts.filter(function (f) { return f && f.fact && rqHumans.indexOf(f.subject) >= 0; });
-      if (rqHumans.length >= 2 && rqFacts.length) G.roomQs = roomAssignRounds(rqFacts);
+      if (rqHumans.length >= 2 && rqFacts.length) G.roomQs = roomAssignRounds(rqFacts, G.guest);
       pendingRoomFacts = null;
     }
     resetDeck();
@@ -5293,7 +5362,7 @@
   /* Sterling's one line over the card: when the champion's biggest
      bank is the night's largest, he names that fact and nothing
      else; otherwise the plain introduction */
-  function reportSayFor(champName, champD, rows, viaDecider, tnFrag) {
+  function reportSayFor(champName, champD, rows, viaDecider, tnFrag, gdFrag) {
     /* the decider line leads when the night ended in one: it is
        the rarer fact and the final one (proposal 2, above) */
     var line;
@@ -5307,7 +5376,11 @@
     }
     /* Road-to-9/10 Pass 5: the Tonight Ledger's flagship fact
        rides the spoken line — the night quoted back at its close */
-    return tnFrag ? line + " " + tnFrag : line;
+    if (tnFrag) line += " " + tnFrag;
+    /* Pass 7: the guest's thread closes the report — the
+       fresh rivalry, opened in the book tonight */
+    if (gdFrag) line += " " + gdFrag;
+    return line;
   }
   /* ================= Pass N3 — SHARE THE NIGHT =================
      The finale becomes a card worth sending: a 1080x1350 portrait
@@ -6109,6 +6182,10 @@
        The words were drawn at show start and ride the save, so a
        resumed intro re-presents them verbatim */
     if (G.round === 1 && G.goldTease) { var hTease = $("hostLine"); if (hTease) hTease.textContent += " " + G.goldTease; }
+    /* Pass 7: the audition rides the same bubble, appended to
+       whichever line owns the night — the guest is presented
+       inside the first five minutes, not discovered later */
+    if (G.round === 1 && G.guestLine) { var hGuest = $("hostLine"); if (hGuest) hGuest.textContent += " " + G.guestLine; }
     /* House Players (pass 5): the solo arrangement is named at the
        same intro, appended after the tease — the house is never a
        surprise sprung mid-show */
@@ -6207,11 +6284,20 @@
   /* Facts are dealt to rounds in the order 2, 1, 3 — a lone
      fact lands where it always has (Round 2's first slot), a
      second joins it in Round 1, a third completes the night
-     in the Big Finish, bets and all */
-  function roomAssignRounds(facts) {
+     in the Big Finish, bets and all. Pass 7: on a guest's
+     night, a fact ABOUT the guest is dealt first — the
+     show's most personal question becomes their introduction
+     to the room (the gift) */
+  function roomAssignRounds(facts, guestName) {
+    var deal = facts.slice();
+    if (guestName) {
+      for (var gi = 0; gi < deal.length; gi++) {
+        if (deal[gi].subject === guestName) { deal.unshift(deal.splice(gi, 1)[0]); break; }
+      }
+    }
     var order = [2, 1, 3], out = [];
-    for (var i = 0; i < facts.length && i < order.length; i++) {
-      out.push({ fact: facts[i].fact, subject: facts[i].subject, round: order[i], shape: roomShapeFor(facts[i], facts, order[i]), used: false });
+    for (var i = 0; i < deal.length && i < order.length; i++) {
+      out.push({ fact: deal[i].fact, subject: deal[i].subject, round: order[i], shape: roomShapeFor(deal[i], facts, order[i]), used: false });
     }
     return out;
   }
@@ -8647,7 +8733,7 @@
        from the tallies the reveals wrote; nothing on it was not
        first settled by a reveal. */
     var reportRowsT = order.map(function (ii) { return { name: G.players[ii].name, d: deriveReport(G.report ? G.report[ii] : null) }; });
-    var reportHTMLT = reportPanelHTML(reportRowsT, reportSayFor(p.name, deriveReport(G.report ? G.report[i] : null), reportRowsT, deciderWon, tonightFinaleFrag(G.tonight)), potEntryT);
+    var reportHTMLT = reportPanelHTML(reportRowsT, reportSayFor(p.name, deriveReport(G.report ? G.report[i] : null), reportRowsT, deciderWon, tonightFinaleFrag(G.tonight), guestDuelFrag(G.guest, p.name)), potEntryT);
     /* Pass N3: the share card's data model, built from this same
        verdict — champion, pot and series line exactly as printed */
     shareNight = shareDataTable(i, potAmt, sFinaleLine, potAward);
@@ -9891,13 +9977,26 @@
      (never a guess slot: the kind check is the guard), facts
      drawn at random without replacement */
   function ogPlantInto(script, roundsWanted, fp) {
+    var names = OG.players.map(function (p) { return p ? p.name : null; });
     for (var i = 0; i < roundsWanted.length && fp.pool.length; i++) {
       var idx = -1;
       for (var j = 0; j < script.length; j++) {
         if (script[j].round === roundsWanted[i] && script[j].qInRound === 0 && script[j].kind === "normal" && !script[j].roomq) { idx = j; break; }
       }
       if (idx < 0) continue;
-      var fact = fp.pool.splice(ri(fp.pool.length), 1)[0];
+      /* Pass 7: the guest's fact is dealt on purpose, never
+         by the draw — Round 1's plant draws around it (it is
+         reserved for the showcase), and Round 2's plant
+         prefers it when the pocket holds it */
+      var pickAt = -1;
+      if (OG.guest && roundsWanted[i] === 2) {
+        for (var pk = 0; pk < fp.pool.length; pk++) if (names[fp.pool[pk].subject] === OG.guest) { pickAt = pk; break; }
+      } else if (OG.guest && roundsWanted[i] === 1) {
+        var others = [];
+        for (var po = 0; po < fp.pool.length; po++) if (names[fp.pool[po].subject] !== OG.guest) others.push(po);
+        if (others.length) pickAt = others[ri(others.length)];
+      }
+      var fact = pickAt >= 0 ? fp.pool.splice(pickAt, 1)[0] : fp.pool.splice(ri(fp.pool.length), 1)[0];
       script[idx] = ogRoomEntry(script[idx], fact, fp.all);
     }
   }
@@ -10116,6 +10215,8 @@
            claimants — the host's own captures, no snapshot
            carries them */
         tonight: OG.tonight ? JSON.parse(JSON.stringify(OG.tonight)) : null,
+        guest: OG.guest || null,
+        guestLine: OG.guestLine || null,
         /* Dynamics pass D2: the break's Second Wind telling rides
            the plan like the tease — the granted names and the
            drawn words, so a host restored mid-break retells the
@@ -10216,6 +10317,8 @@
       pot: 0,                  // Dynamics pass D1: the room's pot, mirrored from its snapshots and reveals
       potWinners: null,        // Pass 4: seats that banked the last question, captured at its reveal (null until then)
       tonight: null,           // Pass 5: Sterling's Tonight Ledger {trap, bluff, firstCut, golden} — this show's facts, for his callbacks
+      guest: null,             // Pass 7: tonight's guest (guestNameFor), or null
+      guestLine: null,         // Pass 7: the audition line, drawn at show start
       report: null,            // Pass N1: the referee's report card, dealt with the ended broadcast / ended snapshot
       breakWind: null,         // Dynamics pass D2: {names, line} — this break's Second Wind grant, as this screen tells it
       phase: "connecting", lastRevealQid: null,
@@ -10279,6 +10382,8 @@
       OG.pot = (typeof plan.pot === "number" && plan.pot > 0) ? Math.floor(plan.pot) : 0;
       OG.potWinners = Array.isArray(plan.potWinners) ? plan.potWinners.filter(function (n) { return Number.isInteger(n) && n >= 0 && n < 4; }) : null;
       OG.tonight = tonightFromSave(plan.tonight); /* Pass 5: the ledger restored from the plan; older plans carry none */
+      OG.guest = typeof plan.guest === "string" ? plan.guest : null; /* Pass 7: the guest rides the plan; older plans carry none */
+      OG.guestLine = typeof plan.guestLine === "string" ? plan.guestLine : null;
       /* Dynamics pass D2: the break's Second Wind telling rides
          the plan beside the tease; a plan written before Second
          Wind has none, and the room's snapshot can still supply
@@ -10639,7 +10744,7 @@
       if (oseg) tags.push(oseg);
       var s = el('<div class="seat pod' + i + (p.connected ? "" : " away") + threatClass(p.streak || 0) + '" data-seat="' + i + '">' +
         '<div class="seat-ava">' + medallionSVG(p.name, i) + "</div>" +
-        '<div class="desk"><span class="seat-name">' + esc(p.name) + '</span>' +
+        '<div class="desk"><span class="seat-name">' + esc(p.name) + (OG.guest && p.name === OG.guest ? ' <span class="guest-tag">GUEST</span>' : '') + '</span>' +
         '<span class="seat-status"></span>' +
         '<span class="seat-score">' + shown + '</span>' +
         '<span class="tag">' + tags.join(" · ") + "</span>" + fortuneHTML() + "</div></div>");
@@ -10778,6 +10883,11 @@
     OG.started = true;
     $("scr-game").classList.remove("sealed");
     resetLineBags();
+    /* Pass 7: tonight's guest is named BEFORE the script is
+       built — the head plant must know whose fact to reserve
+       for Round 2's showcase */
+    OG.guest = guestNameFor(ogJoined().map(function (p) { return p.name; }));
+    OG.guestLine = OG.guest ? authoredLine("audition", { name: OG.guest }) : null;
     OG.script = ogBuildScript();
     /* The Golden Question (pass 4): ogBuildScript has already
        marked the show's one golden entry (a rematch deals a FRESH
@@ -10809,7 +10919,7 @@
     ogCastOverride = null;
     OG.seriesLine = composeSeriesOpening(liveSeriesFor(OG.seriesCtx), OG.seriesCtx);
     Snd.ensure(); Snd.play("theme");
-    if (!OG.seriesLine) sayLive("greeting", { names: ogJoined().map(function (p) { return p.name; }) }, authoredLine("open"),
+    if (!OG.seriesLine && !OG.guestLine) sayLive("greeting", { names: ogJoined().map(function (p) { return p.name; }) }, authoredLine("open"),
       { window: 2500, guard: function () { return !!OG && OG.phase === "intro"; } });
     /* tonight's special: fetched once per show; if it lands before
        Round 1 reaches its third question, it takes that slot in the
@@ -10901,7 +11011,11 @@
        Rematch Night's exception: on a series show the greeting
        stood down in ogBeginShow precisely so this framing could
        own the bubble — no race, because nothing else was said. */
-    if (e.round === 1 && OG.seriesLine) hostSayText(OG.seriesLine);
+    if (e.round === 1 && OG.seriesLine) hostSayText(OG.guestLine ? OG.seriesLine + " " + OG.guestLine : OG.seriesLine);
+    /* Pass 7: with no series line, the audition owns the
+       Round 1 bubble outright (the live greeting stood down
+       in ogBeginShow) — the open line, then the presentation */
+    else if (e.round === 1 && OG.guestLine) hostSayText(authoredLine("open") + " " + OG.guestLine);
     else if (e.round !== 1) hostSay("r" + e.round);
     $("ogRoundGo").addEventListener("click", ogServe);
     autoGo("ogRoundGo", "ogintro:" + e.round, (paceCfg() ? paceCfg().reveal : 6000) + 4000, function () { return !!OG && OG.phase === "intro"; });
@@ -11751,7 +11865,7 @@
        older than the pass) — no panel; the finale stands as it
        always has rather than inventing one. */
     var reportRowsO = OG.report ? order.map(function (ii) { return { name: OG.players[ii].name, d: reportView(OG.report[ii]) }; }) : null;
-    var reportHTMLO = reportRowsO ? reportPanelHTML(reportRowsO, reportSayFor(p.name, reportView(OG.report[winSeat]), reportRowsO, decWin === winSeat, tonightFinaleFrag(OG.tonight)), potEntryO) : "";
+    var reportHTMLO = reportRowsO ? reportPanelHTML(reportRowsO, reportSayFor(p.name, reportView(OG.report[winSeat]), reportRowsO, decWin === winSeat, tonightFinaleFrag(OG.tonight), guestDuelFrag(OG.guest, p.name)), potEntryO) : "";
     /* Pass N3: the share card's data model, from this same verdict */
     shareNight = shareDataHost(winSeat, hasWinner, potAmtO, sFinaleLineO, potAwardO);
     stage('<div class="finale-wrap' + (reportHTMLO ? " has-report" : "") + (sFinaleLineO ? " has-series" : "") + '"><div class="spot-cone" aria-hidden="true"></div><div class="finale-main">' +
@@ -12874,6 +12988,7 @@
        with the very functions the show flies by — never copies */
     finale: { breathMs: finaleBreathMs, stakes: composeFinaleStakes, stakesEx: composeFinaleStakesEx },
     myth: { record: recordShow, line: composeRivalryLine, cell: h2hCell, load: loadRecords },
+    guest: { of: guestNameFor, duel: guestDuelFrag, state: function () { return G ? { guest: G.guest, line: G.guestLine } : null; } },
     roomq: { of: roomQuestionOf, assign: roomAssignRounds, shapeFor: roomShapeFor, whichWrongs: roomWhichWrongs, fromSave: roomQsFromSave, state: function () { return G ? G.roomQs : null; } },
     season: { line: seasonLineFor, plaque: seasonPlaqueText, take: takeSeasonResult, target: SEASON_TARGET, name: seasonName },
     /* Research pass 1: the deck itself, exposed so

@@ -278,6 +278,7 @@
 .seat .avatar{width:clamp(58px,9.5vmin,84px)}
 .seat .desk{position:relative;padding:14px 8px 11px}
 .seat-name{display:block;color:var(--cream);font-weight:800;letter-spacing:.1em;font-size:clamp(11.5px,1.7vmin,15px);text-shadow:0 1px 0 rgba(0,0,0,.5),0 0 7px rgba(8,15,29,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.guest-tag{display:inline-block;vertical-align:2px;font-size:8.5px;font-weight:800;letter-spacing:.22em;color:#F0DCA3;border:1px solid rgba(233,205,138,.55);border-radius:999px;padding:1px 7px 2px}
 .seat-score{display:block;color:#FFF;font-weight:700;font-size:clamp(18px,3.2vmin,28px);line-height:1.1;text-shadow:0 3px 0 rgba(0,0,0,.25);transition:color .3s}
 .seat .tag{display:block;font-size:9px;font-weight:600;letter-spacing:.16em;color:rgba(255,246,232,.75);margin-top:1px}
 /* House Players (pass 5): the HOUSE segment leads the tag line in
