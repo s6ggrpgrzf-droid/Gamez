@@ -14,13 +14,14 @@ const ROOT = __dirname;
 const core = fs.readFileSync(path.join(ROOT, 'rules-core.js'), 'utf8');
 
 const NAMES = ['QUICK_DRAW_BONUS', 'STREAK_BONUS', 'STREAK_MIN', 'STREAK_DEATH_MIN',
-  'BET_PAYOUT', 'BASE_BET_CAP', 'MAX_BET_CAP', 'LONG_SHOT_STEP', 'BLUFF_FOOL'];
+  'BET_PAYOUT', 'BASE_BET_CAP', 'MAX_BET_CAP', 'LONG_SHOT_STEP', 'BLUFF_FOOL',
+  'BET_LOSS_EARLY', 'FINAL_WRONG_PENALTY', 'DECLARE_MULT'];
 
 const browser = core +
   '\n/* ---- browser footer (generated) ---- */\n' +
   'window.GH_RULES = {\n' +
   NAMES.map(n => '  ' + n + ': GH_' + n + ',').join('\n') + '\n' +
-  '  qdAmount: ghQdAmount,\n  streakAmount: ghStreakAmount,\n  melt: ghMelt,\n  betCap: ghBetCap\n};\n';
+  '  qdAmount: ghQdAmount,\n  streakAmount: ghStreakAmount,\n  melt: ghMelt,\n  betCap: ghBetCap,\n  betLoss: ghBetLoss,\n  betPayout: ghBetPayout\n};\n';
 
 const worker = core +
   '\n/* ---- worker footer (generated) ---- */\n' +
@@ -28,7 +29,9 @@ const worker = core +
   'export function qdAmount(round) { return ghQdAmount(round); }\n' +
   'export function streakAmount(round) { return ghStreakAmount(round); }\n' +
   'export function melt(baseValue, multiplier, frac) { return ghMelt(baseValue, multiplier, frac); }\n' +
-  'export function betCap(scores, seat) { return ghBetCap(scores, seat); }\n';
+  'export function betCap(scores, seat) { return ghBetCap(scores, seat); }\n' +
+  'export function betLoss(chips, qInRound) { return ghBetLoss(chips, qInRound); }\n' +
+  'export function betPayout(chips) { return ghBetPayout(chips); }\n';
 
 const targets = [
   { file: path.join(ROOT, 'rules.js'), body: browser, label: 'gilded-hour/rules.js' },
