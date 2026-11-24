@@ -6038,6 +6038,8 @@
           ["The wheel", "Sterling spins the category"],
           ["The pay", "$100 easy · $200 medium · $300 hard"],
           ["The drain", "The value melts while the room thinks — commit early"],
+          ["Cut Two", "One token each — yours for the whole show"],
+          ["What it does", "Hold it on a question to see two wrong answers; tap to strike them — your eyes only"],
           ["The fingers", "1, 2, 3 or 4 when the clock stops — right fingers bank"],
           ["Quick-draw", "First right answer in pockets the bonus — $50 in Round 1, $100 in Round 2, $150 in the Big Finish"],
           ["The streak", "Three in a row starts it — a bonus on every bank while it lives, growing with the round: $25, $50, $75"],
@@ -6045,7 +6047,7 @@
       2: (G.rules && G.rules.secondCut)
         ? [["The money", "Same game, double — $200 · $400 · $600"],
            ["Cut Two", "Two tokens each — yours for the whole show"],
-           ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
+           ["What it does", "Called before the fingers go up: two wrong answers vanish — from your desk only; the room still sees four"],
            ["The spend", "Spend them like they matter — because they do"],
            ["The Double", "New this round: one ×2 token each — spend it on a question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
@@ -6053,7 +6055,7 @@
            ["The Headline", "The round closes with it — double money again, half the clock"]]
         : [["The money", "Same game, double — $200 · $400 · $600"],
            ["Cut Two", "One token each — yours for the whole show"],
-           ["What it does", "Called before the fingers go up: two wrong answers vanish for everybody"],
+           ["What it does", "Called before the fingers go up: two wrong answers vanish — from your desk only; the room still sees four"],
            ["The spend", "Spend it like it's the last one — it is"],
            ["The Double", "New this round: one ×2 token each — spend it on a question and a right answer pays you twice"],
            ["Its price", "Wrong, and the token is spent. Nothing more — nobody loses money here"],
@@ -8867,8 +8869,11 @@
   });
   paintMute();
   /* ---------- how tonight works (teaching cards) ----------
-     A manual overlay off the title screen: five beats (the pot
-     took its own card in Pass 5), no game state touched. gh_taught only records that a player checked
+     A manual overlay off the title screen: six beats (the pot
+     took its own card in Pass 5; the teach-at-the-moment pass
+     added the gate as beat 1 — the show may start there, and
+     the detailed beats behind it are reference, not the road),
+     no game state touched. gh_taught only records that a player checked
      "Don't show this again" — the entry point stays either way,
      and picks up a quiet tick when the table has been taught. */
   var howBeat = 0;
@@ -8879,9 +8884,14 @@
     document.querySelectorAll(".how-beat").forEach(function (p) { p.classList.toggle("hidden", +p.getAttribute("data-beat") !== n); });
     document.querySelectorAll(".how-dot").forEach(function (d, i) { d.classList.toggle("sel", i === n); });
     var last = n === document.querySelectorAll(".how-beat").length - 1;
+    /* the gate beat (teach-at-the-moment pass): the show may be
+       started from the second card — the detailed beats behind
+       it are the reference, not the road */
+    var cur = document.querySelector(".how-beat[data-beat=\"" + n + "\"]");
+    var gate = !!(cur && cur.classList.contains("how-gate"));
     $("howNext").classList.toggle("hidden", last);
     $("howClose").classList.toggle("hidden", !last);
-    $("howStart").classList.toggle("hidden", !last);
+    $("howStart").classList.toggle("hidden", !(last || gate));
   }
   function openHow() {
     $("howAgain").checked = howTaught(); showBeat(0);
@@ -10539,10 +10549,10 @@
     $("qCounter").textContent = "QUESTION " + e.seq + " OF 15";
     var titles = { 1: "THE WARM-UP", 2: "DOUBLE MONEY", 3: "THE BIG FINISH" };
     var texts = {
-      1: "Six questions, and everybody answers every one — on your own phones this time. Sterling spins the category. Easy pays $100, medium $200, hard $300, and the value drains while the room thinks. When the window closes, every correct phone banks the money. And on every multiple-choice question, the first correct answer in also pockets a quick-draw bonus — $50 in this round, and it grows with the night: $100 in Round 2, $150 in the Big Finish — be quick AND right. Three correct in a row starts a streak — every bank after that pays a bonus while it lives, $25 in this round and growing the same way. Closest-number questions: type your number — the nearest takes it.",
+      1: "Six questions, and everybody answers every one — on your own phones this time. Sterling spins the category. Easy pays $100, medium $200, hard $300, and the value drains while the room thinks. When the window closes, every correct phone banks the money. And on every multiple-choice question, the first correct answer in also pockets a quick-draw bonus — $50 in this round, and it grows with the night: $100 in Round 2, $150 in the Big Finish — be quick AND right. Three correct in a row starts a streak — every bank after that pays a bonus while it lives, $25 in this round and growing the same way. Closest-number questions: type your number — the nearest takes it. And every phone holds a Cut Two for the show — hold it on a question to peek at two wrong answers, tap to strike them from your screen alone.",
       2: (OG.rules && OG.rules.secondCut)
-        ? "Same game, double money — $200, $400, $600. Your lifelines are live: each of you holds TWO Cut Two tokens for the whole show. Call one from your phone before the window closes and two wrong answers vanish for everybody. And the round closes with the Headline Question — double money again, half the time on the clock."
-        : "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it from your phone before the window closes and two wrong answers vanish for everybody. And the round closes with the Headline Question — double money again, half the time on the clock.",
+        ? "Same game, double money — $200, $400, $600. Your lifelines are live: each of you holds TWO Cut Two tokens for the whole show. Call one from your phone before the window closes and two wrong answers vanish — from your phone only; every other screen still sees four. And the round closes with the Headline Question — double money again, half the time on the clock."
+        : "Same game, double money — $200, $400, $600. Your one lifeline is live: each of you holds a single Cut Two for the whole show. Call it from your phone before the window closes and two wrong answers vanish — from your phone only; every other screen still sees four. And the round closes with the Headline Question — double money again, half the time on the clock.",
       3: "Three questions. Before each one, bet on yourself from your phone — a chip is $100, and the bet stays secret until the reveal. Chasing the leader? The further behind you are, the more chips you may ride — up to five. Get it right and the bet pays in full. Get it wrong and the bet costs you — half your stake, all of it on the last question, and $300 more for a wrong answer there."
     };
     stage('<div class="bumper"><div class="round-kicker">ROUND ' + e.round + "</div>" +
