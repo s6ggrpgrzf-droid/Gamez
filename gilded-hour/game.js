@@ -6068,8 +6068,12 @@
           : cap > 3 ? " " + trailer.name + " trails by " + money(tGap) + " — the Long Shot lets a trailer ride up to " + cap + " chips."
             : " " + trailer.name + " trails by " + money(tGap) + " — not far enough to wake the Long Shot: three chips is the cap.");
     }
-    var openers = ["Intermission, table. ", "We pause for breath. ", "The story so far. "];
-    var recap = openers[(doneRound + (top ? top.seat : 0)) % openers.length] + leaderFrag + ".";
+    /* Sterling shrink Pass 2: the recap opens on the facts —
+       the rotating ceremonial opener is gone, and so is the
+       'Refill something' closer below. What remains is the
+       standings, the round's biggest bank, the pot and the
+       Tonight Ledger's fragment: reporting, not oratory. */
+    var recap = leaderFrag + ".";
     if (big && bigSeat) recap += " The round's biggest bank was " + bigSeat.name + "'s — " + money(big.amt) + " on " + big.cat + ".";
     else recap += " Nobody banked a thing that round — a quiet table, saving its noise.";
     if (qdFrag) recap += " And " + qdFrag + ".";
@@ -6091,7 +6095,6 @@
        Ledger's freshest story, told in the recap's own grammar,
        handed in by whichever engine is at the break */
     if (cbFrag) recap += " " + cbFrag;
-    recap += doneRound === 1 ? " Refill something — Double Money does not wait." : " Refill something — the Big Finish does not wait.";
     return {
       leaderLine: leaderLine, bankLine: bankLine, qdLine: qdLine, cutLine: cutLine, potLine: potLine, windLine: windLine,
       /* Pass N2: the night's rules, named on the card in one
@@ -6259,7 +6262,7 @@
     else if (G.round === 1 && G.memoryLine) hostSayText(G.memoryLine);
     else if (G.round === 1 && G.seasonLine) hostSayText(G.seasonLine);
     else if (G.round === 1 && G.rivalryLine) hostSayText(G.rivalryLine);
-    else hostSay("r" + G.round);
+    else hostQuiet(); /* Shrink Pass 2: no memory to report — no ceremony either; the ledger card teaches the round */
     /* The Golden Question (pass 4): the tease rides the Round 1
        intro — spoken once per show, appended to whichever line
        owns the bubble (the series framing or the round line).
@@ -6734,7 +6737,7 @@
          table has no single subject and takes the sweep */
       if (finaleEx.seat != null) stPoint(finaleEx.seat); else stSweep();
     }
-    else hostSay("bet");
+    else hostQuiet(); /* Shrink Pass 2: the chips are the content — no generic invitation */
     betLongShotCalled = {};
     $("btnBetsDone").addEventListener("click", spinBeat);
     autoGo("btnBetsDone", "bet:" + G.round + ":" + G.qInRound, 12000, function () { return !!G && G.phase === "bet"; });
@@ -11118,7 +11121,7 @@
        Round 1 bubble outright (the live greeting stood down
        in ogBeginShow) — the open line, then the presentation */
     else if (e.round === 1 && OG.guestLine) hostSayText(authoredLine("open") + " " + OG.guestLine);
-    else if (e.round !== 1) hostSay("r" + e.round);
+    else if (e.round !== 1) hostQuiet(); /* Shrink Pass 2: Rounds 2–3 open quiet online too — the card teaches the round */
     $("ogRoundGo").addEventListener("click", ogServe);
     autoGo("ogRoundGo", "ogintro:" + e.round, (paceCfg() ? paceCfg().reveal : 6000) + 4000, function () { return !!OG && OG.phase === "intro"; });
     ogSaveHostShow(); /* curRound moved with this intro — the save follows */
@@ -11210,7 +11213,7 @@
       '<p class="round-text">Bets are being placed on phones, secret until the reveal — a chip is $100; right pays the bet, and a miss costs half the stake — on the last question, all of it and $300 more. Chasing the leader? The further behind you are, the more chips you may ride — up to five.</p>' +
       '<div><span class="og-count">BETS IN&nbsp;<b id="ogBetsIn">0</b> / ' + ogJoined().length + "</span></div>" +
       '<div style="margin-top:14px"><button class="btn-gold" id="ogBetsGo">BETS ARE IN — SPIN THE CATEGORY</button></div>');
-    hostSay("bet");
+    hostQuiet(); /* Shrink Pass 2: the bets are the content — no generic invitation */
     $("ogBetsGo").addEventListener("click", function () { ogSpinThenPublish(e); });
     if (OG.snap && OG.snap.bet) ogPaintBets(OG.snap.bet.betsIn);
     OG._betsIn = (OG.snap && OG.snap.bet) ? (OG.snap.bet.betsIn || 0) : 0;
@@ -11235,7 +11238,7 @@
     if (e.special && e.intro) $("hostLine").textContent = e.intro;
     else if (spinHeadline) { e.headlineSaid = true; hostSay("headline", { cat: e.cat }); }
     else if (e.round === 1 && e.qInRound === 0) {
-      hostSay("r1");   // the Round-1 bumper line, set where the first spin's lines are set (see ogIntro)
+      hostQuiet();   // Shrink Pass 2: the Round-1 bumper is quiet online too — the appends below (the Golden tease, the rules) still ride the bubble
       /* The Golden Question (pass 4): the tease rides that same
          beat — the host's Round 1 intro moment — appended to the
          bumper line, exactly as the table appends it at
