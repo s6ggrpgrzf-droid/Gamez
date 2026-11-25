@@ -516,6 +516,69 @@
       "The house keeps the crown — {name}, playing for Sterling's side, outplayed the room. The chase, table, is the best part anyway.",
       "{name} takes it for the house. A fair win, cleanly played — the guests will have their revenge another night."
     ],
+    /* The House Rivalry (solo pass, 2026-11-25): Sterling's memory
+       of the soloist's history with each house regular. rivaltheirs
+       and rivalyours speak a live streak ({a} the regular, {n} its
+       length); rivalold speaks a long acquaintance ({f} meetings,
+       {l} taken by the guest, {w} by the regular); the cuppoint
+       pools speak when tonight's show decides the race to five;
+       the solocup pools are PRINTED on the finale when it does. */
+    rivaltheirs: [
+      "{a} again — and {a} has taken your last {n} meetings. The house sends its regards, and its problem.",
+      "Look who the house sent: {a}, who has beaten you {n} meetings running. Revenge is a dish this kitchen serves nightly.",
+      "{a} takes the far chair, {n} meetings unbeaten against you. Sterling keeps the count so you don't have to — though he suspects you do.",
+      "It is {a}, of course. {n} straight meetings have gone the house's way when this face sits down. Tonight would be a fine night to end that.",
+      "{a} is back at your table, carrying a streak of {n} at your expense. The room expects a contest.",
+      "The house does not send {a} by accident. {n} meetings, {n} lessons. Class is in session, if you want it."
+    ],
+    rivalyours: [
+      "{a} returns to the scene of it: you have taken your last {n} meetings. Some chairs hold grudges; this one holds {a}.",
+      "The house sends {a} — brave of them. You have won your last {n} meetings against this face, and {a} knows it.",
+      "{a} again, and the recent history is yours: {n} meetings running. Defend it.",
+      "Your old sparring partner {a} takes a chair. The last {n} meetings went home with you; {a} has come to collect.",
+      "{a}, whom you have beaten {n} times straight. The house believes in second chances. And thirds. And fourths.",
+      "Across the table, {a} — a face you have had the better of {n} meetings running. Streaks, like guests, eventually leave. Usually."
+    ],
+    rivalold: [
+      "{a} again — meeting number {f}. Of those, {l} went home with you and {w} with {a}, and neither of you is finished.",
+      "An old hand takes the chair: {a}. {f} meetings between you now — {l} yours, {w} theirs. Familiarity breeds a contest.",
+      "{a} and you have history — {f} meetings, the count at {l} for you and {w} for {a}. The house could not keep you apart if it tried.",
+      "{f} meetings in, {a} still comes back for more. The acquaintance stands {l} to {w} in your favour — or against it. Sterling reads it kindly either way.",
+      "{a} once more. {f} meetings deep, {l} taken by you, {w} by the house's own. You know each other's tells by now. Or think you do.",
+      "The house deals you {a} — {f} meetings, and the rivalry is the oldest furniture in the room. {l} for you, {w} for them."
+    ],
+    cuppointyou: [
+      "And mark the standing: one more night in the race and the Solo Cup comes to you. The house knows it. Play like it.",
+      "Tonight is worth more than a night: take it, and the Solo Cup is yours. The house has sent its best objections.",
+      "Four nights banked in the race, one to go. Win tonight and Sterling polishes a cup with your name in mind.",
+      "The race stands at match point — yours. Take tonight and the Solo Cup leaves the house's shelf.",
+      "One win from the Solo Cup. The house will contest every inch of it, starting now.",
+      "Sterling will say it plainly: win tonight and the cup is yours. The house has been reminded as well."
+    ],
+    cuppointhouse: [
+      "And mark the standing: the house sits one win from the Solo Cup. Tonight is the defence of it.",
+      "The race is at match point — the wrong way. If the house takes tonight, the Solo Cup stays on its shelf. Spoil it.",
+      "Four nights the house has banked. One more and the cup is theirs. Sterling trusts the room finds that unacceptable.",
+      "Tonight defends the cup itself: lose, and the house takes the race. Win, and the argument continues.",
+      "The house stands one win from the Solo Cup. Favourites have fallen at this exact fence before.",
+      "Match point, house. Sterling dislikes the phrase as much as you do. Take the night back."
+    ],
+    solocupyou: [
+      "AND WITH IT, THE SOLO CUP — the race is yours, five nights taken. The shelf has a new name on it.",
+      "THE SOLO CUP IS YOURS — five nights in the race. Sterling will have the engraving done by morning.",
+      "AND THE SOLO CUP CHANGES HANDS — the house kept it warm; it belongs to the guest now.",
+      "FIVE NIGHTS, AND THE RACE IS YOURS — the Solo Cup leaves with the only guest who ever truly wanted it.",
+      "THE SOLO CUP, TAKEN — the house applauds, through its teeth, beautifully.",
+      "AND THAT SETTLES THE RACE — the Solo Cup is yours. The house requests a rematch era, effective immediately."
+    ],
+    solocuphouse: [
+      "AND WITH IT, THE SOLO CUP STAYS HOME — {name} settles the race for the house.",
+      "THE SOLO CUP REMAINS THE HOUSE'S — {name} takes the deciding night.",
+      "THE RACE GOES TO THE HOUSE — {name} closes it out, and the cup keeps its old shelf.",
+      "AND THE CUP STAYS — {name} for the house, in the deciding night. The next race begins tomorrow.",
+      "THE HOUSE TAKES THE RACE — {name} with the final word. Sterling expects the guest's reply, nightly, until further notice.",
+      "THE SOLO CUP STAYS ON ITS SHELF — {name} defends it for the house. There will be other races."
+    ],
     /* Design pass 3: the Quick-Draw call-out. When the first correct
      * lock-in is banked, this pool REPLACES the reveal's beat line
      * entirely — revealSay / ogRevealSay check for a quick-draw
@@ -4133,6 +4196,7 @@
            introduction line ride the save, like the golden pair */
         solo: !!G.solo,
         soloLine: G.soloLine || null,
+        soloRivalLine: G.soloRivalLine || null,
         /* Dynamics pass D1: the pot rides the save exactly — a
            refresh mid-show restores the brass as it stood, and a
            resumed reveal (whose feed is already inside this
@@ -4295,6 +4359,7 @@
          introduction line is redrawn from the same pool */
       solo: !!sv.solo || sv.players.some(function (p) { return p.house != null; }),
       soloLine: typeof sv.soloLine === "string" ? sv.soloLine : null,
+      soloRivalLine: typeof sv.soloRivalLine === "string" ? sv.soloRivalLine : null,
       /* Rematch Night: the series context needs no save field of
          its own — at the table it is a pure function of the cast,
          so it is rebuilt from the saved names, and the opening
@@ -4319,6 +4384,10 @@
     if (G.houseCast.length !== 2) G.houseCast = null;
     if (G.solo && !G.soloLine && G.players.length === 3)
       G.soloLine = authoredLine("house", { a: G.players[1].name, b: G.players[2].name });
+    /* The House Rivalry: a save that kept the cast but lost the
+       rivalry line recomposes it from the same book (this show
+       has not advanced it yet, so the facts are identical) */
+    if (G.solo && !G.soloRivalLine && G.houseCast) G.soloRivalLine = composeSoloRivalLine(G.houseCast);
     if (G.cur) G.cur.headline = isHeadline(G.round, G.qInRound); // Design pass 2: position-derived, never saved
     /* The Golden Question (pass 4): the flag is never saved on the
        question either — it is re-derived from the restored pick and
@@ -5284,6 +5353,11 @@
         if (p && HOUSE_PROFILES[pi]) { p.house = pi; }
       });
       G.soloLine = authoredLine("house", { a: names[1], b: names[2] });
+      /* The House Rivalry: the memory of these two faces is
+         composed at the same moment, from the soloist's book —
+         and rides the save beside the introduction, so a resumed
+         intro re-presents the identical words */
+      G.soloRivalLine = composeSoloRivalLine(soloCast);
     }
     G.guess = buildGuessSchedule();
     showScreen("scr-game");
@@ -6357,6 +6431,9 @@
        same intro, appended after the tease — the house is never a
        surprise sprung mid-show */
     if (G.round === 1 && G.soloLine) { var hSolo = $("hostLine"); if (hSolo) hSolo.textContent += " " + G.soloLine; }
+    /* The House Rivalry: the memory rides the same bubble, right
+       behind the introduction — the past is part of the seating */
+    if (G.round === 1 && G.soloRivalLine) { var hRival = $("hostLine"); if (hRival) hRival.textContent += " " + G.soloRivalLine; }
     /* Pass N2 — House Rules: Sterling names the night's toggles
        at the same intro, appended after the tease and the house
        introduction — drawn at show start, ridden by the save,
@@ -8857,6 +8934,10 @@
     var potEntryT = potAwardEntry(potAward, G.players);
     if (potEntryT) awardsT.push(potEntryT);
     if (guestFinishers.length) recordShow(G.showId, guestFinishers, guestWin, awardsT);
+    /* The House Rivalry: the soloist's book is written at the
+       same guarded moment, from the same verdict — and if the
+       night decided the race, its line prints on the finale */
+    var soloCupLine = recordSoloShow(G.showId, i, tiedIdx);
     var seasonWonT = takeSeasonResult();
     /* Programme pass 4 — Rematch Night: the night advances at the
        same guarded moment, under the same show id, on the finale's
@@ -8940,6 +9021,7 @@
       (titleSub ? '<div class="winner-sub">' + titleSub + "</div>" : "") +
       (seasonWonT ? '<div class="winner-sub season-line">AND WITH IT, THE SEASON — ' + esc(seasonWonT.champion.toUpperCase()) + " TAKES THE GILDED CUP · " + esc(seasonWonT.name) + "</div>" : "") +
       (sFinaleLine ? '<div class="winner-sub series-line' + (sNightWon ? " night-won" : "") + '">' + esc(sFinaleLine) + "</div>" : "") +
+      (soloCupLine ? '<div class="winner-sub series-line">' + esc(soloCupLine) + "</div>" : "") +
       '<span class="gold-seal" aria-hidden="true"><svg class="wheel-emblem emblem-seal" viewBox="0 0 120 120"><use href="#emblem"></use></svg></span></div>' +
       '<div class="sterling-zone"><div class="bubble bubble-finale">Sealed with a kiss of confetti — the hour is yours, ' + esc(p.name) + ".</div>" +
       sterlingSVG("present", "sterling sterling-lg") + "</div></div>" +
@@ -9038,13 +9120,135 @@
   }
   /* the deal: two profiles from the show rng, neither wearing the
      human's own name — two same-named seats would blur the desk */
+  /* The House Rivalry (solo pass, 2026-11-25): the soloist's own
+     book — one small store (gh_solo_v1) holding the head-to-head
+     with each house regular (meetings faced, nights each way, the
+     live streak between them), the race to five for the Solo Cup,
+     the cups themselves, and the last pair dealt. It is a THIRD
+     book: Sterling's Record keeps guests only, the night's series
+     counts the whole table, and this one belongs to the soloist
+     and the house alone. Nothing here ever touches the others. */
+  var SOLO_KEY = "gh_solo_v1";
+  function loadSoloStore() {
+    try { var s = JSON.parse(localStorage.getItem(SOLO_KEY) || "null"); if (s && s.regs && s.race && s.cups) return s; } catch (e) {}
+    return null;
+  }
+  function freshSoloStore() { return { regs: {}, race: { you: 0, house: 0 }, cups: { you: 0, house: 0 }, lastPair: null, seen: [] }; }
+  function saveSoloStore(s) { try { localStorage.setItem(SOLO_KEY, JSON.stringify(s)); } catch (e) {} }
+  function soloReg(s, i) { if (!s.regs[i]) s.regs[i] = { f: 0, w: 0, l: 0, s: 0 }; return s.regs[i]; }
+  function soloFacedTotal(s) { var t = 0; for (var k in s.regs) t += s.regs[k].f || 0; return t; }
+  /* the dealing policy: the house plays the standing. A first
+     night gets the gentle pair (Caspar, Vivian); a guest leading
+     the race gets Odette, the strongest seat, with the most
+     charged of the rest; a house running away by two or more
+     eases off to its gentlest pair; anything else is dealt by
+     charge — live streaks first, meetings as weight, the roll
+     for the rest. The guest's own name is never dealt (the
+     original rule), and a resumed show never re-deals: the cast
+     rides the save as before */
   function dealHouseCast(humanName) {
     var hn = String(humanName || "").trim().toLowerCase();
-    var order = shuffle([0, 1, 2, 3]), cast = [];
-    for (var k = 0; k < order.length && cast.length < 2; k++) {
-      if (HOUSE_PROFILES[order[k]].name.toLowerCase() !== hn) cast.push(order[k]);
+    var eligible = [0, 1, 2, 3].filter(function (i) { return HOUSE_PROFILES[i].name.toLowerCase() !== hn; });
+    var store = loadSoloStore();
+    if (!store || soloFacedTotal(store) === 0) {
+      var gentle = [2, 1].filter(function (i) { return eligible.indexOf(i) >= 0; });
+      while (gentle.length < 2 && eligible.length) gentle.push(eligible.shift());
+      return gentle.slice(0, 2);
     }
-    return cast;
+    if (store.race.you > store.race.house && eligible.indexOf(3) >= 0) {
+      var partner = null, bestCharge = -1;
+      eligible.forEach(function (i) {
+        if (i === 3) return;
+        var r = soloReg(store, i), charge = Math.abs(r.s) * 10 + r.f;
+        if (charge > bestCharge) { bestCharge = charge; partner = i; }
+      });
+      return [3, partner];
+    }
+    if (store.race.house - store.race.you >= 2) {
+      var soft = eligible.slice().sort(function (a, b) { return HOUSE_PROFILES[a].skill - HOUSE_PROFILES[b].skill; }).slice(0, 2);
+      if (store.lastPair && soft.join() === store.lastPair.join() && eligible.length > 2)
+        soft[1] = eligible.filter(function (i) { return soft.indexOf(i) < 0; })[0];
+      return soft;
+    }
+    var scored = eligible.map(function (i) {
+      var r = soloReg(store, i);
+      return { i: i, score: Math.abs(r.s) * 2 + r.f * 0.3 + rng() * 1.5 };
+    }).sort(function (a, b) { return b.score - a.score; });
+    return [scored[0].i, scored[1].i];
+  }
+  /* the rivalry Sterling names at the solo intro: the cup point
+     outranks everything; then a live streak of two or more,
+     either way; then a long acquaintance. Nothing charged,
+     nothing said — a first meeting gets the house line alone */
+  function composeSoloRivalLine(cast) {
+    var store = loadSoloStore();
+    if (!store || !cast || cast.length !== 2) return null;
+    if (store.race.you >= 4) return authoredLine("cuppointyou");
+    if (store.race.house >= 4) return authoredLine("cuppointhouse");
+    var theirs = null, yours = null, old = null;
+    cast.forEach(function (i) {
+      var r = soloReg(store, i);
+      if (r.s >= 2 && (!theirs || r.s > theirs.r.s)) theirs = { i: i, r: r };
+      if (r.s <= -2 && (!yours || r.s < yours.r.s)) yours = { i: i, r: r };
+      if (r.f >= 4 && (!old || r.f > old.r.f)) old = { i: i, r: r };
+    });
+    var pick = theirs && yours ? (Math.abs(theirs.r.s) >= Math.abs(yours.r.s) ? theirs : yours) : (theirs || yours);
+    if (pick) return authoredLine(pick.r.s > 0 ? "rivaltheirs" : "rivalyours", { a: HOUSE_PROFILES[pick.i].name, n: Math.abs(pick.r.s) });
+    if (old) return authoredLine("rivalold", { a: HOUSE_PROFILES[old.i].name, f: old.r.f, l: old.r.l, w: old.r.w });
+    return null;
+  }
+  /* the standing as the setup card prints it — a fact line, not
+     a speech: the race, the cups if any have been taken, and the
+     sharpest live streak in the room */
+  function composeSoloStanding() {
+    var store = loadSoloStore();
+    if (!store || soloFacedTotal(store) === 0) return null;
+    var txt = "You " + store.race.you + " · house " + store.race.house + " in the race to five";
+    if (store.cups.you || store.cups.house) txt += " · Solo Cups — you " + store.cups.you + " · house " + store.cups.house;
+    var sharp = null;
+    [0, 1, 2, 3].forEach(function (i) {
+      var r = store.regs[i];
+      /* the sharpest streak; on a tie the house's streak over
+         the guest is the sharper fact — the standing is a
+         warning before it is a boast */
+      if (r && Math.abs(r.s) >= 2 && (!sharp || Math.abs(r.s) > Math.abs(sharp.r.s) ||
+        (Math.abs(r.s) === Math.abs(sharp.r.s) && r.s > sharp.r.s))) sharp = { i: i, r: r };
+    });
+    if (sharp) txt += ". " + (sharp.r.s > 0
+      ? HOUSE_PROFILES[sharp.i].name + " has taken your last " + sharp.r.s + " meetings"
+      : "You have taken " + HOUSE_PROFILES[sharp.i].name + "'s last " + Math.abs(sharp.r.s) + " meetings") + ".";
+    return txt;
+  }
+  /* the book is written once per show, at the crowning, under
+     the show's own id — a finale that renders again (or a tie
+     still resolving) can never count twice, and a tied night
+     with no single winner writes nothing at all */
+  function recordSoloShow(showId, winnerIdx, tiedIdx) {
+    if (!G.solo || tiedIdx || winnerIdx == null) return null;
+    var store = loadSoloStore() || freshSoloStore();
+    if (store.seen.indexOf(showId) >= 0) return null;
+    store.seen.push(showId); if (store.seen.length > 60) store.seen = store.seen.slice(-60);
+    var winner = G.players[winnerIdx];
+    var humanWon = winner && winner.house == null;
+    G.players.forEach(function (p) {
+      if (p.house == null) return;
+      var r = soloReg(store, p.house);
+      r.f++;
+      if (winner && winner.house === p.house) { r.w++; r.s = r.s > 0 ? r.s + 1 : 1; }
+      else if (humanWon) { r.l++; r.s = r.s < 0 ? r.s - 1 : -1; }
+      else r.s = 0;
+    });
+    var cupLine = null;
+    if (humanWon) {
+      store.race.you++;
+      if (store.race.you >= 5) { cupLine = authoredLine("solocupyou"); store.cups.you++; store.race.you = 0; store.race.house = 0; }
+    } else if (winner) {
+      store.race.house++;
+      if (store.race.house >= 5) { cupLine = authoredLine("solocuphouse", { name: winner.name }); store.cups.house++; store.race.you = 0; store.race.house = 0; }
+    }
+    store.lastPair = G.houseCast ? G.houseCast.slice() : store.lastPair;
+    saveSoloStore(store);
+    return cupLine;
   }
   function startSoloShow(humanName) {
     var cast = dealHouseCast(humanName);
@@ -9271,6 +9475,11 @@
     }
     if (soloMode) {
       wrap.appendChild(el('<div class="house-note">SEATS 2 &amp; 3 — THE HOUSE PLAYS ITS OWN<span>Two house players, dealt when the show starts. They answer, bet and spend like anyone at the table.</span></div>'));
+      /* The House Rivalry: once the soloist has a book, the card
+         prints the standing — the race and the sharpest streak —
+         in the same note grammar, under its own heading */
+      var soloStanding = composeSoloStanding();
+      if (soloStanding) wrap.appendChild(el('<div class="house-note">THE HOUSE RIVALRY<span>' + esc(soloStanding) + '</span></div>'));
     }
     renderPodiumPreview();
     paintRoomQRows();
