@@ -28,6 +28,16 @@
 #scr-game.st-tip .host-face{transform:rotate(-5deg) translateY(3px)}
 #scr-game.st-nod .host-face{animation:nodA .55s ease}
 @keyframes nodA{0%,100%{transform:translateY(0)}30%{transform:translateY(3px)}55%{transform:translateY(0)}78%{transform:translateY(2px)}}
+/* Sterling shrink Pass 4 — the panel rests: while Sterling is
+   silent the medallion settles (smaller, dimmer, colours muted)
+   and the bar's wash deepens; when he speaks it returns to full
+   presence. Purely visual — layout and fit measurements never
+   change. Placed after the gesture rules so rest wins a tie
+   against a leftover glance or lean. */
+#hostbar{transition:background-color .5s ease}
+#hostbar .host-face{transition:transform .45s ease,filter .45s ease}
+#hostbar.resting{background-color:rgba(10,4,18,.30)}
+#hostbar.resting .host-face{transform:scale(.8);filter:saturate(.45) brightness(.75)}
 .host-face svg circle[r="3.6"],.sterling circle[r="6.5"]{transform-box:fill-box;transform-origin:center;transition:transform .07s ease}
 #scr-game.st-blink .host-face svg circle[r="3.6"],#scr-game.st-blink .sterling circle[r="6.5"]{transform:scaleY(.08)}
 /* Cast pass 1: eyes have whites now, so the blink flattens the whole

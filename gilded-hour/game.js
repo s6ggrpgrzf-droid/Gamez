@@ -170,37 +170,9 @@
       "Good evening, I'm Sterling. Fifteen questions, everybody plays, and the only money you can lose here is a bet you place yourself. Those are the house rules — I invented them, so they're excellent.",
       "Welcome to The Gilded Hour: the questions are older than your first car and twice as reliable. I'm Sterling. Let's make some money.",
       "Evening, table. I'm Sterling — the questions are vintage, the money is pretend, and the company is the real prize. Shall we?",
-      "Pull up a memory and settle in. Tonight we find out who actually remembers those years and who just dresses like them. I'm Sterling. We begin."
-    ],
-    r1: [
-      "Round One — the Warm-Up. Easy money, loud opinions. Fingers at the ready, table.",
-      "The Warm-Up. Six questions to loosen the wrists and the wallets. I pick the categories — the wheel and I have an understanding.",
-      "The Warm-Up. Six gentle questions, priced like a yard sale and twice as fun to fight over.",
-      "Round One. Nothing here bites — these are the questions your childhood left stuck to the fridge with a magnet."
-    ],
-    r2: [
-      "Round Two — Double Money. Everything pays twice, and your Cut Two is live. Spend it wisely; there is exactly one.",
-      "Double Money. The questions get nosier and the money gets louder. Sterling believes in you. Sterling believes in everybody. It's a flaw.",
-      "Double Money, table. Every right answer just doubled in value — and every wrong one doubled in confidence.",
-      "Round Two. The training wheels come off and the stakes have had a growth spurt. Your Cut Two is live: spend its moment like it matters, because it does."
-    ],
-    r3: [
-      "The Big Finish. Three questions, three bets, and the only trapdoor in the show — from here, a wrong bet costs real money.",
-      "Three questions left. Bet on yourselves — out loud, so the room can hold you to it.",
-      "The Big Finish, where brave hearts bet on themselves. Three questions between this table and the Hour — make them count.",
-      "The last three. Bets declared out loud, hearts worn on sleeves. This is the part of the evening you'll be describing at breakfast."
-    ],
-    spin: [
-      "The wheel turns… and stops where it stops. {cat}! Blame the wheel.",
-      "{cat}! The wheel has spoken. The wheel is never wrong, merely smug.",
-      "Round she goes, and where she stops… {cat}! The wheel accepts applause and blame in equal measure.",
-      "The wheel slows, the room leans in… {cat}. Even I didn't see that coming, and I own the wheel."
-    ],
-    read: [
-      "Here's one from {cat}. Fingers limber, memories unlocked.",
-      "{cat}, coming up. Somewhere in this room is a misspent youth about to pay off.",
-      "From the deep vaults of {cat}. Dust it off, table — you know this one; you just don't know you know it.",
-      "{cat}, from the archives. This one's been waiting thirty years to be asked, and it has dressed for the occasion."
+      "Pull up a memory and settle in. Tonight we find out who actually remembers those years and who just dresses like them. I'm Sterling. We begin.",
+      "Good evening. I'm Sterling, the questions are antiques, and the money is pretend — which has never once stopped a table from caring. Fifteen questions. Everybody plays.",
+      "Evening. Sterling, at your service. Everything you're about to be asked, you once knew by heart — tonight we find out what the years kept and what they spent."
     ],
     /* Show the Band (The Ten, pass 3): when the dealt question is a
        Deep Cut, Sterling's intro beat says so — this pool REPLACES
@@ -212,7 +184,9 @@
       "This one's a deep cut, table — {cat}, from the shelves only the devotees dust.",
       "A deep cut from {cat}. If you know it, you know it in your bones; if you don't — bluff like you do.",
       "From the deep end of {cat}, table. The casual fans just sat up a little straighter. Nervously.",
-      "Deep cut, this — and {cat} keeps its secrets well. Somewhere out there is exactly one cousin who knows it cold. Be that cousin."
+      "Deep cut, this — and {cat} keeps its secrets well. Somewhere out there is exactly one cousin who knows it cold. Be that cousin.",
+      "From the bottom shelf of {cat}, where the dust is thickest and the devotees live. A misspent youth is about to pay off — somebody's, anyway.",
+      "A deep cut, table — {cat} at its most particular. The casual fans may sit this one out in their hearts; the rest of you, lean in."
     ],
     /* Subtraction Pass III — CALIBRATION IN THE OPEN: when the
        ledger has re-marked a question (its effective band stands
@@ -225,92 +199,82 @@
     remarkdown: [
       "House rule, in the open: this {cat} question wears a re-mark. Rooms kept acing it at its written band, so the house has stepped it down one. Blame your predecessors — they were too sharp for its old tag.",
       "Re-marked, table — {cat}, playing a step easier than it was written. The ledger keeps score of questions too, and this one kept losing to the room.",
-      "This one carries a new mark: {cat}, stepped down a band by the house. Too many tables knew it too well for the tag it was born with."
+      "This one carries a new mark: {cat}, stepped down a band by the house. Too many tables knew it too well for the tag it was born with.",
+      "A confession from the ledger: this {cat} question has been re-marked down. It arrived wearing a harder tag than it earned, and the house has corrected the tailoring.",
+      "Re-marked down, table — {cat}, one step easier than written. The question kept embarrassing its own label, so the label changed.",
+      "This {cat} question plays below its written band tonight — re-marked by the house after too many rooms walked through it. The tag lied; the question didn't."
     ],
     remarkup: [
       "House rule, in the open: this {cat} question wears a re-mark. It kept besting the room at its written band, so the house has stepped it up one. The ledger believes it now, even if you don't.",
       "Re-marked, table — {cat}, playing a step harder than it was written. This question has been winning its nights, and the house has noticed.",
-      "This one carries a new mark: {cat}, stepped up a band. Somewhere out there is a room still telling stories about missing it."
-    ],
-    vote: [
-      "Fingers up! Three, two, one — SHOW ME!",
-      "Hands in the air like you actually know this one. Three, two, one — show me!",
-      "Answers in, please — no conferring, no asking the dog. Three, two, one — show me!",
-      "Commit, table. A guess held high beats a certainty kept quiet. Three, two, one — show me!",
-      "Locked in, every one of you — three, two, one — SHOW ME!",
-      "No hedging and no half-raised hands. Full commitment, table — three, two, one — show me!",
-      "Fingers up: the international sign for 'I absolutely know this.' Three, two, one — show me!",
-      "Brave, wrong, or gloriously both — up they go. Three, two, one — show me!"
-    ],
-    mark: [
-      "Right — who had it? Tap their seats. Generosity is allowed; honesty is encouraged.",
-      "Call it fairly, table. Tap the seats that earned it.",
-      "The moment of account. Tap every seat that had it — Sterling trusts your eyes and your conscience.",
-      "Who's holding the right answer? Point them out — tap their seats and make it official.",
-      "Confession time. Tap the seats that knew it. The others may keep their dignity; it's all they have left.",
-      "Accounting time. Tap the seats that earned it — Sterling is watching, but Sterling trusts you. Mostly.",
-      "Who had it? Point them out. The honour system has carried this show for years, and it is not starting to wobble tonight.",
-      "Mark them, table — every seat that knew it gets its due. Tap them in.",
-      "The reckoning. Tap the seats whose fingers told the truth; the rest may remain in comfortable denial.",
-      "Confessions over, verdicts in: whose hands were honest? Tap those seats and we'll make it official."
+      "This one carries a new mark: {cat}, stepped up a band. Somewhere out there is a room still telling stories about missing it.",
+      "A word from the ledger: this {cat} question has been re-marked up. It has beaten enough rooms at its written band that the house has stopped believing the tag.",
+      "Re-marked up, table — {cat}, one step harder than it was written. Questions earn their marks here, and this one has been earning.",
+      "This {cat} question carries a heavier mark than it was born with. The house stepped it up — its record against the room demanded it."
     ],
     bluffInvent: [
       "A different animal, this one, table. There is exactly one true answer to it — and the bank is not providing the wrong ones. You are. Lies, please — good ones.",
       "The Bluff, table. I know the truth and I am saying nothing. What I need from each of you is a lie convincing enough to steal a vote.",
       "This question's wrong answers have not been written yet — that's your job. Invent one each, make it sound like the truth wearing its best suit.",
-      "One truth hides in this question and the rest is up to you. Write me a lie you'd bet a stranger on, table."
+      "One truth hides in this question and the rest is up to you. Write me a lie you'd bet a stranger on, table.",
+      "The Bluff, table. One of these answers is true and the bank is providing it. The wrong ones are your department — craftsmanship, please.",
+      "A question with only one honest answer, and it isn't yours to give. Invent the rest — lies with posture, table, lies that could run for office."
     ],
     bluffVote: [
       "There they are — one truth, and this table's finest fiction. Pick the one you believe — on your desk.",
       "Read them carefully. Somebody at this table is lying beautifully, and it might be everybody.",
-      "The answers, as invented by the accused. Pick the one that's actually true — if you can."
+      "The answers, as invented by the accused. Pick the one that's actually true — if you can.",
+      "One truth, the rest couture. Read them like you mean it and pick the honest one.",
+      "Somewhere in that row is the truth, wearing a row of very confident liars. Choose.",
+      "The table has spoken — in fiction. One of those is real. Your desk, your call, table."
     ],
     bluffMark: [
       "Now the accounting of lies. Tap an answer, then the seats that believed it.",
       "Who fell for what? Tap each answer and point me at its believers.",
-      "The reckoning, table — whose lie caught whom? Tap an answer, then its audience."
+      "The reckoning, table — whose lie caught whom? Tap an answer, then its audience.",
+      "Now we settle the fiction. Tap an answer; point me at everyone it fooled.",
+      "Whose lie landed where? The honour system has carried this show for years — tap the answer, then its believers.",
+      "The reckoning of lies, table — answer by answer, believer by believer. Tap them in."
     ],
     allHit: [
       "EVERYBODY. The whole table, paid in full. I shall alert the newspapers.",
       "A clean sweep! Drinks are on the house. The house is me. The drinks are imaginary.",
       "The WHOLE table. Every last one of you. I'm not saying it was easy — I'm saying you made it look that way.",
-      "A clean sweep, with witnesses! If this were a casino, they'd be escorting us out by now."
+      "A clean sweep, with witnesses! If this were a casino, they'd be escorting us out by now.",
+      "The whole table! Every seat, paid. Sterling has hosted a long time, and that sound never gets old.",
+      "Unanimous, and correct. The room just played as one instrument, and it was in tune."
     ],
     someHit: [
       "{name} had it — and has company. The finger-vote never lies. Usually.",
       "Paid out to the sharp-eyed. The rest of you: beautiful confidence, wrong answer.",
       "{name} leads the believers home. The money moves, the room murmurs — this, table, is the good stuff.",
-      "Banked, and banked properly. The rest of the table is taking notes it will pretend not to need."
+      "Banked, and banked properly. The rest of the table is taking notes it will pretend not to need.",
+      "{name} had it, and the money has moved accordingly. The rest of the table has questions for itself.",
+      "Paid: {name} and the sharp company they keep. Knowledge, table — it spends beautifully."
     ],
     allMiss: [
       "Nobody. Not one finger. The question retires undefeated, and slightly smug about it.",
       "The whole table looked straight at that one and blinked. It happens to the best rooms. Once.",
       "A swing and a miss from the entire orchestra. That question leaves in a limousine, undefeated.",
-      "Not a soul had it. The answer slips out the stage door and into the night — and we shall speak of it at breakfast anyway."
-    ],
-    numQ: [
-      "Closest number wins this one. No options, no hiding — just a number and the courage to shout it.",
-      "A numbers question. Key in your best guess when your desk lights up — the nearest number takes the money.",
-      "A closest-number question. No options, no hiding — just a number and the nerve to shout it.",
-      "Numbers, out loud. Nobody needs to be exactly right; somebody needs to be nearest. Make it you."
+      "Not a soul had it. The answer slips out the stage door and into the night — and we shall speak of it at breakfast anyway.",
+      "A collective blink. The question keeps its money and its mystery, and the table keeps its dignity — mostly.",
+      "Nobody in the room. That one goes back in the vault unanswered, wearing a small, satisfied smile."
     ],
     numHit: [
       "{name} called it closest. Somewhere, a maths teacher just felt a small disturbance of pride.",
       "Closest shout: {name}. The number has been respected, and so have you.",
       "Nearest the mark: {name}. Precision like that deserves its own sound effect — the money will have to do.",
-      "{name}, closest to the pin. The rest of you were answering a slightly different question, I can only assume."
+      "{name}, closest to the pin. The rest of you were answering a slightly different question, I can only assume.",
+      "{name}, nearest the number. The rest of you were in the neighbourhood; {name} had the address.",
+      "Closest call: {name}. Guessing is an art, and that was gallery work."
     ],
     numMiss: [
       "Nobody got near it. The number remains at large.",
       "Those guesses were… geographically diverse. No winner this time.",
       "The guesses have scattered to the four winds, and the truth sits untouched in the middle, waving. No money this time.",
-      "Somewhere between the bravest guess and the shyest sits the number, unbothered. It keeps the money."
-    ],
-    cut: [
-      "{name} spends the Cut Two! Two wrong answers leave the building. Security will escort them out.",
-      "Cut Two, called by {name}. Half the lying is over — the other half is up to you.",
-      "The Cut Two falls, called by {name}! Two wrong answers are shown the door — they'll be outside, telling the car park their side of it.",
-      "{name} plays the Cut Two. The field narrows, the odds preen, and this question just got personal."
+      "Somewhere between the bravest guess and the shyest sits the number, unbothered. It keeps the money.",
+      "The guesses have landed everywhere except near it. The number keeps its counsel, and its money.",
+      "Not a near miss among them. Somewhere, the true number is telling this story at parties."
     ],
     /* Design pass 6 — Cut Two's moment. When the lifeline is spent,
        the moment speaks with THIS pool, drawn locally through the
@@ -322,7 +286,9 @@
       "{name} reaches for the scissors — Cut Two! Two wrong answers are snipped clean out of the picture.",
       "Snip, snip — {name} spends the Cut Two. The picture narrows, and the room's breathing with it.",
       "{name} cuts two loose! The blades are out, the net draws tight — now choose well.",
-      "The scissors flash for {name} — Cut Two, spent in broad daylight. Two answers fall away."
+      "The scissors flash for {name} — Cut Two, spent in broad daylight. Two answers fall away.",
+      "The blades, for {name} — Cut Two. Two wrong answers leave the card, and the question stands a little plainer.",
+      "{name} spends the scissors. Snip, snip — the field narrows to the truth and its nearest impersonator."
     ],
     /* Road-to-9/10 Pass 5 — THE TRAP. When two or more seats fall
        for the SAME wrong answer, the reveal names the answer and
@@ -334,7 +300,9 @@
       "One wrong answer, taken in chorus: ‘{answer}’. {names} fell together — which at least is company.",
       "‘{answer}’ — the answer this table wanted to be true. {names} wanted it most. The question disagrees.",
       "{names} cannot all be wrong the same way by accident — ‘{answer}’ simply looked that true. It wasn’t.",
-      "The trap of the night, so far: ‘{answer}’. {names} all reached for it, and it was painted on the ceiling."
+      "The trap of the night, so far: ‘{answer}’. {names} all reached for it, and it was painted on the ceiling.",
+      "‘{answer}’ — it gleamed like the truth and {names} reached for the gleam. Painted scenery, table.",
+      "One answer, taken in harmony: ‘{answer}’. {names} sang it together. The composer, regrettably, was wrong."
     ],
     /* Road-to-9/10 Pass 7 — the audition. On a night with a
        guest (one first-timer among veterans, guestNameFor),
@@ -346,7 +314,9 @@
       "One seat tonight is new to this room: {name}, our guest. The room is kind to guests — for exactly one question.",
       "Before we begin, a presentation: {name} sits with us for the first time. Everything you are about to hear about the rest of this table is true, and none of it is a warning.",
       "Tonight the room has a guest — {name}, first time under these lights. Play well, {name}; the book is watching, and it writes in ink.",
-      "A new name for the book: {name}, our guest this evening. The regulars know the steps. {name} gets to invent them."
+      "A new name for the book: {name}, our guest this evening. The regulars know the steps. {name} gets to invent them.",
+      "A first-timer among the regulars: {name}, our guest. The room will be gentle — the questions have made no such promise.",
+      "The book opens a new page tonight: {name}, first time at this table. Regulars, behave like the legends you believe you are."
     ],
     /* Road-to-9/10 Pass 5 — the second scissors. A Cut Two spent
        after the night's first names the seat that opened the
@@ -357,7 +327,9 @@
       "The scissors are out again — {name} spends a Cut Two. {first} opened the blades tonight, and the room is getting surgical.",
       "Another Cut Two falls, this one {name}’s. {first} started the cutting tonight — a habit is forming.",
       "{name} cuts two more loose. The blades have been busy since {first} first reached for them.",
-      "Cut Two, again — {name} this time. {first} set the scissors loose tonight and they have not rested since."
+      "Cut Two, again — {name} this time. {first} set the scissors loose tonight and they have not rested since.",
+      "Again the scissors — {name} this time. Since {first} opened them, the blades have known no rest.",
+      "{name} cuts two more. {first} started something tonight, and the table has taken to it."
     ],
     /* Dynamics pass D2 — Second Wind: spoken at the break, only
        when the break actually granted one ({name} is the granted
@@ -368,25 +340,26 @@
     wind: [
       "Second wind for {name} — the scissors come back. The house looks after its trailers.",
       "A kindness from the cellar: {name} takes the Cut Two back. Last place has its privileges.",
-      "{name} sits last, so the house returns the blade — a second wind, and a second chance to spend it well."
-    ],
-    bet: [
-      "Bets out loud, please. Declare your chips on yourself. Confidence is free; chips are a hundred dollars.",
-      "The Big Finish wants your bet and your bravado in equal measure. Declare your bets — the room is listening, and it will remember.",
-      "Chips talk in the Big Finish. One chip says cautious; three say certain. Declare yours where the room can hear.",
-      "Your bet, table — stake your pride in hundreds and say it like a headline. The cheap seats are listening."
+      "{name} sits last, so the house returns the blade — a second wind, and a second chance to spend it well.",
+      "{name} trails, so the house intervenes: the Cut Two returns. Spend the second chance like it was the first.",
+      "A second wind for {name} — the scissors, restored by the house. Last place is a position, not a verdict.",
+      "The house returns {name}'s blade. The room's trailers get one kindness here, and this is it, beautifully timed."
     ],
     longshot: [
       "{name} takes the Long Shot — {chips} chips, a {amount} swing on a single answer. The room leans in.",
       "{name} goes long — {chips} chips, {amount} the swing. The room holds its breath in stereo.",
       "The Long Shot, taken by {name}: {chips} chips against the night, {amount} riding on being right.",
-      "{name} believes, and proves it with {chips} chips — the Long Shot, {amount} in the balance."
+      "{name} believes, and proves it with {chips} chips — the Long Shot, {amount} in the balance.",
+      "{name} rides long — {chips} chips, {amount} on one answer. Courage, or arithmetic. Either way, the room approves.",
+      "The Long Shot, and it's {name}'s: {chips} chips against the night, {amount} the swing. Sterling does not breathe during these."
     ],
     headline: [
       "The Headline Question, table — double money again, half the clock, and every eye in the room on one card. Make it a good one.",
       "Front page, table: the Headline Question. Twice the money, half the time, all the nerve.",
       "Here it is — the one they print above the fold. The Headline Question: double value, double-quick clock.",
-      "Last question of the round, and it's the Headline. Double money again — but the clock runs twice as fast, so think like a headline: fast and bold."
+      "Last question of the round, and it's the Headline. Double money again — but the clock runs twice as fast, so think like a headline: fast and bold.",
+      "The Headline Question. It closes the round, it doubles the money, and it halves the clock — the front page waits for no one.",
+      "Above the fold, table: the Headline. Double money, half the thinking time, and the whole round watching."
     ],
     /* The Golden Question (The Ten, pass 4): the tease is spoken
        ONCE per show, at the Round 1 intro — the EXISTENCE is
@@ -397,7 +370,9 @@
       "One house secret before we start, table: somewhere in the first two rounds, one question is golden. It pays double. I know which one. You don't.",
       "A confidence before the wheel turns: one question in the first two rounds tonight is worth double. Which one? That's my secret, and I keep it beautifully.",
       "House rules, one addition: a golden question hides somewhere in the first two rounds. Double money when it lands, no warning when it comes. It could be any of them. It is exactly one of them.",
-      "Listen once, because I say this once: hiding in the first two rounds is a golden question — double pay, in plain sight. I know where it's buried. Dig carefully."
+      "Listen once, because I say this once: hiding in the first two rounds is a golden question — double pay, in plain sight. I know where it's buried. Dig carefully.",
+      "One more house secret, and then Sterling seals his lips: a golden question is hiding in the first two rounds. Double pay. No map.",
+      "Before the first spin, a confidence: one question tonight — early, unmarked — is golden. It pays double. It will not announce itself twice."
     ],
     /* ...and the reveal moment. Like the quick-draw call-out, a
        golden reveal speaks THIS pool instead of the generic beat
@@ -408,7 +383,9 @@
       "GOLDEN! There it is, table — that question was gold all along, and it pays DOUBLE.",
       "The gilt comes off: that was the Golden Question. Double money, exactly as secretly promised.",
       "Gold, table! Did you feel the clock hurry? That was why. The Golden Question — double, for everyone who had it.",
-      "And THAT was the golden one. Hidden in plain sight, paid in double. Sterling keeps his secrets — and his promises."
+      "And THAT was the golden one. Hidden in plain sight, paid in double. Sterling keeps his secrets — and his promises.",
+      "GOLD, table — the golden question, exactly where it was hiding. Double money for every right answer.",
+      "There it was! The golden one, in plain sight all along. It pays double — Sterling's secrets keep beautifully, don't they?"
     ],
     /* Dynamics pass D1 — the Table Pot. Beats in the reveal
        arbitration's grammar (an authored pool replaces the
@@ -426,27 +403,42 @@
     potfirst: [
       "And that, table, is the pot's first feeding — {amount} sits in the brass, waiting on the last question.",
       "Nobody banked it, so the pot keeps it: {amount}. The last question of the night will decide whose it is.",
-      "Into the pot it goes — {amount}. Unclaimed money doesn't leave this table; it just changes its plans."
+      "Into the pot it goes — {amount}. Unclaimed money doesn't leave this table; it just changes its plans.",
+      "The pot opens its account: {amount}. Every miss from here feeds it, and the last question inherits it all.",
+      "First money into the brass — {amount}. The pot has begun its slow, patient evening.",
+      "Unclaimed, and into the pot: {amount}. It will sit there gleaming until the last question decides its fate."
     ],
     potgrand: [
       "The pot passes a thousand — {amount} in the brass, and growing teeth. Somebody's evening just got heavier.",
       "A thousand and beyond: the pot stands at {amount}. The misses are building somebody a very good night.",
-      "Look at it grow — {amount} in the pot. Every question this room fails is a deposit toward the last question."
+      "Look at it grow — {amount} in the pot. Every question this room fails is a deposit toward the last question.",
+      "The pot stands at {amount} — four figures of other people's near-misses, waiting on one question.",
+      "{amount} in the brass now. The pot has stopped being a detail and started being a motive.",
+      "Look what the misses have built: {amount}. The last question of the night just got louder."
     ],
     potaward: [
       "And the pot — {amount} this table left behind — goes to {names} for the last answer, crown or no crown.",
       "Plus the pot: {amount} in unclaimed money, every dollar of it earned by other people's misses — {names} takes it for landing the last one.",
-      "The brass is emptied into {names}'s hands — {amount} from the pot, won on the final question."
+      "The brass is emptied into {names}'s hands — {amount} from the pot, won on the final question.",
+      "And the brass empties to {names} — {amount} of unclaimed money, claimed at the last possible moment.",
+      "The pot goes home with {names}: {amount}, gathered from every miss the table made tonight.",
+      "{names} takes the pot — {amount}. The last answer was worth more than it knew."
     ],
     potshare: [
       "The last answer was shared, so the brass is too — {share} apiece to {names}, {amount} in all.",
       "{names} split the pot — {share} each, from {amount} in unclaimed money.",
-      "The pot had more than one claimant: {share} apiece to {names}. The misses built it; the last answer divided it."
+      "The pot had more than one claimant: {share} apiece to {names}. The misses built it; the last answer divided it.",
+      "Shared, like the answer: {share} apiece to {names}, out of {amount} in the brass.",
+      "The brass divides — {share} each to {names}. {amount} of misses, split by the ones who finally landed one.",
+      "More than one hand in the brass: {names} take {share} apiece from {amount}."
     ],
     pothouse: [
       "And the pot — {amount} — stays with the house. The last question beat the whole table, so the brass keeps what the brass collected.",
       "Nobody banked the last one, so {amount} in unclaimed money stays in the brass tonight. The house thanks you for your contributions.",
-      "The pot goes unclaimed — {amount}. The last question was the pot's question, and the pot won it."
+      "The pot goes unclaimed — {amount}. The last question was the pot's question, and the pot won it.",
+      "The brass keeps its treasure: {amount}, unclaimed. The last question outplayed the whole table, and the pot goes home with the house.",
+      "Nobody landed the last one, so the pot — {amount} — stays in the brass tonight. The house thanks you for your contributions.",
+      "{amount} sits unclaimed in the brass. The house accepts the table's generous donation with a straight face."
     ],
     /* Pass N1 — The Report Card. report is the plain introduction
        printed over the finale's card; reportbig is drawn instead
@@ -456,12 +448,18 @@
     report: [
       "And now the part of the evening where I read your numbers back to you — the report card, table.",
       "Every show leaves its marks. Here is what the night recorded, exactly as it happened.",
-      "Sterling keeps books, and tonight's are unusually well kept. The report card, for the record."
+      "Sterling keeps books, and tonight's are unusually well kept. The report card, for the record.",
+      "The bookkeeping, table — every bank, every miss, exactly as the night wrote it. The report card.",
+      "Sterling reads the record aloud exactly once, and the record does not negotiate. Your report card.",
+      "What the night wrote down, in ink: the report card. Sterling merely holds the page."
     ],
     reportbig: [
       "The report card holds one number I cannot let pass quietly: {name}'s biggest bank of the night — {amount}, in a single question.",
       "Read the card by all means — but note {name}'s {amount} bank. The night's largest single haul, and a beauty.",
-      "One figure on that card deserves its own applause: {name} banked {amount} on one question — the biggest bank of the night."
+      "One figure on that card deserves its own applause: {name} banked {amount} on one question — the biggest bank of the night.",
+      "One line on that card glows: {name}'s {amount} bank — the biggest single haul of the night.",
+      "Before you read it yourselves, hear this: {name} banked {amount} on one question tonight. The card's finest figure.",
+      "The card holds many numbers, but one stands taller: {name}, {amount}, a single question. The night's biggest bank."
     ],
     /* A3 review, proposal 2 (Jimmy's pick, 2026-11-11): when the
        night was settled by the decider, the report card's line
@@ -473,7 +471,10 @@
     reportdecider: [
       "It came down to one question — the decider — and {name} took it. The card below is the night's record; that was its final word.",
       "Fifteen questions could not separate this table. One more could — the decider — and {name} held their nerve.",
-      "The night ended the way nights should: level, tense, one question for everything. {name} answered it. The report card follows."
+      "The night ended the way nights should: level, tense, one question for everything. {name} answered it. The report card follows.",
+      "It took a decider to finish this night, and {name} finished it. The card that follows is the whole story — that was its last line.",
+      "Dead level after fifteen, settled by one more: {name} took the decider. Here is the night's record, complete at last.",
+      "The night needed one question past its ending, and {name} answered it. The report card, table — with its ending written."
     ],
     /* Pass N2 — House Rules. When the night plays under toggles
        the host chose at setup, Sterling names them once, at the
@@ -486,7 +487,10 @@
     rules: [
       "House rules tonight, table: {rules}. Your call, your table — Sterling merely keeps the books.",
       "One note before the money moves: tonight we play with {rules}. Everything else is the Gilded Hour exactly as it ever was.",
-      "The house has agreed to the table's terms: {rules}. I shall pretend they were my idea. We begin."
+      "The house has agreed to the table's terms: {rules}. I shall pretend they were my idea. We begin.",
+      "The night's terms, for the record: {rules}. Agreed by the table, kept by the house.",
+      "Tonight's variation, named once: {rules}. Sterling administers; the table decided.",
+      "One adjustment to the usual liturgy: {rules}. Everything else proceeds exactly as the Hour demands."
     ],
     /* The Ten, pass 5 — House Players. house is the solo show's
        Round 1 introduction: the arrangement is named honestly,
@@ -499,13 +503,18 @@
     house: [
       "One chair is yours; the other two belong to the house. {a} and {b} play for Sterling's side tonight — they answer, they bet, they can take the night. Beat them and it is truly yours.",
       "Playing alone? Not at this table. The house sends two of its own — {a} and {b} — to keep the contest honest. They play by every rule you do, and they play to win.",
-      "A solo show, with company: {a} and {b} are house players. They think fast, bet their own chips, and spend their own Cut Two. Take the night from them if you can."
+      "A solo show, with company: {a} and {b} are house players. They think fast, bet their own chips, and spend their own Cut Two. Take the night from them if you can.",
+      "The house fills the empty chairs: {a} and {b}, playing for Sterling's side. They know the questions' habits. They do not know mercy, either.",
+      "Two seats belong to the house tonight — {a} and {b}. They answer, they bet, they spend, and they would very much like your crown.",
+      "Company for the soloist: {a} and {b} play for the house. Beat them fairly and the night is honestly yours."
     ],
     housewin: [
       "The house takes it — {name} played a beautiful show, and the table applauds its own. The record books stay with the guests; the glory, tonight, stays in the family.",
       "{name} for the house! Somewhere, Sterling is smiling into his sleeve. Your crown waits for another night — and it will keep.",
       "A house win, and a fair one: {name} outplayed the room at its own table. The crown stays home tonight — the chase continues.",
-      "{name} takes it for the house. No disgrace in the losing, table — only in pretending it didn’t happen."
+      "{name} takes it for the house. No disgrace in the losing, table — only in pretending it didn’t happen.",
+      "The house keeps the crown — {name}, playing for Sterling's side, outplayed the room. The chase, table, is the best part anyway.",
+      "{name} takes it for the house. A fair win, cleanly played — the guests will have their revenge another night."
     ],
     /* Design pass 3: the Quick-Draw call-out. When the first correct
      * lock-in is banked, this pool REPLACES the reveal's beat line
@@ -517,7 +526,8 @@
       "{name} beats the whole table to it — first in, and correct. The quick-draw {amt} is yours.",
       "Fastest finger: {name}. Locked in first, locked in right — {amt}, no waiting.",
       "A gunslinger's answer from {name} — drawn first, aimed true. {amt} for the quick draw.",
-      "{name} was in before the ink dried — first AND right. {amt} for sheer speed."
+      "{name} was in before the ink dried — first AND right. {amt} for sheer speed.",
+      "First and right: {name}. The quick-draw {amt} rewards the finger that didn't hesitate."
     ],
     /* Hot Streaks (New programme pass 3): the named streak moments.
      * Same discipline as the quick-draw pool — a moment REPLACES the
@@ -530,18 +540,25 @@
       "Three straight for {name} — the table has a problem, and its name is {name}.",
       "{name} again! Three in a row — the streak is lit, and the room can feel it.",
       "One, two, three — {name} is streaking, table. Somebody cool that seat down.",
-      "{name} makes it three straight. The room has started watching that podium differently."
+      "{name} makes it three straight. The room has started watching that podium differently.",
+      "{name} again — that's three. The streak is young, loud, and entirely {name}'s fault.",
+      "Three on the trot for {name}. The table has begun to answer a half-second slower, out of respect."
     ],
     streak5: [
       "Five straight for {name}! This is no longer a streak; it is a residency.",
       "{name} again — five in a row. Sterling is checking the questions for leaks. There are none. It's just {name}.",
-      "Five! {name} is putting on a clinic and charging the rest of you tuition."
+      "Five! {name} is putting on a clinic and charging the rest of you tuition.",
+      "Five straight. {name} is not playing the questions anymore; the questions are playing {name}.",
+      "{name}, five in a row. Sterling has stopped pretending to be surprised and started taking notes.",
+      "Five! The streak becomes a feature of the room — {name}, its architect."
     ],
     streakdeath: [
       "{name}'s run ends at {n} — the room exhales.",
       "The streak dies at {n}. {name} gave it a beautiful life; the question that killed it should be ashamed.",
       "All good runs end: {name}'s stops at {n}. The table applauds the run, not the ending.",
-      "{n} straight, and then the wall. {name}, the room will remember the run."
+      "{n} straight, and then the wall. {name}, the room will remember the run.",
+      "The run ends at {n} for {name}. Even the applause has a catch in it — that was a streak worth watching.",
+      "{name}'s streak stops at {n}. The question that ended it will be remembered; so will the run."
     ],
     /* Sterling made present (improvement Pass 4, 2026-11-17): the
        night's own story, keyed to what actually happened at this
@@ -550,33 +567,50 @@
     comeback: [
       "Mark the moment: {name} was a thousand down in this room and now leads it. A comeback does not knock — it kicks the door.",
       "From the back of the room to the front of it — {name}'s comeback is complete. The lead belongs to the seat nobody was watching.",
-      "{name} has climbed out of a four-figure hole and taken the lead. If this comeback holds, breakfast will hear of it."
+      "{name} has climbed out of a four-figure hole and taken the lead. If this comeback holds, breakfast will hear of it.",
+      "A thousand down, and now the lead: {name}. Comebacks are the room's favourite genre, and this one is beautifully bound.",
+      "{name} has walked the whole room back — from a four-figure hole to the front of it. The lead has a new name.",
+      "The climb is complete: {name}, once a thousand behind, leads this table. Sterling has underlined it twice."
     ],
     collapse: [
       "And there it goes — {name} held this room by a thousand and the lead has slipped away. A collapse in evening dress is still a collapse.",
       "{name}'s thousand-dollar cushion is spent, and the lead with it. The room has watched a collapse and said nothing out of respect.",
-      "The fall is complete: {name} once towered over this table, and now trails it. Every collapse needs a witness — you are all witnesses."
+      "The fall is complete: {name} once towered over this table, and now trails it. Every collapse needs a witness — you are all witnesses.",
+      "{name} led this room by a thousand, and the lead is gone. The room files the collapse under evenings it will describe carefully.",
+      "The cushion is spent and the lead with it — {name}'s collapse, witnessed by all, described by none. Until breakfast.",
+      "From a thousand clear to chasing: {name}'s lead has left the building. Collapses, like streaks, become part of the furniture."
     ],
     bluffsweep: [
       "{name}'s lie fooled the whole table — every single picker walked into it. The truth stood in the room and nobody looked at it.",
       "A clean sweep of deception: {name} fooled the whole table. Sterling has checked — the lie was not even that good. The table simply believed.",
-      "{name} fooled the whole table with a straight face and an invented answer. That is not luck; that is craft."
+      "{name} fooled the whole table with a straight face and an invented answer. That is not luck; that is craft.",
+      "Every picker. Every single one. {name}'s invention swept the table and the truth watched from the corner.",
+      "{name} fooled the entire room with a fabricated answer. The Bluff requests permission to frame this moment.",
+      "A total sweep: {name}'s lie took every vote the truth didn't. The truth got none. Magnificent, and slightly alarming."
     ],
     bluffbig: [
       "{name}'s lie fooled {n} of you — the invention outpolled the truth, and it pays like it means it.",
       "{n} players bought what {name} was selling, and none of it was true. The Bluff bows to its author.",
-      "{name} fooled {n} seats with a made-up answer. Somewhere, the truth is asking for a recount."
+      "{name} fooled {n} seats with a made-up answer. Somewhere, the truth is asking for a recount.",
+      "{n} seats believed {name}'s invention. The truth is considering legal action.",
+      "{name}'s lie outdrew the truth by {n} believers. Fiction, professionally done.",
+      "Count them: {n} fooled by {name}. The Bluff pays its respects — and its money."
     ],
     bluffnone: [
       "Nobody bit. Every lie at this table fooled nobody — the truth was spotted, sniffed, and taken home.",
       "A table of skeptics: the inventions fooled nobody tonight. The Bluff respects a room it cannot move.",
-      "Not one seat was fooled — the lies fooled nobody, and the truth never looked safer."
+      "Not one seat was fooled — the lies fooled nobody, and the truth never looked safer.",
+      "No takers. The table read every lie like a contract and signed none of them.",
+      "The inventions fooled nobody. This room's suspicion is its finest garment, and it wears it well.",
+      "Not a single believer. The Bluff bows to a table it could not move an inch."
     ],
     winner: [
       "{name} takes the Gilded Hour! The confetti is real, the money is imaginary, and the glory is legally binding.",
       "And the Hour belongs to {name}. Table, applaud. {name}, bow. I shall pretend not to enjoy this.",
       "{name}, the Hour is yours. The rest of you were magnificent and narrowly outshone — Sterling applauds until his gloves wear thin.",
-      "Raise the lights for {name}, champion of the Gilded Hour. The crown is invisible; the bragging rights are extremely visible."
+      "Raise the lights for {name}, champion of the Gilded Hour. The crown is invisible; the bragging rights are extremely visible.",
+      "The Hour belongs to {name}. The crown is pretend, the money is pretend — the winning, table, is entirely real.",
+      "{name} takes the Gilded Hour. Applause, please — and {name}, the room is yours to gloat in, briefly and beautifully."
     ],
     /* Design pass 4: the champion returns. Shown as its own small
        line in the online lobby when a seated player's name matches
@@ -585,7 +619,10 @@
     champreturn: [
       "And look who's back — {name}, the defending champion, returning to guard the crown.",
       "{name} has taken a seat. The defending champion does not surrender a title quietly.",
-      "The champion returns: {name} is in the room, and tonight's crown suddenly has a guard."
+      "The champion returns: {name} is in the room, and tonight's crown suddenly has a guard.",
+      "{name} is back — the crown's current keeper, returning to defend it in person.",
+      "The champion takes a seat: {name}. Titles are heavy; {name} carries it like a coat.",
+      "Look who returns — {name}, defending champion. The crown has a guard tonight, and the guard has a record."
     ],
     /* Designer pass 5 (research programme Pass 3) — Sterling
        remembers: when a table returns as the same group that
@@ -600,23 +637,34 @@
     rematch: [
       "Welcome back to the scene of the crime. Last time this table played, {winner} took the night by {margin} — a debt the rest of you have carried long enough.",
       "The same table, back for more. {winner} won the last one by {margin}; I've kept the receipt, and so, I suspect, have they.",
-      "Back again — and not a moment too soon. Last time: {winner}, by {margin}. Somebody balance the books."
+      "Back again — and not a moment too soon. Last time: {winner}, by {margin}. Somebody balance the books.",
+      "The rematch, table. Last time, {winner} by {margin} — a result the rest of this room has been rehearsing answers to ever since.",
+      "Same table, unfinished business: {winner} took the last one by {margin}. Sterling kept the table set.",
+      "Back at the scene: {winner} won the last meeting by {margin}. Debts, table. Tonight we settle."
     ],
     rematchtotal: [
       "This table has history: last time out, {winner} took the night with {total}. The crown remembers, even if the losers pretend not to.",
       "Welcome back. {winner} closed the last show at this table with {total} — a number the rest of you have seen in your sleep.",
-      "Same seats, same stakes. {winner} won the last one. That is the whole speech; the rest is revenge."
+      "Same seats, same stakes. {winner} won the last one. That is the whole speech; the rest is revenge.",
+      "Last time at this table, {winner} closed with {total}. The number has been on the room's mind — Sterling has checked.",
+      "{winner} owns this table's last headline: {total}. The rest of you have had time to compose a reply.",
+      "The book says {winner}, {total}, last time out. Tonight the book opens a fresh page — same table, same argument."
     ],
     rematchhonour: [
       "{honourName} walked off with {honour} the last time this table played. It is still theirs to lose.",
       "One thing this table remembers: {honourName} held {honour} last time out. Somebody take it off them.",
-      "Last time here, {honour} belonged to {honourName}. The rest of you were there. You saw it. It clearly still stings."
+      "Last time here, {honour} belonged to {honourName}. The rest of you were there. You saw it. It clearly still stings.",
+      "{honour} went home with {honourName} last time. It returns tonight as a target.",
+      "The book remembers what the table pretends to forget: {honourName} holds {honour} from the last meeting.",
+      "One laurel is already spoken for: {honourName} took {honour} last time out. Somebody relieve them of it."
     ],
     rematchdraw: [
       "The last time this table played, nobody took the crown — dead level, unfinished business. We finish it tonight.",
       "This table owes me a champion: last time out, the night ended level. Sterling has kept the table set ever since.",
       "Last time this table played, the night ended level — a champion owed and unpaid. Tonight we collect.",
-      "The last show at this table crowned nobody. The crown has waited patiently. It waits no longer."
+      "The last show at this table crowned nobody. The crown has waited patiently. It waits no longer.",
+      "Last time, this table played fifteen questions and crowned nobody. The debt is outstanding, and Sterling collects tonight.",
+      "A level finish, last time out — the crown went unclaimed and the argument unresolved. We resolve it tonight."
     ],
     /* New programme pass 1 — the Decider. All four pools are LOCAL
        (authored, drawn through hostSay / authoredLine — no worker
@@ -630,31 +678,42 @@
     decider: [
       "Dead level at the top — {a} and {b}, level on money and out of questions. So: one more. The Decider. Closest number takes the crown.",
       "The scoreboard refuses to split {a} and {b}, so we settle it the honest way — one question, two numbers, nearest to the truth takes the Hour.",
-      "Nothing between them. Nothing at all. {a}, {b} — the Decider: one closest-number question, and the crown goes to the nearer call."
+      "Nothing between them. Nothing at all. {a}, {b} — the Decider: one closest-number question, and the crown goes to the nearer call.",
+      "{a} and {b}, level to the dollar, out of questions. The Decider, then: one number, nearest takes everything.",
+      "The table cannot separate {a} and {b}, so the house will. One closest-number question for the crown.",
+      "Dead level. {a}, {b} — one more question, of a different kind: call a number, and let the truth judge the distance."
     ],
     decideragain: [
       "Still nothing between them — so we go again. A fresh number, a fresh call. The Decider does not blink.",
       "The Decider deals another. Same two, same crown, new number — somebody be nearer this time.",
       "Again, then. The Decider has infinite patience and exactly one question at a time.",
-      "Neither would yield, so the Decider asks once more. This is not indecision, table — this is thoroughness."
+      "Neither would yield, so the Decider asks once more. This is not indecision, table — this is thoroughness.",
+      "Level again — the Decider shrugs, shuffles, and asks once more. It has nowhere else to be.",
+      "Neither number would yield. Again, then — the Decider's patience is a house feature."
     ],
     deciderhit: [
       "{name} called it closest — the Decider has spoken, and so has the crown.",
       "Nearest the truth when everything rode on one number: {name}. The Decider is decisive after all.",
       "Closest when it mattered most: {name}. The Decider has its answer, and so does the crown.",
-      "One number nearer than the other — {name} takes the Decider, and the night with it."
+      "One number nearer than the other — {name} takes the Decider, and the night with it.",
+      "Nearest, when nearest was everything: {name}. The Decider rests its case.",
+      "{name} called it closest. One number, one crown, no appeals."
     ],
     deciderlevel: [
       "Identical. The same distance, to the unit. The number refuses to choose — so the Decider goes again.",
       "Dead level AGAIN. Even the truth can't split them. Another question, then.",
       "The same distance, again, to the unit. The Decider shrugs and deals once more.",
-      "Level. Perfectly, stubbornly level. The Decider will ask again — it is enjoying this."
+      "Level. Perfectly, stubbornly level. The Decider will ask again — it is enjoying this.",
+      "The same distance. Again. The Decider is beginning to suspect collusion and deals once more.",
+      "Level to the unit, a second time. The truth refuses to arbitrate — another question."
     ],
     deciderwin: [
       "{name} takes the Gilded Hour — and took it the hard way, closest to the truth with the whole show on one number.",
       "The crown goes to {name}, won head-to-head in the Decider. Nobody can say it was given away.",
       "Won in the Decider, which is to say won outright: {name} takes the Hour.",
-      "{name}, champion by the narrowest instrument the house owns — one number, nearest the truth. The crown fits."
+      "{name}, champion by the narrowest instrument the house owns — one number, nearest the truth. The crown fits.",
+      "{name} takes the Hour by the Decider's narrow arithmetic — closest number, whole crown.",
+      "Won the hard way, in the Decider: {name}. The crown was earned one digit at a time."
     ],
     /* Programme pass 4 — Rematch Night. winnernight is the finale's
        authored winner line when this show's win also took the
@@ -668,13 +727,18 @@
     winnernight: [
       "{name} takes the show — and with it, the night. Three wins in one evening: the argument is over, and {name} won it.",
       "The show is {name}'s, and so is the night — first to three, and reached in style. Somebody frame the evening.",
-      "Once more, {name} — and that makes three. The night has a name on it now, table, and you are all looking at them."
+      "Once more, {name} — and that makes three. The night has a name on it now, table, and you are all looking at them.",
+      "Three shows, one evening, one name: {name} takes the night. The room will be telling this one accurately — it needs no embellishment.",
+      "{name} again — three for the night. Sterling declares the evening closed and the argument settled.",
+      "The night is {name}'s: three wins, first to three, no recount requested. Somebody write it in the book in the good ink."
     ],
     scattered: [
       "The table has scattered — every seat stands empty, and a rematch needs someone still in theirs. The room stays open: gather your people, and Sterling will deal again.",
       "Every chair stands empty and the room has gone quiet. This room stays open while you round them up — Sterling keeps the lights on.",
       "A rematch needs a table, and the table has gone home. The room keeps its code and its patience — bring them back.",
-      "The seats are empty and the hour is late, but the room endures. Gather the table, and we go again."
+      "The seats are empty and the hour is late, but the room endures. Gather the table, and we go again.",
+      "The room is empty and the code still warm. When the table gathers again, Sterling deals — the hour keeps its appointments.",
+      "Every seat empty, the lights low. This room waits — gather the table and the show resumes where the night left it."
     ]
   };
   /* Improvement 5 — Sterling's category lines: reveal-moment pools
@@ -848,6 +912,7 @@
   }
   function hostSay(kind, vars) {
     $("hostLine").textContent = authoredLine(kind, vars);
+    hostPanelSync();
     /* Pass 6: Sterling's line sets the hostbar's height, and the
        seats' reveal growth does the same below — both land AFTER
        the stage() paint that first measures the fit, so the fit
@@ -860,6 +925,7 @@
      facts in it must land exactly as composed */
   function hostSayText(line) {
     var h = $("hostLine"); if (h) h.textContent = line;
+    hostPanelSync();
   }
   /* Sterling shrink Pass 1 — quiet on the ordinary: the routine
      beats (the spin patter, the per-question read line, the vote
@@ -873,6 +939,20 @@
   function hostQuiet() {
     hostSayText("");
     fitStage();
+  }
+  /* Sterling shrink Pass 4 — the panel rests: while the bubble
+     is empty, #hostbar wears .resting (the medallion settles —
+     smaller, dimmer, muted — and the bar's wash deepens, in
+     06-polish-motion.css); the moment a line lands it returns
+     to full presence. One observer on #hostLine keeps the class
+     honest across every way the bubble is written — hostSay,
+     hostSayText, hostQuiet, the composed recaps that assign
+     textContent directly, and the pulse's appends. Layout never
+     changes, so no fit measurement is involved. */
+  function hostPanelSync() {
+    var bar = document.getElementById("hostbar"), line = document.getElementById("hostLine");
+    if (!bar || !line) return;
+    bar.classList.toggle("resting", !(line.textContent || "").trim());
   }
 
   /* ---------- dom helpers ---------- */
@@ -7212,7 +7292,14 @@
         hostSay(G.decider.dealt > 1 ? "decideragain" : "decider",
           { a: names2[0] || "", b: names2.slice(1).join(" and ") || "" });
       }
-      else if (!G.cur.headline) hostSay(G.cur.q && G.cur.q.d === 3 ? "deepcut" : "numQ", { cat: G.cur.cat });
+      else if (!G.cur.headline) {
+        /* Shrink Pass 3: a Deep Cut number still earns its line;
+           an ordinary number open is quiet, exactly as online
+           has been since Pass 1 (the table's numQ draw was the
+           one patter draw Pass 1 missed) */
+        if (G.cur.q && G.cur.q.d === 3) hostSay("deepcut", { cat: G.cur.cat });
+        else hostQuiet();
+      }
     } else if (G.cur.kind === "bluff") {
       stage(bluffQuestionHTML());
       hostSay("bluffVote", { cat: G.cur.cat });
@@ -13085,6 +13172,16 @@
   paintTableResume(); /* improvement 4: offer an unfinished show, if one is saved */
   paintChampion(); /* Design pass 4: the defending champion's plaque, if this device has crowned one */
   paintSeason();
+
+  /* Shrink Pass 4: the host panel's rest state tracks the bubble
+     from the first paint onward */
+  if (window.MutationObserver) {
+    var __hostLineEl = document.getElementById("hostLine");
+    if (__hostLineEl) {
+      new MutationObserver(hostPanelSync).observe(__hostLineEl, { childList: true, characterData: true, subtree: true });
+      hostPanelSync();
+    }
+  }
 
   /* ---------- test hooks ---------- */
   window.__game = {
