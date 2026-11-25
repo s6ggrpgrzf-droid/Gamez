@@ -1187,3 +1187,41 @@
   .seat.house .tag{font-size:7px;letter-spacing:.05em}
   .seat .tag{letter-spacing:.06em}
 }
+
+/* ================================================================
+   MENU PASS 1 (2026-11-25) — THE FRONT DOOR, COMPOSED TWICE.
+   The second critical review's menu charges: the rainbow title
+   emblem is retired (index.html + stratum 06 §8), and landscape
+   was the portrait page stretched — one tall scroll, the wordmark
+   squeezed into a narrow column beside Sterling, the setup card
+   sprawling below the fold. Portrait keeps its single composed
+   column; the wordmark now centres in the marquee row it used to
+   share with the emblem. Short landscape becomes a deliberate
+   two-column composition instead: brand on the left (marquee,
+   category chips, Sterling with his bubble beside him), the setup
+   card whole on the right, each column scrolling inside itself —
+   nothing stretched, nothing floating, nothing below a fold.
+   ================================================================ */
+.marquee-text{text-align:center}
+@media (orientation:landscape) and (max-height:500px){
+  /* a grid, not a row: .title-scroll has THREE children (brand,
+     setup, and the start bar), and the start bar belongs under
+     the setup column — always in view, never a third column. */
+  .title-scroll{display:grid;grid-template-columns:1.04fr 1.3fr;grid-template-rows:minmax(0,1fr) auto;column-gap:3vmin;overflow:hidden;padding-top:8px;padding-bottom:8px}
+  .title-main{grid-row:1/3;flex-direction:column;gap:8px;overflow-y:auto;min-height:0}
+  .title-zone{flex:none;align-items:center}
+  .title-zone .chips{justify-content:center}
+  .sterling-zone{flex:none;flex-direction:row;align-items:flex-end;justify-content:center;gap:10px}
+  .sterling-zone .bubble-title{flex:1;min-width:0}
+  #scr-title .sterling-zone .sterling-lg{width:118px}
+  .title-bottom{margin-top:0;overflow-y:auto;min-height:0;align-items:flex-start;padding-top:48px}
+  .title-bottom .setup-card{flex:1}
+  /* the card stacks in its column, as it does in portrait — the
+     wide-screen two-column grid (stratum 09) would crush its
+     children into a 145px rail here — and the column starts below
+     the SOUND pill, which owns the screen's top-right corner. */
+  #scr-title .setup-card{display:flex;flex-direction:column}
+  .start-bar{grid-column:2}
+  #marqueeTitle{padding-top:8px;padding-bottom:8px}
+  #marqueeTitle .logo{font-size:37px}
+}

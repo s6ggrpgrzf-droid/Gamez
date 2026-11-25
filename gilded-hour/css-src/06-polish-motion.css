@@ -229,15 +229,17 @@
 .wheel-label{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-anchor:middle}
 
 /* ---- 8. the wheel emblem: the show's key art ----
-   One medallion (index.html #emblem / #emblem-sm), three stamps:
-   title marquee, online lobby QR plate, finale seal. Brass comes
-   from the item-7 tokens (the SVG paints with the same values);
-   segments carry the seven category mids. */
+   One medallion (index.html #emblem / #emblem-sm), two stamps left:
+   the online lobby QR plate and the finale seal. The title-marquee
+   stamp RETIRED 2026-11-25 (Menu Pass 1): at marquee size its
+   rainbow segments broke the midnight-and-champagne register the
+   rest of the room keeps; the wordmark stands alone now. Brass
+   comes from the item-7 tokens (the SVG paints with the same
+   values); segments carry the seven category mids. */
 .wheel-emblem{display:block}
 #marqueeTitle>.kicker{margin-bottom:3px}
 .marquee-row{display:flex;align-items:center;justify-content:center;gap:clamp(12px,2.4vmin,22px)}
 .marquee-text{min-width:0}
-.emblem-title{width:clamp(72px,13vmin,96px);height:auto;flex:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.45))}
 .emblem-lobby{position:absolute;top:-13px;left:-13px;width:36px;height:36px;z-index:2;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
 .emblem-seal{width:100%;height:100%}
 
@@ -325,19 +327,16 @@
 /* ---- item 8 responsive sizing (kept last so it wins the cascade
    over the base emblem rules above) ---- */
 @media (max-height:500px){
-  .emblem-title{width:64px}
   .marquee-row{gap:10px}
   #marqueeTitle{padding-top:4px;padding-bottom:4px}
   #marqueeTitle .logo{font-size:29.5px}
 }
 @media (max-width:560px){
-  /* portrait: the emblem row costs the marquee height (the tagline
-     wraps in the narrower text column) — repaid inside the marquee
-     only: slimmer padding, a step down on the wordmark, tighter logo
-     margins — so START keeps its first-viewport place. The kicker
-     rides full-width above the row (its original line), clear of
-     the SOUND button that overlaps the marquee's top-right. */
-  .emblem-title{width:72px}
+  /* portrait: the marquee is repaid inside itself only — slimmer
+     padding, a step down on the wordmark, tighter logo margins —
+     so START keeps its first-viewport place. The kicker rides
+     full-width above the row (its original line), clear of the
+     SOUND button that overlaps the marquee's top-right. */
   .marquee-row{gap:10px}
   .title-zone .marquee{padding:5px 12px}
   .logo{font-size:10vw}
