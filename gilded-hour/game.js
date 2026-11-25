@@ -861,6 +861,19 @@
   function hostSayText(line) {
     var h = $("hostLine"); if (h) h.textContent = line;
   }
+  /* Sterling shrink Pass 1 — quiet on the ordinary: the routine
+     beats (the spin patter, the per-question read line, the vote
+     and mark patter, the generic reveal line) no longer draw a
+     pool line; the bubble clears and the card, the melt and the
+     scoreboard carry the beat. Sterling speaks when something
+     happens — the judging, the events, the remembering. The fit
+     is re-measured here for the same reason hostSay does it: a
+     cleared line changes the hostbar's height after the paint
+     that measured it. */
+  function hostQuiet() {
+    hostSayText("");
+    fitStage();
+  }
 
   /* ---------- dom helpers ---------- */
   function $(id) { return document.getElementById(id); }
@@ -6632,7 +6645,7 @@
       '<p class="round-text">Where it stops, nobody knows. Sterling knows. Sterling always knows.</p>');
     if (G.cur.special && G.cur.intro) $("hostLine").textContent = G.cur.intro;
     else if (G.cur.headline) { G.cur.headlineSaid = true; hostSay("headline", { cat: G.cur.cat }); }
-    else hostSay("spin", { cat: G.cur.cat });
+    else hostQuiet(); /* Shrink Pass 1: the wheel needs no patter */
     Snd.play("spin");
     stClass("st-glance", 1600);
     clearInterval(spinTimer);
@@ -7202,7 +7215,7 @@
       hostSay("bluffVote", { cat: G.cur.cat });
     } else {
       stage(questionHTML());
-      if (!G.cur.headline) { var rkT = remarkOf(G.cur.q); hostSay(rkT < 0 ? "remarkdown" : rkT > 0 ? "remarkup" : (G.cur.q && G.cur.q.d === 3 ? "deepcut" : "read"), { cat: G.cur.cat }); }
+      if (!G.cur.headline) { var rkT = remarkOf(G.cur.q); if (rkT < 0) hostSay("remarkdown", { cat: G.cur.cat }); else if (rkT > 0) hostSay("remarkup", { cat: G.cur.cat }); else if (G.cur.q && G.cur.q.d === 3) hostSay("deepcut", { cat: G.cur.cat }); else hostQuiet(); }
     }
     if (entTake(G.cur)) entApply(document.querySelector("#stage .q-cardwrap"), G.cur.cat);
     if (G.cur.headline && !G.cur.headlineSaid) { G.cur.headlineSaid = true; hostSay("headline", { cat: G.cur.cat }); }
@@ -7531,7 +7544,7 @@
         : G.cur.kind === "num"
         ? (G.cur.guesses ? "Every number is locked in. Who came closest?" : "Numbers ready — shout yours on SHOW ME.")
         : "Every answer is locked on a desk. Who's holding the right one?") + "</p>");
-    hostSay("vote");
+    hostQuiet(); /* Shrink Pass 1: the countdown needs no patter */
     Snd.play("vote");
     saveTableShow();
     var steps = ["3", "2", "1", "SHOW ME!"];
@@ -7631,7 +7644,7 @@
         : "Tap the seat of everyone holding up the right fingers. Wrong fingers, no tap — and nobody loses a thing either way.") + "</p>" +
       markGridHTML() +
       '<button class="btn-gold" id="btnReveal">REVEAL THE ANSWER</button>');
-    hostSay("mark");
+    hostQuiet(); /* Shrink Pass 1: the marking grid instructs itself */
     G.cur.voteAt = Date.now();
     housePreMark();
     paintVoteChips();
@@ -9789,7 +9802,11 @@
         return;
       }
     }
-    var hl = $("hostLine"); if (hl) hl.textContent = authored;
+    /* Shrink Pass 1: no event fired — the reveal says nothing.
+       (The authored generic still serves above as the fallback
+       voice of the three sayLive event beats: whole_miss,
+       first_bank, big_lead.) */
+    var hl = $("hostLine"); if (hl) { hl.textContent = ""; fitStage(); }
   }
   /* the same beats for the online host, against server scores */
   function ogRevealSay(hk, vars, winners) {
@@ -9848,7 +9865,9 @@
         return;
       }
     }
-    var hl = $("hostLine"); if (hl) hl.textContent = authored;
+    /* Shrink Pass 1: no event fired — the reveal says nothing,
+       same rule as the table. */
+    var hl = $("hostLine"); if (hl) { hl.textContent = ""; fitStage(); }
   }
   /* ---------- tonight's special question (served ready-made) ---------- */
   function chicagoDateStr() {
@@ -11227,7 +11246,7 @@
          tease — the table appends them at its Round 1 intro */
       if (OG.rulesLine) { var hRules2 = $("hostLine"); if (hRules2) hRules2.textContent += " " + OG.rulesLine; }
     }
-    else hostSay("spin", { cat: e.cat });
+    else hostQuiet(); /* Shrink Pass 1: the wheel needs no patter */
     Snd.play("spin");
     stClass("st-glance", 1600);
     clearInterval(OG.spinInt);
@@ -11424,7 +11443,7 @@
     }
     else if (headline && !e.headlineSaid) { e.headlineSaid = true; hostSay("headline", { cat: e.cat }); }
     else if (e.kind === "bluff") hostSay("bluffVote", { cat: e.cat });
-    else if (!headline) { var rkO = e.kind === "normal" ? remarkOf(e.bank) : 0; hostSay(rkO < 0 ? "remarkdown" : rkO > 0 ? "remarkup" : (ogBandOf(q, e) === 3 ? "deepcut" : (e.kind === "num" ? "numQ" : "read")), { cat: e.cat }); }
+    else if (!headline) { var rkO = e.kind === "normal" ? remarkOf(e.bank) : 0; if (rkO < 0) hostSay("remarkdown", { cat: e.cat }); else if (rkO > 0) hostSay("remarkup", { cat: e.cat }); else if (ogBandOf(q, e) === 3) hostSay("deepcut", { cat: e.cat }); else hostQuiet(); }
     Snd.playSignature(e.cat);
     stSweep();
     /* Pass 8: no CALL IT on the big screen — the room's own
