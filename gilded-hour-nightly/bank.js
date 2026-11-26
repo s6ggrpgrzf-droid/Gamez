@@ -1635,6 +1635,114 @@ export const BANK = [
     "why": "Eleven — every single one it was nominated for, tying the all-time record held by Ben-Hur and Titanic."
   },
   {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many ghosts chase Pac-Man around his maze?",
+    "num": 4,
+    "why": "Blinky, Pinky, Inky and Clyde — four, each with its own hunting style, which is why the maze never felt fair."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many members were in *NSYNC, the full lineup?",
+    "num": 5,
+    "why": "Justin, JC, Lance, Joey and Chris — five. The puppet strings were a record-label gimmick; the harmonies were not."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many Home Alone films did Macaulay Culkin actually star in?",
+    "num": 2,
+    "why": "Two — New York counts; the third film belongs to a different kid and, the table agrees, a lesser era."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many nephews does Scrooge McDuck have?",
+    "num": 3,
+    "why": "Huey, Dewey and Louie — three, distinguishable only by shirt colour and appetite for adventure."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many episodes of Seinfeld were there, across all nine seasons of the show about nothing?",
+    "num": 180,
+    "why": "180 episodes — the most quoted nothing in television history."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many Grammy Awards did Whitney Houston win in her career?",
+    "num": 6,
+    "why": "Six — including two for 'I Will Always Love You', a song that won everything it was pointed at."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many free hours did the classic AOL trial discs promise — the ones that arrived in every mailbox in America?",
+    "num": 50,
+    "why": "Fifty hours free — the discs outnumbered the coasters, and half the country's first internet ran on them."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "In the famous Tootsie Pop commercial, how many licks did the owl say it takes to get to the centre?",
+    "num": 3,
+    "why": "A-one, a-two, a-three — the world's most famous unofficial count, delivered by a very impatient owl."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many tracks are on Michael Jackson's Thriller?",
+    "num": 9,
+    "why": "Nine — and seven of them were singles. It is less an album than a greatest-hits record that arrived all at once."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many spaces are there on a standard Monopoly board, counting all four corners?",
+    "num": 40,
+    "why": "Forty — every one of them somebody's least favourite place to land in the late game."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "Counting up to and including Pierce Brosnan, how many actors had played James Bond in the official films?",
+    "num": 5,
+    "why": "Connery, Lazenby, Moore, Dalton, Brosnan — five, and the argument about the best one is older than most of the franchise's fans."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many floppy disks did the Windows 95 upgrade ship on — the famous stack you fed the machine one at a time?",
+    "num": 13,
+    "why": "Thirteen — an afternoon of 'please insert disk 7' that a generation can still hear in its sleep."
+  },
+  {
     "cat": "Ads & Jingles",
     "diff": "easy",
     "d": 1,
@@ -1717,6 +1825,174 @@ export const BANK = [
       "Whatchoo talkin' 'bout, Willis?"
     ],
     "why": "Joey Tribbiani's three words outlasted the decade — Willis belongs to the seventies and eighties, whatever your memory tells you."
+  },
+  {
+    "cat": "TV",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "The sitcom most people say they can quote an entire episode of, start to finish, is…",
+    "a": "Friends",
+    "w": [
+      "Seinfeld",
+      "Cheers",
+      "Roseanne"
+    ],
+    "why": "Friends — the one the whole table can perform in chorus, usually starting with 'Pivot!' whether the question asked for it or not."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "The sequel most people say is better than the film that started it all is…",
+    "a": "The Empire Strikes Back",
+    "w": [
+      "The Godfather Part II",
+      "Terminator 2: Judgment Day",
+      "Aliens"
+    ],
+    "why": "Empire — the middle chapter that outran its own legend, cliffhanger and all. The critics argue for the Corleones; the room reaches for the lightsaber."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "The arcade game most people say ate their childhood pocket money, one quarter at a time, is…",
+    "a": "Pac-Man",
+    "w": [
+      "Space Invaders",
+      "Donkey Kong",
+      "Street Fighter II"
+    ],
+    "why": "Pac-Man — a generation's allowance, converted to high scores at twenty-five cents a lesson."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "The breakfast cereal most people say they would still eat dry, straight from the box, as a grown adult is…",
+    "a": "Lucky Charms",
+    "w": [
+      "Froot Loops",
+      "Cap'n Crunch",
+      "Cocoa Puffs"
+    ],
+    "why": "Lucky Charms — the marshmallows were the meal; the oat pieces were the toll you paid to reach them."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The one-hit wonder most people say is secretly a perfect pop song is…",
+    "a": "Take On Me",
+    "w": [
+      "Tubthumping",
+      "Ice Ice Baby",
+      "Mambo No. 5"
+    ],
+    "why": "a-ha's one American hit — a falsetto nobody at this table can reach and everybody attempts anyway."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The website most people say was the first homepage they ever had — the front door of their internet — is…",
+    "a": "Yahoo!",
+    "w": [
+      "AOL",
+      "MSN",
+      "Ask Jeeves"
+    ],
+    "why": "Yahoo! — a directory of the whole web, sorted by human beings, back when that was a thing a website could be."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The fast-food slogan most people say in the character's voice, every single time, is…",
+    "a": "Where's the beef?",
+    "w": [
+      "Have It Your Way",
+      "Eat Mor Chikin",
+      "Think Outside the Bun"
+    ],
+    "why": "Clara Peller, 1984 — three words that outlasted the burger they were complaining about."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The film most people say they have watched more times than any other — their comfort film — is…",
+    "a": "The Shawshank Redemption",
+    "w": [
+      "Forrest Gump",
+      "The Princess Bride",
+      "Back to the Future"
+    ],
+    "why": "Shawshank — the cable-era king. Nobody turns it off halfway; it is not physically possible after the first ten minutes."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "The TV detective most people say would solve the case before anyone else at this table is…",
+    "a": "Columbo",
+    "w": [
+      "Jessica Fletcher",
+      "Magnum",
+      "Kojak"
+    ],
+    "why": "Columbo — one more thing, and the case is closed. The rumpled coat did more work than any forensics lab on television."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "The cartoon theme most people say was secretly the greatest toy commercial ever written is…",
+    "a": "Transformers",
+    "w": [
+      "G.I. Joe",
+      "He-Man and the Masters of the Universe",
+      "DuckTales"
+    ],
+    "why": "'More than meets the eye' — a toy line with a theme song strong enough to outlive the toys, the show, and two reboots."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "The album most people say they bought twice — once on cassette, once on CD, because the tape wore out — is…",
+    "a": "Thriller",
+    "w": [
+      "Rumours",
+      "Back in Black",
+      "The Bodyguard soundtrack"
+    ],
+    "why": "Thriller — the tape wore out in the car, the CD replaced it, and both copies are still in somebody's house."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "The game most people say came free with their first PC and quietly ate their working day is…",
+    "a": "Solitaire",
+    "w": [
+      "Minesweeper",
+      "Space Cadet Pinball",
+      "Hearts"
+    ],
+    "why": "Solitaire — pre-installed, innocent at a glance, and responsible for more lost afternoons than any software ever shipped."
   },
   {
     "cat": "Movies",
@@ -2053,5 +2329,2518 @@ export const BANK = [
       "Harvey Dent"
     ],
     "why": "Heath Ledger's Joker — the line made the poster before it made the trailer."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "GEICO's 2004 ads insisted their website was 'so easy' that who could do it?",
+    "a": "A caveman",
+    "w": [
+      "A toddler",
+      "A goldfish",
+      "A sleepwalker"
+    ],
+    "why": "The offended cavemen got so famous they were given their own sitcom in 2007. It lasted one season."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "From 1997, Taco Bell's ads starred a talking Chihuahua whose Spanish catchphrase was what?",
+    "a": "¡Yo quiero Taco Bell!",
+    "w": [
+      "¡Yo quiero más queso!",
+      "¡Corre por la frontera!",
+      "¡Viva la siesta!"
+    ],
+    "why": "The dog was a Chihuahua named Gidget; the phrase means 'I want Taco Bell' — and 'run for the border' was the chain's older slogan."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 3,
+    "era": "80s",
+    "q": "In the 1981 ad, one Rolls-Royce pulls alongside another so its passenger can ask for what condiment?",
+    "a": "Grey Poupon",
+    "w": [
+      "Heinz Ketchup",
+      "French's Mustard",
+      "Hellmann's Mayonnaise"
+    ],
+    "why": "'Pardon me — would you have any Grey Poupon?' One borrowed jar made a supermarket mustard feel like a luxury good."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Which spinning-top toy line reached North America in 2002 behind the battle cry 'Let it rip!'?",
+    "a": "Beyblade",
+    "w": [
+      "Battle B-Daman",
+      "Bakugan",
+      "Crush Gear"
+    ],
+    "why": "Beyblade's tops fought in plastic Beystadiums; the line began as a Japanese manga and anime in 1999."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "any",
+    "q": "In Trivial Pursuit, the pink wedge is earned by answering a question in which category?",
+    "a": "Entertainment",
+    "w": [
+      "Arts & Literature",
+      "Science & Nature",
+      "Sports & Leisure"
+    ],
+    "why": "Blue is Geography, yellow History, green Science & Nature, orange Sports & Leisure — pink belongs to Entertainment."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "The Sega Genesis was sold under which name in Japan and Europe?",
+    "a": "The Mega Drive",
+    "w": [
+      "The Master System",
+      "The Saturn",
+      "The Wondermega"
+    ],
+    "why": "Sega couldn't secure the Genesis name overseas, so most of the world knew the 1988 machine as the Mega Drive."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 3,
+    "era": "90s",
+    "q": "Which blue-suited animated hero of 1994 yelled 'Spoooon!' as his battle cry?",
+    "a": "The Tick",
+    "w": [
+      "The Maxx",
+      "Freakazoid",
+      "Earthworm Jim"
+    ],
+    "why": "The Tick started as a comic shop's mascot before Fox Kids gave him a series — and Arthur, his moth-suited sidekick."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Kim Possible's sidekick Ron Stoppable carried which pet in his pocket?",
+    "a": "A naked mole-rat",
+    "w": [
+      "A hairless guinea pig",
+      "A hairless cat",
+      "A baby hedgehog"
+    ],
+    "why": "Rufus the naked mole-rat rode in Ron's pocket and shared his love of the naco — Ron's own taco-burrito invention."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Which animated band, co-created by Blur's Damon Albarn, performs through cartoon members including the singer 2-D?",
+    "a": "Gorillaz",
+    "w": [
+      "Arcade Fire",
+      "Daft Punk",
+      "The Good, the Bad & the Queen"
+    ],
+    "why": "Gorillaz debuted in 2001; Albarn voices 2-D, and The Good, the Bad & the Queen is another of his bands — with real people in it."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "In 1995, the auction website that became eBay launched under which name?",
+    "a": "AuctionWeb",
+    "w": [
+      "BidNet",
+      "WebAuction",
+      "The Auction Site"
+    ],
+    "why": "Pierre Omidyar launched AuctionWeb in September 1995 as part of his personal site; the company took the eBay name in 1997."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "In Finding Nemo, what is the address Dory reads off the diver's mask?",
+    "a": "P. Sherman, 42 Wallaby Way, Sydney",
+    "w": [
+      "P. Sherman, 42 Wallaby Way, Melbourne",
+      "P. Sherman, 24 Wallaby Way, Sydney",
+      "P. Sherman, 42 Kangaroo Way, Sydney"
+    ],
+    "why": "P. Sherman, 42 Wallaby Way, Sydney — the address Dory repeats like a prayer so she won't forget it. She forgets it."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Before The Office made him famous, Steve Carell filed reports as a correspondent on which satirical news show?",
+    "a": "The Daily Show",
+    "w": [
+      "The Colbert Report",
+      "Saturday Night Live",
+      "Mad TV"
+    ],
+    "why": "Carell was a Daily Show correspondent from 1999 to 2005 — Stephen Colbert was his desk-mate there before either man had a show of his own."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "The 1986 hit 'Walk Like an Egyptian' was performed by which band?",
+    "a": "The Bangles",
+    "w": [
+      "The Go-Go's",
+      "Bananarama",
+      "Wilson Phillips"
+    ],
+    "why": "The Bangles took it to number one in 1986 — Liam Sternberg wrote it after watching ferry passengers shuffle to keep their balance."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "The Taco Bell chihuahua's famous catchphrase, first heard in 1997, was what?",
+    "a": "¡Yo quiero Taco Bell!",
+    "w": [
+      "Drop the chalupa!",
+      "Think outside the bun",
+      "Where's the beef?"
+    ],
+    "why": "Gidget the chihuahua delivered '¡Yo quiero Taco Bell!' from 1997 — 'Think outside the bun' was the chain's later slogan, no dog involved."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "Before the world called it the Rubik's Cube, the puzzle was first sold in Hungary under which name?",
+    "a": "The Magic Cube",
+    "w": [
+      "The Hungarian Cube",
+      "The Puzzle Cube",
+      "Ernő's Cube"
+    ],
+    "why": "Ernő Rubik's Magic Cube sold in Hungary from 1977; Ideal Toy renamed it for the world in 1980."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "The Goodfeathers, the pigeon mobsters of Animaniacs, are a parody of which Martin Scorsese film?",
+    "a": "Goodfellas",
+    "w": [
+      "Casino",
+      "Mean Streets",
+      "Taxi Driver"
+    ],
+    "why": "Bobby, Pesto and Squit are pigeon send-ups of De Niro, Pesci and Liotta — Goodfellas with feathers and shorter tempers."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "Elwood Edwards, the voice of AOL's 'You've Got Mail', recorded those famous words in 1989 on what, in his own living room?",
+    "a": "A cassette recorder",
+    "w": [
+      "A reel-to-reel tape deck",
+      "His home computer",
+      "A studio microphone"
+    ],
+    "why": "Edwards recorded 'Welcome', 'You've Got Mail', 'File's Done' and 'Goodbye' on a cassette deck at home — his wife worked at the company that became AOL. He was paid $200."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many MILLION people in America watched the final episode of M*A*S*H in 1983?",
+    "num": 106,
+    "why": "About 106 million — still the most-watched series finale in American television history, forty years on."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "McDonald's signs used to keep count out loud. How many BILLION served did they reach before the signs gave up in 1994 and just said 'Billions and Billions Served'?",
+    "num": 99,
+    "why": "The signs hit 99 billion in 1994 and retired the counter — the hamburgers kept going without it."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many SECONDS long was the first television commercial ever aired — a 1941 spot for Bulova watches?",
+    "num": 10,
+    "why": "Ten seconds, on July 1, 1941, before a Dodgers–Phillies game. It cost Bulova nine dollars."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many Pokémon were there in the original first generation of the games?",
+    "num": 151,
+    "why": "151 — from Bulbasaur to Mew. Every kid at this table can still name most of them, and will now try."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many seasons did the original Smurfs cartoon run on Saturday mornings?",
+    "num": 9,
+    "why": "Nine seasons, 1981 to 1989 — longer than most of its audience spent in elementary school."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many cards are in a standard UNO deck?",
+    "num": 108,
+    "why": "108 cards — 76 numbers, 24 action cards and 8 wilds. The +4 has ended friendships."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many Academy Awards did Titanic win at the 1998 Oscars?",
+    "num": 11,
+    "why": "Eleven, including Best Picture and Best Director — tying Ben-Hur's record, which The Return of the King later matched."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many tracks are on the Beatles' White Album?",
+    "num": 30,
+    "why": "Thirty tracks across two discs in 1968 — the Beatles' only double album, and it still had no room for 'Hey Jude', released as a single instead."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "In what YEAR did the first banner ad appear on the web — AT&T asking 'Have you ever clicked your mouse right here?'?",
+    "num": 1994,
+    "why": "1994, on HotWired.com. Its click rate was a never-repeated 44% — nobody has clicked a banner ad on purpose since."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "Ask a roomful of people to name a fast-food slogan, and the one that comes up most is…",
+    "a": "I'm Lovin' It",
+    "w": [
+      "Have It Your Way",
+      "Finger Lickin' Good",
+      "Just Do It"
+    ],
+    "why": "McDonald's has run 'I'm Lovin' It' since 2003 — the chain's longest-running slogan, and the first out of most mouths."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "Ask a room to name a Steven Spielberg film, and the answer that comes up most is…",
+    "a": "E.T.",
+    "w": [
+      "Jurassic Park",
+      "Jaws",
+      "Saving Private Ryan"
+    ],
+    "why": "E.T. the Extra-Terrestrial held the all-time box-office crown for over a decade — for a whole generation it is simply the Spielberg film."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "Ask a roomful of people to name a board game, and the answer that comes up most is…",
+    "a": "Monopoly",
+    "w": [
+      "Scrabble",
+      "Clue",
+      "Risk"
+    ],
+    "why": "Monopoly has been sold in well over a hundred countries — it's the board game the room reaches for first."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "Ask a room of grown-up 90s kids to name a trading card game, and the answer that comes up most is…",
+    "a": "Pokémon",
+    "w": [
+      "Magic: The Gathering",
+      "Yu-Gi-Oh!",
+      "Digimon"
+    ],
+    "why": "Magic came first among collectors, but Pokémon cards were the ones in every schoolyard on earth — that's the room's answer."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "Ask a room what they remember most about dial-up internet, and the answer that comes up most is…",
+    "a": "The modem's screeching handshake",
+    "w": [
+      "Getting kicked off when the phone rang",
+      "Waiting minutes for one photo to load",
+      "The 'You've Got Mail' voice"
+    ],
+    "why": "The screech, the static, the little song of two computers shouting at each other — it's the sound of the whole era."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "Ask a room to name a Beatles song, and the answer that comes up most is…",
+    "a": "Hey Jude",
+    "w": [
+      "Let It Be",
+      "Yesterday",
+      "Come Together"
+    ],
+    "why": "'Yesterday' is the most covered, but 'Hey Jude' is the one the room sings — seven minutes, nine weeks at number one, and a chorus built for a crowd."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "Ask a roomful of people to name a Saturday-morning cartoon, and the answer that comes up most is…",
+    "a": "Scooby-Doo",
+    "w": [
+      "The Flintstones",
+      "Looney Tunes",
+      "Tom and Jerry"
+    ],
+    "why": "Scooby-Doo has been solving mysteries on television, in one form or another, since 1969 — it's the first name out of the room."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "Ask a room to name a sitcom dad, and the answer that comes up most is…",
+    "a": "Homer Simpson",
+    "w": [
+      "Cliff Huxtable",
+      "Carl Winslow",
+      "Al Bundy"
+    ],
+    "why": "D'oh. The Simpsons has run since 1989, and Homer is the sitcom dad three generations can all picture at once."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "KFC's Original Recipe is famous for its secret blend — how many herbs and spices are in it?",
+    "num": 11,
+    "why": "Eleven herbs and spices, a secret since the 1940s — the two halves of the recipe are still mixed in different buildings."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "For six seasons he was just Kramer. When Seinfeld finally revealed his first name — in 'The Switch,' courtesy of his mother Babs — what was it?",
+    "a": "Cosmo",
+    "w": [
+      "Kessler",
+      "Conrad",
+      "Kenny"
+    ],
+    "why": "Cosmo, revealed in January 1995. Kessler was his name in the pilot, before the real Kenny Kramer allowed his own; Conrad was the writers' first idea, dropped as too classy."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "On The Simpsons, Ned Flanders sinks his family's savings into a Springfield Mall store for left-handed customers. What is it called?",
+    "a": "The Leftorium",
+    "w": [
+      "Left-Mart",
+      "Southpaw City",
+      "The Left-Hand Store"
+    ],
+    "why": "The Leftorium, opened in 1991's 'When Flanders Failed.' Left-Mart is the mega-store that later threatens it — the show supplies its own decoy."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "The Energizer Bunny first marched through in the late 1980s, beating his drum — as a parody of which rival battery brand's own drumming-bunny ads?",
+    "a": "Duracell",
+    "w": [
+      "Eveready",
+      "Rayovac",
+      "Panasonic"
+    ],
+    "why": "Duracell's Drumming Bunny dated to 1973, and its US trademark had lapsed — Energizer walked its own bunny straight through the gap. Eveready is the trap: it was Energizer's own parent company."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "In the 1990s, which piece of desk hardware made the screeching, beeping handshake noise that meant you were getting online?",
+    "a": "A dial-up modem",
+    "w": [
+      "A dot-matrix printer",
+      "A fax machine",
+      "A Zip drive"
+    ],
+    "why": "The modem's handshake — dial tone, screech, static — was the sound of the early internet arriving, one phone line at a time."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Which search engine's name is an accidental misspelling of 'googol' — the word for 1 followed by 100 zeros?",
+    "a": "Google",
+    "w": [
+      "Yahoo",
+      "AltaVista",
+      "Ask Jeeves"
+    ],
+    "why": "A googol was named by a mathematician's nine-year-old nephew; the founders meant to honour it and typed the domain wrong. The wrong spelling won."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "In September 1995, the very first item sold on the site that became eBay was a broken one of what?",
+    "a": "A laser pointer",
+    "w": [
+      "A laser printer",
+      "A Pez dispenser",
+      "A Beanie Baby"
+    ],
+    "why": "Pierre Omidyar's broken laser pointer went for $14.83 on AuctionWeb; he wrote to check the buyer knew it was broken and was told, 'I am a collector of broken laser pointers.' The Pez story was a PR invention, admitted years later."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "How many episodes of The Simpsons had aired by the time the show turned twenty in 2009 — the first twenty seasons?",
+    "num": 441,
+    "why": "441 episodes by the end of season twenty — the show passed every scripted record on its way and kept going."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "Ask the table to name the fast-food slogan that pops into their head first, and the one that comes up most is…",
+    "a": "I'm Lovin' It",
+    "w": [
+      "Have It Your Way",
+      "Just Do It",
+      "Finger Lickin' Good"
+    ],
+    "why": "McDonald's has run 'I'm Lovin' It' since 2003 — the longest-lived line in the business, and the one the room hums before it thinks."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "kind": "bluff",
+    "q": "Scooby-Doo has a full legal name, and it is a formal mouthful. What is it?",
+    "a": "Scoobert Doo",
+    "decoys": [
+      "Scoobert Doobert Doo",
+      "Scooby Dooby Doo",
+      "Scoobert von Doo"
+    ],
+    "why": "Scoobert Doo — the first name surfaced in A Pup Named Scooby-Doo, the surname in The 13 Ghosts of Scooby-Doo. The 'Doobert' version wanders the internet, but the show's own record keeps it Scoobert Doo."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "Yahoo's founders fitted their name with a backronym — an acronym built after the fact. What did they say it stood for?",
+    "a": "Yet Another Hierarchical Officious Oracle",
+    "decoys": [
+      "Your Access to a Hundred Online Options",
+      "Yet Another Hypermedia Online Outlet",
+      "Young Americans Hunting Online Opportunities"
+    ],
+    "why": "Yang and Filo admitted the backronym was fitted afterward as a joke — they really picked the name because a 'yahoo' was a rude, uncouth fellow, and they fancied themselves two of them."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Chronology: which of these animated films reached cinemas FIRST?",
+    "a": "Shrek",
+    "w": [
+      "Finding Nemo",
+      "The Incredibles",
+      "Ratatouille"
+    ],
+    "why": "Shrek 2001, Finding Nemo 2003, The Incredibles 2004, Ratatouille 2007 — the decade's animation race, in order."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Chronology: which of these singles hit the charts FIRST?",
+    "a": "Complicated — Avril Lavigne",
+    "w": [
+      "Since U Been Gone — Kelly Clarkson",
+      "Hips Don't Lie — Shakira",
+      "Viva la Vida — Coldplay"
+    ],
+    "why": "Complicated 2002, Since U Been Gone 2004, Hips Don't Lie 2006, Viva la Vida 2008."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Chronology: which of these game machines went on sale FIRST?",
+    "a": "PlayStation 2",
+    "w": [
+      "Xbox",
+      "Nintendo DS",
+      "Wii"
+    ],
+    "why": "PlayStation 2 in 2000, Xbox in 2001, the DS in 2004 and the Wii in 2006. The PS2 is still the best-selling console ever made."
+  },
+  {
+    "cat": "TV",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "Chronology: which of these shows premiered FIRST?",
+    "a": "Lost",
+    "w": [
+      "The Office (US)",
+      "Grey's Anatomy",
+      "Heroes"
+    ],
+    "why": "Lost landed in September 2004; The Office and Grey's Anatomy arrived three days apart in March 2005; Heroes followed in 2006."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "Finish the line from Outkast's 'Hey Ya!': 'Shake it like a ______ picture.'",
+    "a": "Polaroid",
+    "w": [
+      "Kodak",
+      "Fujifilm",
+      "Disposable"
+    ],
+    "why": "Polaroid — the line was so famous the Polaroid Corporation borrowed it for adverts, while quietly asking people not to actually shake the pictures."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "Finish the rule from Mean Girls (2004): 'On Wednesdays we wear ______.'",
+    "a": "Pink",
+    "w": [
+      "Black",
+      "Plaid",
+      "Heels"
+    ],
+    "why": "Pink. Break the dress code and you can't sit with the Plastics — a rule quoted at tables that have never seen the film."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Finish the catchphrase Michael Scott could never resist on The Office: 'That's what ______.'",
+    "a": "She said",
+    "w": [
+      "He said",
+      "The boss said",
+      "HR said"
+    ],
+    "why": "'That's what she said' — Michael's signature, deployed at exactly the wrong moment, every time, for nine seasons."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Odd one out: three of these are Cartoon Network originals. Which one belongs to Nickelodeon?",
+    "a": "Avatar: The Last Airbender",
+    "w": [
+      "Teen Titans",
+      "Foster's Home for Imaginary Friends",
+      "Codename: Kids Next Door"
+    ],
+    "why": "Avatar aired on Nickelodeon from 2005; the other three were Cartoon Network's own. Different channel, same Saturday-morning war."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Odd one out: three of these were 2000s file-sharing services. Which one is a video site?",
+    "a": "YouTube",
+    "w": [
+      "Napster",
+      "LimeWire",
+      "Kazaa"
+    ],
+    "why": "Napster, LimeWire and Kazaa moved the music; YouTube, from 2005, moved everything else."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Who said it — 'Why so serious?'",
+    "a": "The Joker, in The Dark Knight",
+    "w": [
+      "Batman, in The Dark Knight",
+      "Harvey Dent, in The Dark Knight",
+      "Ra's al Ghul, in Batman Begins"
+    ],
+    "why": "Heath Ledger's Joker, 2008 — the line was on the film's first poster and never left the culture."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Who said it — 'I am not in danger. I am the danger. I am the one who knocks.'",
+    "a": "Walter White, in Breaking Bad",
+    "w": [
+      "Jesse Pinkman, in Breaking Bad",
+      "Hank Schrader, in Breaking Bad",
+      "Gus Fring, in Breaking Bad"
+    ],
+    "why": "Walter White, to Skyler — the schoolteacher finishing becoming Heisenberg. The show began in 2008; the line landed in its fourth season."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "One of these is NOT true. Which?",
+    "a": "Monsters, Inc. won the first-ever Best Animated Feature Oscar",
+    "w": [
+      "Spirited Away won Best Animated Feature for 2002",
+      "Finding Nemo won Best Animated Feature for 2003",
+      "The Incredibles won Best Animated Feature for 2004"
+    ],
+    "why": "The first Best Animated Feature Oscar went to Shrek, over Monsters, Inc. The other three all took the prize home."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "In what year did the first iPhone go on sale?",
+    "num": 2007,
+    "why": "June 2007 — one button, no keyboard, and the dial-up years were suddenly over."
+  },
+  {
+    "cat": "TV",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "Ask the table to name a TV show they have happily watched all the way through more than once, and the answer that comes up most is…",
+    "a": "The Office",
+    "w": [
+      "Friends",
+      "Breaking Bad",
+      "Game of Thrones"
+    ],
+    "why": "For this table's generation, The Office is the comfort rewatch — the show that plays in the background of adult life."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "On Dexter's Laboratory, Dexter's tall, ballet-mad older sister — the one forever pressing the wrong button — is…",
+    "a": "Dee Dee",
+    "w": [
+      "Lalavava",
+      "Mee Mee",
+      "Lee Lee"
+    ],
+    "why": "Dee Dee. Lalavava is Mandark's little sister and Dee Dee's dance rival; Mee Mee and Lee Lee are her best friends."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Sugar, spice and everything nice — plus one accidental extra. In The Powerpuff Girls, the ingredient Professor Utonium added by mistake was…",
+    "a": "Chemical X",
+    "w": [
+      "Chemical Z",
+      "Element P",
+      "Mojo's formula"
+    ],
+    "why": "Chemical X — one splash, and Blossom, Bubbles and Buttercup had ultra-superpowers."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Courage the Cowardly Dog protects his owners on a farm in the middle of…",
+    "a": "Nowhere, Kansas",
+    "w": [
+      "Somewhere, Kansas",
+      "Anywhere, Texas",
+      "Everywhere, Oklahoma"
+    ],
+    "why": "The middle of Nowhere — literally. The town is called Nowhere, Kansas, which is why so much weirdness finds the farm."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "On Samurai Jack, the shape-shifting master of darkness who flung Jack into the future is…",
+    "a": "Aku",
+    "w": [
+      "Demongo",
+      "The Scotsman",
+      "The Guardian"
+    ],
+    "why": "Aku — the shogun of sorrow himself. Demongo collects warriors' souls for him; the Scotsman is Jack's loudest ally."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "The watch-like device that lets Ben 10 turn into aliens is called…",
+    "a": "The Omnitrix",
+    "w": [
+      "The Ultimatrix",
+      "The Alien Watch",
+      "The Nemetrix"
+    ],
+    "why": "The Omnitrix, built by Azmuth. The Ultimatrix was Albedo's later knock-off; the Nemetrix is the predator version."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "On Chowder, the young apprentice's master — the elderly chef who runs the catering company — is…",
+    "a": "Mung Daal",
+    "w": [
+      "Shnitzel",
+      "Gazpacho",
+      "Endive"
+    ],
+    "why": "Mung Daal, a chef for some 386 years. Shnitzel is his rock-monster employee, Gazpacho sells the produce, and Ms. Endive is his rival."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "Adventure Time, which arrived in 2010, follows Finn and Jake through the Land of…",
+    "a": "Ooo",
+    "w": [
+      "Aaa",
+      "The Nightosphere",
+      "Lumpy Space"
+    ],
+    "why": "The Land of Ooo. Aaa is the flipped world of Fionna and Cake; the other two are realms of Ooo itself. Adventure Time opened the 2010s for the youngest seats at the table."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "Halo: Combat Evolved was the launch title that sold a brand-new console in 2001. Which one?",
+    "a": "Xbox",
+    "w": [
+      "PlayStation 2",
+      "GameCube",
+      "Dreamcast"
+    ],
+    "why": "Microsoft's Xbox — Halo was the game that proved the box, and Xbox Live arrived a year later."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "In GoldenEye 007's multiplayer, the short character every house banned because he was too hard to hit was…",
+    "a": "Oddjob",
+    "w": [
+      "Jaws",
+      "May Day",
+      "Boris"
+    ],
+    "why": "Oddjob — a head shorter than everyone else, so your aim sailed clean over him. Houses banned him; friendships ended."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "In the original Sims (2000), the cruellest trick in the game was removing the ladder while a Sim was…",
+    "a": "Swimming in the pool",
+    "w": [
+      "In the shower",
+      "On the roof",
+      "In the hot tub"
+    ],
+    "why": "No ladder, no way out — the Sim swam until exhaustion took them. A generation learned game cruelty from that ladder."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "The Legend of Zelda: Ocarina of Time (1998) was the first game ever to receive a perfect 40 out of 40 from which Japanese magazine?",
+    "a": "Famitsu",
+    "w": [
+      "Nintendo Power",
+      "Edge",
+      "Electronic Gaming Monthly"
+    ],
+    "why": "Famitsu — four reviewers, four tens, the first perfect score in the magazine's history. Only a few dozen games have matched it since."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Grand Theft Auto III (2001) is set in which fictional city?",
+    "a": "Liberty City",
+    "w": [
+      "Vice City",
+      "San Andreas",
+      "Carcer City"
+    ],
+    "why": "Liberty City. Vice City and San Andreas headlined the sequels; Carcer City is the grim setting of Manhunt, Rockstar's other scandal."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "Minecraft — the best-selling video game of all time — was created by a Swedish programmer better known as…",
+    "a": "Notch",
+    "w": [
+      "Jeb",
+      "Dinnerbone",
+      "Herobrine"
+    ],
+    "why": "Markus 'Notch' Persson, who built it in 2009 and sold Mojang to Microsoft for $2.5 billion. Jeb took over development. Herobrine never existed — officially."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "Super Mario 64 hides how many Power Stars in total, for the players stubborn enough to find them all?",
+    "num": 120,
+    "why": "120 — fifteen courses, the castle's secret stars and a cannon to the roof. Seventy opens the ending; 120 opens everything."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "Red Dead Redemption 2 puts you in the boots of Arthur Morgan, right-hand man of which outlaw leader — a man with a plan, always a plan?",
+    "a": "Dutch van der Linde",
+    "w": [
+      "John Marston",
+      "Colm O'Driscoll",
+      "Bill Williamson"
+    ],
+    "why": "Dutch van der Linde. John Marston rides with the gang here as a younger man — his own story headlines the first game."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "kind": "num",
+    "q": "Red Dead Redemption 2, the prequel, is set in what year — the last days of the Wild West?",
+    "num": 1899,
+    "why": "1899 — twelve years before John Marston's story in the first game, with the century about to turn on the outlaw life."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "era": "any",
+    "q": "Hogwarts Legacy makes you the new student who arrives at Hogwarts unusually late. You join in which year?",
+    "a": "The fifth year",
+    "w": [
+      "The first year",
+      "The third year",
+      "The seventh year"
+    ],
+    "why": "Fifth year — old enough for the O.W.L.s, new enough to see traces of the school's ancient magic that nobody else can."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "The rare power your Hogwarts Legacy student can see in traces and wield in battle — invisible to almost every other witch and wizard — is called…",
+    "a": "Ancient magic",
+    "w": [
+      "Elder magic",
+      "Founders' magic",
+      "Silent magic"
+    ],
+    "why": "Ancient magic — older than wandwork, guarded for centuries by the Keepers in the Map Chamber beneath the school."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "In Call of Duty's Modern Warfare games, Captain Price, Soap and Ghost serve in which special-forces unit?",
+    "a": "Task Force 141",
+    "w": [
+      "Task Force 99",
+      "Task Force 145",
+      "Delta Force"
+    ],
+    "why": "Task Force 141 — the multinational unit built to hunt Makarov, and the one betrayed by General Shepherd."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Call of Duty 4's flashback mission 'All Ghillied Up' — still ranked among the series' finest — sends a young Price sniping through which abandoned city?",
+    "a": "Pripyat",
+    "w": [
+      "Chernobyl",
+      "Vorkuta",
+      "Stalingrad"
+    ],
+    "why": "Pripyat, the evacuated city beside the Chernobyl plant, fifteen years after the disaster. Vorkuta belongs to Black Ops."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "any",
+    "q": "Stephen King's first published novel — the manuscript his wife Tabitha fished out of the trash — was…",
+    "a": "Carrie",
+    "w": [
+      "'Salem's Lot",
+      "The Shining",
+      "Cujo"
+    ],
+    "why": "Carrie, 1974. King threw the opening pages away; Tabitha retrieved them and told him to finish. The paperback fortune followed."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "In Stephen King's Dark Tower books, Roland Deschain is the last of the…",
+    "a": "Gunslingers",
+    "w": [
+      "Breakers",
+      "Slow Mutants",
+      "Crimson King's men"
+    ],
+    "why": "The gunslingers of Gilead — the knight-order of the old world. The Breakers are the psychics Roland's enemies enslave."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "Anne Rice's Interview with the Vampire is narrated by which vampire, telling his life story to a reporter?",
+    "a": "Louis",
+    "w": [
+      "Lestat",
+      "Armand",
+      "Marius"
+    ],
+    "why": "Louis de Pointe du Lac. Lestat made him — and then steals the series from the second book onward."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "any",
+    "q": "In Anne Rice's Vampire Chronicles, the first vampires — Akasha and Enkil, Those Who Must Be Kept — were king and queen of ancient…",
+    "a": "Egypt",
+    "w": [
+      "Rome",
+      "Babylon",
+      "Sumer"
+    ],
+    "why": "Egypt, some six thousand years ago. Every vampire alive burns if Akasha burns — the whole species hangs on her."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "George R.R. Martin's A Game of Thrones is the first volume of a series called…",
+    "a": "A Song of Ice and Fire",
+    "w": [
+      "A Dance with Dragons",
+      "The Iron Throne Saga",
+      "A Song of Swords and Crowns"
+    ],
+    "why": "A Song of Ice and Fire. A Dance with Dragons is the fifth book in it — the trap answer."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "'Winter is coming' is the house motto — the words — of which house in A Game of Thrones?",
+    "a": "House Stark",
+    "w": [
+      "House Baratheon",
+      "House Lannister",
+      "House Targaryen"
+    ],
+    "why": "House Stark — the only great house whose words are a warning instead of a boast."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "The One Ring's inscription in The Lord of the Rings ends: 'One Ring to bring them all and…'",
+    "a": "'…in the darkness bind them'",
+    "w": [
+      "'…in the shadow keep them'",
+      "'…in the fire forge them'",
+      "'…in the mountain hide them'"
+    ],
+    "why": "'…and in the darkness bind them' — the letters only appear when the Ring is put into the fire."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Harry Potter's wand and Lord Voldemort's wand share a core from the same creature. The cores are feathers from…",
+    "a": "A phoenix",
+    "w": [
+      "A unicorn",
+      "A dragon",
+      "A thestral"
+    ],
+    "why": "One phoenix — Fawkes, Dumbledore's — gave exactly two feathers. It is why the brother wands will not truly fight each other."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "The Deathly Hallows are the Elder Wand, the Resurrection Stone — and which third treasure?",
+    "a": "The Cloak of Invisibility",
+    "w": [
+      "The Veil",
+      "The Mirror of Erised",
+      "The Pensieve"
+    ],
+    "why": "The Cloak — the only Hallow handed down a family line, from Ignotus Peverell to Harry Potter."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "In R.F. Kuang's The Poppy War, war orphan Rin tests into Sinegard — the empire's most elite school for what?",
+    "a": "Military officers",
+    "w": [
+      "Court officials",
+      "Imperial physicians",
+      "Priests of the Pantheon"
+    ],
+    "why": "Sinegard trains Nikan's future commanders. Rin aces the Keju to escape an arranged marriage — and finds a war instead."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "any",
+    "q": "The Poppy War's Rin is a shaman who can call down which vengeful god?",
+    "a": "The Phoenix",
+    "w": [
+      "The Dragon",
+      "The White Tiger",
+      "The Jade Emperor"
+    ],
+    "why": "The Phoenix, god of fire — the Speerly gift, and the Speerly curse. Calling it costs Rin a little more of herself every time."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Harry Potter's first letter arrives addressed to a cupboard under the stairs — and takes him off to board at what school?",
+    "a": "Hogwarts",
+    "w": [
+      "Beauxbatons",
+      "Durmstrang",
+      "The Salem Witches' Institute"
+    ],
+    "why": "Hogwarts School of Witchcraft and Wizardry. The other two are the visiting schools of the Triwizard Tournament."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "The Goosebumps books — reader beware, you're in for a scare — were written by…",
+    "a": "R.L. Stine",
+    "w": [
+      "Christopher Pike",
+      "Ann M. Martin",
+      "Dav Pilkey"
+    ],
+    "why": "R.L. Stine — 62 books in the original Goosebumps run, each one ending on a twist. Pike wrote the teen horror shelf beside it."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "In The Hunger Games, Katniss Everdeen volunteers as tribute from which district?",
+    "a": "District 12",
+    "w": [
+      "District 4",
+      "District 7",
+      "District 11"
+    ],
+    "why": "District 12 — coal country, the poorest district in Panem, and the one nobody in the Capitol bets on."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "The Da Vinci Code — the murder in the Louvre, the symbologist, the decade of arguments — was written by…",
+    "a": "Dan Brown",
+    "w": [
+      "John Grisham",
+      "James Patterson",
+      "Tom Clancy"
+    ],
+    "why": "Dan Brown, 2003. Robert Langdon follows the clues through Paris and London; half the world read it on a plane."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "any",
+    "q": "In Charlotte's Web, the pig that Charlotte the spider works to save is named…",
+    "a": "Wilbur",
+    "w": [
+      "Templeton",
+      "Fern",
+      "Henry Fussy"
+    ],
+    "why": "Wilbur. Charlotte writes the words in her web — 'Some Pig' — and the whole county comes to believe them. Templeton is the rat."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "any",
+    "q": "In Where the Wild Things Are, the boy in the wolf suit who sails away to the wild things is…",
+    "a": "Max",
+    "w": [
+      "Peter",
+      "George",
+      "Sam"
+    ],
+    "why": "Max — he sails through night and day to where the wild things are, and the wild rumpus starts. Sendak, 1963."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "00s",
+    "q": "The Diary of a Wimpy Kid journals — the cheese touch, the row of horrors — are kept by…",
+    "a": "Greg Heffley",
+    "w": [
+      "Rowley Jefferson",
+      "Rodrick Heffley",
+      "Fregley"
+    ],
+    "why": "Greg Heffley — and he will correct you: it is a JOURNAL, not a diary. Rowley is the best friend who never quite learns."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "80s",
+    "q": "In Roald Dahl's Matilda, the terrifying headmistress of Crunchem Hall is…",
+    "a": "Miss Trunchbull",
+    "w": [
+      "Miss Honey",
+      "Mrs. Wormwood",
+      "Mrs. Phelps"
+    ],
+    "why": "The Trunchbull — former Olympic hammer-thrower and keeper of the Chokey. Miss Honey is the teacher every reader wanted instead."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "easy",
+    "d": 1,
+    "era": "any",
+    "q": "The Very Hungry Caterpillar eats his way through the week, builds a small house around himself, and emerges as…",
+    "a": "A butterfly",
+    "w": [
+      "A moth",
+      "A firefly",
+      "A dragonfly"
+    ],
+    "why": "A beautiful butterfly. Eric Carle, 1969 — the holes in the food are cut right through the pages."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "On the Gryffindor Quidditch team, Harry plays the position that ends the game — he is the…",
+    "a": "Seeker",
+    "w": [
+      "Keeper",
+      "Chaser",
+      "Beater"
+    ],
+    "why": "Seeker — catch the Golden Snitch, worth 150 points, and the match is over. Oliver Wood keeps goal; the Weasley twins beat."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Percy Jackson learns his absent father is an Olympian — the god of the sea, earthquakes and horses…",
+    "a": "Poseidon",
+    "w": [
+      "Zeus",
+      "Hades",
+      "Ares"
+    ],
+    "why": "Poseidon — which makes Percy a forbidden child of the Big Three, and explains a great deal about the plumbing."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Nicholas Sparks' The Notebook is the lifelong love story of Noah Calhoun and…",
+    "a": "Allie Nelson",
+    "w": [
+      "Allie Hamilton",
+      "Jamie Sullivan",
+      "Theresa Osborne"
+    ],
+    "why": "Allie Nelson in the novel — the film renamed her Hamilton. Jamie Sullivan belongs to A Walk to Remember."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "In John Grisham's The Firm, the young lawyer who discovers his dream firm's real clients are the Mafia is…",
+    "a": "Mitch McDeere",
+    "w": [
+      "Jake Brigance",
+      "Rudy Baylor",
+      "Adam Hall"
+    ],
+    "why": "Mitch McDeere — Memphis, the Bendini firm, and an offer no honest lawyer survives. The others head Grisham's other courtrooms."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "The Animorphs receive the power to morph into animals from a dying alien of which species?",
+    "a": "The Andalites",
+    "w": [
+      "The Yeerks",
+      "The Hork-Bajir",
+      "The Taxxons"
+    ],
+    "why": "An Andalite — Prince Elfangor, dying in an abandoned construction site, gives five kids the morphing cube. The Yeerks are what they fight."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "In Captain Underpants, George and Harold hypnotize their principal into believing he's a superhero. The principal is…",
+    "a": "Mr. Krupp",
+    "w": [
+      "Mr. Meaner",
+      "Professor Poopypants",
+      "Dr. Diaper"
+    ],
+    "why": "Benjamin 'Benny' Krupp — one snap of the fingers and the meanest principal in Piqua, Ohio is fighting crime in his underwear."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "In Twilight, Bella Swan moves to live with her father in the rainiest small town in the continental United States…",
+    "a": "Forks, Washington",
+    "w": [
+      "Port Angeles, Washington",
+      "La Push, Washington",
+      "Astoria, Oregon"
+    ],
+    "why": "Forks — Stephenie Meyer picked it off a rainfall chart without ever having been. La Push is where the Quileute pack runs."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "In Eragon, the dragon who hatches for the farm boy from Carvahall is…",
+    "a": "Saphira",
+    "w": [
+      "Thorn",
+      "Glaedr",
+      "Fírnen"
+    ],
+    "why": "Saphira — the blue dragon whose egg Eragon finds in the Spine. Christopher Paolini began writing the book at fifteen."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "In Lois Lowry's The Giver, at the Ceremony of Twelve, Jonas is given the community's rarest assignment — the next…",
+    "a": "Receiver of Memory",
+    "w": [
+      "The Giver",
+      "Keeper of Stories",
+      "Elder-in-Training"
+    ],
+    "why": "The Receiver of Memory — the one person who holds the whole world's past so nobody else has to feel it. 1993."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "In Holes, Stanley Yelnats is sent to dig holes all day, every day, at a detention camp called…",
+    "a": "Camp Green Lake",
+    "w": [
+      "Camp Lakeview",
+      "Camp Half-Blood",
+      "Camp Green Point"
+    ],
+    "why": "Camp Green Lake — no lake, no green, just boys digging holes to build character. Louis Sachar, 1998; the Newbery Medal followed."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "In A Series of Unfortunate Events, the Baudelaire orphans are Violet, the inventor, Klaus, the reader — and the baby, whose four sharp teeth are a genuine plot device…",
+    "a": "Sunny Baudelaire",
+    "w": [
+      "Isadora Quagmire",
+      "Carmelita Spats",
+      "Esmé Squalor"
+    ],
+    "why": "Sunny — Lemony Snicket (the pen name of Daniel Handler) began the series in 1999. The Quagmires are the other orphans; Carmelita is cakesniffing trouble."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "John Grisham's first published novel — the one rejected for years and sold from the trunk of his car — was…",
+    "a": "A Time to Kill",
+    "w": [
+      "The Firm",
+      "The Pelican Brief",
+      "The Client"
+    ],
+    "why": "A Time to Kill, 1989 — Jake Brigance's first case, in Ford County. The Firm, two years later, made Grisham impossible to ignore."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "Stephen King published several early novels — Rage, The Long Walk, Roadwork — under a pen name. The name was…",
+    "a": "Richard Bachman",
+    "w": [
+      "George Stark",
+      "John Swithen",
+      "Robert Browne"
+    ],
+    "why": "Richard Bachman — invented so King could publish more than a book a year. A Washington bookstore clerk, Steve Brown, worked it out from the copyright records."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "Filch, the Hogwarts caretaker, patrols the corridors with a scrawny, dust-coloured cat named…",
+    "a": "Mrs. Norris",
+    "w": [
+      "Mrs. Figg",
+      "Crookshanks",
+      "Scabbers"
+    ],
+    "why": "Mrs. Norris — she seems to report students to Filch faster than running could explain. Crookshanks is Hermione's cat; Scabbers was Ron's rat, more or less."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "The very first Goosebumps book, July 1992 — the one that started the whole phenomenon — was…",
+    "a": "Welcome to Dead House",
+    "w": [
+      "Say Cheese and Die!",
+      "Monster Blood",
+      "The Haunted Mask"
+    ],
+    "why": "Welcome to Dead House — the Bensons move to Dark Falls, where the neighbours are not what they seem. The Haunted Mask is the one everybody remembers."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "any",
+    "q": "In To Kill a Mockingbird, Scout Finch's full, formal name — the one used when she is in real trouble — is…",
+    "a": "Jean Louise Finch",
+    "w": [
+      "Louise Jean Finch",
+      "Mary Louise Finch",
+      "Scout Marie Finch"
+    ],
+    "why": "Jean Louise. 'Scout' is the name Jem gave her; Atticus uses the full name only when it matters."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "any",
+    "q": "In 1984, Winston Smith's job at the Ministry of Truth is to…",
+    "a": "Rewrite old news so the record always agrees with the Party",
+    "w": [
+      "Print the ration books for Oceania",
+      "Broadcast the Two Minutes Hate",
+      "Translate the classics into Newspeak"
+    ],
+    "why": "He rewrites back issues of The Times so history always agrees with Big Brother. 'Who controls the past controls the future: who controls the present controls the past.'"
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "any",
+    "q": "The Great Gatsby is narrated — told to us, party by party — by Daisy's cousin and Gatsby's neighbour…",
+    "a": "Nick Carraway",
+    "w": [
+      "Tom Buchanan",
+      "Meyer Wolfsheim",
+      "Jordan Baker"
+    ],
+    "why": "Nick Carraway — the only honest man at the party, by his own account, which is exactly why you should read him carefully."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Artemis Fowl, the boy criminal mastermind, is guarded everywhere he goes by a bodyguard known only as…",
+    "a": "Butler",
+    "w": [
+      "Root",
+      "Mulch Diggums",
+      "Foaly"
+    ],
+    "why": "Butler — Domovoi Butler, of a family that has served the Fowls for centuries. Eoin Colfer described the books as 'Die Hard with fairies.'"
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "At the reaping in The Hunger Games, the single slip Effie Trinket draws first — the one Katniss cannot allow to stand — bears the name…",
+    "a": "Primrose Everdeen",
+    "w": [
+      "Primrose Mellark",
+      "Rue Everdeen",
+      "Primrose Hawthorne"
+    ],
+    "why": "Primrose — Prim. It was her first reaping, and she had exactly one slip in the bowl among thousands."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Before 'Google it', the search box on the family PC most often belonged to which site, fronted by a polite cartoon butler?",
+    "a": "Ask Jeeves",
+    "w": [
+      "AltaVista",
+      "Excite",
+      "Lycos"
+    ],
+    "why": "Jeeves the butler fetched your answers from 1996; he was retired in 2006 and the site became Ask.com."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Which instant-messaging service's running-man icon, door-creak sounds and 'buddy list' meant your friends were online?",
+    "a": "AIM — AOL Instant Messenger",
+    "w": [
+      "MSN Messenger",
+      "ICQ",
+      "Yahoo Messenger"
+    ],
+    "why": "AIM, from 1997 — the away message was this generation's first status update, and everybody workshopped theirs."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "On a frozen 1990s PC, the famous three-fingered salute was Ctrl, Alt — and which third key?",
+    "a": "Delete",
+    "w": [
+      "Escape",
+      "Shift",
+      "Enter"
+    ],
+    "why": "Ctrl+Alt+Delete — the salute every Windows user learned before they learned anything else the machine could do."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "From 1998, which service would post you a film in a red envelope — watch it, send it back, no late fees, ever?",
+    "a": "Netflix",
+    "w": [
+      "Redbox",
+      "Movie Gallery",
+      "Hollywood Video"
+    ],
+    "why": "Netflix by post — the red envelope in the mailbox was the weekend arriving. The streaming came a decade later."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Netscape Navigator lost the browser war to which Microsoft browser, given away free inside Windows?",
+    "a": "Internet Explorer",
+    "w": [
+      "Firefox",
+      "Safari",
+      "Opera"
+    ],
+    "why": "Explorer shipped with Windows 95's add-ons and ate the market; Netscape was gone as a company by 1999."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Which free email service, launched in 1996 promising mail for life, did Microsoft buy a year later for some $400 million?",
+    "a": "Hotmail",
+    "w": [
+      "RocketMail",
+      "Juno Mail",
+      "Mail.com"
+    ],
+    "why": "Hotmail — Sabeer Bhatia and Jack Smith's Fourth-of-July launch. RocketMail was its great rival and became Yahoo Mail."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Which online encyclopedia, launched in 2001 and written by its own readers, did teachers spend a decade telling students not to cite?",
+    "a": "Wikipedia",
+    "w": [
+      "Encarta",
+      "Britannica Online",
+      "World Book Online"
+    ],
+    "why": "Wikipedia — anyone can edit it, which was exactly the scandal, and exactly the point."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "What did the letters AOL actually stand for?",
+    "a": "America Online",
+    "w": [
+      "American Online",
+      "America On-Line",
+      "American OnLine"
+    ],
+    "why": "America Online — the 'American' version is the one half the country still says, and it was never the name."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Which file-sharing network, launched in 2001 by the men who later built Skype, became the most downloaded program of the swapping era?",
+    "a": "Kazaa",
+    "w": [
+      "LimeWire",
+      "Morpheus",
+      "BearShare"
+    ],
+    "why": "Kazaa — Niklas Zennström's FastTrack network. It carried more spyware than music by the end, and everyone knew it."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "Windows 95's desktop carried an icon for Microsoft's own online service, labelled 'The Microsoft…' what?",
+    "a": "Network",
+    "w": [
+      "Web",
+      "Internet",
+      "Online"
+    ],
+    "why": "The Microsoft Network — MSN, launched the same day as Windows 95, with a billion-dollar war chest and a dial tone."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Which insurance company's little green gecko — polite accent, endless patience — arrived in American ads in 1999?",
+    "a": "GEICO",
+    "w": [
+      "Progressive",
+      "Allstate",
+      "State Farm"
+    ],
+    "why": "The GEICO Gecko — an accident of an actors' strike, they say, and now the most employed reptile in advertising."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "easy",
+    "d": 1,
+    "era": "any",
+    "q": "Finish the jingle a generation can still sing unprompted: 'Oh, I wish I were an Oscar Mayer…'",
+    "a": "Wiener",
+    "w": [
+      "Hot dog",
+      "Bologna",
+      "Frankfurter"
+    ],
+    "why": "'…wiener — that is what I'd truly like to be.' The song dates to 1965 and has never once left the air for long."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "'The quicker picker-upper' — which paper towel brand has answered to that name since the 1960s?",
+    "a": "Bounty",
+    "w": [
+      "Brawny",
+      "Viva",
+      "Sparkle"
+    ],
+    "why": "Bounty — the lumberjack was Brawny's; the picker-upper has been Bounty's line since 1965."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "Which clear lemon-lime soda spent the 1970s calling itself 'the Uncola' — the anti-cola in the upside-down campaign?",
+    "a": "7UP",
+    "w": [
+      "Sprite",
+      "Slice",
+      "Sierra Mist"
+    ],
+    "why": "7UP, the Uncola — the campaign ran from 1969 and put Geoffrey Holder's laugh on American television for a decade."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "medium",
+    "d": 2,
+    "era": "any",
+    "q": "Poke the Pillsbury Doughboy's belly and he giggles — but his actual name, the one in the company's own records, is…",
+    "a": "Poppin' Fresh",
+    "w": [
+      "Doughboy Dan",
+      "Pillsbury Pete",
+      "Freddy the Freshener"
+    ],
+    "why": "Poppin' Fresh, since 1965 — 'Doughboy' is what the world calls him; the company christened him properly."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Apple's dancing-silhouette iPod ads became a style of their own. The first famous one, from 2003, moved to which Jet song?",
+    "a": "Are You Gonna Be My Girl",
+    "w": [
+      "Cold Hard Bitch",
+      "Rollover DJ",
+      "Look What You've Done"
+    ],
+    "why": "Jet's debut single, white earbuds everywhere — the ad sold the song and the song sold the iPod, and both knew it."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "Budweiser's 1995 Super Bowl stars — the trio who croaked 'Bud… Weis… Er' across a swamp — were what kind of animal?",
+    "a": "Frogs",
+    "w": [
+      "Lizards",
+      "Clydesdales",
+      "Chameleons"
+    ],
+    "why": "Three frogs on lily pads. The lizards came later, as the frogs' scheming rivals; the horses belong to Christmas."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "era": "any",
+    "q": "Every Easter, which candy's adverts asked the nation 'How do you eat yours?' — nibble, lick, or straight through the chocolate shell?",
+    "a": "The Cadbury Creme Egg",
+    "w": [
+      "The Reese's Egg",
+      "The Kinder Egg",
+      "Whoppers Robin Eggs"
+    ],
+    "why": "The Creme Egg question ran for decades in Britain and crossed the water — fondant yolk and all."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "The AFLAC duck quacked the company's name into America's ear for a decade. The voice inside the duck was which comedian?",
+    "a": "Gilbert Gottfried",
+    "w": [
+      "Bobcat Goldthwait",
+      "Howie Mandel",
+      "Jeff Foxworthy"
+    ],
+    "why": "Gottfried — the squawk was unmistakably his, and the duck out-earned most human spokesmen of the decade."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Which 1995 Alanis Morissette album gave the decade 'You Oughta Know', 'Hand in My Pocket' and 'Ironic'?",
+    "a": "Jagged Little Pill",
+    "w": [
+      "Supposed Former Infatuation Junkie",
+      "Under Rug Swept",
+      "So-Called Chaos"
+    ],
+    "why": "Jagged Little Pill — thirty-three million copies of being twenty-one and furious, produced by Glen Ballard."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Which British five-piece told the world to 'zigazig ah' on their 1996 debut single 'Wannabe'?",
+    "a": "The Spice Girls",
+    "w": [
+      "All Saints",
+      "B*Witched",
+      "TLC"
+    ],
+    "why": "Scary, Baby, Ginger, Posh and Sporty — 'Wannabe' hit number one in thirty-seven countries, girl power and all."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "era": "00s",
+    "q": "Outkast's 2003 double album — one half Big Boi, one half André 3000, carrying 'Hey Ya!' and 'The Way You Move' — was titled…",
+    "a": "Speakerboxxx/The Love Below",
+    "w": [
+      "Stankonia",
+      "ATLiens",
+      "Aquemini"
+    ],
+    "why": "Two solo albums in one box, and both halves went to number one — the last diamond-certified rap album of its era."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Which Seattle band took 'Last Kiss' — a cover of a 1961 car-crash ballad — to the biggest hit of their career in 1999?",
+    "a": "Pearl Jam",
+    "w": [
+      "Nirvana",
+      "Soundgarden",
+      "Alice in Chains"
+    ],
+    "why": "Pearl Jam recorded it for a fan-club Christmas single; radio found it, and the charity single outran every song they'd written."
+  },
+  {
+    "cat": "Music",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Which Mariah Carey song returns to number one every single December, as regular as the tree going up?",
+    "a": "All I Want for Christmas Is You",
+    "w": [
+      "Last Christmas",
+      "Santa Baby",
+      "Rockin' Around the Christmas Tree"
+    ],
+    "why": "1994, from Merry Christmas — 'Last Christmas' is Wham's, and Mariah's is the one that owns the season now."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Which Icelandic singer arrived at the 2001 Oscars in a dress built to look like a swan, egg and all?",
+    "a": "Björk",
+    "w": [
+      "Tori Amos",
+      "PJ Harvey",
+      "Sinéad O'Connor"
+    ],
+    "why": "Björk, in Marjan Pejoski's swan — she even laid an egg on the red carpet. The dress is in design museums now."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "The Beastie Boys' 1986 debut — the best-selling rap album of the decade, home of '(You Gotta) Fight for Your Right' — was titled…",
+    "a": "Licensed to Ill",
+    "w": [
+      "Paul's Boutique",
+      "Ill Communication",
+      "Check Your Head"
+    ],
+    "why": "Licensed to Ill — Rick Rubin and a borrowed aeroplane joke in the gatefold. Paul's Boutique is the critics' favourite; this one sold the decade."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "era": "00s",
+    "q": "Which Las Vegas band recorded 'Mr. Brightside' in 2003 — the single that has somehow never entirely left the charts since?",
+    "a": "The Killers",
+    "w": [
+      "Franz Ferdinand",
+      "The Strokes",
+      "Arctic Monkeys"
+    ],
+    "why": "The Killers — Brandon Flowers wrote it about an ex; Britain adopted it as a national singalong and never gave it back."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "Before Destiny's Child, Beyoncé's first group — the one that lost on Star Search in 1993 — performed under which name?",
+    "a": "Girl's Tyme",
+    "w": [
+      "The Dolls",
+      "Cliché",
+      "Destiny"
+    ],
+    "why": "Girl's Tyme — six girls, one Star Search loss to a rock band, and a manager who rebuilt them into Destiny's Child."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "In Toy Story, the name written in marker on the sole of Woody's boot — the mark of his owner — is…",
+    "a": "Andy",
+    "w": [
+      "Buzz",
+      "Bonnie",
+      "Sid"
+    ],
+    "why": "Andy, written one letter at a time as the boy grew. Sid is the neighbour; Bonnie inherits the toys much later."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Which 1999 comedy hypnotizes Peter Gibbons into hating his job at Initech — and gives the world a red stapler to fight over?",
+    "a": "Office Space",
+    "w": [
+      "American Beauty",
+      "The Truman Show",
+      "Fight Club"
+    ],
+    "why": "Mike Judge's Office Space — a flop in cinemas, a scripture on DVD. The stapler was spray-painted red for the film."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "In The Sandlot, the monster beyond the fence — 'The Beast' the boys fear all summer — is in truth what kind of animal?",
+    "a": "A dog — an enormous English Mastiff",
+    "w": [
+      "A bear",
+      "A wolf",
+      "A mountain lion"
+    ],
+    "why": "Hercules, Mr. Mertle's mastiff, with a taste for baseballs. The legend was bigger than the dog, which is the whole film."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Which 1998 Coen brothers film gave the world The Dude — white Russians, a ruined rug, and a man who abides?",
+    "a": "The Big Lebowski",
+    "w": [
+      "Fargo",
+      "O Brother, Where Art Thou?",
+      "Barton Fink"
+    ],
+    "why": "Jeff Bridges' Dude — a box-office shrug in 1998, a religion since. The rug really tied the room together."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "In Austin Powers (1997), Dr. Evil — thirty years out of date — holds the world to ransom for the then-unimaginable sum of…",
+    "a": "One million dollars",
+    "w": [
+      "One billion dollars",
+      "One hundred million dollars",
+      "Ten million dollars"
+    ],
+    "why": "'One million dollars!' — and the room has to explain inflation to him. By the sequel he'd learned to say billion."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "In Ferris Bueller's Day Off, the borrowed Ferrari that ends the day in a ravine belongs to the father of which of Ferris's friends?",
+    "a": "Cameron Frye",
+    "w": [
+      "Sloane Peterson",
+      "Jeanie Bueller",
+      "Ed Rooney"
+    ],
+    "why": "Cameron — the 1961 Ferrari 250 GT California was his father's prized possession, and the mileage scheme undid it."
+  },
+  {
+    "cat": "Movies",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "Groundhog Day strands Bill Murray reliving February 2nd in which Pennsylvania town?",
+    "a": "Punxsutawney",
+    "w": [
+      "Altoona",
+      "Hershey",
+      "Gettysburg"
+    ],
+    "why": "Punxsutawney — home of Phil the groundhog, though the film itself was shot in Woodstock, Illinois."
+  },
+  {
+    "cat": "TV",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "On The Fresh Prince of Bel-Air, Will's preppy cousin — sweater-vest, Tom Jones dance, butt of every height joke — is…",
+    "a": "Carlton Banks",
+    "w": [
+      "Geoffrey Butler",
+      "Jazz",
+      "Ashley Banks"
+    ],
+    "why": "Carlton, and the dance is officially called the Carlton. Geoffrey is the butler; Jazz kept getting thrown out the front door."
+  },
+  {
+    "cat": "TV",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "On Home Improvement, Tim Taylor's neighbour — wise, kind, and never once seen above the fence line in full — is…",
+    "a": "Wilson",
+    "w": [
+      "Al Borland",
+      "Randy Taylor",
+      "Benny Baroni"
+    ],
+    "why": "Wilson W. Wilson Jr. — Earl Hindman held a miniature fence even in the curtain call. Al was Tim's flannelled assistant."
+  },
+  {
+    "cat": "TV",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "On Full House, which uncle's catchphrase — scissors gesture and all — was 'Cut. It. Out.'?",
+    "a": "Uncle Joey",
+    "w": [
+      "Uncle Jesse",
+      "Danny Tanner",
+      "Uncle Jesse's band"
+    ],
+    "why": "Joey Gladstone, the comedian uncle — John Stamos's Jesse had 'Have mercy', which is how you tell them apart."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "era": "80s",
+    "q": "On The Wonder Years, Kevin Arnold's lifelong crush — the girl next door, first seen in a brown corduroy coat — was…",
+    "a": "Winnie Cooper",
+    "w": [
+      "Becky Slater",
+      "Madeline Adams",
+      "Paul Pfeiffer"
+    ],
+    "why": "Winnie Cooper, played by Danica McKellar — who grew up to write mathematics books, which the table may discuss."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "era": "90s",
+    "q": "Three sisters in a San Francisco manor open the Book of Shadows and become witches in which 1998 series?",
+    "a": "Charmed",
+    "w": [
+      "Sabrina the Teenage Witch",
+      "Angel",
+      "Roswell"
+    ],
+    "why": "The Charmed Ones — Prue, Piper and Phoebe Halliwell. Sabrina was a sitcom witch; Angel had his own demons in Los Angeles."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "The last episode of Newhart (1990) pulls television's most famous rug: the whole series was the dream of Dr. Bob Hartley — from which earlier sitcom?",
+    "a": "The Bob Newhart Show",
+    "w": [
+      "The Mary Tyler Moore Show",
+      "WKRP in Cincinnati",
+      "Taxi"
+    ],
+    "why": "Bob wakes beside Suzanne Pleshette, his wife from the 1972 show, and describes the dream. It is still the finale every finale is measured against."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "On Twin Peaks, Agent Dale Cooper dictates his every observation into a tape recorder, addressing it to which never-seen woman?",
+    "a": "Diane",
+    "w": [
+      "Audrey",
+      "Donna",
+      "Annie"
+    ],
+    "why": "'Diane, I'm holding in my hand a small box of chocolate bunnies.' Diane Evans, his secretary — unseen for the whole original run."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "era": "80s",
+    "q": "Which band of bears — a rainbow, a heart, a shamrock on their bellies, caring at clouds' distance — bounced into 1980s mornings?",
+    "a": "The Care Bears",
+    "w": [
+      "The Gummi Bears",
+      "The Wuzzles",
+      "The Popples"
+    ],
+    "why": "The Care Bears, from greeting cards to the Care Bear Stare. The Gummi Bears bounced on juice, which is a different department."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "In the 1987 Teenage Mutant Ninja Turtles cartoon, reporter April O'Neil wears a one-piece jumpsuit of which unmistakable colour?",
+    "a": "Yellow",
+    "w": [
+      "Red",
+      "Blue",
+      "Purple"
+    ],
+    "why": "Yellow — Channel 6's colours, and the reason a generation can spot her in any crowd scene ever drawn."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "era": "80s",
+    "q": "The green, potato-shaped ghost who haunts The Real Ghostbusters — unnamed in the film, adopted and named by the cartoon — is…",
+    "a": "Slimer",
+    "w": [
+      "Gozer",
+      "Zuul",
+      "Vigo"
+    ],
+    "why": "Slimer — the Onionhead ghost of the first film, promoted to mascot. Gozer and Vigo were the villains; Zuul was in the fridge."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "hard",
+    "d": 3,
+    "era": "90s",
+    "q": "Which 1994 cartoon opens 'One thousand years ago, superstition and the sword ruled' — its heroes stone by day, alive by night?",
+    "a": "Gargoyles",
+    "w": [
+      "Bonkers",
+      "Darkwing Duck",
+      "Aladdin: The Series"
+    ],
+    "why": "Gargoyles — Disney's gothic gamble, Goliath and his clan waking over Manhattan. Nothing else on the afternoon schedule sounded like it."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "era": "90s",
+    "q": "Which Nintendo 64 racer turned every sleepover into a four-player, split-screen, shell-throwing grudge match?",
+    "a": "Mario Kart 64",
+    "w": [
+      "GoldenEye 007",
+      "Super Smash Bros.",
+      "Mario Party"
+    ],
+    "why": "Mario Kart 64, 1997 — the battle mode alone ended friendships in three arenas. The blue shell arrived with this one."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many dots are there on a standard pair of dice, both dice counted together?",
+    "num": 42,
+    "why": "Twenty-one a die — 1 through 6 — so forty-two the pair. The answer to everything, printed on dice all along."
+  },
+  {
+    "cat": "Music",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many keys are there on a standard piano, black and white together?",
+    "num": 88,
+    "why": "Eighty-eight — fifty-two white, thirty-six black. Every piano in every bar in the world agrees on the number."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many players does a baseball team put on the field at one time?",
+    "num": 9,
+    "why": "Nine — one for every position, and the designated hitter stays on the bench until his turn, which starts arguments."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "How many sides does a standard yellow school pencil have?",
+    "num": 6,
+    "why": "Six — hexagons don't roll off desks. The shape is a small mercy every schoolchild has benefited from."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "easy",
+    "d": 1,
+    "kind": "num",
+    "q": "A game of Twenty Questions allows the guessers exactly how many questions?",
+    "num": 20,
+    "why": "Twenty — animal, vegetable or mineral, and the clock of questions runs out faster than anyone expects."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many seasons did Cheers pour for on NBC?",
+    "num": 11,
+    "why": "Eleven seasons, 1982 to 1993 — 275 episodes of a bar where everybody knew your name, and then some."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "kind": "num",
+    "q": "How many MINUTES long is the full 'Thriller' music video — the one with the graveyard, the cinema and the voice-over?",
+    "num": 14,
+    "why": "Fourteen minutes, directed by John Landis — closer to a short film than a video, which was rather the point."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "Ask a room to name the first games console they ever owned, and the answer that comes up most is…",
+    "a": "The Nintendo Entertainment System",
+    "w": [
+      "The Sega Genesis",
+      "The Super Nintendo",
+      "The Atari 2600"
+    ],
+    "why": "The NES — grey box, zapper, and a cartridge you blew into like a doctor. For this table's childhood it was the front door."
+  },
+  {
+    "cat": "Movies",
+    "diff": "easy",
+    "d": 1,
+    "kind": "survey",
+    "q": "Ask a room to name a Disney animated film — any one, first thought — and the answer that comes up most is…",
+    "a": "The Lion King",
+    "w": [
+      "Beauty and the Beast",
+      "Aladdin",
+      "The Little Mermaid"
+    ],
+    "why": "The Lion King — 1994's phenomenon, the video every house owned, and the stage show that never closes."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The Monopoly token most people say they will fight the table to play as is…",
+    "a": "The top hat",
+    "w": [
+      "The race car",
+      "The Scottie dog",
+      "The thimble"
+    ],
+    "why": "The top hat — pure class, and the one Mr. Moneybags himself wears. The dog has its loyalists; the hat has the room."
+  },
+  {
+    "cat": "Saturday Morning",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The school-cafeteria trade item most people say carried the highest value in the whole lunchroom economy was…",
+    "a": "Dunkaroos",
+    "w": [
+      "Gushers",
+      "Fruit Roll-Ups",
+      "Lunchables"
+    ],
+    "why": "Dunkaroos — kangaroo-endorsed cookies with a frosting well. A sealed pack could trade up an entire lunch, and did."
+  },
+  {
+    "cat": "TV",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The game show most people say they could genuinely win, if only they got on it, is…",
+    "a": "The Price Is Right",
+    "w": [
+      "Jeopardy!",
+      "Wheel of Fortune",
+      "Family Feud"
+    ],
+    "why": "The Price Is Right — everybody at home knows the price of the detergent, and everybody is wrong about the car."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "kind": "survey",
+    "q": "The cinema snack most people say is simply non-negotiable — no film starts without it — is…",
+    "a": "Popcorn",
+    "w": [
+      "Raisinets",
+      "Sour Patch Kids",
+      "The giant soda"
+    ],
+    "why": "Popcorn — bought at a markup that would shame a jeweller, eaten before the trailers end, non-negotiable anyway."
+  },
+  {
+    "cat": "Music",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "The discontinued soda most people say they would bring back tomorrow, at any price, is…",
+    "a": "Surge",
+    "w": [
+      "Crystal Pepsi",
+      "Ecto Cooler",
+      "Orbitz"
+    ],
+    "why": "Surge — Coca-Cola's fully loaded green caffeine bomb of 1997, so missed its fans ran a campaign that actually revived it once."
+  },
+  {
+    "cat": "The Dial-Up Years",
+    "diff": "hard",
+    "d": 3,
+    "kind": "survey",
+    "q": "The after-school cartoon block most people say truly raised them — hosts, attitude and all — was…",
+    "a": "Toonami",
+    "w": [
+      "SNICK",
+      "The Disney Afternoon",
+      "Kids' WB"
+    ],
+    "why": "Toonami — Cartoon Network's evening block, hosted by a robot named TOM from a spaceship. The others raised people too; Toonami raised this table."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "bluff",
+    "q": "The Monopoly mascot — top hat, moustache, cane — is not called 'the Monopoly Man' in the company's own books. His name is…",
+    "a": "Rich Uncle Pennybags",
+    "decoys": [
+      "Milton Bradley",
+      "Uncle Moneybags",
+      "Parker Pennybags"
+    ],
+    "why": "Rich Uncle Pennybags, on the Chance cards since 1936. Milton Bradley and Parker Brothers were the rival game companies — the decoys are the industry, not the man."
+  },
+  {
+    "cat": "Toys & Games",
+    "diff": "easy",
+    "d": 1,
+    "kind": "bluff",
+    "q": "Mattel became a toy empire, but in 1945 the founders' first products were not toys at all. The company began by making…",
+    "a": "Picture frames",
+    "decoys": [
+      "Doll furniture",
+      "Toy pianos",
+      "Picture books"
+    ],
+    "why": "Picture frames — the dollhouse furniture came second, made from the frame offcuts, and the toys ate the company from there."
+  },
+  {
+    "cat": "The Bookshelf",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "Shakespeare coined hundreds of everyday English words. Which of these did he invent?",
+    "a": "Eyeball",
+    "decoys": [
+      "Notebook",
+      "Midnight",
+      "Handbook"
+    ],
+    "why": "Eyeball — A Midsummer Night's Dream. The others are older than the language's spelling; the Bard's coinages include 'bedroom' and 'lonely' too."
+  },
+  {
+    "cat": "Movies",
+    "diff": "medium",
+    "d": 2,
+    "kind": "bluff",
+    "q": "The first oranges, in their Southeast Asian home, were not orange at all. A ripe orange there is which colour?",
+    "a": "Green",
+    "decoys": [
+      "Yellow",
+      "Red",
+      "Purple"
+    ],
+    "why": "Green — in warm climates the skin never loses its chlorophyll. The orange colour is what cool nights do; the fruit was named before the colour was."
+  },
+  {
+    "cat": "Ads & Jingles",
+    "diff": "hard",
+    "d": 3,
+    "kind": "bluff",
+    "q": "Fredric Baur, inventor of the Pringles can, asked that part of his ashes be buried in one. Which flavour's can was it?",
+    "a": "Original",
+    "decoys": [
+      "Sour Cream & Onion",
+      "Cheddar Cheese",
+      "Barbecue"
+    ],
+    "why": "Original, in 2008 — his children stopped on the way to the cemetery to buy the can, because the plan had never specified keeping one at home."
+  },
+  {
+    "cat": "TV",
+    "diff": "hard",
+    "d": 3,
+    "kind": "bluff",
+    "q": "Alfred Butts set Scrabble's letter counts by tallying the front page of which newspaper?",
+    "a": "The New York Times",
+    "decoys": [
+      "The Wall Street Journal",
+      "The Washington Post",
+      "The Saturday Evening Post"
+    ],
+    "why": "The New York Times — Butts, an unemployed architect in the Depression, counted letters by hand and built the game's whole economy from one front page."
   }
 ];

@@ -14,24 +14,24 @@ AI. Its first live question was factually confabulated — an
 invented ad campaign, delivered with total confidence — and schema
 validation cannot check truth, only shape. At the owner's decision
 the model no longer writes questions. The special is now dealt from
-the same 96-question bank the game itself uses (hand-authored and
+the same 361-question bank the game itself uses (hand-authored and
 fact-checked), so its answer key is guaranteed. Sterling still
 writes the intro line; that is phrasing, and phrasing is what the
 AI is for.
 
 ## How the pick works
 
-- **The pool** is the bank's 84 ordinary questions (kind absent or
-  `normal`). The 6 closest-number and 6 survey entries are never
-  specials — the show deals those from its own guess slots.
+- **The pool** is the bank's 254 ordinary questions (kind absent or
+  `normal`). The 45 closest-number, 42 survey and 20 bluff entries
+  are never specials — the show deals those from its own guess slots.
 - **The order** is a single Fisher–Yates shuffle of that pool,
   driven by a mulberry32 PRNG with a fixed seed (`POOL_SEED` in
   `logic.js`), computed once at module load. Same seed → same order
   on every deploy and machine.
-- **The date's pick** is `shuffledPool[dayNumber mod 84]`, where
+- **The date's pick** is `shuffledPool[dayNumber mod 254]`, where
   `dayNumber` is the date's UTC day number (days since the Unix
   epoch). Same date → same question for everyone; consecutive
-  dates walk the shuffled pool one step at a time, so all 84
+  dates walk the shuffled pool one step at a time, so all 254
   questions are dealt before any repeats.
 - **The response question** is normalized to
   `{q, a: [4 strings], correct: 0-3, cat, diff, why, kind: 'normal'}`.
@@ -58,7 +58,7 @@ AI is for.
 
 ## Files
 
-- `bank.js` — the full 96-entry bank, copied faithfully from the
+- `bank.js` — the full 361-entry bank, copied faithfully from the
   game's `questions.js` (same order, fields, and values; the game
   exposes it as `window.GH_BANK`). If the game bank changes,
   regenerate this copy and let the test prove it faithful again.
@@ -109,5 +109,5 @@ this worker's service binding points at it.
 3. Check: `https://gilded-hour-nightly.<your-subdomain>.workers.dev/health`
    should answer `gilded-hour-nightly ok`, and `GET /tonight`
    should return the date's bank pick plus an intro. For
-   2026-11-08 the pick is the Coca-Cola polar bears question
+   2026-11-08 the pick is the Energizer Bunny question
    (Ads & Jingles).

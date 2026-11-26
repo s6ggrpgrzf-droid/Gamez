@@ -60,8 +60,8 @@ async function main() {
     const win = {};
     new Function('window', gameSrc)(win);
     const gameBank = win.GH_BANK;
-    ok(Array.isArray(gameBank) && gameBank.length === 150, 'the game bank has 150 entries', 'len=' + (gameBank && gameBank.length));
-    ok(BANK.length === 150, "the worker's bank.js has 150 entries", 'len=' + BANK.length);
+    ok(Array.isArray(gameBank) && gameBank.length === 361, 'the game bank has 361 entries', 'len=' + (gameBank && gameBank.length));
+    ok(BANK.length === 361, "the worker's bank.js has 361 entries", 'len=' + BANK.length);
     ok(deepEqual(BANK, gameBank), "bank.js deep-equals the game's bank (same order, same fields, same values)");
     // Spot checks, named and exact.
     ok(BANK[0].q === 'In Forrest Gump, Forrest says life is like a box of what?'
@@ -76,13 +76,13 @@ async function main() {
       'spot check: the Saturday Morning survey entry keys Scooby-Doo', JSON.stringify(surveyEntry).slice(0, 100));
     const kinds = { normal: 0, num: 0, survey: 0, bluff: 0 };
     for (const e of BANK) kinds[e.kind === 'num' ? 'num' : e.kind === 'survey' ? 'survey' : e.kind === 'bluff' ? 'bluff' : 'normal']++;
-    ok(kinds.normal === 114 && kinds.num === 12 && kinds.survey === 12 && kinds.bluff === 12,
-      'kind distribution is 114 normal / 12 num / 12 survey / 12 bluff', JSON.stringify(kinds));
+    ok(kinds.normal === 254 && kinds.num === 45 && kinds.survey === 42 && kinds.bluff === 20,
+      'kind distribution is 254 normal / 45 num / 42 survey / 20 bluff', JSON.stringify(kinds));
     const pool = eligiblePool();
-    ok(pool.length === 114, 'the eligible pool is exactly the 114 ordinary questions', 'len=' + pool.length);
+    ok(pool.length === 254, 'the eligible pool is exactly the 254 ordinary questions', 'len=' + pool.length);
     ok(pool.every((e) => typeof e.a === 'string' && Array.isArray(e.w) && e.w.length === 3),
       'every eligible entry has a correct string and three wrong answers');
-    ok(shuffledPool().length === 114 && shuffledPool() !== pool
+    ok(shuffledPool().length === 254 && shuffledPool() !== pool
       && deepEqual(shuffledPool().slice().sort((x, y) => BANK.indexOf(x) - BANK.indexOf(y)), pool),
       'the shuffled pool is a permutation of the eligible pool');
   }
@@ -105,7 +105,7 @@ async function main() {
   {
     const i0 = pickIndexForDate(DATE);
     const i1 = pickIndexForDate(addDays(DATE, 1));
-    ok(i1 === (i0 + 1) % 114, 'the next date picks the next slot in the shuffled pool', i0 + ' -> ' + i1);
+    ok(i1 === (i0 + 1) % 254, 'the next date picks the next slot in the shuffled pool', i0 + ' -> ' + i1);
     ok(pickEntryForDate(addDays(DATE, 1)) === shuffledPool()[i1]
       && pickEntryForDate(addDays(DATE, 1)) !== pickEntryForDate(DATE),
       'adjacent dates deal adjacent (different) entries');
@@ -113,19 +113,19 @@ async function main() {
       'dayNumberForDate is the UTC day number');
   }
 
-  // ---- 4. reachability: 114 consecutive dates deal the whole pool ----
+  // ---- 4. reachability: 254 consecutive dates deal the whole pool ----
   {
     const idxSeen = new Set();
     const entrySeen = new Set();
-    for (let n = 0; n < 114; n++) {
+    for (let n = 0; n < 254; n++) {
       const d = addDays(DATE, n);
       idxSeen.add(pickIndexForDate(d));
       entrySeen.add(pickEntryForDate(d));
     }
-    ok(idxSeen.size === 114, '114 consecutive dates hit 114 distinct pool slots', 'seen=' + idxSeen.size);
-    ok(entrySeen.size === 114, '114 consecutive dates deal 114 distinct questions', 'seen=' + entrySeen.size);
-    ok(pickEntryForDate(addDays(DATE, 114)) === pickEntryForDate(DATE),
-      'the 115th date repeats the 1st pick (the walk wraps the pool)');
+    ok(idxSeen.size === 254, '254 consecutive dates hit 254 distinct pool slots', 'seen=' + idxSeen.size);
+    ok(entrySeen.size === 254, '254 consecutive dates deal 254 distinct questions', 'seen=' + entrySeen.size);
+    ok(pickEntryForDate(addDays(DATE, 254)) === pickEntryForDate(DATE),
+      'the 255th date repeats the 1st pick (the walk wraps the pool)');
   }
 
   // ---- 5. no guess kinds are ever dealt as specials ----
