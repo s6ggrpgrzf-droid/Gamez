@@ -606,6 +606,56 @@
   #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-ghost{padding-top:4px;padding-bottom:4px}
 
 /* ================================================================
+   FINALE FIT PASS (2026-11-26 — the debug-team audit's confirmed
+   defect #2): the finale stage still overflowed #stage in two
+   measured shapes (probe-finale-fit, local build): short
+   landscape with a plain report finale — client 330 vs scroll
+   366 — and the portrait series finale — 651 vs 661. In short
+   landscape the marquee holds only half its grid column because
+   Sterling's zone flexes beside it, so the pot line wraps to
+   ~92px and the winner's name wraps under its tag; the
+   composition pass already steps the zone out on series nights
+   (the host rail carries Sterling and his winner line there),
+   and this pass extends that step to every report finale. The
+   remaining height comes from the sub lines' leading, the
+   report's say line and award rows, and the wrap's gaps — the
+   winner's word, name and total keep their sizes. Portrait
+   keeps Sterling: its overflow was 10px, taken from leading
+   and padding alone. Portrait also sets the three finale
+   buttons on one row (77px wrapped) at a smaller size — the
+   stage's client height itself moves with the host line's
+   wrap (612–651px measured across identical shows), so the
+   finale needs real headroom, not an exact fit. Selector
+   note: #stage sits INSIDE #scr-game, so a "#stage #scr-game"
+   chain can never match — the award-row rules here key off
+   #stage alone, like the A2 block above. Round two (same
+   day, drive-rematch's long-name cast — Alexandria,
+   Bartholomew, Cassandra — still 7px over at the shortest
+   client): the portrait podium takes its intended 6px top
+   padding and a 4px margin here (the portrait addendum's own
+   podium rule uses the same dead "#stage #scr-game" chain,
+   so the base 14px/16px stood), and the report card and its
+   head give up 5px more. ================================================================ */
+@media (max-height:500px){
+  #scr-game[data-phase="over"] .finale-wrap.has-report .sterling-zone{display:none}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-sub.pot-line{line-height:1.08}
+  #stage .finale-wrap.has-report .award-row{padding-top:2px;padding-bottom:2px}
+}
+@media (max-width:560px){
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-sub{line-height:1.15}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .winner-sub.pot-line{font-size:10px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-say{font-size:11.5px}
+  #stage .finale-wrap.has-report .award-row{padding-top:2px;padding-bottom:2px}
+  #stage .finale-wrap.has-report .finale-row{padding-top:6px;margin-top:4px}
+  #stage .finale-wrap.has-report .report-card{padding-top:7px;padding-bottom:4px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .report-head{margin-bottom:3px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report{gap:2px}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns{gap:8px;margin-top:6px;flex-wrap:nowrap}
+  #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-gold,
+  #scr-game[data-phase="over"] .finale-wrap.has-report .finale-btns .btn-ghost{font-size:12.5px;padding-left:10px;padding-right:10px;white-space:nowrap}
+}
+
+/* ================================================================
    PERFECTIONIST FIX PASS 3 (2026-11-15) — THE TV COMPOSITION.
    The audit at 1920x1080: every screen was the phone layout
    floating in a big navy frame — the stage column capped at
