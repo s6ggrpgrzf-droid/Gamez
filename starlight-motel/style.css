@@ -670,3 +670,30 @@ body{ background:#04070D; }
 
 /* the corkboard's head fits on one line with its rule */
 .corkboard .cb-head{ letter-spacing:.14em; font-size:10.5px; }
+
+/* COMBOS PASS (F1): the pair line under a catalog item, and the banner
+   that lands when a purchase completes a pair */
+.comboline{ font-size:11px; line-height:1.45; color:#9FB4C7; margin-top:3px; }
+.comboline b{ color:#E8D9AE; font-weight:600; }
+.comboline.lit{ color:#FFC46B; }
+.combolit-note{ margin:10px 0 2px; padding:9px 12px; border-radius:10px; font-size:12.5px; line-height:1.5;
+  color:#F2E4C8; background:linear-gradient(180deg, rgba(255,196,107,.14), rgba(255,196,107,.05));
+  border:1px solid rgba(255,196,107,.45); }
+
+/* CHALLENGE GUESTS (F2): the desk tag, and the Names to keep cards in the book */
+.chtag{ font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:.1em; background:#FFC46B; color:#33270E; padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap; }
+.chcard{ border:1px solid rgba(255,196,107,.35); border-radius:10px; padding:10px 12px; margin-top:8px; background:rgba(255,196,107,.05); }
+.ch-title{ font-size:12px; color:#C9D6E4; margin-top:2px; }
+.ch-want{ font-size:12px; line-height:1.5; color:#9FB4C7; margin-top:3px; }
+.ch-prog{ font-size:12px; color:#E8D9AE; margin-top:6px; }
+.ch-dots{ color:#FFC46B; letter-spacing:.15em; }
+.ch-done{ font-size:12.5px; line-height:1.5; color:#FFC46B; margin-top:6px; }
+
+/* ROOM-CLASS PRICING (F3): the premium card under the standard one */
+.rc-prem{ margin-top:12px; padding-top:10px; border-top:1px dashed rgba(198,164,94,.35); }
+.rc-prem-label{ font-family:'Archivo',sans-serif; font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#FFC46B; margin-bottom:2px; }
+.rate-big.sm{ font-size:30px; }
+
+/* COUNTER-OFFER (F4): the named price on a guest card, and a settled one */
+.wanttag.haggle{ background:rgba(255,196,107,.13); border-color:rgba(255,196,107,.55); color:#F2E4C8; }
+.wanttag.settled{ background:rgba(47,111,106,.25); border-color:rgba(47,111,106,.7); color:#BFE3DD; }
