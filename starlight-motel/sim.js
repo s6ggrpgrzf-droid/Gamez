@@ -185,6 +185,10 @@ const SIM = (() => {
     if (g.ratePremium === undefined) g.ratePremium = null;
     if (g.phone === undefined) g.phone = null;
     if (!Array.isArray(g.blocks)) g.blocks = [];
+    if (g.regular === undefined) g.regular = null;
+    if (g.regularGone === undefined) g.regularGone = false;
+    if (g.regularLine === undefined) g.regularLine = null;
+    if (g.squeeze === undefined) g.squeeze = false;
     if (typeof g.season !== 'number' || g.season < 1) g.season = 1;
     if (!Array.isArray(g.calendar) || !g.calendar.length) g.calendar = buildCalendar(g.season, g.seed);
     if (!Array.isArray(g.ledger)) g.ledger = [];
@@ -242,9 +246,12 @@ const SIM = (() => {
                 bad: 'We have read this twice. The room has been seen to. That is all we will say, and it is true.' }
   };
   function replyMult(tone, stars){
-    if (stars >= 4) return tone === 'funny' ? 1.05 : tone === 'gracious' ? 1.03 : 0.97;
-    if (stars === 3) return tone === 'gracious' ? 1.03 : tone === 'funny' ? 1.02 : 1.01;
-    return tone === 'firm' ? 1.04 : tone === 'gracious' ? 1.02 : 0.96;
+    // Pass H1: the numbers now honour what the morning hint teaches — the
+    // right tone moves the road by a tenth, the wrong one costs as much,
+    // and the effect rides two nights (full, then half-strength).
+    if (stars >= 4) return tone === 'funny' ? 1.12 : tone === 'gracious' ? 1.06 : 0.90;
+    if (stars === 3) return tone === 'gracious' ? 1.10 : tone === 'funny' ? 1.04 : 0.95;
+    return tone === 'firm' ? 1.12 : tone === 'gracious' ? 1.05 : 0.88;
   }
   function replyToReview(g, idx, tone){
     ensureSeason(g);
@@ -271,9 +278,24 @@ const SIM = (() => {
     let h = ((g.seed >>> 0) * 2654435761 + g.night * 40503 + (salt || 0) * 977 + 17) >>> 0;
     const draw = () => { h = (h * 1664525 + 1013904223) >>> 0; return h / 4294967296; };
     if (draw() < 0.45) return null;
-    const ratePer = clamp(Math.round(rate * 0.8 / 5) * 5, 30, 200);
+    // Pass H1: deals used to all price at the same flat 80% of the card, so
+    // the answer was always the same. Now the spread is honest — a third of
+    // offers are fair (88–95%), the middle are standard (78–87%), and the
+    // rest are poor (60–74%) with a longer lock-in: a big lump that reads
+    // generous until you divide it by the nights. The desk shows tonight's
+    // card; judging the offer against it is the player's job again.
+    const kind = draw();
+    // Pass H5: in the squeeze, the desk's deals run meaner — the fair band
+    // thins and the poor band fattens. Word travels among crews, too.
+    const squeezed = g.credit >= 6000 || g.cash < 0;
+    const fairCut = squeezed ? 0.15 : 0.35, stdCut = squeezed ? 0.55 : 0.75;
+    let f, extra = 0;
+    if (kind < fairCut) f = 0.88 + draw() * 0.07;
+    else if (kind < stdCut) f = 0.78 + draw() * 0.09;
+    else { f = 0.60 + draw() * 0.14; extra = 1 + Math.floor(draw() * 2); }
+    const ratePer = clamp(Math.round(rate * f / 5) * 5, 30, 200);
     if (ratePer >= rate) return null;
-    return { nights: nights + 2 + Math.floor(draw() * 3), ratePer };
+    return { nights: nights + 2 + Math.floor(draw() * 3) + extra, ratePer };
   }
   function answerDeal(g, arrivalId, accept){
     const a = g.queue.find(q => q.id === arrivalId);
@@ -414,6 +436,8 @@ const SIM = (() => {
       if (g.challenges.june && g.challenges.june.done && segKey === 'tourist') f *= 1.10;
     }
     if (g.reply && g.reply.night === night) f *= g.reply.mult;
+    else if (g.reply && g.reply.night === night - 1) f *= Math.sqrt(g.reply.mult); // the word is still travelling, fainter
+    if (segKey === 'trucker' && g.regular && g.regular.kept >= 3) f *= 1.04; // Earl's word at the truck stops
     // The road has moods: some nights the highway is generous, some nights it
     // is not, and no rate card changes that. Rolled once per night (createGame,
     // resolveNight); the forecast reports a hint, never the number.
@@ -914,7 +938,9 @@ const SIM = (() => {
     // days, and never in Tonight Only, where the night is the whole game.
     g.phone = null;
     if (g.night >= 4 && !g.tonight){
-      if (rnd(g) < 0.34){
+      // Pass H5: in the squeeze the phone rings far more — a motel clawing
+      // back from the bank's dearest money takes every call it can get.
+      if (rnd(g) < ((g.credit >= 6000 || g.cash < 0) ? 0.8 : 0.34)){
         let kind = pick(g, ['wedding', 'bus', 'scout']);
         if (kind === 'scout' && g.night + 3 > SEASON_NIGHTS) kind = 'wedding';
         if (kind === 'wedding'){
@@ -1039,7 +1065,42 @@ const SIM = (() => {
     return { ok: true };
   }
 
+  // Pass H3: the Friday regular. From night 29, Earl Dobbins drives the
+  // same route every Friday (nights 29, 36, 43, …) and Room 4 is his. If
+  // the room stands empty and ready when the desk closes, he takes it at
+  // the card — no line, no haggling — and keeping him compounds: every
+  // three kept Fridays he pays $5 more, and the truckers hear his word.
+  // Leave the room dark or let it twice running and he takes his route
+  // to the Desert Inn for the rest of the season.
+  function regularDue(g){ return !g.tonight && !g.over && g.night >= 29 && (g.night - 1) % 7 === 0; }
+  function settleRegular(g){
+    if (!regularDue(g) || g.regularGone) return;
+    ensureSeason(g);
+    if (!g.regular) g.regular = { name: 'Earl Dobbins', roomId: 4, kept: 0, missed: 0, streakMiss: 0 };
+    const reg = g.regular;
+    const room = g.rooms.find(r => r.id === reg.roomId);
+    const premium = Math.min(15, Math.floor(reg.kept / 3) * 5);
+    if (room && room.state === 'ready'){
+      room.state = 'occupied';
+      room.guest = { name: reg.name, segment: 'trucker', nightsLeft: 1, ratePaid: g.rate + premium,
+        dirtAtCheckIn: room.dirt, waitScore: 96, trait: null, returning: true, visits: reg.kept,
+        recovery: 6, challenge: null, dealStay: false, dealNights: 0, rowdyDone: false, regularStay: true };
+      g.stats.guests++;
+      reg.kept++; reg.streakMiss = 0;
+      g.regularLine = `${reg.name} kept his Friday — Room ${reg.roomId}, $${g.rate + premium}, no fuss.${premium ? ` The extra $${premium} is loyalty, and he pays it gladly.` : ''}`;
+    } else {
+      reg.missed++; reg.streakMiss++;
+      if (reg.streakMiss >= 2){
+        g.regularGone = true; g.regular = null;
+        g.regularLine = `${reg.name} found Room ${reg.roomId} dark two Fridays running. He has taken his route to the Desert Inn.`;
+      } else {
+        g.regularLine = `Room ${reg.roomId} wasn't ready. ${reg.name} drove on — he won't wait in a lot.`;
+      }
+    }
+  }
+
   function closeDesk(g){
+    settleRegular(g);
     // A knock nobody answered answers itself, and not in your favour.
     if (g.incident && !g.incident.resolved){
       const room = g.rooms.find(r => r.id === g.incident.roomId);
@@ -1179,6 +1240,7 @@ const SIM = (() => {
     // other, and the register says what the phone did with the night.
     const phoneDeposit = (g.phone && g.phone.status === 'taken' && g.phone.kind === 'scout') ? g.phone.deposit : 0;
     if (phoneDeposit) revenue = roundMoney(revenue + phoneDeposit);
+    const regularLine = g.regularLine || ''; g.regularLine = null;
     let phoneLine = '';
     if (g.phone && g.phone.status === 'taken'){
       if (g.phone.kind === 'wedding') phoneLine = `The phone: the ${g.phone.party} wedding took ${g.phone.filled || 0} room${g.phone.filled === 1 ? '' : 's'} at $${g.phone.rate} a door.`;
@@ -1288,10 +1350,21 @@ const SIM = (() => {
     g.cashHistory.push(g.cash);
     if (g.cashHistory.length > 120) g.cashHistory.shift();
 
+    // Pass H5: the squeeze. The bank's cliff used to arrive unannounced —
+    // fine, fine, fine, taken. Now the approach is a state of play: past
+    // $6,000 on the line (or under water on cash) the phone rings more,
+    // the desk's deals run meaner, and the register says where you stand
+    // every night until you claw back out.
+    const wasSqueezed = !!g.squeeze;
+    g.squeeze = !g.tonight && (g.credit >= 6000 || g.cash < 0);
+    let squeezeLine = '';
+    if (g.squeeze && !wasSqueezed) squeezeLine = 'The squeeze is on: the line stands deep in the bank’s dearest money. The phone rings more now, the desk’s deals run meaner, and every night is a claw-back.';
+    else if (g.squeeze) squeezeLine = `The squeeze holds — the line stands at $${g.credit.toLocaleString('en-US')} of $8,000. Rings are lifelines now; answer them like it matters, because it does.`;
+    else if (wasSqueezed) squeezeLine = 'The line is back under $6,000 and the cash is your own again. The bank’s letters go back to being polite.';
     const report = { night: g.night, dow: DOW_NAMES[dowOf(g.night)], revenue, roomRevenue, vendingRevenue, costs, costTotal,
                      profit, cashAfter: g.cash, occupied: occ, checkouts,
                      ratingAfter: g.rating, turnedAwayTotal: g.stats.turnedAway, droveOn: g.droveOn || 0,
-                     phoneDeposit, phoneLine, blockLine,
+                     phoneDeposit, phoneLine, blockLine, regularLine, squeezeLine,
                      creditDrawn, creditAfter: g.credit };
     g.lastReport = report;
     // Past $4,000 on the line, the bank writes — once.
