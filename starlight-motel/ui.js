@@ -59,6 +59,9 @@ function sfx(name){
       case 'coin':  tone(988, 0, 0.07, 'triangle', 0.09); tone(1319, 0.06, 0.13, 'triangle', 0.09); break;
       case 'page':  noiseBurst(0, 0.16, 0.06, 1400); break;
       case 'deny':  tone(196, 0, 0.15, 'sine', 0.09, 147); break;
+      case 'night': tone(330, 0, 1.15, 'triangle', 0.05, 262); tone(262, 0.18, 1.3, 'triangle', 0.045, 196); tone(196, 0.4, 1.4, 'sine', 0.035, 147); break;
+      case 'till':  tone(1568, 0, 0.09, 'triangle', 0.07); tone(2093, 0.07, 0.16, 'triangle', 0.06); noiseBurst(0.02, 0.05, 0.04, 900); break;
+      case 'ledger': tone(220, 0, 0.22, 'sine', 0.06, 175); noiseBurst(0, 0.14, 0.05, 1200); break;
     }
   } catch(e){}
 }
@@ -195,12 +198,15 @@ function loadSave(){ try { const s = localStorage.getItem(SAVE_KEY); return s ? 
 const STAR = '0,-36 8.5,-11.7 34.2,-11.1 13.7,4.5 21.2,29.1 0,14.4 -21.2,29.1 -13.7,4.5 -34.2,-11.1 -8.5,-11.7';
 const SPIKE = '0,-36 8.5,-11.7 -8.5,-11.7';
 
-function signSVG(){
+function signSVG(phase){
   const occ = G ? G.rooms.filter(r => r.state === 'occupied').length : 0;
   const full = !!(G && occ >= G.rooms.length);
   const rating = G ? G.rating : 3.4;
   const weak = rating < 3.2 ? 'sign-weak2' : rating < 3.7 ? 'sign-weak1' : '';
-  return `<div class="signwrap ${weak}">
+  const inGame = phase && phase !== 'title' && G && Array.isArray(G.upgrades);
+  const pro = inGame && G.upgrades.includes('sign');
+  const bookBoard = inGame && G.upgrades.includes('website') ? '<div class="mark-bookdirect">Book<br>Direct</div>' : '';
+  return `<div class="signwrap ${weak} ${pro ? 'sign-pro' : ''}">${bookBoard}
     <div class="sign-glow"></div>
     <svg viewBox="0 0 160 302" role="img" aria-label="Starlight Motel sign">
       <rect x="76" y="198" width="8" height="104" fill="#2A1E15"/>
@@ -217,7 +223,7 @@ function signSVG(){
       <rect x="36" y="166" width="88" height="1.5" fill="#C6A45E" opacity="0.6"/>
       <rect x="28" y="174" width="104" height="19" rx="9.5" fill="#141210" stroke="rgba(198,164,94,.5)"/>
       <text class="n-vac" x="80" y="187.5" text-anchor="middle" font-size="10.5" letter-spacing="2.5" fill="${full ? '#C63A2A' : '#79A96F'}">${full ? 'NO VACANCY' : 'VACANCY'}</text>
-    </svg>
+    </svg><span class="moth m1"></span><span class="moth m2"></span>
   </div>`;
 }
 
@@ -253,19 +259,40 @@ function sceneHTML(sky, rooms, phase, opts){
   } else {
     units = `<div class="units">${rooms.map(r => unitHTML(r, phase, opts)).join('')}</div>`;
   }
-  return `<div id="scene" class="${sky} ${phase === 'title' ? 'attract' : 'chart'}">
+  // PASS V3: purchases show on the building. Every owned upgrade leaves a
+  // trace on the motel itself — panels on the roof, lamps in the court, a
+  // pie board under the awning — so the building becomes the record of
+  // what the keeper spent. In a season only; the title postcard is clean.
+  const up = id => phase !== 'title' && typeof G !== 'undefined' && G && Array.isArray(G.upgrades) && G.upgrades.includes(id);
+  const roofLeft = up('billboard') ? '<div class="mark-billboard">Starlight<i>next right</i></div>' : '';
+  const roofRight = `${up('solar') ? '<div class="mark-solar"></div>' : ''}${up('wifi') ? '<svg class="mark-dish" viewBox="0 0 24 24"><path d="M4 14a9 9 0 0 0 9 9L4 14z" fill="#D8CFB8"/><path d="M13 23L19 10" stroke="#D8CFB8" stroke-width="1.6"/><circle cx="19.5" cy="9" r="1.6" fill="#FFC46B"/></svg>' : ''}`;
+  const boards = `${up('laundry') ? '<div class="mark-board left">Laundry</div>' : '<span></span>'}${up('breakfast') ? '<div class="mark-board mid">· Breakfast ·</div>' : '<span></span>'}${up('piewindow') ? '<div class="mark-board right">Fresh Pie</div>' : '<span></span>'}`;
+  const showBoards = up('laundry') || up('breakfast') || up('piewindow');
+  const walkwayProps = `${up('vending') ? '<div class="mark-vending"><i></i></div>' : ''}${up('deepclean') ? `<div class="mark-cart" style="left:${up('vending') ? 29 : 5}px"><i></i></div>` : ''}${up('pets') ? '<div class="mark-pets"><i></i></div>' : ''}`;
+  const courtMarks = `${up('truckpad') ? '<div class="mark-truckbays"></div>' : ''}${up('security') ? '<div class="mark-lamp" style="left:27%"></div><div class="mark-lamp" style="left:57%"></div>' : ''}`;
+  return `<div id="scene" class="${sky} ${phase === 'title' ? 'attract' : 'chart'} ${up('ac') ? 'has-ac' : ''} ${up('mattress') ? 'has-mattress' : ''}">
+    <div class="skyline"><svg viewBox="0 0 100 26" preserveAspectRatio="none"><path d="M0 26 L0 19 Q12 13 24 17 T48 15 Q58 11 66 14 L67.2 14 L67.2 8.5 L66.4 8.5 Q68 5.5 70 8.5 L69.2 8.5 L69.2 14 L74 15.5 Q86 12 100 17 L100 26 Z" fill="#241D3D"/><rect x="67.55" y="10.5" width="0.5" height="3.5" fill="#241D3D"/><circle cx="67.8" cy="9.2" r="0.55" fill="#FFC46B"/></svg></div>
     <div class="moon"></div>
     ${phase === 'arrivals' ? '<div class="headlights"></div>' : ''}
-    ${signSVG()}
+    ${signSVG(phase)}
     <div class="building">
+      ${roofLeft || roofRight ? `<div class="roofmarks"><span class="rm-left">${roofLeft}</span><span class="rm-right">${roofRight}</span></div>` : ''}
       <div class="roofline">STARLIGHT</div>
       <div class="awning"></div>
+      ${showBoards ? `<div class="underawning">${boards}</div>` : ''}
       <div class="wall">${units}</div>
       <div class="walkway"></div>
+      ${walkwayProps}
     </div>
     <div class="court"></div>
     ${courtCars(phase, rooms)}
-    <div class="pool"></div>
+    ${courtMarks}
+    <div class="pool ${up('pool') ? 'pro' : ''}"><div class="shimmer"></div><div class="shimmer s2"></div>${up('pool') ? '<div class="pool-umb"></div><div class="pool-lounger" style="right:-15px"></div><div class="pool-lounger flip" style="right:-27px"></div>' : ''}</div>
+    <div class="road"><div class="passcar"><i></i></div></div>
+    <div class="wire"><svg viewBox="0 0 100 12" preserveAspectRatio="none"><path d="M0 2.5 Q30 10 62 6 T100 3.5" stroke="#0E0A14" stroke-width="0.45" fill="none" opacity="0.55"/></svg></div>
+    <div class="pole"></div>
+    <div class="vig"></div>
+    <div class="grain"></div>
   </div>`;
 }
 
@@ -292,14 +319,13 @@ function deskbarHTML(){
   const occ = G.rooms.filter(r => r.state === 'occupied').length;
   const dn = (G.lastReport && (G.over || G.tonight)) ? G.lastReport.night : G.night;
   return `<div class="deskbar">
-    <span class="db-sys">STARLIGHT DESK SYSTEM</span>
+    <span class="db-sys">★ THE STARLIGHT</span>
     <span class="db-night">Night ${dn} · ${WD[SIM.dowOf(dn)]}</span>
     <span><span class="db-stars">${stars(G.rating)}</span> <span class="db-rating">${G.rating.toFixed(1)}</span></span>
     <span class="db-house">${occ}/${G.rooms.length} in house</span>
     ${G.credit > 0 ? `<span class="db-house" style="color:#E8A37A">Credit ${money(G.credit)}</span>` : ''}
-    <span class="db-cash ${G.cash < 0 ? 'neg' : ''}">${money(G.cash)}</span>
+    <span class="db-cash ${G.cash < 0 ? 'neg' : ''}" id="db-cash">${money(G.cash)}</span>
     <button class="sndbtn" id="btn-sound">${audio.on ? 'Sound on' : 'Sound off'}</button>
-    <span class="cursor"></span>
   </div>`;
 }
 function deskOpen(panel){ return `<div id="desk">${G ? deskbarHTML() : ''}<div id="panel">${panel}</div></div>`; }
@@ -333,13 +359,12 @@ function renderTitle(){
   const fake = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, state: 'occupied' }));
   app.innerHTML = sceneHTML('sky-desk', fake, 'title') + deskOpen(`
     <div class="paper titlecard">
-      <div class="term-bar"><span>Starlight Desk System</span><span>PMS-88 · Log-on</span></div>
-      <div class="reg-title">The Starlight Motel · Est. 1962 · The Old Highway</div>
+      <div class="term-bar"><span>The Starlight Motel</span><span>Est. 1962 · The Old Highway</span></div>
       <p class="pitch">Eight rooms, one neon star, and a highway that decides whether tonight you eat. Set the rate, spend your cleaning minutes where they count, and work the desk — every guest remembers, and some of them write it down.</p>
-      ${sv ? `<button class="btn btn-primary" id="btn-continue"><span class="fk">F1</span>Continue — ${sv.season > 1 ? `Summer ${summerWord(sv.season)} · ` : ''}Night ${sv.night}</button>` : ''}
-      <button class="btn btn-walnut" id="btn-new"><span class="fk">F2</span>New season</button>
-      <button class="btn btn-walnut" id="btn-shared"><span class="fk">F3</span>Shared season — today's seed</button>
-      <button class="btn btn-walnut" id="btn-tonight"><span class="fk">F4</span>Tonight only — one night</button>
+      ${sv ? `<button class="btn btn-primary" id="btn-continue">Continue — ${sv.season > 1 ? `Summer ${summerWord(sv.season)} · ` : ''}Night ${sv.night}</button>` : ''}
+      <button class="btn btn-walnut" id="btn-new">New season</button>
+      <button class="btn btn-walnut" id="btn-shared">Shared season — today's seed</button>
+      <button class="btn btn-walnut" id="btn-tonight">Tonight only — one night</button>
       <div class="fine">Shared season: everyone who opens one today starts the same summer. Tonight only: one night at a standing motel — night 43, the Suites just opened — the same house for the whole world today, ${todayLabel()}. One sitting; your season is never touched.${tonightBestLine()}</div>
       ${sv && sv.ledger && sv.ledger.length ? `<div class="reg-title" style="margin-top:16px">The Keeper's Ledger</div>${sv.ledger.map(ledgerRow).join('')}` : ''}
       <div class="fine">A season is 84 nights · autosaves on this device</div>
@@ -381,7 +406,7 @@ function reportHTML(){
   const row = (label, v, cls) => `<div class="led ${cls || ''}"><span>${label}</span><b>${money(v)}</b></div>`;
   const co = rep.checkouts.map(x => {
     const cls = x.score >= 80 ? 'hi' : x.score >= 60 ? 'mid' : 'lo';
-    return `<div class="co"><b>${esc(x.name)}</b> <span class="segtag">${SIM.SEGMENTS[x.segment].label}</span> <span class="cst ${cls}">${stars(x.stars)}</span> <span class="score">score ${x.score}</span></div>`;
+    return `<div class="co"><b>${esc(x.name)}</b> <span class="segtag">${SIM.SEGMENTS[x.segment].label}</span> <span class="cst ${cls}">${stars(x.stars)}</span></div>`;
   }).join('');
   const reviews = rep.checkouts.map((x, ci) => ({ x, ci })).filter(({ x }) => x.review);
   const myReply = G.reply && G.reply.night === G.night ? G.reply : null;
@@ -399,7 +424,10 @@ function reportHTML(){
     <div class="reg-title">The Register</div>
     <div class="reg-head">Last night — ${esc(rep.dow)}</div>
     <div class="reg-sub">${rep.occupied}/${G.rooms.length} rooms filled · rating now ${rep.ratingAfter.toFixed(1)}★${rep.droveOn ? ` · ${rep.droveOn} drove on over the price` : ''}</div>
-    ${row('Room revenue', rep.revenue)}
+    ${rep.phoneLine ? `<div class="reg-sub">${esc(rep.phoneLine)}</div>` : ''}
+    ${rep.blockLine ? `<div class="reg-sub">${esc(rep.blockLine)}</div>` : ''}
+    ${row('Room revenue', rep.revenue - (rep.phoneDeposit || 0))}
+    ${rep.phoneDeposit ? row('Phone deposit — the location scout', rep.phoneDeposit) : ''}
     ${row('Mortgage', -c.mortgage, 'out')}
     ${row('Utilities', -c.utilities, 'out')}
     ${row('Housekeeping', -c.housekeeping, 'out')}
@@ -457,6 +485,7 @@ function renderMorning(){
       <div class="meter seasonmeter"><i style="width:${Math.round(G.night / SIM.SEASON_NIGHTS * 100)}%"></i></div>
       <div class="season-line">${cal ? `<b>${esc(cal.name)}</b> — ${esc(cal.note)}` : 'A clear stretch of highway. Nothing on the calendar but the weather.'}</div>
       ${nxt ? `<div class="season-next">Coming night ${nxt.from}${nxt.to > nxt.from ? '–' + nxt.to : ''}: ${esc(nxt.name)} — in ${nxt.from - G.night} night${nxt.from - G.night === 1 ? '' : 's'}.</div>` : ''}
+      ${(G.blocks || []).map(b => `<div class="season-next">On the books: the film crew holds <b>${b.rooms} rooms on night ${b.night}</b> at $${b.rate} a door — filled from the ready rooms when the desk opens.${b.night === G.night ? ' That is tonight: clean for them first.' : ''}</div>`).join('')}
       <div class="season-goal">Season Saved asks <b>$10,000 and 3.5★</b> by Night 84. ${G.credit > 0 ? `Credit line: <b>${money(G.credit)}</b> of $8,000 drawn.` : 'The $8,000 credit line sits untouched in its envelope.'}</div>
       <div class="deskrow" style="margin-top:10px"><button class="btn btn-ghost dk" id="btn-calendar">The season calendar</button><button class="btn btn-ghost dk" id="btn-catalog">Supply catalog &amp; bank</button></div>
     </div>`;
@@ -554,7 +583,7 @@ function renderMorning(){
 }
 
 function renderCalendar(){
-  const rows = (G.calendar || SIM.CALENDAR).map(e => {
+  const rows = (G.calendar || SIM.CALENDAR).slice().sort((a, b) => a.from - b.from || a.to - b.to).map(e => {
     let status, cls = '';
     if (G.night > e.to){ status = 'Done'; cls = 'done'; }
     else if (G.night >= e.from){ status = e.from === e.to ? 'Today' : 'On now'; cls = 'now'; }
@@ -609,6 +638,33 @@ function paybackNote(id, cost){
   }
   return truth;
 }
+// PASS G3: every catalog item gets a face — a small drawn mark in a brass
+// ring, the way a supply house stamps its crates. One shape per item, so
+// the eye learns the catalog the way it learns the doors.
+const SHOP_GLYPHS = {
+  sign: '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/>',
+  website: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.8 2.3 2.8 14.7 0 17-2.8-2.3-2.8-14.7 0-17z"/>',
+  vending: '<rect x="5.5" y="3" width="13" height="18" rx="1.5"/><rect x="8.5" y="6.5" width="4.5" height="5"/><path d="M8.5 15.5h7M8.5 18.5h4"/>',
+  laundry: '<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><circle cx="12" cy="13" r="4.3"/><path d="M7.5 7h3"/>',
+  wifi: '<path d="M4 10a12 12 0 0 1 16 0M6.8 13.8a8 8 0 0 1 10.4 0M9.6 17.2a4 4 0 0 1 4.8 0"/><circle cx="12" cy="19.6" r="1.1" fill="currentColor" stroke="none"/>',
+  pool: '<path d="M2.5 9.5c3-3 6-3 9 0s6 3 9 0M2.5 15.5c3-3 6-3 9 0s6 3 9 0"/>',
+  truckpad: '<path d="M3 6.5h11V16H3zM14 9.5h3.8L21 13v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/><path d="M2 18h2M10 18h4"/>',
+  pets: '<ellipse cx="12" cy="15.5" rx="4.2" ry="3.4"/><circle cx="5.6" cy="10" r="1.6" fill="currentColor" stroke="none"/><circle cx="9.2" cy="7.6" r="1.6" fill="currentColor" stroke="none"/><circle cx="14.8" cy="7.6" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.4" cy="10" r="1.6" fill="currentColor" stroke="none"/>',
+  piewindow: '<circle cx="12" cy="12" r="8.5"/><path d="M12 12L5.2 7.8M12 12l6.8-4.2M12 12v8.5M12 12L5 16.5M12 12l7 4.5"/>',
+  solar: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/>',
+  billboard: '<rect x="4" y="4" width="16" height="9"/><path d="M8 13v6M16 13v6M4.5 20.5h15M7.5 8.5h9"/>',
+  security: '<path d="M12 3l7 2.5V11c0 5-3 8.2-7 10-4-1.8-7-5-7-10V5.5z"/><path d="M9 11.5l2.2 2.2 4.3-4.7"/>',
+  mattress: '<path d="M3.5 18.5h17M3.5 18.5v-5h17v5M3.5 15.5h17"/><path d="M6 13.5v-2.8A1.7 1.7 0 0 1 7.7 9h2.6A1.7 1.7 0 0 1 12 10.7v2.8"/>',
+  deepclean: '<path d="M11 4l1.7 5 5 1.7-5 1.7L11 17.5l-1.7-5.1-5-1.7 5-1.7z"/><path d="M18 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+  ac: '<path d="M12 3.5v17M4.8 8l14.4 8M19.2 8L4.8 16"/><circle cx="12" cy="12" r="1.6"/>',
+  breakfast: '<path d="M5 10.5h11V16a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 11.5h1.3a2.6 2.6 0 0 1 0 5.2H16M8.5 3.5c0 1.4 1 1.6 1 3M12.5 3.5c0 1.4 1 1.6 1 3"/>',
+  expansion: '<path d="M4 20.5V9l6-4.5v16M10 20.5V11l6 2.8v6.7M4 20.5h16"/><path d="M18.5 3v5M16 5.5h5"/>',
+  wrench: '<path d="M15.2 4.2a4.6 4.6 0 0 0-4.5 5.9L4 16.8V20h3.2l6.7-6.7a4.6 4.6 0 0 0 5.9-4.5l-2.9 2.9-2.5-.6-.6-2.5z"/>'
+};
+function shopGlyph(id, owned){
+  const inner = SHOP_GLYPHS[id] || SHOP_GLYPHS.sign;
+  return `<div class="shop-glyph ${owned ? 'owned' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg></div>`;
+}
 let lastCombo = null;
 function comboLine(u){
   const c = SIM.COMBOS.find(x => x.a === u.id || x.b === u.id);
@@ -626,6 +682,7 @@ function renderCatalog(){
   const owned = id => G.upgrades.includes(id);
   const items = SIM.UPGRADES.map(u => `
     <div class="shoprow">
+      ${shopGlyph(u.id, owned(u.id))}
       <div class="shop-main"><div class="shop-name">${esc(u.name)} ${owned(u.id) ? '<span class="ownedtag">Yours</span>' : ''}</div>
       <div class="shop-blurb">${esc(u.blurb)}</div>${owned(u.id) ? '' : `<div class="payback">${paybackNote(u.id, u.cost)}</div>`}${comboLine(u)}</div>
       ${owned(u.id) ? '' : `<button class="stamp" data-buy="${u.id}">Buy — $${u.cost.toLocaleString('en-US')}</button>`}
@@ -660,13 +717,13 @@ function renderCatalog(){
       ${comboNote ? `<div class="combolit-note">★ The pair is lit — <b>${esc(comboNote.name)}</b>. ${esc(comboNote.line)}</div>` : ''}
       ${items}
       <div class="reg-title" style="margin-top:16px">Build</div>
-      ${ex ? `<div class="shoprow"><div class="shop-main"><div class="shop-name">${esc(ex.name)}</div>
+      ${ex ? `<div class="shoprow">${shopGlyph('expansion', false)}<div class="shop-main"><div class="shop-name">${esc(ex.name)}</div>
         <div class="shop-blurb">Two more doors on the court, condition 90, ready tonight. New-wing rooms let for $8 over the card rate. The mortgage rises $16 a night, and housekeeping gains a hand (+40 minutes a day).${G.night < ex.unlock ? ` The crew can start on night ${ex.unlock}.` : ''}</div>
         <div class="payback">${paybackNote('expansion', ex.cost)}</div></div>
         ${G.night >= ex.unlock ? `<button class="stamp" data-expand="1">Build — $${ex.cost.toLocaleString('en-US')}</button>` : `<span class="ownedtag">Night ${ex.unlock}</span>`}</div>`
       : '<div class="fobtag" style="padding:6px 0">Sixteen rooms. The whole court is built.</div>'}
       <div class="reg-title" style="margin-top:16px">Tonight</div>
-      <div class="shoprow"><div class="shop-main"><div class="shop-name">Handyman on rounds</div>
+      <div class="shoprow">${shopGlyph('wrench', false)}<div class="shop-main"><div class="shop-name">Handyman on rounds</div>
       <div class="shop-blurb">$80 tonight. He walks the court and tightens what rattles (+1 condition everywhere), and knocks at the desk get rarer.</div></div>
       <button class="stamp ${draft && draft.handyman ? 'on' : ''}" data-handyman="1">${draft && draft.handyman ? 'Booked' : 'Book him'}</button></div>
       <div class="reg-title" style="margin-top:16px">Room work</div>
@@ -734,9 +791,23 @@ function renderBook(){
   }).join('');
   const chSection = chCards ? `<div class="reg-title" style="margin-top:14px">Names to keep</div>
       <div class="reg-sub">Some guests are worth more than a night's rate. Keep one happy — four stars or better — the counted times, and they will put the Starlight somewhere it cannot buy its way into.</div>${chCards}` : '';
-  const rows = (G.guestBook || []).slice().sort((a, b) => b.lastNight - a.lastNight).map(e => `
-    <div class="bookrow"><span class="b-name">${esc(e.name)}</span> <span class="segtag">${SIM.SEGMENTS[e.segment].label}</span>${e.trait ? ` <span class="traittag">${SIM.TRAITS[e.trait].label}</span>` : ''}
-    <span class="b-meta">${e.visits} stay${e.visits > 1 ? 's' : ''} · last night ${e.lastNight} · ${stars(e.lastStars)}</span></div>`).join('');
+  // PASS G3: the book reads like a book. Regulars get a brass rule and
+  // their own page; a name the house left sore carries the note in red
+  // ink; a name that won't be back is struck, the way a keeper strikes it.
+  const keeperNames = new Set(Object.values(SIM.CHALLENGES).map(c => c.name));
+  const bookRow = e => {
+    const grudge = G.grudges && G.grudges[e.name];
+    const struck = e.lastStars <= 2;
+    return `<div class="bookrow ${e.visits >= 3 ? 'regular' : ''} ${struck ? 'struck' : ''}"><span class="b-name">${keeperNames.has(e.name) ? '★ ' : ''}${esc(e.name)}</span> <span class="segtag">${SIM.SEGMENTS[e.segment].label}</span>${e.trait ? ` <span class="traittag">${SIM.TRAITS[e.trait].label}</span>` : ''}
+    <span class="b-meta">${e.visits} stay${e.visits > 1 ? 's' : ''} · last night ${e.lastNight} · ${stars(e.lastStars)}</span>
+    ${grudge ? `<span class="b-grudge">A score unsettled — the ${esc(SIM.INCIDENTS[grudge] ? SIM.INCIDENTS[grudge].label.toLowerCase() : 'trouble')} was left to ride, and it kept. It will knock again.</span>` : ''}
+    ${struck ? `<span class="b-gone">The last night saw to it — this name won't be back.</span>` : ''}</div>`;
+  };
+  const entries = (G.guestBook || []).slice().sort((a, b) => b.lastNight - a.lastNight);
+  const regulars = entries.filter(e => e.visits >= 3);
+  const rest = entries.filter(e => e.visits < 3);
+  const rows = (regulars.length ? `<div class="book-sec">The regulars</div>` + regulars.map(bookRow).join('') : '')
+    + (rest.length ? (regulars.length ? `<div class="book-sec">In the book</div>` : '') + rest.map(bookRow).join('') : '');
   app.innerHTML = sceneHTML(G.phase === 'arrivals' ? 'sky-desk' : 'sky-dawn', G.rooms, G.phase) + deskOpen(`
     <div class="paper register">
       <div class="reg-title">The Guest Book</div>
@@ -794,12 +865,43 @@ function incidentHTML(){
     </div></div>`;
 }
 
+// Pass P1: the phone card. While it rings it asks; once answered it
+// shrinks to the record of what the desk decided, and stays till nightfall.
+function phoneCardHTML(){
+  const ev = G.phone;
+  if (!ev) return '';
+  if (ev.status === 'let') return `<div class="phonecard done"><div class="ph-line">You let it ring. The night is the night it was.</div></div>`;
+  if (ev.status === 'taken'){
+    const said = ev.kind === 'wedding' ? `You took the ${esc(ev.party)} wedding — ${ev.filled} room${ev.filled === 1 ? '' : 's'} at $${ev.rate} a door.`
+      : ev.kind === 'bus' ? `You took the bus — ${ev.added} more parties in the line, and glad of the roof.`
+      : `You took the scout's word — ${ev.rooms} rooms stand booked for night ${ev.night}, at $${ev.rate} a door, the deposit in tonight's audit.`;
+    return `<div class="phonecard done"><div class="ph-line">${said}</div></div>`;
+  }
+  let line, terms;
+  if (ev.kind === 'wedding'){
+    line = `“Evening, Starlight. We're the ${esc(ev.party)} wedding — the other place in town is full, and your sign is the one we can see from the church. Have you got rooms for the family?”`;
+    terms = `<b>${ev.rooms} rooms tonight at $${ev.rate} a door</b> — under your card, and they fill what the highway didn't. Dancing in the lot, quiet by eleven. Mostly.`;
+  } else if (ev.kind === 'bus'){
+    line = `“Starlight? Our tour bus just gave up at the mile marker, and I've got a driver and a coachload of tired people standing in the dark.”`;
+    terms = `<b>${ev.count} more parties</b> join your line at the full card — road-worn, patient about everything except a bed. If you've got the doors.`;
+  } else {
+    line = `“I'm scouting for a picture that's shooting up the highway. Your court is the one we want in the background of everything.”`;
+    terms = `<b>$${ev.deposit} down in tonight's audit</b>, and <b>${ev.rooms} rooms on night ${ev.night}</b> at <b>$${ev.rate} a door</b> — the crew fills them before your line forms, whatever the road sends.`;
+  }
+  return `<div class="phonecard">
+    <div class="ph-head">☎ The phone is ringing</div>
+    <div class="ph-line">${line}</div>
+    <div class="ph-terms">${terms}</div>
+    <div class="inc-stamps"><button class="stamp" data-phone="take">Take it</button><button class="stamp skip" data-phone="let">Let it ring</button></div>
+  </div>`;
+}
+
 function renderArrivals(){
   if (!draft) draft = { rate: G.rate, premiumRate: null, cleans: {}, extraCleaner: false, sel: null, inquiryDecision: null, moving: false, handyman: false };
   const q = G.queue;
   const cards = q.map((a, i) => `
     <div class="guest ${draft && draft.sel === a.id ? 'sel' : ''}" style="animation-delay:${Math.min(i * 45, 270)}ms" data-guest="${a.id}">
-      <div class="g-name">${esc(a.name)} <span class="segtag">${SIM.SEGMENTS[a.segment].label}</span>${a.trait ? ` <span class="traittag">${SIM.TRAITS[a.trait].label}</span>` : ''}${a.returning ? ` <span class="rettag">Back again · stay #${a.visits}</span>` : ''}${a.inquiry ? ` <span class="blocktag">Block booking</span>` : ''}${a.challenge ? ` <span class="chtag">★ A name to keep</span>` : ''}</div>
+      <div class="g-name">${esc(a.name)} <span class="segtag">${SIM.SEGMENTS[a.segment].label}</span>${a.trait ? ` <span class="traittag">${SIM.TRAITS[a.trait].label}</span>` : ''}${a.returning ? ` <span class="rettag">Back again · stay #${a.visits}</span>` : ''}${a.inquiry ? ` <span class="blocktag">Block booking</span>` : ''}${a.phone ? ` <span class="blocktag">Off the bus</span>` : ''}${a.challenge ? ` <span class="chtag">★ A name to keep</span>` : ''}</div>
       <div class="g-sub">${a.dealTaken && a.deal ? `${a.deal.nights} nights · $${a.deal.ratePer}/night — the deal` : `${a.nights} night${a.nights > 1 ? 's' : ''} · $${a.ratePaid}/night`}</div>
       ${a.line ? `<div class="g-line">“${esc(a.line)}”</div>` : ''}
       ${a.trait ? `<div class="g-hint">${SIM.TRAITS[a.trait].hint}</div>` : ''}
@@ -815,6 +917,7 @@ function renderArrivals(){
     <div class="desk-h">Evening — the desk</div>
     ${coachCard()}
     <div class="desk-note">Rate tonight: <b>$${G.rate}</b>${G.ratePremium != null ? ` · Premium <b>$${G.ratePremium}</b>` : ''}. ${q.length} part${q.length === 1 ? 'y' : 'ies'} waiting. Tap a guest card, then tap a door with an amber outline. End doors — 1 and 8 — are the quiet ones, and the line's patience runs out fast.</div>
+    ${phoneCardHTML()}
     ${incidentHTML()}
     ${cards ? `<div class="guestlist">${cards}</div>` : '<div class="desk-note">The lot is quiet. Everyone who is coming is here.</div>'}
     <div class="deskrow"><button class="btn btn-ghost" id="btn-book">The guest book</button><button class="btn btn-ghost" id="btn-wall">The corkboard</button></div>
@@ -825,6 +928,7 @@ function renderArrivals(){
   document.querySelectorAll('[data-haggle-take]').forEach(el => el.onclick = e => { e.stopPropagation(); const r = SIM.answerHaggle(G, Number(el.dataset.haggleTake), 'take'); if (r.error) alert(r.error); else sfx('coin'); save(); render(); });
   document.querySelectorAll('[data-haggle-counter]').forEach(el => el.onclick = e => { e.stopPropagation(); const r = SIM.answerHaggle(G, Number(el.dataset.haggleCounter), 'counter'); if (r.error) alert(r.error); else sfx(r.outcome === 'settled' ? 'coin' : 'deny'); save(); render(); });
   document.querySelectorAll('[data-haggle-pass]').forEach(el => el.onclick = e => { e.stopPropagation(); const r = SIM.answerHaggle(G, Number(el.dataset.hagglePass), 'pass'); if (r.error) alert(r.error); else sfx('deny'); save(); render(); });
+  document.querySelectorAll('[data-phone]').forEach(el => el.onclick = () => { const r = SIM.answerPhone(G, el.dataset.phone === 'take'); if (r.error) alert(r.error); else { sfx(el.dataset.phone === 'take' ? 'coin' : 'deny'); save(); render(); } });
   document.querySelectorAll('[data-deal-accept]').forEach(el => el.onclick = e => { e.stopPropagation(); const r = SIM.answerDeal(G, Number(el.dataset.dealAccept), true); if (r.error) alert(r.error); else sfx('stamp'); save(); render(); });
   document.querySelectorAll('[data-deal-decline]').forEach(el => el.onclick = e => { e.stopPropagation(); const r = SIM.answerDeal(G, Number(el.dataset.dealDecline), false); if (r.error) alert(r.error); else sfx('stamp'); save(); render(); });
   document.querySelectorAll('[data-guest]').forEach(el => el.onclick = e => {
@@ -859,8 +963,9 @@ function renderArrivals(){
   wireDeskRow();
   wireCoach();
   document.getElementById('btn-close').onclick = () => {
-    sfx('page');
-    const finish = () => { SIM.closeDesk(G); draft = null; save(); render(); };
+    sfx('night');
+    const finish = () => { SIM.closeDesk(G); draft = null; save(); render();
+      if (G.phase === 'morning' && G.lastReport) sfx(G.lastReport.profit >= 0 ? 'till' : 'ledger'); };
     const scene = document.getElementById('scene');
     const lit = Array.from(document.querySelectorAll('.unit.occ'));
     if (scene && lit.length){
@@ -885,6 +990,11 @@ function renderOver(){
     <div class="paper register">
       <div class="reg-tab">SEASON'S END</div>
       <div class="reg-title">The Register — Final Page</div>
+      <div class="postcard"><div class="pc-stripe"></div><div class="pc-body">
+        <div class="pc-title">Greetings from<br>The Starlight</div>
+        <div class="pc-figs">SUMMER ${G.season} · ${money(G.cash)} IN THE TILL · ${G.rating.toFixed(1)}★ ON THE BOARD</div>
+        <div class="pc-line">${esc(e.title)} — ${G.stats.roomNights || 0} room-nights, ${G.stats.guests || 0} guests, one highway.</div>
+      </div><div class="pc-mark">Starlight<br>Summer ${G.season}<br>Night 84</div></div>
       <div class="reg-head">${esc(e.title)}</div>
       <p style="font-family:'Source Serif 4',serif;font-size:15.5px;line-height:1.55">${esc(e.text)}</p>
       <div class="stats-mono">
@@ -911,6 +1021,11 @@ function renderOver(){
   app.innerHTML = sceneHTML('sky-night', G.rooms, 'over') + deskOpen(`
     <div class="paper register">
       <div class="reg-title">The Register — Final Page</div>
+      <div class="postcard faded"><div class="pc-stripe"></div><div class="pc-body">
+        <div class="pc-title">Greetings from<br>The Starlight</div>
+        <div class="pc-figs">${G.stats.nights} NIGHTS · ${G.stats.guests} GUESTS · ${G.rating.toFixed(1)}★ ON THE BOARD</div>
+        <div class="pc-line">The sign still buzzes for a night or two after.</div>
+      </div><div class="pc-mark">Starlight<br>Closed<br>Night ${G.stats.nights}</div></div>
       <div class="reg-head">The bank took the Starlight.</div>
       <p style="font-family:'Source Serif 4',serif;font-size:15.5px;line-height:1.55">The sign still buzzes for a night or two after. Somebody else will stand in this court at dusk and see what you saw. What you built — and what the reviews said — stays in the book.</p>
       <div class="stats-mono">
@@ -942,7 +1057,7 @@ function renderTonightCard(){
   } catch(e){}
   const co = rep.checkouts.map(x => {
     const cls = x.score >= 80 ? 'hi' : x.score >= 60 ? 'mid' : 'lo';
-    return `<div class="co"><b>${esc(x.name)}</b> <span class="segtag">${SIM.SEGMENTS[x.segment].label}</span> <span class="cst ${cls}">${stars(x.stars)}</span> <span class="score">score ${x.score}</span></div>`;
+    return `<div class="co"><b>${esc(x.name)}</b> <span class="segtag">${SIM.SEGMENTS[x.segment].label}</span> <span class="cst ${cls}">${stars(x.stars)}</span></div>`;
   }).join('');
   app.innerHTML = sceneHTML('sky-morning', G.rooms, 'morning') + deskOpen(`
     <div class="paper">
@@ -982,8 +1097,29 @@ function render(){
     else renderMorning();
   }
   afterRender();
+  // PASS G2: the till counts. When the cash on the bar changes, it rolls
+  // to the new figure instead of blinking — money landing is a moment.
+  const cashEl = document.getElementById('db-cash');
+  if (cashEl && G && window._smCash != null && window._smCash !== Math.round(G.cash)){
+    const from = window._smCash, to = Math.round(G.cash), t0 = performance.now();
+    const step = t => { if (!cashEl.isConnected) return; const k = Math.min(1, (t - t0) / 650);
+      cashEl.textContent = money(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  if (G) window._smCash = Math.round(G.cash);
+  // PASS G4: when the sky changes its hour, the scene dips through dusk
+  // rather than snapping — the stars and moon already fade on their own
+  // clocks; this gives the light itself the same courtesy.
+  const sceneEl = document.getElementById('scene');
+  if (sceneEl){
+    const sky = (sceneEl.className.match(/sky-\w+/) || [''])[0];
+    if (window._smSky && sky && sky !== window._smSky) sceneEl.classList.add('phasefade');
+    if (sky) window._smSky = sky;
+  }
   const viewKey = !G ? 'title' : G.over ? 'over' : uiView + '|' + G.phase + '|' + (tonightMode ? 't' : 's');
   if (viewKey === lastViewKey && y) window.scrollTo(0, y);
+  else if (lastViewKey) window.scrollTo(0, 0);
   lastViewKey = viewKey;
 }
 render();
