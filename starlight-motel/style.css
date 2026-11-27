@@ -4,6 +4,8 @@
   --cream:#F2E4C8; --rose:#D9A184; --teal:#2F6F6A; --teal-deep:#1E4340; --tidepool:#358894;
   --walnut:#3A2C22; --dust:#8A6F52; --paper:#F6EED1; --ink:#33261A; --brass:#C6A45E;
   --coral:#FF5A3C; --core:#FFD9A0; --amber:#FFC46B; --red:#C63A2A; --green:#4E7A4A;
+  --r-lg:14px; --r-md:10px; --r-sm:6px;
+  --lift:0 1px 2px rgba(23,16,11,.18),0 10px 28px rgba(23,16,11,.22);
 }
 *{ box-sizing:border-box; }
 html,body{ margin:0; padding:0; }
@@ -63,17 +65,17 @@ button{ font:inherit; }
 .roofline{ background:var(--walnut); color:var(--cream); font-family:'Alfa Slab One',serif; letter-spacing:.42em;
   font-size:11px; text-align:center; padding:5px 0 4px 10px; border-bottom:2px solid var(--brass); border-radius:3px 3px 0 0; }
 .awning{ height:9px; background:repeating-linear-gradient(90deg,var(--teal) 0 13px,#E9D6B0 13px 26px); border-bottom:2px solid rgba(58,44,34,.45); box-shadow:0 2px 3px rgba(0,0,0,.30); }
-.wall{ background:linear-gradient(to bottom,#F2E4C8,#E9D6B0); padding:10px 9px 0; box-shadow:inset 0 -14px 18px rgba(138,111,82,.25); }
+.wall{ background:linear-gradient(to bottom,#F2E4C8,#EFE0BC); padding:10px 9px 0; }
 .units{ display:flex; gap:5px; }
 .unit{ flex:1 1 0; position:relative; background:none; border:none; padding:0; cursor:default; -webkit-tap-highlight-color:transparent; }
 .u-opening{ position:absolute; right:1px; bottom:0; width:58%; height:76px; background:#17100B; opacity:0; transition:opacity .3s; border-radius:2px 2px 0 0; }
 .unit.dirty .u-opening{ opacity:1; }
 .u-in{ display:flex; align-items:flex-end; gap:3px; position:relative; }
-.u-window{ flex:0 0 37%; height:52px; background:linear-gradient(160deg,#274B57,#15242C); border:2px solid var(--walnut); border-radius:2px; position:relative; overflow:hidden; }
+.u-window{ flex:0 0 37%; height:52px; background:linear-gradient(160deg,#274B57,#15242C); border:2px solid var(--walnut); border-radius:4px; position:relative; overflow:hidden; }
 .u-window::after{ content:''; position:absolute; inset:0; background:linear-gradient(115deg,transparent 42%,rgba(246,238,209,.16) 50%,transparent 58%); }
 .unit.occ .u-window{ background:radial-gradient(ellipse at 50% 64%,#FFD9A0,#FFC46B 55%,#D98E3A); }
 .unit.occ .u-window::before{ content:''; position:absolute; left:0; right:0; top:0; height:26%; background:rgba(58,44,34,.35); z-index:1; }
-.u-door{ flex:1; height:76px; background:linear-gradient(to bottom,#35857D,var(--teal) 30%,#2A625C); border:2px solid var(--teal-deep); border-radius:3px 3px 0 0; position:relative; transition:transform .3s ease; }
+.u-door{ flex:1; height:76px; background:linear-gradient(to bottom,#35857D,var(--teal) 30%,#2A625C); border:2px solid var(--teal-deep); border-radius:5px 5px 0 0; position:relative; transition:transform .3s ease; }
 .u-door::after{ content:''; position:absolute; inset:17px 6px 8px; border:1px solid rgba(30,67,64,.55); border-radius:2px; }
 .u-num{ position:absolute; top:4px; left:0; right:0; text-align:center; color:var(--brass); font-weight:800; font-size:13px; letter-spacing:.06em; z-index:1; }
 .u-knob{ position:absolute; right:4px; top:56%; width:5px; height:5px; border-radius:50%; background:var(--brass); z-index:1; }
@@ -96,7 +98,7 @@ button{ font:inherit; }
 .pool::before{ content:''; position:absolute; right:7%; top:0; width:11%; height:58%; z-index:1;
   border-left:2.5px solid rgba(239,227,188,.9); border-right:2.5px solid rgba(239,227,188,.9);
   border-bottom:2.5px solid rgba(239,227,188,.9); border-radius:0 0 3px 3px; }
-.pool::after{ content:''; position:absolute; inset:0; background:linear-gradient(115deg,transparent 38%,rgba(246,238,209,.30) 50%,transparent 62%); }
+.pool::after{ content:''; position:absolute; inset:0; background:linear-gradient(115deg,transparent 38%,rgba(246,238,209,.18) 50%,transparent 62%); }
 .car{ position:absolute; bottom:0.8%; width:12.5%; height:10.5%; z-index:6; }
 .car::before{ content:''; position:absolute; left:0; right:0; bottom:0; height:52%; background:var(--car);
   border-radius:3px 5px 3px 3px; box-shadow:inset 0 -3px 5px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.4); }
@@ -108,117 +110,113 @@ button{ font:inherit; }
 
 /* ============ THE DESK ============ */
 #desk{ background:linear-gradient(to bottom,#4A3826,var(--walnut) 14%); padding:0 12px 28px; }
-.deskbar{ display:flex; gap:16px; flex-wrap:wrap; align-items:baseline; color:var(--cream); padding:11px 2px 9px;
-  border-bottom:1px solid rgba(198,164,94,.5); font-size:13px; max-width:880px; margin:0 auto; }
-.db-night{ font-weight:600; letter-spacing:.03em; }
+.deskbar{ display:flex; gap:16px; flex-wrap:wrap; align-items:baseline; color:var(--cream); padding:14px 2px 12px;
+  border-bottom:1px solid rgba(198,164,94,.25); font-size:13px; max-width:880px; margin:0 auto; }
+.db-night{ font-weight:700; letter-spacing:.03em; font-size:15px; }
 .db-stars{ color:var(--brass); letter-spacing:2px; font-size:12px; }
 .db-rating{ font-family:'IBM Plex Mono',monospace; }
-.db-cash{ font-family:'IBM Plex Mono',monospace; margin-left:auto; font-weight:600; }
+.db-cash{ font-family:'IBM Plex Mono',monospace; margin-left:auto; font-weight:600; font-size:17px; }
 .db-cash.neg{ color:#E88A7A; }
 .db-house{ opacity:.85; }
 #panel{ padding-top:16px; display:flex; flex-direction:column; gap:16px; max-width:880px; margin:0 auto; }
-.desk-h{ color:var(--cream); font-size:11px; letter-spacing:.22em; font-weight:800; text-transform:uppercase; display:flex; align-items:center; gap:12px; }
+.desk-h{ color:var(--cream); font-size:11.5px; letter-spacing:.22em; font-weight:800; text-transform:uppercase; display:flex; align-items:center; gap:12px; }
 .desk-h::after{ content:''; flex:1; height:1px; background:rgba(198,164,94,.45); }
 
 /* paper objects */
-.paper{ background:var(--paper); border-radius:3px; box-shadow:0 2px 0 rgba(0,0,0,.25),0 12px 24px rgba(0,0,0,.28); padding:16px 18px; position:relative; }
-.register{ padding-left:32px; }
-.register::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:15px; border-radius:3px 0 0 3px;
-  background:repeating-linear-gradient(to bottom,transparent 0 14px,rgba(51,38,26,.35) 14px 16px),linear-gradient(90deg,#D9C89A,#EFE3BC);
-  border-right:1px solid rgba(51,38,26,.25); }
-.reg-tab{ position:absolute; top:-9px; right:16px; background:var(--brass); color:var(--ink); font-size:10px; font-weight:800; letter-spacing:.14em; padding:2px 9px; border-radius:2px; }
-.reg-title{ font-size:11px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:var(--dust); margin-bottom:8px; }
-.reg-head{ font-family:'Source Serif 4',serif; font-size:19px; font-weight:600; margin-bottom:2px; }
+.paper{ background:var(--paper); border-radius:var(--r-lg); box-shadow:var(--lift); padding:22px 22px; position:relative; transition:box-shadow .25s ease; }
+.register{ }
+.reg-tab{ position:absolute; top:-9px; right:16px; background:var(--brass); color:var(--ink); font-size:10px; font-weight:800; letter-spacing:.14em; padding:3px 10px; border-radius:6px; }
+.reg-title{ font-size:11px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#6E5741; margin-bottom:8px; }
+.reg-head{ font-family:'Source Serif 4',serif; font-size:24px; font-weight:600; letter-spacing:-.01em; line-height:1.15; margin-bottom:2px; }
 .reg-sub{ font-family:'Source Serif 4',serif; font-style:italic; font-size:14px; opacity:.75; margin-bottom:10px; }
-.led{ display:flex; justify-content:space-between; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:13.5px; padding:2.5px 0; border-bottom:1px dotted rgba(51,38,26,.25); }
+.led{ display:flex; justify-content:space-between; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:14px; padding:5px 0; border-bottom:1px solid rgba(51,38,26,.07); }
 .led b{ font-weight:600; white-space:nowrap; }
 .led.out b{ color:var(--red); }
 .led.total{ border-top:2px solid var(--ink); border-bottom:none; margin-top:3px; padding-top:6px; font-weight:600; }
-.co{ font-family:'Source Serif 4',serif; font-size:15px; padding:2.5px 0; border-bottom:1px dotted rgba(51,38,26,.18); display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
+.co{ font-family:'Source Serif 4',serif; font-size:15px; padding:5px 0; border-bottom:1px solid rgba(51,38,26,.07); display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
 .co .cst{ letter-spacing:1.5px; font-size:12px; }
 .cst.hi{ color:#9A7B2D; } .cst.mid{ color:var(--ember); } .cst.lo{ color:var(--red); }
-.segtag{ font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:.12em; background:var(--teal); color:var(--paper); padding:2px 6px; border-radius:2px; text-transform:uppercase; white-space:nowrap; }
-.co .score{ font-family:'IBM Plex Mono',monospace; font-size:12px; opacity:.65; }
+.segtag{ font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:.1em; background:var(--teal); color:var(--paper); padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap; }
+.co .score{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.01em; opacity:.85; }
 
 /* comment cards */
-.commentcard{ background:#FBF6E3; border:1px solid rgba(51,38,26,.15); padding:11px 13px; transform:rotate(-.5deg);
-  box-shadow:0 4px 10px rgba(0,0,0,.18); font-family:'Source Serif 4',serif; position:relative; margin-top:10px; }
-.commentcard:nth-child(even){ transform:rotate(.4deg); }
+.commentcard{ background:#FBF6E3; border:1px solid rgba(51,38,26,.08); border-radius:var(--r-md); padding:13px 15px;
+  box-shadow:0 1px 3px rgba(51,38,26,.08); font-family:'Source Serif 4',serif; position:relative; margin-top:10px; }
+.corkboard .commentcard:nth-child(odd){ transform:rotate(-.4deg); }
 .commentcard .cc-head{ font-family:'Archivo',sans-serif; font-size:11px; letter-spacing:.08em; font-weight:800; display:flex; gap:8px; align-items:baseline; }
 .commentcard .cc-stars{ letter-spacing:1.5px; font-size:12px; }
 .commentcard blockquote{ margin:4px 0 0; font-style:italic; font-size:15.5px; line-height:1.35; }
-.commentcard.bad::after{ content:''; position:absolute; right:12px; top:8px; width:32px; height:32px; border-radius:50%; border:3px solid rgba(138,111,82,.25); }
 
 /* rate card */
 .ratecard .rc-top{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
 .stepbtn{ width:52px; height:52px; border-radius:50%; background:var(--teal); color:var(--paper); font-size:25px; line-height:1;
-  border:2px solid var(--teal-deep); box-shadow:0 3px 0 var(--teal-deep); cursor:pointer; }
-.stepbtn:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--teal-deep); }
+  border:2px solid var(--teal-deep); box-shadow:0 6px 14px rgba(23,16,11,.28); cursor:pointer; }
+.stepbtn:active{ transform:translateY(2px); box-shadow:0 2px 6px rgba(23,16,11,.28); }
 .rate-big{ font-family:'IBM Plex Mono',monospace; font-size:46px; font-weight:600; min-width:128px; text-align:center; }
 .forecast{ font-family:'Source Serif 4',serif; font-style:italic; font-size:15.5px; line-height:1.45; margin-top:12px; }
 .forecast b{ font-style:normal; }
 .rc-note{ font-family:'Source Serif 4',serif; font-size:14px; opacity:.78; margin-top:4px; }
 
 /* housekeeping fobs */
-.meter{ height:10px; background:rgba(51,38,26,.13); border:1px solid rgba(51,38,26,.3); border-radius:2px; overflow:hidden; margin:8px 0 4px; }
+.meter{ height:8px; background:rgba(51,38,26,.10); border-radius:999px; overflow:hidden; margin:8px 0 4px; }
 .meter i{ display:block; height:100%; background:var(--teal); transition:width .25s; }
 .meter.over i{ background:var(--red); }
-.fobrow{ display:flex; align-items:center; gap:13px; padding:10px 0; border-bottom:1px dotted rgba(51,38,26,.25); flex-wrap:wrap; }
+.fobrow{ display:flex; align-items:center; gap:13px; padding:10px 0; border-bottom:1px solid rgba(51,38,26,.07); flex-wrap:wrap; }
 .fobrow:last-of-type{ border-bottom:none; }
-.fob{ flex:0 0 auto; width:40px; height:40px; background:var(--teal); transform:rotate(45deg); border-radius:7px; border:2px solid var(--teal-deep); display:flex; align-items:center; justify-content:center; margin:0 4px; }
+.fob{ flex:0 0 auto; width:40px; height:40px; background:var(--teal); transform:rotate(45deg); border-radius:9px; border:1.5px solid var(--teal-deep); display:flex; align-items:center; justify-content:center; margin:0 4px; }
 .fob span{ transform:rotate(-45deg); color:var(--brass); font-weight:800; font-size:15px; }
 .fobtag{ font-family:'Source Serif 4',serif; font-size:14.5px; flex:1 1 130px; }
 .stamps{ display:flex; gap:6px; flex-wrap:wrap; }
 .stamp{ font-weight:700; font-size:11px; letter-spacing:.08em; text-transform:uppercase; background:transparent; color:var(--teal);
-  border:2px solid var(--teal); padding:5px 8px; border-radius:3px; transform:rotate(-1.2deg); cursor:pointer; }
+  border:1.5px solid var(--teal); padding:7px 14px; border-radius:999px; cursor:pointer; }
 .stamp.on{ background:var(--teal); color:var(--paper); box-shadow:inset 0 0 0 1px rgba(246,238,209,.35); }
-.stamp.skip{ color:var(--red); border-color:var(--red); transform:rotate(1deg); }
+.stamp.skip{ color:var(--red); border-color:var(--red); }
 .stamp.skip.on{ background:var(--red); color:var(--paper); }
 .chk{ display:flex; align-items:center; gap:10px; font-family:'Source Serif 4',serif; font-size:15px; margin-top:12px; cursor:pointer; }
-.chk .box{ width:20px; height:20px; border:2px solid var(--teal); border-radius:3px; display:inline-flex; align-items:center; justify-content:center; color:var(--teal); font-weight:800; font-size:14px; flex:0 0 auto; }
+.chk .box{ width:20px; height:20px; border:2px solid var(--teal); border-radius:var(--r-sm); display:inline-flex; align-items:center; justify-content:center; color:var(--teal); font-weight:800; font-size:14px; flex:0 0 auto; }
 .hk-note{ font-family:'Source Serif 4',serif; font-style:italic; font-size:13.5px; opacity:.7; margin-top:10px; }
 
 /* guest registration cards */
-.guest{ background:#FBF6E3; border:1px solid rgba(51,38,26,.18); border-left:5px solid var(--teal); padding:11px 13px; cursor:pointer;
-  box-shadow:0 3px 8px rgba(0,0,0,.35); transition:transform .15s,box-shadow .15s; }
-.guest.sel{ transform:translateY(-3px); border-left-color:var(--brass); box-shadow:0 9px 18px rgba(0,0,0,.4); }
-.g-name{ font-family:'Source Serif 4',serif; font-size:18px; font-weight:600; display:flex; gap:9px; align-items:baseline; flex-wrap:wrap; }
-.g-sub{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; opacity:.8; margin-top:2px; }
+.guest{ background:#FBF6E3; border:1px solid rgba(51,38,26,.08); border-radius:var(--r-md); padding:13px 15px; cursor:pointer;
+  box-shadow:inset 3px 0 0 var(--teal), 0 2px 6px rgba(23,16,11,.18); transition:transform .2s cubic-bezier(.22,.8,.3,1),box-shadow .2s cubic-bezier(.22,.8,.3,1); }
+.guest.sel{ transform:translateY(-2px); box-shadow:inset 3px 0 0 var(--brass), var(--lift); }
+.g-name{ font-family:'Source Serif 4',serif; font-size:19px; font-weight:600; display:flex; gap:9px; align-items:baseline; flex-wrap:wrap; }
+.g-sub{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.01em; opacity:.85; margin-top:2px; }
 .turnaway{ display:inline-block; margin-top:7px; font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--red); text-transform:uppercase; cursor:pointer; text-decoration:underline dotted; }
 .desk-note{ font-family:'Source Serif 4',serif; font-style:italic; color:#E9D6B0; font-size:14.5px; }
 
 /* buttons */
-.btn{ font-weight:800; letter-spacing:.14em; text-transform:uppercase; font-size:13px; padding:14px 18px; border-radius:3px; cursor:pointer; border:none; width:100%; }
-.btn-primary{ background:var(--teal); color:var(--paper); border-top:2px solid var(--brass); box-shadow:0 3px 0 var(--teal-deep); }
-.btn-primary:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--teal-deep); }
-.btn-walnut{ background:var(--ink); color:var(--cream); border-top:2px solid var(--brass); box-shadow:0 3px 0 #17100B; }
-.btn-walnut:active{ transform:translateY(2px); box-shadow:0 1px 0 #17100B; }
-.btn-ghost{ background:transparent; color:#D9C89A; border:1px solid rgba(198,164,94,.55); width:auto; padding:10px 16px; }
+.btn{ font-weight:800; letter-spacing:.11em; text-transform:uppercase; font-size:13.5px; padding:16px 20px; border-radius:var(--r-md); cursor:pointer; border:none; width:100%; }
+.btn-primary{ background:var(--teal); color:var(--paper); box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 10px 24px rgba(23,16,11,.35); }
+.btn-primary:active{ transform:translateY(2px); box-shadow:0 4px 10px rgba(23,16,11,.3); }
+.btn-walnut{ background:var(--ink); color:var(--cream); box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 10px 24px rgba(23,16,11,.35); }
+.btn-walnut:active{ transform:translateY(2px); box-shadow:0 4px 10px rgba(23,16,11,.3); }
+.btn-ghost{ background:transparent; color:#D9C89A; border:1px solid rgba(198,164,94,.55); border-radius:999px; width:auto; padding:10px 16px; }
 .center{ text-align:center; }
 .titlecard .pitch{ font-family:'Source Serif 4',serif; font-style:italic; font-size:17px; line-height:1.5; margin:2px 0 16px; }
-.titlecard .btn{ margin-top:10px; }
+.titlecard .btn{ margin-top:12px; }
 .titlecard .fine{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; opacity:.65; text-align:center; margin-top:14px; }
 .stats-mono{ font-family:'IBM Plex Mono',monospace; font-size:13.5px; line-height:1.9; }
 
 /* ============ PASS 3: the guests ============ */
 .g-line{ font-family:'Source Serif 4',serif; font-style:italic; font-size:14.5px; line-height:1.35; margin-top:4px; opacity:.85; }
 .g-hint{ font-family:'Source Serif 4',serif; font-style:italic; font-size:12.5px; opacity:.62; margin-top:2px; }
-.traittag{ font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:.12em; background:transparent; color:#8A6F52; border:1.5px solid var(--brass); padding:1.5px 6px; border-radius:2px; text-transform:uppercase; white-space:nowrap; }
-.rettag{ font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:.12em; background:var(--brass); color:var(--ink); padding:2px 6px; border-radius:2px; text-transform:uppercase; white-space:nowrap; }
-.blocktag{ font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:.12em; background:var(--dust); color:var(--paper); padding:2px 6px; border-radius:2px; text-transform:uppercase; white-space:nowrap; }
-.inquiry{ transform:rotate(-.4deg); }
+.traittag{ font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:.1em; background:transparent; color:#8A6F52; border:1.5px solid var(--brass); padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap; }
+.rettag{ font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:.1em; background:var(--brass); color:var(--ink); padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap; }
+.blocktag{ font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:.1em; background:var(--dust); color:var(--paper); padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap; }
+.inquiry{ border-radius:var(--r-md); }
 .inquiry::before{ content:''; position:absolute; top:-11px; left:50%; margin-left:-34px; width:68px; height:20px; background:rgba(217,200,154,.75); border:1px solid rgba(51,38,26,.12); transform:rotate(.6deg); }
-.inq-text{ font-family:'Source Serif 4',serif; font-size:16px; line-height:1.5; }
+.inq-text{ font-family:'Source Serif 4',serif; font-size:16px; line-height:1.55; }
 .inq-terms{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; opacity:.75; margin-top:6px; }
 .inq-stamps{ display:flex; gap:10px; margin-top:12px; }
 .incident{ border-left:5px solid var(--red); }
-.inc-head{ font-family:'Source Serif 4',serif; font-size:17px; font-weight:600; }
+.inc-head{ font-family:'Source Serif 4',serif; font-size:19px; font-weight:600; }
 .inc-text{ font-family:'Source Serif 4',serif; font-style:italic; font-size:14.5px; line-height:1.4; margin-top:3px; opacity:.85; }
 .inc-stamps{ display:flex; gap:7px; flex-wrap:wrap; margin-top:11px; }
 .inc-done{ font-family:'Source Serif 4',serif; font-size:14.5px; margin-top:6px; }
 .deskrow{ display:flex; gap:10px; }
 .deskrow .btn{ flex:1; }
-.corkboard{ background:linear-gradient(160deg,#6B4A2E,#59391F); border:3px solid #2A1E15; border-radius:4px; padding:16px 14px; box-shadow:0 12px 24px rgba(0,0,0,.35); }
+.corkboard{ background:linear-gradient(160deg,#6B4A2E,#59391F); border:1px solid #2A1E15; border-radius:var(--r-lg); padding:18px 16px; box-shadow:var(--lift); }
 .corkboard .commentcard{ margin-top:0; margin-bottom:12px; }
 .corkboard .cb-head{ color:var(--cream); font-size:11px; letter-spacing:.22em; font-weight:800; text-transform:uppercase; display:flex; align-items:center; gap:12px; margin-bottom:14px; }
 .corkboard .cb-head::after{ content:''; flex:1; height:1px; background:rgba(198,164,94,.45); }
@@ -230,30 +228,30 @@ button{ font:inherit; }
 /* ============ PASS 4: the season ============ */
 .btn-ghost.dk{ color:var(--ink); border-color:rgba(51,38,26,.45); }
 .seasonmeter i{ background:var(--brass); }
-.season-line{ font-family:'Source Serif 4',serif; font-size:15.5px; line-height:1.45; margin-top:8px; }
+.season-line{ font-family:'Source Serif 4',serif; font-size:15.5px; line-height:1.55; margin-top:8px; }
 .season-next{ font-family:'Source Serif 4',serif; font-style:italic; font-size:14px; opacity:.78; margin-top:4px; }
 .season-goal{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; opacity:.85; margin-top:9px; line-height:1.6; }
 .inspection{ border-left:5px solid var(--dust); }
 .inspection.fine{ border-left-color:var(--red); }
 .inspection.certificate{ border-left-color:var(--green); }
-.shoprow{ display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-bottom:1px dotted rgba(51,38,26,.22); }
+.shoprow{ display:flex; gap:12px; align-items:flex-start; padding:14px 0; border-bottom:1px solid rgba(51,38,26,.07); }
 .shoprow:last-of-type{ border-bottom:none; }
 .shop-main{ flex:1; }
-.shop-name{ font-family:'Source Serif 4',serif; font-size:16.5px; font-weight:600; }
-.shop-blurb{ font-family:'Source Serif 4',serif; font-size:14px; line-height:1.4; opacity:.78; margin-top:1px; }
-.payback{ font-family:'Source Serif 4',serif; font-style:italic; font-size:13px; line-height:1.35; color:#644A18; margin-top:3px; }
+.shop-name{ font-family:'Source Serif 4',serif; font-size:17px; font-weight:600; }
+.shop-blurb{ font-family:'Source Serif 4',serif; font-size:14px; line-height:1.55; opacity:.78; margin-top:1px; }
+.payback{ font-family:'Source Serif 4',serif; font-style:italic; font-size:13px; line-height:1.35; color:#7A5A20; margin-top:5px; }
 .inc-note{ font-family:'Source Serif 4',serif; font-style:italic; font-size:13px; line-height:1.4; margin-top:6px; color:#644A18; }
 .wanttag.roomtag{ color:#5B3A6E; background:rgba(122,82,160,.14); border-color:rgba(122,82,160,.45); }
 .guest.sel{ outline:2px solid var(--brass); outline-offset:1px; background:#FFFDF2; }
 .actionbar{ position:sticky; bottom:0; z-index:25; padding:14px 0 6px; margin-top:2px;
-  background:linear-gradient(to bottom, rgba(58,44,30,0), #3A2C1E 46%); }
+  background:linear-gradient(to bottom, rgba(58,44,30,0), #3A2C1E 55%); }
 .actionbar .btn{ width:100%; }
 @media (orientation:portrait){
   #scene.desk-sticky{ position:sticky; top:0; z-index:40; height:clamp(250px,39vh,360px);
     box-shadow:0 12px 26px rgba(0,0,0,.45); }
 }
-.ownedtag{ font-family:'Archivo',sans-serif; font-size:9.5px; font-weight:800; letter-spacing:.12em; background:var(--green); color:var(--paper); padding:2px 6px; border-radius:2px; text-transform:uppercase; white-space:nowrap; }
-.calrow{ display:flex; gap:12px; align-items:baseline; padding:8px 0; border-bottom:1px dotted rgba(51,38,26,.22); }
+.ownedtag{ font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:.1em; background:var(--green); color:var(--paper); padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap; }
+.calrow{ display:flex; gap:12px; align-items:baseline; padding:8px 0; border-bottom:1px solid rgba(51,38,26,.07); }
 .calrow:last-of-type{ border-bottom:none; }
 .calrow.done{ opacity:.5; }
 .cal-when{ font-family:'IBM Plex Mono',monospace; font-size:12px; flex:0 0 86px; }
@@ -261,17 +259,38 @@ button{ font:inherit; }
 .cal-note{ display:block; font-size:13.5px; opacity:.75; line-height:1.4; }
 .cal-status{ font-family:'Archivo',sans-serif; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--dust); white-space:nowrap; }
 .calrow.now .cal-status{ color:var(--red); }
-.trophy{ display:flex; gap:10px; align-items:baseline; font-family:'Source Serif 4',serif; font-size:15px; padding:4px 0; border-bottom:1px dotted rgba(51,38,26,.18); }
+.trophy{ display:flex; gap:10px; align-items:baseline; font-family:'Source Serif 4',serif; font-size:15px; padding:4px 0; border-bottom:1px solid rgba(51,38,26,.07); }
 .trophy-star{ color:var(--brass); }
 .units.wing + .units.wing{ margin-top:5px; }
 
+/* ============ PASS E4: modern chrome — air, pills, soft light ============ */
+@media (max-width:620px){
+  #panel{ gap:20px; }
+  .db-cash{ flex-basis:calc(100% - 132px); margin-left:0; font-size:19px; }
+  .sndbtn{ margin-left:auto; }
+}
+@media (orientation:landscape) and (max-height:500px){
+  .actionbar{ padding-bottom:10px; }
+}
+@media (orientation:landscape) and (min-width:700px){
+  .guestlist{ display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+}
+
 /* ============ PASS A: quirks on the doors, wants on the cards ============ */
+.unit.fin-quiet .u-door{ border-color:#8FA3CC; }
+.unit.fin-plush .u-door{ border-color:#C98A94; }
+.unit.fin-bright .u-door{ border-color:#E8B34B; }
 .u-quirk{ position:absolute; left:50%; transform:translateX(-50%); bottom:1px; z-index:4; pointer-events:none;
   font-size:8px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
   color:#F2E4C8; background:rgba(38,28,18,.72); padding:1px 4px; border-radius:2px; }
 .unit.wantmatch .u-door{ box-shadow:0 0 0 2px var(--brass), 0 0 14px rgba(255,217,160,.75); }
-.wanttag{ display:inline-block; margin-top:5px; font-size:11px; font-weight:800; letter-spacing:.05em; color:#7A4A21;
-  background:rgba(242,160,61,.22); border:1px solid rgba(242,160,61,.65); padding:2px 7px; border-radius:2px; }
+.replyrow{ margin-top:7px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.replylbl{ font-size:11px; font-weight:800; letter-spacing:.06em; color:#7A4A21; }
+.stamp.sm{ font-size:10.5px; padding:5px 11px; }
+.replyline{ margin-top:7px; font-family:'Source Serif 4',serif; font-style:italic; font-size:14px; color:#5B4632; border-top:1px dashed rgba(51,38,26,.25); padding-top:6px; }
+.dealbtn{ cursor:pointer; text-decoration:underline; text-underline-offset:2px; color:#8A5A18; font-weight:800; }
+.wanttag{ display:inline-block; margin-top:5px; font-size:10px; font-weight:800; letter-spacing:.1em; color:#7A4A21;
+  background:rgba(242,160,61,.22); border:1px solid rgba(242,160,61,.65); padding:3px 8px; border-radius:999px; }
 
 /* ============ PASS 5: motion, light, sound's furniture ============ */
 #scene.sky-desk{ background-size:100% 165%; animation:skyDrift 46s ease-in-out infinite alternate; }
@@ -287,11 +306,11 @@ button{ font:inherit; }
 .unit.lights-out .u-window{ animation:windowOut .55s ease forwards; }
 @keyframes windowOut{ to{ background:#10161C; } }
 @keyframes riseIn{ from{ opacity:0; translate:0 10px; } }
-.guest, .commentcard, .inquiry, .incident, .coach{ animation:riseIn .4s ease backwards; }
+.guest, .commentcard, .inquiry, .incident, .coach{ animation:riseIn .45s cubic-bezier(.22,.8,.3,1) backwards; }
 .coach{ border-left:5px solid var(--brass); }
 .sparkrow{ display:flex; align-items:center; gap:12px; margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; opacity:.85; }
 .spark{ flex:0 0 auto; }
-.sndbtn{ background:transparent; color:#D9C89A; border:1px solid rgba(198,164,94,.55); border-radius:3px; cursor:pointer;
+.sndbtn{ background:transparent; color:#D9C89A; border:1px solid rgba(198,164,94,.55); border-radius:999px; cursor:pointer;
   font-size:10.5px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; padding:4px 9px; }
 
 /* ============ PORTRAIT: the court recomposed ============ */
@@ -330,3 +349,324 @@ button{ font:inherit; }
   .moon{ width:20px; height:20px; }
 }
 
+
+/* ============ PASS E5: THE DESK SYSTEM — a small computer for checking people in ============
+   The working screens are the machine: amber status line, mono type, box frames,
+   the doors become the room chart (VC / VD / OC / OOO). Paper survives only where
+   paper exists inside the fiction: the comment cards and the corkboard. */
+:root{
+  --scr:#0B1322; --panel:#13203A; --panel2:#0E1930; --line:#33507E;
+  --txt:#D9E4F2; --dim:#8FA3C4; --tealt:#3FA7A0; --greent:#5BBF6A; --redt:#E86A5E;
+}
+body{ background:#04070D; }
+#app{ background:#05080F; }
+#desk{ background:#070C16; }
+
+/* the status line: reverse video, always on */
+.deskbar{ background:var(--amber); color:#14100C; padding:8px 10px; border-bottom:none;
+  font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.04em; align-items:center; }
+.db-sys{ font-weight:700; letter-spacing:.1em; }
+.db-night{ font-size:12.5px; font-weight:700; }
+.db-stars{ color:#14100C; }
+.db-rating{ color:#14100C; font-weight:700; }
+.db-house{ color:#14100C; opacity:1; }
+.deskbar .db-house{ color:#14100C !important; }
+.db-cash{ color:#14100C; font-size:16px; font-weight:700; margin-left:auto; }
+.db-cash.neg{ color:#A8232A; }
+.deskbar .sndbtn{ border-color:rgba(20,16,12,.55); color:#14100C; border-radius:2px; }
+.cursor{ display:inline-block; width:9px; height:15px; background:#14100C; align-self:center; animation:blinkc 1.1s steps(1) infinite; }
+@keyframes blinkc{ 0%,49%{ opacity:1 } 50%,100%{ opacity:0 } }
+@media (max-width:620px){
+  .db-cash{ flex-basis:auto; font-size:16px; }
+  .sndbtn{ margin-left:0; }
+  .db-sys{ flex-basis:100%; }
+}
+
+/* terminal windows */
+.paper{ background:var(--panel); color:var(--txt); border:1px solid var(--line); border-radius:2px;
+  box-shadow:0 0 0 3px #0A101E, 0 0 0 4px var(--line), 0 18px 34px rgba(0,0,0,.5);
+  padding:20px; font-family:'IBM Plex Mono',monospace; }
+.reg-tab{ background:var(--coral); color:#FFF3E4; border-radius:2px; }
+.reg-title{ color:var(--tealt); }
+.reg-head{ font-family:'IBM Plex Mono',monospace; color:var(--amber); font-size:21px; letter-spacing:0; }
+.reg-sub{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--dim); font-size:12.5px; line-height:1.6; }
+.reg-sub b{ color:var(--txt); }
+.term-bar{ background:var(--amber); color:#14100C; font-weight:700; letter-spacing:.12em; font-size:11.5px;
+  padding:7px 12px; margin:-20px -20px 16px; text-transform:uppercase; display:flex; justify-content:space-between; gap:10px; }
+.titlecard .pitch{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--txt); font-size:13.5px; line-height:1.65; }
+.titlecard .fine{ color:var(--dim); opacity:1; }
+.fk{ background:var(--amber); color:#14100C; padding:1px 7px; margin-right:10px; font-size:11px; border-radius:1px; font-weight:700; }
+.btn-primary .fk{ background:#14100C; color:var(--amber); }
+
+/* the folio: mono columns, amber figures */
+.led{ color:var(--txt); border-bottom:1px solid rgba(143,163,196,.14); font-size:13.5px; }
+.led b{ color:var(--amber); }
+.led.out b{ color:var(--redt); }
+.led.total{ border-top:2px solid var(--amber); color:var(--txt); }
+.led.total b{ color:var(--amber); }
+.co{ font-family:'IBM Plex Mono',monospace; font-size:13.5px; color:var(--txt); border-bottom:1px solid rgba(143,163,196,.12); }
+.co .score{ color:var(--dim); }
+.cst.hi{ color:var(--amber); } .cst.mid{ color:var(--persimmon); } .cst.lo{ color:var(--redt); }
+.sparkrow{ color:var(--dim); }
+
+/* paper inside the fiction stays paper */
+.commentcard{ color:var(--ink); }
+.corkboard{ box-shadow:0 0 0 3px #0A101E, 0 0 0 4px #2A1E15, 0 18px 34px rgba(0,0,0,.5); }
+
+/* records, not cards: the check-in rows */
+.guest{ background:var(--panel2); border:1px solid #2A4468; border-radius:2px; color:var(--txt);
+  box-shadow:inset 3px 0 0 var(--tealt); }
+.guest.sel{ background:#1A2C4E; outline:2px solid var(--amber); outline-offset:1px; box-shadow:inset 3px 0 0 var(--amber); }
+.g-name{ font-family:'IBM Plex Mono',monospace; font-size:16px; color:#FFFFFF; letter-spacing:.02em; }
+.g-sub{ color:var(--dim); opacity:1; }
+.g-line{ color:#EFE6CC; }
+.wanttag{ background:rgba(242,160,61,.16); border-color:rgba(255,196,107,.5); color:var(--amber); }
+.turnaway{ color:var(--redt); }
+.desk-note{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--dim); font-size:13px; }
+.desk-h{ color:var(--amber); }
+.desk-h::after{ background:rgba(255,196,107,.35); }
+
+/* key tags */
+.stamp{ background:var(--panel2); color:var(--amber); border:1.5px solid var(--line); border-radius:2px;
+  font-family:'IBM Plex Mono',monospace; display:inline-flex; align-items:center; gap:7px; }
+.stamp::before{ content:''; width:5px; height:5px; border-radius:50%; background:#070C16; box-shadow:inset 0 0 0 1px rgba(255,196,107,.4); flex:0 0 auto; }
+.stamp.on{ background:var(--amber); color:#14100C; border-color:var(--amber); box-shadow:none; }
+.stamp.on::before{ background:rgba(20,16,12,.35); box-shadow:none; }
+.stamp.skip{ color:var(--redt); border-color:var(--redt); }
+.stamp.skip.on{ background:var(--redt); color:#FFFFFF; }
+.commentcard .stamp{ background:transparent; color:var(--teal); border-color:var(--teal); }
+.commentcard .stamp::before{ background:rgba(47,111,106,.25); box-shadow:none; }
+.commentcard .stamp.on{ background:var(--teal); color:var(--paper); }
+
+/* buttons: the warm light and the dark keys */
+.btn{ font-family:'IBM Plex Mono',monospace; border-radius:2px; letter-spacing:.12em; }
+.btn-primary{ background:var(--ember); color:#FFF7EA; box-shadow:0 0 0 1px #8A3B16, 0 10px 22px rgba(0,0,0,.45); }
+.btn-primary:active{ box-shadow:0 0 0 1px #8A3B16, 0 3px 8px rgba(0,0,0,.4); }
+.btn-walnut{ background:#1B2B47; color:var(--amber); box-shadow:inset 0 0 0 1px var(--line), 0 10px 22px rgba(0,0,0,.4); }
+.btn-walnut:active{ box-shadow:inset 0 0 0 1px var(--line), 0 3px 8px rgba(0,0,0,.4); }
+.btn-ghost{ color:var(--amber); border-color:rgba(255,196,107,.5); border-radius:2px; }
+.actionbar{ background:linear-gradient(to bottom, rgba(7,12,22,0), #070C16 55%); }
+
+/* the morning forms */
+.rate-big{ color:var(--amber); }
+.stepbtn{ background:#1B2B47; border-color:var(--line); color:var(--amber); box-shadow:none; border-radius:2px; }
+.stepbtn:active{ box-shadow:none; }
+.forecast{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--txt); font-size:13.5px; line-height:1.6; }
+.rc-note{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--dim); font-size:12.5px; }
+.meter{ background:rgba(143,163,196,.18); }
+.meter i{ background:var(--amber); }
+.meter.over i{ background:var(--redt); }
+.fob{ background:#1B2B47; border-color:var(--line); }
+.fob span{ color:var(--amber); }
+.fobrow{ border-bottom:1px solid rgba(143,163,196,.12); }
+.fobtag{ font-family:'IBM Plex Mono',monospace; color:var(--dim); font-size:13px; }
+.chk{ font-family:'IBM Plex Mono',monospace; color:var(--txt); font-size:13.5px; }
+.chk .box{ border-color:var(--amber); color:var(--amber); border-radius:1px; }
+.hk-note{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--dim); font-size:12.5px; opacity:1; line-height:1.6; }
+.season-line{ font-family:'IBM Plex Mono',monospace; color:var(--txt); font-size:13.5px; }
+.season-next{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--dim); font-size:12.5px; }
+.season-goal{ color:var(--dim); opacity:1; }
+.inc-note{ color:var(--dim); font-family:'IBM Plex Mono',monospace; font-style:normal; font-size:12.5px; line-height:1.6; }
+
+/* the alert box and the phone message */
+.paper.incident{ border-color:var(--coral); box-shadow:0 0 0 3px #0A101E, 0 0 0 4px var(--coral), 0 18px 34px rgba(0,0,0,.5); }
+.inc-head{ font-family:'IBM Plex Mono',monospace; color:#FFFFFF; font-size:16px; }
+.inc-done{ font-family:'IBM Plex Mono',monospace; color:var(--txt); font-size:13.5px; }
+.inquiry::before{ display:none; }
+.inq-text{ font-family:'IBM Plex Mono',monospace; color:var(--txt); font-size:14px; }
+.inq-terms{ color:var(--dim); }
+
+/* the catalog terminal */
+.shoprow{ border-bottom:1px solid rgba(143,163,196,.12); }
+.shop-name{ font-family:'IBM Plex Mono',monospace; color:#FFFFFF; font-size:15px; }
+.shop-blurb{ font-family:'IBM Plex Mono',monospace; color:var(--dim); font-size:12.5px; opacity:1; }
+.payback{ font-family:'IBM Plex Mono',monospace; font-style:normal; color:var(--amber); font-size:12px; }
+.calrow{ border-bottom:1px solid rgba(143,163,196,.12); }
+.cal-main{ font-family:'IBM Plex Mono',monospace; color:var(--txt); font-size:14px; }
+.cal-note{ color:var(--dim); }
+.cal-status{ color:var(--dim); }
+.calrow.now .cal-status{ color:var(--redt); }
+.trophy{ font-family:'IBM Plex Mono',monospace; color:var(--txt); font-size:13.5px; border-bottom:1px solid rgba(143,163,196,.12); }
+.stats-mono{ color:var(--txt); }
+
+/* ============ THE ROOM CHART — the scene, at work ============ */
+#scene.chart{ height:auto; background:#0A101E; padding:10px 10px 12px; }
+#scene.chart::before{ display:none; }
+#scene.chart .moon, #scene.chart .headlights, #scene.chart .signwrap,
+#scene.chart .court, #scene.chart .car, #scene.chart .pool, #scene.chart .walkway,
+#scene.chart .awning{ display:none; }
+#scene.chart .building{ position:static; width:auto; }
+#scene.chart .roofline{ background:var(--amber); color:#14100C; font-family:'IBM Plex Mono',monospace;
+  letter-spacing:.22em; font-size:11px; font-weight:700; text-align:left; padding:6px 10px; text-transform:uppercase; }
+#scene.chart .roofline::after{ content:' — ROOM CHART'; }
+#scene.chart .wall{ background:#101C33; padding:10px; border:1px solid var(--line); border-top:none; box-shadow:none; }
+#scene.chart .units{ gap:8px; }
+#scene.chart .units.wing + .units.wing{ margin-top:8px; }
+#scene.chart .unit{ background:none; }
+#scene.chart .u-opening{ display:none; }
+#scene.chart .u-window{ height:46px; align-self:center; border-color:#2A4468; border-radius:2px; }
+#scene.chart .u-door{ height:62px; border-radius:2px; border:1px solid #2A4468;
+  background:linear-gradient(to bottom,#22705A,#175C46); }
+#scene.chart .unit.dirty .u-door{ background:linear-gradient(to bottom,#8A6A1F,#6E5416); transform:none; }
+#scene.chart .unit.dark .u-door{ background:#3A3325; filter:none; }
+#scene.chart .unit.occ .u-door{ background:linear-gradient(to bottom,#8A3B2E,#6E2A20); }
+#scene.chart .u-door::after{ content:'VC'; position:absolute; right:5px; bottom:4px; font-family:'IBM Plex Mono',monospace;
+  font-size:9px; font-weight:700; letter-spacing:.08em; color:rgba(255,255,255,.88); }
+#scene.chart .unit.dirty .u-door::after{ content:'VD'; }
+#scene.chart .unit.dark .u-door::after{ content:'VD'; }
+#scene.chart .unit.occ .u-door::after{ content:'OC'; }
+#scene.chart .u-num{ font-family:'IBM Plex Mono',monospace; color:var(--amber); }
+#scene.chart .u-knob{ background:var(--amber); }
+#scene.chart .u-quirk{ background:#F6EED1; color:#33261A; font-family:'IBM Plex Mono',monospace; border-radius:1px; }
+#scene.chart .unit.pickable .u-door{ outline:2px solid var(--amber); outline-offset:1px; }
+#scene.chart .unit.wantmatch .u-door{ box-shadow:0 0 0 2px var(--amber), 0 0 16px rgba(255,196,107,.8); }
+#scene.chart .unit.fin-quiet .u-door{ border-color:#8FA3CC; }
+#scene.chart .unit.fin-plush .u-door{ border-color:#C98A94; }
+#scene.chart .unit.fin-bright .u-door{ border-color:#E8B34B; }
+@media (orientation:portrait){
+  #scene.chart.desk-sticky{ height:auto; }
+}
+
+/* ============ PASS E6: THE MODERN DESK — drawn depth, a designed voice ============
+   Same machine, today's clothes. Soft elevation instead of hard bevels, glass
+   instead of phosphor plates, and Space Grotesk as the machine's voice —
+   Archivo keeps the body, Plex Mono keeps the figures. */
+:root{ --voice:'Space Grotesk','Archivo',sans-serif; }
+
+/* the voice */
+.deskbar, .term-bar, .sec-title, .reg-head, .g-name, .shop-name, .inc-head,
+.btn, .stamp, .cal-title, .bk-name, .u-num, #scene.chart .u-door::after{ font-family:var(--voice); }
+.sec-title{ letter-spacing:.05em; font-weight:700; font-size:12.5px; }
+.reg-head{ font-weight:700; letter-spacing:0; }
+.g-name{ font-weight:600; }
+.shop-name{ font-weight:600; }
+
+/* the status line is a glass readout now, with a power light */
+.deskbar{ background:linear-gradient(180deg,#1D2B4B,#131E36); color:var(--txt);
+  border:1px solid #2E4A75; border-radius:12px; padding:9px 12px;
+  box-shadow:0 10px 24px rgba(2,6,16,.45), inset 0 1px 0 rgba(255,255,255,.09); }
+.db-sys{ color:var(--dim); font-weight:700; letter-spacing:.13em; font-size:11px; }
+.db-sys::before{ content:''; display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:#5BBF6A; box-shadow:0 0 8px rgba(91,191,106,.9); margin-right:8px; vertical-align:1px; }
+.db-night{ color:var(--txt); font-weight:600; }
+.db-cash{ color:var(--amber); font-weight:700; }
+.deskbar .cursor{ background:var(--amber); border-radius:2px; box-shadow:0 0 8px rgba(255,196,107,.75); }
+.sndbtn{ background:rgba(255,255,255,.06); color:var(--txt); border:1px solid rgba(255,255,255,.14);
+  border-radius:8px; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); font-family:var(--voice); }
+
+/* panels float on the glass: a light along the top, a real shadow under */
+.paper{ background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,0) 140px), linear-gradient(180deg,#17263F,#101B30);
+  border:1px solid rgba(148,178,225,.16); border-radius:16px;
+  box-shadow:0 18px 38px rgba(1,4,12,.5), inset 0 1px 0 rgba(255,255,255,.07); }
+.paper.incident{ border:1px solid rgba(255,110,90,.55); border-radius:16px;
+  box-shadow:0 18px 38px rgba(1,4,12,.5), 0 0 24px rgba(232,106,94,.16), inset 0 1px 0 rgba(255,255,255,.07); }
+.term-bar{ background:linear-gradient(180deg,#1D2B4B,#141F38); color:var(--amber);
+  border:1px solid #2E4A75; border-radius:10px; box-shadow:inset 0 1px 0 rgba(255,255,255,.09); letter-spacing:.16em; }
+
+/* keys with travel */
+.btn{ border-radius:12px; font-weight:600; }
+.btn-walnut{ background:linear-gradient(180deg,#2B3E64,#1D2C4B); border:1px solid #3D5A8C; color:var(--txt);
+  box-shadow:0 3px 0 #0C1526, 0 8px 16px rgba(1,4,12,.35), inset 0 1px 0 rgba(255,255,255,.12); }
+.btn-walnut:active{ transform:translateY(2px); box-shadow:0 1px 0 #0C1526, 0 3px 8px rgba(1,4,12,.3), inset 0 1px 0 rgba(255,255,255,.1); }
+.btn-primary{ background:linear-gradient(180deg,#F0824C,#D95F27); border:1px solid #FF9A5F; color:#FFF6EC;
+  box-shadow:0 3px 0 #8F3A12, 0 10px 20px rgba(217,95,39,.32), inset 0 1px 0 rgba(255,255,255,.35); }
+.btn-primary:active{ transform:translateY(2px); box-shadow:0 1px 0 #8F3A12, 0 4px 10px rgba(217,95,39,.3), inset 0 1px 0 rgba(255,255,255,.3); }
+.btn-ghost{ background:rgba(255,255,255,.045); border:1px solid rgba(148,178,225,.2); color:var(--txt);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+.btn-ghost:active{ transform:translateY(1px); }
+.fk{ background:linear-gradient(180deg,#FFD08A,#F0B45C); border-radius:6px; color:#231600;
+  box-shadow:0 2px 0 #9A6A1F, inset 0 1px 0 rgba(255,255,255,.5); font-weight:700; }
+
+/* stamps become chips: a dot for a state, a soft edge to press */
+.stamp{ border-radius:999px; background:linear-gradient(180deg,#22335A,#182642); border:1px solid #3D5A8C;
+  color:var(--txt); font-weight:600; box-shadow:0 2px 0 #0B1424, inset 0 1px 0 rgba(255,255,255,.1); padding:7px 14px 7px 11px; }
+.stamp::before{ background:#7E97BE; box-shadow:none; }
+.stamp.on{ background:linear-gradient(180deg,#FFD08A,#F5B95E); color:#231600; border-color:#FFDCA3;
+  box-shadow:0 2px 0 #9A6A1F, 0 6px 14px rgba(245,185,94,.28), inset 0 1px 0 rgba(255,255,255,.5); }
+.stamp.on::before{ background:#231600; }
+.stamp:active{ transform:translateY(1px); }
+.commentcard .stamp{ background:linear-gradient(180deg,#FFFFFF,#F3E9D2); color:#4A3A20; border-color:#C9B489;
+  box-shadow:0 2px 0 #B39B62, inset 0 1px 0 #FFFFFF; }
+.commentcard .stamp::before{ background:#B39B62; }
+.commentcard .stamp.on{ background:linear-gradient(180deg,#FFD08A,#F5B95E); color:#231600; border-color:#D9A83F;
+  box-shadow:0 2px 0 #9A6A1F, inset 0 1px 0 rgba(255,255,255,.5); }
+.commentcard .stamp.on::before{ background:#231600; }
+
+/* guest records lift off the glass */
+.guest{ border:1px solid rgba(148,178,225,.14); border-radius:14px;
+  background:linear-gradient(180deg,#182847,#121F3A);
+  box-shadow:0 8px 20px rgba(1,4,12,.35), inset 0 1px 0 rgba(255,255,255,.06); }
+.guest.selected{ border:1px solid var(--amber);
+  box-shadow:0 8px 22px rgba(1,4,12,.4), 0 0 0 1px var(--amber), inset 0 1px 0 rgba(255,255,255,.08); }
+
+/* the chart: moulded tiles, a chip for the code, light that spills */
+#scene.chart{ border-radius:16px; border:1px solid rgba(148,178,225,.16);
+  background:linear-gradient(180deg,#0D1730,#0A1322);
+  box-shadow:0 18px 38px rgba(1,4,12,.5), inset 0 1px 0 rgba(255,255,255,.06); }
+#scene.chart .roofline{ background:linear-gradient(180deg,#1D2B4B,#141F38); color:var(--amber);
+  font-family:var(--voice); font-weight:700; letter-spacing:.3em; }
+#scene.chart .u-door{ border-radius:10px; border:1px solid rgba(0,0,0,.35);
+  box-shadow:0 6px 14px rgba(1,4,12,.45), inset 0 1px 0 rgba(255,255,255,.25), inset 0 -8px 14px rgba(0,0,0,.18); }
+#scene.chart .unit .u-door{ background:linear-gradient(180deg,#419E7B,#256B52); }
+#scene.chart .unit.dirty .u-door, #scene.chart .unit.dark .u-door{ background:linear-gradient(180deg,#BC8E40,#7D5A22); }
+#scene.chart .unit.occ .u-door{ background:linear-gradient(180deg,#B85A30,#7E3418); }
+#scene.chart .u-door::after{ inset:auto; right:5px; bottom:5px; border:0; background:rgba(6,12,24,.55); color:#FFE9BD;
+  padding:1px 6px; border-radius:99px; font-size:9.5px; font-weight:700; letter-spacing:.08em; }
+#scene.chart .u-num{ font-weight:700; color:#FFF3D6; text-shadow:0 1px 3px rgba(0,0,0,.45); }
+#scene.chart .u-window{ border-radius:6px; }
+#scene.chart .unit.occ .u-window{ border-color:#8A5A1E; box-shadow:0 0 16px rgba(255,178,84,.5); }
+#scene.chart .u-quirk{ border-radius:3px; box-shadow:0 3px 8px rgba(1,4,12,.4); }
+
+/* ============ PASS E7: THE PERFECTIONIST PASS ============
+   Found by reading every screen at phone size. The doors into the calendar
+   and the catalog were painted for paper and invisible on the glass; the
+   catalog and calendar rows strangled their own text; wings of rooms past
+   eight squeezed or stretched; the quirk slip fought the status chip. */
+
+/* the season's two doors, readable at last */
+.btn-ghost.dk{ color:var(--txt); border-color:rgba(148,178,225,.35); }
+
+/* wings wrap like the main court: one tile size at any room count */
+@media (max-width:620px){
+  #scene .units.wing{ flex-wrap:wrap; row-gap:7px; }
+  #scene .units.wing .unit{ flex:0 1 21%; }
+}
+@media (min-width:621px){
+  #scene .units.wing{ flex-wrap:wrap; row-gap:7px; }
+  #scene .units.wing .unit{ flex:0 1 calc(12.5% - 5px); }
+}
+
+/* the status code moves to the window; the door keeps its panel,
+   and the quirk slip gets the door's whole bottom edge */
+#scene.chart .u-door::after{ content:''; inset:17px 6px 8px; border:1px solid rgba(0,0,0,.16);
+  background:none; padding:0; border-radius:3px; }
+#scene.chart .unit.dirty .u-door::after, #scene.chart .unit.dark .u-door::after, #scene.chart .unit.occ .u-door::after{ content:''; }
+#scene.chart .u-window{ position:relative; }
+#scene.chart .u-window::after{ content:'VC'; position:absolute; left:3px; bottom:4px; white-space:nowrap;
+  background:rgba(6,12,24,.5); color:#FFE9BD; padding:1px 5px; border-radius:99px;
+  font-family:var(--voice); font-size:9px; font-weight:700; letter-spacing:.06em; }
+#scene.chart .unit.dirty .u-window::after, #scene.chart .unit.dark .u-window::after{ content:'VD'; }
+#scene.chart .unit.occ .u-window::after{ content:'OC'; }
+#scene.chart .u-quirk{ left:auto; right:1px; transform:none; max-width:46px; font-size:7px;
+  letter-spacing:0; padding:1px 2px; line-height:1.15; text-align:center; }
+
+/* catalog rows stack: the words get the whole width, the chip sits under */
+.shoprow{ flex-direction:column; gap:8px; }
+.shoprow .stamp{ align-self:flex-start; }
+
+/* calendar rows breathe: the note gets a real column, the status wraps under */
+.calrow{ flex-wrap:wrap; }
+.cal-main{ flex:1 1 170px; }
+.cal-status{ margin-left:auto; }
+
+/* the till's label holds its line */
+.sparkrow span{ flex:0 0 96px; }
+.sparkrow svg{ min-width:0; max-width:100%; }
+
+/* turn away reads as what it is: a small refusal */
+.turnaway{ font-family:var(--voice); font-size:10.5px; font-weight:700; letter-spacing:.08em;
+  color:#FF9A8A; border:1px solid rgba(255,110,90,.5); background:rgba(232,106,94,.1);
+  padding:4px 10px; border-radius:99px; }
+
+/* the corkboard's head fits on one line with its rule */
+.corkboard .cb-head{ letter-spacing:.14em; font-size:10.5px; }

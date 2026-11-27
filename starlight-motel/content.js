@@ -69,7 +69,11 @@ const CONTENT = {
         "Fresh-smelling, everything wiped down, trash can actually empty. Little things done right.",
         "Smelled like clean laundry and nothing else. Underrated perfume.",
         "Even the grout behaved. I checked. I always check.",
-        "Not a hair, not a ring, not a wrapper. Whoever cleans here has standards and a grudge against dirt."
+        "Not a hair, not a ring, not a wrapper. Whoever cleans here has standards and a grudge against dirt.",
+        "Baseboards. They cleaned the baseboards. Nobody cleans the baseboards.",
+        "The ice bucket was clean enough to drink out of, and I nearly did.",
+        "Smelled like a room that gets cleaned even when nobody's watching. Especially then.",
+        "Not one fingerprint on the mirror. I looked. I always look."
       ]
     },
 
@@ -91,6 +95,8 @@ const CONTENT = {
         "Shower had real pressure and real hot water. Stood there longer than I needed to.",
         "Good firm bed. Slept straight through, and I don't sleep strange places well.",
         "Everything in the room just worked. Lights, locks, plumbing, TV. Sounds small. Isn't.",
+        "The door latched with a click you could trust. Slept better for it.",
+        "Water pressure like the place respects you. Hot before the mirror fogged.",
         "You can tell somebody walks these rooms and fixes things before they're broken-broken.",
         "Room's been kept up. New-ish fixtures, door shuts solid, no mystery drips.",
         "Hot water in ten seconds flat. I timed it because nobody believes me.",
@@ -190,6 +196,9 @@ const CONTENT = {
         "They gave me exactly the room I asked for. Exactly. That never happens.",
         "The room fit like they'd read my mind at the desk.",
         "Asked for quiet, got quiet. Asked for nothing else and needed nothing else.",
+        "Blackout curtains, and the room went properly dark. Slept like the road owed me.",
+        "A desk to spread the maps and the laptop both. You'd be surprised how rare that is.",
+        "Rainfall shower after nine hours of highway. I'd book the room again for that alone.",
         "Somebody at that desk pays attention to who is standing in front of them.",
         "The room was the one I was hoping for when I pulled in. They just knew.",
         "Right room, right end of the building. Somebody listened, and it showed all night.",
