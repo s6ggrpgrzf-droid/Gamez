@@ -183,6 +183,8 @@ const SIM = (() => {
     if (g.challengeNote === undefined) g.challengeNote = null;
     if (!g.grudges || typeof g.grudges !== 'object') g.grudges = {};
     if (g.ratePremium === undefined) g.ratePremium = null;
+    if (g.phone === undefined) g.phone = null;
+    if (!Array.isArray(g.blocks)) g.blocks = [];
     if (typeof g.season !== 'number' || g.season < 1) g.season = 1;
     if (!Array.isArray(g.calendar) || !g.calendar.length) g.calendar = buildCalendar(g.season, g.seed);
     if (!Array.isArray(g.ledger)) g.ledger = [];
@@ -443,6 +445,7 @@ const SIM = (() => {
       lastReport: null, lastPlan: null, over: null,
       guestBook: [], reviewWall: [], inquiry: null, incident: null,
       challenges: freshChallenges(), challengeNote: null, grudges: {},
+      phone: null, blocks: [],
       credit: 0, upgrades: [], expansions: 0, cleanLog: [],
       lastInspection: null, bankLetter: null, ending: null, handymanTonight: false,
       cashHistory: [4250], quirkDeck: [],
@@ -793,6 +796,28 @@ const SIM = (() => {
       if (plan.premiumRate != null) g.ratePremium = clamp(Math.round(plan.premiumRate), 35, 220);
       else if (g.ratePremium == null) g.ratePremium = clamp(g.rate + 25, 35, 220);
     } else g.ratePremium = null;
+    // A promise made at the desk comes due (Pass P1): a block booked by
+    // phone fills its rooms out of the morning's ready stock, before the
+    // evening's line forms. The keeper cleans for them like anyone.
+    if (Array.isArray(g.blocks) && g.blocks.length){
+      const due = g.blocks.filter(b => b.night === g.night);
+      if (due.length){
+        g.blocks = g.blocks.filter(b => b.night !== g.night);
+        for (const b of due){
+          let left = b.rooms, filled = 0;
+          for (const room of g.rooms){
+            if (!left) break;
+            if (room.state !== 'ready') continue;
+            room.state = 'occupied';
+            room.guest = { name: guestName(g), segment: 'crew', nightsLeft: 1, ratePaid: b.rate,
+              dirtAtCheckIn: room.dirt, waitScore: 95, trait: null, returning: false, visits: 1,
+              recovery: 0, challenge: null, dealStay: false, dealNights: 0, rowdyDone: false, phoneBlock: true };
+            left--; filled++; g.stats.guests++;
+          }
+          if (filled) g.blockFilled = { rooms: filled, rate: b.rate };
+        }
+      }
+    }
     g.droveOn = 0;
     g.handymanTonight = !!plan.handyman;
     g.lastPlan = { minutesUsed: used, extraCleaner: !!plan.extraCleaner, handyman: !!plan.handyman };
@@ -882,6 +907,28 @@ const SIM = (() => {
         ratePaid: fairRate, trait: c.trait, want: c.want, line: c.line, deal: null,
         challenge: c.id, returning: st.stays > 0, visits: st.stays + 1 });
     }
+    // Pass P1: some nights, the phone rings at the desk. Dealt here, at
+    // the end of the queue's making, so the night's line is already what
+    // it is — the call is an offer laid over the evening, never a
+    // replacement for it. One call a night, none in the season's first
+    // days, and never in Tonight Only, where the night is the whole game.
+    g.phone = null;
+    if (g.night >= 4 && !g.tonight){
+      if (rnd(g) < 0.34){
+        let kind = pick(g, ['wedding', 'bus', 'scout']);
+        if (kind === 'scout' && g.night + 3 > SEASON_NIGHTS) kind = 'wedding';
+        if (kind === 'wedding'){
+          g.phone = { kind, status: 'ringing', rooms: 3 + Math.floor(rnd(g) * 3),
+            rate: Math.round(g.rate * 0.85 / 5) * 5,
+            party: pick(g, ['Alvarez', 'Okafor', 'Lindqvist', 'Marsh', 'Petrov', 'Whitfield']) };
+        } else if (kind === 'bus'){
+          g.phone = { kind, status: 'ringing', count: 4 + Math.floor(rnd(g) * 3) };
+        } else {
+          g.phone = { kind, status: 'ringing', deposit: 200, night: g.night + 3, rooms: 4,
+            rate: Math.round(g.rate * 1.15 / 5) * 5 };
+        }
+      }
+    }
   }
 
   function assignRoom(g, arrivalId, roomId){
@@ -941,6 +988,47 @@ const SIM = (() => {
     g.stats.droveOn = (g.stats.droveOn || 0) + 1;
     g.droveOn = (g.droveOn || 0) + 1;
     return { ok: true, outcome: 'droveon' };
+  }
+
+  // Pass P1: the desk answers the phone. Take it, and the caller's terms
+  // happen now; let it ring, and the night is simply the night it was.
+  // Neither answer is punished — the judgment is the game.
+  function answerPhone(g, take){
+    const ev = g.phone;
+    if (!ev || ev.status !== 'ringing') return { error: 'The phone is not ringing.' };
+    if (!take){ ev.status = 'let'; return { ok: true, outcome: 'let' }; }
+    ev.status = 'taken';
+    if (ev.kind === 'wedding'){
+      let filled = 0;
+      for (const room of g.rooms){
+        if (filled >= ev.rooms) break;
+        if (room.state !== 'ready') continue;
+        room.state = 'occupied';
+        room.guest = { name: guestName(g), segment: 'family', nightsLeft: filled === 0 ? 2 : 1, ratePaid: ev.rate,
+          dirtAtCheckIn: room.dirt, waitScore: 92, trait: null, returning: false, visits: 1,
+          recovery: 0, challenge: null, dealStay: false, dealNights: 0, rowdyDone: false, phoneWedding: true };
+        filled++; g.stats.guests++;
+      }
+      ev.filled = filled;
+      return { ok: true, outcome: 'wedding', filled };
+    }
+    if (ev.kind === 'bus'){
+      const segs = ['tourist', 'family', 'trucker', 'tourist', 'family', 'crew'];
+      let added = 0;
+      for (let i = 0; i < ev.count; i++){
+        const k = segs[i % segs.length];
+        const tr = rollTrait(g);
+        g.queue.unshift({ id: 700 + i, segment: k, name: guestName(g), nights: SEGMENTS[k].stay(g),
+          ratePaid: g.rate, trait: tr, want: rollWant(g, k, tr), line: segLine(g, k), deal: null, phone: true });
+        added++;
+      }
+      ev.added = added;
+      return { ok: true, outcome: 'bus', added };
+    }
+    // The scout: a deposit the audit will show, and a promise on the books.
+    if (!Array.isArray(g.blocks)) g.blocks = [];
+    g.blocks.push({ night: ev.night, rooms: ev.rooms, rate: ev.rate });
+    return { ok: true, outcome: 'scout' };
   }
 
   function turnAway(g, arrivalId){
@@ -1087,6 +1175,18 @@ const SIM = (() => {
     let petRevenue = 0;
     if (hasUpgrade(g, 'pets')){ for (let i = 0; i < occ; i++) if (rnd(g) < 0.18) petRevenue += 12; petRevenue = roundMoney(petRevenue); }
     revenue = roundMoney(revenue + pieRevenue + petRevenue);
+    // Pass P1: a scout's deposit taken at the desk is income like any
+    // other, and the register says what the phone did with the night.
+    const phoneDeposit = (g.phone && g.phone.status === 'taken' && g.phone.kind === 'scout') ? g.phone.deposit : 0;
+    if (phoneDeposit) revenue = roundMoney(revenue + phoneDeposit);
+    let phoneLine = '';
+    if (g.phone && g.phone.status === 'taken'){
+      if (g.phone.kind === 'wedding') phoneLine = `The phone: the ${g.phone.party} wedding took ${g.phone.filled || 0} room${g.phone.filled === 1 ? '' : 's'} at $${g.phone.rate} a door.`;
+      else if (g.phone.kind === 'bus') phoneLine = `The phone: the broken-down bus sent ${g.phone.added || 0} more parties to the line.`;
+      else if (g.phone.kind === 'scout') phoneLine = `The phone: the location scout put ${g.phone.rooms} rooms on the books for night ${g.phone.night}, at $${g.phone.rate} a door.`;
+    }
+    const blockLine = g.blockFilled ? `The film crew kept the scout's promise — ${g.blockFilled.rooms} room${g.blockFilled.rooms === 1 ? '' : 's'} at $${g.blockFilled.rate} a door.` : '';
+    g.blockFilled = null;
     ensureSeason(g);
     g.stats.roomNights += occ;
     g.stats.possibleRoomNights += g.rooms.length;
@@ -1191,6 +1291,7 @@ const SIM = (() => {
     const report = { night: g.night, dow: DOW_NAMES[dowOf(g.night)], revenue, roomRevenue, vendingRevenue, costs, costTotal,
                      profit, cashAfter: g.cash, occupied: occ, checkouts,
                      ratingAfter: g.rating, turnedAwayTotal: g.stats.turnedAway, droveOn: g.droveOn || 0,
+                     phoneDeposit, phoneLine, blockLine,
                      creditDrawn, creditAfter: g.credit };
     g.lastReport = report;
     // Past $4,000 on the line, the bank writes — once.
@@ -1306,7 +1407,7 @@ const SIM = (() => {
            TRAITS, INCIDENTS, UPGRADES, EXPANSIONS, CALENDAR, COMBOS, activeCombos, CHALLENGES,
            activeEvent, calendarEntry, nextCalendar, seasonArc, competitorFactor, segmentPool, bookProb,
            QUIRKS, FITTINGS, FINISHES, matchScore, scoreStay, SEGMENTS, INCIDENTS,
-           setStaff, replyToReview, answerDeal, answerHaggle, REPLIES,
+           setStaff, replyToReview, answerDeal, answerHaggle, answerPhone, REPLIES,
            housekeepingPool, cleanMinutes, queueCap,
            SEASON_NIGHTS, CREDIT_LIMIT,
            BASE_MINUTES, EXTRA_MINUTES, EXTRA_COST, MORTGAGE };
