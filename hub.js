@@ -76,7 +76,10 @@ var GAMES = [
     blurb:'Lockpicking by feel and by ear: five chapters up a locksmith’s ladder — plain pins, spools that lie, serrations that click and say nothing. One new lock for the whole world each night, and a keeper who remarks on your work.' },
   { id:'chess', name:'CHESS', cls:'DAILY · VS COMPUTER', ops:['daily','puzzle'], href:'./chess/',
     glyph:'<path d="M7 20.5v-3.6c0-2.7 1.4-4.4 4.3-5.5L8.7 8.6C7.4 6.6 7.9 4 10 2.3L11.5 1l2.5 2.7 2.8-1.7c1.2 2.6 1.9 5.1 1.9 7.9v5.1c2.3.9 3.6 2.6 3.6 5v3.5Z"/>',
-    blurb:'The royal game, drawn deep: a black lacquer board seamed with gold, an ivory and ebony Staunton set, and four strengths of opponent from Beginner to Master. One daily pairing for the whole world.' }
+    blurb:'The royal game, drawn deep: a black lacquer board seamed with gold, an ivory and ebony Staunton set, and four strengths of opponent from Beginner to Master. One daily pairing for the whole world.' },
+  { id:'starlight-motel', name:'THE STARLIGHT MOTEL', cls:'NEW · DAILY', ops:['daily','long'], href:'./starlight-motel/',
+    glyph:'<path d="M12 2.6 L14.3 8.9 L21 9.3 L15.8 13.5 L17.4 20 L12 16.7 L6.6 20 L8.2 13.5 L3 9.3 L9.7 8.9 Z"/>',
+    blurb:'A roadside-motel season on the old highway: set the rate, work the desk, mind the book — 84 nights, eight doors that become sixteen, and a neon star that flickers when the rating falls. Tonight Only deals the whole world the same single night.' }
 ];
 function byId(id) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].id === id) return GAMES[i]; return null; }
 
@@ -105,7 +108,7 @@ var LINKS = [['dominoes', 'neon-void'], ['neon-void', 'tiny-fairway'],
 var LABOVE = { 'neon-void': 1 };
 var SHORT = {'candy-cascade':'CANDY','bubble-hex':'BUBBLE','bloom-defense':'BLOOM','neon-void':'VOID',
   'maze-trace':'ARROW','word-well':'WELL','pdawg':'PDAWG','life-story':'LIFE','reel-empire':'REEL',
-  'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS','night-shelf':'SHELF','tension':'TENSION','chess':'CHESS'};
+  'tiny-fairway':'FAIRWAY','skylark':'SKYLARK','dominoes':'DOMINOES','cathedral':'CATHEDRAL','starlight-drums':'DRUMS','night-shelf':'SHELF','tension':'TENSION','chess':'CHESS','starlight-motel':'STARLIGHT'};
 function xy(p) { return (window.innerWidth > window.innerHeight) ? [p[2], p[3]] : [p[0], p[1]]; }
 function twkStyle(id, dim, lit) {
   var h = 0; for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997;
@@ -360,6 +363,14 @@ function progressFor(id) {
       if (cwins) cparts.push(cwins + ' won');
       if (cst >= 2) cparts.push('\uD83D\uDD25 ' + cst + ' days');
       return { label: cparts.join(' \u00b7 '), frac: Math.min(1, days / 20) };
+    }
+    if (id === 'starlight-motel') {
+      var sm = readJSON('starlight_motel_v1');
+      if (sm && sm.over) return { label: '🌟 The season is in the ledger', frac: 1 };
+      if (sm && sm.night) return { label: '🌟 Night ' + sm.night + ' of 84 · $' + Math.round(sm.cash).toLocaleString('en-US') + ' · ' + (+sm.rating).toFixed(1) + '★', frac: Math.min(1, sm.night / 84) };
+      var tb = readJSON('starlight_tonight_best_v1');
+      if (tb && tb.profit != null) return { label: '🌟 Tonight best $' + Math.round(tb.profit), frac: .2 };
+      return null;
     }
     if (id === 'starlight-drums') {
       var sd = readJSON('sd-records-v1');
@@ -692,7 +703,7 @@ function callUp(id, via) {
     '<dt>DATA</dt><dd class="dataVal"></dd>';
   var bar = pr ? '<div class="bar"><i style="width:' + Math.round(pr.frac * 100) + '%"></i></div>' : '';
   var verb = id === 'cathedral' ? 'LISTEN' : 'PLAY';
-  var cssArt = id === 'cathedral' || id === 'dominoes' || id === 'starlight-drums' || id === 'night-shelf' || id === 'tension' || id === 'chess';
+  var cssArt = id === 'cathedral' || id === 'dominoes' || id === 'starlight-drums' || id === 'night-shelf' || id === 'tension' || id === 'chess' || id === 'starlight-motel';
   var artChild = id === 'cathedral' ? '<i class="cr2"></i>' : id === 'dominoes' ? '<i class="dm2"></i>' : '';
   var feed = '<div class="feed" aria-hidden="true"><div class="feedpar"><div class="artimg art-' + id + (cssArt ? ' cssart' : '') + '">' + artChild + '</div></div>' +
     '<div class="feedshade"></div><div class="feedhud"><span>EXT CAM · ' + SHORT[id] + '</span><span class="fl">FEED &#9679;</span></div><div class="feedband"></div></div>';
