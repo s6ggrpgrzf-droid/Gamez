@@ -171,7 +171,7 @@ const COACH_STEPS = [
   { phase:'morning', night:1, title:'Then — the cleaning', btn:'Next',
     text:'You hold 300 minutes of housekeeping against every dirty room. A deep clean earns its reviews; a quick clean sells tonight and charges you tomorrow. When the morning is set, open the desk.' },
   { phase:'arrivals', night:1, title:'Working the desk', btn:'Next',
-    text:'Tap a guest card, and every door tells you its character — the big tub, the soft bed, the thin walls. Guests say what they are hoping for, and the door that fits them glows brass. The line loses patience as it waits, and the end doors, 1 and 8, are the quiet ones.' },
+    text:'Tap a guest card, and every door tells you its character — the big tub, the soft bed, the thin walls. Guests say what they are hoping for, and the door that fits them glows brass. Whoever is still standing when you close the desk drives on into the night — and the end doors, 1 and 8, are the quiet ones.' },
   { phase:'morning', night:2, title:'The morning after', btn:'Got it',
     text:'The register tells you what the night earned and what it cost. The guest book remembers everyone, the corkboard keeps what they wrote, and the catalog is where a good week turns into a better motel.' }
 ];
@@ -535,7 +535,9 @@ function renderMorning(){
                  : 'An ordinary road tonight.';
   const evidence = G.lastReport
     ? ` Last night: ${G.lastReport.occupied} of ${G.rooms.length} doors filled, ${money(G.lastReport.roomRevenue)} in room rent.`
-    : ' First night: the register is blank, and the road is the road.';
+    : G.tonight
+      ? ' One night only, at the house as it stands — the register is blank, and the Suites are lit across the highway.'
+      : ' First night: the register is blank, and the road is the road.';
   const inHouse = G.rooms.filter(r => r.state === 'occupied').length;
   const ready = G.rooms.filter(r => r.state === 'ready').length;
 
@@ -557,6 +559,7 @@ function renderMorning(){
       <div class="meter seasonmeter"><i style="width:${Math.round(G.night / SIM.SEASON_NIGHTS * 100)}%"></i></div>
       <div class="season-line">${cal ? `<b>${esc(cal.name)}</b> — ${esc(cal.note)}` : 'A clear stretch of highway. Nothing on the calendar but the weather.'}</div>
       ${!G.tonight ? `<div class="season-next">Prestige <b>${SIM.prestige(G)}</b> — the grounds as the road reads them; a kept house is forgiven more on the card.</div>` : ''}
+      ${!G.tonight ? `<div class="season-next" style="margin-top:6px"><b>The roads</b> — ${Object.keys(SIM.SEGMENTS).map(k => { const lv = SIM.segLevel(G, k); return `${esc(SIM.SEGMENTS[k].label)} — ${lv > 0 ? `standing ${lv}, taken` : 'not yet'}`; }).join(' · ')}</div>` : ''}
       ${!G.tonight && G.placards ? `<div class="season-next" style="margin-top:6px"><b>The placards</b> — the highway association's goals for this house:<br>${G.placards.dealt.map(id => { const p = SIM.PLACARDS.find(x => x.id === id); const won = G.placards.won[id]; return `${won ? '✓' : '·'} ${esc(p.name)} — ${esc(p.line)} <i>$${p.bounty}${won ? ` · won night ${won}` : ''}</i>`; }).join('<br>')}</div>` : ''}
       ${nxt ? `<div class="season-next">Coming night ${nxt.from}${nxt.to > nxt.from ? '–' + nxt.to : ''}: ${esc(nxt.name)} — in ${nxt.from - G.night} night${nxt.from - G.night === 1 ? '' : 's'}.</div>` : ''}
       ${(G.blocks || []).map(b => `<div class="season-next">On the books: the film crew holds <b>${b.rooms} rooms on night ${b.night}</b> at $${b.rate} a door — filled from the ready rooms when the desk opens.${b.night === G.night ? ' That is tonight: clean for them first.' : ''}</div>`).join('')}
@@ -628,6 +631,14 @@ function renderMorning(){
       <div class="inq-text">Sent up: ${esc(G.serviceTicket.item)} for Room ${G.serviceTicket.roomId} — $${G.serviceTicket.price} on the bill tonight.</div>
     </div>` : '');
 
+  // PERFECTIONIST PASS: the plant speaks before it breaks — a machine
+  // running rough earns a morning word, not a register obituary.
+  const roughPlant = G.plant ? Object.entries(G.plant).filter(([, p]) => !p.broken && p.c < 25) : [];
+  const plantCard = roughPlant.length ? `<div class="paper inspection">
+      <div class="reg-title">The Plant — Running Rough</div>
+      <div class="inq-text">${roughPlant.map(([id, p]) => `${esc(SIM.PLANT[id].name)} is at ${Math.round(p.c)}%`).join(' · ')}. A service call in the catalog is cheaper than a repair — and much cheaper than the night it dies mid-stay, with the reviews listening.</div>
+    </div>` : '';
+
   const fobRows = dirty.map(r => `
     <div class="fobrow">
       <div class="fob"><span>${r.id}</span></div>
@@ -676,7 +687,7 @@ function renderMorning(){
     ${tabBarHTML}
     ${uiTab === 'tonight' ? coachCard() : ''}
     ${uiTab === 'office' ? reportHTML() : ''}
-    ${uiTab === 'tonight' ? inspCard + bankCard + chNoteCard + standCard + ticketCard + guideCard : ''}
+    ${uiTab === 'tonight' ? inspCard + bankCard + chNoteCard + standCard + ticketCard + plantCard + guideCard : ''}
     ${uiTab === 'office' ? seasonCard : ''}
     ${uiTab === 'tonight' ? inqCard : ''}
     ${uiTab === 'tonight' ? rateCard : ''}
@@ -882,7 +893,7 @@ function renderCatalog(){
     return `<div class="shoprow">${shopGlyph(p.glyph, !cur.broken && cur.c >= 40)}<div class="shop-main"><div class="shop-name">${p.name}</div>
       <div class="shop-blurb">${p.blurb}</div>
       <div class="condbar"><i style="width:${Math.max(0, Math.round(cur.c))}%;background:${col}"></i></div>
-      <div class="condword" style="color:${col}">${plantStateWord(cur)} · ${Math.round(cur.c)}</div></div>
+      <div class="condword" style="color:${col}">${cur.broken ? 'Broken — wants repair' : `${plantStateWord(cur)} · ${Math.round(cur.c)}% left`}</div></div>
       <button class="stamp" data-plant-svc="${id}" ${!cur.broken && cur.c >= 100 ? 'disabled' : ''}>${cur.broken ? `Repair — $${p.rep}` : `Service — $${p.svc}`}</button></div>`;
   }).join('');
   // Pass J3: the hiring book — a filled role shows its person; a vacant one
@@ -1183,7 +1194,7 @@ function renderArrivals(){
   app.innerHTML = sceneHTML('sky-desk', G.rooms, 'arrivals', { labels: !!selArrival, want: selArrival ? selArrival.want : null, wantRoom: selArrival ? selArrival.wantRoom : null }) + deskOpen(`
     <div class="desk-h">Evening — the desk</div>
     ${coachCard()}
-    <div class="desk-note">Rate tonight: <b>$${G.rate}</b>${G.ratePremium != null ? ` · Premium <b>$${G.ratePremium}</b>` : ''}. ${q.length} part${q.length === 1 ? 'y' : 'ies'} waiting. Tap a guest card, then tap a door with an amber outline. End doors — 1 and 8 — are the quiet ones, and the line's patience runs out fast.</div>
+    <div class="desk-note">Rate tonight: <b>$${G.rate}</b>${G.ratePremium != null ? ` · Premium <b>$${G.ratePremium}</b>` : ''}. ${q.length} part${q.length === 1 ? 'y' : 'ies'} waiting. Tap a guest card, then tap a door with an amber outline. End doors — 1 and 8 — are the quiet ones. Whoever is still waiting when the desk closes drives on.</div>
     ${selArrival ? `<div class="placing">Placing <b>${esc(selArrival.name)}</b> — tap a lit door. <span class="placing-x" id="placing-x">put back</span></div>` : ''}
     ${deskSay ? `<div class="desk-say">${deskSay}</div>` : ''}
     ${phoneCardHTML()}
