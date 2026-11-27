@@ -697,3 +697,324 @@ body{ background:#04070D; }
 /* COUNTER-OFFER (F4): the named price on a guest card, and a settled one */
 .wanttag.haggle{ background:rgba(255,196,107,.13); border-color:rgba(255,196,107,.55); color:#F2E4C8; }
 .wanttag.settled{ background:rgba(47,111,106,.25); border-color:rgba(47,111,106,.7); color:#BFE3DD; }
+
+/* ============ PASS G1: THE COURT IS THE GAME ============
+   The Desk System pass flattened the motel into a chart widget — hid the
+   sign, the sky, the court, the cars — and stamped airport codes on the
+   doors. This block gives the building back on every screen: the doors
+   you play are the doors of the motel, state read the way a keeper reads
+   it — a lit window means someone's home, a door ajar means the room
+   wants cleaning, a car in the court means a guest in the house. */
+#scene.chart{ height:264px; padding:0; }
+#scene.chart.sky-desk{ background:linear-gradient(to bottom,#232C4E 0%,#38345E 34%,#5A4066 58%,#A85A48 78%,#E2703A 90%,#F2A03D 100%); }
+#scene.chart.sky-dawn{ background:linear-gradient(to bottom,#5A4066 0%,#8A5A6E 30%,#D97A44 58%,#E2703A 76%,#F2A03D 92%,#F6C87E 100%); }
+#scene.chart.sky-night{ background:linear-gradient(to bottom,#12182F 0%,#232C4E 52%,#372C50 80%,#5A4066 100%); }
+#scene.chart::before{ display:block; }
+#scene.chart .moon, #scene.chart .headlights, #scene.chart .signwrap,
+#scene.chart .court, #scene.chart .car, #scene.chart .pool, #scene.chart .walkway,
+#scene.chart .awning{ display:block; }
+#scene.chart:has(.units.wing){ height:332px; }
+#scene.chart .signwrap{ width:94px; left:2%; bottom:6%; }
+#scene.chart .building{ position:absolute; right:1.5%; bottom:15.5%; width:76%; }
+#scene.chart .roofline{ background:var(--walnut); color:var(--cream); font-family:'Alfa Slab One',serif;
+  letter-spacing:.42em; font-size:11px; font-weight:400; text-align:center; padding:5px 0 4px 10px;
+  text-transform:none; border-bottom:2px solid var(--brass); border-radius:3px 3px 0 0; }
+#scene.chart .roofline::after{ content:none; }
+#scene.chart .wall{ background:linear-gradient(to bottom,#F2E4C8,#EFE0BC); padding:10px 9px 0; border:none; box-shadow:none; }
+#scene.chart .units{ gap:5px; }
+#scene.chart .units.wing + .units.wing{ margin-top:7px; }
+#scene.chart .u-opening{ display:block; height:58px; }
+#scene.chart .u-window{ height:40px; align-self:auto; border:2px solid var(--walnut); border-radius:4px; }
+#scene.chart .u-door{ height:58px; border:2px solid var(--teal-deep); border-radius:5px 5px 0 0;
+  background:linear-gradient(to bottom,#35857D,var(--teal) 30%,#2A625C); }
+#scene.chart .unit.occ .u-door{ background:linear-gradient(to bottom,#35857D,var(--teal) 30%,#2A625C); }
+#scene.chart .unit.dirty .u-door{ background:linear-gradient(to bottom,#35857D,var(--teal) 30%,#2A625C); transform:translateX(5px) rotate(1.6deg); }
+#scene.chart .unit.dark .u-door{ background:linear-gradient(to bottom,#35857D,var(--teal) 30%,#2A625C); filter:brightness(.68); }
+#scene.chart .u-door::after{ content:''; position:absolute; inset:14px 5px 6px; border:1px solid rgba(30,67,64,.55);
+  border-radius:2px; font-size:0; letter-spacing:0; }
+#scene.chart .u-num{ color:var(--brass); }
+#scene.chart.desk-sticky{ height:264px; }
+#scene.chart.desk-sticky:has(.units.wing){ height:332px; }
+#scene.chart .unit .u-window::after, #scene.chart .unit.dirty .u-window::after,
+#scene.chart .unit.dark .u-window::after, #scene.chart .unit.occ .u-window::after{
+  content:''; position:absolute; inset:0; font-size:0;
+  background:linear-gradient(115deg,transparent 42%,rgba(246,238,209,.16) 50%,transparent 58%); }
+#scene.chart .car{ width:14%; height:13%; }
+#scene.chart .unit.dirty .u-door{ transform:translateX(8px) rotate(2.2deg); }
+#scene.chart .unit.dirty .u-window{ background:linear-gradient(160deg,#4A4238,#2C2620); }
+@media (orientation:landscape){
+  #scene.chart{ height:218px; }
+  #scene.chart:has(.units.wing){ height:284px; }
+  #scene.chart.desk-sticky{ height:218px; }
+}
+
+/* ============ PASS G2: GAME CHROME ============
+   The Desk System's software costume comes off. The bar over the desk is
+   the motel's own name in brass, not a product login; the title menu's
+   board is walnut, not a terminal; the F-key badges are gone (this is a
+   phone game). Voices separate: serif speaks for people and prose, mono
+   keeps only the figures. And the night register becomes what it always
+   claimed to be — the one sheet of paper on the desk. */
+.deskbar .db-sys::before{ display:none; }
+.deskbar .db-sys{ color:var(--brass); letter-spacing:.16em; }
+.deskbar .db-stars{ color:var(--amber); }
+.term-bar{ background:linear-gradient(180deg,#33261A,#241A10); color:var(--cream);
+  border:1px solid #8A6A34; font-family:'Source Serif 4',serif; letter-spacing:.06em; }
+.term-bar span:last-child{ color:var(--brass); }
+.fk{ display:none; }
+.btn-walnut{ background:linear-gradient(180deg,#3A2B1B,#261B0F); border:1px solid #8A6A34; color:var(--cream);
+  box-shadow:0 4px 0 #17100A, 0 8px 16px rgba(10,6,3,.4); }
+.btn-walnut:active{ transform:translateY(3px); box-shadow:0 1px 0 #17100A, 0 4px 8px rgba(10,6,3,.4); }
+.shop-blurb, .cal-note, .hk-note, .g-hint{ font-family:'Source Serif 4',serif; }
+.g-hint{ font-style:italic; font-size:13.5px; }
+.payback{ font-family:'Source Serif 4',serif; font-style:italic; }
+.paper.register{ background:linear-gradient(180deg,#F8EFD4,#F0E1BC); color:#33261A; border-color:#C9B489;
+  box-shadow:0 10px 24px rgba(5,8,18,.45); }
+.paper.register .reg-title{ color:#7A5A20; }
+.paper.register .reg-head{ color:#33261A; font-family:'Source Serif 4',serif; }
+.paper.register .reg-sub{ color:rgba(51,38,26,.75); font-family:'Source Serif 4',serif; font-style:italic; }
+.paper.register .reg-sub b{ color:#33261A; }
+.paper.register .led{ color:#33261A; border-bottom-color:rgba(51,38,26,.14); }
+.paper.register .led.total{ border-top:2px solid #8A5A10; }
+.paper.register .led.total b{ color:#7A4A10; font-size:16.5px; }
+.paper.register .co{ color:#33261A; border-bottom-color:rgba(51,38,26,.12); }
+.paper.register .cst.hi{ color:#1F7A4D; }
+.paper.register .cst.mid{ color:#8A5A10; }
+.paper.register .cst.lo{ color:#B3402A; }
+.paper.register .hk-note{ color:rgba(51,38,26,.72); }
+.paper.register .sparkrow{ color:rgba(51,38,26,.72); }
+.paper.register .commentcard{ background:#FFFBEF; border-color:rgba(51,38,26,.22); color:#33261A; }
+.paper.register .replyline{ color:#5A4632; }
+
+/* ============ PASS G3: THE LEFTOVERS ============
+   The catalog gets faces, the book becomes a book, the calendar keeps
+   its dates in order. Catalog rows: a drawn mark in a brass ring at the
+   left of every item, and the payback note back to margin-note weight —
+   ink, small, one voice among many instead of sixteen amber lectures.
+   Calendar: one line per entry, the status a pill riding on the row,
+   never wrapped under it. Book: regulars ruled in brass, grudges noted
+   in red ink, struck names struck. */
+.paper.register .shoprow{ flex-direction:row; flex-wrap:wrap; align-items:flex-start; }
+.paper.register .shop-main{ flex:1 1 190px; min-width:0; }
+.shop-glyph{ flex:0 0 44px; width:44px; height:44px; border-radius:50%; margin-top:2px;
+  background:radial-gradient(circle at 35% 30%, #3A7D75, #234E49); border:1.5px solid #8A6A34;
+  color:#F2E4C8; display:flex; align-items:center; justify-content:center;
+  box-shadow:inset 0 1px 3px rgba(255,255,255,.25), 0 2px 5px rgba(51,38,26,.25); }
+.shop-glyph svg{ width:26px; height:26px; }
+.shop-glyph.owned{ background:radial-gradient(circle at 35% 30%, #D9B96E, #A9823F); color:#33261A; }
+.paper.register .payback{ color:#7A5A20; font-size:12.5px; }
+.calrow{ flex-wrap:nowrap; }
+.cal-main{ flex:1 1 auto; min-width:0; }
+.cal-status{ flex:0 0 auto; margin-left:8px; background:rgba(51,38,26,.08); padding:2.5px 9px; border-radius:999px; }
+.calrow.now .cal-status{ background:var(--red); color:#FFF6E8; }
+.calrow.done .cal-status{ background:transparent; }
+.book-sec{ font-family:'Archivo',sans-serif; font-size:10.5px; font-weight:800; letter-spacing:.14em;
+  text-transform:uppercase; color:#7A5A20; margin:14px 0 2px; }
+.bookrow.regular{ border-left:3px solid var(--brass); padding-left:9px; }
+.bookrow.struck{ opacity:.55; }
+.bookrow.struck .b-name{ text-decoration:line-through; text-decoration-thickness:1.5px; }
+.b-grudge{ flex-basis:100%; font-family:'Source Serif 4',serif; font-style:italic; font-size:13px; color:#B3402A; }
+.b-gone{ flex-basis:100%; font-family:'Source Serif 4',serif; font-style:italic; font-size:13px; opacity:.8; }
+/* The register paper went cream in G2; the desk-era strata had set the
+   catalog, calendar and challenge-card text in pale dark-screen colors
+   that wash out on paper. On the sheet, they take ink. */
+.paper.register .shop-name{ color:#33261A; }
+.paper.register .shop-blurb{ color:rgba(51,38,26,.8); }
+.paper.register .comboline{ color:#5A4632; }
+.paper.register .cal-main{ color:#33261A; }
+.paper.register .cal-note{ color:rgba(51,38,26,.72); }
+.paper.register .cal-when{ color:rgba(51,38,26,.75); }
+.paper.register .fobtag{ color:rgba(51,38,26,.7); }
+.paper.register .ch-title{ color:#7A5A20; }
+.paper.register .ch-want{ color:rgba(51,38,26,.8); }
+.paper.register .ch-prog{ color:#5A4632; }
+.paper.register .ch-done{ color:#1F7A4D; }
+.paper.register .chcard{ border-color:rgba(51,38,26,.2); }
+.paper.register .chcard .g-name{ color:#33261A; }
+.cal-when{ flex-basis:76px; }
+.cal-status{ font-size:9.5px; }
+
+/* ============ PASS V3: PURCHASES SHOW ON THE BUILDING ============
+   The marks layer. Pure presentation — the sim neither knows nor cares;
+   the building simply keeps what the keeper bought, the way a real
+   motel does. */
+.roofmarks{ position:absolute; left:0; right:0; bottom:calc(100% - 4px); display:flex; justify-content:space-between;
+  align-items:flex-end; padding:0 5px; pointer-events:none; }
+.rm-right{ display:flex; align-items:flex-end; }
+.mark-billboard{ position:relative; background:#2A1E15; color:var(--cream); font-family:'Alfa Slab One',serif;
+  font-size:8px; letter-spacing:.14em; text-transform:uppercase; padding:3px 7px 2px;
+  border:1.5px solid var(--brass); border-radius:2px; text-align:center; line-height:1.3; }
+.mark-billboard i{ display:block; font-family:'Source Serif 4',serif; font-style:italic; font-size:7px;
+  letter-spacing:.05em; text-transform:none; color:var(--amber); }
+.mark-billboard::after{ content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  width:3px; height:6px; background:#2A1E15; }
+.mark-solar{ width:62px; height:11px; transform:skewX(-18deg); border:1px solid #101A28; border-radius:1px;
+  background:repeating-linear-gradient(90deg,#22344E 0 9px,#46648A 9px 10px); box-shadow:0 2px 3px rgba(10,10,20,.4); }
+.mark-dish{ width:19px; height:19px; margin-left:6px; filter:drop-shadow(0 1px 1px rgba(10,10,20,.5)); }
+.underawning{ display:flex; justify-content:space-between; padding:3px 10px 1px;
+  background:linear-gradient(to bottom,#F2E4C8,#EFE0BC); }
+.mark-board{ font-family:'Source Serif 4',serif; font-size:8.5px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; color:#8A2F23; background:#FBF3DC; border:1.2px solid var(--walnut);
+  border-radius:2px; padding:1.5px 6px; box-shadow:0 1px 2px rgba(42,30,21,.35); white-space:nowrap; }
+.mark-vending{ position:absolute; left:4px; bottom:3px; width:17px; height:31px; z-index:6;
+  background:linear-gradient(180deg,#8A3038,#6E242C); border:1px solid #3A1216; border-radius:2.5px; }
+.mark-vending i{ display:block; margin:4px 4px 0; height:14px; border-radius:1.5px;
+  background:linear-gradient(180deg,#BFE3DD,#7FB5AC); box-shadow:0 0 6px rgba(191,227,221,.85); }
+.mark-vending::after{ content:''; position:absolute; left:4px; right:4px; bottom:3px; height:5px;
+  background:repeating-linear-gradient(180deg, rgba(0,0,0,.45) 0 1px, transparent 1px 2.5px); }
+.mark-cart{ position:absolute; bottom:3px; width:21px; height:18px; z-index:6; border-radius:2px 2px 1px 1px;
+  background:linear-gradient(180deg,#C8CFD6,#9AA4AE); border:1px solid #5A646E; }
+.mark-cart i{ position:absolute; top:-6px; left:2px; right:2px; height:6px; background:#F2E4C8;
+  border:1px solid #8A7A5A; border-radius:1px; }
+.mark-cart::after{ content:''; position:absolute; bottom:-2.5px; left:3px; width:4px; height:4px; border-radius:50%;
+  background:#3A4046; box-shadow:11px 0 0 #3A4046; }
+.mark-truckbays{ position:absolute; right:0.5%; bottom:0.5%; width:36%; height:14%; z-index:3;
+  border-top:1.5px dashed rgba(242,228,200,.35);
+  background:repeating-linear-gradient(115deg, transparent 0 13px, rgba(242,228,200,.45) 13px 15.5px); }
+.mark-lamp{ position:absolute; bottom:1%; width:2px; height:13%; background:#241A10; z-index:5; }
+.mark-lamp::before{ content:''; position:absolute; top:-3px; left:50%; transform:translateX(-50%);
+  width:6px; height:6px; border-radius:50%; background:#FFD9A0; box-shadow:0 0 10px 3px rgba(255,196,107,.75); }
+.mark-lamp::after{ content:''; position:absolute; top:2px; left:50%; transform:translateX(-50%);
+  width:34px; height:26px; background:radial-gradient(ellipse at top, rgba(255,196,107,.28), transparent 70%); }
+.mark-pets{ position:absolute; right:4px; bottom:3px; width:33px; height:17px; z-index:6;
+  border:1.5px solid rgba(122,90,32,.75); border-radius:2px;
+  background:repeating-linear-gradient(90deg, rgba(122,90,32,.4) 0 1.5px, transparent 1.5px 6px); }
+.mark-pets i{ position:absolute; bottom:1px; left:50%; transform:translateX(-50%); width:13px; height:10px;
+  background:#6E4A2F; clip-path:polygon(0 38%, 50% 0, 100% 38%, 100% 100%, 0 100%); }
+.pool.pro{ background:linear-gradient(180deg,#7FC4BC,#3E8A82);
+  box-shadow:inset 0 0 0 2px #E8E0C8, 0 0 12px rgba(127,196,188,.5); }
+.pool-umb{ position:absolute; left:-13px; top:-13px; width:0; height:0; border-left:9px solid transparent;
+  border-right:9px solid transparent; border-bottom:7px solid #C65A3A; }
+.pool-umb::after{ content:''; position:absolute; top:6px; left:-1px; width:2px; height:11px; background:#5A4632; }
+.pool-lounger{ position:absolute; top:1px; width:13px; height:5px; background:#E8E0C8; border-radius:1px;
+  transform:rotate(-4deg); box-shadow:0 1px 1px rgba(0,0,0,.3); }
+.pool-lounger.flip{ background:#C65A3A; transform:rotate(3deg); }
+#scene.has-ac .unit::after{ content:''; position:absolute; left:3%; bottom:6px; width:30%; height:8px; z-index:2;
+  background:repeating-linear-gradient(180deg,#B9BEC4 0 1.6px,#878E96 1.6px 3.2px);
+  border:1px solid #6A7076; border-radius:1px; }
+#scene.has-mattress .u-door{ box-shadow:inset 0 -4px 0 rgba(198,164,94,.65), inset 0 1px 0 rgba(255,255,255,.18); }
+.signwrap.sign-pro .sign-glow{ opacity:1; inset:-22% -32%;
+  background:radial-gradient(ellipse, rgba(255,90,60,.5), rgba(255,196,107,.28) 55%, transparent 75%); }
+.signwrap.sign-pro .n-vac{ fill:#A8E08E; }
+.mark-bookdirect{ position:absolute; left:50%; transform:translateX(-50%); bottom:15%; z-index:7;
+  background:#2A1E15; color:var(--amber); border:1.3px solid var(--brass); border-radius:3px;
+  font-family:'Alfa Slab One',serif; font-size:7.5px; letter-spacing:.12em; text-align:center;
+  line-height:1.3; padding:3px 6px; text-transform:uppercase; box-shadow:0 2px 5px rgba(0,0,0,.4); }
+
+/* ============ PASS P1: THE PHONE AT THE DESK ============
+   A walnut card on the night desk — darker than the guest cards, with a
+   brass head, because it is not a person standing there; it is the
+   outside world asking. Once answered it goes quiet and small. */
+.phonecard{ background:linear-gradient(180deg,#2E2115,#211710); border:1px solid #8A6A34; border-radius:12px;
+  padding:13px 15px; margin:12px 0 4px; box-shadow:0 6px 16px rgba(5,3,1,.45); color:var(--cream); }
+.phonecard .ph-head{ font-family:'Archivo',sans-serif; font-size:11px; font-weight:800; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--amber); margin-bottom:7px; }
+.phonecard .ph-line{ font-family:'Source Serif 4',serif; font-style:italic; font-size:15.5px; line-height:1.5; }
+.phonecard .ph-terms{ font-family:'Source Serif 4',serif; font-size:13.5px; line-height:1.5;
+  color:rgba(242,228,200,.82); margin-top:7px; }
+.phonecard .ph-terms b{ color:var(--amber); }
+.phonecard .inc-stamps{ margin-top:11px; }
+.phonecard.done{ padding:9px 15px; }
+.phonecard.done .ph-line{ font-size:13.5px; color:rgba(242,228,200,.85); }
+
+/* ============ PASS G4: THE POLISH ============
+   Small kindnesses, compounded: a door that swings before its window
+   lights, a sky that dips through dusk instead of snapping, a postcard
+   to take home, and print a thumb can read. */
+/* 1 — the door swings, then the window lights */
+.unit.just-in .u-door{ transform-origin:left center; animation:doorSwing .55s ease; }
+.unit.just-in .u-window{ animation-delay:.18s; }
+@keyframes doorSwing{ 0%{ transform:rotate(0) } 35%{ transform:rotate(-3.4deg) translateX(-1px) } 70%{ transform:rotate(1.1deg) } 100%{ transform:rotate(0) } }
+/* 4 — the sky goes through dusk, not a trapdoor */
+#scene.phasefade{ animation:phasefade .9s ease; }
+@keyframes phasefade{ 0%{ filter:brightness(.7) saturate(.85) } 100%{ filter:brightness(1) saturate(1) } }
+/* 5 — the keepsake postcard */
+.postcard{ position:relative; margin:4px 0 16px; border:1.5px solid #B3402A; border-radius:6px; overflow:hidden;
+  background:linear-gradient(180deg,#FBF3DC,#F2E4C8); box-shadow:0 3px 10px rgba(42,30,21,.25); }
+.postcard::before{ content:''; position:absolute; inset:5px; border:1px solid rgba(47,111,106,.55); border-radius:4px; pointer-events:none; }
+.postcard .pc-stripe{ height:7px; background:repeating-linear-gradient(90deg,#B3402A 0 14px,#FBF3DC 14px 20px,#2F6F6A 20px 34px,#FBF3DC 34px 40px); }
+.pc-body{ padding:14px 16px 13px; text-align:center; position:relative; }
+.pc-title{ font-family:'Alfa Slab One',serif; font-size:19px; letter-spacing:.09em; color:#8A2F23; text-transform:uppercase; line-height:1.25; padding:0 64px; }
+.pc-figs{ font-family:'Space Mono',monospace; font-size:12.5px; color:#4A3A28; margin-top:7px; letter-spacing:.02em; }
+.pc-line{ font-family:'Source Serif 4',serif; font-style:italic; font-size:14px; color:#5A4632; margin-top:6px; }
+.pc-mark{ position:absolute; top:13px; right:13px; width:62px; height:62px; border:1.6px solid rgba(138,47,35,.65);
+  border-radius:50%; transform:rotate(9deg); display:flex; align-items:center; justify-content:center; text-align:center;
+  background:rgba(251,243,220,.88);
+  font-family:'Space Mono',monospace; font-size:7.5px; line-height:1.5; letter-spacing:.06em; color:rgba(138,47,35,.85); text-transform:uppercase; }
+.paper.register .stats-mono{ color:#4A3A28; }
+.postcard.faded{ filter:saturate(.55); }
+.postcard.faded .pc-title{ color:#5A4632; }
+/* 7 — thumbs and small print */
+.stamp{ min-height:34px; display:inline-flex; align-items:center; justify-content:center; }
+.stamp.sm{ min-height:29px; }
+.cal-status{ font-size:10.5px; }
+/* 8 — the phone's own edges */
+body{ -webkit-tap-highlight-color:transparent; }
+#app{ min-height:100dvh; }
+.actionbar{ padding-bottom:calc(8px + env(safe-area-inset-bottom)); }
+
+/* ============ THE VISUAL PROGRAM: SURFACE, LIGHT, LIFE ============
+   Researched 2026-11-27: flat is perfect gradients, material-less fills,
+   sourceless light and a frozen frame. Everything below is CSS/SVG —
+   no canvas, no image assets — laid over the locked postcard. */
+/* 1 — print grain over the scene: dithers the skies, gives every fill a
+   material. Baked once as a data-URI, cached by the browser; never a
+   live filter. */
+.grain{ position:absolute; inset:0; z-index:9; pointer-events:none; opacity:.055; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E"); }
+/* 5 — the vignette closes the frame */
+.vig{ position:absolute; inset:0; z-index:8; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 42%, transparent 57%, rgba(10,5,20,.34) 100%); }
+/* 6 — the ridge behind the motel: hills, a water tower, one lit window,
+   all gone pale and quiet with distance */
+.skyline{ position:absolute; left:0; right:0; bottom:56%; height:27%; z-index:1; opacity:.55; pointer-events:none; }
+.skyline svg{ display:block; width:100%; height:100%; }
+/* 2 — light that lands: a lit window spills onto the wall and walkway */
+.unit.occ .u-window{ box-shadow:0 7px 16px 3px rgba(255,196,107,.30); }
+/* 3 — the sign's spill on the court, and its hum */
+.signwrap::after{ content:''; position:absolute; left:-30%; bottom:-10%; width:175%; height:27%;
+  background:radial-gradient(ellipse, rgba(255,90,60,.30), rgba(255,90,60,.10) 55%, transparent 72%);
+  mix-blend-mode:screen; opacity:0; transition:opacity 1.2s; pointer-events:none; }
+#scene.sky-desk .signwrap::after, #scene.sky-night .signwrap::after{ opacity:1; }
+#scene.sky-desk .sign-glow, #scene.sky-night .sign-glow{ animation:signHum 11s linear infinite; }
+@keyframes signHum{ 0%,100%{ opacity:1 } 52%{ opacity:1 } 53.5%{ opacity:.84 } 55%{ opacity:1 } 71%{ opacity:.93 } 72.5%{ opacity:1 } }
+/* 10 — moths worry the sign's light, never in step */
+.moth{ position:absolute; width:3.5px; height:3.5px; border-radius:50%; background:#FFE9B8; pointer-events:none;
+  box-shadow:0 0 5px 1px rgba(255,196,107,.65); opacity:0; }
+.moth.m1{ left:44%; top:9%; animation:mothA 7s ease-in-out infinite; }
+.moth.m2{ left:56%; top:15%; animation:mothB 11s ease-in-out -4s infinite; }
+@keyframes mothA{ 0%,100%{ transform:translate(0,0); opacity:0 } 12%{ opacity:.85 } 30%{ transform:translate(7px,-9px); opacity:.6 } 52%{ transform:translate(-6px,-4px); opacity:.85 } 74%{ transform:translate(4px,-12px); opacity:.5 } 88%{ opacity:.8 } }
+@keyframes mothB{ 0%,100%{ transform:translate(0,0); opacity:0 } 18%{ opacity:.7 } 38%{ transform:translate(-9px,6px); opacity:.85 } 61%{ transform:translate(5px,10px); opacity:.55 } 82%{ transform:translate(-3px,-6px); opacity:.75 } }
+/* 9 — the water is never quite still */
+.pool .shimmer{ position:absolute; inset:0; mix-blend-mode:screen; pointer-events:none;
+  background:linear-gradient(115deg, transparent 30%, rgba(255,246,220,.17) 48%, transparent 63%);
+  background-size:230% 100%; animation:shim 8s ease-in-out infinite alternate; }
+.pool .shimmer.s2{ animation-duration:13s; animation-direction:alternate-reverse; opacity:.55; }
+@keyframes shim{ from{ background-position:28% 0 } to{ background-position:74% 0 } }
+/* 7+8 — the highway in front: a road, a wire, a pole, and now and then
+   a car going somewhere else */
+.road{ position:absolute; left:0; right:0; bottom:0; height:3.4%; z-index:6; pointer-events:none;
+  background:linear-gradient(180deg,#251C13,#171008); }
+.road::before{ content:''; position:absolute; left:0; right:0; top:44%; height:2px;
+  background:repeating-linear-gradient(90deg, rgba(246,200,126,.45) 0 26px, transparent 26px 54px); }
+.road::after{ content:''; position:absolute; top:0; left:0; right:0; height:1px; background:rgba(242,228,200,.15); }
+.passcar{ position:absolute; bottom:8%; left:0; width:58px; height:17px; opacity:0;
+  animation:passdrive 43s linear infinite; }
+.passcar i{ position:absolute; left:8%; right:8%; bottom:22%; height:52%; border-radius:5px 8px 3px 3px;
+  background:linear-gradient(180deg,#2C3140,#171A24); }
+.passcar i::before{ content:''; position:absolute; left:24%; top:-38%; width:44%; height:44%; border-radius:5px 7px 0 0;
+  background:linear-gradient(180deg,#394052,#22262F); }
+.passcar i::after{ content:''; position:absolute; left:-14%; top:30%; width:5px; height:5px; border-radius:50%;
+  background:#C63A2A; box-shadow:0 0 6px 2px rgba(198,58,42,.55); }
+.passcar::before{ content:''; position:absolute; right:-46px; bottom:16%; width:52px; height:13px;
+  background:linear-gradient(90deg, rgba(255,224,160,.5), transparent); mix-blend-mode:screen;
+  clip-path:polygon(0 22%, 100% 0, 100% 100%, 0 78%); }
+.passcar::after{ content:''; position:absolute; right:-3px; bottom:24%; width:5px; height:5px; border-radius:50%;
+  background:#FFE9B8; box-shadow:0 0 7px 2px rgba(255,233,184,.7); }
+@keyframes passdrive{ 0%{ transform:translateX(-90px); opacity:0 } 1.5%{ opacity:1 } 11%{ transform:translateX(104vw); opacity:1 } 12.5%,100%{ transform:translateX(104vw); opacity:0 } }
+.wire{ position:absolute; top:0; left:0; width:100%; height:12%; z-index:7; pointer-events:none; }
+.wire svg{ display:block; width:100%; height:100%; }
+.pole{ position:absolute; top:0; bottom:0; right:4.2%; width:5px; z-index:7; pointer-events:none;
+  background:linear-gradient(90deg,#0C0812,#1A1426); }
+.pole::before{ content:''; position:absolute; top:6.5%; left:50%; transform:translateX(-50%); width:36px; height:4px;
+  background:#0C0812; border-radius:2px; }
