@@ -900,6 +900,46 @@ body{ background:#04070D; }
   background:#2A1E15; color:var(--amber); border:1.3px solid var(--brass); border-radius:3px;
   font-family:'Alfa Slab One',serif; font-size:7.5px; letter-spacing:.12em; text-align:center;
   line-height:1.3; padding:3px 6px; text-transform:uppercase; box-shadow:0 2px 5px rgba(0,0,0,.4); }
+/* PASS J14 (GFX-2): the forecourt drawn in, and the plant tells on itself. */
+.mark-ice{ position:absolute; right:5px; bottom:3px; width:15px; height:24px; z-index:6;
+  background:linear-gradient(180deg,#DDE5EA,#AEB9C2); border:1px solid #6A757F; border-radius:2px; }
+.mark-ice i{ display:block; margin:3px 3px 0; height:9px; border-radius:1px;
+  background:linear-gradient(180deg,#BFE3DD,#8FB8D8); box-shadow:inset 0 0 3px rgba(255,255,255,.8); }
+.mark-ice::after{ content:''; position:absolute; left:3px; right:3px; bottom:3px; height:4px;
+  background:rgba(58,64,70,.55); border-radius:1px; }
+.mark-shopboard{ position:absolute; left:56px; bottom:27px; z-index:6; }
+.mark-pump{ position:absolute; left:11%; bottom:5%; width:34px; height:30px; z-index:5; }
+.mark-pump i{ position:absolute; left:12px; bottom:0; width:11px; height:19px;
+  background:linear-gradient(180deg,#C65A3A,#9A3E24); border:1px solid #5E2413; border-radius:2px; }
+.mark-pump i::after{ content:''; position:absolute; top:3px; left:2px; right:2px; height:6px;
+  background:#F2E4C8; border-radius:1px; box-shadow:0 0 4px rgba(255,217,160,.9); }
+.mark-pump b{ position:absolute; left:0; bottom:24px; width:34px; height:3px; background:#2A1E15; border-radius:1px; }
+.mark-pump b::before{ content:''; position:absolute; left:3px; top:3px; width:2px; height:6px; background:#2A1E15; }
+.mark-pump b::after{ content:''; position:absolute; right:3px; top:-4px; width:6px; height:6px; border-radius:50%;
+  background:#FFD9A0; box-shadow:0 0 9px 3px rgba(255,196,107,.7); }
+.mark-pump::after{ content:''; position:absolute; left:-6px; right:-6px; bottom:-3px; height:10px;
+  background:radial-gradient(ellipse at center, rgba(255,196,107,.20), transparent 70%); }
+.mark-wash{ position:absolute; right:1.2%; bottom:2%; width:40px; height:32px; z-index:4;
+  border:2px solid rgba(216,207,184,.8); border-bottom:none; border-radius:3px 3px 0 0;
+  background:linear-gradient(180deg, rgba(127,196,188,.14), rgba(127,196,188,.03)); }
+.mark-wash i{ position:absolute; left:50%; top:3px; transform:translateX(-50%); width:16px; height:2px;
+  background:repeating-linear-gradient(90deg, #BFE3DD 0 2px, transparent 2px 5px); }
+.mark-wash::after{ content:'WASH'; position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+  font-family:'Source Serif 4',serif; font-size:6.5px; font-weight:700; letter-spacing:.14em; color:#D8CFB8;
+  text-shadow:0 1px 2px rgba(0,0,0,.6); }
+.mark-smoke{ position:absolute; left:44%; top:15%; width:10px; height:26px; z-index:3; pointer-events:none; }
+.mark-smoke i{ position:absolute; left:50%; bottom:0; width:15px; height:15px; border-radius:50%;
+  background:radial-gradient(circle, rgba(24,20,30,.95) 42%, rgba(24,20,30,.55) 68%, rgba(24,20,30,0) 78%);
+  animation:smokeRise 3.6s ease-in-out infinite; }
+.mark-smoke i:nth-child(2){ animation-delay:1.2s; width:19px; height:19px; }
+.mark-smoke i:nth-child(3){ animation-delay:2.4s; width:23px; height:23px; }
+@keyframes smokeRise{ 0%{ transform:translate(-50%,0) scale(.6); opacity:0; } 25%{ opacity:.85; } 100%{ transform:translate(-30%,-24px) scale(1.5); opacity:0; } }
+/* PASS J15 (GFX-3): the title's three ways in, as cards. */
+.modecard{ display:flex; flex-direction:column; align-items:stretch; gap:7px; border:1px solid rgba(198,164,94,.38);
+  border-radius:8px; padding:10px 11px; margin-top:8px; background:rgba(255,255,255,.03); }
+.modecard .mc-name{ font-family:'Source Serif 4',serif; font-weight:700; font-size:15px; }
+.modecard .mc-line{ font-size:12px; opacity:.78; line-height:1.4; margin-top:1px; }
+.modecard .btn{ width:100%; }
 
 /* ============ PASS P1: THE PHONE AT THE DESK ============
    A walnut card on the night desk — darker than the guest cards, with a
@@ -1018,3 +1058,32 @@ body{ -webkit-tap-highlight-color:transparent; }
   background:linear-gradient(90deg,#0C0812,#1A1426); }
 .pole::before{ content:''; position:absolute; top:6.5%; left:50%; transform:translateX(-50%); width:36px; height:4px;
   background:#0C0812; border-radius:2px; }
+/* ============ PASS J1: THE FINISHED FOUNDATION ============
+   The shipped-game grammar, cloned from the hotel sims' screens: one
+   section header everywhere, cards on a board instead of rows on a page,
+   and every control in its complete set of states — rest, press, on,
+   disabled, locked, empty. */
+.sec-head{ display:flex; align-items:center; gap:10px; margin:18px 0 4px; }
+.sec-head span{ font-size:11px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#7A5A20; white-space:nowrap; }
+.sec-head::after{ content:''; flex:1; height:1px; background:linear-gradient(90deg, rgba(198,164,94,.55), rgba(198,164,94,0)); }
+.sec-head .sec-note{ font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:none; color:rgba(51,38,26,.55); }
+.paper .shoprow{ background:linear-gradient(180deg, rgba(255,252,244,.65), rgba(255,252,244,.25)); border:1px solid rgba(122,90,32,.22); border-radius:14px; padding:12px 14px; margin-top:10px; }
+.paper .shoprow.locked{ opacity:.62; }
+.locktag{ display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6E5741; border:1px dashed rgba(110,87,65,.5); border-radius:999px; padding:6px 11px; }
+.stamp:disabled, .btn:disabled{ opacity:.38; box-shadow:none; cursor:default; transform:none; }
+.btn:active{ transform:translateY(1px); }
+.staffcard{ background:linear-gradient(180deg, rgba(255,252,244,.65), rgba(255,252,244,.25)); border:1px solid rgba(122,90,32,.22); border-radius:14px; padding:12px 14px; margin-top:10px; }
+.staffcard .staff-top{ display:flex; gap:12px; align-items:flex-start; }
+.staffcard .staff-main{ flex:1; min-width:0; }
+.staffcard .staff-name{ font-family:'Source Serif 4',serif; font-weight:700; font-size:16.5px; color:#33261A; }
+.staffcard .staff-spec{ font-size:12px; color:rgba(51,38,26,.72); margin-top:2px; line-height:1.45; }
+.staffcard .hk-note{ margin-top:8px; }
+.staffcard .stamp{ margin-top:10px; }
+.emptycard{ border:1.5px dashed rgba(110,87,65,.35); border-radius:12px; padding:10px 12px; text-align:center; font-size:12.5px; color:rgba(51,38,26,.6); margin-top:8px; }
+
+/* ============ PASS J7: THE GROUNDS ============ */
+.prestigecard{ background:linear-gradient(180deg, rgba(255,252,244,.65), rgba(255,252,244,.25)); border:1px solid rgba(122,90,32,.22); border-radius:14px; padding:12px 14px; margin:10px 0 4px; }
+/* ============ PASS J2: THE PLANT ============ */
+.condbar{ height:7px; border-radius:99px; background:rgba(51,38,26,.14); margin-top:8px; overflow:hidden; }
+.condbar i{ display:block; height:100%; border-radius:99px; }
+.condword{ font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-top:5px; }
