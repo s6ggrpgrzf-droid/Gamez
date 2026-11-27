@@ -86,6 +86,23 @@ const SIM = (() => {
     { rooms:2, cost:5400, unlock:45, name:'Rooms 13–14 — the back wing' },
     { rooms:2, cost:6200, unlock:60, name:'Rooms 15–16 — the whole court' }
   ];
+  // Combos (after Hot Springs Story): two things that belong together draw
+  // a named crowd. A combo is not a third purchase — it is what a pair you
+  // already own starts doing on its own, so it is derived from the upgrade
+  // list and never stored.
+  const COMBOS = [
+    { id:'pieplunge',     name:'Pie & a Plunge',       a:'piewindow', b:'pool',      seg:{ family:1.15 },
+      line:'Families hear about the pair of them — the word travels fast.' },
+    { id:'trucksupper',   name:'The Trucker’s Supper', a:'truckpad',  b:'vending',   seg:{ trucker:1.12 },
+      line:'A place to park and a hot bite off the wall — the pad fills first.' },
+    { id:'seenhighway',   name:'Seen From the Highway', a:'sign',     b:'billboard', seg:{ tourist:1.15 },
+      line:'The star twice — once on the board, once over the court. Road-trippers turn in.' },
+    { id:'workingweek',   name:'The Working Week',     a:'wifi',      b:'breakfast', seg:{ crew:1.12 },
+      line:'Signal and a hot breakfast: crews book the week, not the night.' },
+    { id:'backroom',      name:'The Back Room',        a:'laundry',   b:'deepclean', minutes:0.85,
+      line:'Washed on site, cleaned with real kit — the morning’s minutes stretch further.' }
+  ];
+  function activeCombos(g){ return COMBOS.filter(c => hasUpgrade(g, c.a) && hasUpgrade(g, c.b)); }
   // Demand events carry their effects with them; calendar notices (inspections,
   // the competitor) are listed alongside so the whole season reads on one page.
   const CALENDAR = [
@@ -96,6 +113,7 @@ const SIM = (() => {
     { id:'inspection1', from:30, to:30, name:'Health Inspection',    kind:'notice', note:'The inspector comes this morning. Last week’s check-in cleanliness decides it: under 45 earns a $400 fine, 80 or better earns a framed certificate.' },
     { id:'storm',     from:36, to:37, name:'Storm Front',            kind:'event', all:0.68, price:1.25, note:'The highway empties — but the stranded who do stop will pay. Knocks at the desk get likelier.' },
     { id:'competitor', from:43, to:84, name:'The Starling Suites Opens', kind:'notice', note:'A chain motel opens across the highway. It takes almost nothing from a 4★ house, about an eighth from a middling one — and a tired house under 3.4 stars bleeds a fifth of the road, then more.' },
+    { id:'suites-soft', from:36, to:36, name:'The Suites Hang Their Sign', kind:'notice', note:'Across the highway the chain takes its first bookings, quiet-like, a week before the grand opening. Half the pull the opening will have — and a tired house feels it first.' },
     { id:'crew',      from:50, to:52, name:'Tinker Crew Contract',   kind:'event', seg:{ crew:1.60 }, note:'A big contract out at the base. Work crews are looking for rooms all week.' },
     { id:'inspection2', from:60, to:60, name:'Health Inspection',    kind:'notice', note:'The inspector returns this morning. Same rules as night 30.' },
     { id:'homegame',  from:64, to:66, name:'Home-Game Weekend',      kind:'event', all:1.08, seg:{ family:1.45, tourist:1.35 }, note:'The game fills the county. Families and tourists pay weekend prices gladly.' },
@@ -160,6 +178,11 @@ const SIM = (() => {
     if (!Array.isArray(g.cleanLog)) g.cleanLog = [];
     if (g.lastInspection === undefined) g.lastInspection = null;
     if (g.bankLetter === undefined) g.bankLetter = null;
+    if (!g.challenges || typeof g.challenges !== 'object') g.challenges = freshChallenges();
+    for (const cid of Object.keys(CHALLENGES)) if (!g.challenges[cid]) g.challenges[cid] = { met:false, stays:0, happy:0, done:false };
+    if (g.challengeNote === undefined) g.challengeNote = null;
+    if (!g.grudges || typeof g.grudges !== 'object') g.grudges = {};
+    if (g.ratePremium === undefined) g.ratePremium = null;
     if (typeof g.season !== 'number' || g.season < 1) g.season = 1;
     if (!Array.isArray(g.calendar) || !g.calendar.length) g.calendar = buildCalendar(g.season, g.seed);
     if (!Array.isArray(g.ledger)) g.ledger = [];
@@ -183,14 +206,15 @@ const SIM = (() => {
   }
   function hasUpgrade(g, id){ return Array.isArray(g.upgrades) && g.upgrades.includes(id); }
   function competitorFactor(g, night){
-    if (night < 43) return 1;
+    if (night < 36) return 1;
     // The Suites take almost nothing from a 4★ house, an eighth from a middling
     // one — and a tired house bleeds: below 3.4 the shiny place takes a fifth,
     // below 3.0 a quarter and more. That gradient is the season's real cliff.
-    if (g.rating >= 4) return 0.96;
-    if (g.rating >= 3.4) return 0.88;
-    if (g.rating >= 3.0) return 0.80;
-    return 0.72;
+    // Pass F6: the drag starts at the soft opening (night 30) at half
+    // strength — success gets expensive before the grand opening lands.
+    const full = g.rating >= 4 ? 0.96 : g.rating >= 3.4 ? 0.88 : g.rating >= 3.0 ? 0.80 : 0.72;
+    if (night < 43) return 1 - (1 - full) * 0.5;
+    return full;
   }
   function housekeepingPool(g, extra){
     return BASE_MINUTES + Math.max(0, g.rooms.length - 8) * 20 + (extra ? EXTRA_MINUTES : 0) + (g.staff && g.staff.hk ? 120 : 0);
@@ -260,6 +284,7 @@ const SIM = (() => {
     let m = CLEAN_LEVELS[levelKey].min;
     if (hasUpgrade(g, 'laundry')) m *= 0.90;
     if (hasUpgrade(g, 'deepclean')) m *= 0.62;
+    if (hasUpgrade(g, 'laundry') && hasUpgrade(g, 'deepclean')) m *= 0.85; // The Back Room combo
     return Math.ceil(m);
   }
   function queueCap(g){ return Math.max(12, g.rooms.length + 4); }
@@ -294,7 +319,8 @@ const SIM = (() => {
     g.upgrades.push(id);
     if (u.amenity) g.amenities = clamp(g.amenities + u.amenity, 0, 110);
     if (id === 'mattress') for (const r of g.rooms) r.condition = clamp(r.condition + 20, 0, 100);
-    return { ok: true, item: u };
+    const lit = COMBOS.find(c => (c.a === id || c.b === id) && hasUpgrade(g, c.a) && hasUpgrade(g, c.b));
+    return { ok: true, item: u, comboLit: lit ? lit.name : null, comboLine: lit ? lit.line : null };
   }
   function purchaseExpansion(g){
     ensureSeason(g);
@@ -317,7 +343,7 @@ const SIM = (() => {
     if (room.state === 'occupied') return { error: 'There is a guest in that room — work waits for checkout.' };
     if (kind === 'repair'){
       if (room.condition >= 100) return { error: 'That room needs nothing.' };
-      if (!payWithCredit(g, 40)) return { error: 'Not enough cash or credit.' };
+      if (!payWithCredit(g, 55)) return { error: 'Not enough cash or credit.' };
       room.condition = clamp(room.condition + 25, 0, 100);
       return { ok: true };
     }
@@ -380,6 +406,11 @@ const SIM = (() => {
     if (segKey === 'tourist' && hasUpgrade(g, 'truckpad')) f *= 1.06;
     if (segKey === 'family' && hasUpgrade(g, 'pets')) f *= 1.08;
     if (hasUpgrade(g, 'billboard')) f *= 1.10;
+    for (const c of activeCombos(g)) if (c.seg && c.seg[segKey]) f *= c.seg[segKey];
+    if (g.challenges){
+      if (g.challenges.marla && g.challenges.marla.done && (segKey === 'family' || segKey === 'tourist')) f *= 1.06;
+      if (g.challenges.june && g.challenges.june.done && segKey === 'tourist') f *= 1.10;
+    }
     if (g.reply && g.reply.night === night) f *= g.reply.mult;
     // The road has moods: some nights the highway is generous, some nights it
     // is not, and no rate card changes that. Rolled once per night (createGame,
@@ -407,15 +438,16 @@ const SIM = (() => {
       version: 2, seed: seed >>> 0, rng: seed >>> 0,
       season: seasonNum, calendar: buildCalendar(seasonNum, seed >>> 0), ledger: [], standing: null,
       night: 1, phase: 'morning', cash: 4250, rating: 3.4,
-      rate: 79, seasonFactor: seasonArc(1), amenities: 60,
+      rate: 79, ratePremium: null, seasonFactor: seasonArc(1), amenities: 60,
       rooms: [], queue: [], processed: 0,
       lastReport: null, lastPlan: null, over: null,
       guestBook: [], reviewWall: [], inquiry: null, incident: null,
+      challenges: freshChallenges(), challengeNote: null, grudges: {},
       credit: 0, upgrades: [], expansions: 0, cleanLog: [],
       lastInspection: null, bankLetter: null, ending: null, handymanTonight: false,
       cashHistory: [4250], quirkDeck: [],
       content: content || null,
-      stats: { nights:0, revenue:0, guests:0, turnedAway:0, reviews:0, checkouts:0,
+      stats: { nights:0, revenue:0, guests:0, turnedAway:0, droveOn:0, reviews:0, checkouts:0,
                roomNights:0, possibleRoomNights:0, fullHouses:0, fiveStarReviews:0, oneStarReviews:0, returners:0,
                incidents:0, incidentsHandled:0, certificates:0, bestNightProfit:null,
                lowestRatingAfter20:null, maxCredit:0, peakCash:4250 }
@@ -479,6 +511,34 @@ const SIM = (() => {
     }
     return g.quirkDeck.pop();
   }
+  // ---------- Pass F2: challenge guests (after Hot Springs Story) ----------
+  // Three named guests keep their own appointments with the desk. Each must
+  // leave happy — four stars or better — twice; then they put the Starlight
+  // somewhere it cannot buy its way into. Their visits are scheduled by the
+  // calendar, never by dice, so the road's stream is undisturbed.
+  const CHALLENGES = {
+    marla: { id:'marla', name:'Marla Quinn', segment:'tourist', trait:'chatty', want:'quiet-back', nights:2, first:9, every:12, goal:2,
+      title:'Judges the county rodeo — the circuit trusts her word.',
+      wantLine:'Sleeps before dawn rides: the quiet room behind the office, and a clean one.',
+      line:'In for the rodeo — she judges at dawn and sleeps like it matters.',
+      unlockLine:'In the programme — the Starlight is printed in the rodeo programme.',
+      note:'Marla Quinn put the Starlight in the rodeo programme before she left — a line of print, and the road reads it. Families and road-trippers will find you a little easier from here on.' },
+    ray: { id:'ray', name:'Ray Delgado', segment:'crew', trait:'road-worn', want:'icebox', nights:3, first:14, every:12, goal:2,
+      title:'Runs the Delgado crew — one long job out at the base.',
+      wantLine:'His men want the cold rooms and an early night; he judges the place by how they sleep.',
+      line:'The crew boss himself, checking the place his men will sleep.',
+      unlockLine:'The standing contract — Ray phones on his rhythm: three rooms, three nights, at the contract rate.',
+      note:'Ray Delgado shook on it at the desk: his crew books with you first — three rooms, three nights at the contract rate, on a fortnight’s rhythm. The phone will ring on his weeks now.' },
+    june: { id:'june', name:'June Calloway', segment:'tourist', trait:'neat', want:'highway-view', nights:2, first:19, every:12, goal:2,
+      title:'Writing the new Route 66 guide — the one the gift shops stock.',
+      wantLine:'She writes what she sees: a view of the highway, and a room kept honest.',
+      line:'A notebook, a camera, and all the time in the world.',
+      unlockLine:'In the guidebook — the Starlight gets its paragraph.',
+      note:'June Calloway left with her notebook full. The new Route 66 guide will carry the Starlight in print — road-trippers will plan their stop around you from here on.' }
+  };
+  const CHALLENGE_NAMES = {}; for (const c of Object.values(CHALLENGES)) CHALLENGE_NAMES[c.name] = c.id;
+  function freshChallenges(){ const o = {}; for (const id of Object.keys(CHALLENGES)) o[id] = { met:false, stays:0, happy:0, done:false }; return o; }
+
   // ---------- Pass E1: finishes chosen at renovate, fittings bought per room ----------
   const FINISHES = {
     quiet:  { name:'Quiet finish', short:'Quiet', blurb:'Thick doors, sealed frames. The room runs quiet (+10 noise), and a quiet room troubles its neighbours half as much.' },
@@ -564,6 +624,15 @@ const SIM = (() => {
   }
   function genInquiry(g){
     g.inquiry = null;
+    // Ray Delgado's standing contract (Pass F2): once the crew boss is won,
+    // his call comes on a fortnight's rhythm — three rooms, three nights at
+    // the contract rate. It is the one call that never misses its week.
+    if (g.challenges && g.challenges.ray && g.challenges.ray.done && g.night >= 33 && (g.night - 33) % 14 === 0){
+      const ratePer = clamp(Math.round(g.rate * 0.85 / 5) * 5, 35, 180);
+      g.inquiry = { seg: 'crew', rooms: 3, nights: 3, ratePer, name: 'Ray Delgado', contract: true,
+        text: `Ray Delgado on the phone — the standing contract. Three rooms, three nights for the crew at $${ratePer} a night, the way you shook on it.` };
+      return;
+    }
     // During the Tinker contract, the phone mostly rings with crews.
     const ev = activeEvent(g, g.night);
     if (ev && ev.id === 'crew' && rnd(g) < 0.62){ g.inquiry = buildInquiry(g, 'crew'); return; }
@@ -593,6 +662,35 @@ const SIM = (() => {
     g.incident = null;
     ensureSeason(g);
     const occRooms = g.rooms.filter(r => r.state === 'occupied');
+    // Pass F5: trouble remembers. A knock the desk earned comes before the
+    // road's ordinary luck — a trouble ridden out on a guest who has come
+    // back, still unfixed, knocks again and says so.
+    for (const room of occRooms){
+      const guest = room.guest;
+      if (guest.returning && g.grudges[guest.name]){
+        const kind = g.grudges[guest.name];
+        delete g.grudges[guest.name];
+        g.incident = { roomId: room.id, kind, resolved: null, variant: 1,
+          cause: 'The same trouble as last time — ridden out at this desk, and never fixed. It kept.' };
+        g.stats.incidents++;
+        return;
+      }
+    }
+    // And a deal stay, into its run, can turn rowdy: the knock lands on the
+    // room next door, once a stay, and only if there is a next door to hear it.
+    for (const room of occRooms){
+      const guest = room.guest;
+      if (!guest.dealStay || guest.rowdyDone || guest.nightsLeft >= guest.dealNights) continue;
+      const neighbour = occRooms.find(r => Math.abs(r.id - room.id) === 1 && r.guest !== guest);
+      if (!neighbour) continue;
+      guest.rowdyDone = true;
+      if (rnd(g) < 0.5){
+        g.incident = { roomId: neighbour.id, kind: 'noise', resolved: null, variant: 1,
+          cause: 'Your deal guests, into their stay — this is the room next door, at the desk about it.' };
+        g.stats.incidents++;
+        return;
+      }
+    }
     const occ = occRooms.length;
     const ev = activeEvent(g, g.night);
     for (const room of occRooms){
@@ -644,6 +742,10 @@ const SIM = (() => {
     if (g.staff && g.staff.clerk && guest.recovery > 0) guest.recovery += 4;
     inc.resolved = action;
     ensureSeason(g); g.stats.incidentsHandled++;
+    // Pass F5: a trouble ridden out is remembered by name; a trouble seen
+    // to — by any road — is forgiven.
+    if (action === 'ride') g.grudges[guest.name] = inc.kind;
+    else if (g.grudges[guest.name] === inc.kind) delete g.grudges[guest.name];
     return { ok: true };
   }
 
@@ -685,6 +787,13 @@ const SIM = (() => {
       if (lvl.dirt !== null){ room.dirt = lvl.dirt; room.state = 'ready'; }
     }
     g.rate = clamp(Math.round(plan.rate), 35, 180);
+    // Pass F3: the premium card. It exists only while a renovated room does;
+    // the first morning it can be set, it opens at the standard card + $25.
+    if (g.rooms.some(r => r.tier === 'renovated')){
+      if (plan.premiumRate != null) g.ratePremium = clamp(Math.round(plan.premiumRate), 35, 220);
+      else if (g.ratePremium == null) g.ratePremium = clamp(g.rate + 25, 35, 220);
+    } else g.ratePremium = null;
+    g.droveOn = 0;
     g.handymanTonight = !!plan.handyman;
     g.lastPlan = { minutesUsed: used, extraCleaner: !!plan.extraCleaner, handyman: !!plan.handyman };
     g.phase = 'arrivals';
@@ -731,12 +840,24 @@ const SIM = (() => {
     const usedNames = new Set();
     for (const a of g.queue){
       if (rnd(g) >= 0.16) continue;
-      const pool = g.guestBook.filter(e => e.segment === a.segment && e.lastStars >= 3 && !usedNames.has(e.name));
+      const pool = g.guestBook.filter(e => e.segment === a.segment && e.lastStars >= 3 && !usedNames.has(e.name) && !CHALLENGE_NAMES[e.name]);
       if (!pool.length) continue;
       const entry = pick(g, pool);
       usedNames.add(entry.name);
       a.name = entry.name; a.returning = true; a.visits = entry.visits + 1;
       if (entry.trait) a.trait = entry.trait;
+    }
+    // Some walk-ins name a price (Pass F4): they will take a room at their
+    // ask, or meet the desk's one counter — or they drive on. The floor
+    // under their ask is theirs to know and the desk's to guess.
+    if (g.rate >= 60){
+      for (const a of g.queue){
+        if (a.deal) continue;
+        if (rnd(g) >= 0.22) continue;
+        const ask = Math.round(g.rate * (0.62 + rnd(g) * 0.13) / 5) * 5;
+        const floor = Math.round(g.rate * (0.78 + rnd(g) * 0.10) / 5) * 5;
+        a.haggle = { ask, floor: Math.max(floor, ask + 5) };
+      }
     }
     // shuffle the queue so segments interleave
     for (let i = g.queue.length - 1; i > 0; i--){
@@ -744,6 +865,23 @@ const SIM = (() => {
       const t = g.queue[i]; g.queue[i] = g.queue[j]; g.queue[j] = t;
     }
     if (g.queue.length > queueCap(g)) g.queue.length = queueCap(g);
+    // Challenge guests keep their own appointments (Pass F2): they are dealt
+    // by the calendar after the shuffle, with no dice rolled, and they stand
+    // at the front of the line — they phoned ahead, in their way.
+    ensureSeason(g);
+    for (const c of Object.values(CHALLENGES)){
+      const st = g.challenges[c.id];
+      if (!st || st.done) continue;
+      if (g.night < c.first || (g.night - c.first) % c.every !== 0) continue;
+      st.met = true;
+      // They pay the going rate for their kind, not the card: a named guest
+      // who phones ahead is not a walk-in to be skimmed, and a rate-gouger
+      // earns nothing extra from their loyalty.
+      const fairRate = clamp(Math.round(SEGMENTS[c.segment].ref * repMult(g.rating) / 5) * 5, 35, 180);
+      g.queue.unshift({ id: 900 + c.first, segment: c.segment, name: c.name, nights: c.nights,
+        ratePaid: fairRate, trait: c.trait, want: c.want, line: c.line, deal: null,
+        challenge: c.id, returning: st.stays > 0, visits: st.stays + 1 });
+    }
   }
 
   function assignRoom(g, arrivalId, roomId){
@@ -754,18 +892,55 @@ const SIM = (() => {
     // New-wing and renovated rooms let over the card rate — the guest agreed to
     // the card, and the room itself earns the difference. Phone bookings keep
     // the rate they were promised.
-    const premium = a.inquiry ? 0 : (room.tier === 'renovated' ? 7 : 0) + (room.id > 8 ? 8 : 0);
+    // Pass F3: a renovated room lets over the premium card — its own price,
+    // set at the desk in the morning, replacing the old flat $7 (and the
+    // new-wing $8: the premium card is the whole price for such a room).
+    // Phone bookings and named guests keep the rate they were promised.
+    const premium = (a.inquiry || a.challenge) ? 0
+      : (room.tier === 'renovated' ? (g.ratePremium != null ? g.ratePremium - g.rate : 7) : 0)
+      + (room.id > 8 && room.tier !== 'renovated' ? 8 : 0);
     const deal = a.dealTaken && a.deal ? a.deal : null;
     room.guest = { name: a.name, segment: a.segment, nightsLeft: deal ? deal.nights : a.nights, ratePaid: deal ? deal.ratePer : a.ratePaid + premium,
                    dirtAtCheckIn: room.dirt, waitScore: clamp(100 - g.processed * 11, 35, 100),
                    trait: a.trait || null, returning: !!a.returning, visits: a.visits || 0,
                    // A regular who phoned for their room: getting it starts the
                    // stay warm (+8); any other door starts it slightly owed (−4).
-                   recovery: a.wantRoom ? (a.wantRoom === room.id ? 8 : -4) : 0 };
+                   recovery: a.wantRoom ? (a.wantRoom === room.id ? 8 : -4) : 0,
+                   challenge: a.challenge || null,
+                   dealStay: !!deal, dealNights: deal ? deal.nights : 0, rowdyDone: false };
     g.queue = g.queue.filter(q => q.id !== arrivalId);
     g.processed++; g.stats.guests++;
     if (a.returning){ ensureSeason(g); g.stats.returners++; }
     return { ok: true };
+  }
+
+  // Pass F4: the desk answers a named price. Take it, counter once at the
+  // midpoint, or let them drive on — and the register remembers the ones
+  // who drove.
+  function answerHaggle(g, arrivalId, action){
+    const a = g.queue.find(q => q.id === arrivalId);
+    if (!a || !a.haggle) return { error: 'Nobody there.' };
+    if (action === 'take'){
+      a.ratePaid = a.haggle.ask;
+      a.settled = a.haggle.ask;
+      a.haggle = null;
+      return { ok: true, outcome: 'settled', price: a.settled };
+    }
+    if (action === 'counter'){
+      const price = Math.round((a.haggle.ask + a.ratePaid) / 2 / 5) * 5;
+      if (price <= a.haggle.floor){
+        a.ratePaid = price;
+        a.settled = price;
+        a.haggle = null;
+        return { ok: true, outcome: 'settled', price };
+      }
+    }
+    // A refused counter, or the desk passing outright: they drive on.
+    g.queue = g.queue.filter(q => q.id !== arrivalId);
+    g.processed++;
+    g.stats.droveOn = (g.stats.droveOn || 0) + 1;
+    g.droveOn = (g.droveOn || 0) + 1;
+    return { ok: true, outcome: 'droveon' };
   }
 
   function turnAway(g, arrivalId){
@@ -955,6 +1130,21 @@ const SIM = (() => {
       if (guest.returning && sc.stars <= 2){ if (bi >= 0) g.guestBook.splice(bi, 1); }
       else if (bi >= 0){ const e = g.guestBook[bi]; e.visits++; e.lastStars = sc.stars; e.lastScore = Math.round(sc.score); e.lastNight = g.night; e.lastRoom = room.id; if (guest.trait) e.trait = guest.trait; }
       else g.guestBook.push({ name: guest.name, segment: guest.segment, visits: 1, lastStars: sc.stars, lastScore: Math.round(sc.score), lastNight: g.night, lastRoom: room.id, trait: guest.trait || null });
+      // Challenge guests (Pass F2): a happy stay — four stars or better —
+      // is a kept promise. Two of them, and their business with the desk
+      // is done: the unlock is theirs to give, and it is given for good.
+      if (guest.challenge){
+        ensureSeason(g);
+        const cst = g.challenges[guest.challenge];
+        const cc = CHALLENGES[guest.challenge];
+        if (cst && cc && !cst.done){
+          cst.stays++;
+          if (sc.stars >= 4){
+            cst.happy++;
+            if (cst.happy >= cc.goal){ cst.done = true; g.challengeNote = { night: g.night + 1, text: cc.note }; }
+          }
+        }
+      }
       g.cleanLog.push({ night: g.night, clean: 100 - guest.dirtAtCheckIn });
       room.condition = clamp(Math.round((room.condition - wear * (room.finish === 'plush' ? 0.5 : 1)) * 10) / 10, 35, 100);
       room.dirt = clamp(Math.round(45 + rnd(g) * 35 + s.dirtMod), 30, 95);
@@ -973,7 +1163,7 @@ const SIM = (() => {
       supplies: roundMoney(1.4 * occ)
     };
     if (hasUpgrade(g, 'breakfast')) costs.breakfast = roundMoney(3.8 * occ);
-    if (g.handymanTonight) costs.handyman = 60;
+    if (g.handymanTonight) costs.handyman = 80;
     const staffWage = (g.staff && g.staff.hk ? 38 : 0) + (g.staff && g.staff.clerk ? 30 : 0);
     if (staffWage) costs.staff = staffWage;
     // Insurance and the county are owed whether a single door sold or not —
@@ -1000,7 +1190,7 @@ const SIM = (() => {
 
     const report = { night: g.night, dow: DOW_NAMES[dowOf(g.night)], revenue, roomRevenue, vendingRevenue, costs, costTotal,
                      profit, cashAfter: g.cash, occupied: occ, checkouts,
-                     ratingAfter: g.rating, turnedAwayTotal: g.stats.turnedAway,
+                     ratingAfter: g.rating, turnedAwayTotal: g.stats.turnedAway, droveOn: g.droveOn || 0,
                      creditDrawn, creditAfter: g.credit };
     g.lastReport = report;
     // Past $4,000 on the line, the bank writes — once.
@@ -1113,10 +1303,10 @@ const SIM = (() => {
            startNextSeason, buildCalendar, genInquiry, buildTonight,
            purchase, purchaseExpansion, roomWork, adjustCredit, ensureSeason, hasUpgrade,
            SEGMENTS, SEG_KEYS, CLEAN_LEVELS, DOW_NAMES, dowOf, repMult,
-           TRAITS, INCIDENTS, UPGRADES, EXPANSIONS, CALENDAR,
+           TRAITS, INCIDENTS, UPGRADES, EXPANSIONS, CALENDAR, COMBOS, activeCombos, CHALLENGES,
            activeEvent, calendarEntry, nextCalendar, seasonArc, competitorFactor, segmentPool, bookProb,
            QUIRKS, FITTINGS, FINISHES, matchScore, scoreStay, SEGMENTS, INCIDENTS,
-           setStaff, replyToReview, answerDeal, REPLIES,
+           setStaff, replyToReview, answerDeal, answerHaggle, REPLIES,
            housekeepingPool, cleanMinutes, queueCap,
            SEASON_NIGHTS, CREDIT_LIMIT,
            BASE_MINUTES, EXTRA_MINUTES, EXTRA_COST, MORTGAGE };
