@@ -10,7 +10,7 @@ let renovPick = null, fitPick = null;
 let lastViewKey = null;
 
 /* ---------- sound: a small synthesized evening, off until asked ---------- */
-const audio = { ctx: null, master: null, music: null, on: (() => { try { return localStorage.getItem('starlight_sound') === 'on'; } catch(e){ return false; } })() };
+const audio = { ctx: null, master: null, music: null, ambience: null, on: (() => { try { return localStorage.getItem('starlight_sound') === 'on'; } catch(e){ return false; } })() };
 function ensureAudio(){
   try {
     if (!audio.ctx){
@@ -65,6 +65,57 @@ function sfx(name){
     }
   } catch(e){}
 }
+// Pass H4: the dusk loop's place layer — a distant highway under the
+// chords. A looped wash of low-filtered noise breathes on a slow cycle,
+// and every twenty-odd seconds a car passes far off: a band swell that
+// rises and falls away. It starts and stops with the music, on the same
+// gesture-gated, opt-in sound the game already keeps.
+function startAmbience(){
+  if (!audio.ctx || audio.ambience) return;
+  const ctx = audio.ctx;
+  const g = ctx.createGain(); g.gain.value = 0; g.connect(audio.master);
+  g.gain.linearRampToValueAtTime(0.016, ctx.currentTime + 3);
+  const len = 2 * ctx.sampleRate;
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++){ const w = Math.random() * 2 - 1; last = (last + 0.03 * w) / 1.03; d[i] = last * 3.2; } // brownish wash
+  const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+  const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 420;
+  src.connect(fl); fl.connect(g); src.start();
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 1 / 17;
+  const lfoG = ctx.createGain(); lfoG.gain.value = 0.005;
+  lfo.connect(lfoG); lfoG.connect(g.gain); lfo.start();
+  const passCar = () => {
+    if (!audio.ambience) return;
+    try {
+      const t = ctx.currentTime;
+      const cs = ctx.createBufferSource(); cs.buffer = buf; cs.loop = true;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
+      bp.frequency.setValueAtTime(280, t);
+      bp.frequency.linearRampToValueAtTime(880, t + 1.7);
+      bp.frequency.linearRampToValueAtTime(240, t + 3.6);
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0, t);
+      cg.gain.linearRampToValueAtTime(0.035, t + 1.6);
+      cg.gain.linearRampToValueAtTime(0, t + 3.8);
+      cs.connect(bp); bp.connect(cg); cg.connect(audio.master);
+      cs.start(t); cs.stop(t + 4);
+    } catch(e){}
+    audio.ambience.iv = setTimeout(passCar, 17000 + Math.random() * 16000);
+  };
+  audio.ambience = { gain: g, src, lfo, iv: null };
+  audio.ambience.iv = setTimeout(passCar, 6000 + Math.random() * 8000);
+}
+function stopAmbience(){
+  if (!audio.ambience) return;
+  const a = audio.ambience; audio.ambience = null;
+  if (a.iv) clearTimeout(a.iv);
+  try {
+    a.gain.gain.linearRampToValueAtTime(0, audio.ctx.currentTime + 0.4);
+    setTimeout(() => { try { a.src.stop(); a.lfo.stop(); a.gain.disconnect(); } catch(e){} }, 650);
+  } catch(e){}
+}
 function startMusic(){
   if (!audio.ctx || audio.music) return;
   const ctx = audio.ctx;
@@ -89,8 +140,10 @@ function startMusic(){
   audio.music = { gain: g, iv: null };
   playChord();
   audio.music.iv = setInterval(playChord, 4400);
+  startAmbience();
 }
 function stopMusic(){
+  stopAmbience();
   if (!audio.music) return;
   clearInterval(audio.music.iv);
   const m = audio.music; audio.music = null;
@@ -416,7 +469,7 @@ function reportHTML(){
     <div class="commentcard ${x.review.stars <= 2 ? 'bad' : ''}">
       <div class="cc-head"><span class="cc-stars cst ${x.review.stars >= 4 ? 'hi' : x.review.stars === 3 ? 'mid' : 'lo'}">${stars(x.review.stars)}</span> ${esc(x.name)}</div>
       <blockquote>“${esc(x.review.text)}”</blockquote>
-      ${myReply && myReply.idx === ci ? `<div class="replyline">Your reply — “${esc(myReply.text)}”</div>`
+      ${myReply && myReply.idx === ci ? `<div class="replyline">Your reply — “${esc(myReply.text)}” ${myReply.mult >= 1.08 ? 'That one will travel well.' : myReply.mult >= 1 ? 'That will travel fine.' : 'That may travel badly.'}</div>`
         : (!myReply && G.phase === 'morning' && !G.over) ? `<div class="replyrow"><span class="replylbl">Reply — one a morning:</span><button class="stamp sm" data-reply="${ci}:gracious">Gracious</button><button class="stamp sm" data-reply="${ci}:funny">Funny</button><button class="stamp sm" data-reply="${ci}:firm">Firm</button></div>` : ''}
     </div>`).join('');
   return `<div class="paper register">
@@ -426,6 +479,8 @@ function reportHTML(){
     <div class="reg-sub">${rep.occupied}/${G.rooms.length} rooms filled · rating now ${rep.ratingAfter.toFixed(1)}★${rep.droveOn ? ` · ${rep.droveOn} drove on over the price` : ''}</div>
     ${rep.phoneLine ? `<div class="reg-sub">${esc(rep.phoneLine)}</div>` : ''}
     ${rep.blockLine ? `<div class="reg-sub">${esc(rep.blockLine)}</div>` : ''}
+    ${rep.regularLine ? `<div class="reg-sub">${esc(rep.regularLine)}</div>` : ''}
+    ${rep.squeezeLine ? `<div class="reg-sub">${esc(rep.squeezeLine)}</div>` : ''}
     ${row('Room revenue', rep.revenue - (rep.phoneDeposit || 0))}
     ${rep.phoneDeposit ? row('Phone deposit — the location scout', rep.phoneDeposit) : ''}
     ${row('Mortgage', -c.mortgage, 'out')}
@@ -486,6 +541,9 @@ function renderMorning(){
       <div class="season-line">${cal ? `<b>${esc(cal.name)}</b> — ${esc(cal.note)}` : 'A clear stretch of highway. Nothing on the calendar but the weather.'}</div>
       ${nxt ? `<div class="season-next">Coming night ${nxt.from}${nxt.to > nxt.from ? '–' + nxt.to : ''}: ${esc(nxt.name)} — in ${nxt.from - G.night} night${nxt.from - G.night === 1 ? '' : 's'}.</div>` : ''}
       ${(G.blocks || []).map(b => `<div class="season-next">On the books: the film crew holds <b>${b.rooms} rooms on night ${b.night}</b> at $${b.rate} a door — filled from the ready rooms when the desk opens.${b.night === G.night ? ' That is tonight: clean for them first.' : ''}</div>`).join('')}
+      ${!G.tonight && !G.regularGone && G.night >= 28 && (G.night - 1) % 7 === 6 ? `<div class="season-next">Tomorrow night is a Friday: <b>Earl Dobbins</b> drives his route and Room 4 is his. Keep it empty and cleaned, and he'll keep coming.</div>` : ''}
+      ${!G.tonight && !G.regularGone && G.night >= 29 && (G.night - 1) % 7 === 0 ? `<div class="season-next">Tonight: <b>Earl Dobbins</b>, his Friday room — <b>Room 4</b>. Leave it empty and ready at the desk and he takes it at the card, no fuss.${G.regular && G.regular.kept ? ` He has kept <b>${G.regular.kept} ${G.regular.kept === 1 ? 'Friday' : 'Fridays'}</b> so far.` : ''}${G.regular && G.regular.streakMiss === 1 ? ` <b>He drove on last Friday — one more dark Friday and he takes his route elsewhere.</b>` : ''}</div>` : ''}
+      ${!G.tonight && (G.credit >= 6000 || G.cash < 0) ? `<div class="season-next"><b>The squeeze is on.</b> The line stands at $${G.credit.toLocaleString('en-US')} of $8,000${G.cash < 0 ? ', and the cash is under water' : ''}. The phone will ring more; the deals on the desk will run meaner. Claw the line back under $6,000 and it eases.</div>` : ''}
       <div class="season-goal">Season Saved asks <b>$10,000 and 3.5★</b> by Night 84. ${G.credit > 0 ? `Credit line: <b>${money(G.credit)}</b> of $8,000 drawn.` : 'The $8,000 credit line sits untouched in its envelope.'}</div>
       <div class="deskrow" style="margin-top:10px"><button class="btn btn-ghost dk" id="btn-calendar">The season calendar</button><button class="btn btn-ghost dk" id="btn-catalog">Supply catalog &amp; bank</button></div>
     </div>`;
@@ -743,6 +801,12 @@ function renderCatalog(){
         <button class="stamp ${G.staff && G.staff.hk ? 'on' : ''}" data-staff="hk">${G.staff && G.staff.hk ? 'Housekeeper — on the roster · let go' : 'Hire the housekeeper — $38/night'}</button>
         <button class="stamp ${G.staff && G.staff.clerk ? 'on' : ''}" data-staff="clerk">${G.staff && G.staff.clerk ? 'Night clerk — on the roster · let go' : 'Hire the night clerk — $30/night'}</button>
       </div>
+      <div class="hk-note">${G.rooms.length <= 8
+        ? 'Honest word on the housekeeper: at eight doors her minutes are comfort, not need — the morning pool covers the work. Buy her with profit, not hope; she earns her keep once the wings grow.'
+        : G.rooms.length <= 12
+        ? 'Honest word on the housekeeper: the wings are growing into her minutes — she earns her keep on the heavy mornings now.'
+        : 'Honest word on the housekeeper: at this size, her minutes earn their keep most nights.'}</div>
+      <div class="hk-note">Honest word on the clerk: he earns his keep on full, rowdy nights, when the knocks come. On quiet ones he is a lamp left burning — company, at $30 a night.</div>
       <div class="reg-title" id="bank-anchor" style="margin-top:16px">The bank envelope</div>
       <div class="stamps">
         <button class="stamp" data-credit="500">Draw $500</button>
