@@ -73,7 +73,12 @@ const SIM = (() => {
     { id:'deepclean', name:'Deep-clean equipment',   cost:1100, amenity:0,  blurb:'A real extractor and a cart that fits the walkway. Cleaning minutes cost about a third less.' },
     { id:'ac',        name:'AC overhaul',            cost:1400, amenity:10, blurb:'Every unit serviced and sealed. Amenities +10, heat waves stop hurting, rooms wear slower.' },
     { id:'breakfast', name:'Breakfast nook',         cost:1500, amenity:12, blurb:'Coffee, toast and a place to sit. Amenities +12; families forgive $8 more on the rate. Costs $3.80 a room a night to run.' },
-    { id:'pool',      name:'Pool resurface',         cost:2100, amenity:12, blurb:'New plaster, honest blue. Amenities +12, and families look for you first in the high weeks.' }
+    { id:'pool',      name:'Pool resurface',         cost:2100, amenity:12, blurb:'New plaster, honest blue. Amenities +12, and families look for you first in the high weeks.' },
+    { id:'truckpad',  name:'Truck pad & EV chargers', cost:900,  amenity:0,  blurb:'A gravel pad out back and two chargers on the wall. Truckers find you first (+15%), and road-trippers in EVs too (+6%).' },
+    { id:'pets',      name:'Pet-friendly & dog run', cost:700,  amenity:4,  blurb:'A fenced run by the far wing and a welcome for dogs. Amenities +4, families travelling with dogs look for you (+8%) — and about one room in five pays the $12 pet fee. Dogs do knock, though.' },
+    { id:'piewindow', name:'Pie & coffee window',   cost:1100, amenity:6,  blurb:'A hatch in the office wall: coffee at dawn, pie till late. Amenities +6, about $2.60 a room a night over the counter, and families forgive $5 more on the rate.' },
+    { id:'solar',     name:'Solar panels',          cost:2600, amenity:0,  blurb:'Panels over the office and the east wing. The meter runs backward — utilities fall by more than half, every night, sold or empty.' },
+    { id:'billboard', name:'Highway billboard (leased)', cost:250, amenity:0, blurb:'Your star, forty feet tall, two miles out. Every pool +10% — but the lease is $13 a night, every night, whether they come or not. It runs to the end of the season.' }
   ];
   const EXPANSIONS = [
     { rooms:2, cost:3600, unlock:15, name:'Rooms 9–10 — the east court' },
@@ -163,7 +168,7 @@ const SIM = (() => {
     if (g.ending === undefined) g.ending = null;
     if (typeof g.handymanTonight !== 'boolean') g.handymanTonight = false;
     const s = g.stats;
-    const defs = { roomNights:0, possibleRoomNights:0, fullHouses:0, fiveStarReviews:0, oneStarReviews:0, returners:0,
+    const defs = { guests:0, reviews:0, checkouts:0, roomNights:0, possibleRoomNights:0, fullHouses:0, fiveStarReviews:0, oneStarReviews:0, returners:0,
                    incidents:0, incidentsHandled:0, certificates:0, bestNightProfit:null,
                    lowestRatingAfter20:null, maxCredit:g.credit || 0 };
     for (const k of Object.keys(defs)) if (s[k] === undefined) s[k] = defs[k];
@@ -172,6 +177,8 @@ const SIM = (() => {
     for (const r of g.rooms) if (!r.quirk) r.quirk = drawQuirk(g);
     if (typeof s.peakCash !== 'number') s.peakCash = g.cash;
     for (const r of g.rooms) if (!r.tier) r.tier = 'standard';
+    for (const r of g.rooms){ if (!Array.isArray(r.fittings)) r.fittings = []; if (r.finish === undefined) r.finish = null; if (r.tier === 'renovated' && !r.finish) r.finish = 'quiet'; }
+    if (!g.staff) g.staff = { hk: false, clerk: false };
     return g;
   }
   function hasUpgrade(g, id){ return Array.isArray(g.upgrades) && g.upgrades.includes(id); }
@@ -186,7 +193,68 @@ const SIM = (() => {
     return 0.72;
   }
   function housekeepingPool(g, extra){
-    return BASE_MINUTES + Math.max(0, g.rooms.length - 8) * 20 + (extra ? EXTRA_MINUTES : 0);
+    return BASE_MINUTES + Math.max(0, g.rooms.length - 8) * 20 + (extra ? EXTRA_MINUTES : 0) + (g.staff && g.staff.hk ? 120 : 0);
+  }
+  // ---------- Pass E3: staff, review replies, weekly-rate deals ----------
+  function setStaff(g, role, on){
+    ensureSeason(g);
+    if (g.phase !== 'morning' || g.over) return { error: 'Hiring happens in the morning.' };
+    if (role !== 'hk' && role !== 'clerk') return { error: 'No such job.' };
+    if (!g.staff) g.staff = { hk: false, clerk: false };
+    g.staff[role] = !!on;
+    return { ok: true, staff: g.staff };
+  }
+  const REPLIES = {
+    gracious: { good: 'Thank you for saying so — and for staying with us. The star will be lit when you pass this way again.',
+                mid: 'Thank you for the honest word. We read every one, and the morning crew hears about it.',
+                bad: 'You are right to say it plainly, and we are sorry. It has been seen to, and the coffee is on us if you pass again.' },
+    funny:    { good: 'Careful — praise like that and the neon will get a swelled head.',
+                mid: 'Fair. We are a work in progress with excellent parking.',
+                bad: 'We would like to blame the bedspread, but the bedspread has retained a lawyer. Sorry — truly.' },
+    firm:     { good: 'Glad the room suited. It was ready because the crew takes pride in it.',
+                mid: 'Noted. We keep the place honest and the rate fair, and we will keep at it.',
+                bad: 'We have read this twice. The room has been seen to. That is all we will say, and it is true.' }
+  };
+  function replyMult(tone, stars){
+    if (stars >= 4) return tone === 'funny' ? 1.05 : tone === 'gracious' ? 1.03 : 0.97;
+    if (stars === 3) return tone === 'gracious' ? 1.03 : tone === 'funny' ? 1.02 : 1.01;
+    return tone === 'firm' ? 1.04 : tone === 'gracious' ? 1.02 : 0.96;
+  }
+  function replyToReview(g, idx, tone){
+    ensureSeason(g);
+    if (g.phase !== 'morning' || g.over) return { error: 'Replies are written in the morning.' };
+    if (!REPLIES[tone]) return { error: 'No such tone.' };
+    if (g.reply && g.reply.night === g.night) return { error: 'One reply a morning — the road has read it.' };
+    const rep = g.lastReport;
+    if (!rep || rep.night !== g.night - 1) return { error: 'No fresh cards to answer.' };
+    const co = rep.checkouts[idx];
+    if (!co || !co.review) return { error: 'That card has no review on it.' };
+    const stars = co.review.stars;
+    const bucket = stars >= 4 ? 'good' : stars === 3 ? 'mid' : 'bad';
+    g.reply = { night: g.night, idx, tone, stars, mult: replyMult(tone, stars), text: REPLIES[tone][bucket] };
+    if (Array.isArray(g.reviewWall)){
+      const w = g.reviewWall.find(e => e.night === rep.night && e.name === co.name);
+      if (w) w.reply = { tone, text: g.reply.text };
+    }
+    return { ok: true, reply: g.reply };
+  }
+  function dealFor(g, segKey, nights, rate, salt){
+    if (segKey !== 'crew' && segKey !== 'longstay') return null;
+    // The deal roll runs on its own hash stream, never the season's rng —
+    // an unanswered offer shouldn't reshuffle the whole summer's luck.
+    let h = ((g.seed >>> 0) * 2654435761 + g.night * 40503 + (salt || 0) * 977 + 17) >>> 0;
+    const draw = () => { h = (h * 1664525 + 1013904223) >>> 0; return h / 4294967296; };
+    if (draw() < 0.45) return null;
+    const ratePer = clamp(Math.round(rate * 0.8 / 5) * 5, 30, 200);
+    if (ratePer >= rate) return null;
+    return { nights: nights + 2 + Math.floor(draw() * 3), ratePer };
+  }
+  function answerDeal(g, arrivalId, accept){
+    const a = g.queue.find(q => q.id === arrivalId);
+    if (!a || !a.deal) return { error: 'No deal on the table.' };
+    if (a.dealTaken || a.dealDeclined) return { error: 'That deal is settled.' };
+    if (accept) a.dealTaken = true; else a.dealDeclined = true;
+    return { ok: true };
   }
   function cleanMinutes(g, levelKey){
     let m = CLEAN_LEVELS[levelKey].min;
@@ -236,16 +304,17 @@ const SIM = (() => {
     if (g.night < ex.unlock) return { error: `The crew can start on night ${ex.unlock}.` };
     if (!payWithCredit(g, ex.cost)) return { error: 'Not enough cash or credit to build.' };
     for (let i = 0; i < ex.rooms; i++){
-      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', quirk: drawQuirk(g), guest: null });
+      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null });
     }
     g.expansions++;
     return { ok: true, expansion: ex };
   }
-  function roomWork(g, kind, roomId){
+  function roomWork(g, kind, roomId, extra){
     ensureSeason(g);
     if (g.phase !== 'morning' || g.over) return { error: 'Room work happens in the morning.' };
     const room = g.rooms.find(r => r.id === roomId);
     if (!room) return { error: 'No such room.' };
+    if (room.state === 'occupied') return { error: 'There is a guest in that room — work waits for checkout.' };
     if (kind === 'repair'){
       if (room.condition >= 100) return { error: 'That room needs nothing.' };
       if (!payWithCredit(g, 40)) return { error: 'Not enough cash or credit.' };
@@ -254,8 +323,19 @@ const SIM = (() => {
     }
     if (kind === 'renovate'){
       if (room.tier === 'renovated') return { error: 'Already renovated.' };
+      const finish = FINISHES[extra] ? extra : 'quiet';
       if (!payWithCredit(g, 950)) return { error: 'Not enough cash or credit.' };
-      room.condition = 100; room.tier = 'renovated';
+      room.condition = 100; room.tier = 'renovated'; room.finish = finish;
+      return { ok: true, finish };
+    }
+    if (kind === 'fitting'){
+      const f = FITTINGS[extra];
+      if (!f) return { error: 'No such fitting.' };
+      if (!Array.isArray(room.fittings)) room.fittings = [];
+      if (room.fittings.includes(extra)) return { error: 'Already fitted.' };
+      if (room.fittings.length >= 2) return { error: 'Two fittings to a room — the walls are only so big.' };
+      if (!payWithCredit(g, f.cost)) return { error: 'Not enough cash or credit.' };
+      room.fittings.push(extra);
       return { ok: true };
     }
     return { error: 'Unknown work.' };
@@ -296,6 +376,11 @@ const SIM = (() => {
     if (hasUpgrade(g, 'website')) f *= 1.08;
     if (hasUpgrade(g, 'sign')) f *= 1.12;
     if (segKey === 'family' && hasUpgrade(g, 'pool') && seasonArc(night) >= 1) f *= 1.22;
+    if (segKey === 'trucker' && hasUpgrade(g, 'truckpad')) f *= 1.15;
+    if (segKey === 'tourist' && hasUpgrade(g, 'truckpad')) f *= 1.06;
+    if (segKey === 'family' && hasUpgrade(g, 'pets')) f *= 1.08;
+    if (hasUpgrade(g, 'billboard')) f *= 1.10;
+    if (g.reply && g.reply.night === night) f *= g.reply.mult;
     // The road has moods: some nights the highway is generous, some nights it
     // is not, and no rate card changes that. Rolled once per night (createGame,
     // resolveNight); the forecast reports a hint, never the number.
@@ -307,6 +392,7 @@ const SIM = (() => {
     const s = SEGMENTS[segKey];
     let ref = s.ref;
     if (segKey === 'family' && hasUpgrade(g, 'breakfast')) ref += 10;
+    if (segKey === 'family' && hasUpgrade(g, 'piewindow')) ref += 5;
     const ev = activeEvent(g, g.night);
     const fair = ref * repMult(g.rating) * (ev && ev.price ? ev.price : 1);
     // Asymmetric: demand falls off much faster above the fair price than it
@@ -336,7 +422,7 @@ const SIM = (() => {
     };
     const conds = [88, 82, 79, 76, 74, 71, 68, 65];
     for (let i = 0; i < 8; i++){
-      g.rooms.push({ id: i + 1, state: 'ready', dirt: ri(g, 0, 6), condition: conds[i], tier: 'standard', quirk: drawQuirk(g), guest: null });
+      g.rooms.push({ id: i + 1, state: 'ready', dirt: ri(g, 0, 6), condition: conds[i], tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null });
     }
     g.roadMood = rollRoadMood(g);
     return g;
@@ -393,16 +479,28 @@ const SIM = (() => {
     }
     return g.quirkDeck.pop();
   }
+  // ---------- Pass E1: finishes chosen at renovate, fittings bought per room ----------
+  const FINISHES = {
+    quiet:  { name:'Quiet finish', short:'Quiet', blurb:'Thick doors, sealed frames. The room runs quiet (+10 noise), and a quiet room troubles its neighbours half as much.' },
+    plush:  { name:'Plush finish', short:'Plush', blurb:'Deep carpet, heavy curtains, the good mattress. Guests judge the room 8 kinder, and it wears at half the usual rate.' },
+    bright: { name:'Bright finish', short:'Bright', blurb:'Big windows washed, warm lamps, colour on the wall. Families and tourists take to it (+8 match).' }
+  };
+  const FITTINGS = {
+    curtains: { name:'Blackout curtains', short:'Curtains', cost:120, ask:'the blackout curtains', noise:8, trait:{ 'light-sleeper':10 } },
+    desk:     { name:'Work desk & lamp', short:'Desk', cost:140, ask:'a room with a desk', seg:{ crew:10, longstay:10 } },
+    fridge:   { name:'Mini-fridge', short:'Fridge', cost:160, ask:'a fridge in the room', seg:{ family:8, longstay:6 } },
+    shower:   { name:'Rainfall shower', short:'Shower', cost:220, ask:'the rainfall shower', seg:{ tourist:8, family:6 }, trait:{ 'road-worn':8 }, cond:3 }
+  };
   const WANT_BY_SEG = {
     family: ['big-tub', 'cloud-bed', 'big-tv'],
     tourist: ['highway-view', 'big-tv', 'big-tub'],
     trucker: ['icebox', 'highway-view'],
-    crew: ['big-tv', 'icebox'],
+    crew: ['big-tv', 'icebox', 'desk'],
     longstay: ['cloud-bed', 'quiet-back']
   };
   function rollWant(g, segKey, trait){
-    if (trait === 'light-sleeper') return rnd(g) < 0.75 ? 'quiet-back' : null;
-    if (trait === 'road-worn') return rnd(g) < 0.60 ? pick(g, ['cloud-bed', 'icebox']) : null;
+    if (trait === 'light-sleeper'){ const lw = rnd(g); return lw < 0.55 ? 'quiet-back' : (lw < 0.8 ? 'curtains' : null); }
+    if (trait === 'road-worn') return rnd(g) < 0.60 ? pick(g, ['cloud-bed', 'icebox', 'shower']) : null;
     if (trait === 'neat' || trait === 'easygoing') return rnd(g) < 0.25 ? pick(g, WANT_BY_SEG[segKey]) : null;
     return rnd(g) < 0.55 ? pick(g, WANT_BY_SEG[segKey]) : null;
   }
@@ -415,7 +513,15 @@ const SIM = (() => {
       const ev = activeEvent(g, g.night);
       if (ev && ev.id === 'heat' && room.quirk === 'icebox') m += 8;
     }
-    if (guest.want && room.quirk === guest.want) m += 24;
+    const fits = room.fittings || [];
+    for (const fid of fits){
+      const f = FITTINGS[fid];
+      if (!f) continue;
+      if (f.seg && f.seg[guest.segment]) m += f.seg[guest.segment];
+      if (f.trait && guest.trait && f.trait[guest.trait]) m += f.trait[guest.trait];
+    }
+    if (room.finish === 'bright' && (guest.segment === 'family' || guest.segment === 'tourist')) m += 8;
+    if (guest.want && (room.quirk === guest.want || fits.includes(guest.want))) m += 24;
     return clamp(m, 5, 100);
   }
   function segLine(g, segKey){
@@ -427,7 +533,8 @@ const SIM = (() => {
     rattle:   { label: 'The AC is rattling', text: 'Knocked twice already. Says it sounds like a spoon in a garbage disposal.', text2: 'The unit kicks on every twenty minutes like it is clearing its throat.' },
     plumbing: { label: 'The tap won\'t stop dripping', text: 'Counted it instead of sleeping. Got to four hundred.', text2: 'There is a towel in the sink and a rhythm section in the bathroom.' },
     tv:       { label: 'The TV gave up', text: 'Screen went grey right at the good part. He is taking it personally.', text2: 'Remote works. Picture does not. He has tried both, twice, and is done being reasonable.' },
-    noise:    { label: 'Noise through the wall', text: 'The room next door is having a better night than she is.', text2: 'A television, a laugh track, and somebody learning the guitar. Through her wall.' }
+    noise:    { label: 'Noise through the wall', text: 'The room next door is having a better night than she is.', text2: 'A television, a laugh track, and somebody learning the guitar. Through her wall.' },
+    petmess:  { label: 'A dog got at the bedspread', text: 'The little dog was lovely. The bedspread was not up to him.', text2: 'Muddy paws, one chewed corner, and a guest who is very sorry in two languages.' }
   };
   const INQUIRY_TEXT = {
     crew: [
@@ -502,6 +609,7 @@ const SIM = (() => {
         let kind;
         if (guest.trait === 'light-sleeper' && occ >= 5 && rnd(g) < 0.5) kind = 'noise';
         else kind = pick(g, room.condition < 72 ? ['rattle', 'plumbing', 'tv'] : ['rattle', 'plumbing', 'tv', 'noise']);
+        if (hasUpgrade(g, 'pets') && rnd(g) < 0.25) kind = 'petmess';
         g.incident = { roomId: room.id, kind, resolved: null, variant: rnd(g) < 0.5 ? 0 : 1 };
         g.stats.incidents++;
         return;
@@ -533,6 +641,7 @@ const SIM = (() => {
       room.state = 'dirty'; room.dirt = Math.max(room.dirt, 30); room.guest = null;
     }
     else return { error: 'Unknown response.' };
+    if (g.staff && g.staff.clerk && guest.recovery > 0) guest.recovery += 4;
     inc.resolved = action;
     ensureSeason(g); g.stats.incidentsHandled++;
     return { ok: true };
@@ -611,8 +720,11 @@ const SIM = (() => {
       if (rnd(g) < 0.10) n += 1; // a little weather on the highway
       for (let i = 0; i < n; i++){
         const tr = rollTrait(g);
-        g.queue.push({ id: id++, segment: k, name: guestName(g), nights: SEGMENTS[k].stay(g),
-          ratePaid: g.rate, trait: tr, want: rollWant(g, k, tr), line: segLine(g, k) });
+        const nm = guestName(g);
+        const stayNights = SEGMENTS[k].stay(g);
+        g.queue.push({ id: id++, segment: k, name: nm, nights: stayNights,
+          ratePaid: g.rate, trait: tr, want: rollWant(g, k, tr), line: segLine(g, k),
+          deal: dealFor(g, k, stayNights, g.rate, id) });
       }
     }
     // Regulars come back: a happy name from the guest book may take a slot.
@@ -643,7 +755,8 @@ const SIM = (() => {
     // the card, and the room itself earns the difference. Phone bookings keep
     // the rate they were promised.
     const premium = a.inquiry ? 0 : (room.tier === 'renovated' ? 7 : 0) + (room.id > 8 ? 8 : 0);
-    room.guest = { name: a.name, segment: a.segment, nightsLeft: a.nights, ratePaid: a.ratePaid + premium,
+    const deal = a.dealTaken && a.deal ? a.deal : null;
+    room.guest = { name: a.name, segment: a.segment, nightsLeft: deal ? deal.nights : a.nights, ratePaid: deal ? deal.ratePer : a.ratePaid + premium,
                    dirtAtCheckIn: room.dirt, waitScore: clamp(100 - g.processed * 11, 35, 100),
                    trait: a.trait || null, returning: !!a.returning, visits: a.visits || 0,
                    // A regular who phoned for their room: getting it starts the
@@ -677,19 +790,27 @@ const SIM = (() => {
 
   function scoreStay(g, room, occCount, occIds){
     const guest = room.guest, s = SEGMENTS[guest.segment];
-    let neighbours = 0;
-    if (occIds){ if (occIds.has(room.id - 1)) neighbours++; if (occIds.has(room.id + 1)) neighbours++; }
+    let neighbourBurden = 0;
+    if (occIds){
+      for (const nid of [room.id - 1, room.id + 1]){
+        if (!occIds.has(nid)) continue;
+        const nb = g.rooms.find(r => r.id === nid);
+        neighbourBurden += (nb && nb.finish === 'quiet') ? 0.5 : 1;
+      }
+    }
     const ev = activeEvent(g, g.night);
-    let noise = 88 - Math.max(0, occCount - 4) * 5 - neighbours * 6 + rf(g, -5, 5);
+    let noise = 88 - Math.max(0, occCount - 4) * 5 - neighbourBurden * 6 + rf(g, -5, 5);
     if (ev && ev.noiseAll) noise -= ev.noiseAll;
     if (ev && ev.noiseRoad && room.id <= 4) noise -= ev.noiseRoad;
     const qk = QUIRKS[room.quirk];
     if (qk && qk.noise) noise += qk.noise;
+    if (room.finish === 'quiet') noise += 10;
+    if ((room.fittings || []).includes('curtains')) noise += 8;
     let amen = g.amenities + rf(g, -4, 4);
     if (ev && ev.amenityPenalty && !hasUpgrade(g, 'ac')) amen -= ev.amenityPenalty;
     const comp = {
       clean: 100 - guest.dirtAtCheckIn,
-      condition: clamp(room.condition + (room.tier === 'renovated' ? 8 : 0), 0, 100),
+      condition: clamp(room.condition + (room.tier === 'renovated' ? 8 : 0) + (room.finish === 'plush' ? 8 : 0) + ((room.fittings || []).includes('shower') ? 3 : 0), 0, 100),
       wait: guest.waitScore,
       amenities: clamp(amen, 0, 100),
       noise: clamp(noise, 30, 100),
@@ -787,6 +908,10 @@ const SIM = (() => {
     const roomRevenue = revenue;
     const vendingRevenue = hasUpgrade(g, 'vending') ? roundMoney(1.6 * occ) : 0;
     revenue = roundMoney(revenue + vendingRevenue);
+    const pieRevenue = hasUpgrade(g, 'piewindow') ? roundMoney(2.6 * occ) : 0;
+    let petRevenue = 0;
+    if (hasUpgrade(g, 'pets')){ for (let i = 0; i < occ; i++) if (rnd(g) < 0.18) petRevenue += 12; petRevenue = roundMoney(petRevenue); }
+    revenue = roundMoney(revenue + pieRevenue + petRevenue);
     ensureSeason(g);
     g.stats.roomNights += occ;
     g.stats.possibleRoomNights += g.rooms.length;
@@ -797,7 +922,7 @@ const SIM = (() => {
     for (const room of occRooms){
       room.guest.nightsLeft--;
       if (room.guest.nightsLeft > 0){
-        room.condition = clamp(Math.round((room.condition - wear) * 10) / 10, 35, 100);
+        room.condition = clamp(Math.round((room.condition - wear * (room.finish === 'plush' ? 0.5 : 1)) * 10) / 10, 35, 100);
         continue;
       }
       const guest = room.guest;
@@ -831,7 +956,7 @@ const SIM = (() => {
       else if (bi >= 0){ const e = g.guestBook[bi]; e.visits++; e.lastStars = sc.stars; e.lastScore = Math.round(sc.score); e.lastNight = g.night; e.lastRoom = room.id; if (guest.trait) e.trait = guest.trait; }
       else g.guestBook.push({ name: guest.name, segment: guest.segment, visits: 1, lastStars: sc.stars, lastScore: Math.round(sc.score), lastNight: g.night, lastRoom: room.id, trait: guest.trait || null });
       g.cleanLog.push({ night: g.night, clean: 100 - guest.dirtAtCheckIn });
-      room.condition = clamp(Math.round((room.condition - wear) * 10) / 10, 35, 100);
+      room.condition = clamp(Math.round((room.condition - wear * (room.finish === 'plush' ? 0.5 : 1)) * 10) / 10, 35, 100);
       room.dirt = clamp(Math.round(45 + rnd(g) * 35 + s.dirtMod), 30, 95);
       room.state = 'dirty'; room.guest = null;
       g.stats.checkouts++;
@@ -842,17 +967,20 @@ const SIM = (() => {
     const evNow = activeEvent(g, g.night);
     const costs = {
       mortgage: MORTGAGE + Math.max(0, g.rooms.length - 8) * 8,
-      utilities: roundMoney((16 + 6.5 * occ) * (evNow && evNow.utilities ? evNow.utilities : 1)),
+      utilities: roundMoney((16 + 6.5 * occ) * (evNow && evNow.utilities ? evNow.utilities : 1) * (hasUpgrade(g, 'solar') ? 0.45 : 1)),
       housekeeping: roundMoney(plan.minutesUsed * HK_WAGE + (plan.extraCleaner ? EXTRA_COST : 0)),
       laundry: roundMoney(2.1 * occ * (hasUpgrade(g, 'laundry') ? 0.4 : 1)),
       supplies: roundMoney(1.4 * occ)
     };
     if (hasUpgrade(g, 'breakfast')) costs.breakfast = roundMoney(3.8 * occ);
     if (g.handymanTonight) costs.handyman = 60;
+    const staffWage = (g.staff && g.staff.hk ? 38 : 0) + (g.staff && g.staff.clerk ? 30 : 0);
+    if (staffWage) costs.staff = staffWage;
     // Insurance and the county are owed whether a single door sold or not —
     // the fixed nut an empty motel still pays, and the reason standing still
     // is a way to die, just a slower one.
     costs.insurance = 24;
+    if (hasUpgrade(g, 'billboard')) costs.billboard = 13;
     if (g.credit > 0) costs.interest = roundMoney(Math.min(g.credit, 4000) * 0.0025 + Math.min(Math.max(0, g.credit - 4000), 2000) * 0.005 + Math.max(0, g.credit - 6000) * 0.0075);
     const costTotal = roundMoney(Object.values(costs).reduce((a, b) => a + b, 0));
     const profit = roundMoney(revenue - costTotal);
@@ -940,7 +1068,7 @@ const SIM = (() => {
     g.upgrades = ['sign', 'wifi', 'laundry'];
     // the second wing: rooms 9 and 10, dealt quirks like any expansion
     for (let i = 0; i < 2; i++)
-      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', quirk: drawQuirk(g), guest: null });
+      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null });
     g.expansions = 1;
     const conds = [88, 74, 91, 63, 79, 55, 84, 70, 95, 68];
     g.rooms.forEach((r, i) => { r.condition = conds[i]; });
@@ -970,13 +1098,13 @@ const SIM = (() => {
       { name: 'Doyle Rusk', segment: 'crew', visits: 1, lastStars: 3, lastScore: 63, lastNight: 18, trait: null, lastRoom: 6 }
     ];
     // a plausible summer so far behind the register
-    g.stats = { nights: 42, revenue: 38140, guestsServed: 186, roomNights: 231, possibleRoomNights: 42 * 9, reviewsPosted: 121, fiveStars: 34, turnedAway: 41 };
+    g.stats = { nights: 42, revenue: 38140, guestsServed: 186, guests: 186, reviews: 121, checkouts: 186, roomNights: 231, possibleRoomNights: 42 * 9, reviewsPosted: 121, fiveStars: 34, turnedAway: 41 };
     g.cashHistory = [];
     let walk = 4250;
     for (let n = 0; n < 42; n++){ walk += ri(g, -160, 210); g.cashHistory.push(Math.max(900, walk)); }
     g.cashHistory.push(5200);
     g.roadMood = +(0.85 + rnd(g) * 0.35).toFixed(3);
-    g.inquiry = genInquiry(g);
+    genInquiry(g);
     g.tonight = { night: 43, ratingBefore: 3.9 };
     return g;
   }
@@ -987,7 +1115,8 @@ const SIM = (() => {
            SEGMENTS, SEG_KEYS, CLEAN_LEVELS, DOW_NAMES, dowOf, repMult,
            TRAITS, INCIDENTS, UPGRADES, EXPANSIONS, CALENDAR,
            activeEvent, calendarEntry, nextCalendar, seasonArc, competitorFactor, segmentPool, bookProb,
-           QUIRKS, matchScore, SEGMENTS,
+           QUIRKS, FITTINGS, FINISHES, matchScore, scoreStay, SEGMENTS, INCIDENTS,
+           setStaff, replyToReview, answerDeal, REPLIES,
            housekeepingPool, cleanMinutes, queueCap,
            SEASON_NIGHTS, CREDIT_LIMIT,
            BASE_MINUTES, EXTRA_MINUTES, EXTRA_COST, MORTGAGE };
