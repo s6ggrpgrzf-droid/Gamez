@@ -5,7 +5,10 @@ const WD = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunda
 let G = null;
 let draft = null;
 let uiView = 'desk', uiPhase = null;
+let uiTab = 'tonight'; // the morning's three drawers: tonight / house / office
+let catOpen = 'shop'; // the catalog fold left open
 let uiFlash = null, uiCashPrev = null, uiKnockKey = null;
+let deskSay = null; // the desk speaks when a door refuses — never silence
 let renovPick = null, fitPick = null;
 let lastViewKey = null;
 
@@ -634,18 +637,7 @@ function renderMorning(){
       </div>
     </div>`).join('');
 
-  app.innerHTML = sceneHTML('sky-dawn', G.rooms, 'morning') + deskOpen(`
-    ${coachCard()}
-    ${reportHTML()}
-    ${inspCard}
-    ${bankCard}
-    ${chNoteCard}
-    ${standCard}
-    ${ticketCard}
-    ${guideCard}
-    ${seasonCard}
-    ${inqCard}
-    <div class="paper ratecard">
+  const rateCard = `<div class="paper ratecard">
       <div class="reg-title">Tonight's rate — the card in the office window</div>
       <div class="rc-top">
         <button class="stepbtn" id="rate-down" aria-label="Lower rate">−</button>
@@ -663,9 +655,8 @@ function renderMorning(){
         </div>
         <div class="rc-note">${premCount} renovated room${premCount === 1 ? '' : 's'} let at this card instead — and their guests judge the room against what they paid for it.</div>
       </div>` : ''}
-    </div>
-    ${mktCard}
-    <div class="paper">
+    </div>`;
+  const houseCard = `<div class="paper">
       <div class="reg-title">Housekeeping — ${used} of ${pool} minutes</div>
       <div class="meter ${used > pool ? 'over' : ''}"><i style="width:${Math.min(100, pool ? used / pool * 100 : 0)}%"></i></div>
       ${G.staff && G.staff.hk ? '<div class="hk-note" style="margin-top:2px">The housekeeper’s minutes are already in the pool.</div>' : ''}
@@ -673,20 +664,40 @@ function renderMorning(){
       ${svcRows ? `<div class="hk-note" style="margin-top:10px">In house — a service is a towel run and a tidy for a guest mid-stay: twenty minutes, once a stay, and the room they judge at checkout is the tidier one.</div>${svcRows}` : ''}
       <label class="chk" id="btn-extra"><span class="box">${draft.extraCleaner ? '✓' : ''}</span> Call in a second cleaner (+150 min, $55)</label>
       <div class="hk-note">A room you skip stays dark tonight. A quick clean sells — and the guest can tell.</div>
-    </div>
-    <div class="deskrow"><button class="btn btn-ghost" id="btn-book">The guest book</button><button class="btn btn-ghost" id="btn-wall">The corkboard</button></div>
+    </div>`;
+  const deskRowHTML = `<div class="deskrow"><button class="btn btn-ghost" id="btn-book">The guest book</button><button class="btn btn-ghost" id="btn-wall">The corkboard</button></div>`;
+  const tabBarHTML = `<div class="mtabs">
+      <button data-mtab="tonight" class="${uiTab === 'tonight' ? 'on' : ''}">Tonight</button>
+      <button data-mtab="house" class="${uiTab === 'house' ? 'on' : ''}">The House</button>
+      <button data-mtab="office" class="${uiTab === 'office' ? 'on' : ''}">The Office</button>
+    </div>`;
+
+  app.innerHTML = sceneHTML('sky-dawn', G.rooms, 'morning') + deskOpen(`
+    ${tabBarHTML}
+    ${uiTab === 'tonight' ? coachCard() : ''}
+    ${uiTab === 'office' ? reportHTML() : ''}
+    ${uiTab === 'tonight' ? inspCard + bankCard + chNoteCard + standCard + ticketCard + guideCard : ''}
+    ${uiTab === 'office' ? seasonCard : ''}
+    ${uiTab === 'tonight' ? inqCard : ''}
+    ${uiTab === 'tonight' ? rateCard : ''}
+    ${uiTab === 'office' ? mktCard : ''}
+    ${uiTab === 'house' ? houseCard : ''}
+    ${uiTab === 'office' ? deskRowHTML : ''}
     <div class="actionbar"><button class="btn btn-primary" id="btn-open">Open the desk →</button></div>
     <div class="center"><button class="btn btn-ghost" id="btn-quit">Save &amp; back to title</button></div>`);
 
   document.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => { SIM.setFocus(G, b.dataset.focus, !(G.mkt && G.mkt.focus[b.dataset.focus])); sfx('stamp'); save(); render(); });
   document.querySelectorAll('[data-ad]').forEach(b => b.onclick = () => { SIM.setAdTier(G, +b.dataset.ad); sfx('stamp'); save(); render(); });
   document.querySelectorAll('[data-pkg]').forEach(b => b.onclick = () => { SIM.setPackage(G, b.dataset.pkg, !(G.mkt && G.mkt.pkg[b.dataset.pkg])); sfx('stamp'); save(); render(); });
-  document.getElementById('rate-down').onclick = () => { draft.rate = Math.max(35, draft.rate - 5); sfx('tick'); render(); };
-  document.getElementById('rate-up').onclick = () => { draft.rate = Math.min(180, draft.rate + 5); sfx('tick'); render(); };
+  const rdEl = document.getElementById('rate-down'), ruEl = document.getElementById('rate-up');
+  if (rdEl) rdEl.onclick = () => { draft.rate = Math.max(35, draft.rate - 5); sfx('tick'); render(); };
+  if (ruEl) ruEl.onclick = () => { draft.rate = Math.min(180, draft.rate + 5); sfx('tick'); render(); };
+  document.querySelectorAll('[data-mtab]').forEach(b => b.onclick = () => { uiTab = b.dataset.mtab; sfx('tick'); render(); });
   const prDown = document.getElementById('prate-down'), prUp = document.getElementById('prate-up');
   if (prDown) prDown.onclick = () => { draft.premiumRate = Math.max(35, draft.premiumRate - 5); sfx('tick'); render(); };
   if (prUp) prUp.onclick = () => { draft.premiumRate = Math.min(220, draft.premiumRate + 5); sfx('tick'); render(); };
-  document.getElementById('btn-extra').onclick = () => { draft.extraCleaner = !draft.extraCleaner; sfx('tick'); render(); };
+  const beEl = document.getElementById('btn-extra');
+  if (beEl) beEl.onclick = () => { draft.extraCleaner = !draft.extraCleaner; sfx('tick'); render(); };
   const bv = document.getElementById('btn-vouchers'); if (bv) bv.onclick = () => { draft.vouchers = !draft.vouchers; sfx('tick'); render(); };
   document.querySelectorAll('[data-service]').forEach(b => b.onclick = () => {
     const id = +b.dataset.service;
@@ -705,14 +716,15 @@ function renderMorning(){
   });
   document.getElementById('btn-open').onclick = () => {
     if (draftMinutes() > pool) { alert('Housekeeping is over the minutes you have. Deep-clean fewer rooms, or call in the second cleaner.'); return; }
-    applyDraftToPlan(); draft.sel = null; sfx('page'); save(); render();
+    applyDraftToPlan(); draft.sel = null; uiTab = 'tonight'; sfx('page'); save(); render();
   };
   document.getElementById('btn-quit').onclick = () => { save(); G = null; draft = null; render(); };
   document.querySelectorAll('[data-inq]').forEach(b => b.onclick = () => { draft.inquiryDecision = b.dataset.inq; sfx('stamp'); render(); });
   document.querySelectorAll('[data-reply]').forEach(b => b.onclick = () => { const [idx, tone] = b.dataset.reply.split(':'); const r = SIM.replyToReview(G, Number(idx), tone); if (r.error) alert(r.error); else sfx('stamp'); save(); render(); });
   wireCoach();
-  document.getElementById('btn-calendar').onclick = () => { uiView = 'calendar'; sfx('page'); render(); };
-  document.getElementById('btn-catalog').onclick = () => { uiView = 'catalog'; sfx('page'); render(); };
+  const bcEl = document.getElementById('btn-calendar'), btEl = document.getElementById('btn-catalog');
+  if (bcEl) bcEl.onclick = () => { uiView = 'calendar'; sfx('page'); render(); };
+  if (btEl) btEl.onclick = () => { uiView = 'catalog'; sfx('page'); render(); };
   wireDeskRow();
 }
 
@@ -932,46 +944,32 @@ function renderCatalog(){
         `<button class="stamp" data-fitting="${k}">${f.name} — $${f.cost}</button>`).join('') || '<span class="fobtag">Fully fitted.</span>'}</div>
       ${(fitRoom.fittings || []).length >= 2 ? '' : Object.entries(SIM.FITTINGS).filter(([k]) => !(fitRoom.fittings || []).includes(k)).map(([k, f]) =>
         `<div class="shop-blurb" style="margin-top:4px"><b>${f.name}</b> — ${f.ask ? 'Guests ask for it by name. ' : ''}${k === 'curtains' ? 'The room sleeps darker (+8 noise) and light sleepers take to it.' : k === 'desk' ? 'Crew and long-stay guests take to it (+10 match).' : k === 'fridge' ? 'Families (+8) and long-stay guests (+6) take to it.' : 'Tourists (+8), families (+6) and the road-worn (+8) take to it, and the room reads newer (+3 condition).'}</div>`).join('')}` : '';
-  app.innerHTML = sceneHTML('sky-dawn', G.rooms, 'morning') + deskOpen(`
-    <div class="paper register">
-      <div class="reg-title">The Supply Catalog — &amp; the Bank Envelope</div>
-      <div class="reg-head">Order in the morning; it is yours by the desk.</div>
-      <div class="reg-sub">Cash in the till: <b>${money(G.cash)}</b> · Credit drawn: <b>${money(G.credit)}</b> of $8,000, at 0.25% a night on the first $4,000 and 0.5% past it. Anything cash cannot cover draws on the line by itself. <button class="stamp sm" id="btn-bankjump">The bank envelope ↓</button></div>
-      ${comboNote ? `<div class="combolit-note">★ The pair is lit — <b>${esc(comboNote.name)}</b>. ${esc(comboNote.line)}</div>` : ''}
-      ${prestigeBlock}
-      ${items}
-      <div class="sec-head"><span>Build</span></div>
-      ${ex ? `<div class="shoprow${G.night < ex.unlock ? ' locked' : ''}">${shopGlyph('expansion', false)}<div class="shop-main"><div class="shop-name">${esc(ex.name)}</div>
+  // The catalog folds: one section open at a time, each under its own head.
+  const fold = (id, title, body) => `<div class="sec-head foldhead" data-fold="${id}"${id === 'bank' ? ' id="bank-anchor"' : ''}><span>${title}</span><span class="foldmark">${catOpen === id ? '−' : '+'}</span></div>${catOpen === id ? body : ''}`;
+  const buildBody = ex ? `<div class="shoprow${G.night < ex.unlock ? ' locked' : ''}">${shopGlyph('expansion', false)}<div class="shop-main"><div class="shop-name">${esc(ex.name)}</div>
         <div class="shop-blurb">Two more doors on the court, condition 90, ready tonight. New-wing rooms let for $8 over the card rate. The mortgage rises $16 a night, and housekeeping gains a hand (+40 minutes a day).${G.night < ex.unlock ? ` The crew can start on night ${ex.unlock}.` : ''}</div>
         <div class="payback">${paybackNote('expansion', ex.cost)}</div></div>
         ${G.night >= ex.unlock ? `<button class="stamp" data-expand="1">Build — $${ex.cost.toLocaleString('en-US')}</button>` : `<span class="locktag">Opens night ${ex.unlock}</span>`}</div>`
-      : '<div class="emptycard">Sixteen rooms — the whole court is built.</div>'}
-      <div class="sec-head"><span>Tonight</span></div>
-      <div class="shoprow">${shopGlyph('wrench', false)}<div class="shop-main"><div class="shop-name">Handyman on rounds</div>
+      : '<div class="emptycard">Sixteen rooms — the whole court is built.</div>';
+  const tonightBody = `<div class="shoprow">${shopGlyph('wrench', false)}<div class="shop-main"><div class="shop-name">Handyman on rounds</div>
       <div class="shop-blurb">$80 tonight. He walks the court and tightens what rattles (+1 condition everywhere), and knocks at the desk get rarer.</div></div>
-      <button class="stamp ${draft && draft.handyman ? 'on' : ''}" data-handyman="1">${draft && draft.handyman ? 'Booked' : 'Book him'}</button></div>
-      <div class="sec-head"><span>The plant</span></div>
-      <div class="shop-blurb">Machines wear out a few points a night. Sound (40 and up) works in full; tired (15–39) works at half; failing or broken, not at all — and under 20 a machine can give out entirely, in the night, in front of everybody. A morning service puts a machine back to 100; a repair costs more and teaches the same lesson louder.</div>
-      ${plantRows}
-      <div class="sec-head"><span>The town</span></div>
-      <div class="shop-blurb">Beyond the fence is a town that can thrive or fade with you. Money put into it comes back as traffic — for good.</div>
-      ${townRows}
-      <div class="sec-head"><span>The forecourt</span></div>
-      <div class="shop-blurb">A second business on the same concrete — it trades on its own account, and the register keeps its little P&amp;L.</div>
-      ${foreRows}
-      <div class="sec-head"><span>Room work</span></div>
-      <div class="shop-blurb">Repair — $55 a room, condition +25. Renovate — $950 a room, condition back to 100, lets at the premium card you set, and the room reads renovated (+8 when guests judge it). A renovation takes a finish — quiet, plush or bright — and the finish stays with the room.</div>
+      <button class="stamp ${draft && draft.handyman ? 'on' : ''}" data-handyman="1">${draft && draft.handyman ? 'Booked' : 'Book him'}</button></div>`;
+  const plantBody = `<div class="shop-blurb">Machines wear out a few points a night. Sound (40 and up) works in full; tired (15–39) works at half; failing or broken, not at all — and under 20 a machine can give out entirely, in the night, in front of everybody. A morning service puts a machine back to 100; a repair costs more and teaches the same lesson louder.</div>
+      ${plantRows}`;
+  const townBody = `<div class="shop-blurb">Beyond the fence is a town that can thrive or fade with you. Money put into it comes back as traffic — for good.</div>
+      ${townRows}`;
+  const foreBody = `<div class="shop-blurb">A second business on the same concrete — it trades on its own account, and the register keeps its little P&amp;L.</div>
+      ${foreRows}`;
+  const roomworkBody = `<div class="shop-blurb">Repair — $55 a room, condition +25. Renovate — $950 a room, condition back to 100, lets at the premium card you set, and the room reads renovated (+8 when guests judge it). A renovation takes a finish — quiet, plush or bright — and the finish stays with the room.</div>
       <div class="shop-blurb" style="margin-top:10px"><b>Repair</b> — $55 a room, done on the tap.</div>
       <div class="stamps" style="margin-top:6px">${repairStamps || '<div class="emptycard">Every room is sound — nothing to repair.</div>'}</div>
       <div class="shop-blurb" style="margin-top:12px"><b>Renovate</b> — $950, then pick its finish.</div>
       <div class="stamps" style="margin-top:6px">${renovateStamps || '<div class="emptycard">Every room renovated — the whole court gleams.</div>'}</div>
-      ${finishPanel}
-      <div class="sec-head"><span>Fittings — room by room</span></div>
-      <div class="shop-blurb">Bought for one room and fitted by the desk, in the morning. A fitting is that room's answer to a kind of guest — pick the room, then the fitting.</div>
+      ${finishPanel}`;
+  const fittingsBody = `<div class="shop-blurb">Bought for one room and fitted by the desk, in the morning. A fitting is that room's answer to a kind of guest — pick the room, then the fitting.</div>
       <div class="stamps" style="margin-top:8px">${fitStamps}</div>
-      ${fitPanel}
-      <div class="sec-head"><span>The hiring book</span></div>
-      <div class="shop-blurb">You don't hire a role any more — you hire a person, gift and catch together, and the catch never comes off. Wages are nightly, hiring happens in the morning, and if you let someone go in the morning, tonight's wage is never charged. People learn the place, too: levels at 8, 20, 38 and 60 nights worked bring more minutes, cleaner cleans and softer knocks — and wages rise 6% a level. Shifts sit on each roster card: an evening housekeeper trades the morning pool for rooms that wear less dirt; a clerk on morning cover turns rooms early and writes the replies, but is home by noon when the knocks come.</div>
+      ${fitPanel}`;
+  const hiringBody = `<div class="shop-blurb">You don't hire a role any more — you hire a person, gift and catch together, and the catch never comes off. Wages are nightly, hiring happens in the morning, and if you let someone go in the morning, tonight's wage is never charged. People learn the place, too: levels at 8, 20, 38 and 60 nights worked bring more minutes, cleaner cleans and softer knocks — and wages rise 6% a level. Shifts sit on each roster card: an evening housekeeper trades the morning pool for rooms that wear less dirt; a clerk on morning cover turns rooms early and writes the replies, but is home by noon when the knocks come.</div>
       <div class="hk-note">${G.rooms.length <= 8
         ? 'Honest word on the housekeeping job itself: at eight doors the minutes are comfort, not need — the morning pool covers the work. Buy any of them with profit, not hope; the job earns its keep once the wings grow.'
         : G.rooms.length <= 12
@@ -981,19 +979,36 @@ function renderCatalog(){
       <div class="hk-note" style="margin-top:12px">Honest word on the clerk's job itself: it earns its keep on full, rowdy nights, when the knocks come. On quiet ones a clerk is a lamp left burning — company, at a nightly wage.</div>
       ${clerkBook}
       <div class="hk-note" style="margin-top:12px">Honest word on the watchman's job itself: he earns his keep on the nights trouble would have knocked — most nights you will never know what he prevented, which is the job. His one loud tool is the eject: on a noise knock, a watchman who will lay a hand can walk the loud room out. The desk keeps the guest who knocked, loses the loud room for the night, and cleans it in the morning.</div>
-      ${watchBook}
-      <div class="sec-head" id="bank-anchor"><span>The bank envelope</span></div>
-      <div class="stamps">
+      ${watchBook}`;
+  const bankBody = `<div class="stamps">
         <button class="stamp" data-credit="500" ${G.credit >= 8000 ? 'disabled' : ''}>Draw $500</button>
         <button class="stamp" data-credit="1000" ${G.credit >= 8000 ? 'disabled' : ''}>Draw $1,000</button>
         <button class="stamp" data-credit="-500" ${G.credit <= 0 ? 'disabled' : ''}>Repay $500</button>
         <button class="stamp" data-credit="repayAll" ${G.credit <= 0 ? 'disabled' : ''}>Repay all</button>
-      </div>
+      </div>`;
+  app.innerHTML = sceneHTML('sky-dawn', G.rooms, 'morning') + deskOpen(`
+    <div class="paper register">
+      <div class="reg-title">The Supply Catalog — &amp; the Bank Envelope</div>
+      <div class="reg-head">Order in the morning; it is yours by the desk.</div>
+      <div class="reg-sub">Cash in the till: <b>${money(G.cash)}</b> · Credit drawn: <b>${money(G.credit)}</b> of $8,000, at 0.25% a night on the first $4,000 and 0.5% past it. Anything cash cannot cover draws on the line by itself. <button class="stamp sm" id="btn-bankjump">The bank envelope ↓</button></div>
+      ${comboNote ? `<div class="combolit-note">★ The pair is lit — <b>${esc(comboNote.name)}</b>. ${esc(comboNote.line)}</div>` : ''}
+      ${prestigeBlock}
+      ${fold('shop', 'Upgrades', items)}
+      ${fold('build', 'Build', buildBody)}
+      ${fold('tonight', 'Tonight', tonightBody)}
+      ${fold('plant', 'The plant', plantBody)}
+      ${fold('town', 'The town', townBody)}
+      ${fold('forecourt', 'The forecourt', foreBody)}
+      ${fold('roomwork', 'Room work', roomworkBody)}
+      ${fold('fittings', 'Fittings — room by room', fittingsBody)}
+      ${fold('hiring', 'The hiring book', hiringBody)}
+      ${fold('bank', 'The bank envelope', bankBody)}
     </div>
     <div class="center"><button class="btn btn-ghost" id="btn-back">${(G.phase === 'morning' && !G.tonight) ? 'Back to the register' : 'Back to the desk'}</button></div>`);
   document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const r = SIM.purchase(G, b.dataset.buy); if (r.error) alert(r.error); else { sfx('coin'); if (r.comboLit) lastCombo = { name: r.comboLit, line: r.comboLine }; save(); render(); } });
+  document.querySelectorAll('[data-fold]').forEach(h => h.onclick = () => { catOpen = catOpen === h.dataset.fold ? '' : h.dataset.fold; sfx('tick'); render(); });
   const bj = document.getElementById('btn-bankjump');
-  if (bj) bj.onclick = () => { const t = document.getElementById('bank-anchor'); if (t) t.scrollIntoView({ block: 'start' }); };
+  if (bj) bj.onclick = () => { catOpen = 'bank'; render(); setTimeout(() => { const t = document.getElementById('bank-anchor'); if (t) t.scrollIntoView({ block: 'start' }); }, 60); };
   const eb = document.querySelector('[data-expand]');
   if (eb) eb.onclick = () => { const r = SIM.purchaseExpansion(G); if (r.error) alert(r.error); else sfx('coin'); save(); render(); };
   document.querySelectorAll('[data-repair]').forEach(b => b.onclick = () => { const r = SIM.roomWork(G, 'repair', Number(b.dataset.repair)); if (r.error) alert(r.error); else sfx('coin'); save(); render(); });
@@ -1151,7 +1166,7 @@ function renderArrivals(){
   if (!draft) draft = { rate: G.rate, premiumRate: null, cleans: {}, services: [], extraCleaner: false, sel: null, inquiryDecision: null, moving: false, handyman: false, vouchers: false };
   const q = G.queue;
   const cards = q.map((a, i) => `
-    <div class="guest ${draft && draft.sel === a.id ? 'sel' : ''}" style="animation-delay:${Math.min(i * 45, 270)}ms" data-guest="${a.id}">
+    <div class="guest ${draft && draft.sel === a.id ? 'sel' : ''}" data-guest="${a.id}">
       <div class="g-name">${esc(a.name)} <span class="segtag">${SIM.SEGMENTS[a.segment].label}</span>${a.trait ? ` <span class="traittag">${SIM.TRAITS[a.trait].label}</span>` : ''}${a.returning ? ` <span class="rettag">Back again · stay #${a.visits}</span>` : ''}${a.inquiry ? ` <span class="blocktag">Block booking</span>` : ''}${a.phone ? ` <span class="blocktag">Off the bus</span>` : ''}${a.challenge ? ` <span class="chtag">★ A name to keep</span>` : ''}</div>
       <div class="g-sub">${a.dealTaken && a.deal ? `${a.deal.nights} nights · $${a.deal.ratePer}/night — the deal` : `${a.nights} night${a.nights > 1 ? 's' : ''} · $${a.ratePaid}/night${a.pkg ? ` · ${esc(a.pkg)}` : ''}${a.referred ? ` · sent by ${esc(a.referred)}` : ''}`}</div>
       ${a.line ? `<div class="g-line">“${esc(a.line)}”</div>` : ''}
@@ -1169,6 +1184,8 @@ function renderArrivals(){
     <div class="desk-h">Evening — the desk</div>
     ${coachCard()}
     <div class="desk-note">Rate tonight: <b>$${G.rate}</b>${G.ratePremium != null ? ` · Premium <b>$${G.ratePremium}</b>` : ''}. ${q.length} part${q.length === 1 ? 'y' : 'ies'} waiting. Tap a guest card, then tap a door with an amber outline. End doors — 1 and 8 — are the quiet ones, and the line's patience runs out fast.</div>
+    ${selArrival ? `<div class="placing">Placing <b>${esc(selArrival.name)}</b> — tap a lit door. <span class="placing-x" id="placing-x">put back</span></div>` : ''}
+    ${deskSay ? `<div class="desk-say">${deskSay}</div>` : ''}
     ${phoneCardHTML()}
     ${incidentHTML()}
     ${cards ? `<div class="guestlist">${cards}</div>` : '<div class="desk-note">The lot is quiet. Everyone who is coming is here.</div>'}
@@ -1186,6 +1203,7 @@ function renderArrivals(){
   document.querySelectorAll('[data-guest]').forEach(el => el.onclick = e => {
     if (e.target.dataset.turn) return;
     draft.sel = draft.sel === Number(el.dataset.guest) ? null : Number(el.dataset.guest);
+    deskSay = null;
     sfx('tick'); render();
   });
   document.querySelectorAll('[data-turn]').forEach(el => el.onclick = e => {
@@ -1194,24 +1212,31 @@ function renderArrivals(){
   });
   document.querySelectorAll('[data-inc]').forEach(el => el.onclick = () => {
     const act = el.dataset.inc;
-    if (act === 'move'){ draft.moving = !draft.moving; sfx('tick'); render(); return; }
+    if (act === 'move'){ draft.moving = !draft.moving; deskSay = null; sfx('tick'); render(); return; }
     SIM.resolveIncident(G, act); draft.moving = false;
     sfx(act === 'comp' ? 'coin' : act === 'ride' ? 'deny' : 'stamp');
     save(); render();
   });
   document.querySelectorAll('[data-room]').forEach(el => el.onclick = () => {
     const room = G.rooms.find(r => r.id === Number(el.dataset.room));
-    if (!room || room.state !== 'ready') return;
+    if (!room) return;
+    const whyNot = room.state === 'dirty' ? `Room ${room.id} is still dirty — it needs a clean before anyone can stay in it.`
+      : room.state === 'occupied' ? `Room ${room.id} already has a guest in it.`
+      : `Room ${room.id} isn't ready yet.`;
     if (draft.moving){
+      if (room.state !== 'ready'){ deskSay = `They can't move there — ${whyNot.charAt(0).toLowerCase()}${whyNot.slice(1)}`; sfx('deny'); render(); return; }
       const res = SIM.resolveIncident(G, 'move', room.id);
-      if (!res.error){ draft.moving = false; sfx('assign'); }
+      if (!res.error){ draft.moving = false; deskSay = null; sfx('assign'); }
       save(); render(); return;
     }
-    if (!draft.sel) return;
-    SIM.assignRoom(G, draft.sel, room.id); draft.sel = null;
+    if (!draft.sel){ deskSay = 'Pick a guest first — tap their card, then tap the door you want for them.'; sfx('deny'); render(); return; }
+    if (room.state !== 'ready'){ deskSay = whyNot; sfx('deny'); render(); return; }
+    SIM.assignRoom(G, draft.sel, room.id); draft.sel = null; deskSay = null;
     uiFlash = room.id; setTimeout(() => { uiFlash = null; }, 950);
     sfx('assign'); save(); render();
   });
+  const px = document.getElementById('placing-x');
+  if (px) px.onclick = () => { draft.sel = null; deskSay = null; sfx('tick'); render(); };
   wireDeskRow();
   wireCoach();
   document.getElementById('btn-close').onclick = () => {
