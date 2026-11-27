@@ -37,18 +37,21 @@ const SIM = (() => {
   // ---------- segments ----------
   // dow index: 0=Mon .. 6=Sun
   const SEGMENTS = {
-    trucker:  { label:'Trucker',       base:0.95, ref:69,  elast:1.50, dow:[1.1,1.1,1.1,1.1,1.0,0.8,0.85], post:0.45,
+    trucker:  { label:'Trucker',       base:0.95, ref:69,  elast:1.50, dow:[1.1,1.1,1.1,1.1,1.0,0.8,0.85], post:0.45, loud:0.8, tol:0.8,
                 w:{clean:.26,condition:.17,wait:.22,amenities:.09,noise:.14,match:.12}, dirtMod:2,  stay:g=>1 },
-    family:   { label:'Family',        base:0.85, ref:95,  elast:1.10, dow:[0.55,0.55,0.55,0.55,1.5,1.8,0.9], post:0.80,
+    family:   { label:'Family',        base:0.85, ref:95,  elast:1.10, dow:[0.55,0.55,0.55,0.55,1.5,1.8,0.9], post:0.80, loud:1.3, tol:1.0,
                 w:{clean:.26,condition:.14,wait:.07,amenities:.15,noise:.14,match:.24}, dirtMod:8,  stay:g=> 1 + (rnd(g)<0.4?1:0) },
-    crew:     { label:'Work crew',     base:0.45, ref:62,  elast:1.60, dow:[1.3,1.1,1.1,1.1,0.5,0.3,0.6], post:0.35,
+    crew:     { label:'Work crew',     base:0.45, ref:62,  elast:1.60, dow:[1.3,1.1,1.1,1.1,0.5,0.3,0.6], post:0.35, loud:1.1, tol:0.9,
                 w:{clean:.20,condition:.13,wait:.17,amenities:.13,noise:.23,match:.14}, dirtMod:12, stay:g=> 3 + Math.floor(rnd(g)*2) },
-    longstay: { label:'Long-stay',     base:0.12, ref:45,  elast:1.80, dow:[1,1,1,1,1,1,1], post:0.30,
+    longstay: { label:'Long-stay',     base:0.12, ref:45,  elast:1.80, dow:[1,1,1,1,1,1,1], post:0.30, loud:0.7, tol:1.1,
                 w:{clean:.24,condition:.19,wait:.04,amenities:.16,noise:.17,match:.20}, dirtMod:15, stay:g=> 5 + Math.floor(rnd(g)*3) },
-    tourist:  { label:'Route 66 tourist', base:0.42, ref:110, elast:0.90, dow:[0.8,0.8,0.8,0.8,1.2,1.4,1.0], post:0.65,
+    tourist:  { label:'Route 66 tourist', base:0.42, ref:110, elast:0.90, dow:[0.8,0.8,0.8,0.8,1.2,1.4,1.0], post:0.65, loud:1.0, tol:1.15,
                 w:{clean:.23,condition:.19,wait:.07,amenities:.12,noise:.17,match:.22}, dirtMod:0,  stay:g=> 1 + (rnd(g)<0.3?1:0) }
   };
   const SEG_KEYS = Object.keys(SEGMENTS);
+  // Pass J6: the court's big rooms — the two ends and every fourth door,
+  // the way a motor court was actually built.
+  function roomSize(id){ return (id === 1 || id % 4 === 0) ? 'large' : 'standard'; }
   const DOW_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const CLEAN_LEVELS = {
     deep:     { label:'Deep',     min:45, dirt:2 },
@@ -189,6 +192,32 @@ const SIM = (() => {
     if (g.regularGone === undefined) g.regularGone = false;
     if (g.regularLine === undefined) g.regularLine = null;
     if (g.squeeze === undefined) g.squeeze = false;
+    if (!g.staff || typeof g.staff !== 'object') g.staff = { hk: null, clerk: null };
+    if (g.staff.watch === undefined) g.staff.watch = null;
+    if (g.ejectWord === undefined) g.ejectWord = null;
+    if (g.serviceTicket === undefined) g.serviceTicket = null;
+    if (g.guide === undefined) g.guide = null;
+    if (g.guidePrev === undefined) g.guidePrev = null;
+    if (g.guideWord === undefined) g.guideWord = null;
+    if (!g.mkt) g.mkt = { focus: {}, ad: 0, pkg: { weekend: false, weekly: false } };
+    if (!Array.isArray(g.town)) g.town = [];
+    if (!g.segXp) g.segXp = { trucker: { xp: 0 }, family: { xp: 0 }, crew: { xp: 0 }, longstay: { xp: 0 }, tourist: { xp: 0 } };
+    if (!g.referrers) g.referrers = {};
+    if (!g.forecourt) g.forecourt = {};
+    if (!g.shop) g.shop = { stock: 0, price: 6 };
+    if (!g.pump) g.pump = { mode: 'match' };
+    if (!g.placards && !g.tonight) g.placards = dealPlacards(g);
+    if (typeof g.foreEarned !== 'number') g.foreEarned = 0;
+    if (typeof g.drewOnce !== 'boolean') g.drewOnce = false;
+    if (typeof g.vouchersTonight !== 'boolean') g.vouchersTonight = false;
+    for (const r of g.rooms) if (!r.size) r.size = roomSize(r.id);
+    if (!g.people || typeof g.people !== 'object') g.people = {};
+    if (!g.shifts || typeof g.shifts !== 'object') g.shifts = { hk: 'day', clerk: 'night' };
+    if (g.staff.hk === true) g.staff.hk = 'mabel'; else if (g.staff.hk === false) g.staff.hk = null;
+    if (g.staff.clerk === true) g.staff.clerk = 'eddie'; else if (g.staff.clerk === false) g.staff.clerk = null;
+    if (!g.plant || typeof g.plant !== 'object') g.plant = {};
+    for (const pid of ['pool', 'laundry', 'vending'])
+      if (Array.isArray(g.upgrades) && g.upgrades.includes(pid) && !g.plant[pid]) g.plant[pid] = { c: 80, broken: false };
     if (typeof g.season !== 'number' || g.season < 1) g.season = 1;
     if (!Array.isArray(g.calendar) || !g.calendar.length) g.calendar = buildCalendar(g.season, g.seed);
     if (!Array.isArray(g.ledger)) g.ledger = [];
@@ -222,17 +251,108 @@ const SIM = (() => {
     if (night < 43) return 1 - (1 - full) * 0.5;
     return full;
   }
-  function housekeepingPool(g, extra){
-    return BASE_MINUTES + Math.max(0, g.rooms.length - 8) * 20 + (extra ? EXTRA_MINUTES : 0) + (g.staff && g.staff.hk ? 120 : 0);
+  // ---------- Pass J3: THE HIRING BOOK (Travellers Rest's staff) ----------
+  // You don't hire a role any more; you hire a person — a gift and a catch,
+  // and the catch never comes off. g.staff holds person ids ('mabel'), with
+  // the E3 boolean shape migrated by ensureSeason (true = the steady hand).
+  const PEOPLE = {
+    darlene: { role:'hk', name:'Darlene Voss', wage:44, minutes:150,
+      gift:'Thorough — +150 housekeeping minutes a day, the deepest pool on the book.',
+      flaw:'Heavy-handed — the plant wears a point faster every night it runs under her care.' },
+    mabel:   { role:'hk', name:'Mabel Okafor', wage:38, minutes:120,
+      gift:'Steady — the classic +120 minutes, no surprises either way.',
+      flaw:'Set in her ways — supplies run $5 a night over, every night, itemised and unrepentant.' },
+    rosa:    { role:'hk', name:'Rosa Delgado', wage:33, minutes:135,
+      gift:'Fast — +135 minutes a day at the lowest wage on the book.',
+      flaw:'Cuts corners — a room she has cleaned is never cleaner than 8. The corners show.' },
+    eddie:   { role:'clerk', name:'Eddie Kowalski', wage:30, soften:4,
+      gift:'A night owl — a knock he has half-answered lands softer (+4).',
+      flaw:'Forgets to charge — the till comes up $1.20 short for every room in house.' },
+    frankie: { role:'clerk', name:'Frankie Boone', wage:36, soften:7,
+      gift:'A silver tongue — a knock he has half-answered lands softer still (+7).',
+      flaw:'Generous with comps — a comped guest costs $10 over the rate. He throws in pie.' },
+    wanda:   { role:'clerk', name:'Wanda Pierce', wage:26, soften:4,
+      gift:'By the book — a knock she has half-answered lands softer (+4), at the lowest wage on the book.',
+      flaw:'Rubs people wrong — your review replies travel a quarter less far under her hand.' },
+    hollis:  { role:'watch', name:'Hollis Brandt', wage:34, deter:0.25, eject:true,
+      gift:'A presence — trouble at the desk runs a quarter rarer, and he can walk a loud party out.',
+      flaw:'A face like weather — families and tourists judge the amenities 2 colder with him looming in the dark.' },
+    petra:   { role:'watch', name:'Petra Lindqvist', wage:28, deter:0.10, eject:false,
+      gift:'Quiet rounds — the court stays hushed under her: every stay judges the noise 4 kinder.',
+      flaw:'Won’t lay a hand — under Petra there is no ejecting anybody. She will fetch you to the desk and watch you handle it.' },
+    doyle:   { role:'watch', name:'Doyle Riggs', wage:42, deter:0.40, eject:true,
+      gift:'Ex-cop — trouble at the desk runs 40% rarer, and his ejects are final.',
+      flaw:'The road talks — every eject under Doyle is highway gossip by morning: the next night’s pools run 4% thin.' }
+  };
+  function staffPerson(g, role){
+    const v = g.staff && g.staff[role];
+    if (!v) return null;
+    if (v === true) return PEOPLE[role === 'hk' ? 'mabel' : 'eddie'];
+    return PEOPLE[v] || null;
   }
-  // ---------- Pass E3: staff, review replies, weekly-rate deals ----------
-  function setStaff(g, role, on){
+  function hireStaff(g, role, who){
     ensureSeason(g);
     if (g.phase !== 'morning' || g.over) return { error: 'Hiring happens in the morning.' };
-    if (role !== 'hk' && role !== 'clerk') return { error: 'No such job.' };
-    if (!g.staff) g.staff = { hk: false, clerk: false };
-    g.staff[role] = !!on;
+    const p = PEOPLE[who];
+    if (!p || p.role !== role) return { error: 'No such person for that job.' };
+    if (!g.staff) g.staff = { hk: null, clerk: null };
+    if (g.staff[role]) return { error: `${staffPerson(g, role).name} holds that job — let them go first.` };
+    g.staff[role] = who;
+    if (!g.people) g.people = {};
+    if (!g.people[who]) g.people[who] = { xp: 0 };
     return { ok: true, staff: g.staff };
+  }
+  // ---------- Pass J4: THE ROSTER ----------
+  // People learn the place. XP is nights worked (a busy night, six rooms or
+  // more in house, teaches double); levels land at 8, 20, 38 and 60 nights.
+  // A level is worth +8 minutes and a cleaner clean to a housekeeper, +1
+  // softening every other level to a clerk, and +6% wages to either.
+  // Shifts: a housekeeper on the evening turn leaves the morning pool and
+  // keeps the rooms' dirt down instead; a clerk on morning cover turns
+  // rooms early (+20 minutes) and writes the replies (+0.03 of travel) but
+  // is home by noon — no softening when the knocks come.
+  const LEVEL_XP = [8, 20, 38, 60];
+  function personLevel(g, who){
+    const xp = (g.people && g.people[who] && g.people[who].xp) || 0;
+    let lvl = 1; for (const t of LEVEL_XP) if (xp >= t) lvl++;
+    return lvl;
+  }
+  function wageOf(g, role){
+    const p = staffPerson(g, role);
+    if (!p) return 0;
+    return Math.round(p.wage * (1 + 0.06 * (personLevel(g, g.staff[role]) - 1)));
+  }
+  function setShift(g, role, shift){
+    ensureSeason(g);
+    if (g.phase !== 'morning' || g.over) return { error: 'The roster is set in the morning.' };
+    if (role !== 'hk' && role !== 'clerk') return { error: 'No such job.' };
+    const ok = role === 'hk' ? ['day', 'evening'] : ['night', 'morning'];
+    if (!ok.includes(shift)) return { error: 'No such shift for that job.' };
+    if (!g.staff || !g.staff[role]) return { error: 'Nobody holds that job.' };
+    if (!g.shifts) g.shifts = { hk: 'day', clerk: 'night' };
+    g.shifts[role] = shift;
+    return { ok: true, shifts: g.shifts };
+  }
+  function fireStaff(g, role){
+    ensureSeason(g);
+    if (g.phase !== 'morning' || g.over) return { error: 'Letting go happens in the morning.' };
+    if (role !== 'hk' && role !== 'clerk' && role !== 'watch') return { error: 'No such job.' };
+    if (!g.staff) g.staff = { hk: null, clerk: null, watch: null };
+    g.staff[role] = null;
+    return { ok: true, staff: g.staff };
+  }
+  function housekeepingPool(g, extra){
+    const hk = staffPerson(g, 'hk');
+    let mins = 0;
+    if (hk && !(g.shifts && g.shifts.hk === 'evening')) mins = hk.minutes + (personLevel(g, g.staff.hk) - 1) * 8;
+    const clerkCover = g.shifts && g.shifts.clerk === 'morning' && staffPerson(g, 'clerk') ? 20 : 0;
+    return BASE_MINUTES + Math.max(0, g.rooms.length - 8) * 20 + (extra ? EXTRA_MINUTES : 0) + mins + clerkCover;
+  }
+  // ---------- Pass E3: staff, review replies, weekly-rate deals ----------
+  // Kept as the steady hands' shorthand: on = hire the baseline person.
+  function setStaff(g, role, on){
+    if (role !== 'hk' && role !== 'clerk' && role !== 'watch') return { error: 'No such job.' };
+    return on ? hireStaff(g, role, role === 'hk' ? 'mabel' : role === 'clerk' ? 'eddie' : 'hollis') : fireStaff(g, role);
   }
   const REPLIES = {
     gracious: { good: 'Thank you for saying so — and for staying with us. The star will be lit when you pass this way again.',
@@ -264,7 +384,10 @@ const SIM = (() => {
     if (!co || !co.review) return { error: 'That card has no review on it.' };
     const stars = co.review.stars;
     const bucket = stars >= 4 ? 'good' : stars === 3 ? 'mid' : 'bad';
-    g.reply = { night: g.night, idx, tone, stars, mult: replyMult(tone, stars), text: REPLIES[tone][bucket] };
+    let rMult = replyMult(tone, stars);
+    if (g.staff && g.staff.clerk === 'wanda') rMult = 1 + (rMult - 1) * 0.75; // Wanda's hand: the word travels less far
+    if (g.staff && g.staff.clerk && g.shifts && g.shifts.clerk === 'morning') rMult += 0.03; // morning cover writes the replies fresh
+    g.reply = { night: g.night, idx, tone, stars, mult: rMult, text: REPLIES[tone][bucket] };
     if (Array.isArray(g.reviewWall)){
       const w = g.reviewWall.find(e => e.night === rep.night && e.name === co.name);
       if (w) w.reply = { tone, text: g.reply.text };
@@ -333,6 +456,89 @@ const SIM = (() => {
     g.stats.maxCredit = Math.max(g.stats.maxCredit || 0, g.credit);
     return drawn;
   }
+  // Pass J2 — THE PLANT (Hotel Magnate's utilities & maintenance). Machines
+  // wear out: every plant item and the three machine upgrades (pool, laundry,
+  // vending) carry a condition that decays nightly and can fail outright
+  // under 20. A machine's benefit scales with its health — sound 1, tired
+  // (15–39) a half, failing or broken nothing. Decay and breakdowns run on
+  // their own hash stream, like the deal roll, so the season's rng — and
+  // every balance gate measured on it — never moves.
+  const PLANT = {
+    heater:      { name:'Water heater',     cost:650, svc:70, rep:175, glyph:'flame',
+                   blurb:'Hot water in every room, on demand. Amenities +3 while it holds — and a dead heater on a full night is cold showers and long memories.' },
+    ice:         { name:'Ice machine',      cost:420, svc:45, rep:110, glyph:'ice',
+                   blurb:'A bin by the office that never runs empty. Amenities +2 while it holds.' },
+    transformer: { name:'Sign transformer', cost:380, svc:40, rep:95,  glyph:'bolt',
+                   blurb:'Clean power for the neon. The star burns steadier and reads further — every pool +4% while it holds.' },
+    pool:        { name:'Pool plant',       svc:80, rep:200, glyph:'pool', via:'pool',
+                   blurb:'The pump and filter behind the blue. Families look for the pool first in the high weeks — while it runs.' },
+    laundry:     { name:'Laundry machines', svc:60, rep:150, glyph:'laundry', via:'laundry',
+                   blurb:'The washers and dryers out back. Sheets on site cost 60% less — scaled by how well the machines run.' },
+    vending:     { name:'Vending machines', svc:35, rep:85,  glyph:'vending', via:'vending',
+                   blurb:'Cold drinks at midnight prices — about $1.60 a room a night, scaled by whether the machine gives or eats.' }
+  };
+  const PLANT_BROKEN_LINES = {
+    heater: 'The water heater gave out in the night — cold showers all round. Repair it in the catalog before it costs you stars.',
+    ice: 'The ice machine died in the night — warm drinks and thin patience until it is repaired.',
+    transformer: 'The sign transformer blew in the night — the star buzzed, dimmed, and held. It wants repair in the catalog.',
+    pool: 'The pool pump seized in the night — the water will turn by the weekend if it is not repaired.',
+    laundry: 'A laundry machine threw its belt in the night — sheets by hand until it is repaired.',
+    vending: 'The vending machine ate a dollar and gave nothing back, all night. It wants repair.'
+  };
+  function plantHash(g, id, salt){
+    let h = ((g.seed >>> 0) * 2654435761 + g.night * 40503 + salt * 977 + 31) >>> 0;
+    for (let i = 0; i < id.length; i++) h = ((h * 1664525 + id.charCodeAt(i) * 1013904223) >>> 0);
+    h = (h * 1664525 + 1013904223) >>> 0;
+    return h / 4294967296;
+  }
+  function plantFactor(g, id){
+    const p = g.plant && g.plant[id];
+    if (!p) return 1;
+    if (p.broken) return 0;
+    return p.c >= 40 ? 1 : p.c >= 15 ? 0.5 : 0;
+  }
+  function plantBroken(g, id){ return !!(g.plant && g.plant[id] && g.plant[id].broken); }
+  function plantAmenity(g){
+    let a = 0;
+    if (g.plant && g.plant.heater) a += 3 * plantFactor(g, 'heater');
+    if (g.plant && g.plant.ice) a += 2 * plantFactor(g, 'ice');
+    return a;
+  }
+  function buyPlant(g, id){
+    ensureSeason(g);
+    if (g.phase !== 'morning' || g.over) return { error: 'The catalog only opens in the morning.' };
+    const p = PLANT[id];
+    if (!p || !p.cost) return { error: 'Not plant stock.' };
+    if (g.plant && g.plant[id]) return { error: 'Already installed.' };
+    if (!payWithCredit(g, p.cost)) return { error: 'Not enough cash or credit for that.' };
+    if (!g.plant) g.plant = {};
+    g.plant[id] = { c: 100, broken: false };
+    return { ok: true, item: p };
+  }
+  function servicePlant(g, id){
+    ensureSeason(g);
+    if (g.phase !== 'morning' || g.over) return { error: 'The plant is serviced in the morning.' };
+    const p = PLANT[id], cur = g.plant && g.plant[id];
+    if (!p || !cur) return { error: 'No such machine.' };
+    if (!cur.broken && cur.c >= 100) return { error: 'Sound — nothing to do.' };
+    const cost = cur.broken ? p.rep : p.svc;
+    if (!payWithCredit(g, cost)) return { error: 'Not enough cash or credit for that.' };
+    cur.c = 100; cur.broken = false;
+    return { ok: true, cost };
+  }
+  function settlePlant(g){
+    // Nightly wear, settled in resolveNight. Returns the ids that broke.
+    const broke = [];
+    if (!g.plant) return broke;
+    const heavyHand = g.staff && g.staff.hk === 'darlene' ? 1 : 0; // Darlene's catch
+    for (const id of Object.keys(g.plant)){
+      const p = g.plant[id];
+      if (p.broken) continue;
+      p.c = clamp(p.c - (2 + Math.floor(plantHash(g, id, 3) * 4) + heavyHand), 0, 100);
+      if (p.c < 20 && plantHash(g, id, 7) * 100 < (20 - p.c) * 2){ p.broken = true; p.c = 0; broke.push(id); }
+    }
+    return broke;
+  }
   function purchase(g, id){
     ensureSeason(g);
     if (g.phase !== 'morning' || g.over) return { error: 'The catalog only opens in the morning.' };
@@ -341,6 +547,7 @@ const SIM = (() => {
     if (g.upgrades.includes(id)) return { error: 'Already yours.' };
     if (!payWithCredit(g, u.cost)) return { error: 'Not enough cash or credit for that.' };
     g.upgrades.push(id);
+    if (PLANT[id] && PLANT[id].via){ if (!g.plant) g.plant = {}; g.plant[id] = { c: 100, broken: false }; }
     if (u.amenity) g.amenities = clamp(g.amenities + u.amenity, 0, 110);
     if (id === 'mattress') for (const r of g.rooms) r.condition = clamp(r.condition + 20, 0, 100);
     const lit = COMBOS.find(c => (c.a === id || c.b === id) && hasUpgrade(g, c.a) && hasUpgrade(g, c.b));
@@ -354,7 +561,7 @@ const SIM = (() => {
     if (g.night < ex.unlock) return { error: `The crew can start on night ${ex.unlock}.` };
     if (!payWithCredit(g, ex.cost)) return { error: 'Not enough cash or credit to build.' };
     for (let i = 0; i < ex.rooms; i++){
-      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null });
+      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null, size: roomSize(g.rooms.length + 1) });
     }
     g.expansions++;
     return { ok: true, expansion: ex };
@@ -425,11 +632,12 @@ const SIM = (() => {
     }
     if (hasUpgrade(g, 'website')) f *= 1.08;
     if (hasUpgrade(g, 'sign')) f *= 1.12;
-    if (segKey === 'family' && hasUpgrade(g, 'pool') && seasonArc(night) >= 1) f *= 1.22;
+    if (segKey === 'family' && hasUpgrade(g, 'pool') && seasonArc(night) >= 1) f *= 1 + 0.22 * plantFactor(g, 'pool');
     if (segKey === 'trucker' && hasUpgrade(g, 'truckpad')) f *= 1.15;
     if (segKey === 'tourist' && hasUpgrade(g, 'truckpad')) f *= 1.06;
     if (segKey === 'family' && hasUpgrade(g, 'pets')) f *= 1.08;
     if (hasUpgrade(g, 'billboard')) f *= 1.10;
+    if (g.plant && g.plant.transformer) f *= 1 + 0.04 * plantFactor(g, 'transformer');
     for (const c of activeCombos(g)) if (c.seg && c.seg[segKey]) f *= c.seg[segKey];
     if (g.challenges){
       if (g.challenges.marla && g.challenges.marla.done && (segKey === 'family' || segKey === 'tourist')) f *= 1.06;
@@ -437,6 +645,20 @@ const SIM = (() => {
     }
     if (g.reply && g.reply.night === night) f *= g.reply.mult;
     else if (g.reply && g.reply.night === night - 1) f *= Math.sqrt(g.reply.mult); // the word is still travelling, fainter
+    if (g.ejectWord && g.ejectWord.night === night) f *= 0.96; // Pass J5: Doyle's eject is highway gossip for a night
+    if (g.guideWord && night >= g.guideWord.from && night <= g.guideWord.until) f *= g.guideWord.mult; // Pass J8: the guide is being carried this week
+    if (g.mkt){
+      if (g.mkt.focus[segKey]) f *= 1.25; // Pass J9: a campaign talks to one road at a time
+      f *= AD_TIERS[g.mkt.ad || 0].mult;  // Pass J9: the paper, the radio
+    }
+    if (g.town && g.town.length){ // Pass J10: what you put into the town comes back as traffic
+      if (hasTown(g, 'piecase') && (segKey === 'family' || segKey === 'tourist')) f *= 1.06;
+      if (hasTown(g, 'garage') && segKey === 'trucker') f *= 1.08;
+      if (hasTown(g, 'church') && segKey === 'longstay') f *= 1.10;
+      if (hasTown(g, 'drivein') && segKey === 'tourist') f *= 1.12;
+    }
+    const sl = segLevel(g, segKey); if (sl) f *= 1 + 0.03 * sl; // Pass J11: a road that loves you sends more of its own (3% a level, balanced against the value forgiveness in bookProb/scoreStay — see the J11 tuning note in the suite)
+    if (segKey === 'tourist' && g.forecourt && g.forecourt.pump && g.pump && g.pump.mode === 'premium') f *= 0.98; // Pass J12: the premium sign is highway talk
     if (segKey === 'trucker' && g.regular && g.regular.kept >= 3) f *= 1.04; // Earl's word at the truck stops
     // The road has moods: some nights the highway is generous, some nights it
     // is not, and no rate card changes that. Rolled once per night (createGame,
@@ -445,11 +667,206 @@ const SIM = (() => {
     return s.base * s.dow[dowOf(night)] * f;
   }
   function rollRoadMood(g){ return Math.round((0.85 + rnd(g) * 0.35) * 100) / 100; }
+  // ---------- Pass J7: THE GROUNDS ----------
+  // Prestige is the property as the road reads it: what has been built,
+  // how the rooms are kept, whether the plant is sound, and what the
+  // stars say. It buys a little pricing room everywhere — the fair price
+  // runs up to a tenth kinder — and it is placed, not just totalled: the
+  // rooms beside the pool and the breakfast nook judge their amenities
+  // gentler, because that is what the guest is actually looking at.
+  const PRESTIGE = { pool:6, sign:5, breakfast:4, piewindow:4, solar:4, ac:3, wifi:3, billboard:3,
+                     website:2, vending:2, pets:2, truckpad:2, mattress:2, security:2, laundry:1, deepclean:1 };
+  function prestigeDetail(g){
+    const parts = [];
+    let score = 0;
+    for (const u of UPGRADES){ if (hasUpgrade(g, u.id) && PRESTIGE[u.id]){ parts.push({ label: u.name.toLowerCase(), pts: PRESTIGE[u.id] }); score += PRESTIGE[u.id]; } }
+    const ren = g.rooms.filter(r => r.tier === 'renovated').length;
+    if (ren){ const pts = Math.min(16, ren * 2); parts.push({ label: ren === 1 ? 'a renovated room' : `${ren} renovated rooms`, pts }); score += pts; }
+    const plush = g.rooms.filter(r => r.finish === 'plush').length;
+    if (plush){ const pts = Math.min(8, plush); parts.push({ label: 'plush finishes', pts }); score += pts; }
+    const fits = g.rooms.reduce((a, r) => a + (r.fittings || []).length, 0);
+    if (fits >= 3){ const pts = Math.min(6, Math.floor(fits / 3)); parts.push({ label: 'the fittings', pts }); score += pts; }
+    const plantIds = Object.keys(g.plant || {});
+    if (plantIds.length){
+      const avg = plantIds.reduce((a, id) => a + (g.plant[id].broken ? 0 : g.plant[id].c), 0) / plantIds.length;
+      const pts = Math.round(avg / 25);
+      if (pts > 0){ parts.push({ label: 'a sound plant', pts }); score += pts; }
+    }
+    const starPts = Math.round((g.rating - 3) * 4);
+    if (starPts > 0){ parts.push({ label: 'the stars themselves', pts: starPts }); score += starPts; }
+    parts.sort((a, b) => b.pts - a.pts);
+    return { score: Math.max(0, score), parts };
+  }
+  function prestige(g){ return prestigeDetail(g).score; }
+  function prestigeRefMult(g){ return 1 + Math.min(0.10, prestige(g) * 0.0015); }
+  function poolRooms(g){ const mid = Math.ceil(g.rooms.length / 2); return [mid, mid + 1]; }
+  // ---------- Pass J8: THE HIGHWAY GUIDE ----------
+  // Twice a summer the guide prints its rankings for this stretch of
+  // highway: the Starlight against the Starling Suites across the road,
+  // the Desert Inn at the county line, and the Palm Court Lodge, fading
+  // politely. The player's mark is real — stars, prestige, and how full
+  // the court has run. Print high and travellers carry the guide for a
+  // week: the road runs thicker.
+  function guideHash(g, salt){
+    let h = (g.seed >>> 0) ^ 0x9e3779b9;
+    const s = String(salt);
+    for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i) + (h << 5); h = Math.imul(h, 16777619) >>> 0; }
+    return ((h >>> 0) % 1000) / 1000;
+  }
+  const GUIDE_RIVALS = [
+    { name: 'The Starling Suites', line: 'The chain across the highway. Everything new, nothing remembered.' },
+    { name: 'The Desert Inn', line: 'At the county line. A fair court, a famous pie case, no hurry in it.' },
+    { name: 'The Palm Court Lodge', line: 'Fading politely since the interstate. The regulars are loyal; the paint is not.' }
+  ];
+  function guideRows(g){
+    const occPct = g.stats.possibleRoomNights ? 100 * g.stats.roomNights / g.stats.possibleRoomNights : 0;
+    const you = Math.round(g.rating * 18 + prestige(g) * 0.6 + occPct * 0.25);
+    const n = g.night;
+    const scores = {
+      'The Starling Suites': Math.round(84 + Math.max(0, n - 43) * 0.35 + guideHash(g, 'starling') * 4),
+      'The Desert Inn': Math.round(76 + (guideHash(g, 'desert') - 0.5) * 6),
+      'The Palm Court Lodge': Math.round(74 - n * 0.08 + (guideHash(g, 'palm') - 0.5) * 4)
+    };
+    const rows = [{ name: 'The Starlight Motel', score: you, you: true,
+                    line: you >= 95 ? 'The court everybody talks about at the diner.' : you >= 85 ? 'A kept court with a lit sign — the pick of the independents.' : you >= 75 ? 'Honest rooms, honestly kept. The guide has its eye on it.' : 'A plain court on a loud highway. The guide is waiting to be impressed.' },
+                  ...GUIDE_RIVALS.map(r => ({ name: r.name, score: scores[r.name], line: r.line }))];
+    rows.sort((a, b) => b.score - a.score);
+    const prev = g.guidePrev || [];
+    for (const r of rows){
+      const was = prev.indexOf(r.name);
+      r.move = was >= 0 ? was - rows.indexOf(r) : null;
+    }
+    return rows;
+  }
+  // ---------- Pass J9: THE WORD GETS OUT ----------
+  // Marketing is a running spend, not a purchase: a campaign per road
+  // ($25 a night, that segment's pool ×1.25 while it runs), one standing
+  // advert (the county paper, the radio spot), and two packages that
+  // reshape the drive-up trade in genQueue. All of it settles nightly.
+  const AD_TIERS = [
+    { name: 'No advert running', cost: 0, mult: 1 },
+    { name: 'The county paper', cost: 18, mult: 1.05 },
+    { name: 'The radio spot', cost: 45, mult: 1.10 }
+  ];
+  function mktCost(g){
+    if (!g.mkt) return 0;
+    let c = AD_TIERS[g.mkt.ad || 0].cost;
+    for (const k in g.mkt.focus) if (g.mkt.focus[k]) c += 25;
+    return c;
+  }
+  function setFocus(g, seg, on){ if (!g.mkt || !SEGMENTS[seg]) return { error: 'No such road.' }; g.mkt.focus[seg] = !!on; return { ok: true }; }
+  function setAdTier(g, i){ if (!g.mkt || !AD_TIERS[i]) return { error: 'No such advert.' }; g.mkt.ad = i; return { ok: true }; }
+  function setPackage(g, key, on){ if (!g.mkt || !(key in g.mkt.pkg)) return { error: 'No such package.' }; g.mkt.pkg[key] = !!on; return { ok: true }; }
+
+  // ---------- Pass J10: THE TOWN ----------
+  // The motel is not the whole world. Money put into the town — the
+  // diner's pie case, the garage's tow rig, the church hall's roof, the
+  // drive-in's second screen — comes back as traffic on specific roads,
+  // for good. The pie case also unlocks a sellable extra: diner vouchers
+  // at the desk, $5 a room over the counter, on nights you choose (the
+  // pie window stays dark those nights — your guests are eating out).
+  const TOWN = [
+    { id:'piecase', name:'The diner — a new pie case', cost:900,  line:'Families and tourists run 6% thicker — folks stop for pie and stay the night. Unlocks diner vouchers at the desk.' },
+    { id:'garage',  name:'The garage — a tow rig',     cost:1200, line:'Truckers run 8% thicker, and the garage owes you: a handyman callout is $50, not $80.' },
+    { id:'church',  name:'The church hall — a new roof', cost:750, line:'Long-stay traffic runs 10% thicker — retreats, visiting preachers, cousins in for the reunion.' },
+    { id:'drivein', name:'The drive-in — a second screen', cost:1500, line:'Tourists run 12% thicker, and families and tourists judge the court 2 kinder — a night at the pictures counts.' }
+  ];
+  function hasTown(g, id){ return !!g.town && g.town.includes(id); }
+  function buyTown(g, id){
+    const t = TOWN.find(x => x.id === id);
+    if (!t) return { error: 'No such place in town.' };
+    if (hasTown(g, id)) return { error: 'Already done — the town remembers.' };
+    if (g.cash < t.cost) return { error: 'Not enough in the till.' };
+    g.cash = Math.round((g.cash - t.cost) * 100) / 100;
+    (g.town = g.town || []).push(id);
+    return { ok: true };
+  }
+
+  // ---------- Pass J11: WORD OF MOUTH ----------
+  // Every road forms its own opinion. Serve a segment well and its
+  // standing climbs (12 / 30 / 55 / 90 good turns): the road runs
+  // thicker — loyal — and its people notice more — demanding, dirt
+  // reads deeper against them. From the first level they also send
+  // their own: a referred arrival names the guest who sent them and
+  // arrives half-sold (+8 match, carried into the stay).
+  const SEG_XP_AT = [12, 30, 55, 90];
+  function segLevel(g, seg){
+    const x = g.segXp && g.segXp[seg];
+    if (!x) return 0;
+    let l = 0; for (const at of SEG_XP_AT) if (x.xp >= at) l++;
+    return l;
+  }
+
+  // ---------- Pass J12: THE FORECOURT ----------
+  // A second business on the same concrete. The shop trades on stock
+  // and a shelf price you set; the pump trades on a price sign you
+  // choose (a cent under brings the road in, premium takes more and
+  // the tourists hear about it); the wash is a coin box that earns
+  // against a full court. Each keeps its own little P&L in the register.
+  const FORE = [
+    { id:'shop', name:'The forecourt shop', cost:800,  line:'A counter, a fridge, a shelf of road food. You stock it by the case and set the shelf price; it sells against the night\u2019s occupancy.' },
+    { id:'pump', name:'The fuel pump',      cost:1400, line:'One pump on the forecourt. Set the sign: match the highway, a cent under it, or premium — the take follows, and so does the talk.' },
+    { id:'wash', name:'The car wash',       cost:950,  line:'A coin-box wash at the court\u2019s edge. Six dollars a car, and a full court washes more cars.' }
+  ];
+  const SHELF_PRICES = [4, 6, 8, 10];
+  const SHELF_TAKE = { 4: 0.9, 6: 0.7, 8: 0.5, 10: 0.32 };
+  const PUMP_MODES = { match: { mult: 1, label: 'at the highway price' }, under: { mult: 1.15, label: 'a cent under the highway' }, premium: { mult: 1.30, label: 'at the premium price' } };
+  function buyForecourt(g, id){
+    const t = FORE.find(x => x.id === id);
+    if (!t) return { error: 'No such fixture.' };
+    if (g.forecourt && g.forecourt[id]) return { error: 'Already standing.' };
+    if (g.cash < t.cost) return { error: 'Not enough in the till.' };
+    g.cash = Math.round((g.cash - t.cost) * 100) / 100;
+    (g.forecourt = g.forecourt || {})[id] = true;
+    return { ok: true };
+  }
+  function buyStock(g, cases){
+    if (!g.forecourt || !g.forecourt.shop) return { error: 'No shop to stock.' };
+    const cost = 24 * cases;
+    if (g.cash < cost) return { error: 'Not enough in the till.' };
+    g.cash = Math.round((g.cash - cost) * 100) / 100;
+    g.shop.stock += 12 * cases;
+    return { ok: true };
+  }
+  function setShelfPrice(g, p){ if (!SHELF_PRICES.includes(p)) return { error: 'No such shelf price.' }; g.shop.price = p; return { ok: true }; }
+  function setPumpMode(g, m){ if (!PUMP_MODES[m]) return { error: 'No such sign.' }; g.pump.mode = m; return { ok: true }; }
+
+  // ---------- Pass J13: THE PLACARDS ----------
+  // The highway association pins three placards in the office each
+  // season — one for the money, one for the house, one for the road —
+  // dealt by hash from authored sets. Meet one and it comes down with
+  // a bounty in an envelope; they are the genre's level goals, hung
+  // on a corkboard by the desk.
+  const PLACARDS = [
+    { id:'cash8',     fam:'money', name:'Eight Thousand Clear', line:'Hold $8,000 in the till at a night\u2019s settlement.', bounty:300, test:(g) => g.cash >= 8000 },
+    { id:'offline',   fam:'money', name:'Off the Line', line:'Draw on the credit line, then pay it back to nothing.', bounty:250, test:(g) => !!g.drewOnce && g.credit === 0 },
+    { id:'forepay',   fam:'money', name:'The Forecourt Pays', line:'Take $400 across the forecourt in a season.', bounty:200, test:(g) => (g.foreEarned || 0) >= 400 },
+    { id:'bignight',  fam:'money', name:'A Nine-Hundred Night', line:'Settle a single night at $900 or better, all told.', bounty:200, test:(g, ctx) => ctx.revenue >= 900 },
+    { id:'stars4',    fam:'house', name:'Four Stars Standing', line:'Hold four stars at a night\u2019s settlement.', bounty:250, test:(g) => g.rating >= 4.0 },
+    { id:'gloves',    fam:'house', name:'White Gloves', line:'Five or more checkouts in one night, every one scoring 80 or better.', bounty:300, test:(g, ctx) => ctx.checkouts.length >= 5 && ctx.checkouts.every(c => c.score >= 80) },
+    { id:'plantsound',fam:'house', name:'The Plant, Sound', line:'Three or more machines standing, every one at 70 or better.', bounty:200, test:(g) => { const ps = Object.values(g.plant || {}); return ps.length >= 3 && ps.every(p => p.c >= 70); } },
+    { id:'doors16',   fam:'house', name:'Sixteen Doors', line:'Grow the court to sixteen doors.', bounty:400, test:(g) => g.rooms.length >= 16 },
+    { id:'roadtaken', fam:'road',  name:'A Road Taken', line:'Bring any one road to standing 2.', bounty:250, test:(g) => Object.keys(SEGMENTS).some(s => segLevel(g, s) >= 2) },
+    { id:'inguide',   fam:'road',  name:'In the Guide', line:'Stand first or second when the Highway Guide prints.', bounty:300, test:(g) => !!g.guide && g.guide.pos <= 2 },
+    { id:'town3',     fam:'road',  name:'The Town Stands With You', line:'Put money into three places in town.', bounty:300, test:(g) => (g.town || []).length >= 3 },
+    { id:'fullfri',   fam:'road',  name:'Full Court Friday', line:'Fill every door on a Friday night.', bounty:350, test:(g, ctx) => (g.night - 1) % 7 === 0 && ctx.occ > 0 && ctx.occ === g.rooms.length }
+  ];
+  function dealPlacards(g){
+    const dealt = [];
+    for (const fam of ['money', 'house', 'road']){
+      const set = PLACARDS.filter(p => p.fam === fam);
+      dealt.push(set[Math.floor(ticketHash(g, 'placard-' + fam) * set.length)].id);
+    }
+    return { dealt, won: {} };
+  }
+
   function bookProb(g, segKey, rate){
     const s = SEGMENTS[segKey];
     let ref = s.ref;
     if (segKey === 'family' && hasUpgrade(g, 'breakfast')) ref += 10;
     if (segKey === 'family' && hasUpgrade(g, 'piewindow')) ref += 5;
+    ref *= prestigeRefMult(g); // Pass J7: a kept house is forgiven a little more on the card
+    ref *= 1 + 0.03 * segLevel(g, segKey); // Pass J11: a road that loves you forgives the card, too
     const ev = activeEvent(g, g.night);
     const fair = ref * repMult(g.rating) * (ev && ev.price ? ev.price : 1);
     // Asymmetric: demand falls off much faster above the fair price than it
@@ -481,7 +898,7 @@ const SIM = (() => {
     };
     const conds = [88, 82, 79, 76, 74, 71, 68, 65];
     for (let i = 0; i < 8; i++){
-      g.rooms.push({ id: i + 1, state: 'ready', dirt: ri(g, 0, 6), condition: conds[i], tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null });
+      g.rooms.push({ id: i + 1, state: 'ready', dirt: ri(g, 0, 6), condition: conds[i], tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null, size: roomSize(i + 1) });
     }
     g.roadMood = rollRoadMood(g);
     return g;
@@ -609,6 +1026,8 @@ const SIM = (() => {
     }
     if (room.finish === 'bright' && (guest.segment === 'family' || guest.segment === 'tourist')) m += 8;
     if (guest.want && (room.quirk === guest.want || fits.includes(guest.want))) m += 24;
+    if (guest.big) m += room.size === 'large' ? 14 : -10; // Pass J6: the size want, honoured or not
+    if (guest.referred) m += 8; // Pass J11: they arrived half-sold
     return clamp(m, 5, 100);
   }
   function segLine(g, segKey){
@@ -722,14 +1141,7 @@ const SIM = (() => {
     const ev = activeEvent(g, g.night);
     for (const room of occRooms){
       const guest = room.guest;
-      let p = 0.09;
-      if (room.condition < 72) p += 0.13;
-      if (room.condition < 55) p += 0.15;
-      if (room.condition < 40) p += 0.15;
-      if (guest.trait === 'light-sleeper' && occ >= 5) p += 0.10;
-      if (ev && ev.id === 'storm') p *= 1.6;
-      if (hasUpgrade(g, 'security')) p *= 0.7;
-      if (g.handymanTonight) p *= 0.8;
+      const p = troubleP(g, room, guest, occ, ev);
       if (rnd(g) < p){
         let kind;
         if (guest.trait === 'light-sleeper' && occ >= 5 && rnd(g) < 0.5) kind = 'noise';
@@ -740,6 +1152,21 @@ const SIM = (() => {
         return;
       }
     }
+  }
+  // One room's chance of a knock tonight. The watchman's presence scales
+  // the same roll — deterrence changes the threshold, never the draw count.
+  function troubleP(g, room, guest, occ, ev){
+    let p = 0.09;
+    if (room.condition < 72) p += 0.13;
+    if (room.condition < 55) p += 0.15;
+    if (room.condition < 40) p += 0.15;
+    if (guest.trait === 'light-sleeper' && occ >= 5) p += 0.10;
+    if (ev && ev.id === 'storm') p *= 1.6;
+    if (hasUpgrade(g, 'security')) p *= 0.7;
+    if (g.handymanTonight) p *= 0.8;
+    const watchP = staffPerson(g, 'watch');
+    if (watchP) p *= 1 - Math.min(0.6, (watchP.deter || 0) + 0.02 * (personLevel(g, g.staff.watch) - 1));
+    return p;
   }
   function resolveIncident(g, action, targetRoomId){
     const inc = g.incident;
@@ -755,8 +1182,25 @@ const SIM = (() => {
     // a comped guest does not savage you in public (scoreStay floors their
     // stars at 3), which also keeps a regular from striking out in the book.
     // Riding it out stays free, and stays a gamble.
-    if (action === 'fix'){ g.cash = Math.round((g.cash - 28) * 100) / 100; guest.recovery = 12; }
-    else if (action === 'comp'){ g.cash = Math.round((g.cash - guest.ratePaid) * 100) / 100; guest.recovery = 12; guest.compProtected = true; }
+    if (action === 'eject'){
+      // Pass J5: the watchman walks the LOUD room out — the knock is a
+      // neighbour complaint, so the party next door is the one who leaves.
+      // The desk keeps the complainant (recovery 10, the quiet itself) and
+      // loses the ejected room for the night: no rate, no review, a dirty
+      // room at 55. Under Doyle the road talks — tomorrow's pools run thin.
+      if (inc.kind !== 'noise') return { error: 'The watchman handles people, not plumbing.' };
+      const watchP = staffPerson(g, 'watch');
+      if (!watchP) return { error: 'Nobody on watch to walk them out.' };
+      if (!watchP.eject) return { error: `${watchP.name} won’t lay a hand — that was the catch, in the open.` };
+      const loud = g.rooms.filter(r => Math.abs(r.id - room.id) === 1 && r.state === 'occupied' && r.guest)
+        .sort((a, b) => (b.guest.dealStay ? 1 : 0) - (a.guest.dealStay ? 1 : 0))[0];
+      if (!loud) return { error: 'Nobody next door to walk out — that noise is a television, not a party.' };
+      loud.guest = null; loud.state = 'dirty'; loud.dirt = 55;
+      if (g.staff.watch === 'doyle'){ ensureSeason(g); g.ejectWord = { night: g.night + 1 }; }
+      guest.recovery = 10;
+    }
+    else if (action === 'fix'){ g.cash = Math.round((g.cash - 28) * 100) / 100; guest.recovery = 12; }
+    else if (action === 'comp'){ g.cash = Math.round((g.cash - guest.ratePaid - (g.staff && g.staff.clerk === 'frankie' ? 10 : 0)) * 100) / 100; guest.recovery = 12; guest.compProtected = true; }
     else if (action === 'ride'){ guest.recovery = -14; }
     else if (action === 'move'){
       const target = g.rooms.find(r => r.id === targetRoomId);
@@ -766,7 +1210,9 @@ const SIM = (() => {
       room.state = 'dirty'; room.dirt = Math.max(room.dirt, 30); room.guest = null;
     }
     else return { error: 'Unknown response.' };
-    if (g.staff && g.staff.clerk && guest.recovery > 0) guest.recovery += 4;
+    const clerkP = staffPerson(g, 'clerk');
+    if (clerkP && guest.recovery > 0 && !(g.shifts && g.shifts.clerk === 'morning'))
+      guest.recovery += (clerkP.soften || 4) + Math.floor((personLevel(g, g.staff.clerk) - 1) / 2);
     inc.resolved = action;
     ensureSeason(g); g.stats.incidentsHandled++;
     // Pass F5: a trouble ridden out is remembered by name; a trouble seen
@@ -807,11 +1253,20 @@ const SIM = (() => {
       if (room.state !== 'dirty') continue;
       used += cleanMinutes(g, plan.cleans[room.id] || 'skip');
     }
+    // Pass J6: mid-stay services spend the same minutes — a towel run and a
+    // tidy for a guest in house, 20 minutes a room, once a stay.
+    const services = Array.isArray(plan.services) ? plan.services : [];
+    for (const rid of services){
+      const r = g.rooms.find(x => x.id === rid);
+      if (r && r.state === 'occupied' && r.guest && !r.guest.serviced) used += 20;
+    }
     if (used > pool) return { error: 'Not enough housekeeping minutes for that plan.' };
     for (const room of g.rooms){
       if (room.state !== 'dirty') continue;
       const lvl = CLEAN_LEVELS[plan.cleans[room.id] || 'skip'];
-      if (lvl.dirt !== null){ room.dirt = lvl.dirt; room.state = 'ready'; }
+      if (lvl.dirt !== null){ room.dirt = lvl.dirt; room.state = 'ready';
+        if (staffPerson(g, 'hk') && !(g.shifts && g.shifts.hk === 'evening')){ const hkLvl = personLevel(g, g.staff.hk); if (hkLvl > 1) room.dirt = Math.max(0, room.dirt - (hkLvl - 1) * 2); }
+        if (g.staff && g.staff.hk === 'rosa') room.dirt = Math.max(room.dirt, 8); }
     }
     g.rate = clamp(Math.round(plan.rate), 35, 180);
     // Pass F3: the premium card. It exists only while a renovated room does;
@@ -844,6 +1299,11 @@ const SIM = (() => {
     }
     g.droveOn = 0;
     g.handymanTonight = !!plan.handyman;
+    g.vouchersTonight = !!plan.vouchers; // Pass J10: diner vouchers at the desk tonight
+    for (const rid of services){
+      const r = g.rooms.find(x => x.id === rid);
+      if (r && r.state === 'occupied' && r.guest && !r.guest.serviced) r.guest.serviced = true;
+    }
     g.lastPlan = { minutesUsed: used, extraCleaner: !!plan.extraCleaner, handyman: !!plan.handyman };
     g.phase = 'arrivals';
     genQueue(g);
@@ -955,8 +1415,77 @@ const SIM = (() => {
         }
       }
     }
+    // Pass J6: size wants ride the hash, not the stream.
+    for (const a of g.queue){
+      const p = a.segment === 'family' ? 0.35 : a.segment === 'longstay' ? 0.30 : a.segment === 'tourist' ? 0.15 : 0;
+      if (p && ticketHash(g, 'big' + a.id) < p) a.big = true;
+    }
+    // Pass J9: packages reshape the drive-up trade, hash-dealt like the
+    // size wants. The Weekend Two-Night (family/tourist, Fri–Sat) trades
+    // a tenth off the rate for a guaranteed second night; the Trucker
+    // Weekly locks five to seven nights at 85%. Regulars and challenge
+    // guests keep their own arrangements.
+    if (g.mkt){
+      const dow = (g.night - 1) % 7; // night 1 is a Friday: 0 Fri, 1 Sat
+      for (const a of g.queue){
+        if (a.regular || a.challenge || a.pkg) continue;
+        if (g.mkt.pkg.weekend && dow <= 1 && (a.segment === 'family' || a.segment === 'tourist') && ticketHash(g, 'pkgw' + a.id) < 0.6){
+          a.nights = Math.max(a.nights, 2);
+          a.ratePaid = Math.max(35, Math.round(a.ratePaid * 0.9));
+          a.pkg = 'The Weekend Two-Night';
+        } else if (g.mkt.pkg.weekly && a.segment === 'trucker' && ticketHash(g, 'pkgt' + a.id) < 0.5){
+          a.nights = 5 + Math.floor(ticketHash(g, 'pkgn' + a.id) * 3);
+          a.ratePaid = Math.max(35, Math.round(a.ratePaid * 0.85));
+          a.pkg = 'The Trucker Weekly';
+        }
+      }
+    }
+    // Pass J11: referrals — a road that has taken to the place sends its
+    // own. The sender is a real past guest of that road, remembered at
+    // settlement for a stay that scored 80 or better.
+    if (g.segXp){
+      for (const a of g.queue){
+        if (a.regular || a.challenge || a.referred) continue;
+        const lvl = segLevel(g, a.segment);
+        const senders = (g.referrers && g.referrers[a.segment]) || [];
+        if (lvl >= 1 && senders.length && ticketHash(g, 'ref' + a.id) < 0.10 + 0.03 * lvl){
+          a.referred = senders[Math.floor(ticketHash(g, 'refn' + a.id) * senders.length)];
+        }
+      }
+    }
   }
 
+  // ---------- Pass J6: the room-service ticket ----------
+  // A guest in house leaves a supper ticket at the desk some mornings —
+  // hash-dealt like everything else that must not touch the stream. Send
+  // it up and the night carries the price, the kitchen carries the cost,
+  // and the guest remembers it kindly (+8). Let it go and nothing happens,
+  // which is also a kind of answer.
+  function ticketHash(g, salt){
+    let h = (g.seed >>> 0) ^ (g.night * 7919) >>> 0;
+    const s = String(salt);
+    for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995) >>> 0; h ^= h >>> 15;
+    return (h >>> 0) / 4294967296;
+  }
+  function genTicket(g){
+    g.serviceTicket = null;
+    if (g.tonight) return;
+    const staying = g.rooms.filter(r => r.state === 'occupied' && r.guest && r.guest.nightsLeft >= 1);
+    if (!staying.length) return;
+    if (ticketHash(g, 'ticket') > 0.45) return;
+    const room = staying[Math.floor(ticketHash(g, 'ticketroom') * staying.length)];
+    g.serviceTicket = { roomId: room.id, name: room.guest.name,
+      item: ticketHash(g, 'ticketitem') < 0.5 ? 'a supper tray' : 'pie and coffee',
+      price: 12 + Math.floor(ticketHash(g, 'ticketprice') * 4) * 2, cost: 6, status: 'waiting' };
+  }
+  function answerTicket(g, send){
+    const t = g.serviceTicket;
+    if (!t || t.status !== 'waiting') return { error: 'No ticket waiting.' };
+    if (g.phase !== 'morning') return { error: 'The ticket is a morning decision.' };
+    t.status = send ? 'sent' : 'let';
+    return { ok: true, ticket: t };
+  }
   function assignRoom(g, arrivalId, roomId){
     const a = g.queue.find(q => q.id === arrivalId);
     const room = g.rooms.find(r => r.id === roomId);
@@ -979,7 +1508,7 @@ const SIM = (() => {
                    // A regular who phoned for their room: getting it starts the
                    // stay warm (+8); any other door starts it slightly owed (−4).
                    recovery: a.wantRoom ? (a.wantRoom === room.id ? 8 : -4) : 0,
-                   challenge: a.challenge || null,
+                   challenge: a.challenge || null, big: !!a.big, referred: a.referred || null,
                    dealStay: !!deal, dealNights: deal ? deal.nights : 0, rowdyDone: false };
     g.queue = g.queue.filter(q => q.id !== arrivalId);
     g.processed++; g.stats.guests++;
@@ -1119,7 +1648,9 @@ const SIM = (() => {
       for (const nid of [room.id - 1, room.id + 1]){
         if (!occIds.has(nid)) continue;
         const nb = g.rooms.find(r => r.id === nid);
-        neighbourBurden += (nb && nb.finish === 'quiet') ? 0.5 : 1;
+        let nbBase = (nb && nb.finish === 'quiet') ? 0.5 : 1;
+        if (nb && nb.guest) nbBase *= (SEGMENTS[nb.guest.segment].loud || 1); // Pass J5: noise is per-type now
+        neighbourBurden += nbBase;
       }
     }
     const ev = activeEvent(g, g.night);
@@ -1130,10 +1661,20 @@ const SIM = (() => {
     if (qk && qk.noise) noise += qk.noise;
     if (room.finish === 'quiet') noise += 10;
     if ((room.fittings || []).includes('curtains')) noise += 8;
-    let amen = g.amenities + rf(g, -4, 4);
+    noise = 100 - (100 - noise) * (s.tol || 1); // Pass J5: tolerance is per-type — a trucker shrugs off what ends a tourist's night
+    if (g.staff && g.staff.watch === 'petra') noise += 4 + (personLevel(g, 'petra') - 1); // her quiet rounds
+    let amen = g.amenities + plantAmenity(g) + rf(g, -4, 4);
+    if (plantBroken(g, 'heater')) amen -= 6;
+    if (plantBroken(g, 'ice')) amen -= 2;
+    if (g.staff && g.staff.watch === 'hollis' && (guest.segment === 'family' || guest.segment === 'tourist')) amen -= 2; // his face, looming
+    if (hasUpgrade(g, 'pool') && plantFactor(g, 'pool') > 0 && poolRooms(g).includes(room.id)) amen += 5; // Pass J7: beside the pool
+    if (hasUpgrade(g, 'breakfast') && room.id <= 2) amen += 4; // Pass J7: beside the breakfast nook
+    if (hasTown(g, 'drivein') && (guest.segment === 'family' || guest.segment === 'tourist')) amen += 2; // Pass J10: a night at the pictures counts
     if (ev && ev.amenityPenalty && !hasUpgrade(g, 'ac')) amen -= ev.amenityPenalty;
+    const dirtIn = guest.serviced ? Math.max(0, guest.dirtAtCheckIn - 25) : guest.dirtAtCheckIn; // Pass J6: the towel run shows at checkout
+    const dirtJudged = dirtIn * (1 + 0.03 * segLevel(g, guest.segment)); // Pass J11: a loyal road notices dirt deeper (3% a level — tuned in-pass: 6% taxed the best houses out of Legend range)
     const comp = {
-      clean: 100 - guest.dirtAtCheckIn,
+      clean: 100 - dirtJudged,
       condition: clamp(room.condition + (room.tier === 'renovated' ? 8 : 0) + (room.finish === 'plush' ? 8 : 0) + ((room.fittings || []).includes('shower') ? 3 : 0), 0, 100),
       wait: guest.waitScore,
       amenities: clamp(amen, 0, 100),
@@ -1146,7 +1687,7 @@ const SIM = (() => {
     if (guest.trait === 'road-worn') w.amenities *= 1.6;
     let wSum = 0; for (const k of Object.keys(w)) wSum += w[k];
     let raw = 0; for (const k of Object.keys(w)) raw += (w[k] / wSum) * comp[k];
-    const vf = clamp(Math.pow(s.ref / guest.ratePaid, 0.65), 0.62, 1.12);
+    const vf = clamp(Math.pow(s.ref * (1 + 0.03 * segLevel(g, guest.segment)) / guest.ratePaid, 0.65), 0.62, 1.12); // Pass J11: loyalty forgives the rate in the judging, too
     let score = raw * vf;
     if (guest.trait === 'easygoing') score += (72 - score) * 0.35;
     score += (guest.recovery || 0) + (guest.returning ? 4 : 0);
@@ -1230,16 +1771,47 @@ const SIM = (() => {
     const occIds = new Set(occRooms.map(r => r.id));
     let revenue = 0; for (const r of occRooms) revenue += r.guest.ratePaid;
     const roomRevenue = revenue;
-    const vendingRevenue = hasUpgrade(g, 'vending') ? roundMoney(1.6 * occ) : 0;
+    const vendingRevenue = hasUpgrade(g, 'vending') ? roundMoney(1.6 * occ * plantFactor(g, 'vending')) : 0;
     revenue = roundMoney(revenue + vendingRevenue);
-    const pieRevenue = hasUpgrade(g, 'piewindow') ? roundMoney(2.6 * occ) : 0;
+    // Pass J12: the forecourt trades on its own account.
+    let foreRevenue = 0; const foreLines = [];
+    if (g.forecourt && occ > 0){
+      if (g.forecourt.shop && g.shop && g.shop.stock > 0){
+        const units = Math.min(g.shop.stock, Math.round(occ * (SHELF_TAKE[g.shop.price] || 0.7) * (0.85 + ticketHash(g, 'shop') * 0.3)));
+        if (units > 0){ g.shop.stock -= units; foreRevenue += units * g.shop.price; foreLines.push(`The shop sold ${units} off the shelf at $${g.shop.price} — $${units * g.shop.price}, with ${g.shop.stock} left in the back.`); }
+      }
+      if (g.forecourt.pump){
+        const mode = (g.pump && g.pump.mode) || 'match';
+        const take = Math.round((14 + 3.5 * occ) * PUMP_MODES[mode].mult * (0.85 + ticketHash(g, 'pump') * 0.3));
+        foreRevenue += take; foreLines.push(`The pump took $${take}, ${PUMP_MODES[mode].label}.`);
+      }
+      if (g.forecourt.wash){
+        const washes = Math.floor(occ * 0.35 * (0.7 + ticketHash(g, 'wash') * 0.6));
+        if (washes > 0){ foreRevenue += washes * 6; foreLines.push(`The wash ran ${washes} car${washes === 1 ? '' : 's'} through — $${washes * 6}.`); }
+      }
+    }
+    foreRevenue = roundMoney(foreRevenue);
+    const pieRevenue = hasUpgrade(g, 'piewindow') ? (g.vouchersTonight ? 0 : roundMoney(2.6 * occ)) : 0; // Pass J10: voucher nights, they eat at the diner
+    const voucherRevenue = (hasTown(g, 'piecase') && g.vouchersTonight) ? roundMoney(5 * occ) : 0; // Pass J10
     let petRevenue = 0;
     if (hasUpgrade(g, 'pets')){ for (let i = 0; i < occ; i++) if (rnd(g) < 0.18) petRevenue += 12; petRevenue = roundMoney(petRevenue); }
-    revenue = roundMoney(revenue + pieRevenue + petRevenue);
+    revenue = roundMoney(revenue + pieRevenue + petRevenue + voucherRevenue + foreRevenue);
     // Pass P1: a scout's deposit taken at the desk is income like any
     // other, and the register says what the phone did with the night.
     const phoneDeposit = (g.phone && g.phone.status === 'taken' && g.phone.kind === 'scout') ? g.phone.deposit : 0;
     if (phoneDeposit) revenue = roundMoney(revenue + phoneDeposit);
+    // Pass J6: a sent room-service ticket settles tonight — the price on
+    // the bill, the cost out of the kitchen, and the guest remembers it
+    // kindly when the stay is scored.
+    let serviceCost = 0, serviceLine = '';
+    if (g.serviceTicket && g.serviceTicket.status === 'sent'){
+      const t = g.serviceTicket;
+      revenue = roundMoney(revenue + t.price);
+      serviceCost = t.cost;
+      const tRoom = g.rooms.find(r => r.id === t.roomId);
+      if (tRoom && tRoom.guest && tRoom.guest.name === t.name) tRoom.guest.recovery += 8;
+      serviceLine = `${t.name} in Room ${t.roomId} sent up ${t.item} — $${t.price} on the bill, $${t.cost} out of the kitchen.`;
+    }
     const regularLine = g.regularLine || ''; g.regularLine = null;
     let phoneLine = '';
     if (g.phone && g.phone.status === 'taken'){
@@ -1310,6 +1882,7 @@ const SIM = (() => {
       g.cleanLog.push({ night: g.night, clean: 100 - guest.dirtAtCheckIn });
       room.condition = clamp(Math.round((room.condition - wear * (room.finish === 'plush' ? 0.5 : 1)) * 10) / 10, 35, 100);
       room.dirt = clamp(Math.round(45 + rnd(g) * 35 + s.dirtMod), 30, 95);
+      if (g.staff && g.staff.hk && g.shifts && g.shifts.hk === 'evening') room.dirt = Math.round(room.dirt * 0.6); // the evening turn-down
       room.state = 'dirty'; room.guest = null;
       g.stats.checkouts++;
     }
@@ -1321,13 +1894,17 @@ const SIM = (() => {
       mortgage: MORTGAGE + Math.max(0, g.rooms.length - 8) * 8,
       utilities: roundMoney((16 + 6.5 * occ) * (evNow && evNow.utilities ? evNow.utilities : 1) * (hasUpgrade(g, 'solar') ? 0.45 : 1)),
       housekeeping: roundMoney(plan.minutesUsed * HK_WAGE + (plan.extraCleaner ? EXTRA_COST : 0)),
-      laundry: roundMoney(2.1 * occ * (hasUpgrade(g, 'laundry') ? 0.4 : 1)),
+      laundry: roundMoney(2.1 * occ * (hasUpgrade(g, 'laundry') ? 1 - 0.6 * plantFactor(g, 'laundry') : 1)),
       supplies: roundMoney(1.4 * occ)
     };
     if (hasUpgrade(g, 'breakfast')) costs.breakfast = roundMoney(3.8 * occ);
-    if (g.handymanTonight) costs.handyman = 80;
-    const staffWage = (g.staff && g.staff.hk ? 38 : 0) + (g.staff && g.staff.clerk ? 30 : 0);
+    if (g.handymanTonight) costs.handyman = hasTown(g, 'garage') ? 50 : 80; // Pass J10: the garage owes you
+    const staffWage = wageOf(g, 'hk') + wageOf(g, 'clerk') + wageOf(g, 'watch');
     if (staffWage) costs.staff = staffWage;
+    if (g.staff && g.staff.hk === 'mabel') costs.supplies = roundMoney(costs.supplies + 5); // her ways, itemised
+    if (g.staff && g.staff.clerk === 'eddie' && occ > 0) costs.tillshort = roundMoney(1.2 * occ); // he forgets to charge
+    if (serviceCost) costs.service = serviceCost;
+    const mkt = mktCost(g); if (mkt) costs.marketing = mkt; // Pass J9: the word gets out, nightly
     // Insurance and the county are owed whether a single door sold or not —
     // the fixed nut an empty motel still pays, and the reason standing still
     // is a way to die, just a slower one.
@@ -1335,7 +1912,7 @@ const SIM = (() => {
     if (hasUpgrade(g, 'billboard')) costs.billboard = 13;
     if (g.credit > 0) costs.interest = roundMoney(Math.min(g.credit, 4000) * 0.0025 + Math.min(Math.max(0, g.credit - 4000), 2000) * 0.005 + Math.max(0, g.credit - 6000) * 0.0075);
     const costTotal = roundMoney(Object.values(costs).reduce((a, b) => a + b, 0));
-    const profit = roundMoney(revenue - costTotal);
+    let profit = roundMoney(revenue - costTotal);
     g.cash = roundMoney(g.cash + profit);
     g.stats.nights++; g.stats.revenue += revenue;
     if (g.stats.bestNightProfit === null || profit > g.stats.bestNightProfit) g.stats.bestNightProfit = profit;
@@ -1361,11 +1938,80 @@ const SIM = (() => {
     if (g.squeeze && !wasSqueezed) squeezeLine = 'The squeeze is on: the line stands deep in the bank’s dearest money. The phone rings more now, the desk’s deals run meaner, and every night is a claw-back.';
     else if (g.squeeze) squeezeLine = `The squeeze holds — the line stands at $${g.credit.toLocaleString('en-US')} of $8,000. Rings are lifelines now; answer them like it matters, because it does.`;
     else if (wasSqueezed) squeezeLine = 'The line is back under $6,000 and the cash is your own again. The bank’s letters go back to being polite.';
-    const report = { night: g.night, dow: DOW_NAMES[dowOf(g.night)], revenue, roomRevenue, vendingRevenue, costs, costTotal,
+    // Pass J2: the plant settles its wear after the night is scored — a
+    // breakdown announced this morning bites tonight if it goes unrepaired.
+    const plantBroke = settlePlant(g);
+    let plantLine = '';
+    if (plantBroke.length) plantLine = plantBroke.map(id => PLANT_BROKEN_LINES[id]).join(' ');
+    else if (g.plant){
+      let worst = null;
+      for (const id of Object.keys(g.plant)){ const p = g.plant[id]; if (!p.broken && p.c < 40 && (!worst || p.c < g.plant[worst].c)) worst = id; }
+      if (worst) plantLine = `The plant wants attention: the ${PLANT[worst].name.toLowerCase()} stands at ${Math.round(g.plant[worst].c)} and falling. A service in the catalog is cheaper than a breakdown.`;
+    }
+    // Pass J4: the roster learns. XP lands after the night is worked;
+    // a level-up is named in the register the morning it lands.
+    const levelUps = [];
+    if (g.staff && g.people){
+      for (const role of ['hk', 'clerk', 'watch']){
+        const who = g.staff[role];
+        if (!who || typeof who !== 'string') continue;
+        if (!g.people[who]) g.people[who] = { xp: 0 };
+        const before = personLevel(g, who);
+        g.people[who].xp += occ >= 6 ? 2 : 1;
+        const after = personLevel(g, who);
+        if (after > before) levelUps.push(`${PEOPLE[who].name} has the run of the place a little more tonight — ${role === 'hk' ? 'housekeeper' : role === 'clerk' ? 'night clerk' : 'night watchman'}, level ${after}. The wage rises to $${wageOf(g, role)}, and the work shows it.`);
+      }
+    }
+    const levelLine = levelUps.join(' ');
+    const ejectLine = (g.ejectWord && g.ejectWord.night === g.night)
+      ? 'The road is talking about the ejection at the Starlight — the pools run thin tonight, and Doyle calls it rent.' : '';
+    // Pass J11: the roads form their opinions at settlement — good turns
+    // bank standing, poor ones spend it, and a delighted guest's name
+    // goes in the referral book.
+    let segLine = '';
+    if (g.segXp){
+      const ups = [];
+      for (const c of checkouts){
+        const rec = g.segXp[c.segment]; if (!rec) continue;
+        const was = segLevel(g, c.segment);
+        rec.xp = Math.max(0, rec.xp + (c.score >= 80 ? 2 : c.score >= 60 ? 1 : c.score < 40 ? -1 : 0));
+        if (segLevel(g, c.segment) > was) ups.push(c.segment);
+        if (c.score >= 80){
+          const list = (g.referrers[c.segment] = g.referrers[c.segment] || []);
+          if (!list.includes(c.name)){ list.push(c.name); if (list.length > 12) list.shift(); }
+        }
+      }
+      if (ups.length) segLine = `Word of mouth: the ${SEGMENTS[ups[0]].label} road has taken to the place — it runs thicker now, and its people notice more.`;
+    }
+    // Pass J13: the placards are judged at settlement.
+    let placardLine = '', placardBounty = 0;
+    g.foreEarned = (g.foreEarned || 0) + foreRevenue;
+    if (g.credit > 0) g.drewOnce = true;
+    if (g.placards){
+      const wonLines = [];
+      for (const id of g.placards.dealt){
+        if (g.placards.won[id]) continue;
+        const p = PLACARDS.find(x => x.id === id);
+        if (p && p.test(g, { revenue, checkouts, occ })){
+          g.placards.won[id] = g.night;
+          g.cash = roundMoney(g.cash + p.bounty);
+          placardBounty += p.bounty;
+          wonLines.push(`A placard comes down: ${p.name} — $${p.bounty} in an envelope from the highway association.`);
+        }
+      }
+      placardLine = wonLines.join(' ');
+      // The envelope is part of the night's taking: it joins the profit
+      // so the till and the register agree, to the cent.
+      if (placardBounty) profit = roundMoney(profit + placardBounty);
+    }
+    const report = { night: g.night, dow: DOW_NAMES[dowOf(g.night)], revenue, roomRevenue, vendingRevenue, voucherRevenue, foreRevenue, foreLine: foreLines.join(' '), costs, costTotal,
                      profit, cashAfter: g.cash, occupied: occ, checkouts,
                      ratingAfter: g.rating, turnedAwayTotal: g.stats.turnedAway, droveOn: g.droveOn || 0,
-                     phoneDeposit, phoneLine, blockLine, regularLine, squeezeLine,
+                     phoneDeposit, phoneLine, blockLine, regularLine, squeezeLine, plantLine, levelLine, ejectLine, serviceLine,
                      creditDrawn, creditAfter: g.credit };
+    if (segLine) report.segLine = segLine;
+    if (placardLine) report.placardLine = placardLine;
+    if (placardBounty) report.placardBounty = placardBounty;
     g.lastReport = report;
     // Past $4,000 on the line, the bank writes — once.
     if (g.credit > 4000 && !g.bankLetter) g.bankLetter = { night: g.night + 1, credit: g.credit };
@@ -1378,6 +2024,16 @@ const SIM = (() => {
       g.standing = { night: 43, cash: Math.round(g.cash), rating: +g.rating.toFixed(2),
                      occ: g.stats.possibleRoomNights ? Math.round(100 * g.stats.roomNights / g.stats.possibleRoomNights) : 0,
                      pace, proj };
+    }
+    // Pass J8: the guide prints at the halfway mark and again in the run-in.
+    if (!g.tonight && (report.night === 42 || report.night === 77)){
+      const rows = guideRows(g);
+      const pos = rows.findIndex(r => r.you) + 1;
+      g.guidePrev = rows.map(r => r.name);
+      g.guide = { night: g.night + 1, rows, pos };
+      if (pos === 1) g.guideWord = { from: g.night + 1, until: g.night + 7, mult: 1.06 };
+      else if (pos === 2) g.guideWord = { from: g.night + 1, until: g.night + 7, mult: 1.03 };
+      report.guideLine = `The Highway Guide printed this morning — the Starlight stands ${['', 'first', 'second', 'third', 'fourth'][pos]} of four along this stretch.${pos <= 2 ? ' Travellers are carrying the guide this week, and the road runs thicker for it.' : ''}`;
     }
     g.lastPlan = null;
     g.handymanTonight = false;
@@ -1396,6 +2052,7 @@ const SIM = (() => {
     maybeInspection(g);
     if (g.cash < BANKRUPT_AT){ g.over = 'bankrupt'; return report; }
     genInquiry(g);
+    genTicket(g);
     return report;
   }
 
@@ -1432,7 +2089,7 @@ const SIM = (() => {
     g.upgrades = ['sign', 'wifi', 'laundry'];
     // the second wing: rooms 9 and 10, dealt quirks like any expansion
     for (let i = 0; i < 2; i++)
-      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null });
+      g.rooms.push({ id: g.rooms.length + 1, state: 'ready', dirt: ri(g, 0, 6), condition: 90, tier: 'standard', finish: null, fittings: [], quirk: drawQuirk(g), guest: null, size: roomSize(g.rooms.length + 1) });
     g.expansions = 1;
     const conds = [88, 74, 91, 63, 79, 55, 84, 70, 95, 68];
     g.rooms.forEach((r, i) => { r.condition = conds[i]; });
@@ -1476,6 +2133,13 @@ const SIM = (() => {
   return { createGame, forecast, planDay, assignRoom, turnAway, closeDesk, resolveIncident,
            startNextSeason, buildCalendar, genInquiry, buildTonight,
            purchase, purchaseExpansion, roomWork, adjustCredit, ensureSeason, hasUpgrade,
+           PLANT, buyPlant, servicePlant, settlePlant, plantFactor,
+           PEOPLE, hireStaff, fireStaff, staffPerson, personLevel, wageOf, setShift, troubleP, answerTicket, roomSize,
+           prestige, prestigeDetail, bookProb, guideRows,
+           AD_TIERS, mktCost, setFocus, setAdTier, setPackage,
+           TOWN, hasTown, buyTown, segLevel, SEG_XP_AT,
+           FORE, SHELF_PRICES, PUMP_MODES, buyForecourt, buyStock, setShelfPrice, setPumpMode,
+           PLACARDS, dealPlacards,
            SEGMENTS, SEG_KEYS, CLEAN_LEVELS, DOW_NAMES, dowOf, repMult,
            TRAITS, INCIDENTS, UPGRADES, EXPANSIONS, CALENDAR, COMBOS, activeCombos, CHALLENGES,
            activeEvent, calendarEntry, nextCalendar, seasonArc, competitorFactor, segmentPool, bookProb,
