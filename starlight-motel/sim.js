@@ -1160,7 +1160,11 @@ const SIM = (() => {
   // One room's chance of a knock tonight. The watchman's presence scales
   // the same roll — deterrence changes the threshold, never the draw count.
   function troubleP(g, room, guest, occ, ev){
-    let p = 0.09;
+    // Cadence pass: the base rate is the house's ordinary luck — at 0.09 a
+    // sound, full house knocked every other night, and trouble stopped
+    // reading as trouble. 0.05 puts a kept house near one night in three;
+    // the worn-room bonuses below still make neglect knock loud.
+    let p = 0.05;
     if (room.condition < 72) p += 0.13;
     if (room.condition < 55) p += 0.15;
     if (room.condition < 40) p += 0.15;
@@ -1787,6 +1791,7 @@ const SIM = (() => {
   }
 
   function resolveNight(g){
+    const ratingStart = g.rating;
     const occRooms = g.rooms.filter(r => r.state === 'occupied');
     const occ = occRooms.length;
     const occIds = new Set(occRooms.map(r => r.id));
@@ -1849,6 +1854,7 @@ const SIM = (() => {
 
     const wear = hasUpgrade(g, 'ac') ? 0.3 : 0.6;
     const checkouts = [];
+    const judgeTally = { worst: {}, best: {} };
     for (const room of occRooms){
       room.guest.nightsLeft--;
       if (room.guest.nightsLeft > 0){
@@ -1876,6 +1882,8 @@ const SIM = (() => {
         g.reviewWall.push({ night: g.night, name: guest.name, stars: sc.stars, text: review.text, worst: sc.worst });
         if (g.reviewWall.length > 60) g.reviewWall.shift();
       }
+      judgeTally.worst[sc.worst] = (judgeTally.worst[sc.worst] || 0) + 1;
+      judgeTally.best[sc.best] = (judgeTally.best[sc.best] || 0) + 1;
       checkouts.push({ roomId: room.id, name: guest.name, segment: guest.segment,
                        stars: sc.stars, score: Math.round(sc.score), review,
                        ratingBefore: before, ratingAfter: g.rating });
@@ -2046,6 +2054,24 @@ const SIM = (() => {
                      creditDrawn, creditAfter: g.credit };
     if (segLine) report.segLine = segLine;
     if (mktLine) report.mktLine = mktLine;
+    { // The rating ledger: the register says what moved the stars.
+      const FACTOR_WORDS = { clean: 'the cleaning', condition: "the rooms' wear", wait: 'the wait at the desk', amenities: 'the amenities', noise: 'the noise', match: 'the room fit' };
+      const posted = checkouts.filter(c => c.review);
+      let ratingLine = '';
+      if (posted.length){
+        const avg = posted.reduce((a, c) => a + c.stars, 0) / posted.length;
+        const delta = g.rating - ratingStart;
+        const move = delta > 0.005 ? 'pulled them up' : delta < -0.005 ? 'dragged them down' : 'left them where they stood';
+        ratingLine = `The stars: ${ratingStart.toFixed(1)} → ${g.rating.toFixed(1)} — ${posted.length} review${posted.length === 1 ? '' : 's'} posted tonight, averaging ${avg.toFixed(1)}★, ${move}.`;
+        const topOf = t => Object.entries(t).sort((a, b) => b[1] - a[1])[0];
+        const wTop = topOf(judgeTally.worst), bTop = topOf(judgeTally.best);
+        if (bTop && bTop[1] >= 2 && bTop[1] >= checkouts.length / 2) ratingLine += ` ${FACTOR_WORDS[bTop[0]].replace(/^the /, 'The ')} carried the night.`;
+        if (wTop && wTop[1] >= 2 && wTop[1] >= checkouts.length / 2 && (!bTop || wTop[0] !== bTop[0])) ratingLine += ` ${FACTOR_WORDS[wTop[0]].replace(/^the /, 'The ')} told against you most.`;
+      } else if (checkouts.length){
+        ratingLine = `No reviews posted tonight — the stars hold at ${g.rating.toFixed(1)}.`;
+      }
+      if (ratingLine) report.ratingLine = ratingLine;
+    }
     if (placardLine) report.placardLine = placardLine;
     if (placardBounty) report.placardBounty = placardBounty;
     g.lastReport = report;

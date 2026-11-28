@@ -496,6 +496,7 @@ function reportHTML(){
     ${rep.guideLine ? `<div class="reg-sub">${esc(rep.guideLine)}</div>` : ''}
     ${rep.segLine ? `<div class="reg-sub">${esc(rep.segLine)}</div>` : ''}
     ${rep.mktLine ? `<div class="reg-sub">${esc(rep.mktLine)}</div>` : ''}
+    ${rep.ratingLine ? `<div class="reg-sub">${esc(rep.ratingLine)}</div>` : ''}
     ${rep.rivalLine ? `<div class="reg-sub">${esc(rep.rivalLine)}</div>` : ''}
     ${rep.foreLine ? `<div class="reg-sub">${esc(rep.foreLine)}</div>` : ''}
     ${rep.placardLine ? `<div class="reg-sub">${esc(rep.placardLine)}</div>` : ''}
@@ -642,7 +643,7 @@ function renderMorning(){
     </div>` : '';
 
   const fobRows = dirty.map(r => `
-    <div class="fobrow">
+    <div class="fobrow" id="hk-room-${r.id}">
       <div class="fob"><span>${r.id}</span></div>
       <div class="fobtag">Room ${r.id} · dirt ${Math.round(r.dirt)}% · condition ${Math.round(r.condition)}${r.finish && SIM.FINISHES[r.finish] ? ' · ' + SIM.FINISHES[r.finish].name : ''}</div>
       <div class="stamps">
@@ -672,6 +673,7 @@ function renderMorning(){
   const houseCard = `<div class="paper">
       <div class="reg-title">Housekeeping — ${used} of ${pool} minutes</div>
       <div class="meter ${used > pool ? 'over' : ''}"><i style="width:${Math.min(100, pool ? used / pool * 100 : 0)}%"></i></div>
+      ${dirty.length ? '<div class="hk-note" style="margin-top:2px">The doors above are live, too — tap a dirty door and you land on its row; tap any other door for its fittings.</div>' : ''}
       ${G.staff && G.staff.hk ? '<div class="hk-note" style="margin-top:2px">The housekeeper’s minutes are already in the pool.</div>' : ''}
       ${dirty.length ? fobRows : '<div class="fobtag" style="padding:8px 0">Every room is ready. A quiet morning.</div>'}
       ${svcRows ? `<div class="hk-note" style="margin-top:10px">In house — a service is a towel run and a tidy for a guest mid-stay: twenty minutes, once a stay, and the room they judge at checkout is the tidier one.</div>${svcRows}` : ''}
@@ -726,6 +728,21 @@ function renderMorning(){
   document.querySelectorAll('[data-clean]').forEach(b => b.onclick = () => {
     const [id, lv] = b.dataset.clean.split(':');
     draft.cleans[id] = lv; sfx('stamp'); render();
+  });
+  // Pass 3 (review programme): the morning doors are live. A dirty door
+  // lands on its housekeeping row; any other door opens its fittings.
+  const scM = document.getElementById('scene');
+  if (scM) scM.classList.add('doors-live');
+  document.querySelectorAll('#scene [data-room]').forEach(el => el.onclick = () => {
+    const room = G.rooms.find(r => r.id === Number(el.dataset.room));
+    if (!room) return;
+    sfx('tick');
+    if (room.state === 'dirty'){
+      uiTab = 'house'; render();
+      setTimeout(() => { const t = document.getElementById('hk-room-' + room.id); if (t) t.scrollIntoView({ block: 'center' }); }, 60);
+    } else {
+      fitPick = room.id; catOpen = 'fittings'; uiView = 'catalog'; render();
+    }
   });
   document.getElementById('btn-open').onclick = () => {
     if (draftMinutes() > pool) { alert('Housekeeping is over the minutes you have. Deep-clean fewer rooms, or call in the second cleaner.'); return; }

@@ -1135,3 +1135,5 @@ body{ -webkit-tap-highlight-color:transparent; }
 .desk-note{ font-size:14px; }
 .u-quirk{ z-index:30; }
 #scene.chart .u-quirk{ font-size:6.5px; letter-spacing:0; white-space:normal; text-align:center; line-height:1.25; right:7px; }
+/* ============ REVIEW PASS 3: THE MORNING DOORS ARE LIVE ============ */
+#scene.doors-live .unit{ cursor:pointer; }
