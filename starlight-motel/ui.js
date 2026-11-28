@@ -7,6 +7,7 @@ let draft = null;
 let uiView = 'desk', uiPhase = null;
 let uiTab = 'tonight'; // the morning's three drawers: tonight / house / office
 let catOpen = 'shop'; // the catalog fold left open
+let prestigeMore = false; // the grounds card: one line until tapped for more
 let uiFlash = null, uiCashPrev = null, uiKnockKey = null;
 let deskSay = null; // the desk speaks when a door refuses — never silence
 let renovPick = null, fitPick = null;
@@ -421,10 +422,9 @@ function renderTitle(){
   const fake = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, state: 'occupied' }));
   app.innerHTML = sceneHTML('sky-desk', fake, 'title') + deskOpen(`
     <div class="paper titlecard">
-      <div class="term-bar"><span>The Starlight Motel</span><span>Est. 1962 · The Old Highway</span></div>
-      <p class="pitch">Eight rooms, one neon star, and a highway that decides whether tonight you eat. Set the rate, spend your cleaning minutes where they count, and work the desk — every guest remembers, and some of them write it down.</p>
+      <p class="pitch">Eight rooms, one neon star, and a highway that decides whether tonight you eat. Work the desk — every guest remembers, and some of them write it down.</p>
       ${sv ? `<button class="btn btn-primary" id="btn-continue">Continue — ${sv.season > 1 ? `Summer ${summerWord(sv.season)} · ` : ''}Night ${sv.night}</button>` : ''}
-      <div class="modecard"><div class="mc-main"><div class="mc-name">A new season</div><div class="mc-line">Eighty-four nights from a bare court — the whole summer is yours to make.</div></div><button class="btn btn-walnut" id="btn-new">New season</button></div>
+      <div class="modecard"><div class="mc-main"><div class="mc-name">A new season</div><div class="mc-line">Eighty-four nights from a bare court — the whole summer is yours to make.</div></div><button class="btn ${sv ? 'btn-walnut' : 'btn-primary'}" id="btn-new">New season</button></div>
       <div class="modecard"><div class="mc-main"><div class="mc-name">The shared season</div><div class="mc-line">Everyone who opens one today starts the same summer — same road, same weather, same luck.</div></div><button class="btn btn-walnut" id="btn-shared">Shared season</button></div>
       <div class="modecard"><div class="mc-main"><div class="mc-name">Tonight only</div><div class="mc-line">One night at a standing motel — night 43, the Suites just opened across the highway, the same house for the whole world today, ${todayLabel()}. One sitting; your season is never touched.${tonightBestLine()}</div></div><button class="btn btn-walnut" id="btn-tonight">Tonight only</button></div>
       ${sv && sv.ledger && sv.ledger.length ? `<div class="reg-title" style="margin-top:16px">The Keeper's Ledger</div>${sv.ledger.map(ledgerRow).join('')}` : ''}
@@ -931,7 +931,8 @@ function renderCatalog(){
   const pTop = pDet.parts.slice(0, 3).map(p => p.label).join(', ');
   const prestigeBlock = `<div class="prestigecard">
       <div class="reg-title">The Grounds — Prestige ${pDet.score}</div>
-      <div class="shop-blurb">${pDet.score > 2 ? `The road reads this place by ${pTop} — and a kept house is forgiven more on the card: the fair price runs about ${Math.max(1, Math.round(Math.min(10, pDet.score * 0.15)))}% kinder tonight. The rooms beside the pool and the breakfast nook judge their amenities gentler, too.` : 'Nothing built yet but the court itself and its stars. The road reads a plain place plainly — build, renovate, keep the plant sound, and the same card starts buying more.'}</div>
+      <div class="shop-blurb">${pDet.score > 2 ? `The road reads this place by ${pTop} — the fair price runs about ${Math.max(1, Math.round(Math.min(10, pDet.score * 0.15)))}% kinder tonight.` : 'Nothing built yet but the court itself and its stars.'} <button class="stamp sm" id="btn-prestige-more">${prestigeMore ? 'Less' : 'More'}</button></div>
+      ${prestigeMore ? `<div class="shop-blurb" style="margin-top:4px">${pDet.score > 2 ? `A kept house is forgiven more on the card, and the rooms beside the pool and the breakfast nook judge their amenities gentler, too.` : 'The road reads a plain place plainly — build, renovate, keep the plant sound, and the same card starts buying more.'}</div>` : ''}
     </div>`;
   const hkBook = personCard('hk', 'sparkle');
   const clerkBook = personCard('clerk', 'key');
@@ -993,7 +994,8 @@ function renderCatalog(){
       ${clerkBook}
       <div class="hk-note" style="margin-top:12px">Honest word on the watchman's job itself: he earns his keep on the nights trouble would have knocked — most nights you will never know what he prevented, which is the job. His one loud tool is the eject: on a noise knock, a watchman who will lay a hand can walk the loud room out. The desk keeps the guest who knocked, loses the loud room for the night, and cleans it in the morning.</div>
       ${watchBook}`;
-  const bankBody = `<div class="stamps">
+  const bankBody = `<div class="shop-blurb">Credit drawn: <b>${money(G.credit)}</b> of $8,000, at 0.25% a night on the first $4,000 and 0.5% past it. Anything cash cannot cover draws on the line by itself.</div>
+      <div class="stamps" style="margin-top:8px">
         <button class="stamp" data-credit="500" ${G.credit >= 8000 ? 'disabled' : ''}>Draw $500</button>
         <button class="stamp" data-credit="1000" ${G.credit >= 8000 ? 'disabled' : ''}>Draw $1,000</button>
         <button class="stamp" data-credit="-500" ${G.credit <= 0 ? 'disabled' : ''}>Repay $500</button>
@@ -1003,7 +1005,7 @@ function renderCatalog(){
     <div class="paper register">
       <div class="reg-title">The Supply Catalog — &amp; the Bank Envelope</div>
       <div class="reg-head">Order in the morning; it is yours by the desk.</div>
-      <div class="reg-sub">Cash in the till: <b>${money(G.cash)}</b> · Credit drawn: <b>${money(G.credit)}</b> of $8,000, at 0.25% a night on the first $4,000 and 0.5% past it. Anything cash cannot cover draws on the line by itself. <button class="stamp sm" id="btn-bankjump">The bank envelope ↓</button></div>
+      <div class="reg-sub">Cash in the till: <b>${money(G.cash)}</b> <button class="stamp sm" id="btn-bankjump">The bank envelope ↓</button></div>
       ${comboNote ? `<div class="combolit-note">★ The pair is lit — <b>${esc(comboNote.name)}</b>. ${esc(comboNote.line)}</div>` : ''}
       ${prestigeBlock}
       ${fold('shop', 'Upgrades', items)}
@@ -1022,6 +1024,8 @@ function renderCatalog(){
   document.querySelectorAll('[data-fold]').forEach(h => h.onclick = () => { catOpen = catOpen === h.dataset.fold ? '' : h.dataset.fold; sfx('tick'); render(); });
   const bj = document.getElementById('btn-bankjump');
   if (bj) bj.onclick = () => { catOpen = 'bank'; render(); setTimeout(() => { const t = document.getElementById('bank-anchor'); if (t) t.scrollIntoView({ block: 'start' }); }, 60); };
+  const pm = document.getElementById('btn-prestige-more');
+  if (pm) pm.onclick = () => { prestigeMore = !prestigeMore; sfx('tick'); render(); };
   const eb = document.querySelector('[data-expand]');
   if (eb) eb.onclick = () => { const r = SIM.purchaseExpansion(G); if (r.error) alert(r.error); else sfx('coin'); save(); render(); };
   document.querySelectorAll('[data-repair]').forEach(b => b.onclick = () => { const r = SIM.roomWork(G, 'repair', Number(b.dataset.repair)); if (r.error) alert(r.error); else sfx('coin'); save(); render(); });
@@ -1196,14 +1200,14 @@ function renderArrivals(){
   app.innerHTML = sceneHTML('sky-desk', G.rooms, 'arrivals', { labels: !!selArrival, want: selArrival ? selArrival.want : null, wantRoom: selArrival ? selArrival.wantRoom : null }) + deskOpen(`
     <div class="desk-h">Evening — the desk</div>
     ${coachCard()}
-    <div class="desk-note">Rate tonight: <b>$${G.rate}</b>${G.ratePremium != null ? ` · Premium <b>$${G.ratePremium}</b>` : ''}. ${q.length} part${q.length === 1 ? 'y' : 'ies'} waiting. Tap a guest card, then tap a door with an amber outline. End doors — 1 and 8 — are the quiet ones. Whoever is still waiting when the desk closes drives on.</div>
+    <div class="desk-note">Rate tonight: <b>$${G.rate}</b>${G.ratePremium != null ? ` · Premium <b>$${G.ratePremium}</b>` : ''}. ${q.length} part${q.length === 1 ? 'y' : 'ies'} waiting.${coach.done ? '' : ' Tap a guest card, then tap a door with an amber outline. End doors — 1 and 8 — are the quiet ones. Whoever is still waiting when the desk closes drives on.'}</div>
     ${selArrival ? `<div class="placing">Placing <b>${esc(selArrival.name)}</b> — tap a lit door. <span class="placing-x" id="placing-x">put back</span></div>` : ''}
     ${deskSay ? `<div class="desk-say">${deskSay}</div>` : ''}
     ${phoneCardHTML()}
     ${incidentHTML()}
     ${cards ? `<div class="guestlist">${cards}</div>` : '<div class="desk-note">The lot is quiet. Everyone who is coming is here.</div>'}
     <div class="deskrow"><button class="btn btn-ghost" id="btn-book">The guest book</button><button class="btn btn-ghost" id="btn-wall">The corkboard</button></div>
-    <div class="actionbar"><button class="btn btn-walnut" id="btn-close">Close the desk — nightfall</button></div>`);
+    <div class="actionbar"><div class="desk-status">Night ${G.night} · ${money(G.cash)} in the till · ${G.rating.toFixed(1)}★${G.credit > 0 ? ` · credit ${money(G.credit)}` : ''}</div><button class="btn btn-walnut" id="btn-close">Close the desk — nightfall</button></div>`);
 
   const sc = document.getElementById('scene');
   if (sc) sc.classList.add('desk-sticky');

@@ -1110,3 +1110,28 @@ body{ -webkit-tap-highlight-color:transparent; }
 /* PERFECTIONIST PASS: the owned-line note gets its own dress — small,
    warm-dark gold on the paper, the way the other standing lines read. */
 .plant-note{ font-family:'Source Serif 4',serif; font-style:italic; font-size:12.5px; color:#7A5A20; margin-top:5px; }
+/* ============ UI PASS 1: THE PLATFORM FLOOR ============
+   Every control a thumb lands on stands at least 44px tall (the
+   small inline stamps at 40) — the desk already worked this way;
+   now the morning chrome, the catalog and the deskbar do too. */
+.sndbtn{ min-height:44px; padding:10px 14px; display:inline-flex; align-items:center; }
+.mtabs button{ min-height:44px; }
+.stamp{ min-height:44px; display:inline-flex; align-items:center; justify-content:center; }
+.stamp.sm{ min-height:40px; }
+.foldhead{ min-height:44px; display:flex; align-items:center; }
+.btn-ghost{ min-height:44px; }
+/* ============ UI PASS 3: THE TILL STAYS IN SIGHT ============
+   The deskbar scrolls away behind the pinned court; the desk's
+   sticky action bar now carries the standing figures, so a comp
+   or a counter-offer is never judged blind mid-scroll. */
+.desk-status{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.04em; color:var(--cream); text-align:center; padding:2px 0 8px; }
+/* ============ UI PASS 4: DECISION COPY AT READING SIZE ============
+   The lines that explain consequences — catalog blurbs, register
+   sub-lines, guest sub-lines, the desk note — stand at 14px, and a
+   door's trait tag paints above its window so it is never clipped. */
+.reg-sub{ font-size:14px; }
+.g-sub{ font-size:14px; }
+.shop-blurb{ font-size:14px; }
+.desk-note{ font-size:14px; }
+.u-quirk{ z-index:30; }
+#scene.chart .u-quirk{ font-size:6.5px; letter-spacing:0; white-space:normal; text-align:center; line-height:1.25; right:7px; }
