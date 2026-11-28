@@ -80,7 +80,7 @@ button{ font:inherit; }
 .u-num{ position:absolute; top:4px; left:0; right:0; text-align:center; color:var(--brass); font-weight:800; font-size:13px; letter-spacing:.06em; z-index:1; }
 .u-knob{ position:absolute; right:4px; top:56%; width:5px; height:5px; border-radius:50%; background:var(--brass); z-index:1; }
 .unit.dirty .u-door{ transform:translateX(5px) rotate(1.6deg); }
-.unit.dark .u-window{ background:#0E1418; }
+.unit.dark .u-window{ background:linear-gradient(160deg,#71624C,#463B2C); }
 .unit.dark .u-door{ filter:brightness(.68); }
 .unit.pickable{ cursor:pointer; }
 .unit.pickable .u-door{ outline:2px solid var(--brass); outline-offset:1px; }
@@ -741,7 +741,7 @@ body{ background:#04070D; }
   background:linear-gradient(115deg,transparent 42%,rgba(246,238,209,.16) 50%,transparent 58%); }
 #scene.chart .car{ width:14%; height:13%; }
 #scene.chart .unit.dirty .u-door{ transform:translateX(8px) rotate(2.2deg); }
-#scene.chart .unit.dirty .u-window{ background:linear-gradient(160deg,#4A4238,#2C2620); }
+#scene.chart .unit.dirty .u-window{ background:linear-gradient(160deg,#71624C,#463B2C); }
 @media (orientation:landscape){
   #scene.chart{ height:218px; }
   #scene.chart:has(.units.wing){ height:284px; }
