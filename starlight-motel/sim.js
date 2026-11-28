@@ -197,6 +197,7 @@ const SIM = (() => {
     if (g.ejectWord === undefined) g.ejectWord = null;
     if (g.serviceTicket === undefined) g.serviceTicket = null;
     if (g.guide === undefined) g.guide = null;
+    if (g.rivalAnswer === undefined) g.rivalAnswer = null;
     if (g.guidePrev === undefined) g.guidePrev = null;
     if (g.guideWord === undefined) g.guideWord = null;
     if (!g.mkt) g.mkt = { focus: {}, ad: 0, pkg: { weekend: false, weekly: false } };
@@ -249,6 +250,9 @@ const SIM = (() => {
     // strength — success gets expensive before the grand opening lands.
     const full = g.rating >= 4 ? 0.96 : g.rating >= 3.4 ? 0.88 : g.rating >= 3.0 ? 0.80 : 0.72;
     if (night < 43) return 1 - (1 - full) * 0.5;
+    // Review pass: while the Suites are dark for their renovation
+    // (nights 61–70 after the rival answers), there is no drag at all.
+    if (g.rivalAnswer && g.rivalAnswer.fired && night >= 61 && night <= 70) return 1;
     return full;
   }
   // ---------- Pass J3: THE HIRING BOOK (Travellers Rest's staff) ----------
@@ -264,25 +268,25 @@ const SIM = (() => {
       flaw:'Set in her ways — supplies run $5 a night over, every night, itemised and unrepentant.' },
     rosa:    { role:'hk', name:'Rosa Delgado', wage:33, minutes:135,
       gift:'Fast — +135 minutes a day at the lowest wage on the book.',
-      flaw:'Cuts corners — a room she has cleaned is never cleaner than 8. The corners show.' },
+      flaw:'Cuts corners — a room she has cleaned is never quite clean; a film of the dirt stays. The corners show.' },
     eddie:   { role:'clerk', name:'Eddie Kowalski', wage:30, soften:4,
-      gift:'A night owl — a knock he has half-answered lands softer (+4).',
+      gift:'A night owl — a knock he has half-answered lands four points softer.',
       flaw:'Forgets to charge — the till comes up $1.20 short for every room in house.' },
     frankie: { role:'clerk', name:'Frankie Boone', wage:36, soften:7,
-      gift:'A silver tongue — a knock he has half-answered lands softer still (+7).',
+      gift:'A silver tongue — a knock he has half-answered lands seven points softer still.',
       flaw:'Generous with comps — a comped guest costs $10 over the rate. He throws in pie.' },
     wanda:   { role:'clerk', name:'Wanda Pierce', wage:26, soften:4,
-      gift:'By the book — a knock she has half-answered lands softer (+4), at the lowest wage on the book.',
+      gift:'By the book — a knock she has half-answered lands four points softer, at the lowest wage on the book.',
       flaw:'Rubs people wrong — your review replies travel a quarter less far under her hand.' },
     hollis:  { role:'watch', name:'Hollis Brandt', wage:34, deter:0.25, eject:true,
       gift:'A presence — trouble at the desk runs a quarter rarer, and he can walk a loud party out.',
-      flaw:'A face like weather — families and tourists judge the amenities 2 colder with him looming in the dark.' },
+      flaw:'A face like weather — families and tourists judge the amenities two points colder with him looming in the dark.' },
     petra:   { role:'watch', name:'Petra Lindqvist', wage:28, deter:0.10, eject:false,
-      gift:'Quiet rounds — the court stays hushed under her: every stay judges the noise 4 kinder.',
+      gift:'Quiet rounds — the court stays hushed under her: every stay judges the noise four points kinder.',
       flaw:'Won’t lay a hand — under Petra there is no ejecting anybody. She will fetch you to the desk and watch you handle it.' },
     doyle:   { role:'watch', name:'Doyle Riggs', wage:42, deter:0.40, eject:true,
       gift:'Ex-cop — trouble at the desk runs 40% rarer, and his ejects are final.',
-      flaw:'The road talks — every eject under Doyle is highway gossip by morning: the next night’s pools run 4% thin.' }
+      flaw:'The road talks — every eject under Doyle is highway gossip by morning, and the next night’s road runs thinner for it.' }
   };
   function staffPerson(g, role){
     const v = g.staff && g.staff[role];
@@ -723,13 +727,13 @@ const SIM = (() => {
     const you = Math.round(g.rating * 18 + prestige(g) * 0.6 + occPct * 0.25);
     const n = g.night;
     const scores = {
-      'The Starling Suites': Math.round(84 + Math.max(0, n - 43) * 0.35 + guideHash(g, 'starling') * 4),
+      'The Starling Suites': Math.round(84 + Math.max(0, n - 43) * 0.35 + guideHash(g, 'starling') * 4) + ((g.rivalAnswer && g.rivalAnswer.fired) ? 7 : 0),
       'The Desert Inn': Math.round(76 + (guideHash(g, 'desert') - 0.5) * 6),
       'The Palm Court Lodge': Math.round(74 - n * 0.08 + (guideHash(g, 'palm') - 0.5) * 4)
     };
     const rows = [{ name: 'The Starlight Motel', score: you, you: true,
                     line: you >= 95 ? 'The court everybody talks about at the diner.' : you >= 85 ? 'A kept court with a lit sign — the pick of the independents.' : you >= 75 ? 'Honest rooms, honestly kept. The guide has its eye on it.' : 'A plain court on a loud highway. The guide is waiting to be impressed.' },
-                  ...GUIDE_RIVALS.map(r => ({ name: r.name, score: scores[r.name], line: r.line }))];
+                  ...GUIDE_RIVALS.map(r => ({ name: r.name, score: scores[r.name], line: (r.name === 'The Starling Suites' && g.rivalAnswer && g.rivalAnswer.fired) ? 'Reopened brighter — new sign, new carpets. A chain that spent real money answering the Starlight.' : r.line }))];
     rows.sort((a, b) => b.score - a.score);
     const prev = g.guidePrev || [];
     for (const r of rows){
@@ -745,8 +749,8 @@ const SIM = (() => {
   // reshape the drive-up trade in genQueue. All of it settles nightly.
   const AD_TIERS = [
     { name: 'No advert running', cost: 0, mult: 1 },
-    { name: 'The county paper', cost: 18, mult: 1.05 },
-    { name: 'The radio spot', cost: 45, mult: 1.10 }
+    { name: 'The county paper', cost: 18, mult: 1.10 },
+    { name: 'The radio spot', cost: 45, mult: 1.20 }
   ];
   function mktCost(g){
     if (!g.mkt) return 0;
@@ -1247,6 +1251,7 @@ const SIM = (() => {
   // Returns {ok} or {error}.
   function planDay(g, plan){
     ensureSeason(g);
+    g.mktTonight = [];
     const pool = housekeepingPool(g, !!plan.extraCleaner);
     let used = 0;
     for (const room of g.rooms){
@@ -1453,6 +1458,21 @@ const SIM = (() => {
         }
       }
     }
+    // Review pass: marketing attribution. The share of a road's pool the
+    // adverts bought is 1 − 1/mult; that share of its arrivals is dealt
+    // the channel by hash, the way referrals are dealt — so when the
+    // spend brings someone in, the desk and the register can say so.
+    if (g.mkt){
+      const ad = AD_TIERS[g.mkt.ad || 0];
+      for (const a of g.queue){
+        if (a.regular || a.challenge || a.phone || a.inquiry) continue;
+        const focusOn = !!g.mkt.focus[a.segment];
+        const mult = (focusOn ? 1.25 : 1) * (ad ? ad.mult : 1);
+        if (mult <= 1) continue;
+        if (ticketHash(g, 'mkt' + a.id) < 1 - 1 / mult)
+          a.viaMkt = focusOn ? 'campaign:' + a.segment : (g.mkt.ad === 2 ? 'radio' : 'paper');
+      }
+    }
   }
 
   // ---------- Pass J6: the room-service ticket ----------
@@ -1512,6 +1532,7 @@ const SIM = (() => {
                    dealStay: !!deal, dealNights: deal ? deal.nights : 0, rowdyDone: false };
     g.queue = g.queue.filter(q => q.id !== arrivalId);
     g.processed++; g.stats.guests++;
+    if (a.viaMkt) (g.mktTonight = g.mktTonight || []).push(a.viaMkt);
     if (a.returning){ ensureSeason(g); g.stats.returners++; }
     return { ok: true };
   }
@@ -1965,6 +1986,20 @@ const SIM = (() => {
     const levelLine = levelUps.join(' ');
     const ejectLine = (g.ejectWord && g.ejectWord.night === g.night)
       ? 'The road is talking about the ejection at the Starlight — the pools run thin tonight, and Doyle calls it rent.' : '';
+    // Review pass: the adverts answer for themselves — whoever they
+    // brought in tonight is counted at the desk, and named here.
+    let mktLine = '';
+    {
+      const counts = {};
+      for (const ch of (g.mktTonight || [])) counts[ch] = (counts[ch] || 0) + 1;
+      const top = Object.entries(counts).sort((x, y) => y[1] - x[1])[0];
+      if (top){
+        const n = top[1], parties = n === 1 ? 'One party' : n + ' parties';
+        if (top[0] === 'radio') mktLine = `The radio spot earned its keep — ${parties.toLowerCase()} came off the air tonight.`;
+        else if (top[0] === 'paper') mktLine = `The county paper earned its keep — ${parties.toLowerCase()} read it and came tonight.`;
+        else if (top[0].startsWith('campaign:')) mktLine = `The ${SEGMENTS[top[0].slice(9)].label} campaign earned its keep — it brought ${parties.toLowerCase()} in tonight.`;
+      }
+    }
     // Pass J11: the roads form their opinions at settlement — good turns
     // bank standing, poor ones spend it, and a delighted guest's name
     // goes in the referral book.
@@ -2010,6 +2045,7 @@ const SIM = (() => {
                      phoneDeposit, phoneLine, blockLine, regularLine, squeezeLine, plantLine, levelLine, ejectLine, serviceLine,
                      creditDrawn, creditAfter: g.credit };
     if (segLine) report.segLine = segLine;
+    if (mktLine) report.mktLine = mktLine;
     if (placardLine) report.placardLine = placardLine;
     if (placardBounty) report.placardBounty = placardBounty;
     g.lastReport = report;
@@ -2034,6 +2070,20 @@ const SIM = (() => {
       if (pos === 1) g.guideWord = { from: g.night + 1, until: g.night + 7, mult: 1.06 };
       else if (pos === 2) g.guideWord = { from: g.night + 1, until: g.night + 7, mult: 1.03 };
       report.guideLine = `The Highway Guide printed this morning — the Starlight stands ${['', 'first', 'second', 'third', 'fourth'][pos]} of four along this stretch.${pos <= 2 ? ' Travellers are carrying the guide this week, and the road runs thicker for it.' : ''}`;
+      // Review pass: run away with the first printing and the chain
+      // across the highway answers — the renovation is armed here and
+      // fires at the night-60 settlement.
+      if (report.night === 42 && !g.rivalAnswer){
+        const youRow = rows.find(r => r.you), starRow = rows.find(r => r.name === 'The Starling Suites');
+        if (youRow && starRow && youRow.score - starRow.score >= 8) g.rivalAnswer = { at: 61, fired: false };
+      }
+    }
+    // Review pass: the rival's renovation lands — one register line,
+    // a dark fortnight on their side of the highway, a brighter rival
+    // when the Guide prints again.
+    if (g.rivalAnswer && !g.rivalAnswer.fired && report.night === 60){
+      g.rivalAnswer.fired = true;
+      report.rivalLine = 'Word from across the highway: the Starling Suites has gone dark — scaffolds up, a chain crew working under lights. They mean to reopen brighter, and the road is yours alone while they do.';
     }
     g.lastPlan = null;
     g.handymanTonight = false;
