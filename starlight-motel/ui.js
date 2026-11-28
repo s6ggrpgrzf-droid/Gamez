@@ -13,7 +13,7 @@ let renovPick = null, fitPick = null;
 let lastViewKey = null;
 
 /* ---------- sound: a small synthesized evening, off until asked ---------- */
-const audio = { ctx: null, master: null, music: null, ambience: null, on: (() => { try { return localStorage.getItem('starlight_sound') === 'on'; } catch(e){ return false; } })() };
+const audio = { ctx: null, master: null, music: null, ambience: null, on: (() => { try { const v = localStorage.getItem('starlight_sound'); return v === null ? true : v === 'on'; } catch(e){ return true; } })() };
 function ensureAudio(){
   try {
     if (!audio.ctx){
@@ -171,7 +171,7 @@ const COACH_STEPS = [
   { phase:'morning', night:1, title:'Then — the cleaning', btn:'Next',
     text:'You hold 300 minutes of housekeeping against every dirty room. A deep clean earns its reviews; a quick clean sells tonight and charges you tomorrow. When the morning is set, open the desk.' },
   { phase:'arrivals', night:1, title:'Working the desk', btn:'Next',
-    text:'Tap a guest card, and every door tells you its character — the big tub, the soft bed, the thin walls. Guests say what they are hoping for, and the door that fits them glows brass. Whoever is still standing when you close the desk drives on into the night — and the end doors, 1 and 8, are the quiet ones.' },
+    text:'Tap a guest card, and every door tells you its character — the big tub, the soft bed, the thin walls. Guests say what they are hoping for, and the door that fits them glows brass. Whoever is still standing when you close the desk drives on into the night — and the end doors, 1 and 8, are the quiet ones. And some nights the knock comes from inside — a dripping tap, a rattling unit. Seeing to it costs money or goodwill; letting it ride costs more. The desk decides what a quiet night is worth.' },
   { phase:'morning', night:2, title:'The morning after', btn:'Got it',
     text:'The register tells you what the night earned and what it cost. The guest book remembers everyone, the corkboard keeps what they wrote, and the catalog is where a good week turns into a better motel.' }
 ];
@@ -495,6 +495,8 @@ function reportHTML(){
     ${rep.serviceLine ? `<div class="reg-sub">${esc(rep.serviceLine)}</div>` : ''}
     ${rep.guideLine ? `<div class="reg-sub">${esc(rep.guideLine)}</div>` : ''}
     ${rep.segLine ? `<div class="reg-sub">${esc(rep.segLine)}</div>` : ''}
+    ${rep.mktLine ? `<div class="reg-sub">${esc(rep.mktLine)}</div>` : ''}
+    ${rep.rivalLine ? `<div class="reg-sub">${esc(rep.rivalLine)}</div>` : ''}
     ${rep.foreLine ? `<div class="reg-sub">${esc(rep.foreLine)}</div>` : ''}
     ${rep.placardLine ? `<div class="reg-sub">${esc(rep.placardLine)}</div>` : ''}
     ${row('Room revenue', rep.revenue - (rep.phoneDeposit || 0))}
@@ -1179,7 +1181,7 @@ function renderArrivals(){
   const cards = q.map((a, i) => `
     <div class="guest ${draft && draft.sel === a.id ? 'sel' : ''}" data-guest="${a.id}">
       <div class="g-name">${esc(a.name)} <span class="segtag">${SIM.SEGMENTS[a.segment].label}</span>${a.trait ? ` <span class="traittag">${SIM.TRAITS[a.trait].label}</span>` : ''}${a.returning ? ` <span class="rettag">Back again · stay #${a.visits}</span>` : ''}${a.inquiry ? ` <span class="blocktag">Block booking</span>` : ''}${a.phone ? ` <span class="blocktag">Off the bus</span>` : ''}${a.challenge ? ` <span class="chtag">★ A name to keep</span>` : ''}</div>
-      <div class="g-sub">${a.dealTaken && a.deal ? `${a.deal.nights} nights · $${a.deal.ratePer}/night — the deal` : `${a.nights} night${a.nights > 1 ? 's' : ''} · $${a.ratePaid}/night${a.pkg ? ` · ${esc(a.pkg)}` : ''}${a.referred ? ` · sent by ${esc(a.referred)}` : ''}`}</div>
+      <div class="g-sub">${a.dealTaken && a.deal ? `${a.deal.nights} nights · $${a.deal.ratePer}/night — the deal` : `${a.nights} night${a.nights > 1 ? 's' : ''} · $${a.ratePaid}/night${a.pkg ? ` · ${esc(a.pkg)}` : ''}${a.referred ? ` · sent by ${esc(a.referred)}` : ''}${a.viaMkt ? ` · ${a.viaMkt === 'radio' ? 'off the radio spot' : a.viaMkt === 'paper' ? 'read it in the paper' : 'the campaign brought them'}` : ''}`}</div>
       ${a.line ? `<div class="g-line">“${esc(a.line)}”</div>` : ''}
       ${a.trait ? `<div class="g-hint">${SIM.TRAITS[a.trait].hint}</div>` : ''}
       ${a.want && ((SIM.QUIRKS[a.want] || {}).ask || (SIM.FITTINGS[a.want] || {}).ask) ? `<div class="wanttag">Hoping for ${(SIM.QUIRKS[a.want] || SIM.FITTINGS[a.want]).ask}.</div>` : ''}
